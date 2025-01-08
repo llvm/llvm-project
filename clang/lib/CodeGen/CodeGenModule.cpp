@@ -4241,7 +4241,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static unsigned getFMVPriority(const TargetInfo &TI,
+static uint64_t getFMVPriority(const TargetInfo &TI,
                                const CodeGenFunction::FMVResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> Features{RO.Features};
   if (RO.Architecture)

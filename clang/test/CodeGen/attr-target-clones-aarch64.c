@@ -64,20 +64,20 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 33664
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 33664
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 69793284352
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 69793284352
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @ftc._MaesMlse
+// CHECK-NEXT:    ret ptr @ftc._Msve2
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 69793284352
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 69793284352
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 33664
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 33664
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @ftc._Msve2
+// CHECK-NEXT:    ret ptr @ftc._MaesMlse
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @ftc.default
 //
@@ -411,20 +411,20 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 70369817985280
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 70369817985280
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1125899906842624
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1125899906842624
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @ftc_inline3._MsbMsve
+// CHECK-NEXT:    ret ptr @ftc_inline3._Mbti
 // CHECK:       resolver_else:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1125899906842624
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 1125899906842624
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 70369817985280
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 70369817985280
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @ftc_inline3._Mbti
+// CHECK-NEXT:    ret ptr @ftc_inline3._MsbMsve
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @ftc_inline3.default
 //
@@ -521,20 +521,20 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 33664
-// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 33664
+// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 69793284352
+// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 69793284352
 // CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK-MTE-BTI:       resolver_return:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._MaesMlse
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._Msve2
 // CHECK-MTE-BTI:       resolver_else:
 // CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 69793284352
-// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 69793284352
+// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 33664
+// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 33664
 // CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK-MTE-BTI:       resolver_return1:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._Msve2
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._MaesMlse
 // CHECK-MTE-BTI:       resolver_else2:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc.default
 //
@@ -868,20 +868,20 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 70369817985280
-// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 70369817985280
+// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1125899906842624
 // CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK-MTE-BTI:       resolver_return:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._MsbMsve
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._Mbti
 // CHECK-MTE-BTI:       resolver_else:
 // CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1125899906842624
-// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 70369817985280
+// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 70369817985280
 // CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
 // CHECK-MTE-BTI:       resolver_return1:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._Mbti
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._MsbMsve
 // CHECK-MTE-BTI:       resolver_else2:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
