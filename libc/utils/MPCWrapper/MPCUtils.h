@@ -36,6 +36,7 @@ enum class Operation {
   // and produce a single complex floating point number of the same kind
   // as output.
   BeginUnaryOperationsSingleOutputSameOutputType,
+  Cproj,
   Csqrt,
   Clog,
   Cexp,

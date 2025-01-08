@@ -135,17 +135,31 @@ public:
     mpfr_t res;
     mpc_t res_mpc;
 
-    mpfr_init2(res, this->mpc_real_precision);
-    mpc_init3(res_mpc, this->mpc_real_precision, this->mpc_imag_precision);
+    mpfr_init2(res, mpc_real_precision);
+    mpc_init3(res_mpc, mpc_real_precision, mpc_imag_precision);
 
-    mpc_arg(res, value, MPC_RND_RE(this->mpc_rounding));
-    mpc_set_fr(res_mpc, res, this->mpc_rounding);
+    mpc_arg(res, value, MPC_RND_RE(mpc_rounding));
+    mpc_set_fr(res_mpc, res, mpc_rounding);
 
-    MPCNumber result(res_mpc, this->mpc_real_precision,
-                     this->mpc_imag_precision, this->mpc_rounding);
+    MPCNumber result(res_mpc, mpc_real_precision,mpc_imag_precision, mpc_rounding);
 
     mpfr_clear(res);
     mpc_clear(res_mpc);
+
+    return result;
+  }
+
+  MPCNumber cproj() const {
+
+    mpc_t res;
+
+    mpc_init3(res, mpc_real_precision, mpc_imag_precision);
+
+    mpc_proj(res, value, mpc_rounding);
+
+    MPCNumber result(res, mpc_real_precision, mpc_imag_precision, mpc_rounding);
+
+    mpc_clear(res);
 
     return result;
   }
@@ -161,6 +175,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
   switch (op) {
   case Operation::Carg:
     return mpcInput.carg();
+  case Operation::Cproj:
+    return mpcInput.cproj();
   default:
     __builtin_unreachable();
   }
@@ -271,7 +287,7 @@ void explain_unary_operation_single_output_different_type_error(
   msg << "  Rounding mode: " << str(rounding.Rrnd) << " , "
       << str(rounding.Irnd) << '\n';
   msg << "    Libc: " << mpfrLibcResult.str() << '\n';
-  msg << "    MPFR: " << mpfr_result.str() << '\n';
+  msg << "    MPC: " << mpfr_result.str() << '\n';
   msg << '\n';
   msg << "  ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
       << '\n';
@@ -282,6 +298,57 @@ template void explain_unary_operation_single_output_different_type_error(
     Operation, _Complex float, float, double, MPCRoundingMode);
 template void explain_unary_operation_single_output_different_type_error(
     Operation, _Complex double, double, double, MPCRoundingMode);
+
+template <typename InputType, typename OutputType>
+void explain_unary_operation_single_output_same_type_error(
+    Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
+    MPCRoundingMode rounding) {
+
+  unsigned int precision =
+      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+
+  MPCNumber mpc_result;
+  mpc_result = unary_operation(op, input, precision, rounding);
+
+  mpc_t mpc_result_val;
+  mpc_init3(mpc_result_val, precision, precision);
+  mpc_result.getValue(mpc_result_val);
+
+  mpfr_t real, imag;
+  mpfr_init2(real, precision);
+  mpfr_init2(imag, precision);
+  mpc_real(real, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Rrnd));
+  mpc_imag(imag, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Irnd));
+
+  mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfr_imag(imag, precision, rounding.Irnd);
+  mpfr::MPFRNumber mpfrLibcResultReal(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real, precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfrLibcResultImag(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag, precision, rounding.Irnd);
+  mpfr::MPFRNumber mpfrInputReal(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision,
+      rounding.Rrnd);
+  mpfr::MPFRNumber mpfrInputImag(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).imag, precision,
+      rounding.Irnd);
+
+  cpp::array<char, 2048> msg_buf;
+  cpp::StringStream msg(msg_buf);
+  msg << "Match value not within tolerance value of MPFR result:\n"
+      << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str()
+      << "i" << '\n';
+  msg << "  Rounding mode: " << str(rounding.Rrnd) << " , "
+      << str(rounding.Irnd) << '\n';
+  msg << "    Libc: " << mpfrLibcResultReal.str() << " + " << mpfrLibcResultImag.str() << "i" << '\n';
+  msg << "    MPC: " << mpfr_real.str() << " + " << mpfr_imag.str() << "i" << '\n';
+  msg << '\n';
+  msg << "  ULP error: " << mpfr_real.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real).str() << " , " << mpfr_imag.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag).str() << '\n';
+  tlog << msg.str();
+}
+
+template void explain_unary_operation_single_output_same_type_error(
+    Operation, _Complex float, _Complex float, double, MPCRoundingMode);
+template void explain_unary_operation_single_output_same_type_error(
+    Operation, _Complex double, _Complex double, double, MPCRoundingMode);
 
 } // namespace internal
 

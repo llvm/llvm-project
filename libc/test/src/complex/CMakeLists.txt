@@ -1,17 +1,6 @@
 add_custom_target(libc-complex-unittests)
 
 add_cfp_unittest(
-  cargf_test
-  NEED_MPC
-  SUITE
-    libc-complex-unittests
-  SRCS
-    cargf_test.cpp
-  DEPENDS
-    libc.src.complex.cargf
-)
-
-add_cfp_unittest(
   conj_test
   SUITE
     libc-complex-unittests
@@ -73,6 +62,7 @@ add_cfp_unittest(
 
 add_cfp_unittest(
   cprojf_test
+  NEED_MPC
   SUITE
     libc-complex-unittests
   SRCS
