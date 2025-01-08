@@ -66,6 +66,11 @@ RUN apt-get update && \
     file \
     tzdata
 
+# Install sccache as it is needed by most of the project test workflows and
+# cannot be installed by the ccache action when executing as a non-root user.
+RUN curl -L 'https://github.com/mozilla/sccache/releases/download/v0.7.6/sccache-v0.7.6-x86_64-unknown-linux-musl.tar.gz' | tar xzf - -O --wildcards '*/sccache' > '/usr/local/bin/sccache' && \
+    chmod +x /usr/local/bin/sccache
+
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
