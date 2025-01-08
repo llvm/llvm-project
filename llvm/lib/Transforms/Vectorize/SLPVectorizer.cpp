@@ -839,16 +839,12 @@ public:
     return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
   }
 
-<<<<<<< HEAD
-  InstructionsState() = default;
-=======
   /// Checks if the current state is valid, i.e. has non-null MainOp
   bool valid() const { return MainOp && AltOp; }
 
   explicit operator bool() const { return valid(); }
 
   InstructionsState() = delete;
->>>>>>> upstream/main
   InstructionsState(Instruction *MainOp, Instruction *AltOp)
       : MainOp(MainOp), AltOp(AltOp) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
@@ -3331,7 +3327,7 @@ private:
     /// reordering of operands during buildTree_rec() and vectorizeTree().
     SmallVector<ValueList, 2> Operands;
 
-    InstructionsState S;
+    InstructionsState S = InstructionsState::invalid();
 
     /// Interleaving factor for interleaved loads Vectorize nodes.
     unsigned InterleaveFactor = 0;
@@ -3405,15 +3401,10 @@ private:
       return S.getMainOp();
     }
 
-<<<<<<< HEAD
-    void setOperations(const InstructionsState &S) { this->S = S; }
-=======
     void setOperations(const InstructionsState &S) {
       assert(S && "InstructionsState is invalid.");
-      MainOp = S.getMainOp();
-      AltOp = S.getAltOp();
+      this->S = S;
     }
->>>>>>> upstream/main
 
     Instruction *getMainOp() const { return S.getMainOp(); }
 
