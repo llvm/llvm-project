@@ -10612,9 +10612,8 @@ public:
     bool PrevNodeFound = any_of(
         ArrayRef(R.VectorizableTree).take_front(E->Idx),
         [&](const std::unique_ptr<TreeEntry> &TE) {
-          return (((!TE->isInstructionsStateValid() || !TE->isAltShuffle()) &&
-                   (TE->isInstructionsStateValid() &&
-                    TE->getOpcode() == Instruction::ExtractElement)) ||
+          return ((TE->isInstructionsStateValid() && !TE->isAltShuffle() &&
+                   TE->getOpcode() == Instruction::ExtractElement) ||
                   TE->isGather()) &&
                  all_of(enumerate(TE->Scalars), [&](auto &&Data) {
                    return VL.size() > Data.index() &&
