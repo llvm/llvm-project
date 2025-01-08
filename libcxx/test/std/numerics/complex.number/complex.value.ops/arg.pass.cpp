@@ -53,6 +53,7 @@ void test_edges()
                     assert(std::signbit(testcases<T>[i].imag()) == std::signbit(r));
                 }
                 break;
+            case lowest_value:
             case maximum_value:
             case non_zero:
                 if (testcases<T>[i].real() == 0)

@@ -12,7 +12,7 @@
 //   complex<T>
 //   operator/(const complex<T>& lhs, const complex<T>& rhs); // constexpr in C++20
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2131685
 
 #include <cassert>
 #include <complex>
@@ -55,6 +55,7 @@ test_edges()
         case zero:
           assert(classify(r) == NaN);
           break;
+        case lowest_value:
         case maximum_value:
           continue; // not tested
         case non_zero:
@@ -71,6 +72,7 @@ test_edges()
           break;
         }
         break;
+      case lowest_value:
       case maximum_value:
         continue; // not tested
       case non_zero:
@@ -78,6 +80,7 @@ test_edges()
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
         case maximum_value:
           continue; // not tested
         case non_zero:
@@ -99,6 +102,7 @@ test_edges()
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
         case maximum_value:
           continue; // not tested
         case non_zero:
@@ -120,6 +124,7 @@ test_edges()
         case zero:
           assert(classify(r) == NaN);
           break;
+        case lowest_value:
         case maximum_value:
           continue; // not tested
         case non_zero:
@@ -141,6 +146,7 @@ test_edges()
         case zero:
           assert(classify(r) == inf);
           break;
+        case lowest_value:
         case maximum_value:
           continue; // not tested
         case non_zero:

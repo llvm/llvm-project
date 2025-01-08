@@ -39,10 +39,17 @@ void test_edges()
             assert(r == 0);
             assert(!std::signbit(r));
             break;
+        case lowest_value: {
+            // It appears that `lowest<float> - relatively_small_number == lowest<float>`, so we check to
+            // make sure that abs was actually effective before asserting that it should be infinity.
+            bool const ineffective_abs = testcases<T>[i].real() + testcases<T>[i].imag() == -r;
+            assert((std::isinf(r) && r > 0) || ineffective_abs);
+            break;
+        }
         case maximum_value: {
             // It appears that `max<float> + relatively_small_number == max<float>`, so we check to
             // make sure that abs was actually effective before asserting that it should be infinity.
-            bool const ineffective_abs = (testcases<T>[i].real() + testcases<T>[i].imag()) == r;
+            bool const ineffective_abs = testcases<T>[i].real() + testcases<T>[i].imag() == r;
             assert((std::isinf(r) && r > 0) || ineffective_abs);
             break;
         }

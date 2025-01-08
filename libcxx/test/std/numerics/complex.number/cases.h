@@ -194,11 +194,22 @@ TEST_CONSTEXPR_CXX20 const std::complex<T> testcases[] =
     std::complex<T>(std::numeric_limits<T>::infinity(), std::numeric_limits<T>::infinity()),
 
     std::complex<T>(std::numeric_limits<T>::max(), 1),
+    std::complex<T>(std::numeric_limits<T>::max(), -1),
+    std::complex<T>(std::numeric_limits<T>::lowest(), 1),
+    std::complex<T>(std::numeric_limits<T>::lowest(), -1),
+
     std::complex<T>(1, std::numeric_limits<T>::max()),
+    std::complex<T>(1, std::numeric_limits<T>::lowest()),
+    std::complex<T>(-1, std::numeric_limits<T>::max()),
+    std::complex<T>(-1, std::numeric_limits<T>::lowest()),
+
     std::complex<T>(std::numeric_limits<T>::max(), std::numeric_limits<T>::max()),
+    std::complex<T>(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()),
+    std::complex<T>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max()),
+    std::complex<T>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest()),
 };
 
-enum {zero, non_zero, maximum_value, inf, NaN, non_zero_nan};
+enum {zero, non_zero, lowest_value, maximum_value, inf, NaN, non_zero_nan};
 
 template <class T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
 TEST_CONSTEXPR_CXX20 bool test_isinf(T v) {
@@ -235,6 +246,8 @@ classify(const std::complex<T>& x)
     }
     if (x.real() == std::numeric_limits<T>::max() || x.imag() == std::numeric_limits<T>::max())
         return maximum_value;
+    if (x.real() == std::numeric_limits<T>::lowest() || x.imag() == std::numeric_limits<T>::lowest())
+        return lowest_value;
     return non_zero;
 }
 
@@ -251,6 +264,8 @@ classify(T x)
         return NaN;
     if (x == std::numeric_limits<T>::max())
         return maximum_value;
+    if (x == std::numeric_limits<T>::lowest())
+        return lowest_value;
     return non_zero;
 }
 

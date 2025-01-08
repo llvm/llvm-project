@@ -66,6 +66,7 @@ void test_edges()
                 assert(z == std::complex<T>());
             }
             break;
+        case lowest_value:
         case maximum_value:
         case non_zero:
             if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN)

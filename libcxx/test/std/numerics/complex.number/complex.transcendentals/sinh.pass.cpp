@@ -32,8 +32,6 @@ test()
     test(std::complex<T>(0, 0), std::complex<T>(0, 0));
 }
 
-#include <print>
-
 template<class T>
 void test_edges()
 {

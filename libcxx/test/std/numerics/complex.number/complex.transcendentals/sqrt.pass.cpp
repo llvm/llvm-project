@@ -114,12 +114,19 @@ void test_edges()
         }
         else if (std::signbit(testcases<T>[i].imag()))
         {
-            assert(!std::signbit(r.real()) || approaching_zero(r.real()));
+            // FIXME(https://github.com/llvm/llvm-project/issues/122172): move `expected_pass` into
+            // assert once #122172 is fixed.
+            const bool expected_pass = !std::signbit(r.real()) || approaching_zero(r.real());
+            assert((i != 156 || std::is_same<T, double>::value) ? expected_pass : !expected_pass);
             assert(std::signbit(r.imag()));
         }
         else
         {
-            assert(!std::signbit(r.real()) || approaching_zero(r.real()));
+
+            // FIXME(https://github.com/llvm/llvm-project/issues/122172): move `expected_pass` into
+            // assert once #122172 is fixed.
+            const bool expected_pass = !std::signbit(r.real()) || approaching_zero(r.real());
+            assert((i != 155 || std::is_same<T, double>::value) ? expected_pass : !expected_pass);
             assert(!std::signbit(r.imag()));
         }
     }

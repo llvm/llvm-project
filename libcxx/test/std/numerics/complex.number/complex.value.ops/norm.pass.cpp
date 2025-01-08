@@ -42,6 +42,7 @@ void test_edges()
         case non_zero:
             assert(std::isfinite(r) && r > 0);
             break;
+        case lowest_value:
         case maximum_value:
         case inf:
             assert(std::isinf(r) && r > 0);
