@@ -11,7 +11,7 @@ on:
       - main
     paths:
       - llvm/**/DirectX/**
-      - .github/workflows/hlsl*
+      - .github/workflows/hlsl-macos.yaml
       - .github/workflows/hlsl/*
       - clang/*HLSL*/**/*
       - clang/**/*HLSL*
