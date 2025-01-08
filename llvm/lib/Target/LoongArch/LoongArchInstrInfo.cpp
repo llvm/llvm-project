@@ -454,9 +454,6 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     // * pcalau12i $a0, %got_pc_hi20(s)
     //   ld.w/d $a0, $a0, %got_pc_lo12(s)
     //
-    // * pcalau12i $a0, %ie_pc_hi20(s)
-    //   ld.w/d $a0, $a0, %ie_pc_lo12(s)
-    //
     // * pcalau12i $a0, %ld_pc_hi20(s) | %gd_pc_hi20(s)
     //   addi.w/d $a0, $a0, %got_pc_lo12(s)
     //
@@ -492,9 +489,6 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       if (MO0 == LoongArchII::MO_GOT_PC_HI && SecondOp->getOpcode() == LdOp &&
           MO1 == LoongArchII::MO_GOT_PC_LO)
         return true;
-      if (MO0 == LoongArchII::MO_IE_PC_HI && SecondOp->getOpcode() == LdOp &&
-          MO1 == LoongArchII::MO_IE_PC_LO)
-        return true;
       if ((MO0 == LoongArchII::MO_LD_PC_HI ||
            MO0 == LoongArchII::MO_GD_PC_HI) &&
           SecondOp->getOpcode() == AddiOp && MO1 == LoongArchII::MO_GOT_PC_LO)
@@ -511,7 +505,7 @@ bool LoongArchInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     case LoongArch::LD_W:
     case LoongArch::LD_D: {
       auto MO = LoongArchII::getDirectFlags(MI.getOperand(2));
-      if (MO == LoongArchII::MO_GOT_PC_LO || MO == LoongArchII::MO_IE_PC_LO)
+      if (MO == LoongArchII::MO_GOT_PC_LO)
         return true;
       break;
     }

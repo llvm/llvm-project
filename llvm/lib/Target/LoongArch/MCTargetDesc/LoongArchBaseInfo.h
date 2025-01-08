@@ -75,7 +75,9 @@ static inline unsigned getDirectFlags(const MachineOperand &MO) {
 }
 
 // Add MO_RELAX "bitmask" flag when FeatureRelax is enabled.
-static inline unsigned addRelaxFlag(unsigned Flags) { return Flags | MO_RELAX; }
+static inline unsigned encodeFlags(unsigned Flags, bool Relax) {
+  return Flags | (Relax ? MO_RELAX : 0);
+}
 
 // \returns true if the given MachineOperand has MO_RELAX "bitmask" flag.
 static inline bool hasRelaxFlag(const MachineOperand &MO) {

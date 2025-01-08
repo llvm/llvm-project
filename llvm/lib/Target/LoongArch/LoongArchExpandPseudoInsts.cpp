@@ -196,14 +196,12 @@ bool LoongArchPreRAExpandPseudo::expandPcalau12iInstPair(
   MachineOperand &Symbol = MI.getOperand(1);
 
   BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg)
-      .addDisp(Symbol, 0,
-               EnableRelax ? LoongArchII::addRelaxFlag(FlagsHi) : FlagsHi);
+      .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsHi, EnableRelax));
 
   MachineInstr *SecondMI =
       BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
           .addReg(ScratchReg)
-          .addDisp(Symbol, 0,
-                   EnableRelax ? LoongArchII::addRelaxFlag(FlagsLo) : FlagsLo);
+          .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsLo, EnableRelax));
 
   if (MI.hasOneMemOperand())
     SecondMI->addMemOperand(*MF, *MI.memoperands_begin());
@@ -495,9 +493,8 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
 
   BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), Tmp1Reg)
       .addDisp(Symbol, 0,
-               (EnableRelax && !Large)
-                   ? LoongArchII::addRelaxFlag(LoongArchII::MO_DESC_PC_HI)
-                   : LoongArchII::MO_DESC_PC_HI);
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_HI,
+                                        EnableRelax && !Large));
 
   if (Large) {
     // Code Sequence:
@@ -539,24 +536,21 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
     // add.w/d   $dst, $a0, $tp
     BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
         .addReg(Tmp1Reg)
-        .addDisp(Symbol, 0,
-                 EnableRelax
-                     ? LoongArchII::addRelaxFlag(LoongArchII::MO_DESC_PC_LO)
-                     : LoongArchII::MO_DESC_PC_LO);
+        .addDisp(
+            Symbol, 0,
+            LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_LO, EnableRelax));
   }
 
   BuildMI(MBB, MBBI, DL, TII->get(LD), LoongArch::R1)
       .addReg(LoongArch::R4)
       .addDisp(Symbol, 0,
-               (EnableRelax && !Large)
-                   ? LoongArchII::addRelaxFlag(LoongArchII::MO_DESC_LD)
-                   : LoongArchII::MO_DESC_LD);
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_LD,
+                                        EnableRelax && !Large));
   BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PseudoDESC_CALL), LoongArch::R1)
       .addReg(LoongArch::R1)
       .addDisp(Symbol, 0,
-               (EnableRelax && !Large)
-                   ? LoongArchII::addRelaxFlag(LoongArchII::MO_DESC_CALL)
-                   : LoongArchII::MO_DESC_CALL);
+               LoongArchII::encodeFlags(LoongArchII::MO_DESC_CALL,
+                                        EnableRelax && !Large));
   BuildMI(MBB, MBBI, DL, TII->get(ADD), DestReg)
       .addReg(LoongArch::R4)
       .addReg(LoongArch::R2);
