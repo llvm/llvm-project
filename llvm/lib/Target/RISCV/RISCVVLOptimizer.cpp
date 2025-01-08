@@ -257,16 +257,24 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
   // Vector Unit-Stride Instructions
   // Vector Strided Instructions
   /// Dest EEW encoded in the instruction and EMUL=(EEW/SEW)*LMUL
+  case RISCV::VLE8_V:
   case RISCV::VSE8_V:
+  case RISCV::VLSE8_V:
   case RISCV::VSSE8_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(3, MI), 3);
+  case RISCV::VLE16_V:
   case RISCV::VSE16_V:
+  case RISCV::VLSE16_V:
   case RISCV::VSSE16_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(4, MI), 4);
+  case RISCV::VLE32_V:
   case RISCV::VSE32_V:
+  case RISCV::VLSE32_V:
   case RISCV::VSSE32_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(5, MI), 5);
+  case RISCV::VLE64_V:
   case RISCV::VSE64_V:
+  case RISCV::VLSE64_V:
   case RISCV::VSSE64_V:
     return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(6, MI), 6);
 
@@ -732,6 +740,31 @@ static bool isSupportedInstr(const MachineInstr &MI) {
     return false;
 
   switch (RVV->BaseInstr) {
+  // Vector Unit-Stride Instructions
+  // Vector Strided Instructions
+  case RISCV::VLE8_V:
+  case RISCV::VLSE8_V:
+  case RISCV::VLE16_V:
+  case RISCV::VLSE16_V:
+  case RISCV::VLE32_V:
+  case RISCV::VLSE32_V:
+  case RISCV::VLE64_V:
+  case RISCV::VLSE64_V:
+  // Vector Indexed Instructions
+  case RISCV::VLUXEI8_V:
+  case RISCV::VLOXEI8_V:
+  case RISCV::VLUXEI16_V:
+  case RISCV::VLOXEI16_V:
+  case RISCV::VLUXEI32_V:
+  case RISCV::VLOXEI32_V:
+  case RISCV::VLUXEI64_V:
+  case RISCV::VLOXEI64_V: {
+    for (const MachineMemOperand *MMO : MI.memoperands())
+      if (MMO->isVolatile())
+        return false;
+    return true;
+  }
+
   // Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
   case RISCV::VADD_VV:
