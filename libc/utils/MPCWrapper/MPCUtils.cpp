@@ -74,7 +74,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex float, XType>, bool> = 0>
-  MPCNumber(XType x, unsigned int precision = mpfr::ExtraPrecision<float>::VALUE,
+  MPCNumber(XType x,
+            unsigned int precision = mpfr::ExtraPrecision<float>::VALUE,
             MPCRoundingMode rounding = MPCRoundingMode(RoundingMode::Nearest,
                                                        RoundingMode::Nearest))
       : mpc_real_precision(precision), mpc_imag_precision(precision),
@@ -92,7 +93,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex double, XType>, bool> = 0>
-  MPCNumber(XType x, unsigned int precision = mpfr::ExtraPrecision<double>::VALUE,
+  MPCNumber(XType x,
+            unsigned int precision = mpfr::ExtraPrecision<double>::VALUE,
             MPCRoundingMode rounding = MPCRoundingMode(RoundingMode::Nearest,
                                                        RoundingMode::Nearest))
       : mpc_real_precision(precision), mpc_imag_precision(precision),
@@ -171,7 +173,8 @@ bool compare_unary_operation_single_output_same_type(Operation op,
                                                      double ulp_tolerance,
                                                      MPCRoundingMode rounding) {
 
-  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision =
+      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -206,7 +209,8 @@ bool compare_unary_operation_single_output_different_type(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
     MPCRoundingMode rounding) {
 
-  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision =
+      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -236,7 +240,8 @@ void explain_unary_operation_single_output_different_type_error(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
     MPCRoundingMode rounding) {
 
-  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision =
+      mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
