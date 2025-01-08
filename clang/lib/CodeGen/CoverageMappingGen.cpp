@@ -962,7 +962,8 @@ struct CounterCoverageMappingBuilder
 
     // The old behavior of SingleByte is unaware of Branches.
     if (llvm::EnableSingleByteCoverage) {
-      assert(SkipCntForOld);
+      assert(SkipCntForOld &&
+             "SingleByte must provide SkipCntForOld as a fake Skipped count.");
       return {ExecCnt, *SkipCntForOld};
     }
 
