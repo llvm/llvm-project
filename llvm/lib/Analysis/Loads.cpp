@@ -170,11 +170,11 @@ static bool isDereferenceableAndAlignedPointer(
 
   if (CtxI) {
     /// Look through assumes to see if both dereferencability and alignment can
-    /// be provent by an assume if needed.
+    /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
     RetainedKnowledge DerefRK;
     APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-    bool IsAligned = isAligned(V, Offset, Alignment, DL);
+    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
