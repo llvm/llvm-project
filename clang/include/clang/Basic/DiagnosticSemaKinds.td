@@ -10512,6 +10512,10 @@ def warn_second_parameter_to_va_arg_ownership_qualified : Warning<
 def warn_second_parameter_to_va_arg_never_compatible : Warning<
   "second argument to 'va_arg' is of promotable type %0; this va_arg has "
   "undefined behavior because arguments will be promoted to %1">, InGroup<Varargs>;
+def warn_second_parameter_to_va_arg_array : Warning<
+  "second argument to 'va_arg' is of array type %0; "
+  "this va_arg has undefined behavior because arguments "
+  "will never be compatible with array type">, InGroup<Varargs>;
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
@@ -12823,6 +12827,10 @@ def err_acc_loop_not_monotonic
             "('++', '--', or compound assignment)">;
 def err_acc_construct_one_clause_of
     : Error<"OpenACC '%0' construct must have at least one %1 clause">;
+def err_acc_update_as_body
+    : Error<"OpenACC 'update' construct may not appear in place of the "
+            "statement following a%select{n if statement| while statement| do "
+            "statement| switch statement| label statement}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

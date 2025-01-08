@@ -313,7 +313,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
     break;
 
   case llvm::Triple::UnknownOS:
-    if (triple.isWasm() || triple.isAppleMachO())
+    if (triple.isWasm())
       return false;
     break;
 
