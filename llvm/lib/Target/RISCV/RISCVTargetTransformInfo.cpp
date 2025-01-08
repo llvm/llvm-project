@@ -1058,37 +1058,44 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    auto NVT = LT.second;
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      SmallVector<unsigned, 3> Opcodes;
+      SmallVector<unsigned, 4> ConvOp;
+      SmallVector<unsigned, 2> FsqrtOp;
+      MVT ConvType = LT.second;
+      MVT FsqrtType = LT.second;
       // f16 with zvfhmin and bf16 with zvfbfmin and the type of nxv32[b]f16
       // will be spilt.
       if (LT.second.getVectorElementType() == MVT::bf16) {
         if (LT.second == MVT::nxv32bf16) {
-          Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
-                     RISCV::VFSQRT_V,         RISCV::VFSQRT_V,
-                     RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
-          NVT = MVT::nxv16f32;
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
+                    RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
         } else {
-          Opcodes = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFSQRT_V,
-                     RISCV::VFNCVTBF16_F_F_W};
-          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
         }
       } else if (LT.second.getVectorElementType() == MVT::f16 &&
                  !ST->hasVInstructionsF16()) {
         if (LT.second == MVT::nxv32f16) {
-          Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
-                     RISCV::VFSQRT_V,     RISCV::VFSQRT_V,
-                     RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
-          NVT = NVT = MVT::nxv16f32;
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
+                    RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
         } else {
-          Opcodes = {RISCV::VFWCVT_F_F_V, RISCV::VFSQRT_V, RISCV::VFNCVT_F_F_W};
-          NVT = TLI->getTypeToPromoteTo(ISD::FSQRT, NVT);
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
         }
       } else {
-        Opcodes = {RISCV::VFSQRT_V};
+        FsqrtOp = {RISCV::VFSQRT_V};
       }
-      return LT.first * getRISCVInstructionCost(Opcodes, NVT, CostKind);
+
+      return LT.first * (getRISCVInstructionCost(FsqrtOp, FsqrtType, CostKind) +
+                         getRISCVInstructionCost(ConvOp, ConvType, CostKind));
     }
     break;
   }
