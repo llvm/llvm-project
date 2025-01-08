@@ -329,13 +329,14 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
                            options::OPT_fno_sanitize_trap_EQ);
 }
 
-static void parseNoSanitizeHotArgs(const Driver &D,
-                                   const llvm::opt::ArgList &Args,
-                                   bool DiagnoseErrors,
-                                   SanitizerMaskCutoffs *Cutoffs) {
+static SanitizerMaskCutoffs
+parseNoSanitizeHotArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                       bool DiagnoseErrors) {
+  SanitizerMaskCutoffs Cutoffs;
   for (const auto *Arg : Args)
     if (Arg->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ))
-      parseArgCutoffs(D, Arg, DiagnoseErrors, *Cutoffs);
+      parseArgCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
+  return Cutoffs;
 }
 
 bool SanitizerArgs::needsFuzzerInterceptors() const {
@@ -729,7 +730,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
-  parseNoSanitizeHotArgs(D, Args, DiagnoseErrors, &TopHotCutoffs);
+  TopHotCutoffs = parseNoSanitizeHotArgs(D, Args, DiagnoseErrors);
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
