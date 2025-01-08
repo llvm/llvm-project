@@ -253,6 +253,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
   // CHECK-NEXT: IntegerLiteral{{.*}}1
 }
 
