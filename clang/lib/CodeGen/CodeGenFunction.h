@@ -615,10 +615,6 @@ public:
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
 
-  /// HLSL Branch attribute.
-  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
-      HLSLControlFlowHintAttr::SpellingNotCalculated;
-
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
@@ -4138,6 +4134,11 @@ public:
   }
 
   void EmitOpenACCSetConstruct(const OpenACCSetConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // but in the future we will implement some sort of IR.
   }

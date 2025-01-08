@@ -1507,6 +1507,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // ELF targets define __ELF__
   if (TI.getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
+  else if (TI.getTriple().isAppleMachO())
+    // Apple MachO targets define __MACH__ even when not using DarwinTargetInfo.
+    // Hurd will also define this in some circumstances, but that's done in
+    // HurdTargetInfo. Windows targets don't define this.
+    Builder.defineMacro("__MACH__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
