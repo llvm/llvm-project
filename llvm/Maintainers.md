@@ -46,7 +46,7 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 #### Inlining
 
 Arthur Eubanks \
-aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
+aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub) \
 Mircea Trofin (esp. ML inliner) \
 mtrofin@google.com (email), [mtrofin](https://github.com/mtrofin) (GitHub) \
 Kazu Hirata (esp. module inliner and inline order) \
