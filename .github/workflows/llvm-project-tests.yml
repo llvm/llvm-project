@@ -60,6 +60,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     container:
       image: ${{(startsWith(matrix.os, 'ubuntu') && 'ghcr.io/llvm/ci-ubuntu-22.04:latest') || null}}
+      # We run as the root user as when we need to install sccache, the action
+      # currently does not support running the installation commands using sudo.
+      options: --user root
       volumes:
         - /mnt/:/mnt/
     strategy:
