@@ -1351,6 +1351,9 @@ public:
     }
   }
 
+  /// Returns true if the underlying opcode may read from or write to memory.
+  bool opcodeMayReadOrWriteFromMemory() const;
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
