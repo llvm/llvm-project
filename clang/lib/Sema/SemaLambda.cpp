@@ -1456,7 +1456,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
-    SemaARM::CheckSMEFunctionDefAttributes(Method, *this);
+    ARM().CheckSMEFunctionDefAttributes(Method);
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)

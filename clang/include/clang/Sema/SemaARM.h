@@ -80,7 +80,7 @@ public:
   void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
 
-  static void CheckSMEFunctionDefAttributes(const FunctionDecl *FD, Sema &S);
+  void CheckSMEFunctionDefAttributes(const FunctionDecl *FD);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

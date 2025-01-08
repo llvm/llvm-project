@@ -12288,7 +12288,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   if (DeclIsDefn && Context.getTargetInfo().getTriple().isAArch64())
-    SemaARM::CheckSMEFunctionDefAttributes(NewFD, *this);
+    ARM().CheckSMEFunctionDefAttributes(NewFD);
 
   return Redeclaration;
 }
