@@ -109,8 +109,8 @@ int testContinueBreak() { // CHECK-NEXT: File 0, [[@LINE]]:25 -> [[@LINE+23]]:2 
     sum += i;        // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE+2]]:4 = [[C5F1]]
     i++;
   }
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:3 = ([[C5T1]] + [[C5E]])
-  return sum;        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = ([[C5T1]] + [[C5E]])
+                     // #0
+  return sum;        // #0
 }
 
 // CHECK-NEXT: testFor
