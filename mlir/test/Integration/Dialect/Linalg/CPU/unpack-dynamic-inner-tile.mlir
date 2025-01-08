@@ -9,7 +9,7 @@
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
 /// End-to-end test for tensor.unpack where one of the inner tile sizes is
-/// dynamic. See pack-dynamic-inner-tile.mlir for a similar test for tensor.pack.
+/// dynamic.
 
 func.func @main() {
   // Allocate and initialise the inputs
