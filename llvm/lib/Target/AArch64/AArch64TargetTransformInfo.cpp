@@ -4738,10 +4738,21 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
-  // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+  // A sebvector extract can be implemented with a ext (or trivial extract, if
+  // from lane 0). This currently only handles low or high extracts to prevent
+  // SLP vectorizer regressions.
+  if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
+    if (LT.second.is128BitVector() &&
+        cast<FixedVectorType>(SubTp)->getNumElements() ==
+            LT.second.getVectorNumElements() / 2) {
+      if (Index == 0)
+        return 0;
+      if (Index == (int)LT.second.getVectorNumElements() / 2)
+        return 1;
+    }
     Kind = TTI::SK_PermuteSingleSrc;
+  }
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get

@@ -1,4 +1,5 @@
-header: sys-random.h
+header: sys/random.h
+header_template: random.h.def
 macros: []
 types:
   - type_name: ssize_t
