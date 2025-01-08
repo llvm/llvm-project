@@ -573,6 +573,26 @@ body: |
     PseudoVSE8_V_MF2 %x, $noreg, 1, 3 /* e8 */
 ...
 ---
+name: vsm_v
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vsm_v
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: PseudoVSM_V_B8 %x, $noreg, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    PseudoVSM_V_B8 %x, $noreg, 1, 0
+...
+---
+name: vsm_v_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vsm_v_incompatible_emul
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: PseudoVSM_V_B16 %x, $noreg, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    PseudoVSM_V_B16 %x, $noreg, 1, 0
+...
+---
 name: vleN_v
 body: |
   bb.0:
@@ -601,6 +621,36 @@ body: |
     ; CHECK-NEXT: %x:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVLE8_V_M1 $noreg, $noreg, -1, 3 /* e8 */, 0
     %x:vr = PseudoVADD_VV_MF2 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
+...
+---
+name: vlm_v
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vlm_v
+    ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, 1, 0 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
+    %y:vr = PseudoVMAND_MM_B8 $noreg, %x, 1, 0
+...
+---
+name: vlm_v_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vlm_v_incompatible_eew
+    ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0 /* tu, mu */
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, $noreg, %x, 1, 4 /* e16 */, 0
+...
+---
+name: vlm_v_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vlm_v_incompatible_emul
+    ; CHECK: %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0 /* e8 */
+    %x:vr = PseudoVLM_V_B8 $noreg, $noreg, -1, 0, 0
+    %y:vr = PseudoVMAND_MM_B16 $noreg, %x, 1, 0
 ...
 ---
 name: vsseN_v
