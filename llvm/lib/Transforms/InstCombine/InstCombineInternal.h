@@ -435,9 +435,6 @@ private:
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
-  Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
-                                       Instruction *CxtI, bool IsAnd,
-                                       bool IsLogical = false);
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
