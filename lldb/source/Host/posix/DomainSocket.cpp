@@ -14,7 +14,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <strings.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
