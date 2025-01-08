@@ -3263,7 +3263,12 @@ private:
     };
 
     /// Checks if the current node is a gather node.
-    bool isGather() const {return State == NeedToGather; }
+    bool isGather() const {
+      assert(
+          (State == NeedToGather || S.valid()) &&
+          "InstructionsState must be valid if the TreeEntry is not gathered.");
+      return State == NeedToGather;
+    }
 
     /// A vector of scalars.
     ValueList Scalars;
