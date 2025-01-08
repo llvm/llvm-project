@@ -93,11 +93,15 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   ArrayRef<OperandBundleDef> ActualBundlesRef = OpBundles;
   SmallVector<OperandBundleDef, 2> ActualBundles;
 
+  bool doesCallAccessFPEnv = false;
   if (IsFPConstrained) {
     if (const auto *Func = dyn_cast<Function>(Callee)) {
+      // Some intrinsic functions in non-default FP mode must have FP operand
+      // bundles to indicate a side effect due to read/write FP environment.
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
         if (IntrinsicInst::canAccessFPEnvironment(ID)) {
           bool NeedRound = true, NeedExcept = true;
+          doesCallAccessFPEnv = true;
           for (const auto &Item : OpBundles) {
             if (NeedRound && Item.getTag() == "fpe.control")
               NeedRound = false;
@@ -112,11 +116,16 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
           ActualBundlesRef = ActualBundles;
         }
       }
+      // A call to a function that has the 'StrictFP' attribute makes the call
+      // site 'StrictFP' also.
+      else if (Func->hasFnAttribute(Attribute::StrictFP)) {
+        doesCallAccessFPEnv = true;
+      }
     }
   }
 
   CallInst *CI = CallInst::Create(FTy, Callee, Args, ActualBundlesRef);
-  if (IsFPConstrained)
+  if (IsFPConstrained && doesCallAccessFPEnv)
     setConstrainedFPCallAttr(CI);
   if (isa<FPMathOperator>(CI))
     setFPAttrs(CI, FPMathTag, FMF);

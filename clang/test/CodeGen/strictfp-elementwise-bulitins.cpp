@@ -20,7 +20,7 @@ float4 strict_fadd(float4 a, float4 b) {
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z22strict_elementwise_absDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_ABS:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_ABS:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[A]])
 // CHECK-NEXT:    ret <4 x float> [[ELT_ABS]]
 //
 float4 strict_elementwise_abs(float4 a) {
@@ -300,7 +300,7 @@ float4 strict_elementwise_trunc(float4 a) {
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z31strict_elementwise_canonicalizeDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ELT_CANONICALIZE:%.*]] = tail call <4 x float> @llvm.canonicalize.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    [[ELT_CANONICALIZE:%.*]] = tail call <4 x float> @llvm.canonicalize.v4f32(<4 x float> [[A]])
 // CHECK-NEXT:    ret <4 x float> [[ELT_CANONICALIZE]]
 //
 float4 strict_elementwise_canonicalize(float4 a) {
@@ -310,7 +310,7 @@ float4 strict_elementwise_canonicalize(float4 a) {
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z27strict_elementwise_copysignDv4_fS_
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.copysign.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.copysign.v4f32(<4 x float> [[A]], <4 x float> [[B]])
 // CHECK-NEXT:    ret <4 x float> [[TMP0]]
 //
 float4 strict_elementwise_copysign(float4 a, float4 b) {
