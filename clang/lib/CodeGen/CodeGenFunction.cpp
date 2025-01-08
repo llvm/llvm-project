@@ -2104,6 +2104,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
                         llvm::MDNode::get(CGM.getLLVMContext(), Vals));
     break;
   }
+  // This is required to avoid warnings during compilation
   case HLSLControlFlowHintAttr::SpellingNotCalculated:
     break;
   }
