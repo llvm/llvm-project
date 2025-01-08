@@ -942,9 +942,18 @@ struct CounterCoverageMappingBuilder
     Counter Skipped;
   };
 
-  BranchCounterPair getBranchCounterPair(const Stmt *S, Counter ParentCnt) {
+  BranchCounterPair
+  getBranchCounterPair(const Stmt *S, Counter ParentCnt,
+                       std::optional<Counter> SkipCntForOld = std::nullopt) {
     auto &TheMap = CounterMap[S];
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
+
+    // The old behavior of SingleByte shouldn't emit Branches.
+    if (llvm::EnableSingleByteCoverage) {
+      assert(SkipCntForOld);
+      return {ExecCnt, *SkipCntForOld};
+    }
+
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
 
@@ -964,25 +973,6 @@ struct CounterCoverageMappingBuilder
     MapToExpand[SkipCnt] = Builder.subst(Counters.Skipped, MapToExpand);
     Counters.Skipped = SkipCnt;
     return Counters;
-  }
-
-  /// Returns {TrueCnt,FalseCnt} for "implicit default".
-  /// FalseCnt is considered as the False count on SwitchStmt.
-  std::pair<Counter, Counter>
-  getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
-                                      Counter CaseCountSum) {
-    if (llvm::EnableSingleByteCoverage)
-      // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
-      return {Counter::getZero(), // Folded
-              Counter::getCounter(CounterMap[Cond].Skipped = NextCounterNum++)};
-
-    // Simplify is skipped while building the counters above: it can get
-    // really slow on top of switches with thousands of cases. Instead,
-    // trigger simplification by adding zero to the last counter.
-    CaseCountSum =
-        addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
-
-    return {CaseCountSum, Builder.subtract(ParentCount, CaseCountSum)};
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
@@ -1652,8 +1642,8 @@ struct CounterCoverageMappingBuilder
     // Go back to handle the condition.
     Counter CondCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
-    assert(ExecCount.isZero() || ExecCount == BodyCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     propagateCounts(CondCount, S->getCond());
     adjustForOutOfOrderTraversal(getEnd(S));
@@ -1663,7 +1653,7 @@ struct CounterCoverageMappingBuilder
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
-    Counter OutCount = addCounters(BC.BreakCount, ExitCount);
+    Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
@@ -1672,7 +1662,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    createBranchRegion(S->getCond(), BodyCount, ExitCount);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitDoStmt(const DoStmt *S) {
@@ -1693,19 +1683,19 @@ struct CounterCoverageMappingBuilder
     HasTerminateStmt = false;
 
     Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
-    assert(ExecCount.isZero() || ExecCount == BodyCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     propagateCounts(CondCount, S->getCond());
 
-    Counter OutCount = addCounters(BC.BreakCount, ExitCount);
+    Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
     }
 
     // Create Branch Region around condition.
-    createBranchRegion(S->getCond(), BodyCount, ExitCount);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
 
     if (BodyHasTerminateStmt)
       HasTerminateStmt = true;
@@ -1744,8 +1734,8 @@ struct CounterCoverageMappingBuilder
     Counter CondCount = addCounters(
         addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
         IncrementBC.ContinueCount);
-    auto [ExecCount, ExitCount] = getBranchCounterPair(S, CondCount);
-    assert(ExecCount.isZero() || ExecCount == BodyCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     if (const Expr *Cond = S->getCond()) {
       propagateCounts(CondCount, Cond);
@@ -1757,8 +1747,8 @@ struct CounterCoverageMappingBuilder
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
-    Counter OutCount =
-        addCounters(BodyBC.BreakCount, IncrementBC.BreakCount, ExitCount);
+    Counter OutCount = addCounters(BodyBC.BreakCount, IncrementBC.BreakCount,
+                                   BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
@@ -1767,7 +1757,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    createBranchRegion(S->getCond(), BodyCount, ExitCount);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
@@ -1795,10 +1785,10 @@ struct CounterCoverageMappingBuilder
 
     Counter LoopCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] = getBranchCounterPair(S, LoopCount);
-    assert(ExecCount.isZero() || ExecCount == BodyCount);
+    auto BranchCount = getBranchCounterPair(S, LoopCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
-    Counter OutCount = addCounters(BC.BreakCount, ExitCount);
+    Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
@@ -1807,7 +1797,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    createBranchRegion(S->getCond(), BodyCount, ExitCount);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
@@ -1829,9 +1819,9 @@ struct CounterCoverageMappingBuilder
 
     Counter LoopCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto [ExecCount, ExitCount] = getBranchCounterPair(S, LoopCount);
-    assert(ExecCount.isZero() || ExecCount == BodyCount);
-    Counter OutCount = addCounters(BC.BreakCount, ExitCount);
+    auto BranchCount = getBranchCounterPair(S, LoopCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
+    Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
@@ -1903,9 +1893,15 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      auto Counters = getSwitchImplicitDefaultCounterPair(
-          S->getCond(), ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), Counters.first, Counters.second);
+      // Simplify is skipped while building the counters above: it can get
+      // really slow on top of switches with thousands of cases. Instead,
+      // trigger simplification by adding zero to the last counter.
+      CaseCountSum =
+          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+      // This is considered as the False count on SwitchStmt.
+      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
     }
   }
 
