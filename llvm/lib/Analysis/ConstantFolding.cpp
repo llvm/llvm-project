@@ -3036,8 +3036,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
       case Intrinsic::nvvm_fmin_xorsign_abs_f: {
 
-        bool ShouldCanonicalizeNaNs = IntrinsicID != Intrinsic::nvvm_fmax_d &&
-                                      IntrinsicID != Intrinsic::nvvm_fmin_d;
+        bool ShouldCanonicalizeNaNs = !(IntrinsicID == Intrinsic::nvvm_fmax_d ||
+                                        IntrinsicID == Intrinsic::nvvm_fmin_d);
         bool IsFTZ = nvvm::FMinFMaxShouldFTZ(IntrinsicID);
         bool IsNaNPropagating = nvvm::FMinFMaxPropagatesNaNs(IntrinsicID);
         bool IsXorSignAbs = nvvm::FMinFMaxIsXorSignAbs(IntrinsicID);
