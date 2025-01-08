@@ -36,6 +36,7 @@ struct ArchInfo;
 struct CpuInfo;
 
 #include "llvm/TargetParser/AArch64CPUFeatures.inc"
+#include "llvm/TargetParser/AArch64FeatPriorities.inc"
 
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
