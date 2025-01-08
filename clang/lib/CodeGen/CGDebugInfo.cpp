@@ -1721,7 +1721,8 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
 
   assert(PreviousBitfield->isBitField());
 
-  if (!PreviousBitfield->isZeroLengthBitField())
+  ASTContext &Context = CGM.getContext();
+  if (!PreviousBitfield->isZeroLengthBitField(Context))
     return nullptr;
 
   QualType Ty = PreviousBitfield->getType();
@@ -3213,8 +3214,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     if (!FType->isIncompleteArrayType()) {
 
       // Bit size, align and offset of the type.
-      FieldSize = Field->isBitField() ? Field->getBitWidthValue()
-                                      : CGM.getContext().getTypeSize(FType);
+      FieldSize = Field->isBitField()
+                      ? Field->getBitWidthValue(CGM.getContext())
+                      : CGM.getContext().getTypeSize(FType);
       FieldAlign = getTypeAlignIfRequired(FType, CGM.getContext());
     }
 
