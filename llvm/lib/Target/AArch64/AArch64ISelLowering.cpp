@@ -26373,9 +26373,10 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 ///   (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
 ///
 /// We prefer this canonical form to match existing isel patterns.
-static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && VT != MVT::i64)
+static SDValue performSHLCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 SelectionDAG &DAG) {
+  if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
@@ -26389,13 +26390,14 @@ static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
 
   // Might be folded into shifted op, do not lower.
   if (N->hasOneUse()) {
-    unsigned UseOpc = N->use_begin()->getOpcode();
+    unsigned UseOpc = N->user_begin()->getOpcode();
     if (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
         UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS)
       return SDValue();
   }
 
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
   SDValue X = Op0->getOperand(0);
   SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
@@ -26748,7 +26750,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
   case ISD::SHL:
-    return performSHLCombine(N, DAG);
+    return performSHLCombine(N, DCI, DAG);
   }
   return SDValue();
 }
