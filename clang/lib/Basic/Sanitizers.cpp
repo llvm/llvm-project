@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Sanitizers.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -96,10 +96,9 @@ void clang::serializeSanitizerMaskCutoffs(
     const SanitizerMaskCutoffs &Cutoffs, SmallVectorImpl<std::string> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
   if (auto C = Cutoffs[SanitizerKind::SO_##ID]) {                              \
-    llvm::APFloat F(*C);                                                       \
     std::string Str;                                                           \
     llvm::raw_string_ostream OS(Str);                                          \
-    OS << NAME "=" << F;                                                       \
+    OS << NAME "=" << llvm::format("%.8f", *C);                                \
     Values.emplace_back(std::move(Str));                                       \
   }
 #include "clang/Basic/Sanitizers.def"
