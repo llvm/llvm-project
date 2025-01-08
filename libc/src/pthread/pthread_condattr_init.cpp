@@ -11,8 +11,8 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include "hdr/time_macros.h"
-#include <pthread.h> // pthread_condattr_t, PTHREAD_PROCESS_PRIVATE
+#include "hdr/time_macros.h" // CLOCK_REALTIME
+#include <pthread.h>         // pthread_condattr_t, PTHREAD_PROCESS_PRIVATE
 
 namespace LIBC_NAMESPACE_DECL {
 
