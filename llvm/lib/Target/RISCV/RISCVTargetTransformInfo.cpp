@@ -1547,18 +1547,18 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     if (ISD == ISD::AND) {
       // Example sequences:
       //   vmand.mm v8, v9, v8 ; needed every time type is split
-      //   vmnot.m v8, v0
+      //   vmnot.m v8, v0      ; alias for vmnand
       //   vcpop.m a0, v8
       //   seqz a0, a0
 
-      // Scalable VT: In nxv256i1 and larger vector elements,
-      // Fixed VT:    If getFixedSizeInBits() >= (4 * getRealMinVLen()),
-      //   the VMAND_MM instructions have started to be added.
-      InstructionCost NumOfVMAND = 0;
-      if (LT.second.isScalableVector() ||
-          LT.second.getFixedSizeInBits() == ST->getRealMinVLen())
-        NumOfVMAND = (LT.first > 2) ? (LT.first - 2) : 0;
-      return NumOfVMAND *
+      // See the discussion: https://github.com/llvm/llvm-project/pull/119160
+      // For LMUL <= 8, there is no splitting,
+      //   the sequences are vmnot, vcpop and seqz.
+      // When LMUL > 8 and split = 1,
+      //   the sequences are vmnand, vcpop and seqz.
+      // When LMUL > 8 and split > 1,
+      //   the sequences are (LT.first-2) * vmand, vmnand, vcpop and seqz.
+      return ((LT.first > 2) ? (LT.first - 2) : 0) *
                  getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
