@@ -138,8 +138,8 @@ class EmptySubobjectMap {
     return Offset <= MaxEmptyClassOffset;
   }
 
-  CharUnits
-  getFieldOffset(const ASTRecordLayout &Layout, const FieldDecl *Field) const {
+  CharUnits getFieldOffset(const ASTRecordLayout &Layout,
+                           const FieldDecl *Field) const {
     uint64_t FieldOffset = Layout.getFieldOffset(Field->getFieldIndex());
     assert(FieldOffset % CharWidth == 0 &&
            "Field offset not at char boundary!");
@@ -458,9 +458,8 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
   return true;
 }
 
-bool
-EmptySubobjectMap::CanPlaceFieldAtOffset(const FieldDecl *FD,
-                                         CharUnits Offset) {
+bool EmptySubobjectMap::CanPlaceFieldAtOffset(const FieldDecl *FD,
+                                              CharUnits Offset) {
   if (!CanPlaceFieldSubobjectAtOffset(FD, Offset))
     return false;
 
@@ -3661,7 +3660,8 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
 
   // Dump fields.
   for (const FieldDecl *Field : RD->fields()) {
-    uint64_t LocalFieldOffsetInBits = Layout.getFieldOffset(Field->getFieldIndex());
+    uint64_t LocalFieldOffsetInBits =
+        Layout.getFieldOffset(Field->getFieldIndex());
     CharUnits FieldOffset =
       Offset + C.toCharUnitsFromBits(LocalFieldOffsetInBits);
 

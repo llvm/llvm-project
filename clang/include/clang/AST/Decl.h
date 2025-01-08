@@ -3129,7 +3129,6 @@ private:
   void setCachedFieldIndex() const;
 
 public:
-
   /// Determines whether this field is mutable (C++ only).
   bool isMutable() const { return Mutable; }
 
