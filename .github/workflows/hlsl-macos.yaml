@@ -21,6 +21,6 @@ jobs:
     uses: ./.github/workflows/hlsl-test-all.yaml
     with:
       OS: macOS
-      SKU: hlsl-metal
+      SKU: hlsl-macos
       TestTarget: check-hlsl-clang-mtl
       LLVM-branch: ${{ github.ref }}
