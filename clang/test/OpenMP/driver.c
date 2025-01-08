@@ -11,12 +11,13 @@
 // CHECK-NO-TLS: "-cc1"
 // CHECK-NO-TLS-SAME: -fnoopenmp-use-tls
 //
-// RUN: %clang %s -c -E -dM -fopenmp=libomp | FileCheck --check-prefix=CHECK-DEFAULT-VERSION %s
+// RUN: %clang %s -c -E -dM -fopenmp=libomp | FileCheck --check-prefix=CHECK-60-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=1 | FileCheck --check-prefix=CHECK-DEFAULT-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=0 | FileCheck --check-prefix=CHECK-DEFAULT-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=100 | FileCheck --check-prefix=CHECK-DEFAULT-VERSION %s
 // RUN: %clang %s -c -E -dM -fopenmp=libomp | FileCheck --check-prefix=CHECK-DEFAULT-VERSION %s
 
+// CHECK-60-VERSION: #define _OPENMP 202411
 // CHECK-DEFAULT-VERSION: #define _OPENMP 202011
 
 // RUN: %clang %s -c -E -dM -fopenmp=libomp -fopenmp-version=31 | FileCheck --check-prefix=CHECK-31-VERSION %s
