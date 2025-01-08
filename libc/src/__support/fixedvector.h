@@ -29,21 +29,24 @@ public:
   using iterator = typename cpp::array<T, CAPACITY>::iterator;
   LIBC_INLINE constexpr FixedVector(iterator begin, iterator end)
       : store{}, item_count{} {
+    LIBC_ASSERT(begin + CAPACITY >= end);
     for (; begin != end; ++begin)
-      LIBC_ASSERT(push_back(*begin));
+      push_back(*begin);
   }
 
   using const_iterator = typename cpp::array<T, CAPACITY>::const_iterator;
   LIBC_INLINE constexpr FixedVector(const_iterator begin, const_iterator end)
       : store{}, item_count{} {
+    LIBC_ASSERT(begin + CAPACITY >= end);
     for (; begin != end; ++begin)
-      LIBC_ASSERT(push_back(*begin));
+      push_back(*begin);
   }
 
   LIBC_INLINE constexpr FixedVector(size_t count, const T &value)
       : store{}, item_count{} {
+    LIBC_ASSERT(count <= CAPACITY);
     for (size_t i = 0; i < count; ++i)
-      LIBC_ASSERT(push_back(value));
+      push_back(value);
   }
 
   LIBC_INLINE constexpr bool push_back(const T &obj) {
