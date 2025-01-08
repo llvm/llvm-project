@@ -226,7 +226,11 @@ int bad16();
 void bad17(void (fp [[clang::sycl_kernel_entry_point(BADKN<17>)]])());
 
 // Function template parameters.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// FIXME: Clang currently ignores attributes that appear in template parameters
+// FIXME: and the C++ standard is unclear regarding whether such attributes are
+// FIXME: permitted. P3324 (Attributes for namespace aliases, template
+// FIXME: parameters, and lambda captures) seeks to clarify the situation.
+// FIXME-expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
 template<void (fp [[clang::sycl_kernel_entry_point(BADKN<18>)]])()>
 void bad18();
 

@@ -1550,8 +1550,6 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     IdResolver.AddDecl(Param);
   }
 
-  ProcessDeclAttributes(S, Param, D);
-
   // C++0x [temp.param]p9:
   //   A default template-argument may be specified for any kind of
   //   template-parameter that is not a template parameter pack.
