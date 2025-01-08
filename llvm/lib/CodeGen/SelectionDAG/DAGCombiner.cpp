@@ -141,7 +141,7 @@ static cl::opt<bool> EnableReduceLoadOpStoreWidth(
 static cl::opt<bool> ReduceLoadOpStoreWidthForceNarrowingProfitable(
     "combiner-reduce-load-op-store-width-force-narrowing-profitable",
     cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner force override the narrowing profitable check when"
+    cl::desc("DAG combiner force override the narrowing profitable check when "
              "reducing the width of load/op/store sequences"));
 
 static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(

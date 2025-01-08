@@ -43,9 +43,9 @@ STATISTIC(LoadsClustered, "Number of loads clustered together");
 // without a target itinerary. The choice of number here has more to do with
 // balancing scheduler heuristics than with the actual machine latency.
 static cl::opt<int> HighLatencyCycles(
-  "sched-high-latency-cycles", cl::Hidden, cl::init(10),
-  cl::desc("Roughly estimate the number of cycles that 'long latency'"
-           "instructions take for targets with no itinerary"));
+    "sched-high-latency-cycles", cl::Hidden, cl::init(10),
+    cl::desc("Roughly estimate the number of cycles that 'long latency' "
+             "instructions take for targets with no itinerary"));
 
 ScheduleDAGSDNodes::ScheduleDAGSDNodes(MachineFunction &mf)
     : ScheduleDAG(mf), InstrItins(mf.getSubtarget().getInstrItineraryData()) {}

@@ -30,5 +30,7 @@ d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
 revert: breaks oclTst
 b2adeae8 [AMDGPU][MC] Allow null where 128b or larger dst reg is expected
-Ron and Brox
+depends on above:
+[AMDGPU] Disallow null for more resource operands (#121941)
+Ron and Shore
 ---
