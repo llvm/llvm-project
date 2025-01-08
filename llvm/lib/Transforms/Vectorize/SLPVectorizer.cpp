@@ -962,8 +962,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
-  for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
-    auto *I = dyn_cast<Instruction>(VL[Cnt]);
+  // Skip MainOp.
+  while (++It != VL.end()) {
+    auto *I = dyn_cast<Instruction>(*It);
     if (!I)
       continue;
 
@@ -999,7 +1000,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
           continue;
         }
       }
-    } else if (auto *Inst = dyn_cast<CmpInst>(VL[Cnt]); Inst && IsCmpOp) {
+    } else if (auto *Inst = dyn_cast<CmpInst>(I); Inst && IsCmpOp) {
       auto *BaseInst = cast<CmpInst>(MainOp);
       Type *Ty0 = BaseInst->getOperand(0)->getType();
       Type *Ty1 = Inst->getOperand(0)->getType();
@@ -1014,7 +1015,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         CmpInst::Predicate SwappedCurrentPred =
             CmpInst::getSwappedPredicate(CurrentPred);
 
-        if ((E == 2 || SwappedPredsCompatible) &&
+        if ((VL.size() == 2 || SwappedPredsCompatible) &&
             (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
           continue;
 
