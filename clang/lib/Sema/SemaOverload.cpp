@@ -516,7 +516,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
       if (BitField->getBitWidth()->isValueDependent())
         DependentBitField = true;
-      else if (unsigned BitFieldWidth = BitField->getBitWidthValue();
+      else if (unsigned BitFieldWidth = BitField->getBitWidthValue(Ctx);
                BitFieldWidth < FromWidth) {
         if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth))
           return NK_Not_Narrowing;

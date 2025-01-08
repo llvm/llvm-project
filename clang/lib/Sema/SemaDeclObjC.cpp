@@ -2210,7 +2210,8 @@ void SemaObjC::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
         << ImplIvar->getType() << ClsIvar->getType();
       Diag(ClsIvar->getLocation(), diag::note_previous_definition);
     } else if (ImplIvar->isBitField() && ClsIvar->isBitField() &&
-               ImplIvar->getBitWidthValue() != ClsIvar->getBitWidthValue()) {
+               ImplIvar->getBitWidthValue(Context) !=
+               ClsIvar->getBitWidthValue(Context)) {
       Diag(ImplIvar->getBitWidth()->getBeginLoc(),
            diag::err_conflicting_ivar_bitwidth)
           << ImplIvar->getIdentifier();

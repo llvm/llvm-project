@@ -4599,24 +4599,18 @@ void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
     Init = NewInit;
 }
 
-unsigned FieldDecl::getBitWidthValue() const {
+unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   assert(isBitField() && "not a bitfield");
-  assert(isa<ConstantExpr>(getBitWidth()));
-  assert(cast<ConstantExpr>(getBitWidth())->hasAPValueResult());
-  assert(cast<ConstantExpr>(getBitWidth())->getAPValueResult().isInt());
-  return cast<ConstantExpr>(getBitWidth())
-      ->getAPValueResult()
-      .getInt()
-      .getZExtValue();
+  return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
 }
 
-bool FieldDecl::isZeroLengthBitField() const {
+bool FieldDecl::isZeroLengthBitField(const ASTContext &Ctx) const {
   return isUnnamedBitField() && !getBitWidth()->isValueDependent() &&
-         getBitWidthValue() == 0;
+         getBitWidthValue(Ctx) == 0;
 }
 
 bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
-  if (isZeroLengthBitField())
+  if (isZeroLengthBitField(Ctx))
     return true;
 
   // C++2a [intro.object]p7:
