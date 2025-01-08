@@ -5,8 +5,8 @@ target triple = "nvptx64-nvidia-cuda"
 
 @a = external global ptr align 16
 
-define i32  @test_v2i8(i16 %a) {
-; CHECK-LABEL: test_v2i8(
+define i32  @test_disjoint_or_addr(i16 %a) {
+; CHECK-LABEL: test_disjoint_or_addr(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -14,12 +14,12 @@ define i32  @test_v2i8(i16 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.u64 %rd1, a;
 ; CHECK-NEXT:    cvta.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.volatile.u32 %r1, [%rd2+8];
+; CHECK-NEXT:    ld.u32 %r1, [%rd2+8];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %a1 = ptrtoint ptr @a to i64
   %a2 = or disjoint i64 %a1, 8
   %a3 = inttoptr i64 %a2 to ptr
-  %v = load volatile i32, ptr %a3
+  %v = load i32, ptr %a3
   ret i32 %v
 }
