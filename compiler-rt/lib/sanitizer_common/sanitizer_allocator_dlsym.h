@@ -37,7 +37,7 @@ struct DlSymAllocator {
     void *ptr = InternalAlloc(size_in_bytes, nullptr, align);
     CHECK(internal_allocator()->FromPrimary(ptr));
     Details::OnAllocate(ptr,
-                        internal_allocator()->GetActuallyAllocatedSize(ptr));
+                        Size(ptr));
     return ptr;
   }
 
@@ -45,12 +45,12 @@ struct DlSymAllocator {
     void *ptr = InternalCalloc(nmemb, size);
     CHECK(internal_allocator()->FromPrimary(ptr));
     Details::OnAllocate(ptr,
-                        internal_allocator()->GetActuallyAllocatedSize(ptr));
+                        Size(ptr));
     return ptr;
   }
 
   static void Free(void *ptr) {
-    uptr size = internal_allocator()->GetActuallyAllocatedSize(ptr);
+    uptr size = Size(ptr);
     Details::OnFree(ptr, size);
     InternalFree(ptr);
   }
@@ -63,7 +63,7 @@ struct DlSymAllocator {
       Free(ptr);
       return nullptr;
     }
-    uptr size = internal_allocator()->GetActuallyAllocatedSize(ptr);
+    uptr size = Size(ptr);
     uptr memcpy_size = Min(new_size, size);
     void *new_ptr = Allocate(new_size);
     if (new_ptr)
@@ -75,6 +75,10 @@ struct DlSymAllocator {
   static void *ReallocArray(void *ptr, uptr count, uptr size) {
     CHECK(!CheckForCallocOverflow(count, size));
     return Realloc(ptr, count * size);
+  }
+
+  static uptr Size(void *ptr) {
+    return internal_allocator()->GetActuallyAllocatedSize(ptr);
   }
 
   static void OnAllocate(const void *ptr, uptr size) {}
