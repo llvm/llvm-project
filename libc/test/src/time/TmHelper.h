@@ -27,8 +27,7 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
                     .tm_mday = mday,
                     .tm_mon = month - 1, // tm_mon starts with 0 for Jan
                     // years since 1900
-                    .tm_year =
-                        year - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE,
+                    .tm_year = year - time_constants::TIME_YEAR_BASE,
                     .tm_wday = wday,
                     .tm_yday = yday,
                     .tm_isdst = 0};
