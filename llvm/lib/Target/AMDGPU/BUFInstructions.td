@@ -179,7 +179,7 @@ class getMTBUFInsDA<list<RegisterClass> vdataList,
                 !con((ins vdata_op:$vdata), Inputs));
 }
 
-class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList, [], hasRestrictedSOffset, RsrcRC>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasRestrictedSOffset, RsrcRC>.ret,
@@ -221,7 +221,7 @@ class MTBUF_Load_Pseudo <string opName,
                          RegisterClass vdataClass,
                          int elems,
                          bit hasRestrictedSOffset = 0,
-                         DAGOperand RsrcRC = SReg_128,
+                         DAGOperand RsrcRC = SReg_128_XNULL,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind>
@@ -238,7 +238,7 @@ class MTBUF_Load_Pseudo <string opName,
 }
 
 multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterClass vdataClass,
-                              int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+                              int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
 
   def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasRestrictedSOffset, RsrcRC>,
                 MTBUFAddr64Table<0, NAME>;
@@ -270,7 +270,7 @@ class MTBUF_Store_Pseudo <string opName,
                           RegisterClass vdataClass,
                           int elems,
                           bit hasRestrictedSOffset = 0,
-                          DAGOperand RsrcRC = SReg_128,
+                          DAGOperand RsrcRC = SReg_128_XNULL,
                           list<dag> pattern=[],
                           // Workaround bug bz30254
                           int addrKindCopy = addrKind,
@@ -288,7 +288,7 @@ class MTBUF_Store_Pseudo <string opName,
 }
 
 multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterClass vdataClass,
-                               int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128> {
+                               int elems, bit hasRestrictedSOffset, DAGOperand RsrcRC = SReg_128_XNULL> {
 
   def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasRestrictedSOffset, RsrcRC>,
     MTBUFAddr64Table<0, NAME>;
@@ -416,7 +416,7 @@ class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
 }
 
 class getMUBUFInsDA<list<RegisterClass> vdataList,
-                    list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                    list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
   RegisterClass vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdataClass, isTFE>.ret;
@@ -447,7 +447,7 @@ class getMUBUFElements<ValueType vt> {
     );
 }
 
-class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, RsrcRC>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset, RsrcRC>.ret,
@@ -494,7 +494,7 @@ class MUBUF_Load_Pseudo <string opName,
                          bit isLdsOpc = 0,
                          bit isTFE = 0,
                          bit hasRestrictedSOffset = 0,
-                         DAGOperand RsrcRC = SReg_128,
+                         DAGOperand RsrcRC = SReg_128_XNULL,
                          list<dag> pattern=[],
                          // Workaround bug bz30254
                          int addrKindCopy = addrKind,
@@ -548,7 +548,7 @@ multiclass MUBUF_Pseudo_Load_Pats<string BaseInst, ValueType load_vt = i32, SDPa
 }
 
 multiclass MUBUF_Pseudo_Loads_Helper<string opName, ValueType load_vt,
-                                     bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                                     bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
   defvar legal_load_vt = !if(!eq(load_vt, v3f16), v4f16, load_vt);
 
   def _OFFSET : MUBUF_Load_Pseudo <opName, BUFAddrKind.Offset, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>,
@@ -628,7 +628,7 @@ class MUBUF_Discard_Pseudo <string opName, int addrKind, DAGOperand RsrcRC>
   let tfe = 0;
 }
 
-multiclass MUBUF_Pseudo_Discard_Helper<string opName, DAGOperand RsrcRC = SReg_128> {
+multiclass MUBUF_Pseudo_Discard_Helper<string opName, DAGOperand RsrcRC = SReg_128_XNULL> {
   def _OFFSET : MUBUF_Discard_Pseudo <opName, BUFAddrKind.Offset, RsrcRC>,
                         MUBUFAddr64Table<0, NAME>;
 
@@ -658,7 +658,7 @@ class MUBUF_Store_Pseudo <string opName,
                           ValueType store_vt,
                           bit isTFE = 0,
                           bit hasRestrictedSOffset = 0,
-                          DAGOperand RsrcRC = SReg_128,
+                          DAGOperand RsrcRC = SReg_128_XNULL,
                           list<dag> pattern=[],
                           // Workaround bug bz30254
                           int addrKindCopy = addrKind>
@@ -695,7 +695,7 @@ multiclass MUBUF_Pseudo_Store_Pats<string BaseInst, ValueType store_vt = i32, SD
 }
 
 multiclass MUBUF_Pseudo_Stores_Helper<string opName, ValueType store_vt,
-                                      bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128> {
+                                      bit isTFE, bit hasRestrictedSOffset, DAGOperand RsrcRC=SReg_128_XNULL> {
   defvar legal_store_vt = !if(!eq(store_vt, v3f16), v4f16, store_vt);
 
   def _OFFSET : MUBUF_Store_Pseudo <opName, BUFAddrKind.Offset, legal_store_vt, isTFE, hasRestrictedSOffset, RsrcRC>,
@@ -729,7 +729,7 @@ multiclass MUBUF_Pseudo_Stores<string opName, ValueType store_vt = i32> {
 class MUBUF_Pseudo_Store_Lds<string opName>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 (ins SReg_128:$srsrc, SCSrc_b32:$soffset, Offset:$offset, CPol:$cpol, i1imm:$swz),
+                 (ins SReg_128_XNULL:$srsrc, SCSrc_b32:$soffset, Offset:$offset, CPol:$cpol, i1imm:$swz),
                  " $srsrc, $soffset$offset lds$cpol"> {
   let LGKM_CNT = 1;
   let mayLoad = 1;
@@ -763,7 +763,7 @@ class getMUBUFAtomicIns<int addrKind,
                         RegisterClass vdataClass,
                         bit vdata_in,
                         bit hasRestrictedSOffset,
-                        DAGOperand RsrcRC=SReg_128,
+                        DAGOperand RsrcRC=SReg_128_XNULL,
                         // Workaround bug bz30254
                         RegisterClass vdataClassCopy=vdataClass> {
   dag ret =
@@ -803,7 +803,7 @@ class MUBUF_Atomic_Pseudo<string opName,
 class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
                                RegisterClass vdataClass,
                                bit hasRestrictedSOffset = 0,
-                               DAGOperand RsrcRC = SReg_128,
+                               DAGOperand RsrcRC = SReg_128_XNULL,
                                list<dag> pattern=[],
                                // Workaround bug bz30254
                                int addrKindCopy = addrKind,
@@ -823,7 +823,7 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
 class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
                              RegisterClass vdataClass,
                              bit hasRestrictedSOffset = 0,
-                             DAGOperand RsrcRC = SReg_128,
+                             DAGOperand RsrcRC = SReg_128_XNULL,
                              list<dag> pattern=[],
                              // Workaround bug bz30254
                              int addrKindCopy = addrKind,
@@ -856,7 +856,7 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
     def _BOTHEN : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
     foreach Infix = ["_indexed", ""] in {
-    defvar RsrcRC = !if(!eq(Infix, ""), SReg_128, RsrcReg128Op);
+    defvar RsrcRC = !if(!eq(Infix, ""), SReg_128_XNULL, RsrcReg128Op);
 
     def _VBUFFER # Infix # _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, RsrcRC>,
                   MUBUFAddr64Table <0, NAME # "_VBUFFER" # Infix>;
@@ -874,13 +874,13 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
                                      ValueType vdataType,
                                      SDPatternOperator atomic> {
   let FPAtomic = vdataType.isFP in {
-    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0, SReg_128,
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0, SReg_128_XNULL,
       [(set vdataType:$vdata,
        (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
                vdataType:$vdata_in))]>,
       MUBUFAddr64Table <0, NAME # "_RTN">;
 
-    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0, SReg_128,
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0, SReg_128_XNULL,
       [(set vdataType:$vdata,
        (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
                 vdataType:$vdata_in))]>,
@@ -890,13 +890,13 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
     def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass, 0>;
     def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
-    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, SReg_128,
+    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1, SReg_128_XNULL,
       [(set vdataType:$vdata,
        (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
                vdataType:$vdata_in))]>,
       MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
 
-    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1, SReg_128,
+    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1, SReg_128_XNULL,
       [(set vdataType:$vdata,
        (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
                 vdataType:$vdata_in))]>,

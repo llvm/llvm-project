@@ -243,8 +243,9 @@ public:
   }
 
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy) {
-    return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+                                       Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,

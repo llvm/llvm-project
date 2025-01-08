@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1301 -verify-machineinstrs -o - %s | FileCheck -check-prefixes=SOUT %s
 
 %class.ExpAmdWorkgroupWaveBarrier = type { target("amdgcn.named.barrier", 0) }
 %class.ExpAmdClusterWaveBarrier = type { target("amdgcn.named.barrier", 1) }
@@ -14,6 +15,7 @@
 ; CHECK-NEXT: @ClusterBar = internal addrspace(3) global %class.ExpAmdClusterWaveBarrier poison, !absolute_symbol !3
 ; CHECK-NEXT: @bar1.kernel1 = internal addrspace(3) global [4 x %class.ExpAmdWorkgroupWaveBarrier] poison, !absolute_symbol !2
 
+; SOUT:        .set func1.num_named_barrier, 7
 define void @func1() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
@@ -21,6 +23,7 @@ define void @func1() {
     ret void
 }
 
+; SOUT:        .set func2.num_named_barrier, 2
 define void @func2() {
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
@@ -31,6 +34,7 @@ define void @func2() {
     ret void
 }
 
+; SOUT:        .set kernel1.num_named_barrier, max(6, func1.num_named_barrier, func2.num_named_barrier)
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
@@ -44,6 +48,7 @@ define amdgpu_kernel void @kernel1() #0 {
     ret void
 }
 
+; SOUT:        .set kernel2.num_named_barrier, max(6, func2.num_named_barrier)
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
     call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)

@@ -3568,6 +3568,19 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+def Sincos : FPMathTemplate, GNULibBuiltin<"math.h"> {
+  let Spellings = ["sincos"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(T, T*, T*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def SincosF16F128 : F16F128MathTemplate, Builtin {
+  let Spellings = ["__builtin_sincos"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["ldexp"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];

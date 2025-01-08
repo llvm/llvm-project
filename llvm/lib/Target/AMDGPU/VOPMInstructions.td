@@ -133,7 +133,7 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
 
-  let Inst{73-64} = src2;
+  let Inst{73-64} = !if(pfl.HasSrc2, src2, ?);
   let Inst{75-74} = idxs{13-12};    // src2_idx
 
   let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
@@ -828,19 +828,24 @@ def FmaFromTensorLayout {
 
 class Fma_From_Tensor_Profile<list<ValueType> ArgTy, int OpLayout> : VOPMProfile<ArgTy, 1, 1, 0, 0> {
   let Outs64 = (outs DstRC64:$vdst);
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs);
+  let Ins64 = !if(HasSrc2, (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs),
+                           (ins Src0RC64:$src0, Src1RC64:$src1, Src3RC64:$src3, AuxData:$aux_data, Clamp0:$clamp, Idxs0:$idxs));
 
-  dag FmaFromTensorInPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
-  dag FmaFromTensorOutPat = (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp);
+  dag FmaFromTensorInPat = !if(HasSrc2, (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp),
+                                        (ins Src0VT:$src0, Src1VT:$src1, Src3VT:$src3, timm:$aux_data, i1:$clamp));
+  dag FmaFromTensorOutPat = !if(HasSrc2, (ins Src0VT:$src0, Src1VT:$src1, Src2VT:$src2, Src3VT:$src3, timm:$aux_data, i1:$clamp),
+                                         (ins Src0VT:$src0, Src1VT:$src1, Src3VT:$src3, timm:$aux_data, i1:$clamp));
 
-  dag FmaFromTensorFrag = (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$aux_data, node:$clamp);
+  dag FmaFromTensorFrag = !if(HasSrc2, (ops node:$src0, node:$src1, node:$src2, node:$src3, node:$aux_data, node:$clamp),
+                                       (ops node:$src0, node:$src1, node:$src3, node:$aux_data, node:$clamp));
 
-  let Asm64 = "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs";
+  let Asm64 = !if(HasSrc2, "$vdst, $src0, $src1, $src2, $src3$aux_data$clamp$idxs",
+                           "$vdst, $src0, $src1, $src3$aux_data$clamp$idxs");
 
   int Layout = OpLayout;
 }
 
-multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int ScaleReg, string OutAccInBaseTy, string ResidualBaseTy, int OpLayout> {
+multiclass Fma_From_Tensor_Profile_Reg<int OutAccScaleReg, int ResidualReg, string OutAccInBaseTy, string ResidualBaseTy, int ResidualCount, int OpLayout> {
 
   defvar OutputBaseTy = OutAccInBaseTy;
   defvar AccBaseTy = OutAccInBaseTy;
@@ -849,9 +854,9 @@ multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int Scale
   defvar OutAccScaleMult = !if(!eq(!find(OutAccInBaseTy, "16"), -1), 1, 2);
   defvar ResidualMult = !if(!eq(!find(ResidualBaseTy, "16"), -1), 1, 2);
 
-  defvar OutElCount = !mul(OutAccScaleMult, OutAccReg);
-  defvar AccElCount = !mul(OutAccScaleMult, OutAccReg);
-  defvar ScaleElCount = !mul(OutAccScaleMult, ScaleReg);
+  defvar OutElCount = !mul(OutAccScaleMult, OutAccScaleReg);
+  defvar AccElCount = !mul(OutAccScaleMult, OutAccScaleReg);
+  defvar ScaleElCount = !mul(OutAccScaleMult, OutAccScaleReg);
   defvar ResidualElCount = !mul(ResidualMult, ResidualReg);
 
   defvar OutElPrefix = !if(!eq(OutElCount, 1), "", "v" # OutElCount);
@@ -864,21 +869,22 @@ multiclass Fma_From_Tensor_Profile_Reg<int OutAccReg, int ResidualReg, int Scale
   defvar ScaleInFullTy = !cast<ValueType>(ScaleElPrefix # ScaleBaseTy);
   defvar ResidualFullTy = !cast<ValueType>(ResidualElPrefix # ResidualBaseTy);
 
-  def NAME : Fma_From_Tensor_Profile<[OutputFullTy, AccFullTy, ResidualFullTy, ResidualFullTy, ScaleInFullTy], OpLayout>;
+  defvar SecondResidualFullTy = !if(!eq(ResidualCount, 2), ResidualFullTy, untyped);
+
+  def NAME : Fma_From_Tensor_Profile<[OutputFullTy, AccFullTy, ResidualFullTy, SecondResidualFullTy, ScaleInFullTy], OpLayout>;
 }
 
 multiclass Fma_From_Tensor_Profile_Multi<string OutAccBaseTy, string ResidualBaseTy> {
+  defvar ResidualCount = !if(!eq(OutAccBaseTy, ResidualBaseTy), 2, 1);
 
-  // 4x2 with 16-bit accumulators require 2 registers for accumulator/output, not 4.
-  defvar OutAcc_Reg_4x2 = !if(!eq(!find(OutAccBaseTy, "16"), -1), 4, 2);
-  defvar OutAcc_Reg_Nx4 = !if(!eq(OutAccBaseTy, ResidualBaseTy), 2, 4);
+  defm _regular_8x4 : Fma_From_Tensor_Profile_Reg<             2, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.CONV_8X4>;
+  defm _regular_4x4 : Fma_From_Tensor_Profile_Reg<             2, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.CONV_4X4>;
+  defm _regular_4x2 : Fma_From_Tensor_Profile_Reg<             2, 1, OutAccBaseTy, ResidualBaseTy, ResidualCount, FmaFromTensorLayout.CONV_4X2>;
 
-  defm _regular_8x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_8X4>;
-  defm _regular_4x4 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_Nx4, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X4>;
-  defm _regular_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Reg_4x2, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.CONV_4X2>;
-
-  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X4>;
-  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<             1, 1, 1, OutAccBaseTy, ResidualBaseTy, FmaFromTensorLayout.DEQUANT_4X2>;
+  // 4x2 with 32-bit accumulators require 2 registers for accumulator/output, otherwise 1.
+  defvar OutAcc_Deq_4x2 = !if(!eq(!find(OutAccBaseTy, "16"), -1), 2, 1);
+  defm _dequant_4x4 : Fma_From_Tensor_Profile_Reg<             1, 1, OutAccBaseTy, ResidualBaseTy, 1, FmaFromTensorLayout.DEQUANT_4X4>;
+  defm _dequant_4x2 : Fma_From_Tensor_Profile_Reg<OutAcc_Deq_4x2, 1, OutAccBaseTy, ResidualBaseTy, 1, FmaFromTensorLayout.DEQUANT_4X2>;
 }
 
 defm VOPM_FMA_FROM_TENSOR_F32_4B_OR_8B : Fma_From_Tensor_Profile_Multi<"f32", "i32">;
@@ -1621,31 +1627,33 @@ class DEQUANT_4x2 <SDPatternOperator node, Fma_From_Tensor_Profile P> : PatFrag<
 	[{ return ((cast<ConstantSDNode>(N->getOperand(N->getNumOperands()-2)))->getZExtValue() & 7) == 4; }]
 >;
 
-multiclass FmaFromTensorPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
+multiclass FmaFromTensorPatMulti_VOPM<string Inst, SDPatternOperator Node, string ProfilePrefix, bit DeqSupported> {
 
   defvar P_REG_8x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_8x4");
-  def : GCNPat <(P_REG_8x4.DstVT !setdagop(P_REG_8x4.FmaFromTensorInPat, REGULAR_8x4<node, P_REG_8x4>)),
+  def : GCNPat <(P_REG_8x4.DstVT !setdagop(P_REG_8x4.FmaFromTensorInPat, REGULAR_8x4<Node, P_REG_8x4>)),
                 (P_REG_8x4.DstVT !setdagop(P_REG_8x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_8x4")))>;
 
   defvar P_REG_4x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_4x4");
-  def : GCNPat <(P_REG_4x4.DstVT !setdagop(P_REG_4x4.FmaFromTensorInPat, REGULAR_4x4<node, P_REG_4x4>)),
+  def : GCNPat <(P_REG_4x4.DstVT !setdagop(P_REG_4x4.FmaFromTensorInPat, REGULAR_4x4<Node, P_REG_4x4>)),
                 (P_REG_4x4.DstVT !setdagop(P_REG_4x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_4x4")))>;
 
   defvar P_REG_4x2 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_regular_4x2");
-  def : GCNPat <(P_REG_4x2.DstVT !setdagop(P_REG_4x2.FmaFromTensorInPat, REGULAR_4x2<node, P_REG_4x2>)),
+  def : GCNPat <(P_REG_4x2.DstVT !setdagop(P_REG_4x2.FmaFromTensorInPat, REGULAR_4x2<Node, P_REG_4x2>)),
                 (P_REG_4x2.DstVT !setdagop(P_REG_4x2.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_regular_4x2")))>;
 
-  defvar P_DEQ_4x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x4");
-  def : GCNPat <(P_DEQ_4x4.DstVT !setdagop(P_DEQ_4x4.FmaFromTensorInPat, DEQUANT_4x4<node, P_DEQ_4x4>)),
+  if !eq(DeqSupported, 1) then {
+    defvar P_DEQ_4x4 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x4");
+    def : GCNPat <(P_DEQ_4x4.DstVT !setdagop(P_DEQ_4x4.FmaFromTensorInPat, DEQUANT_4x4<Node, P_DEQ_4x4>)),
                 (P_DEQ_4x4.DstVT !setdagop(P_DEQ_4x4.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_dequant_4x4")))>;
 
-  defvar P_DEQ_4x2 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x2");
-  def : GCNPat <(P_DEQ_4x2.DstVT !setdagop(P_DEQ_4x2.FmaFromTensorInPat, DEQUANT_4x2<node, P_DEQ_4x2>)),
+    defvar P_DEQ_4x2 = !cast<Fma_From_Tensor_Profile>(ProfilePrefix # "_dequant_4x2");
+    def : GCNPat <(P_DEQ_4x2.DstVT !setdagop(P_DEQ_4x2.FmaFromTensorInPat, DEQUANT_4x2<Node, P_DEQ_4x2>)),
                 (P_DEQ_4x2.DstVT !setdagop(P_DEQ_4x2.FmaFromTensorOutPat, !cast<Instruction>(Inst # "_dequant_4x2")))>;
+  }
 }
 
-multiclass FmaFromTensorPatMultiDeq_VOPM<string TypeNames, string NodePrefix, string ProfileSuffix> {
-  defm : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames, !cast<SDPatternOperator>(NodePrefix), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix>;
+multiclass FmaFromTensorPatMultiDeq_VOPM<string TypeNames, string NodeName, string ProfileSuffix, bit DeqSupported = 1> {
+  defm : FmaFromTensorPatMulti_VOPM<"V_FMA_FROM_TENSOR_" # TypeNames, !cast<SDPatternOperator>(NodeName), "VOPM_FMA_FROM_TENSOR_" # ProfileSuffix, DeqSupported>;
 }
 
 defm : FmaFromTensorPatMultiDeq_VOPM<"F32_I4", "int_amdgcn_fma_from_tensor_f32_i4", "F32_4B_OR_8B">;
@@ -1662,7 +1670,7 @@ defm : FmaFromTensorPatMultiDeq_VOPM<"F16_I8", "int_amdgcn_fma_from_tensor_f16_i
 defm : FmaFromTensorPatMultiDeq_VOPM<"F16_U8", "int_amdgcn_fma_from_tensor_f16_u8", "F16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"F16_FP8", "int_amdgcn_fma_from_tensor_f16_fp8", "F16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF8", "int_amdgcn_fma_from_tensor_f16_bf8", "F16_4B_OR_8B">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"F16_F16", "int_amdgcn_fma_from_tensor_f16_f16", "F16_F16">;
+defm : FmaFromTensorPatMultiDeq_VOPM<"F16_F16", "int_amdgcn_fma_from_tensor_f16_f16", "F16_F16", 0>;
 defm : FmaFromTensorPatMultiDeq_VOPM<"F16_BF16", "int_amdgcn_fma_from_tensor_f16_bf16", "F16_BF16">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_I4", "int_amdgcn_fma_from_tensor_bf16_i4", "BF16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U4", "int_amdgcn_fma_from_tensor_bf16_u4", "BF16_4B_OR_8B">;
@@ -1671,7 +1679,7 @@ defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_U8", "int_amdgcn_fma_from_tensor_bf16
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_FP8", "int_amdgcn_fma_from_tensor_bf16_fp8", "BF16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF8", "int_amdgcn_fma_from_tensor_bf16_bf8", "BF16_4B_OR_8B">;
 defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_F16", "int_amdgcn_fma_from_tensor_bf16_f16", "BF16_F16">;
-defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF16", "int_amdgcn_fma_from_tensor_bf16_bf16", "BF16_BF16">;
+defm : FmaFromTensorPatMultiDeq_VOPM<"BF16_BF16", "int_amdgcn_fma_from_tensor_bf16_bf16", "BF16_BF16", 0>;
 
 
 //===----------------------------------------------------------------------===//
