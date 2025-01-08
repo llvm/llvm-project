@@ -633,7 +633,8 @@ static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istr
 }
 
 // This function parses the leap-seconds "binary file" compiled from the .list file
-// by the zic compiler. That format is what's provided on some platforms like Darwin.
+// by the zic compiler. That format is widely available as it comes by default with
+// the IANA Time Zone Database.
 //
 // The format looks like:
 //
@@ -642,8 +643,7 @@ static void __parse_tzdata(tzdb& __db, __tz::__rules_storage_type& __rules, istr
 //    Leap    1972    Dec     31      23:59:60        +       S
 //    Leap    1973    Dec     31      23:59:60        +       S
 //
-inline vector<leap_second> __parse_leap_seconds_binary(istream&& __input) {
-  vector<leap_second> __result;
+static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, istream&& __input) {
   [&] {
     while (true) {
       switch (__input.peek()) {
@@ -699,86 +699,12 @@ inline vector<leap_second> __parse_leap_seconds_binary(istream&& __input) {
 
       chrono::__skip_line(__input);
 
-      __result.emplace_back(std::__private_constructor_tag{}, __timestamp, __value);
+      __leap_seconds.emplace_back(std::__private_constructor_tag{}, __timestamp, __value);
     }
   }();
 
   // Ensure the leap seconds are sorted properly.
-  ranges::sort(__result, {}, &leap_second::date);
-
-  return __result;
-}
-
-// This function parses leap-seconds.list file as can be found at
-// https://hpiers.obspm.fr/iers/bul/bulc/ntp/leap-seconds.list
-//
-// The format looks like
-//
-//    #NTP Time      DTAI    Day Month Year
-//    #
-//    2272060800      10      # 1 Jan 1972
-//    2287785600      11      # 1 Jul 1972
-//    2303683200      12      # 1 Jan 1973
-//
-// Where the timestamps are expressed as a number of seconds since 1 January 1900, 00:00:00.
-inline vector<leap_second> __parse_leap_seconds_list(istream&& __input) {
-  // The file stores dates since 1 January 1900, 00:00:00, we want
-  // seconds since 1 January 1970.
-  constexpr auto __offset = sys_days{1970y / January / 1} - sys_days{1900y / January / 1};
-
-  struct __entry {
-    sys_seconds __timestamp;
-    seconds __value;
-  };
-  vector<__entry> __entries;
-  [&] {
-    while (true) {
-      switch (__input.peek()) {
-      case istream::traits_type::eof():
-        return;
-
-      case ' ':
-      case '\t':
-      case '\n':
-        __input.get();
-        continue;
-
-      case '#':
-        chrono::__skip_line(__input);
-        continue;
-      }
-
-      sys_seconds __date = sys_seconds{seconds{chrono::__parse_integral(__input, false)}} - __offset;
-      chrono::__skip_mandatory_whitespace(__input);
-      seconds __value{chrono::__parse_integral(__input, false)};
-      chrono::__skip_line(__input);
-
-      __entries.emplace_back(__date, __value);
-    }
-  }();
-  // The Standard requires the leap seconds to be sorted. The file
-  // leap-seconds.list usually provides them in sorted order, but that is not
-  // guaranteed so we ensure it here.
-  ranges::sort(__entries, {}, &__entry::__timestamp);
-
-  // The database should contain the number of seconds inserted by a leap
-  // second (1 or -1). So the difference between the two elements is stored.
-  // std::ranges::views::adjacent has not been implemented yet.
-  vector<leap_second> __result;
-  (void)ranges::adjacent_find(__entries, [&](const __entry& __first, const __entry& __second) {
-    __result.emplace_back(std::__private_constructor_tag{}, __second.__timestamp, __second.__value - __first.__value);
-    return false;
-  });
-  return __result;
-}
-
-// Parse leap seconds from the appropriate location based on the platform.
-static void __parse_leap_seconds(vector<leap_second>& __leap_seconds, filesystem::path const& __tzdb_directory) {
-#if defined(__APPLE__)
-  __leap_seconds.append_range(chrono::__parse_leap_seconds_binary(ifstream{__tzdb_directory / "leapseconds"}));
-#else
-  __leap_seconds.append_range(chrono::__parse_leap_seconds_list(ifstream{__tzdb_directory / "leap-seconds.list"}));
-#endif
+  ranges::sort(__leap_seconds, {}, &leap_second::date);
 }
 
 void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
@@ -790,7 +716,7 @@ void __init_tzdb(tzdb& __tzdb, __tz::__rules_storage_type& __rules) {
   ranges::sort(__tzdb.zones);
   ranges::sort(__tzdb.links);
   ranges::sort(__rules, {}, [](const auto& p) { return p.first; });
-  chrono::__parse_leap_seconds(__tzdb.leap_seconds, __root);
+  chrono::__parse_leap_seconds(__tzdb.leap_seconds, ifstream{__root / "leapseconds"});
 }
 
 #ifdef _WIN32
