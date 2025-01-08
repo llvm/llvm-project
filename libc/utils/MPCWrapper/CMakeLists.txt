@@ -1,4 +1,4 @@
-# if(LIBC_TESTS_CAN_USE_MPC)
+if(LIBC_TESTS_CAN_USE_MPC)
   add_library(libcMPCWrapper STATIC
     MPCUtils.cpp
     MPCUtils.h
@@ -20,6 +20,6 @@
   )
   target_include_directories(libcMPCWrapper PUBLIC ${LIBC_SOURCE_DIR})
   target_link_libraries(libcMPCWrapper PUBLIC LibcFPTestHelpers.unit LibcTest.unit mpc mpfr gmp)
-# elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
-#   message(WARNING "Math tests using MPC will be skipped.")
-# endif()
+elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
+  message(WARNING "Math tests using MPC will be skipped.")
+endif()

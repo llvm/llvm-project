@@ -1,4 +1,4 @@
-//===-- Utils which wrap MPFR ---------------------------------------------===//
+//===-- Utils which wrap MPC ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,48 +28,6 @@ template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpc {
-
-// A precision value which allows sufficiently large additional
-// precision compared to the floating point precision.
-template <typename T> struct ExtraPrecision;
-
-template <> struct ExtraPrecision<float> {
-  static constexpr unsigned int VALUE = 128;
-};
-
-template <> struct ExtraPrecision<double> {
-  static constexpr unsigned int VALUE = 256;
-};
-
-// If the ulp tolerance is less than or equal to 0.5, we would check that the
-// result is rounded correctly with respect to the rounding mode by using the
-// same precision as the inputs.
-template <typename T>
-static inline unsigned int get_precision(double ulp_tolerance) {
-  if (ulp_tolerance <= 0.5) {
-    return LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN + 1;
-  } else {
-    return ExtraPrecision<T>::VALUE;
-  }
-}
-
-static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
-  switch (mode) {
-  case RoundingMode::Upward:
-    return MPFR_RNDU;
-    break;
-  case RoundingMode::Downward:
-    return MPFR_RNDD;
-    break;
-  case RoundingMode::TowardZero:
-    return MPFR_RNDZ;
-    break;
-  case RoundingMode::Nearest:
-    return MPFR_RNDN;
-    break;
-  }
-  __builtin_unreachable();
-}
 
 static inline cpp::string str(RoundingMode mode) {
   switch (mode) {
@@ -116,30 +74,30 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex float, XType>, bool> = 0>
-  MPCNumber(XType x, unsigned int precision = ExtraPrecision<float>::VALUE,
+  MPCNumber(XType x, unsigned int precision = mpfr::ExtraPrecision<float>::VALUE,
             MPCRoundingMode rounding = MPCRoundingMode(RoundingMode::Nearest,
                                                        RoundingMode::Nearest))
       : mpc_real_precision(precision), mpc_imag_precision(precision),
-        mpc_rounding(MPC_RND(get_mpfr_rounding_mode(rounding.Rrnd),
-                             get_mpfr_rounding_mode(rounding.Irnd))) {
+        mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rounding.Rrnd),
+                             mpfr::get_mpfr_rounding_mode(rounding.Irnd))) {
     mpc_init2(value, precision);
     MPCComplex<float> x_c = cpp::bit_cast<MPCComplex<float>>(x);
     mpfr_t real, imag;
     mpfr_init2(real, precision);
     mpfr_init2(imag, precision);
-    mpfr_set_flt(real, x_c.real, get_mpfr_rounding_mode(rounding.Rrnd));
-    mpfr_set_flt(imag, x_c.imag, get_mpfr_rounding_mode(rounding.Irnd));
+    mpfr_set_flt(real, x_c.real, mpfr::get_mpfr_rounding_mode(rounding.Rrnd));
+    mpfr_set_flt(imag, x_c.imag, mpfr::get_mpfr_rounding_mode(rounding.Irnd));
     mpc_set_fr_fr(value, real, imag, mpc_rounding);
   }
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<_Complex double, XType>, bool> = 0>
-  MPCNumber(XType x, unsigned int precision = ExtraPrecision<double>::VALUE,
+  MPCNumber(XType x, unsigned int precision = mpfr::ExtraPrecision<double>::VALUE,
             MPCRoundingMode rounding = MPCRoundingMode(RoundingMode::Nearest,
                                                        RoundingMode::Nearest))
       : mpc_real_precision(precision), mpc_imag_precision(precision),
-        mpc_rounding(MPC_RND(get_mpfr_rounding_mode(rounding.Rrnd),
-                             get_mpfr_rounding_mode(rounding.Irnd))) {
+        mpc_rounding(MPC_RND(mpfr::get_mpfr_rounding_mode(rounding.Rrnd),
+                             mpfr::get_mpfr_rounding_mode(rounding.Irnd))) {
     mpc_init2(value, precision);
     MPCComplex<double> x_c = cpp::bit_cast<MPCComplex<double>>(x);
     mpc_set_d_d(value, x_c.real, x_c.imag, mpc_rounding);
@@ -213,7 +171,7 @@ bool compare_unary_operation_single_output_same_type(Operation op,
                                                      double ulp_tolerance,
                                                      MPCRoundingMode rounding) {
 
-  unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -225,8 +183,8 @@ bool compare_unary_operation_single_output_same_type(Operation op,
   mpfr_t real, imag;
   mpfr_init2(real, precision);
   mpfr_init2(imag, precision);
-  mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
-  mpc_imag(imag, mpc_result_val, get_mpfr_rounding_mode(rounding.Irnd));
+  mpc_real(real, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Rrnd));
+  mpc_imag(imag, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Irnd));
 
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
   mpfr::MPFRNumber mpfr_imag(imag, precision, rounding.Irnd);
@@ -248,7 +206,7 @@ bool compare_unary_operation_single_output_different_type(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
     MPCRoundingMode rounding) {
 
-  unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -259,7 +217,7 @@ bool compare_unary_operation_single_output_different_type(
 
   mpfr_t real;
   mpfr_init2(real, precision);
-  mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
+  mpc_real(real, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Rrnd));
 
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
 
@@ -278,7 +236,7 @@ void explain_unary_operation_single_output_different_type_error(
     Operation op, InputType input, OutputType libc_result, double ulp_tolerance,
     MPCRoundingMode rounding) {
 
-  unsigned int precision = get_precision<get_real_t<InputType>>(ulp_tolerance);
+  unsigned int precision = mpfr::get_precision<get_real_t<InputType>>(ulp_tolerance);
 
   MPCNumber mpc_result;
   mpc_result = unary_operation(op, input, precision, rounding);
@@ -289,7 +247,7 @@ void explain_unary_operation_single_output_different_type_error(
 
   mpfr_t real;
   mpfr_init2(real, precision);
-  mpc_real(real, mpc_result_val, get_mpfr_rounding_mode(rounding.Rrnd));
+  mpc_real(real, mpc_result_val, mpfr::get_mpfr_rounding_mode(rounding.Rrnd));
 
   mpfr::MPFRNumber mpfr_result(real, precision, rounding.Rrnd);
   mpfr::MPFRNumber mpfrLibcResult(libc_result, precision, rounding.Rrnd);
