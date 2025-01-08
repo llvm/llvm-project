@@ -5980,7 +5980,7 @@ void BoUpSLP::reorderTopToBottom() {
           if (It != GathersToOrders.end())
             return It->second;
         }
-        if (OpTE->isAltShuffle()) {
+        if (OpTE->isInstructionsStateValid() && OpTE->isAltShuffle()) {
           auto It = AltShufflesToOrders.find(OpTE);
           if (It != AltShufflesToOrders.end())
             return It->second;
