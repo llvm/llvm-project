@@ -958,7 +958,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"coarray", AnyData, Rank::coarray}, RequiredDIM, OptionalTEAM},
         DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"this_image", {{"coarray", AnyData, Rank::coarray}, OptionalTEAM},
-        DefaultInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+        DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"tiny",
@@ -3189,27 +3189,6 @@ static bool CheckForNonPositiveValues(FoldingContext &context,
   return ok;
 }
 
-static bool CheckDimAgainstCorank(SpecificCall &call, FoldingContext &context) {
-  bool ok{true};
-  if (const auto &coarrayArg{call.arguments[0]}) {
-    if (const auto &dimArg{call.arguments[1]}) {
-      if (const auto *symbol{
-              UnwrapWholeSymbolDataRef(coarrayArg->UnwrapExpr())}) {
-        const auto corank = symbol->Corank();
-        if (const auto dimNum{ToInt64(dimArg->UnwrapExpr())}) {
-          if (dimNum < 1 || dimNum > corank) {
-            ok = false;
-            context.messages().Say(dimArg->sourceLocation(),
-                "DIM=%jd dimension is out of range for coarray with corank %d"_err_en_US,
-                static_cast<std::intmax_t>(*dimNum), corank);
-          }
-        }
-      }
-    }
-  }
-  return ok;
-}
-
 static bool CheckAtomicDefineAndRef(FoldingContext &context,
     const std::optional<ActualArgument> &atomArg,
     const std::optional<ActualArgument> &valueArg,
@@ -3277,8 +3256,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     if (const auto &arg{call.arguments[0]}) {
       ok = CheckForNonPositiveValues(context, *arg, name, "image");
     }
-  } else if (name == "lcobound") {
-    return CheckDimAgainstCorank(call, context);
   } else if (name == "loc") {
     const auto &arg{call.arguments[0]};
     ok =
@@ -3288,8 +3265,6 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
-  } else if (name == "ucobound") {
-    return CheckDimAgainstCorank(call, context);
   }
   return ok;
 }
