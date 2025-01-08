@@ -37,7 +37,6 @@ class BPSectionBase {
 public:
   virtual ~BPSectionBase() = default;
   virtual uint64_t getSize() const = 0;
-  virtual bool hasValidData() const = 0;
   virtual bool isCodeSection() const = 0;
   virtual llvm::SmallVector<std::unique_ptr<BPSymbol>> getSymbols() const = 0;
   virtual const void *getSection() const = 0;

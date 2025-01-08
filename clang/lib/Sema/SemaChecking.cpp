@@ -70,6 +70,7 @@
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -1934,6 +1935,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     return MIPS().CheckMipsBuiltinFunctionCall(TI, BuiltinID, TheCall);
+  case llvm::Triple::spirv:
+    return SPIRV().CheckSPIRVBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
@@ -6591,27 +6594,33 @@ void CheckFormatHandler::HandleNonStandardConversionSpecifier(
 
 void CheckFormatHandler::HandlePosition(const char *startPos,
                                         unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_non_standard_positional_arg, SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleInvalidPosition(
     const char *startSpecifier, unsigned specifierLen,
     analyze_format_string::PositionContext p) {
-  EmitFormatDiagnostic(
-      S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
-      getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
-      getSpecifierRange(startSpecifier, specifierLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_invalid_positional_specifier, SourceLocation()))
+    EmitFormatDiagnostic(
+        S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
+        getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
+        getSpecifierRange(startSpecifier, specifierLen));
 }
 
 void CheckFormatHandler::HandleZeroPosition(const char *startPos,
                                             unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(diag::warn_format_zero_positional_specifier,
+                                    SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleNullChar(const char *nullCharacter) {

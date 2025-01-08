@@ -69,6 +69,10 @@
 ;; Check that we hint additional allocations with a threshold < 100%
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-report-hinted-sizes -memprof-matching-cold-threshold=60 2>&1 | FileCheck %s --check-prefixes=TOTALSIZESSINGLE,TOTALSIZESTHRESH60
 
+;; Make sure that the -memprof-cloning-cold-threshold flag is enough to cause
+;; the size metadata to be generated for the LTO link.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-cloning-cold-threshold=80 2>&1 | FileCheck %s --check-prefixes=TOTALSIZES
+
 ;; Make sure we emit a random hotness seed if requested.
 ; RUN: llvm-profdata merge -memprof-random-hotness %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand 2>&1 | FileCheck %s --check-prefix=RAND
 ; RAND: random hotness seed =

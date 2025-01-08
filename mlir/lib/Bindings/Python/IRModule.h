@@ -10,9 +10,6 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
-#include <nanobind/nanobind.h>
-#include <nanobind/stl/string.h>
-
 #include <optional>
 #include <utility>
 #include <vector>
@@ -26,6 +23,7 @@
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace mlir {

@@ -736,10 +736,8 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
-    if (LangOpts.Sanitize.has(SanitizerKind::Type)) {
-      MPM.addPass(ModuleTypeSanitizerPass());
-      MPM.addPass(createModuleToFunctionPassAdaptor(TypeSanitizerPass()));
-    }
+    if (LangOpts.Sanitize.has(SanitizerKind::Type))
+      MPM.addPass(TypeSanitizerPass());
 
     if (LangOpts.Sanitize.has(SanitizerKind::NumericalStability))
       MPM.addPass(NumericalStabilitySanitizerPass());
@@ -1030,6 +1028,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback(
           [this](FunctionPassManager &FPM, OptimizationLevel Level) {
             BoundsCheckingPass::ReportingMode Mode;
+            bool Merge = CodeGenOpts.SanitizeMergeHandlers.has(
+                SanitizerKind::LocalBounds);
+
             if (CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
               Mode = BoundsCheckingPass::ReportingMode::Trap;
             } else if (CodeGenOpts.SanitizeMinimalRuntime) {
@@ -1041,7 +1042,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                          ? BoundsCheckingPass::ReportingMode::FullRuntime
                          : BoundsCheckingPass::ReportingMode::FullRuntimeAbort;
             }
-            FPM.addPass(BoundsCheckingPass(Mode));
+            BoundsCheckingPass::BoundsCheckingOptions Options(Mode, Merge);
+            FPM.addPass(BoundsCheckingPass(Options));
           });
 
     // Don't add sanitizers if we are here from ThinLTO PostLink. That already

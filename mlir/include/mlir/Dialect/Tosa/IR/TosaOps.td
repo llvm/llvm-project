@@ -1552,21 +1552,21 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Example:
 
     ```mlir
-    %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
+    %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<4xi32>)  -> (tensor<4x9xf32>)
     ```
 
     Example 2:
 
     ```mlir
-    %0 = arith.constant dense<[[-1, 2], [3, 4]]> : tensor<2x2xi32>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
+    %0 = arith.constant dense<[-1, 2, 3, 4]> : tensor<4xi32>
+    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<4xi32>)  -> (tensor<?x9xf32>)
     ```
   }];
 
   let arguments = (ins
     Tosa_RankedTensor:$input1,
-    Tosa_Int32Or64Tensor:$padding,
+    TosaTensorRankOf<[Tosa_Int32Or64], [1]>:$padding,
     Optional<Tosa_ScalarTensor>:$pad_const,
     OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
   );
@@ -1698,7 +1698,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                 AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator";
 
   let description = [{

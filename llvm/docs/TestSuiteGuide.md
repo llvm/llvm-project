@@ -367,6 +367,19 @@ For the SPEC benchmarks you can switch between the `test`, `train` and
 `ref` input datasets via the `TEST_SUITE_RUN_TYPE` configuration option.
 The `train` dataset is used by default.
 
+In addition to SPEC, the multimedia frameworks ffmpeg and dav1d can also
+be hooked up as external projects in the same way. By including them in
+llvm-test-suite, a lot more of potentially vectorizable code gets compiled
+- which can catch compiler bugs merely by triggering code generation asserts.
+Including them also adds small code correctness tests, that compare the
+output of the compiler generated functions against handwritten assembly
+functions. (On x86, building the assembly requires having the nasm tool
+available.) The integration into llvm-test-suite doesn't run the projects'
+full testsuites though. The projects also contain microbenchmarks for
+measuring the performance of some functions. See the `README.md` files in
+the respective `ffmpeg` and `dav1d` directories under
+`llvm-test-suite/External` for further details.
+
 
 Custom Suites
 -------------
