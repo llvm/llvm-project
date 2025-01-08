@@ -33,103 +33,95 @@ test()
 
 // test edges
 
-template<class T>
-TEST_CONSTEXPR_CXX20 bool test_edges()
-{
-    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
-    int classification[N];
-    for (unsigned i=0; i < N; ++i)
-        classification[i] = classify(testcases<T>[i]);
+template <class T>
+TEST_CONSTEXPR_CXX20 bool test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  int classification[N];
+  for (unsigned i = 0; i < N; ++i)
+    classification[i] = classify(testcases<T>[i]);
 
-    for (unsigned i = 0; i < N; ++i)
-    {
-        for (unsigned j = 0; j < N; ++j)
-        {
-            std::complex<T> r = testcases<T>[i] * testcases<T>[j];
-            switch (classification[i])
-            {
-            case zero:
-                switch (classification[j])
-                {
-                case lowest_value:
-                case maximum_value:
-                    continue; // not tested
-                case zero:
-                case non_zero:
-                    assert(classify(r) == zero);
-                    break;
-                case inf:
-                case NaN:
-                case non_zero_nan:
-                    assert(classify(r) == NaN);
-                    break;
-                }
-                break;
-            case lowest_value:
-            case maximum_value:
-                continue; // not tested
-            case non_zero:
-                switch (classification[j])
-                {
-                case zero:
-                    assert(classify(r) == zero);
-                    break;
-                case lowest_value:
-                case maximum_value:
-                    continue; // not tested
-                case non_zero:
-                    assert(classify(r) == non_zero);
-                    break;
-                case inf:
-                    assert(classify(r) == inf);
-                    break;
-                case NaN:
-                case non_zero_nan:
-                    assert(classify(r) == NaN);
-                    break;
-                }
-                break;
-            case inf:
-                switch (classification[j])
-                {
-                case zero:
-                case NaN:
-                    assert(classify(r) == NaN);
-                    break;
-                case lowest_value:
-                case maximum_value:
-                    continue; // not tested
-                case non_zero:
-                case inf:
-                case non_zero_nan:
-                    assert(classify(r) == inf);
-                    break;
-                }
-                break;
-            case NaN:
-                assert(classify(r) == NaN);
-                break;
-            case non_zero_nan:
-                switch (classification[j])
-                {
-                case inf:
-                    assert(classify(r) == inf);
-                    break;
-                case lowest_value:
-                case maximum_value:
-                    continue; // not tested
-                case zero:
-                case non_zero:
-                case NaN:
-                case non_zero_nan:
-                    assert(classify(r) == NaN);
-                    break;
-                }
-                break;
-            }
+  for (unsigned i = 0; i < N; ++i) {
+    for (unsigned j = 0; j < N; ++j) {
+      std::complex<T> r = testcases<T>[i] * testcases<T>[j];
+      switch (classification[i]) {
+      case zero:
+        switch (classification[j]) {
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
+        case zero:
+        case non_zero:
+          assert(classify(r) == zero);
+          break;
+        case inf:
+        case NaN:
+        case non_zero_nan:
+          assert(classify(r) == NaN);
+          break;
         }
+        break;
+      case lowest_value:
+      case maximum_value:
+        continue; // not tested
+      case non_zero:
+        switch (classification[j]) {
+        case zero:
+          assert(classify(r) == zero);
+          break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
+        case non_zero:
+          assert(classify(r) == non_zero);
+          break;
+        case inf:
+          assert(classify(r) == inf);
+          break;
+        case NaN:
+        case non_zero_nan:
+          assert(classify(r) == NaN);
+          break;
+        }
+        break;
+      case inf:
+        switch (classification[j]) {
+        case zero:
+        case NaN:
+          assert(classify(r) == NaN);
+          break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
+        case non_zero:
+        case inf:
+        case non_zero_nan:
+          assert(classify(r) == inf);
+          break;
+        }
+        break;
+      case NaN:
+        assert(classify(r) == NaN);
+        break;
+      case non_zero_nan:
+        switch (classification[j]) {
+        case inf:
+          assert(classify(r) == inf);
+          break;
+        case lowest_value:
+        case maximum_value:
+          continue; // not tested
+        case zero:
+        case non_zero:
+        case NaN:
+        case non_zero_nan:
+          assert(classify(r) == NaN);
+          break;
+        }
+        break;
+      }
     }
-    return true;
+  }
+  return true;
 }
 
 int main(int, char**)

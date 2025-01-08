@@ -34,11 +34,8 @@ test()
     return true;
 }
 
-template<class T>
-TEST_CONSTEXPR_CXX20
-bool
-test_edges()
-{
+template <class T>
+TEST_CONSTEXPR_CXX20 bool test_edges() {
   const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
   int classification[N];
   for (unsigned i=0; i < N; ++i)
@@ -47,7 +44,7 @@ test_edges()
   for (unsigned i = 0; i < N; ++i) {
     auto const x = testcases<T>[i];
     for (unsigned j = 0; j < N; ++j) {
-      auto const y = testcases<T>[j];
+      auto const y      = testcases<T>[j];
       std::complex<T> r = x / y;
       switch (classification[i]) {
       case zero:

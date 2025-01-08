@@ -34,30 +34,25 @@ test()
     test(std::complex<T>(2, 3), T(2), std::complex<T>(-5, 12));
 }
 
-template<class T>
-void test_edges()
-{
-    const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        for (unsigned j = 0; j < N; ++j)
-        {
-            std::complex<T> r = pow(testcases<T>[i], real(testcases<T>[j]));
-            std::complex<T> z = exp(std::complex<T>(real(testcases<T>[j])) * log(testcases<T>[i]));
-            if (std::isnan(real(r)))
-                assert(std::isnan(real(z)));
-            else
-            {
-                assert(real(r) == real(z));
-            }
-            if (std::isnan(imag(r)))
-                assert(std::isnan(imag(z)));
-            else
-            {
-                assert(imag(r) == imag(z));
-            }
-        }
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    for (unsigned j = 0; j < N; ++j) {
+      std::complex<T> r = pow(testcases<T>[i], real(testcases<T>[j]));
+      std::complex<T> z = exp(std::complex<T>(real(testcases<T>[j])) * log(testcases<T>[i]));
+      if (std::isnan(real(r)))
+        assert(std::isnan(real(z)));
+      else {
+        assert(real(r) == real(z));
+      }
+      if (std::isnan(imag(r)))
+        assert(std::isnan(imag(z)));
+      else {
+        assert(imag(r) == imag(z));
+      }
     }
+  }
 }
 
 int main(int, char**)
@@ -69,5 +64,5 @@ int main(int, char**)
     test_edges<double>();
     test_edges<long double>();
 
-  return 0;
+    return 0;
 }
