@@ -10,8 +10,7 @@
 define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_0(i64 inreg %reg) {
 ; GFX9-LABEL: s_add_i64_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 0x40000
+; GFX9-NEXT:    s_add_i32 s1, s1, 0x40000
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add i64 %reg, 1125899906842624 ; (1 << 50)
   ret i64 %add
@@ -20,8 +19,7 @@ define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_0(i64 inreg %reg) {
 define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_1(i64 inreg %reg) {
 ; GFX9-LABEL: s_add_i64_const_low_bits_known0_1:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 1
+; GFX9-NEXT:    s_add_i32 s1, s1, 1
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add i64 %reg, 4294967296 ; (1 << 32)
   ret i64 %add
@@ -30,8 +28,7 @@ define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_1(i64 inreg %reg) {
 define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_2(i64 inreg %reg) {
 ; GFX9-LABEL: s_add_i64_const_low_bits_known0_2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 2
+; GFX9-NEXT:    s_add_i32 s1, s1, 2
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add i64 %reg, 8589934592 ; (1 << 33)
   ret i64 %add
@@ -40,8 +37,7 @@ define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_2(i64 inreg %reg) {
 define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_3(i64 inreg %reg) {
 ; GFX9-LABEL: s_add_i64_const_low_bits_known0_3:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 0x80000000
+; GFX9-NEXT:    s_add_i32 s1, s1, 0x80000000
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add i64 %reg, -9223372036854775808 ; (1 << 63)
   ret i64 %add
@@ -50,8 +46,7 @@ define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_3(i64 inreg %reg) {
 define amdgpu_ps i64 @s_add_i64_const_low_bits_known0_4(i64 inreg %reg) {
 ; GFX9-LABEL: s_add_i64_const_low_bits_known0_4:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, -1
+; GFX9-NEXT:    s_add_i32 s1, s1, -1
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add i64 %reg, -4294967296 ; 0xffffffff00000000
   ret i64 %add
@@ -61,9 +56,7 @@ define i64 @v_add_i64_const_low_bits_known0_0(i64 %reg) {
 ; GFX9-LABEL: v_add_i64_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x40000
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v2, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 0x40000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %reg, 1125899906842624 ; (1 << 50)
   ret i64 %add
@@ -73,8 +66,7 @@ define i64 @v_add_i64_const_low_bits_known0_1(i64 %reg) {
 ; GFX9-LABEL: v_add_i64_const_low_bits_known0_1:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %reg, 4294967296 ; (1 << 32)
   ret i64 %add
@@ -84,8 +76,7 @@ define i64 @v_add_i64_const_low_bits_known0_2(i64 %reg) {
 ; GFX9-LABEL: v_add_i64_const_low_bits_known0_2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 2, v1, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 2, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %reg, 8589934592 ; (1 << 33)
   ret i64 %add
@@ -95,9 +86,7 @@ define i64 @v_add_i64_const_low_bits_known0_3(i64 %reg) {
 ; GFX9-LABEL: v_add_i64_const_low_bits_known0_3:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v2, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 0x80000000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %reg, -9223372036854775808 ; (1 << 63)
   ret i64 %add
@@ -107,8 +96,7 @@ define i64 @v_add_i64_const_low_bits_known0_4(i64 %reg) {
 ; GFX9-LABEL: v_add_i64_const_low_bits_known0_4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, -1, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add i64 %reg, -4294967296 ; 0xffffffff00000000
   ret i64 %add
@@ -139,10 +127,8 @@ define <2 x i64> @v_add_v2i64_splat_const_low_bits_known0_0(<2 x i64> %reg) {
 ; GFX9-LABEL: v_add_v2i64_splat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
-; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, 0, v2
-; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 1, v3, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
+; GFX9-NEXT:    v_add_u32_e32 v3, 1, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i64> %reg, <i64 4294967296, i64 4294967296> ; (1 << 32)
   ret <2 x i64> %add
@@ -152,10 +138,8 @@ define <2 x i64> @v_add_v2i64_nonsplat_const_low_bits_known0_0(<2 x i64> %reg) {
 ; GFX9-LABEL: v_add_v2i64_nonsplat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, 0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 1, v1, vcc
-; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, 0, v2
-; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 2, v3, vcc
+; GFX9-NEXT:    v_add_u32_e32 v1, 1, v1
+; GFX9-NEXT:    v_add_u32_e32 v3, 2, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i64> %reg, <i64 4294967296, i64 8589934592> ; (1 << 32), (1 << 33)
   ret <2 x i64> %add
@@ -164,10 +148,8 @@ define <2 x i64> @v_add_v2i64_nonsplat_const_low_bits_known0_0(<2 x i64> %reg) {
 define amdgpu_ps <2 x i64> @s_add_v2i64_splat_const_low_bits_known0_0(<2 x i64> inreg %reg) {
 ; GFX9-LABEL: s_add_v2i64_splat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 1
-; GFX9-NEXT:    s_add_u32 s2, s2, 0
-; GFX9-NEXT:    s_addc_u32 s3, s3, 1
+; GFX9-NEXT:    s_add_i32 s1, s1, 1
+; GFX9-NEXT:    s_add_i32 s3, s3, 1
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add <2 x i64> %reg, <i64 4294967296, i64 4294967296> ; (1 << 32)
   ret <2 x i64> %add
@@ -176,10 +158,8 @@ define amdgpu_ps <2 x i64> @s_add_v2i64_splat_const_low_bits_known0_0(<2 x i64> 
 define amdgpu_ps <2 x i64> @s_add_v2i64_nonsplat_const_low_bits_known0_0(<2 x i64> inreg %reg) {
 ; GFX9-LABEL: s_add_v2i64_nonsplat_const_low_bits_known0_0:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_add_u32 s0, s0, 0
-; GFX9-NEXT:    s_addc_u32 s1, s1, 1
-; GFX9-NEXT:    s_add_u32 s2, s2, 0
-; GFX9-NEXT:    s_addc_u32 s3, s3, 2
+; GFX9-NEXT:    s_add_i32 s1, s1, 1
+; GFX9-NEXT:    s_add_i32 s3, s3, 2
 ; GFX9-NEXT:    ; return to shader part epilog
   %add = add <2 x i64> %reg, <i64 4294967296, i64 8589934592> ; (1 << 32), (1 << 33)
   ret <2 x i64> %add
