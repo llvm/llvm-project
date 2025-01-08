@@ -349,7 +349,7 @@ implementation.
 OpenMP 6.0 Implementation Details
 =================================
 
-The following table provides a quick overview over various OpenMP 5.0 features
+The following table provides a quick overview over various OpenMP 6.0 features
 and their implementation status. Please post on the
 `Discourse forums (Runtimes - OpenMP category)`_ for more
 information or if you want to help with the
