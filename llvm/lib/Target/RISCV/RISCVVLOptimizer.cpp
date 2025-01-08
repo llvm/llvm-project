@@ -79,11 +79,6 @@ static bool isVectorRegClass(Register R, const MachineRegisterInfo *MRI) {
 
 /// Represents the EMUL and EEW of a MachineOperand.
 struct OperandInfo {
-  enum class State {
-    Unknown,
-    Known,
-  } S;
-
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
   // EMUL can take on values that don't map to RISCVII::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
@@ -92,41 +87,32 @@ struct OperandInfo {
   unsigned Log2EEW;
 
   OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {
-  }
+      : EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {}
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW) {}
+      : EMUL(EMUL), Log2EEW(Log2EEW) {}
 
-  OperandInfo(unsigned Log2EEW) : S(State::Known), Log2EEW(Log2EEW) {}
+  OperandInfo(unsigned Log2EEW) : Log2EEW(Log2EEW) {}
 
-  OperandInfo() : S(State::Unknown) {}
-
-  bool isUnknown() const { return S == State::Unknown; }
-  bool isKnown() const { return S == State::Known; }
+  OperandInfo() = delete;
 
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    assert(A.isKnown() && B.isKnown() && "Both operands must be known");
-
     return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
            A.EMUL->second == B.EMUL->second;
   }
 
   static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    assert(A.isKnown() && B.isKnown() && "Both operands must be known");
     return A.Log2EEW == B.Log2EEW;
   }
 
   void print(raw_ostream &OS) const {
-    if (isUnknown()) {
-      OS << "Unknown";
-      return;
-    }
-    assert(EMUL && "Expected EMUL to have value");
-    OS << "EMUL: m";
-    if (EMUL->second)
-      OS << "f";
-    OS << EMUL->first;
+    if (EMUL) {
+      OS << "EMUL: m";
+      if (EMUL->second)
+        OS << "f";
+      OS << EMUL->first;
+    } else
+      OS << "EMUL: unknown\n";
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -134,6 +120,16 @@ struct OperandInfo {
 LLVM_ATTRIBUTE_UNUSED
 static raw_ostream &operator<<(raw_ostream &OS, const OperandInfo &OI) {
   OI.print(OS);
+  return OS;
+}
+
+LLVM_ATTRIBUTE_UNUSED
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const std::optional<OperandInfo> &OI) {
+  if (OI)
+    OI->print(OS);
+  else
+    OS << "nullopt";
   return OS;
 }
 
@@ -715,12 +711,12 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 
   default:
-    return {};
+    return std::nullopt;
   }
 }
 
-static OperandInfo getOperandInfo(const MachineOperand &MO,
-                                  const MachineRegisterInfo *MRI) {
+static std::optional<OperandInfo>
+getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const MachineInstr &MI = *MO.getParent();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
@@ -728,7 +724,7 @@ static OperandInfo getOperandInfo(const MachineOperand &MO,
 
   std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO, MRI);
   if (!Log2EEW)
-    return {};
+    return std::nullopt;
 
   switch (RVV->BaseInstr) {
   // Vector Reduction Operations
@@ -1185,9 +1181,10 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
       return std::nullopt;
     }
 
-    OperandInfo ConsumerInfo = getOperandInfo(UserOp, MRI);
-    OperandInfo ProducerInfo = getOperandInfo(MI.getOperand(0), MRI);
-    if (ConsumerInfo.isUnknown() || ProducerInfo.isUnknown()) {
+    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp, MRI);
+    std::optional<OperandInfo> ProducerInfo =
+        getOperandInfo(MI.getOperand(0), MRI);
+    if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
       LLVM_DEBUG(dbgs() << "      ProducerInfo is: " << ProducerInfo << "\n");
@@ -1198,9 +1195,9 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
     // compatible. Otherwise, the EMUL *and* EEW must be compatible.
     bool IsVectorOpUsedAsScalarOp = isVectorOpUsedAsScalarOp(UserOp);
     if ((IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EEWAreEqual(ConsumerInfo, ProducerInfo)) ||
+         !OperandInfo::EEWAreEqual(*ConsumerInfo, *ProducerInfo)) ||
         (!IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EMULAndEEWAreEqual(ConsumerInfo, ProducerInfo))) {
+         !OperandInfo::EMULAndEEWAreEqual(*ConsumerInfo, *ProducerInfo))) {
       LLVM_DEBUG(
           dbgs()
           << "    Abort due to incompatible information for EMUL or EEW.\n");
