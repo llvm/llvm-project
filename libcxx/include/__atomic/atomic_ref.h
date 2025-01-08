@@ -293,7 +293,7 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 };
 
 template <class _Tp>
-  requires(std::integral<_Tp> && !std::same_as<bool, __remove_cv_t<_Tp>>)
+  requires(integral<_Tp> && !same_as<bool, __remove_cv_t<_Tp>>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
@@ -397,7 +397,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 };
 
 template <class _Tp>
-  requires std::floating_point<_Tp>
+  requires floating_point<_Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
@@ -458,7 +458,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 };
 
 template <class _Tp>
-  requires(std::is_pointer_v<_Tp>)
+  requires(is_pointer_v<_Tp>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
