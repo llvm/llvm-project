@@ -819,7 +819,7 @@ void TargetLoweringBase::initActions() {
 #include "llvm/IR/VPIntrinsics.def"
 
     // Masked vector extracts default to expand.
-    setOperationAction(ISD::VECTOR_EXTRACT_LAST_ACTIVE, VT, Expand);
+    setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);

@@ -401,16 +401,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f128, &AArch64::FPR128RegClass);
   }
 
-  // TODO: Should we include any other operations here? The calls to
-  //       addDRType/addQRType below do mark VSELECT as Expand for the
-  //       specified VTs, but leave other illegal types as the default
-  //       of 'Legal'. LegalizeDAG doesn't legalize VSELECT after type
-  //       legalization if LegalizeVectorOps introduces one.
-  for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
-    setOperationAction(ISD::VSELECT, VT, Expand);
-  for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
-    setOperationAction(ISD::VSELECT, VT, Expand);
-
   if (Subtarget->hasNEON()) {
     addRegisterClass(MVT::v16i8, &AArch64::FPR8RegClass);
     addRegisterClass(MVT::v8i16, &AArch64::FPR16RegClass);

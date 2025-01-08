@@ -6426,17 +6426,25 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
                                                        unsigned Intrinsic) {
   assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
          "Tried lowering invalid vector extract last");
-
   SDLoc sdl = getCurSDLoc();
+  const DataLayout &Layout = DAG.getDataLayout();
   SDValue Data = getValue(I.getOperand(0));
   SDValue Mask = getValue(I.getOperand(1));
-  SDValue PassThru = getValue(I.getOperand(2));
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  EVT ResVT = TLI.getValueType(Layout, I.getType());
 
-  SDValue Result = DAG.getNode(ISD::VECTOR_EXTRACT_LAST_ACTIVE, sdl, ResultVT,
-                               Data, Mask, PassThru);
+  EVT ExtVT = TLI.getVectorIdxTy(Layout);
+  SDValue Idx = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, sdl, ExtVT, Mask);
+  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ResVT, Data, Idx);
+
+  Value *Default = I.getOperand(2);
+  if (!isa<PoisonValue>(Default) && !isa<UndefValue>(Default)) {
+    SDValue PassThru = getValue(Default);
+    EVT BoolVT = Mask.getValueType().getScalarType();
+    SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+    Result = DAG.getSelect(sdl, ResVT, AnyActive, Result, PassThru);
+  }
 
   setValue(&I, Result);
 }

@@ -567,8 +567,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return "histogram";
 
-  case ISD::VECTOR_EXTRACT_LAST_ACTIVE:
-    return "extract_last_active";
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    return "find_last_active";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \

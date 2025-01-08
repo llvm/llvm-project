@@ -155,8 +155,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ZERO_EXTEND_VECTOR_INREG:
                          Res = PromoteIntRes_EXTEND_VECTOR_INREG(N); break;
 
-  case ISD::VECTOR_EXTRACT_LAST_ACTIVE:
-    Res = PromoteIntRes_VECTOR_EXTRACT_LAST_ACTIVE(N);
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(N);
     break;
 
   case ISD::SIGN_EXTEND:
@@ -2073,8 +2073,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Res = PromoteIntOp_VECTOR_HISTOGRAM(N, OpNo);
     break;
-  case ISD::VECTOR_EXTRACT_LAST_ACTIVE:
-    Res = PromoteIntOp_VECTOR_EXTRACT_LAST_ACTIVE(N, OpNo);
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
   }
 
@@ -2817,10 +2817,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue
-DAGTypeLegalizer::PromoteIntOp_VECTOR_EXTRACT_LAST_ACTIVE(SDNode *N,
-                                                          unsigned OpNo) {
-  SmallVector<SDValue, 3> NewOps(N->ops());
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
+                                                               unsigned OpNo) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
   NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
@@ -2863,9 +2862,6 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::BUILD_PAIR:         ExpandRes_BUILD_PAIR(N, Lo, Hi); break;
   case ISD::EXTRACT_ELEMENT:    ExpandRes_EXTRACT_ELEMENT(N, Lo, Hi); break;
   case ISD::EXTRACT_VECTOR_ELT: ExpandRes_EXTRACT_VECTOR_ELT(N, Lo, Hi); break;
-  case ISD::VECTOR_EXTRACT_LAST_ACTIVE:
-    ExpandRes_VECTOR_EXTRACT_LAST_ACTIVE(N, Lo, Hi);
-    break;
   case ISD::VAARG:              ExpandRes_VAARG(N, Lo, Hi); break;
 
   case ISD::ANY_EXTEND:  ExpandIntRes_ANY_EXTEND(N, Lo, Hi); break;
@@ -6142,10 +6138,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_EXTRACT_LAST_ACTIVE(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(ISD::VECTOR_EXTRACT_LAST_ACTIVE, SDLoc(N), NVT, N->ops());
+  return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, SDLoc(N), NVT, N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {
