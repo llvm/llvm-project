@@ -173,7 +173,6 @@ static bool isDereferenceableAndAlignedPointer(
     /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
     RetainedKnowledge DerefRK;
-    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
     bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
