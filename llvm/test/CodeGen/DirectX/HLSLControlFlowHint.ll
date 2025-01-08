@@ -32,7 +32,6 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i32 %3
 }
 
-;CHECK: bnabnasn
 ; CHECK: define i32 @test_flatten(i32 %X)
 ; CHECK-NOT: hlsl.controlflow.hint
 ; CHECK: br i1 %cmp, label %if.then, label %if.else, !dx.controlflow.hints [[HINT_FLATTEN:![0-9]+]]
