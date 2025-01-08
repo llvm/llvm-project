@@ -28,7 +28,7 @@
 
 // SPT64: "-cc1" "-triple" "spirv64"
 // SPT64-SAME: "-o" [[BC:".*bc"]]
-// SPT64: {{llvm-spirv.*"}} [[BC]] "-to-text" "-o" {{".*s"}}
+// SPT64: {{llvm-spirv.*"}} [[BC]] "--spirv-tools-dis" "-o" {{".*s"}}
 
 // RUN: %clang -### --target=spirv32 -x cl -S %s 2>&1 | FileCheck --check-prefix=SPT32 %s
 // RUN: %clang -### --target=spirv32 -x ir -S %s 2>&1 | FileCheck --check-prefix=SPT32 %s
@@ -37,13 +37,13 @@
 
 // SPT32: "-cc1" "-triple" "spirv32"
 // SPT32-SAME: "-o" [[BC:".*bc"]]
-// SPT32: {{llvm-spirv.*"}} [[BC]] "-to-text" "-o" {{".*s"}}
+// SPT32: {{llvm-spirv.*"}} [[BC]] "--spirv-tools-dis" "-o" {{".*s"}}
 
 //-----------------------------------------------------------------------------
 // Check assembly input -> object output
 // RUN: %clang -### --target=spirv64 -x assembler -c %s 2>&1 | FileCheck --check-prefix=ASM %s
 // RUN: %clang -### --target=spirv32 -x assembler -c %s 2>&1 | FileCheck --check-prefix=ASM %s
-// ASM: {{llvm-spirv.*"}} {{".*"}} "-to-binary" "-o" {{".*o"}}
+// ASM: {{spirv-as.*"}} {{".*"}} "-o" {{".*o"}}
 
 //-----------------------------------------------------------------------------
 // Check --save-temps.
@@ -55,8 +55,8 @@
 // TMP: "-cc1" "-triple" "spirv64"
 // TMP-SAME: "-o" [[BC:".*bc"]]
 // TMP-SAME: [[I]]
-// TMP: {{llvm-spirv.*"}} [[BC]] "-to-text" "-o" [[S:".*s"]]
-// TMP: {{llvm-spirv.*"}} [[S]] "-to-binary" "-o" {{".*o"}}
+// TMP: {{llvm-spirv.*"}} [[BC]] "--spirv-tools-dis" "-o" [[S:".*s"]]
+// TMP: {{spirv-as.*"}} [[S]] "-o" {{".*o"}}
 
 //-----------------------------------------------------------------------------
 // Check linking when multiple input files are passed.
