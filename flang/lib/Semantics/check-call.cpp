@@ -690,7 +690,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
-      IsAllocatable(*actualLastSymbol) && dummy.intent == common::Intent::Out &&
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
+      dummy.intent == common::Intent::Out &&
       !(intrinsic &&
           evaluate::AcceptsIntentOutAllocatableCoarray(
               intrinsic->name))) { // C846
