@@ -4,28 +4,20 @@ struct NotConvertible{} NC;
 int getI();
 void uses() {
   int Var;
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update async self(Var)
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update wait self(Var)
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I)
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update if(true) self(Var)
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update if_present self(Var)
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var)
   // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
 #pragma acc update host(Var)
   // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
   // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'update' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc update self(Var) device_type(I) if(true)
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented}}
   // expected-error@+2{{OpenACC clause 'if_present' may not follow a 'device_type' clause in a 'update' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc update self(Var) device_type(I) if_present
@@ -39,12 +31,9 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc update device_type(I) device(Var)
   // These 2 are OK.
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I) async
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I) wait
   // Unless otherwise specified, we assume 'device_type' can happen after itself.
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented}}
 #pragma acc update self(Var) device_type(I) device_type(I)
 
   // TODO: OpenACC: These should diagnose because there isn't at least 1 of
@@ -128,3 +117,51 @@ void uses() {
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
 #pragma acc update wait(devnum:arr : queues: arr, NC, 5)
 }
+
+struct SomeS {
+  int Array[5];
+  int MemberOfComp;
+};
+
+template<typename I, typename T>
+void varlist_restrictions_templ() {
+  I iArray[5];
+  T Single;
+  T Array[5];
+
+  // Members of a subarray of struct or class type may not appear, but others
+  // are permitted to.
+#pragma acc update self(iArray[0:1])
+
+#pragma acc update self(Array[0:1])
+
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update self(Array[0:1].MemberOfComp)
+}
+
+void varlist_restrictions() {
+  varlist_restrictions_templ<int, SomeS>();// expected-note{{in instantiation of}}
+  int iArray[5];
+  SomeS Single;
+  SomeS Array[5];
+
+  int LocalInt;
+  int *LocalPtr;
+
+#pragma acc update self(LocalInt, LocalPtr, Single)
+
+#pragma acc update self(Single.MemberOfComp)
+
+#pragma acc update self(Single.Array[0:1])
+
+
+  // Members of a subarray of struct or class type may not appear, but others
+  // are permitted to.
+#pragma acc update self(iArray[0:1])
+
+#pragma acc update self(Array[0:1])
+
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update self(Array[0:1].MemberOfComp)
+}
+
