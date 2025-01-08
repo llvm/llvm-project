@@ -59,15 +59,11 @@ private:
   mpc_rnd_t mpc_rounding;
 
 public:
-  MPCNumber(unsigned int p)
-      : precision(p),
-        mpc_rounding(MPC_RNDNN) {
+  MPCNumber(unsigned int p) : precision(p), mpc_rounding(MPC_RNDNN) {
     mpc_init2(value, precision);
   }
 
-  MPCNumber()
-      : precision(256),
-        mpc_rounding(MPC_RNDNN) {
+  MPCNumber() : precision(256), mpc_rounding(MPC_RNDNN) {
     mpc_init2(value, 256);
   }
 
@@ -105,8 +101,7 @@ public:
   }
 
   MPCNumber(const MPCNumber &other)
-      : precision(other.precision),
-        mpc_rounding(other.mpc_rounding) {
+      : precision(other.precision), mpc_rounding(other.mpc_rounding) {
     mpc_init2(value, precision);
     mpc_set(value, other.value, mpc_rounding);
   }
@@ -119,7 +114,7 @@ public:
     return *this;
   }
 
-  MPCNumber(const mpc_t x,unsigned int p, mpc_rnd_t rnd)
+  MPCNumber(const mpc_t x, unsigned int p, mpc_rnd_t rnd)
       : precision(p), mpc_rounding(rnd) {
     mpc_init2(value, precision);
     mpc_set(value, x, mpc_rounding);
@@ -286,8 +281,7 @@ void explain_unary_operation_single_output_different_type_error(
   msg << "Match value not within tolerance value of MPFR result:\n"
       << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str()
       << "i" << '\n';
-  msg << "  Rounding mode: " << str(rounding) << " , "
-      << str(rounding) << '\n';
+  msg << "  Rounding mode: " << str(rounding) << " , " << str(rounding) << '\n';
   msg << "    Libc: " << mpfrLibcResult.str() << '\n';
   msg << "    MPC: " << mpfr_result.str() << '\n';
   msg << '\n';
@@ -344,8 +338,7 @@ void explain_unary_operation_single_output_same_type_error(
   msg << "Match value not within tolerance value of MPFR result:\n"
       << "  Input: " << mpfrInputReal.str() << " + " << mpfrInputImag.str()
       << "i" << '\n';
-  msg << "  Rounding mode: " << str(rounding) << " , "
-      << str(rounding) << '\n';
+  msg << "  Rounding mode: " << str(rounding) << " , " << str(rounding) << '\n';
   msg << "    Libc: " << mpfrLibcResultReal.str() << " + "
       << mpfrLibcResultImag.str() << "i" << '\n';
   msg << "    MPC: " << mpfr_real.str() << " + " << mpfr_imag.str() << "i"
