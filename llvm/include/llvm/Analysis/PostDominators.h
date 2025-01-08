@@ -68,6 +68,8 @@ public:
   explicit PostDominatorTreePrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 struct PostDominatorTreeWrapperPass : public FunctionPass {

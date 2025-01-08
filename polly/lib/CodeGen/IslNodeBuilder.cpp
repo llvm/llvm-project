@@ -30,10 +30,12 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -44,11 +46,13 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "isl/aff.h"
 #include "isl/aff_type.h"
@@ -366,22 +370,6 @@ void IslNodeBuilder::getReferencesInSubtree(const isl::ast_node &For,
   Values = ReplacedValues;
 }
 
-void IslNodeBuilder::updateValues(ValueMapT &NewValues) {
-  SmallPtrSet<Value *, 5> Inserted;
-
-  for (const auto &I : IDToValue) {
-    IDToValue[I.first] = NewValues[I.second];
-    Inserted.insert(I.second);
-  }
-
-  for (const auto &I : NewValues) {
-    if (Inserted.count(I.first))
-      continue;
-
-    ValueMap[I.first] = I.second;
-  }
-}
-
 Value *IslNodeBuilder::getLatestValue(Value *Original) const {
   auto It = ValueMap.find(Original);
   if (It == ValueMap.end())
@@ -488,10 +476,10 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
-  bool UseGuardBB =
-      !SE.isKnownPredicate(Predicate, SE.getSCEV(ValueLB), SE.getSCEV(ValueUB));
-  IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, LI, DT, ExitBlock,
-                  Predicate, &Annotator, MarkParallel, UseGuardBB,
+  bool UseGuardBB = !GenSE->isKnownPredicate(Predicate, GenSE->getSCEV(ValueLB),
+                                             GenSE->getSCEV(ValueUB));
+  IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, *GenLI, *GenDT,
+                  ExitBlock, Predicate, &Annotator, MarkParallel, UseGuardBB,
                   LoopVectorizerDisabled);
   IDToValue[IteratorID.get()] = IV;
 
@@ -504,50 +492,6 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   Builder.SetInsertPoint(&ExitBlock->front());
 
   SequentialLoops++;
-}
-
-/// Remove the BBs contained in a (sub)function from the dominator tree.
-///
-/// This function removes the basic blocks that are part of a subfunction from
-/// the dominator tree. Specifically, when generating code it may happen that at
-/// some point the code generation continues in a new sub-function (e.g., when
-/// generating OpenMP code). The basic blocks that are created in this
-/// sub-function are then still part of the dominator tree of the original
-/// function, such that the dominator tree reaches over function boundaries.
-/// This is not only incorrect, but also causes crashes. This function now
-/// removes from the dominator tree all basic blocks that are dominated (and
-/// consequently reachable) from the entry block of this (sub)function.
-///
-/// FIXME: A LLVM (function or region) pass should not touch anything outside of
-/// the function/region it runs on. Hence, the pure need for this function shows
-/// that we do not comply to this rule. At the moment, this does not cause any
-/// issues, but we should be aware that such issues may appear. Unfortunately
-/// the current LLVM pass infrastructure does not allow to make Polly a module
-/// or call-graph pass to solve this issue, as such a pass would not have access
-/// to the per-function analyses passes needed by Polly. A future pass manager
-/// infrastructure is supposed to enable such kind of access possibly allowing
-/// us to create a cleaner solution here.
-///
-/// FIXME: Instead of adding the dominance information and then dropping it
-/// later on, we should try to just not add it in the first place. This requires
-/// some careful testing to make sure this does not break in interaction with
-/// the SCEVBuilder and SplitBlock which may rely on the dominator tree or
-/// which may try to update it.
-///
-/// @param F The function which contains the BBs to removed.
-/// @param DT The dominator tree from which to remove the BBs.
-static void removeSubFuncFromDomTree(Function *F, DominatorTree &DT) {
-  DomTreeNode *N = DT.getNode(&F->getEntryBlock());
-  std::vector<BasicBlock *> Nodes;
-
-  // We can only remove an element from the dominator tree, if all its children
-  // have been removed. To ensure this we obtain the list of nodes to remove
-  // using a post-order tree traversal.
-  for (po_iterator<DomTreeNode *> I = po_begin(N), E = po_end(N); I != E; ++I)
-    Nodes.push_back(I->getBlock());
-
-  for (BasicBlock *BB : Nodes)
-    DT.eraseNode(BB);
 }
 
 void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
@@ -619,31 +563,109 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
 
   switch (PollyOmpBackend) {
   case OpenMPBackend::GNU:
-    ParallelLoopGenPtr.reset(
-        new ParallelLoopGeneratorGOMP(Builder, LI, DT, DL));
+    ParallelLoopGenPtr.reset(new ParallelLoopGeneratorGOMP(Builder, DL));
     break;
   case OpenMPBackend::LLVM:
-    ParallelLoopGenPtr.reset(new ParallelLoopGeneratorKMP(Builder, LI, DT, DL));
+    ParallelLoopGenPtr.reset(new ParallelLoopGeneratorKMP(Builder, DL));
     break;
   }
 
   IV = ParallelLoopGenPtr->createParallelLoop(
       ValueLB, ValueUB, ValueInc, SubtreeValues, NewValues, &LoopBody);
   BasicBlock::iterator AfterLoop = Builder.GetInsertPoint();
-  Builder.SetInsertPoint(&*LoopBody);
 
   // Remember the parallel subfunction
-  ParallelSubfunctions.push_back(LoopBody->getFunction());
+  Function *SubFn = LoopBody->getFunction();
+  ParallelSubfunctions.push_back(SubFn);
 
-  // Save the current values.
-  auto ValueMapCopy = ValueMap;
+  // We start working on the outlined function. Since DominatorTree/LoopInfo are
+  // not an inter-procedural passes, we temporarily switch them out. Save the
+  // old ones first.
+  Function *CallerFn = Builder.GetInsertBlock()->getParent();
+  DominatorTree *CallerDT = GenDT;
+  LoopInfo *CallerLI = GenLI;
+  ScalarEvolution *CallerSE = GenSE;
+  ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
 
-  updateValues(NewValues);
+  // Get the analyses for the subfunction. ParallelLoopGenerator already create
+  // DominatorTree and LoopInfo for us.
+  DominatorTree *SubDT = ParallelLoopGenPtr->getCalleeDominatorTree();
+  LoopInfo *SubLI = ParallelLoopGenPtr->getCalleeLoopInfo();
+
+  // Create TargetLibraryInfo, AssumptionCachem and ScalarEvolution ourselves.
+  // TODO: Ideally, we would use the pass manager's TargetLibraryInfoPass and
+  // AssumptionAnalysis instead of our own. They contain more target-specific
+  // information than we have available here: TargetLibraryInfoImpl can be a
+  // derived class determined by TargetMachine, AssumptionCache can be
+  // configured using a TargetTransformInfo object also derived from
+  // TargetMachine.
+  TargetLibraryInfoImpl BaselineInfoImpl(
+      Triple(SubFn->getParent()->getTargetTriple()));
+  TargetLibraryInfo CalleeTLI(BaselineInfoImpl, SubFn);
+  AssumptionCache CalleeAC(*SubFn);
+  std::unique_ptr<ScalarEvolution> SubSE = std::make_unique<ScalarEvolution>(
+      *SubFn, CalleeTLI, CalleeAC, *SubDT, *SubLI);
+
+  // Switch to the subfunction
+  GenDT = SubDT;
+  GenLI = SubLI;
+  GenSE = SubSE.get();
+  BlockGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
+  RegionGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
+  ExprBuilder.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
+  Builder.SetInsertPoint(&*LoopBody);
+
+  // Update the ValueMap to use instructions in the subfunction. Note that
+  // "GlobalMap" used in BlockGenerator/IslExprBuilder is a reference to this
+  // ValueMap.
+  for (auto &[OldVal, NewVal] : ValueMap) {
+    NewVal = NewValues.lookup(NewVal);
+
+    // Clean-up any value that getReferencesInSubtree thinks we do not need.
+    // DenseMap::erase only writes a tombstone (and destroys OldVal/NewVal), so
+    // does not invalidate our iterator.
+    if (!NewVal)
+      ValueMap.erase(OldVal);
+  }
+
+  // This is for NewVals that do not appear in ValueMap (such as SCoP-invariant
+  // values whose original value can be reused as long as we are in the same
+  // function). No need to map the others.
+  for (auto &[NewVal, NewNewVal] : NewValues) {
+    if (Instruction *NewValInst = dyn_cast<Instruction>((Value *)NewVal)) {
+      if (S.contains(NewValInst))
+        continue;
+      assert(NewValInst->getFunction() == &S.getFunction());
+    }
+    assert(!ValueMap.contains(NewVal));
+    ValueMap[NewVal] = NewNewVal;
+  }
+
+  // Also update the IDToValue map to use instructions from the subfunction.
+  for (auto &[OldVal, NewVal] : IDToValue) {
+    NewVal = NewValues.lookup(NewVal);
+    assert(NewVal);
+  }
   IDToValue[IteratorID] = IV;
 
-  ValueMapT NewValuesReverse;
+#ifndef NDEBUG
+  // Check whether the maps now exclusively refer to SubFn values.
+  for (auto &[OldVal, SubVal] : ValueMap) {
+    Instruction *SubInst = dyn_cast<Instruction>((Value *)SubVal);
+    assert(SubInst->getFunction() == SubFn &&
+           "Instructions from outside the subfn cannot be accessed within the "
+           "subfn");
+  }
+  for (auto &[Id, SubVal] : IDToValue) {
+    Instruction *SubInst = dyn_cast<Instruction>((Value *)SubVal);
+    assert(SubInst->getFunction() == SubFn &&
+           "Instructions from outside the subfn cannot be accessed within the "
+           "subfn");
+  }
+#endif
 
+  ValueMapT NewValuesReverse;
   for (auto P : NewValues)
     NewValuesReverse[P.second] = P.first;
 
@@ -652,12 +674,17 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   create(Body);
 
   Annotator.resetAlternativeAliasBases();
-  // Restore the original values.
-  ValueMap = ValueMapCopy;
-  IDToValue = IDToValueCopy;
 
+  // Resume working on the caller function.
+  GenDT = CallerDT;
+  GenLI = CallerLI;
+  GenSE = CallerSE;
+  IDToValue = std::move(IDToValueCopy);
+  ValueMap = std::move(CallerGlobals);
+  ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
+  RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
+  BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(&*AfterLoop);
-  removeSubFuncFromDomTree((*LoopBody).getParent()->getParent(), DT);
 
   for (const Loop *L : Loops)
     OutsideLoopIterations.erase(L);
@@ -686,21 +713,21 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
   LLVMContext &Context = F->getContext();
 
   BasicBlock *CondBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), &DT, &LI);
+                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
   CondBB->setName("polly.cond");
-  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), &DT, &LI);
+  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), GenDT, GenLI);
   MergeBB->setName("polly.merge");
   BasicBlock *ThenBB = BasicBlock::Create(Context, "polly.then", F);
   BasicBlock *ElseBB = BasicBlock::Create(Context, "polly.else", F);
 
-  DT.addNewBlock(ThenBB, CondBB);
-  DT.addNewBlock(ElseBB, CondBB);
-  DT.changeImmediateDominator(MergeBB, CondBB);
+  GenDT->addNewBlock(ThenBB, CondBB);
+  GenDT->addNewBlock(ElseBB, CondBB);
+  GenDT->changeImmediateDominator(MergeBB, CondBB);
 
-  Loop *L = LI.getLoopFor(CondBB);
+  Loop *L = GenLI->getLoopFor(CondBB);
   if (L) {
-    L->addBasicBlockToLoop(ThenBB, LI);
-    L->addBasicBlockToLoop(ElseBB, LI);
+    L->addBasicBlockToLoop(ThenBB, *GenLI);
+    L->addBasicBlockToLoop(ElseBB, *GenLI);
   }
 
   CondBB->getTerminator()->eraseFromParent();
@@ -1025,8 +1052,6 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
 
   auto *Ptr = AddressValue;
   auto Name = Ptr->getName();
-  auto AS = Ptr->getType()->getPointerAddressSpace();
-  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
   PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
@@ -1088,19 +1113,19 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
     Cond = Builder.CreateIsNotNull(Cond);
 
   BasicBlock *CondBB = SplitBlock(Builder.GetInsertBlock(),
-                                  &*Builder.GetInsertPoint(), &DT, &LI);
+                                  &*Builder.GetInsertPoint(), GenDT, GenLI);
   CondBB->setName("polly.preload.cond");
 
-  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), &DT, &LI);
+  BasicBlock *MergeBB = SplitBlock(CondBB, &CondBB->front(), GenDT, GenLI);
   MergeBB->setName("polly.preload.merge");
 
   Function *F = Builder.GetInsertBlock()->getParent();
   LLVMContext &Context = F->getContext();
   BasicBlock *ExecBB = BasicBlock::Create(Context, "polly.preload.exec", F);
 
-  DT.addNewBlock(ExecBB, CondBB);
-  if (Loop *L = LI.getLoopFor(CondBB))
-    L->addBasicBlockToLoop(ExecBB, LI);
+  GenDT->addNewBlock(ExecBB, CondBB);
+  if (Loop *L = GenLI->getLoopFor(CondBB))
+    L->addBasicBlockToLoop(ExecBB, *GenLI);
 
   auto *CondBBTerminator = CondBB->getTerminator();
   Builder.SetInsertPoint(CondBBTerminator);
@@ -1212,7 +1237,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   BasicBlock *EntryBB = &Builder.GetInsertBlock()->getParent()->getEntryBlock();
   auto *Alloca = new AllocaInst(AccInstTy, DL.getAllocaAddrSpace(),
                                 AccInst->getName() + ".preload.s2a",
-                                &*EntryBB->getFirstInsertionPt());
+                                EntryBB->getFirstInsertionPt());
   Builder.CreateStore(PreloadVal, Alloca);
   ValueMapT PreloadedPointer;
   PreloadedPointer[PreloadVal] = AccInst;
@@ -1308,10 +1333,11 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()
                         ->getEntryBlock()
-                        .getTerminator();
+                        .getTerminator()
+                        ->getIterator();
 
       auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
-                                          SAI->getName(), &*InstIt);
+                                          SAI->getName(), InstIt);
       if (PollyTargetFirstLevelCacheLineSize)
         CreatedArray->setAlignment(Align(PollyTargetFirstLevelCacheLineSize));
       SAI->setBasePtr(CreatedArray);
@@ -1325,7 +1351,7 @@ bool IslNodeBuilder::preloadInvariantLoads() {
     return true;
 
   BasicBlock *PreLoadBB = SplitBlock(Builder.GetInsertBlock(),
-                                     &*Builder.GetInsertPoint(), &DT, &LI);
+                                     &*Builder.GetInsertPoint(), GenDT, GenLI);
   PreLoadBB->setName("polly.preload.begin");
   Builder.SetInsertPoint(&PreLoadBB->front());
 
@@ -1374,8 +1400,10 @@ Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
   assert(Builder.GetInsertBlock()->end() != Builder.GetInsertPoint() &&
          "Insert location points after last valid instruction");
   Instruction *InsertLocation = &*Builder.GetInsertPoint();
-  return expandCodeFor(S, SE, DL, "polly", Expr, Expr->getType(),
-                       InsertLocation, &ValueMap,
+
+  return expandCodeFor(S, SE, Builder.GetInsertBlock()->getParent(), *GenSE, DL,
+                       "polly", Expr, Expr->getType(), InsertLocation,
+                       &ValueMap, /*LoopToScevMap*/ nullptr,
                        StartBlock->getSinglePredecessor());
 }
 

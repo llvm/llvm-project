@@ -17,10 +17,8 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -116,7 +114,7 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   BranchInst::Create(Body, Header);
   BranchInst::Create(Latch, Body);
   PHINode *IV =
-      PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator());
+      PHINode::Create(I16Ty, 2, Name + ".iv", Header->getTerminator()->getIterator());
   IV->addIncoming(ConstantInt::get(I16Ty, 0), Preheader);
 
   B.SetInsertPoint(Latch);

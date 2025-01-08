@@ -14,14 +14,14 @@
 //     optimizations are done and those builtins can be removed.
 //   - remove llvm.bpf.getelementptr.and.load builtins.
 //   - remove llvm.bpf.getelementptr.and.store builtins.
+//   - for loads and stores with base addresses from non-zero address space
+//     cast base address to zero address space (support for BPF address spaces).
 //
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
 #include "BPFCORE.h"
-#include "BPFTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -29,7 +29,6 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -55,6 +54,7 @@ private:
   bool removeCompareBuiltin(Module &M);
   bool sinkMinMax(Module &M);
   bool removeGEPBuiltins(Module &M);
+  bool insertASpaceCasts(Module &M);
 };
 } // End anonymous namespace
 
@@ -416,11 +416,123 @@ bool BPFCheckAndAdjustIR::removeGEPBuiltins(Module &M) {
   return Changed;
 }
 
+// Wrap ToWrap with cast to address space zero:
+// - if ToWrap is a getelementptr,
+//   wrap it's base pointer instead and return a copy;
+// - if ToWrap is Instruction, insert address space cast
+//   immediately after ToWrap;
+// - if ToWrap is not an Instruction (function parameter
+//   or a global value), insert address space cast at the
+//   beginning of the Function F;
+// - use Cache to avoid inserting too many casts;
+static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
+                              Value *ToWrap) {
+  auto It = Cache.find(ToWrap);
+  if (It != Cache.end())
+    return It->getSecond();
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(ToWrap)) {
+    Value *Ptr = GEP->getPointerOperand();
+    Value *WrappedPtr = aspaceWrapValue(Cache, F, Ptr);
+    auto *GEPTy = cast<PointerType>(GEP->getType());
+    auto *NewGEP = GEP->clone();
+    NewGEP->insertAfter(GEP);
+    NewGEP->mutateType(PointerType::getUnqual(GEPTy->getContext()));
+    NewGEP->setOperand(GEP->getPointerOperandIndex(), WrappedPtr);
+    NewGEP->setName(GEP->getName());
+    Cache[ToWrap] = NewGEP;
+    return NewGEP;
+  }
+
+  IRBuilder IB(F->getContext());
+  if (Instruction *InsnPtr = dyn_cast<Instruction>(ToWrap))
+    IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
+  else
+    IB.SetInsertPoint(F->getEntryBlock().getFirstInsertionPt());
+  auto *ASZeroPtrTy = IB.getPtrTy(0);
+  auto *ACast = IB.CreateAddrSpaceCast(ToWrap, ASZeroPtrTy, ToWrap->getName());
+  Cache[ToWrap] = ACast;
+  return ACast;
+}
+
+// Wrap a pointer operand OpNum of instruction I
+// with cast to address space zero
+static void aspaceWrapOperand(DenseMap<Value *, Value *> &Cache, Instruction *I,
+                              unsigned OpNum) {
+  Value *OldOp = I->getOperand(OpNum);
+  if (OldOp->getType()->getPointerAddressSpace() == 0)
+    return;
+
+  Value *NewOp = aspaceWrapValue(Cache, I->getFunction(), OldOp);
+  I->setOperand(OpNum, NewOp);
+  // Check if there are any remaining users of old GEP,
+  // delete those w/o users
+  for (;;) {
+    auto *OldGEP = dyn_cast<GetElementPtrInst>(OldOp);
+    if (!OldGEP)
+      break;
+    if (!OldGEP->use_empty())
+      break;
+    OldOp = OldGEP->getPointerOperand();
+    OldGEP->eraseFromParent();
+  }
+}
+
+// Support for BPF address spaces:
+// - for each function in the module M, update pointer operand of
+//   each memory access instruction (load/store/cmpxchg/atomicrmw)
+//   by casting it from non-zero address space to zero address space, e.g:
+//
+//   (load (ptr addrspace (N) %p) ...)
+//     -> (load (addrspacecast ptr addrspace (N) %p to ptr))
+//
+// - assign section with name .addr_space.N for globals defined in
+//   non-zero address space N
+bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
+  bool Changed = false;
+  for (Function &F : M) {
+    DenseMap<Value *, Value *> CastsCache;
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        unsigned PtrOpNum;
+
+        if (auto *LD = dyn_cast<LoadInst>(&I))
+          PtrOpNum = LD->getPointerOperandIndex();
+        else if (auto *ST = dyn_cast<StoreInst>(&I))
+          PtrOpNum = ST->getPointerOperandIndex();
+        else if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I))
+          PtrOpNum = CmpXchg->getPointerOperandIndex();
+        else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+          PtrOpNum = RMW->getPointerOperandIndex();
+        else
+          continue;
+
+        aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+      }
+    }
+    Changed |= !CastsCache.empty();
+  }
+  // Merge all globals within same address space into single
+  // .addr_space.<addr space no> section
+  for (GlobalVariable &G : M.globals()) {
+    if (G.getAddressSpace() == 0 || G.hasSection())
+      continue;
+    SmallString<16> SecName;
+    raw_svector_ostream OS(SecName);
+    OS << ".addr_space." << G.getAddressSpace();
+    G.setSection(SecName);
+    // Prevent having separate section for constants
+    G.setConstant(false);
+  }
+  return Changed;
+}
+
 bool BPFCheckAndAdjustIR::adjustIR(Module &M) {
   bool Changed = removePassThroughBuiltin(M);
   Changed = removeCompareBuiltin(M) || Changed;
   Changed = sinkMinMax(M) || Changed;
   Changed = removeGEPBuiltins(M) || Changed;
+  Changed = insertASpaceCasts(M) || Changed;
   return Changed;
 }
 

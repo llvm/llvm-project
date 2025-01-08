@@ -6,18 +6,27 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
+
+using LIBC_NAMESPACE::Sign;
 
 template <typename T>
-class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class FDimTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
+
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
   void test_na_n_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
@@ -59,10 +68,10 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      if (isnan(x) || isinf(x))
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
-      if (isnan(y) || isinf(y))
+      if (FPBits(w).is_nan() || FPBits(w).is_inf())
         continue;
 
       if (x > y) {
@@ -72,13 +81,4 @@ public:
       }
     }
   }
-
-private:
-  // constexpr does not work on FPBits yet, so we cannot have these constants as
-  // static.
-  const T nan = T(FPBits::build_quiet_nan(1));
-  const T inf = T(FPBits::inf());
-  const T neg_inf = T(FPBits::neg_inf());
-  const T zero = T(FPBits::zero());
-  const T neg_zero = T(FPBits::neg_zero());
 };

@@ -2,7 +2,17 @@
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s  --implicit-check-not=DBG_
+
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s  --implicit-check-not=DBG_
 
@@ -67,10 +77,10 @@ entry:
   ret i32 0, !dbg !35
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !36 dso_local void @_Z4stepv() local_unnamed_addr #2
 declare !dbg !40 dso_local void @_Z3escP4Nums(ptr noundef) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!0}

@@ -1,6 +1,6 @@
-; RUN: llc --mtriple=loongarch64 --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --stop-after loongarch-prera-expand-pseudo \
 ; RUN:     --relocation-model=pic %s -o %t.mir
-; RUN: llc --mtriple=loongarch64 --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d --run-pass loongarch-prera-expand-pseudo \
 ; RUN:     %t.mir -o - | FileCheck %s
 
 ;; This tests the LoongArch-specific serialization and deserialization of
@@ -28,8 +28,9 @@ define void @caller() nounwind {
 ; CHECK-NEXT: target-flags(loongarch-got-pc-lo) @t_ld
 ; CHECK:      target-flags(loongarch-ie-pc-hi) @t_ie
 ; CHECK-NEXT: target-flags(loongarch-ie-pc-lo) @t_ie
-; CHECK:      target-flags(loongarch-le-hi) @t_le
-; CHECK-NEXT: target-flags(loongarch-le-lo) @t_le
+; CHECK:      target-flags(loongarch-le-hi-r) @t_le
+; CHECK-NEXT: target-flags(loongarch-le-add-r) @t_le
+; CHECK-NEXT: target-flags(loongarch-le-lo-r) @t_le
 ; CHECK:      target-flags(loongarch-call-plt) @callee1
 ; CHECK:      target-flags(loongarch-call) @callee2
   %a = load volatile i32, ptr @g_e

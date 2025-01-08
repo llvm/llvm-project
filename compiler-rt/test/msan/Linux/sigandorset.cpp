@@ -1,6 +1,6 @@
 // RUN: %clangxx_msan -std=c++11 -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_msan -DLEFT_OK -std=c++11 -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_msan -DRIGHT_OK -std=c++11 -O0 -g %s -o %t && not %run %t 2<&1 | FileCheck %s
+// RUN: %clangxx_msan -DRIGHT_OK -std=c++11 -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_msan -DLEFT_OK -DRIGHT_OK -std=c++11 -O0 -g %s -o %t && %run %t
 // REQUIRES: !android
 

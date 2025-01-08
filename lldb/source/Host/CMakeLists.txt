@@ -13,6 +13,7 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
+  common/Alarm.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -132,6 +133,11 @@ else()
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
       )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_host_subdirectory(aix
+      aix/HostInfoAIX.cpp
+      )    
   endif()
 endif()
 

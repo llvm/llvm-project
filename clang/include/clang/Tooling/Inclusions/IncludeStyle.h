@@ -123,10 +123,10 @@ struct IncludeStyle {
   /// When guessing whether a #include is the "main" include (to assign
   /// category 0, see above), use this regex of allowed suffixes to the header
   /// stem. A partial match is done, so that:
-  /// - "" means "arbitrary suffix"
-  /// - "$" means "no suffix"
+  /// * ``""`` means "arbitrary suffix"
+  /// * ``"$"`` means "no suffix"
   ///
-  /// For example, if configured to "(_test)?$", then a header a.h would be seen
+  /// For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
   /// as the "main" include in both a.cc and a_test.cc.
   /// \version 3.9
   std::string IncludeIsMainRegex;
@@ -151,6 +151,21 @@ struct IncludeStyle {
   /// before any other include.
   /// \version 10
   std::string IncludeIsMainSourceRegex;
+
+  /// Character to consider in the include directives for the main header.
+  enum MainIncludeCharDiscriminator : int8_t {
+    /// Main include uses quotes: ``#include "foo.hpp"`` (the default).
+    MICD_Quote,
+    /// Main include uses angle brackets: ``#include <foo.hpp>``.
+    MICD_AngleBracket,
+    /// Main include uses either quotes or angle brackets.
+    MICD_Any
+  };
+
+  /// When guessing whether a #include is the "main" include, only the include
+  /// directives that use the specified character are considered.
+  /// \version 19
+  MainIncludeCharDiscriminator MainIncludeChar;
 };
 
 } // namespace tooling
@@ -172,6 +187,14 @@ struct ScalarEnumerationTraits<
     clang::tooling::IncludeStyle::IncludeBlocksStyle> {
   static void
   enumeration(IO &IO, clang::tooling::IncludeStyle::IncludeBlocksStyle &Value);
+};
+
+template <>
+struct ScalarEnumerationTraits<
+    clang::tooling::IncludeStyle::MainIncludeCharDiscriminator> {
+  static void enumeration(
+      IO &IO,
+      clang::tooling::IncludeStyle::MainIncludeCharDiscriminator &Value);
 };
 
 } // namespace yaml

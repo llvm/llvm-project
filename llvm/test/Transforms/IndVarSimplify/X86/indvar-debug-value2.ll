@@ -16,9 +16,9 @@
 ; opt -passes=mem2reg -scalar-evolution
 
 ; CHECK: @main
-; CHECK: llvm.dbg.value(metadata i32 1, metadata [[METADATA_IDX1:![0-9]+]]
+; CHECK: #dbg_value(i32 1, [[METADATA_IDX1:![0-9]+]]
 ; CHECK: %[[VAR_NAME:.*]] = add nuw nsw i64
-; CHECK: llvm.dbg.value(metadata i64 %[[VAR_NAME]], metadata [[METADATA_IDX1]], metadata !DIExpression())
+; CHECK: #dbg_value(i64 %[[VAR_NAME]], [[METADATA_IDX1]], !DIExpression(),
 ; CHECK: DICompileUnit
 ; CHECK: [[METADATA_IDX1]] = !DILocalVariable(name: "ArgIndex"
 

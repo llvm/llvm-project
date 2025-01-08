@@ -37,8 +37,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  return [=](unsigned Task, StringRef Key,
-             const Twine &ModuleName) -> Expected<AddStreamFn> {
+  auto Func = [=](unsigned Task, StringRef Key,
+                  const Twine &ModuleName) -> Expected<AddStreamFn> {
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
     SmallString<64> EntryPath;
@@ -163,8 +163,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // This CacheStream will move the temporary file into the cache when done.
       return std::make_unique<CacheStream>(
           std::make_unique<raw_fd_ostream>(Temp->FD, /* ShouldClose */ false),
-          AddBuffer, std::move(*Temp), std::string(EntryPath.str()),
-          ModuleName.str(), Task);
+          AddBuffer, std::move(*Temp), std::string(EntryPath), ModuleName.str(),
+          Task);
     };
   };
+  return FileCache(Func, CacheDirectoryPathRef.str());
 }

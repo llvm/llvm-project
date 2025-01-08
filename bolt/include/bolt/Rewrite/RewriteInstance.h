@@ -17,11 +17,11 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -47,11 +47,14 @@ public:
   // construction. Constructors can’t return errors, so clients must test \p Err
   // after the object is constructed. Use `create` method instead.
   RewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
-                  const char *const *Argv, StringRef ToolPath, Error &Err);
+                  const char *const *Argv, StringRef ToolPath,
+                  raw_ostream &Stdout, raw_ostream &Stderr, Error &Err);
 
   static Expected<std::unique_ptr<RewriteInstance>>
   create(llvm::object::ELFObjectFileBase *File, const int Argc,
-         const char *const *Argv, StringRef ToolPath);
+         const char *const *Argv, StringRef ToolPath,
+         raw_ostream &Stdout = llvm::outs(),
+         raw_ostream &Stderr = llvm::errs());
   ~RewriteInstance();
 
   /// Assign profile from \p Filename to this instance.
@@ -76,15 +79,6 @@ public:
     return InputFile->getFileName();
   }
 
-  /// Set the build-id string if we did not fail to parse the contents of the
-  /// ELF note section containing build-id information.
-  void parseBuildID();
-
-  /// The build-id is typically a stream of 20 bytes. Return these bytes in
-  /// printable hexadecimal form if they are available, or std::nullopt
-  /// otherwise.
-  std::optional<std::string> getPrintableBuildID() const;
-
   /// If this instance uses a profile, return appropriate profile reader.
   const ProfileReaderBase *getProfileReader() const {
     return ProfileReader.get();
@@ -94,6 +88,10 @@ private:
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
   void discoverFileObjects();
+
+  /// Check if the input binary has a space reserved for BOLT and use it for new
+  /// section allocations if found.
+  void discoverBOLTReserved();
 
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
@@ -166,6 +164,9 @@ private:
 
   void preregisterSections();
 
+  /// run analyses requested in binary analysis mode.
+  void runBinaryAnalyses();
+
   /// Run optimizations that operate at the binary, or post-linker, level.
   void runOptimizationPasses();
 
@@ -177,11 +178,17 @@ private:
   /// Link additional runtime code to support instrumentation.
   void linkRuntime();
 
+  /// Process metadata in sections before functions are discovered.
+  void processSectionMetadata();
+
   /// Process metadata in special sections before CFG is built for functions.
   void processMetadataPreCFG();
 
   /// Process metadata in special sections after CFG is built for functions.
   void processMetadataPostCFG();
+
+  /// Make changes to metadata before the binary is emitted.
+  void finalizeMetadataPreEmit();
 
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
@@ -260,6 +267,11 @@ private:
   /// associated address.
   void createPLTBinaryFunction(uint64_t TargetAddress, uint64_t EntryAddress,
                                uint64_t EntrySize);
+
+  /// Disassemble PLT instruction.
+  void disassemblePLTInstruction(const BinarySection &Section,
+                                 uint64_t InstrOffset, MCInst &Instruction,
+                                 uint64_t &InstrSize);
 
   /// Disassemble aarch64-specific .plt \p Section auxiliary function
   void disassemblePLTSectionAArch64(BinarySection &Section);
@@ -353,18 +365,6 @@ private:
   /// Loop over now emitted functions to write translation maps
   void encodeBATSection();
 
-  /// Update the ELF note section containing the binary build-id to reflect
-  /// a new build-id, so tools can differentiate between the old and the
-  /// rewritten binary.
-  void patchBuildID();
-
-  /// Return file offset corresponding to a given virtual address.
-  uint64_t getFileOffsetFor(uint64_t Address) {
-    assert(Address >= NewTextSegmentAddress &&
-           "address in not in the new text segment");
-    return Address - NewTextSegmentAddress + NewTextSegmentOffset;
-  }
-
   /// Return file offset corresponding to a virtual \p Address.
   /// Return 0 if the address has no mapping in the file, including being
   /// part of .bss section.
@@ -387,9 +387,6 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
-
-  /// Return true if the section holds linux kernel symbol information.
-  static bool isKSymtabSection(StringRef SectionName);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
@@ -422,9 +419,17 @@ private:
   /// Section name used for extra BOLT code in addition to .text.
   static StringRef getBOLTTextSectionName() { return ".bolt.text"; }
 
+  /// Symbol markers for BOLT reserved area.
+  static StringRef getBOLTReservedStart() { return "__bolt_reserved_start"; }
+  static StringRef getBOLTReservedEnd() { return "__bolt_reserved_end"; }
+
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
+
+  /// FILE symbol name used for local fragments of global functions.
+  static StringRef getBOLTFileSymbolName() { return "bolt-pseudo.o"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
@@ -488,7 +493,10 @@ private:
   std::unordered_map<const MCSymbol *, uint32_t> SymbolIndex;
 
   /// Store all non-zero symbols in this map for a quick address lookup.
-  std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
+  std::multimap<uint64_t, llvm::object::SymbolRef> FileSymRefs;
+
+  /// FILE symbols used for disambiguating split function parents.
+  std::vector<ELFSymbolRef> FileSymbols;
 
   std::unique_ptr<DWARFRewriter> DebugInfoRewriter;
 
@@ -505,12 +513,11 @@ private:
   };
 
   /// Different types of X86-64 PLT sections.
-  const PLTSectionInfo X86_64_PLTSections[4] = {
-      { ".plt", 16 },
-      { ".plt.got", 8 },
-      { ".plt.sec", 8 },
-      { nullptr, 0 }
-  };
+  const PLTSectionInfo X86_64_PLTSections[5] = {{".plt", 16},
+                                                {".plt.got", 8},
+                                                {".plt.sec", 8},
+                                                {".iplt", 16},
+                                                {nullptr, 0}};
 
   /// AArch64 PLT sections.
   const PLTSectionInfo AArch64_PLTSections[4] = {
@@ -546,25 +553,11 @@ private:
   /// Exception handling and stack unwinding information in this binary.
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
 
-  /// .note.gnu.build-id section.
-  ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
-
   /// Helper for accessing sections by name.
   BinarySection *getSection(const Twine &Name) {
     ErrorOr<BinarySection &> ErrOrSection = BC->getUniqueSectionByName(Name);
     return ErrOrSection ? &ErrOrSection.get() : nullptr;
   }
-
-  /// A reference to the build-id bytes in the original binary
-  StringRef BuildID;
-
-  /// Keep track of functions we fail to write in the binary. We need to avoid
-  /// rewriting CFI info for these functions.
-  std::vector<uint64_t> FailedAddresses;
-
-  /// Keep track of which functions didn't fit in their original space in the
-  /// last emission, so that we may either decide to split or not optimize them.
-  std::set<uint64_t> LargeFunctions;
 
   /// Section header string table.
   StringTableBuilder SHStrTab;
@@ -580,6 +573,9 @@ private:
   uint64_t NumFailedRelocations{0};
 
   NameResolver NR;
+
+  // Regex object matching split function names.
+  const Regex FunctionFragmentTemplate{"(.*)\\.(cold|warm)(\\.[0-9]+)?"};
 
   friend class RewriteInstanceDiff;
 };

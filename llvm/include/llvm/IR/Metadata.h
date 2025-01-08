@@ -43,7 +43,7 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
-class DPValue;
+class DbgVariableRecord;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;
@@ -205,37 +205,51 @@ private:
 /// Base class for tracking ValueAsMetadata/DIArgLists with user lookups and
 /// Owner callbacks outside of ValueAsMetadata.
 ///
-/// Currently only inherited by DPValue; if other classes need to use it, then
-/// a SubclassID will need to be added (either as a new field or by making
-/// DebugValue into a PointerIntUnion) to discriminate between the subclasses in
-/// lookup and callback handling.
+/// Currently only inherited by DbgVariableRecord; if other classes need to use
+/// it, then a SubclassID will need to be added (either as a new field or by
+/// making DebugValue into a PointerIntUnion) to discriminate between the
+/// subclasses in lookup and callback handling.
 class DebugValueUser {
 protected:
-  Metadata *DebugValue;
+  // Capacity to store 3 debug values.
+  // TODO: Not all DebugValueUser instances need all 3 elements, if we
+  // restructure the DbgVariableRecord class then we can template parameterize
+  // this array size.
+  std::array<Metadata *, 3> DebugValues;
+
+  ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
 public:
-  DPValue *getUser();
-  const DPValue *getUser() const;
-  void handleChangedValue(Metadata *NewDebugValue);
+  DbgVariableRecord *getUser();
+  const DbgVariableRecord *getUser() const;
+  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// is a pointer to one of the pointers in `DebugValues` (so should be type
+  /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
+  /// *Old.
+  /// For manually replacing elements of DebugValues,
+  /// `resetDebugValue(Idx, NewDebugValue)` should be used instead.
+  void handleChangedValue(void *Old, Metadata *NewDebugValue);
   DebugValueUser() = default;
-  explicit DebugValueUser(Metadata *DebugValue) : DebugValue(DebugValue) {
-    trackDebugValue();
+  explicit DebugValueUser(std::array<Metadata *, 3> DebugValues)
+      : DebugValues(DebugValues) {
+    trackDebugValues();
   }
-
-  DebugValueUser(DebugValueUser &&X) : DebugValue(X.DebugValue) {
-    retrackDebugValue(X);
+  DebugValueUser(DebugValueUser &&X) {
+    DebugValues = X.DebugValues;
+    retrackDebugValues(X);
   }
-  DebugValueUser(const DebugValueUser &X) : DebugValue(X.DebugValue) {
-    trackDebugValue();
+  DebugValueUser(const DebugValueUser &X) {
+    DebugValues = X.DebugValues;
+    trackDebugValues();
   }
 
   DebugValueUser &operator=(DebugValueUser &&X) {
     if (&X == this)
       return *this;
 
-    untrackDebugValue();
-    DebugValue = X.DebugValue;
-    retrackDebugValue(X);
+    untrackDebugValues();
+    DebugValues = X.DebugValues;
+    retrackDebugValues(X);
     return *this;
   }
 
@@ -243,35 +257,41 @@ public:
     if (&X == this)
       return *this;
 
-    untrackDebugValue();
-    DebugValue = X.DebugValue;
-    trackDebugValue();
+    untrackDebugValues();
+    DebugValues = X.DebugValues;
+    trackDebugValues();
     return *this;
   }
 
-  ~DebugValueUser() { untrackDebugValue(); }
+  ~DebugValueUser() { untrackDebugValues(); }
 
-  void resetDebugValue() {
-    untrackDebugValue();
-    DebugValue = nullptr;
+  void resetDebugValues() {
+    untrackDebugValues();
+    DebugValues.fill(nullptr);
   }
-  void resetDebugValue(Metadata *DebugValue) {
-    untrackDebugValue();
-    this->DebugValue = DebugValue;
-    trackDebugValue();
+
+  void resetDebugValue(size_t Idx, Metadata *DebugValue) {
+    assert(Idx < 3 && "Invalid debug value index.");
+    untrackDebugValue(Idx);
+    DebugValues[Idx] = DebugValue;
+    trackDebugValue(Idx);
   }
 
   bool operator==(const DebugValueUser &X) const {
-    return DebugValue == X.DebugValue;
+    return DebugValues == X.DebugValues;
   }
   bool operator!=(const DebugValueUser &X) const {
-    return DebugValue != X.DebugValue;
+    return DebugValues != X.DebugValues;
   }
 
 private:
-  void trackDebugValue();
-  void untrackDebugValue();
-  void retrackDebugValue(DebugValueUser &X);
+  void trackDebugValue(size_t Idx);
+  void trackDebugValues();
+
+  void untrackDebugValue(size_t Idx);
+  void untrackDebugValues();
+
+  void retrackDebugValues(DebugValueUser &X);
 };
 
 /// API for tracking metadata references through RAUW and deletion.
@@ -387,8 +407,8 @@ public:
   static void SalvageDebugInfo(const Constant &C); 
   /// Returns the list of all DIArgList users of this.
   SmallVector<Metadata *> getAllArgListUsers();
-  /// Returns the list of all DPValue users of this.
-  SmallVector<DPValue *> getAllDPValueUsers();
+  /// Returns the list of all DbgVariableRecord users of this.
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers();
 
   /// Resolve all uses of this.
   ///
@@ -396,6 +416,8 @@ public:
   /// ResolveUsers, call \a MDNode::resolve() on any users whose last operand
   /// is resolved.
   void resolveAllUses(bool ResolveUsers = true);
+
+  unsigned getNumUses() const { return UseMap.size(); }
 
 private:
   void addRef(void *Ref, OwnerTy Owner);
@@ -472,8 +494,8 @@ public:
   SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
   }
-  SmallVector<DPValue *> getAllDPValueUsers() {
-    return ReplaceableMetadataImpl::getAllDPValueUsers();
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
+    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
   static void handleDeletion(Value *V);
@@ -822,6 +844,16 @@ struct AAMDNodes {
   /// together. Different from `merge`, where different locations should
   /// overlap each other, `concat` puts non-overlapping locations together.
   AAMDNodes concat(const AAMDNodes &Other) const;
+
+  /// Create a new AAMDNode for accessing \p AccessSize bytes of this AAMDNode.
+  /// If this AAMDNode has !tbaa.struct and \p AccessSize matches the size of
+  /// the field at offset 0, get the TBAA tag describing the accessed field.
+  /// If such an AAMDNode already embeds !tbaa, the existing one is retrieved.
+  /// Finally, !tbaa.struct is zeroed out.
+  AAMDNodes adjustForAccess(unsigned AccessSize);
+  AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
+                            const DataLayout &DL);
+  AAMDNodes adjustForAccess(size_t Offset, unsigned AccessSize);
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
@@ -1037,6 +1069,7 @@ struct TempMDNodeDeleter {
 class MDNode : public Metadata {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
+  friend class DIAssignID;
 
   /// The header that is coallocated with an MDNode along with its "small"
   /// operands. It is located immediately before the main body of the node.
@@ -1148,7 +1181,7 @@ class MDNode : public Metadata {
 
 protected:
   MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt);
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
   void *operator new(size_t Size, size_t NumOps, StorageType Storage);
@@ -1219,7 +1252,13 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary(); }
+  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
+  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+
+  unsigned getNumTemporaryUses() const {
+    assert(isTemporary() && "Only for temporaries");
+    return Context.getReplaceableUses()->getNumUses();
+  }
 
   /// RAUW a temporary.
   ///
@@ -1417,6 +1456,7 @@ public:
   static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
   static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
+  static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
@@ -1424,6 +1464,8 @@ public:
   static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
                                        const Instruction *AInstr,
                                        const Instruction *BInstr);
+  static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.
@@ -1450,8 +1492,7 @@ class MDTuple : public MDNode {
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(
-                                          Operands.begin(), Operands.end()));
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(Operands));
   }
 
 public:
@@ -1701,7 +1742,7 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
 
   explicit NamedMDNode(const Twine &N);
 
-  template <class T1, class T2> class op_iterator_impl {
+  template <class T1> class op_iterator_impl {
     friend class NamedMDNode;
 
     const NamedMDNode *Node = nullptr;
@@ -1711,10 +1752,10 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
 
   public:
     using iterator_category = std::bidirectional_iterator_tag;
-    using value_type = T2;
+    using value_type = T1;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type *;
-    using reference = value_type &;
+    using reference = value_type;
 
     op_iterator_impl() = default;
 
@@ -1775,12 +1816,12 @@ public:
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
   //
-  using op_iterator = op_iterator_impl<MDNode *, MDNode>;
+  using op_iterator = op_iterator_impl<MDNode *>;
 
   op_iterator op_begin() { return op_iterator(this, 0); }
   op_iterator op_end()   { return op_iterator(this, getNumOperands()); }
 
-  using const_op_iterator = op_iterator_impl<const MDNode *, MDNode>;
+  using const_op_iterator = op_iterator_impl<const MDNode *>;
 
   const_op_iterator op_begin() const { return const_op_iterator(this, 0); }
   const_op_iterator op_end()   const { return const_op_iterator(this, getNumOperands()); }

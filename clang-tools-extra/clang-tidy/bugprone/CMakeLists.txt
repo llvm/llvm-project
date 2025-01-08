@@ -3,17 +3,20 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 
-add_clang_library(clangTidyBugproneModule
+add_clang_library(clangTidyBugproneModule STATIC
   ArgumentCommentCheck.cpp
   AssertSideEffectCheck.cpp
   AssignmentInIfConditionCheck.cpp
   BadSignalToKillThreadCheck.cpp
+  BitwisePointerCastCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
   CastingThroughVoidCheck.cpp
+  ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
+  CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
@@ -24,9 +27,8 @@ add_clang_library(clangTidyBugproneModule
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
-  IncorrectEnableIfCheck.cpp
-  SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp
+  IncorrectEnableIfCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
@@ -40,14 +42,18 @@ add_clang_library(clangTidyBugproneModule
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
+  NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
+  NondeterministicPointerIterationOrderCheck.cpp
   NotNullTerminatedResultCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
+  PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
   SignedCharMisuseCheck.cpp
@@ -68,7 +74,10 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousReallocUsageCheck.cpp
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
   SwappedArgumentsCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
+  TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
   TooSmallLoopVariableCheck.cpp
@@ -87,7 +96,6 @@ add_clang_library(clangTidyBugproneModule
 
   LINK_LIBS
   clangTidy
-  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
 
   DEPENDS

@@ -8,11 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// Aligned allocations are not supported on macOS < 10.13
-// Note: use 'unsupported' instead of 'xfail' to ensure
-// we won't pass prior to c++17.
-// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
-
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <memory>
@@ -26,11 +22,10 @@
 //   return_temporary_buffer(T* p);
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
-
-#include "test_macros.h"
 
 struct alignas(32) A {
     int field;

@@ -386,7 +386,7 @@ define i1 @nonnull5(ptr %a) {
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @assumption_conflicts_with_known_bits(
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    ret i32 poison
 ;
   %and1 = and i32 %b, 3
   %B1 = lshr i32 %and1, %and1
@@ -405,7 +405,7 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata i32 5, metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -485,7 +485,7 @@ define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -513,7 +513,7 @@ define i1 @nonnull3C(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -543,7 +543,7 @@ define i1 @nonnull3D(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -774,7 +774,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; DEFAULT-LABEL: @canonicalize_assume(
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 2
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 8
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
 ; DEFAULT-NEXT:    ret void
 ;

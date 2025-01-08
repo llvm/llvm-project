@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "../native_handle_test_helpers.h"
 
 int main(int, char**)
 {
@@ -32,6 +33,12 @@ int main(int, char**)
     static_assert((std::is_same<std::basic_filebuf<char>::int_type, std::char_traits<char>::int_type>::value), "");
     static_assert((std::is_same<std::basic_filebuf<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_filebuf<char>::off_type, std::char_traits<char>::off_type>::value), "");
+#if TEST_STD_VER >= 26
+    test_native_handle_type< std::basic_filebuf<char>>();
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test_native_handle_type< std::basic_filebuf<wchar_t>>();
+#  endif
+#endif
 
-  return 0;
+    return 0;
 }

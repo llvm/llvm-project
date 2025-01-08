@@ -1,18 +1,20 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -verify -S -emit-llvm -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -verify -S -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -verify -emit-llvm -o - %s
 
 typedef unsigned int uint;
 typedef half __attribute__((ext_vector_type(2))) half2;
 typedef short __attribute__((ext_vector_type(2))) short2;
 typedef unsigned short __attribute__((ext_vector_type(2))) ushort2;
+typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 kernel void builtins_amdgcn_dl_insts_err(
     global float *fOut, global int *siOut, global uint *uiOut,
     global short *sOut, global int *iOut, global half *hOut,
     half2 v2hA, half2 v2hB, float fC, half hC,
+    bfloat2 v2bfbfA, bfloat2 v2bfbfB,
     short2 v2ssA, short2 v2ssB, short sC, int siA, int siB, int siC,
     ushort2 v2usA, ushort2 v2usB, uint uiA, uint uiB, uint uiC,
     int A, int B, int C) {
@@ -23,8 +25,11 @@ kernel void builtins_amdgcn_dl_insts_err(
 
   sOut[0] = __builtin_amdgcn_fdot2_bf16_bf16(v2ssA, v2ssB, sC);       // expected-error {{'__builtin_amdgcn_fdot2_bf16_bf16' needs target feature dot9-insts}}
 
-  fOut[3] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, false); // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot9-insts}}
-  fOut[4] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, true);  // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot9-insts}}
+  fOut[3] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, false); // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot12-insts}}
+  fOut[4] = __builtin_amdgcn_fdot2_f32_bf16(v2ssA, v2ssB, fC, true);  // expected-error {{'__builtin_amdgcn_fdot2_f32_bf16' needs target feature dot12-insts}}
+
+  fOut[3] = __builtin_amdgcn_fdot2c_f32_bf16(v2bfbfA, v2bfbfB, fC, false); // expected-error {{'__builtin_amdgcn_fdot2c_f32_bf16' needs target feature dot13-insts}}
+  fOut[4] = __builtin_amdgcn_fdot2c_f32_bf16(v2bfbfA, v2bfbfB, fC, true);  // expected-error {{'__builtin_amdgcn_fdot2c_f32_bf16' needs target feature dot13-insts}}
 
   siOut[0] = __builtin_amdgcn_sdot2(v2ssA, v2ssB, siC, false);      // expected-error {{'__builtin_amdgcn_sdot2' needs target feature dot2-insts}}
   siOut[1] = __builtin_amdgcn_sdot2(v2ssA, v2ssB, siC, true);       // expected-error {{'__builtin_amdgcn_sdot2' needs target feature dot2-insts}}
@@ -49,4 +54,9 @@ kernel void builtins_amdgcn_dl_insts_err(
 
   iOut[3] = __builtin_amdgcn_sudot8(false, A, true, B, C, false);    // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
   iOut[4] = __builtin_amdgcn_sudot8(true, A, false, B, C, true);     // expected-error {{'__builtin_amdgcn_sudot8' needs target feature dot8-insts}}
+
+  fOut[5] = __builtin_amdgcn_dot4_f32_fp8_bf8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_fp8_bf8' needs target feature dot11-insts}}
+  fOut[6] = __builtin_amdgcn_dot4_f32_bf8_fp8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_bf8_fp8' needs target feature dot11-insts}}
+  fOut[7] = __builtin_amdgcn_dot4_f32_fp8_fp8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_fp8_fp8' needs target feature dot11-insts}}
+  fOut[8] = __builtin_amdgcn_dot4_f32_bf8_bf8(uiA, uiB, fC);        // expected-error {{'__builtin_amdgcn_dot4_f32_bf8_bf8' needs target feature dot11-insts}}
 }

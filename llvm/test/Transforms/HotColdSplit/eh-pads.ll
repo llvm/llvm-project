@@ -84,13 +84,16 @@ cold4:
 ; CHECK: sink
 
 ; CHECK-LABEL: define {{.*}}@bar.cold.1(
+; CHECK: sideeffect(i32 0)
+
+; CHECK-LABEL: define {{.*}}@bar.cold.2(
 ; CHECK: sideeffect(i32 1)
 
 ; CHECK-LABEL: define {{.*}}@baz.cold.1(
-; CHECK: sideeffect(i32 1)
+; CHECK: sideeffect(i32 0)
 
 ; CHECK-LABEL: define {{.*}}@baz.cold.2(
-; CHECK: sideeffect(i32 0)
+; CHECK: sideeffect(i32 1)
 
 declare void @sideeffect(i32)
 

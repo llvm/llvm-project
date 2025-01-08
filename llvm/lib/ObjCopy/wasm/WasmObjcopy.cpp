@@ -22,7 +22,7 @@ using namespace object;
 using SectionPred = std::function<bool(const Section &Sec)>;
 
 static bool isDebugSection(const Section &Sec) {
-  return Sec.Name.starts_with(".debug");
+  return Sec.Name.starts_with(".debug") || Sec.Name.starts_with("reloc..debug");
 }
 
 static bool isLinkerSection(const Section &Sec) {

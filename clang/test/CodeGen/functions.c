@@ -61,3 +61,15 @@ static void test9_helper(void) {}
 void test9(void) {
   (void) test9_helper;
 }
+
+// PR88917: don't crash
+int b();
+
+int main() {
+	return b(b);
+	// CHECK: call i32 @b(ptr noundef @b)
+}
+int b(int (*f)()){
+  return 0;
+}
+// CHECK-LABEL: define{{.*}} i32 @b(ptr noundef %f)

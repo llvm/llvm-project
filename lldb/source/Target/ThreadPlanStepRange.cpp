@@ -120,8 +120,9 @@ bool ThreadPlanStepRange::InRange() {
         frame->GetSymbolContext(eSymbolContextEverything));
     if (m_addr_context.line_entry.IsValid() &&
         new_context.line_entry.IsValid()) {
-      if (m_addr_context.line_entry.original_file ==
-          new_context.line_entry.original_file) {
+      if (m_addr_context.line_entry.original_file_sp->Equal(
+              *new_context.line_entry.original_file_sp,
+              SupportFile::eEqualFileSpecAndChecksumIfSet)) {
         if (m_addr_context.line_entry.line == new_context.line_entry.line) {
           m_addr_context = new_context;
           const bool include_inlined_functions =
@@ -265,9 +266,11 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
         // Disassemble the address range given:
         const char *plugin_name = nullptr;
         const char *flavor = nullptr;
+        const char *cpu = nullptr;
+        const char *features = nullptr;
         m_instruction_ranges[i] = Disassembler::DisassembleRange(
-            GetTarget().GetArchitecture(), plugin_name, flavor, GetTarget(),
-            m_address_ranges[i]);
+            GetTarget().GetArchitecture(), plugin_name, flavor, cpu, features,
+            GetTarget(), m_address_ranges[i]);
       }
       if (!m_instruction_ranges[i])
         return nullptr;
@@ -292,6 +295,20 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
   return nullptr;
 }
 
+bool ThreadPlanStepRange::IsNextBranchBreakpointStop(StopInfoSP stop_info_sp) {
+  if (!m_next_branch_bp_sp)
+    return false;
+
+  break_id_t bp_site_id = stop_info_sp->GetValue();
+  BreakpointSiteSP bp_site_sp =
+      m_process.GetBreakpointSiteList().FindByID(bp_site_id);
+  if (!bp_site_sp)
+    return false;
+  else if (!bp_site_sp->IsBreakpointAtThisSite(m_next_branch_bp_sp->GetID()))
+    return false;
+  return true;
+}
+
 void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
   if (m_next_branch_bp_sp) {
     Log *log = GetLog(LLDBLog::Step);
@@ -302,6 +319,11 @@ void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
     m_could_not_resolve_hw_bp = false;
     m_found_calls = false;
   }
+}
+
+void ThreadPlanStepRange::ClearNextBranchBreakpointExplainedStop() {
+  if (IsNextBranchBreakpointStop(GetPrivateStopInfo()))
+    ClearNextBranchBreakpoint();
 }
 
 bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
@@ -346,7 +368,9 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
       run_to_address =
           instructions->GetInstructionAtIndex(branch_index)->GetAddress();
     }
-
+    if (branch_index == pc_index)
+      LLDB_LOGF(log, "ThreadPlanStepRange::SetNextBranchBreakpoint - skipping "
+                     "because current is branch instruction");
     if (run_to_address.IsValid()) {
       const bool is_internal = true;
       m_next_branch_bp_sp =
@@ -357,10 +381,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
             !m_next_branch_bp_sp->HasResolvedLocations())
           m_could_not_resolve_hw_bp = true;
 
+        BreakpointLocationSP bp_loc =
+            m_next_branch_bp_sp->GetLocationAtIndex(0);
         if (log) {
           lldb::break_id_t bp_site_id = LLDB_INVALID_BREAK_ID;
-          BreakpointLocationSP bp_loc =
-              m_next_branch_bp_sp->GetLocationAtIndex(0);
           if (bp_loc) {
             BreakpointSiteSP bp_site = bp_loc->GetBreakpointSite();
             if (bp_site) {
@@ -373,22 +397,67 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                     m_next_branch_bp_sp->GetID(), bp_site_id,
                     run_to_address.GetLoadAddress(&m_process.GetTarget()));
         }
-
+        // The "next branch breakpoint might land on a virtual inlined call
+        // stack.  If that's true, we should always stop at the top of the
+        // inlined call stack.  Only virtual steps should walk deeper into the
+        // inlined call stack.
+        Block *block = run_to_address.CalculateSymbolContextBlock();
+        if (bp_loc && block) {
+          LineEntry top_most_line_entry;
+          lldb::addr_t run_to_addr = run_to_address.GetFileAddress();
+          for (Block *inlined_parent = block->GetContainingInlinedBlock();
+               inlined_parent;
+               inlined_parent = inlined_parent->GetInlinedParent()) {
+            AddressRange range;
+            if (!inlined_parent->GetRangeContainingAddress(run_to_address,
+                                                           range))
+              break;
+            Address range_start_address = range.GetBaseAddress();
+            // Only compare addresses here, we may have different symbol
+            // contexts (for virtual inlined stacks), but we just want to know
+            // that they are all at the same address.
+            if (range_start_address.GetFileAddress() != run_to_addr)
+              break;
+            const InlineFunctionInfo *inline_info =
+                inlined_parent->GetInlinedFunctionInfo();
+            if (!inline_info)
+              break;
+            const Declaration &call_site = inline_info->GetCallSite();
+            top_most_line_entry.line = call_site.GetLine();
+            top_most_line_entry.column = call_site.GetColumn();
+            FileSpec call_site_file_spec = call_site.GetFile();
+            top_most_line_entry.original_file_sp.reset(
+                new SupportFile(call_site_file_spec));
+            top_most_line_entry.range = range;
+            top_most_line_entry.file_sp.reset();
+            top_most_line_entry.ApplyFileMappings(
+                GetThread().CalculateTarget());
+            if (!top_most_line_entry.file_sp)
+              top_most_line_entry.file_sp =
+                  top_most_line_entry.original_file_sp;
+          }
+          if (top_most_line_entry.IsValid()) {
+            LLDB_LOG(log, "Setting preferred line entry: {0}:{1}",
+                     top_most_line_entry.GetFile(), top_most_line_entry.line);
+            bp_loc->SetPreferredLineEntry(top_most_line_entry);
+          }
+        }
         m_next_branch_bp_sp->SetThreadID(m_tid);
         m_next_branch_bp_sp->SetBreakpointKind("next-branch-location");
 
         return true;
       } else
         return false;
-    }
+    } else
+      LLDB_LOGF(log, "ThreadPlanStepRange::SetNextBranchBreakpoint - skipping "
+                     "invalid run_to_address");
   }
   return false;
 }
 
 bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
     lldb::StopInfoSP stop_info_sp) {
-  Log *log = GetLog(LLDBLog::Step);
-  if (!m_next_branch_bp_sp)
+  if (!IsNextBranchBreakpointStop(stop_info_sp))
     return false;
 
   break_id_t bp_site_id = stop_info_sp->GetValue();
@@ -396,30 +465,27 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
       m_process.GetBreakpointSiteList().FindByID(bp_site_id);
   if (!bp_site_sp)
     return false;
-  else if (!bp_site_sp->IsBreakpointAtThisSite(m_next_branch_bp_sp->GetID()))
-    return false;
-  else {
-    // If we've hit the next branch breakpoint, then clear it.
-    size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
-    bool explains_stop = true;
-    // If all the constituents are internal, then we are probably just stepping
-    // over this range from multiple threads, or multiple frames, so we want to
-    // continue.  If one is not internal, then we should not explain the stop,
-    // and let the user breakpoint handle the stop.
-    for (size_t i = 0; i < num_constituents; i++) {
-      if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
-        explains_stop = false;
-        break;
-      }
+
+  // If we've hit the next branch breakpoint, then clear it.
+  size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
+  bool explains_stop = true;
+  // If all the constituents are internal, then we are probably just stepping
+  // over this range from multiple threads, or multiple frames, so we want to
+  // continue.  If one is not internal, then we should not explain the stop,
+  // and let the user breakpoint handle the stop.
+  for (size_t i = 0; i < num_constituents; i++) {
+    if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
+      explains_stop = false;
+      break;
     }
-    LLDB_LOGF(log,
-              "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
-              "next range breakpoint which has %" PRIu64
-              " constituents - explains stop: %u.",
-              (uint64_t)num_constituents, explains_stop);
-    ClearNextBranchBreakpoint();
-    return explains_stop;
   }
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log,
+            "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
+            "next range breakpoint which has %" PRIu64
+            " constituents - explains stop: %u.",
+            (uint64_t)num_constituents, explains_stop);
+  return explains_stop;
 }
 
 bool ThreadPlanStepRange::WillStop() { return true; }

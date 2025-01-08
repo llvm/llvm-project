@@ -236,6 +236,29 @@ namespace PR14858 {
   void test_q(int (&a)[5]) { Q<B, B, B>().f<B, B>(&a); }
 }
 
+namespace PR84220 {
+
+template <class...> class list {};
+
+template <int> struct foo_impl {
+  template <class> using f = int;
+};
+
+template <class... xs>
+using foo = typename foo_impl<sizeof...(xs)>::template f<xs...>;
+
+// We call getFullyPackExpandedSize at the annotation stage
+// before parsing the ellipsis next to the foo<xs>. This happens before
+// a PackExpansionType is formed for foo<xs>.
+// getFullyPackExpandedSize shouldn't determine the value here. Otherwise,
+// foo_impl<sizeof...(xs)> would lose its dependency despite the template
+// arguments being unsubstituted.
+template <class... xs> using test = list<foo<xs>...>;
+
+test<int> a;
+
+}
+
 namespace redecl {
   template<typename> using A = int;
   template<typename = void> using A = int;

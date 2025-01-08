@@ -32,18 +32,20 @@
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 
 template <typename T, typename... TArgs> class AnalysisManager;
 template <class T> class ArrayRef;
 class AssumptionCache;
-class BinaryOperator;
 class CallBase;
 class DataLayout;
 class DominatorTree;
 class Function;
 class Instruction;
+class CmpPredicate;
+class LoadInst;
 struct LoopStandardAnalysisResults;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
@@ -151,11 +153,11 @@ Value *simplifyOrInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 Value *simplifyXorInst(Value *LHS, Value *RHS, const SimplifyQuery &Q);
 
 /// Given operands for an ICmpInst, fold the result or return null.
-Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
+Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
                         const SimplifyQuery &Q);
 
 /// Given operands for an FCmpInst, fold the result or return null.
-Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
+Value *simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
                         FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given operands for a SelectInst, fold the result or return null.
@@ -164,7 +166,7 @@ Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
 Value *simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
-                       bool InBounds, const SimplifyQuery &Q);
+                       GEPNoWrapFlags NW, const SimplifyQuery &Q);
 
 /// Given operands for an InsertValueInst, fold the result or return null.
 Value *simplifyInsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
@@ -186,6 +188,11 @@ Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
 Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                         const SimplifyQuery &Q);
 
+/// Given operands for a BinaryIntrinsic, fold the result or return null.
+Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType, Value *Op0,
+                               Value *Op1, const SimplifyQuery &Q,
+                               const CallBase *Call);
+
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.
 Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1, ArrayRef<int> Mask,
@@ -194,7 +201,7 @@ Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1, ArrayRef<int> Mask,
 //=== Helper functions for higher up the class hierarchy.
 
 /// Given operands for a CmpInst, fold the result or return null.
-Value *simplifyCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
+Value *simplifyCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
                        const SimplifyQuery &Q);
 
 /// Given operand for a UnaryOperator, fold the result or return null.

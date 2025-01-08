@@ -93,6 +93,19 @@ csrrsi a0, mhpm12counter, a0 # CHECK: :[[@LINE]]:12: error: operand must be a va
 csrrwi a0, mhpmcounter32, 0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
 csrrsi a0, A, a0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
 
+## symbol in place of uimm12
+.set out_of_range, 4096
+csrr a0, out_of_range # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrr a0, undef_symbol # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+local_label:
+csrr a0, local_label # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+.Lstart:
+.space 10
+.Lend:
+csrr a0, .Lstart-.Lend # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+.set dot_set_sym_diff, .Lstart-.Lend
+csrr a0, dot_set_sym_diff # CHECK: [[#@LINE]]:10: error: operand must be a valid system register name or an integer in the range [0, 4095]
+
 ## simm13_lsb0
 beq t0, t1, %lo(1) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 bne t0, t1, %lo(a) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
@@ -170,7 +183,8 @@ xor s2, s2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
 # Instruction not in the base ISA
 div a4, ra, s0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'M' (Integer Multiplication and Division){{$}}
-amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'A' (Atomic Instructions){{$}}
+amomaxu.w s5, s4, (s3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zaamo' (Atomic Memory Operations){{$}}
+lr.w t0, (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zalrsc' (Load-Reserved/Store-Conditional){{$}}
 fadd.s ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
 fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
 fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}

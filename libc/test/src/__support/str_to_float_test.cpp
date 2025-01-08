@@ -1,25 +1,34 @@
+//===-- Unittests for str_to_float<float> ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using LlvmLibcStrToFltTest = LlvmLibcStrToFloatTest<float>;
 
 TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32Simple) {
-  clinger_fast_path_test(123, 0, 0x760000, 133);
-  clinger_fast_path_test(1234567, 1, 0x3c6146, 150);
-  clinger_fast_path_test(12345, -5, 0x7cd35b, 123);
+  clinger_fast_path_test(123, 0, 0xf60000, 133);
+  clinger_fast_path_test(1234567, 1, 0xbc6146, 150);
+  clinger_fast_path_test(12345, -5, 0xfcd35b, 123);
 }
 
 TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32ExtendedExp) {
-  clinger_fast_path_test(1, 15, 0x635fa9, 176);
-  clinger_fast_path_test(1, 17, 0x31a2bc, 183);
+  clinger_fast_path_test(1, 15, 0xe35fa9, 176);
+  clinger_fast_path_test(1, 17, 0xb1a2bc, 183);
   clinger_fast_path_fails_test(10, 17);
   clinger_fast_path_fails_test(1, 50);
 }
 
 TEST_F(LlvmLibcStrToFltTest, ClingerFastPathFloat32NegativeExp) {
-  clinger_fast_path_test(1, -5, 0x27c5ac, 110);
-  clinger_fast_path_test(1, -10, 0x5be6ff, 93);
+  clinger_fast_path_test(1, -5, 0xa7c5ac, 110);
+  clinger_fast_path_test(1, -10, 0xdbe6ff, 93);
   clinger_fast_path_fails_test(1, -15);
 }
 
@@ -46,7 +55,7 @@ TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   auto float_result =
       internal::simple_decimal_conversion<float>("123456789012345678900");
   float_output_mantissa = float_result.num.mantissa;
@@ -56,4 +65,4 @@ TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   EXPECT_EQ(float_result.error, 0);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

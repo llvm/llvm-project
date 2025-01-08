@@ -74,7 +74,10 @@ static X86_64RelType getType64(MCFixupKind Kind,
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_relax_rex2:
   case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_riprel_4byte_movq_load_rex2:
+  case X86::reloc_riprel_4byte_relax_evex:
     return RT64_32;
   case X86::reloc_branch_4byte_pcrel:
     Modifier = MCSymbolRefExpr::VK_PLT;
@@ -189,12 +192,19 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case MCSymbolRefExpr::VK_TLSCALL:
     return ELF::R_X86_64_TLSDESC_CALL;
   case MCSymbolRefExpr::VK_TLSDESC:
-    return ELF::R_X86_64_GOTPC32_TLSDESC;
+    return ((unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
+               ? ELF::R_X86_64_CODE_4_GOTPC32_TLSDESC
+               : ELF::R_X86_64_GOTPC32_TLSDESC;
   case MCSymbolRefExpr::VK_TLSGD:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_TLSGD;
   case MCSymbolRefExpr::VK_GOTTPOFF:
     checkIs32(Ctx, Loc, Type);
+    if ((unsigned)Kind == X86::reloc_riprel_4byte_movq_load_rex2 ||
+        (unsigned)Kind == X86::reloc_riprel_4byte_relax_rex2)
+      return ELF::R_X86_64_CODE_4_GOTTPOFF;
+    else if ((unsigned)Kind == X86::reloc_riprel_4byte_relax_evex)
+      return ELF::R_X86_64_CODE_6_GOTTPOFF;
     return ELF::R_X86_64_GOTTPOFF;
   case MCSymbolRefExpr::VK_TLSLD:
     checkIs32(Ctx, Loc, Type);
@@ -205,9 +215,9 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case MCSymbolRefExpr::VK_GOTPCREL:
     checkIs32(Ctx, Loc, Type);
     // Older versions of ld.bfd/ld.gold/lld
-    // do not support GOTPCRELX/REX_GOTPCRELX,
+    // do not support GOTPCRELX/REX_GOTPCRELX/CODE_4_GOTPCRELX,
     // and we want to keep back-compatibility.
-    if (!Ctx.getAsmInfo()->canRelaxRelocations())
+    if (!Ctx.getTargetOptions()->X86RelaxRelocations)
       return ELF::R_X86_64_GOTPCREL;
     switch (unsigned(Kind)) {
     default:
@@ -217,6 +227,9 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     case X86::reloc_riprel_4byte_relax_rex:
     case X86::reloc_riprel_4byte_movq_load:
       return ELF::R_X86_64_REX_GOTPCRELX;
+    case X86::reloc_riprel_4byte_relax_rex2:
+    case X86::reloc_riprel_4byte_movq_load_rex2:
+      return ELF::R_X86_64_CODE_4_GOTPCRELX;
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
@@ -259,7 +272,7 @@ static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
       return ELF::R_386_GOTPC;
     // Older versions of ld.bfd/ld.gold/lld do not support R_386_GOT32X and we
     // want to maintain compatibility.
-    if (!Ctx.getAsmInfo()->canRelaxRelocations())
+    if (!Ctx.getTargetOptions()->X86RelaxRelocations)
       return ELF::R_386_GOT32;
 
     return Kind == MCFixupKind(X86::reloc_signed_4byte_relax)

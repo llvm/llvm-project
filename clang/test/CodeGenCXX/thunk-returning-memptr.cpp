@@ -23,5 +23,5 @@ C::C() {}
 // Because of the tail call, the return value cannot be copied into a local
 // alloca. (PR39901)
 
-// CHECK-LABEL: define linkonce_odr void @_ZThn4_N1C1fEv(ptr noalias sret({ i32, i32 }) align 4 %agg.result, ptr noundef %this)
-// CHECK: tail call void @_ZN1C1fEv(ptr sret({ i32, i32 }) align 4 %agg.result
+// CHECK-LABEL: define linkonce_odr void @_ZThn4_N1C1fEv(ptr dead_on_unwind noalias writable sret({ i32, i32 }) align 4 %agg.result, ptr noundef %this)
+// CHECK: tail call void @_ZN1C1fEv(ptr dead_on_unwind writable sret({ i32, i32 }) align 4 %agg.result

@@ -25,7 +25,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
 #include "VPlanDominatorTree.h"
-#include "VPlanVerifier.h"
 
 namespace llvm {
 
@@ -33,11 +32,11 @@ class Loop;
 class LoopInfo;
 class VPRegionBlock;
 class VPlan;
-class VPlanTestBase;
+class VPlanTestIRBase;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
 class VPlanHCFGBuilder {
-  friend VPlanTestBase;
+  friend VPlanTestIRBase;
 
 private:
   // The outermost loop of the input loop nest considered for vectorization.
@@ -48,9 +47,6 @@ private:
 
   // The VPlan that will contain the H-CFG we are building.
   VPlan &Plan;
-
-  // VPlan verifier utility.
-  VPlanVerifier Verifier;
 
   // Dominator analysis for VPlan plain CFG to be used in the
   // construction of the H-CFG. This analysis is no longer valid once regions

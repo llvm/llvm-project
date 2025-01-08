@@ -75,14 +75,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "TableGenBackends.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-using namespace llvm;
-typedef std::map<std::string, std::vector<Record*> > InstrRelMapTy;
 
-typedef std::map<std::vector<Init*>, std::vector<Record*> > RowInstrMapTy;
+using namespace llvm;
+typedef std::map<std::string, std::vector<const Record *>> InstrRelMapTy;
+typedef std::map<std::vector<const Init *>, std::vector<const Record *>>
+    RowInstrMapTy;
 
 namespace {
 
@@ -92,13 +95,13 @@ class InstrMap {
 private:
   std::string Name;
   std::string FilterClass;
-  ListInit *RowFields;
-  ListInit *ColFields;
-  ListInit *KeyCol;
-  std::vector<ListInit*> ValueCols;
+  const ListInit *RowFields;
+  const ListInit *ColFields;
+  const ListInit *KeyCol;
+  std::vector<const ListInit *> ValueCols;
 
 public:
-  InstrMap(Record* MapRec) {
+  InstrMap(const Record *MapRec) {
     Name = std::string(MapRec->getName());
 
     // FilterClass - It's used to reduce the search space only to the
@@ -125,42 +128,35 @@ public:
     // Ex: ValueCols = [['true'],['false']] -- it results two columns in the
     // table. First column requires all the instructions to have predSense
     // set to 'true' and second column requires it to be 'false'.
-    ListInit *ColValList = MapRec->getValueAsListInit("ValueCols");
+    const ListInit *ColValList = MapRec->getValueAsListInit("ValueCols");
 
     // Each instruction map must specify at least one column for it to be valid.
     if (ColValList->empty())
       PrintFatalError(MapRec->getLoc(), "InstrMapping record `" +
-        MapRec->getName() + "' has empty " + "`ValueCols' field!");
+                                            MapRec->getName() + "' has empty " +
+                                            "`ValueCols' field!");
 
-    for (Init *I : ColValList->getValues()) {
-      auto *ColI = cast<ListInit>(I);
+    for (const Init *I : ColValList->getValues()) {
+      const auto *ColI = cast<ListInit>(I);
 
       // Make sure that all the sub-lists in 'ValueCols' have same number of
       // elements as the fields in 'ColFields'.
       if (ColI->size() != ColFields->size())
-        PrintFatalError(MapRec->getLoc(), "Record `" + MapRec->getName() +
-          "', field `ValueCols' entries don't match with " +
-          " the entries in 'ColFields'!");
+        PrintFatalError(MapRec->getLoc(),
+                        "Record `" + MapRec->getName() +
+                            "', field `ValueCols' entries don't match with " +
+                            " the entries in 'ColFields'!");
       ValueCols.push_back(ColI);
     }
   }
 
   const std::string &getName() const { return Name; }
-
   const std::string &getFilterClass() const { return FilterClass; }
-
-  ListInit *getRowFields() const { return RowFields; }
-
-  ListInit *getColFields() const { return ColFields; }
-
-  ListInit *getKeyCol() const { return KeyCol; }
-
-  const std::vector<ListInit*> &getValueCols() const {
-    return ValueCols;
-  }
+  const ListInit *getRowFields() const { return RowFields; }
+  const ListInit *getColFields() const { return ColFields; }
+  const ListInit *getKeyCol() const { return KeyCol; }
+  ArrayRef<const ListInit *> getValueCols() const { return ValueCols; }
 };
-} // end anonymous namespace
-
 
 //===----------------------------------------------------------------------===//
 // class MapTableEmitter : It builds the instruction relation maps using
@@ -168,29 +164,29 @@ public:
 // relationship maps as tables into XXXGenInstrInfo.inc file along with the
 // functions to query them.
 
-namespace {
 class MapTableEmitter {
 private:
-//  std::string TargetName;
+  //  std::string TargetName;
   const CodeGenTarget &Target;
   // InstrMapDesc - InstrMapping record to be processed.
   InstrMap InstrMapDesc;
 
   // InstrDefs - list of instructions filtered using FilterClass defined
   // in InstrMapDesc.
-  std::vector<Record*> InstrDefs;
+  ArrayRef<const Record *> InstrDefs;
 
   // RowInstrMap - maps RowFields values to the instructions. It's keyed by the
   // values of the row fields and contains vector of records as values.
   RowInstrMapTy RowInstrMap;
 
   // KeyInstrVec - list of key instructions.
-  std::vector<Record*> KeyInstrVec;
-  DenseMap<Record*, std::vector<Record*> > MapTable;
+  std::vector<const Record *> KeyInstrVec;
+  DenseMap<const Record *, std::vector<const Record *>> MapTable;
 
 public:
-  MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec):
-                  Target(Target), InstrMapDesc(IMRec) {
+  MapTableEmitter(const CodeGenTarget &Target, const RecordKeeper &Records,
+                  const Record *IMRec)
+      : Target(Target), InstrMapDesc(IMRec) {
     const std::string &FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
@@ -199,11 +195,12 @@ public:
 
   // Returns true if an instruction is a key instruction, i.e., its ColFields
   // have same values as KeyCol.
-  bool isKeyColInstr(Record* CurInstr);
+  bool isKeyColInstr(const Record *CurInstr);
 
   // Find column instruction corresponding to a key instruction based on the
   // constraints for that column.
-  Record *getInstrForColumn(Record *KeyInstr, ListInit *CurValueCol);
+  const Record *getInstrForColumn(const Record *KeyInstr,
+                                  const ListInit *CurValueCol);
 
   // Find column instructions for each key instruction based
   // on ValueCols and store them into MapTable.
@@ -215,10 +212,8 @@ public:
 
   // Lookup functions to query binary search tables.
   void emitMapFuncBody(raw_ostream &OS, unsigned TableSize);
-
 };
 } // end anonymous namespace
-
 
 //===----------------------------------------------------------------------===//
 // Process all the instructions that model this relation (alreday present in
@@ -229,16 +224,17 @@ public:
 //===----------------------------------------------------------------------===//
 
 void MapTableEmitter::buildRowInstrMap() {
-  for (Record *CurInstr : InstrDefs) {
-    std::vector<Init*> KeyValue;
-    ListInit *RowFields = InstrMapDesc.getRowFields();
-    for (Init *RowField : RowFields->getValues()) {
-      RecordVal *RecVal = CurInstr->getValue(RowField);
+  for (const Record *CurInstr : InstrDefs) {
+    std::vector<const Init *> KeyValue;
+    const ListInit *RowFields = InstrMapDesc.getRowFields();
+    for (const Init *RowField : RowFields->getValues()) {
+      const RecordVal *RecVal = CurInstr->getValue(RowField);
       if (RecVal == nullptr)
-        PrintFatalError(CurInstr->getLoc(), "No value " +
-                        RowField->getAsString() + " found in \"" +
-                        CurInstr->getName() + "\" instruction description.");
-      Init *CurInstrVal = RecVal->getValue();
+        PrintFatalError(CurInstr->getLoc(),
+                        "No value " + RowField->getAsString() + " found in \"" +
+                            CurInstr->getName() +
+                            "\" instruction description.");
+      const Init *CurInstrVal = RecVal->getValue();
       KeyValue.push_back(CurInstrVal);
     }
 
@@ -256,18 +252,19 @@ void MapTableEmitter::buildRowInstrMap() {
 // Return true if an instruction is a KeyCol instruction.
 //===----------------------------------------------------------------------===//
 
-bool MapTableEmitter::isKeyColInstr(Record* CurInstr) {
-  ListInit *ColFields = InstrMapDesc.getColFields();
-  ListInit *KeyCol = InstrMapDesc.getKeyCol();
+bool MapTableEmitter::isKeyColInstr(const Record *CurInstr) {
+  const ListInit *ColFields = InstrMapDesc.getColFields();
+  const ListInit *KeyCol = InstrMapDesc.getKeyCol();
 
   // Check if the instruction is a KeyCol instruction.
   bool MatchFound = true;
-  for (unsigned j = 0, endCF = ColFields->size();
-      (j < endCF) && MatchFound; j++) {
-    RecordVal *ColFieldName = CurInstr->getValue(ColFields->getElement(j));
+  for (unsigned J = 0, EndCf = ColFields->size(); (J < EndCf) && MatchFound;
+       J++) {
+    const RecordVal *ColFieldName =
+        CurInstr->getValue(ColFields->getElement(J));
     std::string CurInstrVal = ColFieldName->getValue()->getAsUnquotedString();
-    std::string KeyColValue = KeyCol->getElement(j)->getAsUnquotedString();
-    MatchFound = (CurInstrVal == KeyColValue);
+    std::string KeyColValue = KeyCol->getElement(J)->getAsUnquotedString();
+    MatchFound = CurInstrVal == KeyColValue;
   }
   return MatchFound;
 }
@@ -280,15 +277,15 @@ bool MapTableEmitter::isKeyColInstr(Record* CurInstr) {
 void MapTableEmitter::buildMapTable() {
   // Find column instructions for a given key based on the ColField
   // constraints.
-  const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
+  ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumOfCols = ValueCols.size();
-  for (Record *CurKeyInstr : KeyInstrVec) {
-    std::vector<Record*> ColInstrVec(NumOfCols);
+  for (const Record *CurKeyInstr : KeyInstrVec) {
+    std::vector<const Record *> ColInstrVec(NumOfCols);
 
     // Find the column instruction based on the constraints for the column.
     for (unsigned ColIdx = 0; ColIdx < NumOfCols; ColIdx++) {
-      ListInit *CurValueCol = ValueCols[ColIdx];
-      Record *ColInstr = getInstrForColumn(CurKeyInstr, CurValueCol);
+      const ListInit *CurValueCol = ValueCols[ColIdx];
+      const Record *ColInstr = getInstrForColumn(CurKeyInstr, CurValueCol);
       ColInstrVec[ColIdx] = ColInstr;
     }
     MapTable[CurKeyInstr] = ColInstrVec;
@@ -299,14 +296,14 @@ void MapTableEmitter::buildMapTable() {
 // Find column instruction based on the constraints for that column.
 //===----------------------------------------------------------------------===//
 
-Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
-                                           ListInit *CurValueCol) {
-  ListInit *RowFields = InstrMapDesc.getRowFields();
-  std::vector<Init*> KeyValue;
+const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
+                                                 const ListInit *CurValueCol) {
+  const ListInit *RowFields = InstrMapDesc.getRowFields();
+  std::vector<const Init *> KeyValue;
 
   // Construct KeyValue using KeyInstr's values for RowFields.
-  for (Init *RowField : RowFields->getValues()) {
-    Init *KeyInstrVal = KeyInstr->getValue(RowField)->getValue();
+  for (const Init *RowField : RowFields->getValues()) {
+    const Init *KeyInstrVal = KeyInstr->getValue(RowField)->getValue();
     KeyValue.push_back(KeyInstrVal);
   }
 
@@ -314,20 +311,20 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
   // in RowInstrMap. We search through these instructions to find a match
   // for the current column, i.e., the instruction which has the same values
   // as CurValueCol for all the fields in ColFields.
-  const std::vector<Record*> &RelatedInstrVec = RowInstrMap[KeyValue];
+  ArrayRef<const Record *> RelatedInstrVec = RowInstrMap[KeyValue];
 
-  ListInit *ColFields = InstrMapDesc.getColFields();
-  Record *MatchInstr = nullptr;
+  const ListInit *ColFields = InstrMapDesc.getColFields();
+  const Record *MatchInstr = nullptr;
 
-  for (llvm::Record *CurInstr : RelatedInstrVec) {
+  for (const Record *CurInstr : RelatedInstrVec) {
     bool MatchFound = true;
-    for (unsigned j = 0, endCF = ColFields->size();
-         (j < endCF) && MatchFound; j++) {
-      Init *ColFieldJ = ColFields->getElement(j);
-      Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
+    for (unsigned J = 0, EndCf = ColFields->size(); (J < EndCf) && MatchFound;
+         J++) {
+      const Init *ColFieldJ = ColFields->getElement(J);
+      const Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
       std::string CurInstrVal = CurInstrInit->getAsUnquotedString();
-      Init *ColFieldJVallue = CurValueCol->getElement(j);
-      MatchFound = (CurInstrVal == ColFieldJVallue->getAsUnquotedString());
+      const Init *ColFieldJVallue = CurValueCol->getElement(J);
+      MatchFound = CurInstrVal == ColFieldJVallue->getAsUnquotedString();
     }
 
     if (MatchFound) {
@@ -335,7 +332,7 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
         // Already had a match
         // Error if multiple matches are found for a column.
         std::string KeyValueStr;
-        for (Init *Value : KeyValue) {
+        for (const Init *Value : KeyValue) {
           if (!KeyValueStr.empty())
             KeyValueStr += ", ";
           KeyValueStr += Value->getAsString();
@@ -359,45 +356,48 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
 //===----------------------------------------------------------------------===//
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
-
-  ArrayRef<const CodeGenInstruction*> NumberedInstructions =
-                                            Target.getInstructionsByEnumValue();
+  ArrayRef<const CodeGenInstruction *> NumberedInstructions =
+      Target.getInstructionsByEnumValue();
   StringRef Namespace = Target.getInstNamespace();
-  const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
+  ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();
   unsigned TotalNumInstr = NumberedInstructions.size();
   unsigned TableSize = 0;
 
-  OS << "static const uint16_t "<<InstrMapDesc.getName();
+  OS << "static const uint16_t " << InstrMapDesc.getName();
   // Number of columns in the table are NumCol+1 because key instructions are
   // emitted as first column.
-  OS << "Table[]["<< NumCol+1 << "] = {\n";
-  for (unsigned i = 0; i < TotalNumInstr; i++) {
-    Record *CurInstr = NumberedInstructions[i]->TheDef;
-    std::vector<Record*> ColInstrs = MapTable[CurInstr];
+  OS << "Table[][" << NumCol + 1 << "] = {\n";
+  for (unsigned I = 0; I < TotalNumInstr; I++) {
+    const Record *CurInstr = NumberedInstructions[I]->TheDef;
+    ArrayRef<const Record *> ColInstrs = MapTable[CurInstr];
     std::string OutStr;
     unsigned RelExists = 0;
     if (!ColInstrs.empty()) {
-      for (unsigned j = 0; j < NumCol; j++) {
-        if (ColInstrs[j] != nullptr) {
+      for (unsigned J = 0; J < NumCol; J++) {
+        if (ColInstrs[J] != nullptr) {
           RelExists = 1;
           OutStr += ", ";
           OutStr += Namespace;
           OutStr += "::";
-          OutStr += ColInstrs[j]->getName();
-        } else { OutStr += ", (uint16_t)-1U";}
+          OutStr += ColInstrs[J]->getName();
+        } else {
+          OutStr += ", (uint16_t)-1U";
+        }
       }
 
       if (RelExists) {
         OS << "  { " << Namespace << "::" << CurInstr->getName();
-        OS << OutStr <<" },\n";
+        OS << OutStr << " },\n";
         TableSize++;
       }
     }
   }
   if (!TableSize) {
-    OS << "  { " << Namespace << "::" << "INSTRUCTION_LIST_END, ";
-    OS << Namespace << "::" << "INSTRUCTION_LIST_END }";
+    OS << "  { " << Namespace << "::"
+       << "INSTRUCTION_LIST_END, ";
+    OS << Namespace << "::"
+       << "INSTRUCTION_LIST_END }";
   }
   OS << "}; // End of " << InstrMapDesc.getName() << "Table\n\n";
   return TableSize;
@@ -430,11 +430,10 @@ void MapTableEmitter::emitBinSearch(raw_ostream &OS, unsigned TableSize) {
 // Emit functions to query relation tables.
 //===----------------------------------------------------------------------===//
 
-void MapTableEmitter::emitMapFuncBody(raw_ostream &OS,
-                                           unsigned TableSize) {
+void MapTableEmitter::emitMapFuncBody(raw_ostream &OS, unsigned TableSize) {
 
-  ListInit *ColFields = InstrMapDesc.getColFields();
-  const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
+  const ListInit *ColFields = InstrMapDesc.getColFields();
+  ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
 
   // Emit binary search algorithm to locate instructions in the
   // relation table. If found, return opcode value from the appropriate column
@@ -442,27 +441,26 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS,
   emitBinSearch(OS, TableSize);
 
   if (ValueCols.size() > 1) {
-    for (unsigned i = 0, e = ValueCols.size(); i < e; i++) {
-      ListInit *ColumnI = ValueCols[i];
+    for (unsigned I = 0, E = ValueCols.size(); I < E; I++) {
+      const ListInit *ColumnI = ValueCols[I];
       OS << "  if (";
-      for (unsigned j = 0, ColSize = ColumnI->size(); j < ColSize; ++j) {
-        std::string ColName = ColFields->getElement(j)->getAsUnquotedString();
+      for (unsigned J = 0, ColSize = ColumnI->size(); J < ColSize; ++J) {
+        std::string ColName = ColFields->getElement(J)->getAsUnquotedString();
         OS << "in" << ColName;
         OS << " == ";
-        OS << ColName << "_" << ColumnI->getElement(j)->getAsUnquotedString();
-        if (j < ColumnI->size() - 1)
+        OS << ColName << "_" << ColumnI->getElement(J)->getAsUnquotedString();
+        if (J < ColumnI->size() - 1)
           OS << " && ";
       }
       OS << ")\n";
       OS << "    return " << InstrMapDesc.getName();
-      OS << "Table[mid]["<<i+1<<"];\n";
+      OS << "Table[mid][" << I + 1 << "];\n";
     }
     OS << "  return -1;";
-  }
-  else
+  } else
     OS << "  return " << InstrMapDesc.getName() << "Table[mid][1];\n";
 
-  OS <<"}\n\n";
+  OS << "}\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -476,12 +474,12 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   // since first column is used for the key instructions), then we also need
   // to pass another input to indicate the column to be selected.
 
-  ListInit *ColFields = InstrMapDesc.getColFields();
-  const std::vector<ListInit*> &ValueCols = InstrMapDesc.getValueCols();
-  OS << "// "<< InstrMapDesc.getName() << "\nLLVM_READONLY\n";
-  OS << "int "<< InstrMapDesc.getName() << "(uint16_t Opcode";
+  const ListInit *ColFields = InstrMapDesc.getColFields();
+  ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
+  OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
+  OS << "int " << InstrMapDesc.getName() << "(uint16_t Opcode";
   if (ValueCols.size() > 1) {
-    for (Init *CF : ColFields->getValues()) {
+    for (const Init *CF : ColFields->getValues()) {
       std::string ColName = CF->getAsUnquotedString();
       OS << ", enum " << ColName << " in" << ColName;
     }
@@ -499,75 +497,68 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
 // Emit enums for the column fields across all the instruction maps.
 //===----------------------------------------------------------------------===//
 
-static void emitEnums(raw_ostream &OS, RecordKeeper &Records) {
-
-  std::vector<Record*> InstrMapVec;
-  InstrMapVec = Records.getAllDerivedDefinitions("InstrMapping");
-  std::map<std::string, std::vector<Init*> > ColFieldValueMap;
+static void emitEnums(raw_ostream &OS, const RecordKeeper &Records) {
+  std::map<std::string, std::vector<const Init *>> ColFieldValueMap;
 
   // Iterate over all InstrMapping records and create a map between column
   // fields and their possible values across all records.
-  for (Record *CurMap : InstrMapVec) {
-    ListInit *ColFields;
-    ColFields = CurMap->getValueAsListInit("ColFields");
-    ListInit *List = CurMap->getValueAsListInit("ValueCols");
-    std::vector<ListInit*> ValueCols;
+  for (const Record *CurMap :
+       Records.getAllDerivedDefinitions("InstrMapping")) {
+    const ListInit *ColFields = CurMap->getValueAsListInit("ColFields");
+    const ListInit *List = CurMap->getValueAsListInit("ValueCols");
+    std::vector<const ListInit *> ValueCols;
     unsigned ListSize = List->size();
 
-    for (unsigned j = 0; j < ListSize; j++) {
-      auto *ListJ = cast<ListInit>(List->getElement(j));
+    for (unsigned J = 0; J < ListSize; J++) {
+      const auto *ListJ = cast<ListInit>(List->getElement(J));
 
       if (ListJ->size() != ColFields->size())
-        PrintFatalError("Record `" + CurMap->getName() + "', field "
-          "`ValueCols' entries don't match with the entries in 'ColFields' !");
+        PrintFatalError("Record `" + CurMap->getName() +
+                        "', field "
+                        "`ValueCols' entries don't match with the entries in "
+                        "'ColFields' !");
       ValueCols.push_back(ListJ);
     }
 
-    for (unsigned j = 0, endCF = ColFields->size(); j < endCF; j++) {
-      for (unsigned k = 0; k < ListSize; k++){
-        std::string ColName = ColFields->getElement(j)->getAsUnquotedString();
-        ColFieldValueMap[ColName].push_back((ValueCols[k])->getElement(j));
+    for (unsigned J = 0, EndCf = ColFields->size(); J < EndCf; J++) {
+      for (unsigned K = 0; K < ListSize; K++) {
+        std::string ColName = ColFields->getElement(J)->getAsUnquotedString();
+        ColFieldValueMap[ColName].push_back((ValueCols[K])->getElement(J));
       }
     }
   }
 
-  for (auto &Entry : ColFieldValueMap) {
-    std::vector<Init*> FieldValues = Entry.second;
-
+  for (auto &[EnumName, FieldValues] : ColFieldValueMap) {
     // Delete duplicate entries from ColFieldValueMap
     for (unsigned i = 0; i < FieldValues.size() - 1; i++) {
-      Init *CurVal = FieldValues[i];
-      for (unsigned j = i+1; j < FieldValues.size(); j++) {
+      const Init *CurVal = FieldValues[i];
+      for (unsigned j = i + 1; j < FieldValues.size(); j++) {
         if (CurVal == FieldValues[j]) {
-          FieldValues.erase(FieldValues.begin()+j);
+          FieldValues.erase(FieldValues.begin() + j);
           --j;
         }
       }
     }
 
     // Emit enumerated values for the column fields.
-    OS << "enum " << Entry.first << " {\n";
-    for (unsigned i = 0, endFV = FieldValues.size(); i < endFV; i++) {
-      OS << "\t" << Entry.first << "_" << FieldValues[i]->getAsUnquotedString();
-      if (i != endFV - 1)
-        OS << ",\n";
-      else
-        OS << "\n};\n\n";
-    }
+    OS << "enum " << EnumName << " {\n";
+    ListSeparator LS(",\n");
+    for (const Init *Field : FieldValues)
+      OS << LS << "\t" << EnumName << "_" << Field->getAsUnquotedString();
+    OS << "\n};\n\n";
   }
 }
 
-namespace llvm {
 //===----------------------------------------------------------------------===//
 // Parse 'InstrMapping' records and use the information to form relationship
 // between instructions. These relations are emitted as a tables along with the
 // functions to query them.
 //===----------------------------------------------------------------------===//
-void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
+void llvm::EmitMapTable(const RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);
   StringRef NameSpace = Target.getInstNamespace();
-  std::vector<Record*> InstrMapVec;
-  InstrMapVec = Records.getAllDerivedDefinitions("InstrMapping");
+  ArrayRef<const Record *> InstrMapVec =
+      Records.getAllDerivedDefinitions("InstrMapping");
 
   if (InstrMapVec.empty())
     return;
@@ -583,7 +574,7 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   // Iterate over all instruction mapping records and construct relationship
   // maps based on the information specified there.
   //
-  for (Record *CurMap : InstrMapVec) {
+  for (const Record *CurMap : InstrMapVec) {
     MapTableEmitter IMap(Target, Records, CurMap);
 
     // Build RowInstrMap to group instructions based on their values for
@@ -602,5 +593,3 @@ void EmitMapTable(RecordKeeper &Records, raw_ostream &OS) {
   OS << "} // end namespace llvm\n";
   OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }
-
-} // End llvm namespace

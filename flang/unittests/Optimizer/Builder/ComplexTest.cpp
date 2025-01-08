@@ -22,20 +22,20 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
-    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    builder.setInsertionPointToStart(moduleOp->getBody());
+    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
         loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
-    mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
     kindMap = std::make_unique<fir::KindMapping>(&context);
-    firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
+    firBuilder = std::make_unique<fir::FirOpBuilder>(builder, *kindMap);
     helper = std::make_unique<fir::factory::Complex>(*firBuilder, loc);
 
     // Init commonly used types
     realTy1 = mlir::FloatType::getF32(&context);
-    complexTy1 = fir::ComplexType::get(&context, 4);
+    complexTy1 = mlir::ComplexType::get(realTy1);
     integerTy1 = mlir::IntegerType::get(&context, 32);
 
     // Create commonly used reals
@@ -46,13 +46,14 @@ public:
   }
 
   mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> moduleOp;
   std::unique_ptr<fir::KindMapping> kindMap;
   std::unique_ptr<fir::FirOpBuilder> firBuilder;
   std::unique_ptr<fir::factory::Complex> helper;
 
   // Commonly used real/complex/integer types
   mlir::FloatType realTy1;
-  fir::ComplexType complexTy1;
+  mlir::ComplexType complexTy1;
   mlir::IntegerType integerTy1;
 
   // Commonly used real numbers
@@ -64,20 +65,13 @@ public:
 
 TEST_F(ComplexTest, verifyTypes) {
   mlir::Value cVal1 = helper->createComplex(complexTy1, rOne, rTwo);
-  mlir::Value cVal2 = helper->createComplex(4, rOne, rTwo);
   EXPECT_TRUE(fir::isa_complex(cVal1.getType()));
-  EXPECT_TRUE(fir::isa_complex(cVal2.getType()));
   EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal1)));
-  EXPECT_TRUE(fir::isa_real(helper->getComplexPartType(cVal2)));
 
   mlir::Value real1 = helper->extractComplexPart(cVal1, /*isImagPart=*/false);
   mlir::Value imag1 = helper->extractComplexPart(cVal1, /*isImagPart=*/true);
-  mlir::Value real2 = helper->extractComplexPart(cVal2, /*isImagPart=*/false);
-  mlir::Value imag2 = helper->extractComplexPart(cVal2, /*isImagPart=*/true);
   EXPECT_EQ(realTy1, real1.getType());
   EXPECT_EQ(realTy1, imag1.getType());
-  EXPECT_EQ(realTy1, real2.getType());
-  EXPECT_EQ(realTy1, imag2.getType());
 
   mlir::Value cVal3 =
       helper->insertComplexPart(cVal1, rThree, /*isImagPart=*/false);
@@ -96,6 +90,6 @@ TEST_F(ComplexTest, verifyConvertWithSemantics) {
 
   // Convert complex to integer
   mlir::Value v2 = firBuilder->convertWithSemantics(loc, integerTy1, v1);
-  EXPECT_TRUE(v2.getType().isa<mlir::IntegerType>());
+  EXPECT_TRUE(mlir::isa<mlir::IntegerType>(v2.getType()));
   EXPECT_TRUE(mlir::dyn_cast<fir::ConvertOp>(v2.getDefiningOp()));
 }

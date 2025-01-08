@@ -19,20 +19,17 @@
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-#include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/ThreadPool.h"
-#include "llvm/Support/YAMLTraits.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <string>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -44,6 +41,88 @@ extern cl::opt<unsigned> Verbosity;
 }
 namespace llvm {
 namespace bolt {
+
+/// Returns DWO Name to be used to update DW_AT_dwo_name/DW_AT_GNU_dwo_name
+/// either in CU or TU unit die. Handles case where user specifies output DWO
+/// directory, and there are duplicate names. Assumes DWO ID is unique.
+static std::string
+getDWOName(llvm::DWARFUnit &CU,
+           std::unordered_map<std::string, uint32_t> &NameToIndexMap,
+           std::optional<StringRef> &DwarfOutputPath) {
+  assert(CU.getDWOId() && "DWO ID not found.");
+  std::string DWOName = dwarf::toString(
+      CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
+      "");
+  assert(!DWOName.empty() &&
+         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exist.");
+  if (DwarfOutputPath) {
+    DWOName = std::string(sys::path::filename(DWOName));
+    uint32_t &Index = NameToIndexMap[DWOName];
+    DWOName.append(std::to_string(Index));
+    ++Index;
+  }
+  DWOName.append(".dwo");
+  return DWOName;
+}
+
+/// Adds a \p Str to .debug_str section.
+/// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
+/// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
+/// for this contribution of \p Unit.
+static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
+                            DebugStrWriter &StrWriter, DIEBuilder &DIEBldr,
+                            DIE &Die, const DWARFUnit &Unit,
+                            DIEValue &DIEAttrInfo, StringRef Str) {
+  uint32_t NewOffset = StrWriter.addString(Str);
+  if (Unit.getVersion() >= 5) {
+    StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
+                                     NewOffset, Unit);
+    return;
+  }
+  DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
+                       DIEInteger(NewOffset));
+}
+
+std::string DIEBuilder::updateDWONameCompDir(
+    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
+    DWARFUnit &SkeletonCU, std::optional<StringRef> DwarfOutputPath,
+    std::optional<StringRef> DWONameToUse) {
+  DIE &UnitDIE = *getUnitDIEbyUnit(SkeletonCU);
+  DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
+  if (!DWONameAttrInfo)
+    DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
+  if (!DWONameAttrInfo)
+    return "";
+  std::string ObjectName;
+  if (DWONameToUse)
+    ObjectName = *DWONameToUse;
+  else
+    ObjectName = getDWOName(SkeletonCU, NameToIndexMap, DwarfOutputPath);
+  addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
+                  DWONameAttrInfo, ObjectName);
+
+  DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
+  assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
+
+  if (DwarfOutputPath) {
+    if (!sys::fs::exists(*DwarfOutputPath))
+      sys::fs::create_directory(*DwarfOutputPath);
+    addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
+                    CompDirAttrInfo, *DwarfOutputPath);
+  }
+  return ObjectName;
+}
+
+void DIEBuilder::updateDWONameCompDirForTypes(
+    DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
+    DWARFUnit &Unit, std::optional<StringRef> DwarfOutputPath,
+    const StringRef DWOName) {
+  for (DWARFUnit *DU : getState().DWARF5TUVector)
+    updateDWONameCompDir(StrOffstsWriter, StrWriter, *DU, DwarfOutputPath,
+                         DWOName);
+  if (StrOffstsWriter.isStrOffsetsSectionModified())
+    StrOffstsWriter.finalizeSection(Unit, *this);
+}
 
 void DIEBuilder::updateReferences() {
   for (auto &[SrcDIEInfo, ReferenceInfo] : getState().AddrReferences) {
@@ -126,8 +205,8 @@ uint32_t DIEBuilder::allocDIE(const DWARFUnit &DU, const DWARFDie &DDie,
 void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   std::optional<uint32_t> UnitId = getUnitId(DU);
   if (!UnitId) {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: "
-           << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+              << "Skip Unit at " << Twine::utohexstr(DU.getOffset()) << "\n";
     return;
   }
 
@@ -178,8 +257,11 @@ void DIEBuilder::constructFromUnit(DWARFUnit &DU) {
   getState().CloneUnitCtxMap[*UnitId].IsConstructed = true;
 }
 
-DIEBuilder::DIEBuilder(DWARFContext *DwarfContext, bool IsDWO)
-    : DwarfContext(DwarfContext), IsDWO(IsDWO) {}
+DIEBuilder::DIEBuilder(BinaryContext &BC, DWARFContext *DwarfContext,
+                       DWARF5AcceleratorTable &DebugNamesTable,
+                       DWARFUnit *SkeletonCU)
+    : BC(BC), DwarfContext(DwarfContext), SkeletonCU(SkeletonCU),
+      DebugNamesTable(DebugNamesTable) {}
 
 static unsigned int getCUNum(DWARFContext *DwarfContext, bool IsDWO) {
   unsigned int CUNum = IsDWO ? DwarfContext->getNumDWOCompileUnits()
@@ -199,15 +281,14 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
     for (auto &Row : TUIndex.getRows()) {
       uint64_t Signature = Row.getSignature();
       // manually populate TypeUnit to UnitVector
-      DwarfContext->getTypeUnitForHash(DwarfContext->getMaxVersion(), Signature,
-                                       true);
+      DwarfContext->getTypeUnitForHash(Signature, true);
     }
   }
-  const unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  const unsigned int CUNum = getCUNum(DwarfContext, isDWO());
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CU4TURanges =
-      IsDWO ? DwarfContext->dwo_types_section_units()
-            : DwarfContext->types_section_units();
+      isDWO() ? DwarfContext->dwo_types_section_units()
+              : DwarfContext->types_section_units();
 
   getState().Type = ProcessingType::DWARF4TUs;
   for (std::unique_ptr<DWARFUnit> &DU : CU4TURanges)
@@ -217,8 +298,8 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
     constructFromUnit(*DU.get());
 
   DWARFContext::unit_iterator_range CURanges =
-      IsDWO ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+      isDWO() ? DwarfContext->dwo_info_section_units()
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are
@@ -241,11 +322,11 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
   if (Init)
     BuilderState.reset(new State());
 
-  unsigned int CUNum = getCUNum(DwarfContext, IsDWO);
+  unsigned int CUNum = getCUNum(DwarfContext, isDWO());
   getState().CloneUnitCtxMap.resize(CUNum);
   DWARFContext::unit_iterator_range CURanges =
-      IsDWO ? DwarfContext->dwo_info_section_units()
-            : DwarfContext->info_section_units();
+      isDWO() ? DwarfContext->dwo_info_section_units()
+              : DwarfContext->info_section_units();
 
   // This handles DWARF4 CUs and DWARF5 CU/TUs.
   // Creating a vector so that for reference handling only DWARF5 CU/TUs are
@@ -377,18 +458,31 @@ getUnitForOffset(DIEBuilder &Builder, DWARFContext &DWCtx,
   return nullptr;
 }
 
-uint32_t DIEBuilder::computeDIEOffset(const DWARFUnit &CU, DIE &Die,
-                                      uint32_t &CurOffset) {
+uint32_t DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
+                                  uint32_t &CurOffset) {
   getState().DWARFDieAddressesParsed.erase(Die.getOffset());
   uint32_t CurSize = 0;
   Die.setOffset(CurOffset);
+  // It is possible that an indexed debugging information entry has a parent
+  // that is not indexed (for example, if its parent does not have a name
+  // attribute). In such a case, a parent attribute may point to a nameless
+  // index entry (that is, one that cannot be reached from any entry in the name
+  // table), or it may point to the nearest ancestor that does have an index
+  // entry.
+  // Skipping entry is not very useful for LLDB. This follows clang where
+  // children of forward declaration won't have DW_IDX_parent.
+  // https://github.com/llvm/llvm-project/pull/91808
+
+  // If Parent is nullopt and NumberParentsInChain is not zero, then forward
+  // declaration was encountered in this DF traversal. Propagating nullopt for
+  // Parent to children.
   for (DIEValue &Val : Die.values())
     CurSize += Val.sizeOf(CU.getFormParams());
   CurSize += getULEB128Size(Die.getAbbrevNumber());
   CurOffset += CurSize;
 
   for (DIE &Child : Die.children()) {
-    uint32_t ChildSize = computeDIEOffset(CU, Child, CurOffset);
+    uint32_t ChildSize = finalizeDIEs(CU, Child, CurOffset);
     CurSize += ChildSize;
   }
   // for children end mark.
@@ -398,17 +492,17 @@ uint32_t DIEBuilder::computeDIEOffset(const DWARFUnit &CU, DIE &Die,
   }
 
   Die.setSize(CurSize);
-
   return CurSize;
 }
 
 void DIEBuilder::finish() {
-  auto computeOffset = [&](const DWARFUnit &CU,
-                           uint64_t &UnitStartOffset) -> void {
+  auto finalizeCU = [&](DWARFUnit &CU, uint64_t &UnitStartOffset) -> void {
     DIE *UnitDIE = getUnitDIEbyUnit(CU);
     uint32_t HeaderSize = CU.getHeaderSize();
     uint32_t CurOffset = HeaderSize;
-    computeDIEOffset(CU, *UnitDIE, CurOffset);
+    std::vector<std::optional<BOLTDWARF5AccelTableData *>> Parents;
+    Parents.push_back(std::nullopt);
+    finalizeDIEs(CU, *UnitDIE, CurOffset);
 
     DWARFUnitInfo &CurUnitInfo = getUnitInfoByDwarfUnit(CU);
     CurUnitInfo.UnitOffset = UnitStartOffset;
@@ -419,18 +513,18 @@ void DIEBuilder::finish() {
   // It's processed first when CU is registered so will be at the begginnig of
   // the vector.
   uint64_t TypeUnitStartOffset = 0;
-  for (const DWARFUnit *CU : getState().DUList) {
+  for (DWARFUnit *CU : getState().DUList) {
     // We process DWARF$ types first.
     if (!(CU->getVersion() < 5 && CU->isTypeUnit()))
       break;
-    computeOffset(*CU, TypeUnitStartOffset);
+    finalizeCU(*CU, TypeUnitStartOffset);
   }
 
-  for (const DWARFUnit *CU : getState().DUList) {
+  for (DWARFUnit *CU : getState().DUList) {
     // Skipping DWARF4 types.
     if (CU->getVersion() < 5 && CU->isTypeUnit())
       continue;
-    computeOffset(*CU, UnitSize);
+    finalizeCU(*CU, UnitSize);
   }
   if (opts::Verbosity >= 1) {
     if (!getState().DWARFDieAddressesParsed.empty())
@@ -439,16 +533,49 @@ void DIEBuilder::finish() {
       dbgs() << Twine::utohexstr(Address) << "\n";
     }
   }
-  updateReferences();
 }
 
-DWARFDie DIEBuilder::resolveDIEReference(
-    const DWARFFormValue &RefValue,
-    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-    DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry) {
-  assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
-  uint64_t RefOffset = *RefValue.getAsReference();
-  return resolveDIEReference(AttrSpec, RefOffset, RefCU, DwarfDebugInfoEntry);
+void DIEBuilder::populateDebugNamesTable(
+    DWARFUnit &CU, const DIE &Die,
+    std::optional<BOLTDWARF5AccelTableData *> Parent,
+    uint32_t NumberParentsInChain) {
+  std::optional<BOLTDWARF5AccelTableData *> NameEntry =
+      DebugNamesTable.addAccelTableEntry(
+          CU, Die, SkeletonCU ? SkeletonCU->getDWOId() : std::nullopt,
+          NumberParentsInChain, Parent);
+  if (!Parent && NumberParentsInChain)
+    NameEntry = std::nullopt;
+  if (NameEntry)
+    ++NumberParentsInChain;
+
+  for (const DIE &Child : Die.children())
+    populateDebugNamesTable(CU, Child, NameEntry, NumberParentsInChain);
+}
+
+void DIEBuilder::updateDebugNamesTable() {
+  auto finalizeDebugNamesTableForCU = [&](DWARFUnit &CU,
+                                          uint64_t &UnitStartOffset) -> void {
+    DIE *UnitDIE = getUnitDIEbyUnit(CU);
+    DebugNamesTable.setCurrentUnit(CU, UnitStartOffset);
+    populateDebugNamesTable(CU, *UnitDIE, std::nullopt, 0);
+
+    DWARFUnitInfo &CurUnitInfo = getUnitInfoByDwarfUnit(CU);
+    UnitStartOffset += CurUnitInfo.UnitLength;
+  };
+
+  uint64_t TypeUnitStartOffset = 0;
+  for (DWARFUnit *CU : getState().DUList) {
+    if (!(CU->getVersion() < 5 && CU->isTypeUnit()))
+      break;
+    finalizeDebugNamesTableForCU(*CU, TypeUnitStartOffset);
+  }
+
+  for (DWARFUnit *CU : getState().DUList) {
+    if (CU->getVersion() < 5 && CU->isTypeUnit())
+      continue;
+    finalizeDebugNamesTableForCU(*CU, DebugNamesUnitSize);
+  }
+  updateReferences();
 }
 
 DWARFDie DIEBuilder::resolveDIEReference(
@@ -475,34 +602,33 @@ DWARFDie DIEBuilder::resolveDIEReference(
           allocDIE(*RefCU, RefDie, getState().DIEAlloc, *UnitId);
         return RefDie;
       }
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
-                "at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs()
+          << "BOLT-WARNING: [internal-dwarf-error]: invalid referenced DIE "
+             "at offset: "
+          << Twine::utohexstr(RefOffset) << ".\n";
 
     } else {
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
-                "referenced DIE at offset: "
-             << Twine::utohexstr(RefOffset) << ".\n";
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: could not parse "
+                   "referenced DIE at offset: "
+                << Twine::utohexstr(RefOffset) << ".\n";
     }
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
-              "CU. Referenced DIE offset: "
-           << Twine::utohexstr(RefOffset) << ".\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: could not find referenced "
+           "CU. Referenced DIE offset: "
+        << Twine::utohexstr(RefOffset) << ".\n";
   }
   return DWARFDie();
 }
 
-void DIEBuilder::cloneDieReferenceAttribute(
-    DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
-    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-    const DWARFFormValue &Val) {
-  const uint64_t Ref = *Val.getAsReference();
-
+void DIEBuilder::cloneDieOffsetReferenceAttribute(
+    DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
+    const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref) {
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;
 
   DWARFDebugInfoEntry DDIEntry;
-  const DWARFDie RefDie = resolveDIEReference(Val, AttrSpec, RefUnit, DDIEntry);
+  const DWARFDie RefDie = resolveDIEReference(AttrSpec, Ref, RefUnit, DDIEntry);
 
   if (!RefDie)
     return;
@@ -516,8 +642,8 @@ void DIEBuilder::cloneDieReferenceAttribute(
   if (!DieInfo.Die) {
     assert(Ref > InputDIE.getOffset());
     (void)Ref;
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
-              "unallocated DIE. Should be alloc!\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
+                 "unallocated DIE. Should be alloc!\n";
     // We haven't cloned this DIE yet. Just create an empty one and
     // store it. It'll get really cloned when we process it.
     DieInfo.Die = DIE::get(getState().DIEAlloc, dwarf::Tag(RefDie.getTag()));
@@ -525,6 +651,10 @@ void DIEBuilder::cloneDieReferenceAttribute(
   NewRefDie = DieInfo.Die;
 
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr) {
+    // Adding referenced DIE to DebugNames to be used when entries are created
+    // that contain cross cu references.
+    if (DebugNamesTable.canGenerateEntryWithCrossCUReference(U, Die, AttrSpec))
+      DebugNamesTable.addCrossCUDie(&U, DieInfo.Die);
     // no matter forward reference or backward reference, we are supposed
     // to calculate them in `finish` due to the possible modification of
     // the DIE.
@@ -534,7 +664,7 @@ void DIEBuilder::cloneDieReferenceAttribute(
         std::make_pair(CurDieInfo, AddrReferenceInfo(&DieInfo, AttrSpec)));
 
     Die.addValue(getState().DIEAlloc, AttrSpec.Attr, dwarf::DW_FORM_ref_addr,
-                 DIEInteger(0xDEADBEEF));
+                 DIEInteger(DieInfo.Die->getOffset()));
     return;
   }
 
@@ -580,8 +710,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
          Description.Op[0] != Encoding::Size1))
-      outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
-                "encoding.\n";
+      BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
+                   "encoding.\n";
 
     if ((Description.Op.size() == 1 &&
          Description.Op[0] == Encoding::BaseTypeRef) ||
@@ -616,9 +746,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
             Offset = Stage == CloneExpressionStage::INIT ? RefOffset
                                                          : Clone->getOffset();
           else
-            errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
-                      "doesn't point to "
-                      "DW_TAG_base_type.\n";
+            BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: base type ref "
+                         "doesn't point to "
+                         "DW_TAG_base_type.\n";
         }
       }
       uint8_t ULEB[16];
@@ -652,8 +782,9 @@ void DIEBuilder::cloneBlockAttribute(
                                    U.getVersion())) {
     Block = new (getState().DIEAlloc) DIEBlock;
   } else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
-              "cloneBlockAttribute\n";
+    BC.errs()
+        << "BOLT-WARNING: [internal-dwarf-error]: Unexpected Form value in "
+           "cloneBlockAttribute\n";
     return;
   }
   Attr = Loc ? static_cast<DIEValueList *>(Loc)
@@ -702,7 +833,7 @@ void DIEBuilder::cloneAddressAttribute(
 void DIEBuilder::cloneRefsigAttribute(
     DIE &Die, DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     const DWARFFormValue &Val) {
-  const std::optional<uint64_t> SigVal = Val.getRawUValue();
+  const std::optional<uint64_t> SigVal = Val.getAsSignatureReference();
   Die.addValue(getState().DIEAlloc, AttrSpec.Attr, dwarf::DW_FORM_ref_sig8,
                DIEInteger(*SigVal));
 }
@@ -720,9 +851,9 @@ void DIEBuilder::cloneScalarAttribute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = *OptionalValue;
   else {
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
     return;
   }
 
@@ -743,9 +874,9 @@ void DIEBuilder::cloneLoclistAttrubute(
   else if (auto OptionalValue = Val.getAsSectionOffset())
     Value = OptionalValue;
   else
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
-              "attribute form. Dropping "
-              "attribute.\n";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported scalar "
+                 "attribute form. Dropping "
+                 "attribute.\n";
 
   if (!Value.has_value())
     return;
@@ -770,11 +901,16 @@ void DIEBuilder::cloneAttribute(
     cloneStringAttribute(Die, U, AttrSpec, Val);
     break;
   case dwarf::DW_FORM_ref_addr:
+    cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
+                                     *Val.getAsDebugInfoReference());
+    break;
   case dwarf::DW_FORM_ref1:
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_ref8:
-    cloneDieReferenceAttribute(Die, U, InputDIE, AttrSpec, Val);
+    cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
+                                     Val.getUnit()->getOffset() +
+                                         *Val.getAsRelativeReference());
     break;
   case dwarf::DW_FORM_block:
   case dwarf::DW_FORM_block1:
@@ -808,10 +944,10 @@ void DIEBuilder::cloneAttribute(
     cloneRefsigAttribute(Die, AttrSpec, Val);
     break;
   default:
-    errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
-              "form " +
-                  dwarf::FormEncodingString(AttrSpec.Form).str() +
-                  " in cloneAttribute. Dropping.";
+    BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: Unsupported attribute "
+                 "form " +
+                     dwarf::FormEncodingString(AttrSpec.Form).str() +
+                     " in cloneAttribute. Dropping.";
   }
 }
 void DIEBuilder::assignAbbrev(DIEAbbrev &Abbrev) {

@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le-unknown-unknown -start-after=ppc-mi-peepholes \ 
-# RUN: -stop-before=ppc-expand-isel -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: -stop-after=ppc-pre-emit-peephole -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   ; ModuleID = 'a.ll'
   source_filename = "a.c"   

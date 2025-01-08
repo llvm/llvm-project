@@ -38,12 +38,17 @@
 //          Called before fork syscall.
 //   COMMON_SYSCALL_POST_FORK(long res)
 //          Called after fork syscall.
+//   COMMON_SYSCALL_BLOCKING_START()
+//         Called before blocking syscall.
+//   COMMON_SYSCALL_BLOCKING_END()
+//         Called after blocking syscall.
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
 #if SANITIZER_LINUX
 
 #  include "sanitizer_libc.h"
+#  include "sanitizer_platform_limits_posix.h"
 
 #  define PRE_SYSCALL(name) \
     SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_syscall_pre_impl_##name
@@ -82,6 +87,16 @@
 
 #  ifndef COMMON_SYSCALL_POST_FORK
 #    define COMMON_SYSCALL_POST_FORK(res) \
+      {}
+#  endif
+
+#  ifndef COMMON_SYSCALL_BLOCKING_START
+#    define COMMON_SYSCALL_BLOCKING_START() \
+      {}
+#  endif
+
+#  ifndef COMMON_SYSCALL_BLOCKING_END
+#    define COMMON_SYSCALL_BLOCKING_END() \
       {}
 #  endif
 
@@ -2516,18 +2531,19 @@ PRE_SYSCALL(ptrace)(long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       defined(__loongarch__) || SANITIZER_RISCV64)
-  if (data) {
+       defined(__loongarch__) || SANITIZER_RISCV64 || defined(__sparc__))
+  long data_arg = ptrace_data_arg(request, addr, data);
+  if (data_arg) {
     if (request == ptrace_setregs) {
-      PRE_READ((void *)data, struct_user_regs_struct_sz);
+      PRE_READ((void *)data_arg, struct_user_regs_struct_sz);
     } else if (request == ptrace_setfpregs) {
-      PRE_READ((void *)data, struct_user_fpregs_struct_sz);
+      PRE_READ((void *)data_arg, struct_user_fpregs_struct_sz);
     } else if (request == ptrace_setfpxregs) {
-      PRE_READ((void *)data, struct_user_fpxregs_struct_sz);
+      PRE_READ((void *)data_arg, struct_user_fpxregs_struct_sz);
     } else if (request == ptrace_setsiginfo) {
-      PRE_READ((void *)data, siginfo_t_sz);
+      PRE_READ((void *)data_arg, siginfo_t_sz);
     } else if (request == ptrace_setregset) {
-      __sanitizer_iovec *iov = (__sanitizer_iovec *)data;
+      __sanitizer_iovec *iov = (__sanitizer_iovec *)data_arg;
       PRE_READ(iov->iov_base, iov->iov_len);
     }
   }
@@ -2538,25 +2554,26 @@ POST_SYSCALL(ptrace)(long res, long request, long pid, long addr, long data) {
 #  if !SANITIZER_ANDROID &&                                                   \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||           \
        defined(__powerpc64__) || defined(__aarch64__) || defined(__s390__) || \
-       defined(__loongarch__) || SANITIZER_RISCV64)
-  if (res >= 0 && data) {
+       defined(__loongarch__) || SANITIZER_RISCV64 || defined(__sparc__))
+  long data_arg = ptrace_data_arg(request, addr, data);
+  if (res >= 0 && data_arg) {
     // Note that this is different from the interceptor in
     // sanitizer_common_interceptors.inc.
     // PEEK* requests return resulting values through data pointer.
     if (request == ptrace_getregs) {
-      POST_WRITE((void *)data, struct_user_regs_struct_sz);
+      POST_WRITE((void *)data_arg, struct_user_regs_struct_sz);
     } else if (request == ptrace_getfpregs) {
-      POST_WRITE((void *)data, struct_user_fpregs_struct_sz);
+      POST_WRITE((void *)data_arg, struct_user_fpregs_struct_sz);
     } else if (request == ptrace_getfpxregs) {
-      POST_WRITE((void *)data, struct_user_fpxregs_struct_sz);
+      POST_WRITE((void *)data_arg, struct_user_fpxregs_struct_sz);
     } else if (request == ptrace_getsiginfo) {
-      POST_WRITE((void *)data, siginfo_t_sz);
+      POST_WRITE((void *)data_arg, siginfo_t_sz);
     } else if (request == ptrace_getregset) {
-      __sanitizer_iovec *iov = (__sanitizer_iovec *)data;
+      __sanitizer_iovec *iov = (__sanitizer_iovec *)data_arg;
       POST_WRITE(iov->iov_base, iov->iov_len);
     } else if (request == ptrace_peekdata || request == ptrace_peektext ||
                request == ptrace_peekuser) {
-      POST_WRITE((void *)data, sizeof(void *));
+      POST_WRITE((void *)data_arg, sizeof(void *));
     }
   }
 #  endif
@@ -2807,6 +2824,15 @@ PRE_SYSCALL(fchownat)
 
 POST_SYSCALL(fchownat)
 (long res, long dfd, const void *filename, long user, long group, long flag) {}
+
+PRE_SYSCALL(fchmodat2)(long dfd, const void *filename, long mode, long flag) {
+  if (filename)
+    PRE_READ(filename,
+             __sanitizer::internal_strlen((const char *)filename) + 1);
+}
+
+POST_SYSCALL(fchmodat2)
+(long res, long dfd, const void *filename, long mode, long flag) {}
 
 PRE_SYSCALL(openat)(long dfd, const void *filename, long flags, long mode) {
   if (filename)
@@ -3167,6 +3193,18 @@ POST_SYSCALL(sigaltstack)(long res, void *ss, void *oss) {
     }
   }
 }
+
+PRE_SYSCALL(futex)
+(void *uaddr, long futex_op, long val, void *timeout, void *uaddr2, long val3) {
+  COMMON_SYSCALL_BLOCKING_START();
+}
+
+POST_SYSCALL(futex)
+(long res, void *uaddr, long futex_op, long val, void *timeout, void *uaddr2,
+ long val3) {
+  COMMON_SYSCALL_BLOCKING_END();
+}
+
 }  // extern "C"
 
 #  undef PRE_SYSCALL

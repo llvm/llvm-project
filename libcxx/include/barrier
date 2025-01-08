@@ -17,7 +17,7 @@ namespace std
 {
 
   template<class CompletionFunction = see below>
-  class barrier
+  class barrier                                   // since C++20
   {
   public:
     using arrival_token = see below;
@@ -45,32 +45,33 @@ namespace std
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
-#include <__atomic/atomic_base.h>
-#include <__atomic/memory_order.h>
-#include <__availability>
-#include <__config>
-#include <__memory/unique_ptr.h>
-#include <__thread/poll_with_backoff.h>
-#include <__thread/timed_backoff_policy.h>
-#include <__utility/move.h>
-#include <cstddef>
-#include <cstdint>
-#include <limits>
-#include <version>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/barrier>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  if _LIBCPP_HAS_THREADS
 
-#ifdef _LIBCPP_HAS_NO_THREADS
-#  error "<barrier> is not supported since libc++ has been configured without support for threads."
-#endif
+#    include <__assert>
+#    include <__atomic/atomic.h>
+#    include <__atomic/memory_order.h>
+#    include <__cstddef/ptrdiff_t.h>
+#    include <__memory/unique_ptr.h>
+#    include <__thread/poll_with_backoff.h>
+#    include <__thread/timed_backoff_policy.h>
+#    include <__utility/move.h>
+#    include <cstdint>
+#    include <limits>
+#    include <version>
+
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#    include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 14
+#    if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -78,7 +79,7 @@ struct __empty_completion {
   inline _LIBCPP_HIDE_FROM_ABI void operator()() noexcept {}
 };
 
-#  ifndef _LIBCPP_HAS_NO_TREE_BARRIER
+#      ifndef _LIBCPP_HAS_NO_TREE_BARRIER
 
 /*
 
@@ -94,7 +95,7 @@ It looks different from literature pseudocode for two main reasons:
 
 */
 
-using __barrier_phase_t = uint8_t;
+using __barrier_phase_t _LIBCPP_NODEBUG = uint8_t;
 
 class __barrier_algorithm_base;
 
@@ -102,18 +103,18 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base*
 __construct_barrier_algorithm_base(ptrdiff_t& __expected);
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI bool
-__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase);
+__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) noexcept;
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier);
+__destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier) noexcept;
 
 template <class _CompletionF>
 class __barrier_base {
   ptrdiff_t __expected_;
   unique_ptr<__barrier_algorithm_base, void (*)(__barrier_algorithm_base*)> __base_;
-  __atomic_base<ptrdiff_t> __expected_adjustment_;
+  atomic<ptrdiff_t> __expected_adjustment_;
   _CompletionF __completion_;
-  __atomic_base<__barrier_phase_t> __phase_;
+  atomic<__barrier_phase_t> __phase_;
 
 public:
   using arrival_token = __barrier_phase_t;
@@ -127,8 +128,8 @@ public:
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
-  [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
     auto const __old_phase = __phase_.load(memory_order_relaxed);
@@ -152,7 +153,7 @@ public:
   }
 };
 
-#  else
+#      else
 
 /*
 
@@ -169,10 +170,10 @@ Two versions of this algorithm are provided:
 
 template <class _CompletionF>
 class __barrier_base {
-  __atomic_base<ptrdiff_t> __expected;
-  __atomic_base<ptrdiff_t> __arrived;
+  atomic<ptrdiff_t> __expected;
+  atomic<ptrdiff_t> __arrived;
   _CompletionF __completion;
-  __atomic_base<bool> __phase;
+  atomic<bool> __phase;
 
 public:
   using arrival_token = bool;
@@ -186,7 +187,7 @@ public:
     auto const __result     = __arrived.fetch_sub(update, memory_order_acq_rel) - update;
     auto const new_expected = __expected.load(memory_order_relaxed);
 
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         update <= new_expected, "update is greater than the expected count for the current barrier phase");
 
     if (0 == __result) {
@@ -214,7 +215,7 @@ class __barrier_base<__empty_completion> {
   static constexpr uint64_t __phase_bit     = 1ull << 63;
   static constexpr uint64_t __arrived_mask  = (__phase_bit - 1) & ~__expected_mask;
 
-  __atomic_base<uint64_t> __phase_arrived_expected;
+  atomic<uint64_t> __phase_arrived_expected;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr uint64_t __init(ptrdiff_t __count) _NOEXCEPT {
     return ((uint64_t(1u << 31) - __count) << 32) | (uint64_t(1u << 31) - __count);
@@ -231,7 +232,7 @@ public:
     auto const __inc = __arrived_unit * update;
     auto const __old = __phase_arrived_expected.fetch_add(__inc, memory_order_acq_rel);
 
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         update <= __old, "update is greater than the expected count for the current barrier phase");
 
     if ((__old ^ (__old + __inc)) & __phase_bit) {
@@ -253,7 +254,7 @@ public:
   }
 };
 
-#  endif // !_LIBCPP_HAS_NO_TREE_BARRIER
+#      endif // !_LIBCPP_HAS_NO_TREE_BARRIER
 
 template <class _CompletionF = __empty_completion>
 class barrier {
@@ -264,13 +265,13 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI explicit barrier(
-      ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+  _LIBCPP_AVAILABILITY_SYNC
+  _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count <= max(),
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with "
         "a value greater than max()");
@@ -279,8 +280,8 @@ public:
   barrier(barrier const&)            = delete;
   barrier& operator=(barrier const&) = delete;
 
-  [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__update > 0, "barrier:arrive must be called with a value greater than 0");
+  [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __phase) const {
@@ -292,17 +293,20 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 14
+#    endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <atomic>
-#  include <concepts>
-#  include <iterator>
-#  include <memory>
-#  include <stdexcept>
-#  include <variant>
-#endif
+#  endif // _LIBCPP_HAS_THREADS
 
-#endif //_LIBCPP_BARRIER
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <atomic>
+#    include <concepts>
+#    include <iterator>
+#    include <memory>
+#    include <stdexcept>
+#    include <variant>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
+#endif // _LIBCPP_BARRIER

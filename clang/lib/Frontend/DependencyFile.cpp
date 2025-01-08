@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -23,8 +23,10 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <system_error>
 
 using namespace clang;
 
@@ -62,11 +64,25 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsMissing=*/false);
   }
 
+  void EmbedDirective(SourceLocation, StringRef, bool,
+                      OptionalFileEntryRef File,
+                      const LexEmbedParametersResult &) override {
+    assert(File && "expected to only be called when the file is found");
+    StringRef FileName =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    DepCollector.maybeAddDependency(FileName,
+                                    /*FromModule*/ false,
+                                    /*IsSystem*/ false,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
+  }
+
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName, /*FromModule*/ false,
@@ -74,6 +90,18 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                       /*IsModuleFile*/ false,
                                       /*IsMissing*/ true);
     // Files that actually exist are handled by FileChanged.
+  }
+
+  void HasEmbed(SourceLocation, StringRef, bool,
+                OptionalFileEntryRef File) override {
+    if (!File)
+      return;
+    StringRef Filename =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    DepCollector.maybeAddDependency(Filename,
+                                    /*FromModule=*/false, false,
+                                    /*IsModuleFile=*/false,
+                                    /*IsMissing=*/false);
   }
 
   void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
@@ -210,6 +238,7 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
     PP.SetSuppressIncludeNotFoundError(true);
 
   DependencyCollector::attachToPreprocessor(PP);
+  FS = PP.getFileManager().getVirtualFileSystemPtr();
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
@@ -286,11 +315,22 @@ void DependencyFileGenerator::finishedMainFile(DiagnosticsEngine &Diags) {
 /// https://msdn.microsoft.com/en-us/library/dd9y37ha.aspx for NMake info,
 /// https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
 /// for Windows file-naming info.
-static void PrintFilename(raw_ostream &OS, StringRef Filename,
+static void printFilename(raw_ostream &OS, llvm::vfs::FileSystem *FS,
+                          StringRef Filename,
                           DependencyOutputFormat OutputFormat) {
   // Convert filename to platform native path
   llvm::SmallString<256> NativePath;
   llvm::sys::path::native(Filename.str(), NativePath);
+  // Resolve absolute path. Make and Ninja canonicalize paths
+  // without checking for symbolic links in the path, for performance concerns.
+  // If there is something like `/bin/../lib64` -> `/usr/lib64`
+  // (where `/bin` links to `/usr/bin`), Make will see them as `/lib64`.
+  if (FS != nullptr && llvm::sys::path::is_absolute(NativePath)) {
+    llvm::SmallString<256> NativePathTmp = NativePath;
+    std::error_code EC = FS->getRealPath(NativePathTmp, NativePath);
+    if (EC)
+      NativePath = NativePathTmp;
+  }
 
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
@@ -374,7 +414,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
       Columns = 2;
     }
     OS << ' ';
-    PrintFilename(OS, File, OutputFormat);
+    printFilename(OS, FS.get(), File, OutputFormat);
     Columns += N + 1;
   }
   OS << '\n';
@@ -385,7 +425,7 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
     for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
       if (Index++ == InputFileIndex)
         continue;
-      PrintFilename(OS, *I, OutputFormat);
+      printFilename(OS, FS.get(), *I, OutputFormat);
       OS << ":\n";
     }
   }

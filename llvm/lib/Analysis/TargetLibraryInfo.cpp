@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -37,7 +38,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
                           "SIMD Library for Evaluating Elementary Functions"),
                clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
-                          "Arm Performance Libraries")));
+                          "Arm Performance Libraries"),
+               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
+                          "AMD vector math library")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -158,17 +161,28 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
                                     F->getFunctionType());
 }
 
+static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
+  bool ShouldExtI32Param, ShouldExtI32Return;
+  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+  TargetLibraryInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
+  TLI.setShouldExtI32Param(ShouldExtI32Param);
+  TLI.setShouldExtI32Return(ShouldExtI32Return);
+  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
+  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
+
+  // Let's assume by default that the size of int is 32 bits, unless the target
+  // is a 16-bit architecture because then it most likely is 16 bits. If that
+  // isn't true for a target those defaults should be overridden below.
+  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
-static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
-  // Verify that the StandardNames array is in alphabetical order.
-  assert(
-      llvm::is_sorted(StandardNames,
-                      [](StringRef LHS, StringRef RHS) { return LHS < RHS; }) &&
-      "TargetLibraryInfoImpl function names must be sorted");
-
+static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
+                               ArrayRef<StringLiteral> StandardNames) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -181,20 +195,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fwrite_unlocked);
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
-
-  bool ShouldExtI32Param, ShouldExtI32Return;
-  bool ShouldSignExtI32Param, ShouldSignExtI32Return;
-  TargetLibraryInfo::initExtensionsForTriple(ShouldExtI32Param,
-       ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return, T);
-  TLI.setShouldExtI32Param(ShouldExtI32Param);
-  TLI.setShouldExtI32Return(ShouldExtI32Return);
-  TLI.setShouldSignExtI32Param(ShouldSignExtI32Param);
-  TLI.setShouldSignExtI32Return(ShouldSignExtI32Return);
-
-  // Let's assume by default that the size of int is 32 bits, unless the target
-  // is a 16-bit architecture because then it most likely is 16 bits. If that
-  // isn't true for a target those defaults should be overridden below.
-  TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
 
   // There is really no runtime library on AMDGPU, apart from
   // __kmpc_alloc/free_shared.
@@ -300,11 +300,14 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_expf);
       TLI.setUnavailable(LibFunc_floorf);
       TLI.setUnavailable(LibFunc_fmodf);
+      TLI.setUnavailable(LibFunc_hypotf);
       TLI.setUnavailable(LibFunc_log10f);
       TLI.setUnavailable(LibFunc_logf);
       TLI.setUnavailable(LibFunc_modff);
       TLI.setUnavailable(LibFunc_powf);
       TLI.setUnavailable(LibFunc_remainderf);
+      TLI.setUnavailable(LibFunc_remquof);
+      TLI.setUnavailable(LibFunc_fdimf);
       TLI.setUnavailable(LibFunc_sinf);
       TLI.setUnavailable(LibFunc_sinhf);
       TLI.setUnavailable(LibFunc_sqrtf);
@@ -329,12 +332,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_floorl);
     TLI.setUnavailable(LibFunc_fmodl);
     TLI.setUnavailable(LibFunc_frexpl);
+    TLI.setUnavailable(LibFunc_hypotl);
     TLI.setUnavailable(LibFunc_ldexpl);
     TLI.setUnavailable(LibFunc_log10l);
     TLI.setUnavailable(LibFunc_logl);
     TLI.setUnavailable(LibFunc_modfl);
     TLI.setUnavailable(LibFunc_powl);
     TLI.setUnavailable(LibFunc_remainderl);
+    TLI.setUnavailable(LibFunc_remquol);
+    TLI.setUnavailable(LibFunc_fdiml);
     TLI.setUnavailable(LibFunc_sinl);
     TLI.setUnavailable(LibFunc_sinhl);
     TLI.setUnavailable(LibFunc_sqrtl);
@@ -368,6 +374,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_log2);
       TLI.setUnavailable(LibFunc_log2f);
       TLI.setAvailableWithName(LibFunc_logb, "_logb");
+      TLI.setUnavailable(LibFunc_ilogb);
+      TLI.setUnavailable(LibFunc_ilogbf);
       if (hasPartialFloat)
         TLI.setAvailableWithName(LibFunc_logbf, "_logbf");
       else
@@ -376,6 +384,12 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc_rintf);
       TLI.setUnavailable(LibFunc_round);
       TLI.setUnavailable(LibFunc_roundf);
+      TLI.setUnavailable(LibFunc_scalbln);
+      TLI.setUnavailable(LibFunc_scalblnf);
+      TLI.setUnavailable(LibFunc_scalblnl);
+      TLI.setUnavailable(LibFunc_scalbn);
+      TLI.setUnavailable(LibFunc_scalbnf);
+      TLI.setUnavailable(LibFunc_scalbnl);
       TLI.setUnavailable(LibFunc_trunc);
       TLI.setUnavailable(LibFunc_truncf);
     }
@@ -394,9 +408,12 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_log1pl);
     TLI.setUnavailable(LibFunc_log2l);
     TLI.setUnavailable(LibFunc_logbl);
+    TLI.setUnavailable(LibFunc_ilogbl);
     TLI.setUnavailable(LibFunc_nearbyintl);
     TLI.setUnavailable(LibFunc_rintl);
     TLI.setUnavailable(LibFunc_roundl);
+    TLI.setUnavailable(LibFunc_scalblnl);
+    TLI.setUnavailable(LibFunc_scalbnl);
     TLI.setUnavailable(LibFunc_truncl);
 
     // Win32 does not support these functions, but
@@ -460,6 +477,11 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_uname);
     TLI.setUnavailable(LibFunc_unsetenv);
     TLI.setUnavailable(LibFunc_utimes);
+
+    // MinGW does have ldexpf, but it is a plain wrapper over regular ldexp.
+    // Therefore it's not beneficial to transform code to use it, i.e.
+    // just pretend that the function is not available.
+    TLI.setUnavailable(LibFunc_ldexpf);
   }
 
   // Pick just one set of new/delete variants.
@@ -505,6 +527,10 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_Znam12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_t12__hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t);
+    TLI.setUnavailable(LibFunc_size_returning_new);
+    TLI.setUnavailable(LibFunc_size_returning_new_hot_cold);
+    TLI.setUnavailable(LibFunc_size_returning_new_aligned);
+    TLI.setUnavailable(LibFunc_size_returning_new_aligned_hot_cold);
   } else {
     // Not MSVC, assume it's Itanium.
     TLI.setUnavailable(LibFunc_msvc_new_int);
@@ -546,6 +572,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
     TLI.setUnavailable(LibFunc_exp10l);
     if (!T.isWatchOS() &&
         (T.isOSVersionLT(7, 0) || (T.isOSVersionLT(9, 0) && T.isX86()))) {
@@ -581,6 +608,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
   case Triple::FreeBSD:
   case Triple::Linux:
     break;
@@ -597,6 +625,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::IOS:
   case Triple::TvOS:
   case Triple::WatchOS:
+  case Triple::XROS:
   case Triple::FreeBSD:
   case Triple::Linux:
     break;
@@ -823,6 +852,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_memrchr);
     TLI.setUnavailable(LibFunc_ntohl);
     TLI.setUnavailable(LibFunc_ntohs);
+    TLI.setUnavailable(LibFunc_reallocarray);
     TLI.setUnavailable(LibFunc_reallocf);
     TLI.setUnavailable(LibFunc_roundeven);
     TLI.setUnavailable(LibFunc_roundevenf);
@@ -875,14 +905,25 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_vec_free);
   }
 
+  if (T.isOSAIX())
+    TLI.setUnavailable(LibFunc_memrchr);
+
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary, T);
 }
 
-TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
-  // Default to everything being available.
-  memset(AvailableArray, -1, sizeof(AvailableArray));
+/// Initialize the set of available library functions based on the specified
+/// target triple. This should be carefully written so that a missing target
+/// triple gets a sane set of defaults.
+static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
+                       ArrayRef<StringLiteral> StandardNames) {
+  initializeBase(TLI, T);
+  initializeLibCalls(TLI, T, StandardNames);
+}
 
-  initialize(*this, Triple(), StandardNames);
+TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
+  // Default to nothing being available.
+  memset(AvailableArray, 0, sizeof(AvailableArray));
+  initializeBase(*this, Triple());
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
@@ -1024,6 +1065,49 @@ static bool matchType(FuncArgTypeID ArgTy, const Type *Ty, unsigned IntBits,
   llvm_unreachable("Invalid type");
 }
 
+static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
+                                            const Module &M,
+                                            int SizeTSizeBits) {
+  switch (F) {
+  case LibFunc_size_returning_new: {
+    if (FTy.getNumParams() != 1 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_hot_cold: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(8)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned: {
+    if (FTy.getNumParams() != 2 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits)) {
+      return false;
+    }
+  } break;
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    if (FTy.getNumParams() != 3 ||
+        !FTy.getParamType(0)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(1)->isIntegerTy(SizeTSizeBits) ||
+        !FTy.getParamType(2)->isIntegerTy(8)) {
+      return false;
+    }
+    break;
+  default:
+    return false;
+  }
+
+  auto &Context = M.getContext();
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  StructType *SizedPtrTy = StructType::get(
+      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
+  return FTy.getReturnType() == SizedPtrTy;
+}
+
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
                                                    const Module &M) const {
@@ -1074,7 +1158,13 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-
+    // Special handling of __size_returning_new functions that return a struct
+    // of type {void*, size_t}.
+  case LibFunc_size_returning_new:
+  case LibFunc_size_returning_new_hot_cold:
+  case LibFunc_size_returning_new_aligned:
+  case LibFunc_size_returning_new_aligned_hot_cold:
+    return isValidProtoForSizeReturningNew(FTy, F, M, getSizeTSize(M));
   default:
     break;
   }
@@ -1183,97 +1273,134 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
-    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
-  switch (VecLib) {
-  case Accelerate: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_ACCELERATE_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case DarwinLibSystemM: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case LIBMVEC_X86: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case MASSV: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_MASSV_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case SVML: {
-    const VecDesc VecFuncs[] = {
-    #define TLI_DEFINE_SVML_VECFUNCS
-    #include "llvm/Analysis/VecFuncs.def"
-    };
-    addVectorizableFunctions(VecFuncs);
-    break;
-  }
-  case SLEEFGNUABI: {
-    const VecDesc VecFuncs_VF2[] = {
+static const VecDesc VecFuncs_Accelerate[] = {
+#define TLI_DEFINE_ACCELERATE_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ACCELERATE_VECFUNCS
+};
+
+static const VecDesc VecFuncs_DarwinLibSystemM[] = {
+#define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
+};
+
+static const VecDesc VecFuncs_LIBMVEC_X86[] = {
+#define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
+};
+
+static const VecDesc VecFuncs_MASSV[] = {
+#define TLI_DEFINE_MASSV_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_MASSV_VECFUNCS
+};
+
+static const VecDesc VecFuncs_SVML[] = {
+#define TLI_DEFINE_SVML_VECFUNCS
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SVML_VECFUNCS
+};
+
+static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
-    const VecDesc VecFuncs_VF4[] = {
+#undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
+};
+static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
   {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
-    const VecDesc VecFuncs_VFScalable[] = {
+#undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
+};
+static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
 #include "llvm/Analysis/VecFuncs.def"
-    };
+#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
+};
 
+static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+#define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
+};
+
+static const VecDesc VecFuncs_ArmPL[] = {
+#define TLI_DEFINE_ARMPL_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_ARMPL_VECFUNCS
+};
+
+const VecDesc VecFuncs_AMDLIBM[] = {
+#define TLI_DEFINE_AMDLIBM_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#include "llvm/Analysis/VecFuncs.def"
+#undef TLI_DEFINE_AMDLIBM_VECFUNCS
+};
+
+void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
+    enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
+  switch (VecLib) {
+  case Accelerate: {
+    addVectorizableFunctions(VecFuncs_Accelerate);
+    break;
+  }
+  case DarwinLibSystemM: {
+    addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
+    break;
+  }
+  case LIBMVEC_X86: {
+    addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+    break;
+  }
+  case MASSV: {
+    addVectorizableFunctions(VecFuncs_MASSV);
+    break;
+  }
+  case SVML: {
+    addVectorizableFunctions(VecFuncs_SVML);
+    break;
+  }
+  case SLEEFGNUABI: {
     switch (TargetTriple.getArch()) {
     default:
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs_VF2);
-      addVectorizableFunctions(VecFuncs_VF4);
-      addVectorizableFunctions(VecFuncs_VFScalable);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF2);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF4);
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalable);
+      break;
+    case llvm::Triple::riscv64:
+      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalableRISCV);
       break;
     }
     break;
   }
   case ArmPL: {
-    const VecDesc VecFuncs[] = {
-#define TLI_DEFINE_ARMPL_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX},
-#include "llvm/Analysis/VecFuncs.def"
-    };
-
     switch (TargetTriple.getArch()) {
     default:
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs);
+      addVectorizableFunctions(VecFuncs_ArmPL);
       break;
     }
+    break;
+  }
+  case AMDLIBM: {
+    addVectorizableFunctions(VecFuncs_AMDLIBM);
     break;
   }
   case NoLibrary:
@@ -1332,19 +1459,16 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
-  // There is really no guarantee that sizeof(size_t) is equal to sizeof(int*).
-  // If that isn't true then it should be possible to derive the SizeTTy from
-  // the target triple here instead and do an early return.
+  // There is really no guarantee that sizeof(size_t) is equal to the index
+  // size of the default address space. If that isn't true then it should be
+  // possible to derive the SizeTTy from the target triple here instead and do
+  // an early return.
 
-  // Historically LLVM assume that size_t has same size as intptr_t (hence
-  // deriving the size from sizeof(int*) in address space zero). This should
-  // work for most targets. For future consideration: DataLayout also implement
-  // getIndexSizeInBits which might map better to size_t compared to
-  // getPointerSizeInBits. Hard coding address space zero here might be
-  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
-  // getAllocaAddrSpace() is better.
-  unsigned AddressSpace = 0;
-  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
+  // Hard coding address space zero may seem unfortunate, but a number of
+  // configurations of common targets (i386, x86-64 x32, aarch64 x32, possibly
+  // others) have larger-than-size_t index sizes on non-default address spaces,
+  // making this the best default.
+  return M.getDataLayout().getIndexSizeInBits(/*AddressSpace=*/0);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
@@ -1362,6 +1486,10 @@ TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
     : ImmutablePass(ID), TLA(TLIImpl) {
   initializeTargetLibraryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
+
+TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass(
+    const TargetLibraryInfo &TLIOther)
+    : TargetLibraryInfoWrapperPass(*TLIOther.Impl) {}
 
 AnalysisKey TargetLibraryAnalysis::Key;
 

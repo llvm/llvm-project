@@ -2,7 +2,7 @@
 ; RUN: llvm-as %s -o %t.o
 ; RUN: ld.lld %t.o -o %t.so -save-temps --lto-aa-pipeline=basic-aa \
 ; RUN: --lto-newpm-passes=ipsccp -shared
-; RUN: ld.lld %t.o -o %t2.so -save-temps --lto-newpm-passes=loweratomic -shared
+; RUN: ld.lld %t.o -o %t2.so -save-temps --lto-newpm-passes=lower-atomic -shared
 ; RUN: llvm-dis %t.so.0.4.opt.bc -o - | FileCheck %s
 ; RUN: llvm-dis %t2.so.0.4.opt.bc -o - | FileCheck %s --check-prefix=ATOMIC
 

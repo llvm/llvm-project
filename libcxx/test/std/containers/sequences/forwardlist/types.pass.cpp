@@ -24,11 +24,31 @@
 //   ...
 // };
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <forward_list>
 #include <type_traits>
 
 #include "test_macros.h"
 #include "min_allocator.h"
+
+// Ensures that we don't use a non-uglified name 'base' in the implementation of 'forward_list'.
+
+struct my_base {
+  typedef my_base base;
+};
+
+template <class T, class A = std::allocator<T> >
+struct my_derived : my_base, std::forward_list<T, A> {};
+
+static_assert(std::is_same<my_derived<char>::base, my_base>::value, "");
+static_assert(std::is_same<my_derived<int>::base, my_base>::value, "");
+static_assert(std::is_same<my_derived<my_base>::base, my_base>::value, "");
+#if TEST_STD_VER >= 11
+static_assert(std::is_same<my_derived<char, min_allocator<char>>::base, my_base>::value, "");
+static_assert(std::is_same<my_derived<int, min_allocator<int>>::base, my_base>::value, "");
+static_assert(std::is_same<my_derived<my_base, min_allocator<my_base>>::base, my_base>::value, "");
+#endif
 
 struct A { std::forward_list<A> v; }; // incomplete type support
 

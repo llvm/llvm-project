@@ -19,17 +19,14 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %5.sub1:vreg_64 = V_MOV_B32_e32 1786773504, implicit $exec
-  ; CHECK-NEXT:   dead [[V_MUL_F32_e32_:%[0-9]+]]:vgpr_32 = V_MUL_F32_e32 0, %5.sub1, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   undef %7.sub1:vreg_64 = V_MAC_F32_e32 0, undef %1:vgpr_32, undef %7.sub1, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   SI_SPILL_V64_SAVE %7, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 1786773504, implicit $exec
+  ; CHECK-NEXT:   dead [[V_MUL_F32_e32_:%[0-9]+]]:vgpr_32 = V_MUL_F32_e32 0, [[V_MOV_B32_e32_]].sub1, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MAC_F32_e32_:%[0-9]+]].sub1:vreg_64 = V_MAC_F32_e32 0, undef %1:vgpr_32, undef [[V_MAC_F32_e32_]].sub1, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   undef %6.sub1:vreg_64 = V_MOV_B32_e32 1786773504, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit %6.sub1
-  ; CHECK-NEXT:   [[SI_SPILL_V64_RESTORE:%[0-9]+]]:vreg_64 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-  ; CHECK-NEXT:   S_NOP 0, implicit [[SI_SPILL_V64_RESTORE]].sub1
-  ; CHECK-NEXT:   S_NOP 0, implicit undef %9.sub0:vreg_64
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub1
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MAC_F32_e32_]].sub1
+  ; CHECK-NEXT:   S_NOP 0, implicit undef [[V_MAC_F32_e32_]].sub0
   bb.0:
     successors: %bb.1
 
@@ -59,13 +56,13 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %1.sub2:vreg_128 = V_MOV_B32_e32 1786773504, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub2:vreg_128 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_1:%[0-9]+]].sub2:vreg_128 = V_MOV_B32_e32 1786773504, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   S_NOP 0, implicit %1.sub2
-  ; CHECK-NEXT:   S_NOP 0, implicit undef %4.sub0:vreg_128
-  ; CHECK-NEXT:   undef %2.sub2:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit %2.sub2
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_1]].sub2
+  ; CHECK-NEXT:   S_NOP 0, implicit undef [[V_MOV_B32_e32_]].sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub2
   bb.0:
     successors: %bb.1
 

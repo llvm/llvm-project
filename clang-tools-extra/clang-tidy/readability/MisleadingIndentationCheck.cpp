@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MisleadingIndentationCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -51,8 +52,20 @@ void MisleadingIndentationCheck::danglingElseCheck(const SourceManager &SM,
     diag(ElseLoc, "different indentation for 'if' and corresponding 'else'");
 }
 
-void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
-                                                    const CompoundStmt *CStmt) {
+static bool isAtStartOfLineIncludingEmptyMacro(SourceLocation NextLoc,
+                                               const SourceManager &SM,
+                                               const LangOptions &LangOpts) {
+  const SourceLocation BeforeLoc =
+      utils::lexer::getPreviousTokenAndStart(NextLoc, SM, LangOpts).second;
+  if (BeforeLoc.isInvalid())
+    return false;
+  return SM.getExpansionLineNumber(BeforeLoc) !=
+         SM.getExpansionLineNumber(NextLoc);
+}
+
+void MisleadingIndentationCheck::missingBracesCheck(
+    const SourceManager &SM, const CompoundStmt *CStmt,
+    const LangOptions &LangOpts) {
   const static StringRef StmtNames[] = {"if", "for", "while"};
   for (unsigned int I = 0; I < CStmt->size() - 1; I++) {
     const Stmt *CurrentStmt = CStmt->body_begin()[I];
@@ -92,6 +105,8 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
 
     if (NextLoc.isInvalid() || NextLoc.isMacroID())
       continue;
+    if (!isAtStartOfLineIncludingEmptyMacro(NextLoc, SM, LangOpts))
+      continue;
 
     if (SM.getExpansionColumnNumber(InnerLoc) ==
         SM.getExpansionColumnNumber(NextLoc)) {
@@ -117,7 +132,8 @@ void MisleadingIndentationCheck::check(const MatchFinder::MatchResult &Result) {
     danglingElseCheck(*Result.SourceManager, Result.Context, If);
 
   if (const auto *CStmt = Result.Nodes.getNodeAs<CompoundStmt>("compound"))
-    missingBracesCheck(*Result.SourceManager, CStmt);
+    missingBracesCheck(*Result.SourceManager, CStmt,
+                       Result.Context->getLangOpts());
 }
 
 } // namespace clang::tidy::readability

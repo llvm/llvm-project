@@ -1,5 +1,7 @@
 ; RUN: opt -passes=instcombine -S %s -o -  \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=instcombine -S %s -o -  \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Based on the test remove-redundant-dbg.ll.
 ;;
@@ -8,9 +10,9 @@
 ;; behaviour is maintained. If it is discovered that it is profitable to remove
 ;; these intrinsics in instcombine then it's okay to remove this test.
 
-; CHECK: @llvm.dbg.value(metadata i32 undef
-; CHECK: @llvm.dbg.value(metadata i32 0
-; CHECK: @llvm.dbg.value(metadata i32 1
+; CHECK: #dbg_value(i32 undef
+; CHECK: #dbg_value(i32 0
+; CHECK: #dbg_value(i32 1
 
 define dso_local void @_Z3funv() local_unnamed_addr !dbg !7 {
 entry:

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon < %s 2> %t
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+neon,+fprcvt < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s
 
 //------------------------------------------------------------------------------
@@ -4877,7 +4877,7 @@
 // CHECK-ERROR:                        ^
 
 //----------------------------------------------------------------------
-// Scalar Unigned Rounding Shift Right (Immediate)
+// Scalar Unsigned Rounding Shift Right (Immediate)
 //----------------------------------------------------------------------
 
         urshr d20, d23, #99
@@ -5174,6 +5174,32 @@
 // CHECK-ERROR:                        ^
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        ucvtf d21, s14, #64
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Signed Integer Convert To Floating-Point
+//---------------------------------------------------------------------
+
+    scvtf d0, h0
+    scvtf s0, h0
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:         scvtf d0, h0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:         scvtf s0, h0
+// CHECK-ERROR:                   ^
+
+//----------------------------------------------------------------------
+// Scalar Unsigned Integer Convert To Floating-Point
+//---------------------------------------------------------------------
+
+    ucvtf d0, h0
+    ucvtf s0, h0
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:         ucvtf d0, h0
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:         ucvtf s0, h0
 // CHECK-ERROR:                   ^
 
 //------------------------------------------------------------------------------
@@ -6888,6 +6914,9 @@
         tbl v0.8b, {v1.8b, v2.8b, v3.8b}, v2.8b
         tbl v0.8b, {v1.8b, v2.8b, v3.8b, v4.8b}, v2.8b
         tbl v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
+        tbl v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+        tbl.8b v0, {v2, v4, v6, v8}, v10
+        tbl.16b v0, {v2, v4, v6, v8}, v10
 
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        tbl v0.8b, {v1.8b}, v2.8b
@@ -6904,12 +6933,24 @@
 // CHECK-ERROR: error: invalid number of vectors
 // CHECK-ERROR:        tbl v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
 // CHECK-ERROR:                                                    ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl.8b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbl.16b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                    ^
 
         tbx v0.8b, {v1.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b, v3.8b}, v2.8b
         tbx v0.8b, {v1.8b, v2.8b, v3.8b, v4.8b}, v2.8b
         tbx v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
+        tbx v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+        tbx.8b v0, {v2, v4, v6, v8}, v10
+        tbx.16b v0, {v2, v4, v6, v8}, v10
 
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR:        tbx v0.8b, {v1.8b}, v2.8b
@@ -6926,6 +6967,15 @@
 // CHECK-ERROR: error: invalid number of vectors
 // CHECK-ERROR:        tbx v0.8b, {v1.16b, v2.16b, v3.16b, v4.16b, v5.16b}, v2.8b
 // CHECK-ERROR:                                                    ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx v0.8b, {v2.16b, v4.16b, v6.16b, v8.16b}, v10.8b
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx.8b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                   ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR:        tbx.16b v0, {v2, v4, v6, v8}, v10
+// CHECK-ERROR:                    ^
 
 //----------------------------------------------------------------------
 // Scalar Floating-point Convert To Lower Precision Narrow, Rounding To
@@ -6943,14 +6993,14 @@
 // With Ties To Away
 //----------------------------------------------------------------------
 
-    fcvtas s0, d0
-    fcvtas d0, s0
+    fcvtas h0, d0
+    fcvtas h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtas s0, d0
+// CHECK-ERROR:        fcvtas h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtas d0, s0
+// CHECK-ERROR:        fcvtas h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -6958,14 +7008,14 @@
 // Nearest With Ties To Away
 //----------------------------------------------------------------------
 
-    fcvtau s0, d0
-    fcvtau d0, s0
+    fcvtau h0, d0
+    fcvtau h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtau s0, d0
+// CHECK-ERROR:        fcvtau h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtau d0, s0
+// CHECK-ERROR:        fcvtau h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -6973,14 +7023,14 @@
 // Minus Infinity
 //----------------------------------------------------------------------
 
-    fcvtms s0, d0
-    fcvtms d0, s0
+    fcvtms h0, d0
+    fcvtms h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtms s0, d0
+// CHECK-ERROR:        fcvtms h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtms d0, s0
+// CHECK-ERROR:        fcvtms h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -6988,14 +7038,14 @@
 // Minus Infinity
 //----------------------------------------------------------------------
 
-    fcvtmu s0, d0
-    fcvtmu d0, s0
+    fcvtmu h0, d0
+    fcvtmu h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtmu s0, d0
+// CHECK-ERROR:        fcvtmu h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtmu d0, s0
+// CHECK-ERROR:        fcvtmu h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -7003,14 +7053,14 @@
 // With Ties To Even
 //----------------------------------------------------------------------
 
-    fcvtns s0, d0
-    fcvtns d0, s0
+    fcvtns h0, d0
+    fcvtns h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtns s0, d0
+// CHECK-ERROR:        fcvtns h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtns d0, s0
+// CHECK-ERROR:        fcvtns h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -7018,14 +7068,14 @@
 // Nearest With Ties To Even
 //----------------------------------------------------------------------
 
-    fcvtnu s0, d0
-    fcvtnu d0, s0
+    fcvtnu h0, d0
+    fcvtnu h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtnu s0, d0
+// CHECK-ERROR:        fcvtnu h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtnu d0, s0
+// CHECK-ERROR:        fcvtnu h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -7033,14 +7083,14 @@
 // Positive Infinity
 //----------------------------------------------------------------------
 
-    fcvtps s0, d0
-    fcvtps d0, s0
+    fcvtps h0, d0
+    fcvtps h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtps s0, d0
+// CHECK-ERROR:        fcvtps h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtps d0, s0
+// CHECK-ERROR:        fcvtps h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -7048,28 +7098,28 @@
 // Positive Infinity
 //----------------------------------------------------------------------
 
-    fcvtpu s0, d0
-    fcvtpu d0, s0
+    fcvtpu h0, d0
+    fcvtpu h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtpu s0, d0
+// CHECK-ERROR:        fcvtpu h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtpu d0, s0
+// CHECK-ERROR:        fcvtpu h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
 // Scalar Floating-point Convert To Signed Integer, Rounding Toward Zero
 //----------------------------------------------------------------------
 
-    fcvtzs s0, d0
-    fcvtzs d0, s0
+    fcvtzs h0, d0
+    fcvtzs h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtzs s0, d0
+// CHECK-ERROR:        fcvtzs h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtzs d0, s0
+// CHECK-ERROR:        fcvtzs h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------
@@ -7077,14 +7127,14 @@
 // Zero
 //----------------------------------------------------------------------
 
-    fcvtzu s0, d0
-    fcvtzu d0, s0
+    fcvtzu h0, d0
+    fcvtzu h0, s0
 
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtzu s0, d0
+// CHECK-ERROR:        fcvtzu h0, d0
 // CHECK-ERROR:                   ^
 // CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:        fcvtzu d0, s0
+// CHECK-ERROR:        fcvtzu h0, s0
 // CHECK-ERROR:                   ^
 
 //----------------------------------------------------------------------

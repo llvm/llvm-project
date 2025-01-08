@@ -51,7 +51,7 @@ define i32 @foo(i32 %a, i32 %b) {
 ; The new load should be in the same spot as the old load.
 define i32 @extract2gep(ptr %pair, ptr %P) {
 ; CHECK-LABEL: @extract2gep(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { i16, i32 }, ptr [[PAIR:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PAIR:%.*]], i64 4
 ; CHECK-NEXT:    [[E:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -82,7 +82,7 @@ end:
 ; to a 3-index inbounds gep + smaller load.
 define i16 @doubleextract2gep(ptr %arg) {
 ; CHECK-LABEL: @doubleextract2gep(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds { i16, { i32, i16 } }, ptr [[ARG:%.*]], i64 0, i32 1, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG:%.*]], i64 8
 ; CHECK-NEXT:    [[E2:%.*]] = load i16, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret i16 [[E2]]
 ;

@@ -76,8 +76,8 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    store i16 0, ptr [[TMP8]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       pred.store.continue2:
-; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
+; TAILFOLD-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; TAILFOLD-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
@@ -199,7 +199,7 @@ define i32 @early_exit_with_live_out(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x i32> <i32 10, i32 10>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    store <2 x i32> splat (i32 10), ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 998
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -847,8 +847,8 @@ define i32 @multiple_exit_switch(ptr %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, ptr [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    switch i32 [[I]], label [[FOR_COND]] [
-; CHECK-NEXT:    i32 2096, label [[IF_END:%.*]]
-; CHECK-NEXT:    i32 2097, label [[IF_END]]
+; CHECK-NEXT:      i32 2096, label [[IF_END:%.*]]
+; CHECK-NEXT:      i32 2097, label [[IF_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ], [ [[I]], [[FOR_COND]] ]
@@ -864,8 +864,8 @@ define i32 @multiple_exit_switch(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
 ; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; TAILFOLD-NEXT:    switch i32 [[I]], label [[FOR_COND]] [
-; TAILFOLD-NEXT:    i32 2096, label [[IF_END:%.*]]
-; TAILFOLD-NEXT:    i32 2097, label [[IF_END]]
+; TAILFOLD-NEXT:      i32 2096, label [[IF_END:%.*]]
+; TAILFOLD-NEXT:      i32 2097, label [[IF_END]]
 ; TAILFOLD-NEXT:    ]
 ; TAILFOLD:       if.end:
 ; TAILFOLD-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[FOR_COND]] ], [ [[I]], [[FOR_COND]] ]
@@ -902,8 +902,8 @@ define i32 @multiple_exit_switch2(ptr %p, i32 %n) {
 ; CHECK-NEXT:    store i16 0, ptr [[B]], align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    switch i32 [[I]], label [[FOR_COND]] [
-; CHECK-NEXT:    i32 2096, label [[IF_END:%.*]]
-; CHECK-NEXT:    i32 2097, label [[IF_END2:%.*]]
+; CHECK-NEXT:      i32 2096, label [[IF_END:%.*]]
+; CHECK-NEXT:      i32 2097, label [[IF_END2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
@@ -920,8 +920,8 @@ define i32 @multiple_exit_switch2(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
 ; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
 ; TAILFOLD-NEXT:    switch i32 [[I]], label [[FOR_COND]] [
-; TAILFOLD-NEXT:    i32 2096, label [[IF_END:%.*]]
-; TAILFOLD-NEXT:    i32 2097, label [[IF_END2:%.*]]
+; TAILFOLD-NEXT:      i32 2096, label [[IF_END:%.*]]
+; TAILFOLD-NEXT:      i32 2097, label [[IF_END2:%.*]]
 ; TAILFOLD-NEXT:    ]
 ; TAILFOLD:       if.end:
 ; TAILFOLD-NEXT:    ret i32 0
@@ -1090,7 +1090,7 @@ define void @scalar_predication(ptr %addr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <2 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP3]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -1201,7 +1201,7 @@ define i32 @me_reduction(ptr %addr) {
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 200, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]

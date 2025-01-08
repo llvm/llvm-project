@@ -478,4 +478,4 @@ template <typename T> class PCTT6<TestClass::PrivateClass, T> {
 };
 template <typename T1> template <typename, typename> class PCTT6<TestClass::PrivateClass, T1>::NCT4 final {};
 // expected-error@+1 2{{is a private member of}}
-template <typename T1> template <typename T2> struct PCTT6<TestClass::PrivateClass, T1>::template NCT3<T2, TestClass::TemplatePrivateClass<TestClass::TemplateProtectedClass<TestClass::PublicClass>>> : PCTT6<TestClass::PrivateClass, T1>::NCT4<T2, TestClass::TemplatePrivateClass<int>> {};
+template <typename T1> template <typename T2> struct PCTT6<TestClass::PrivateClass, T1>::NCT3<T2, TestClass::TemplatePrivateClass<TestClass::TemplateProtectedClass<TestClass::PublicClass>>> : PCTT6<TestClass::PrivateClass, T1>::NCT4<T2, TestClass::TemplatePrivateClass<int>> {};

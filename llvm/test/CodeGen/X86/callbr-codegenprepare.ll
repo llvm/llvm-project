@@ -1,4 +1,4 @@
-;; RUN: opt -S -codegenprepare < %s | FileCheck %s
+;; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' < %s | FileCheck %s
 
 ;; Ensure that codegenprepare (via InstSimplify) doesn't eliminate the
 ;; phi here (which would cause a module verification error).

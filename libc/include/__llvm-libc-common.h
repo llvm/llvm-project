@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC___COMMON_H
-#define LLVM_LIBC___COMMON_H
+#ifndef LLVM_LIBC_COMMON_H
+#define LLVM_LIBC_COMMON_H
 
 #ifdef __cplusplus
 
@@ -16,6 +16,12 @@
 
 #undef __END_C_DECLS
 #define __END_C_DECLS }
+
+// Standard C++ doesn't have C99 restrict but GNU C++ has it with __ spelling.
+#undef __restrict
+#ifndef __GNUC__
+#define __restrict
+#endif
 
 #undef _Noreturn
 #define _Noreturn [[noreturn]]
@@ -44,11 +50,32 @@
 #define __END_C_DECLS
 
 #undef __restrict
-#define __restrict restrict // C99 and above support the restrict keyword.
+#if __STDC_VERSION__ >= 199901L
+// C99 and above support the restrict keyword.
+#define __restrict restrict
+#elif !defined(__GNUC__)
+// GNU-compatible compilers accept the __ spelling in all modes.
+// Otherwise, omit the qualifier for pure C89 compatibility.
+#define __restrict
+#endif
+
+#undef _Noreturn
+#if __STDC_VERSION__ >= 201112L
+// In C11 and later, _Noreturn is a keyword.
+#elif defined(__GNUC__)
+// GNU-compatible compilers have an equivalent attribute.
+#define _Noreturn __attribute__((__noreturn__))
+#else
+#define _Noreturn
+#endif
 
 #undef __NOEXCEPT
+#ifdef __GNUC__
+#define __NOEXCEPT __attribute__((__nothrow__))
+#else
 #define __NOEXCEPT
+#endif
 
 #endif // __cplusplus
 
-#endif // LLVM_LIBC___COMMON_H
+#endif // LLVM_LIBC_COMMON_H

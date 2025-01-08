@@ -14,6 +14,8 @@
 // Make sure std::array<T, N> has the correct object size and alignment.
 // This test is mostly meant to catch subtle ABI-breaking regressions.
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // Ignore error about requesting a large alignment not being ABI compatible with older AIX systems.
 #if defined(_AIX)
 #  pragma clang diagnostic ignored "-Waix-compat"
@@ -22,7 +24,10 @@
 #include <array>
 #include <cstddef>
 #include <type_traits>
-#include <__type_traits/datasizeof.h>
+
+#ifdef _LIBCPP_VERSION
+#  include <__type_traits/datasizeof.h>
+#endif
 
 #include "test_macros.h"
 
@@ -43,7 +48,7 @@ void test_type() {
     static_assert(!std::is_empty<Array>::value, "");
 
     // Make sure empty arrays don't have padding bytes
-    LIBCPP_STATIC_ASSERT(std::__libcpp_datasizeof<Array>::value == sizeof(Array), "");
+    LIBCPP_STATIC_ASSERT(std::__datasizeof_v<Array> == sizeof(Array), "");
   }
 
   {

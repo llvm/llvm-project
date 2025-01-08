@@ -27,147 +27,135 @@
 
 #include "test_macros.h"
 
-
-void test_no_inner_alloc()
-{
-    using VoidAlloc = CountingAllocator<void>;
-    AllocController P;
-    {
-        using T = UsesAllocatorV1<VoidAlloc, 0>;
-        using U = UsesAllocatorV2<VoidAlloc, 0>;
-        using Pair = std::pair<T, U>;
-        using Alloc = CountingAllocator<Pair>;
-        using SA = std::scoped_allocator_adaptor<Alloc>;
-        static_assert(std::uses_allocator<T, CountingAllocator<T> >::value, "");
-        Pair * ptr = (Pair*)std::malloc(sizeof(Pair));
-        assert(ptr);
-        Alloc CA(P);
-        SA A(CA);
-        A.construct(ptr);
-        assert(checkConstruct<>(ptr->first, UA_AllocArg, CA));
-        assert(checkConstruct<>(ptr->second, UA_AllocLast, CA));
+void test_no_inner_alloc() {
+  using VoidAlloc = CountingAllocator<void>;
+  AllocController P;
+  {
+    using T     = UsesAllocatorV1<VoidAlloc, 0>;
+    using U     = UsesAllocatorV2<VoidAlloc, 0>;
+    using Pair  = std::pair<T, U>;
+    using Alloc = CountingAllocator<Pair>;
+    using SA    = std::scoped_allocator_adaptor<Alloc>;
+    static_assert(std::uses_allocator<T, CountingAllocator<T> >::value, "");
+    Pair* ptr = (Pair*)std::malloc(sizeof(Pair));
+    assert(ptr);
+    Alloc CA(P);
+    SA A(CA);
+    A.construct(ptr);
+    assert(checkConstruct<>(ptr->first, UA_AllocArg, CA));
+    assert(checkConstruct<>(ptr->second, UA_AllocLast, CA));
 #if TEST_STD_VER >= 20
-        assert((P.checkConstruct<std::piecewise_construct_t&&,
-                                 std::tuple<std::allocator_arg_t, const SA&>&&,
-                                 std::tuple<const SA&>&&
-              >(CA, ptr)));
+    assert((P.checkConstruct<std::piecewise_construct_t&&,
+                             std::tuple<std::allocator_arg_t, const SA&>&&,
+                             std::tuple<const SA&>&& >(CA, ptr)));
 #else
-        assert((P.checkConstruct<std::piecewise_construct_t const&,
-                                 std::tuple<std::allocator_arg_t, SA&>&&,
-                                 std::tuple<SA&>&&
-              >(CA, ptr)));
+    assert((P.checkConstruct<std::piecewise_construct_t const&,
+                             std::tuple<std::allocator_arg_t, SA&>&&,
+                             std::tuple<SA&>&& >(CA, ptr)));
 #endif
-        A.destroy(ptr);
-        std::free(ptr);
-
-    }
-    P.reset();
-    {
-        using T = UsesAllocatorV3<VoidAlloc, 0>;
-        using U = NotUsesAllocator<VoidAlloc, 0>;
-        using Pair = std::pair<T, U>;
-        using Alloc = CountingAllocator<Pair>;
-        using SA = std::scoped_allocator_adaptor<Alloc>;
-        static_assert(std::uses_allocator<T, CountingAllocator<T> >::value, "");
-        Pair * ptr = (Pair*)std::malloc(sizeof(Pair));
-        assert(ptr);
-        Alloc CA(P);
-        SA A(CA);
-        A.construct(ptr);
-        assert(checkConstruct<>(ptr->first, UA_AllocArg, CA));
-        assert(checkConstruct<>(ptr->second, UA_None));
+    A.destroy(ptr);
+    std::free(ptr);
+  }
+  P.reset();
+  {
+    using T     = UsesAllocatorV3<VoidAlloc, 0>;
+    using U     = NotUsesAllocator<VoidAlloc, 0>;
+    using Pair  = std::pair<T, U>;
+    using Alloc = CountingAllocator<Pair>;
+    using SA    = std::scoped_allocator_adaptor<Alloc>;
+    static_assert(std::uses_allocator<T, CountingAllocator<T> >::value, "");
+    Pair* ptr = (Pair*)std::malloc(sizeof(Pair));
+    assert(ptr);
+    Alloc CA(P);
+    SA A(CA);
+    A.construct(ptr);
+    assert(checkConstruct<>(ptr->first, UA_AllocArg, CA));
+    assert(checkConstruct<>(ptr->second, UA_None));
 #if TEST_STD_VER >= 20
-        assert((P.checkConstruct<std::piecewise_construct_t&&,
-                                 std::tuple<std::allocator_arg_t, const SA&>&&,
-                                 std::tuple<>&&
-                   >(CA, ptr)));
+    assert(
+        (P.checkConstruct<std::piecewise_construct_t&&, std::tuple<std::allocator_arg_t, const SA&>&&, std::tuple<>&& >(
+            CA, ptr)));
 #else
-        assert((P.checkConstruct<std::piecewise_construct_t const&,
-                                 std::tuple<std::allocator_arg_t, SA&>&&,
-                                 std::tuple<>&&
-                   >(CA, ptr)));
+    assert(
+        (P.checkConstruct<std::piecewise_construct_t const&, std::tuple<std::allocator_arg_t, SA&>&&, std::tuple<>&& >(
+            CA, ptr)));
 #endif
-        A.destroy(ptr);
-        std::free(ptr);
-    }
+    A.destroy(ptr);
+    std::free(ptr);
+  }
 }
 
-void test_with_inner_alloc()
-{
-    using VoidAlloc2 = CountingAllocator<void, 2>;
+void test_with_inner_alloc() {
+  using VoidAlloc2 = CountingAllocator<void, 2>;
 
-    AllocController POuter;
-    AllocController PInner;
-    {
-        using T = UsesAllocatorV1<VoidAlloc2, 0>;
-        using U = UsesAllocatorV2<VoidAlloc2, 0>;
-        using Pair = std::pair<T, U>;
-        using Outer = CountingAllocator<Pair, 1>;
-        using Inner = CountingAllocator<Pair, 2>;
-        using SA = std::scoped_allocator_adaptor<Outer, Inner>;
-        using SAInner = std::scoped_allocator_adaptor<Inner>;
-        static_assert(!std::uses_allocator<T, Outer>::value, "");
-        static_assert(std::uses_allocator<T, Inner>::value, "");
-        Pair * ptr = (Pair*)std::malloc(sizeof(Pair));
-        assert(ptr);
-        Outer O(POuter);
-        Inner I(PInner);
-        SA A(O, I);
-        A.construct(ptr);
-        assert(checkConstruct<>(ptr->first, UA_AllocArg, I));
-        assert(checkConstruct<>(ptr->second, UA_AllocLast));
+  AllocController POuter;
+  AllocController PInner;
+  {
+    using T       = UsesAllocatorV1<VoidAlloc2, 0>;
+    using U       = UsesAllocatorV2<VoidAlloc2, 0>;
+    using Pair    = std::pair<T, U>;
+    using Outer   = CountingAllocator<Pair, 1>;
+    using Inner   = CountingAllocator<Pair, 2>;
+    using SA      = std::scoped_allocator_adaptor<Outer, Inner>;
+    using SAInner = std::scoped_allocator_adaptor<Inner>;
+    static_assert(!std::uses_allocator<T, Outer>::value, "");
+    static_assert(std::uses_allocator<T, Inner>::value, "");
+    Pair* ptr = (Pair*)std::malloc(sizeof(Pair));
+    assert(ptr);
+    Outer O(POuter);
+    Inner I(PInner);
+    SA A(O, I);
+    A.construct(ptr);
+    assert(checkConstruct<>(ptr->first, UA_AllocArg, I));
+    assert(checkConstruct<>(ptr->second, UA_AllocLast));
 #if TEST_STD_VER >= 20
-        assert((POuter.checkConstruct<std::piecewise_construct_t&&,
-                                 std::tuple<std::allocator_arg_t, const SAInner&>&&,
-                                 std::tuple<const SAInner&>&&
-              >(O, ptr)));
+    assert((POuter.checkConstruct<std::piecewise_construct_t&&,
+                                  std::tuple<std::allocator_arg_t, const SAInner&>&&,
+                                  std::tuple<const SAInner&>&& >(O, ptr)));
 #else
-        assert((POuter.checkConstruct<std::piecewise_construct_t const&,
-                                 std::tuple<std::allocator_arg_t, SAInner&>&&,
-                                 std::tuple<SAInner&>&&
-              >(O, ptr)));
+    assert((POuter.checkConstruct<std::piecewise_construct_t const&,
+                                  std::tuple<std::allocator_arg_t, SAInner&>&&,
+                                  std::tuple<SAInner&>&& >(O, ptr)));
 #endif
-        A.destroy(ptr);
-        std::free(ptr);
-    }
-    PInner.reset();
-    POuter.reset();
-    {
-        using T = UsesAllocatorV3<VoidAlloc2, 0>;
-        using U = NotUsesAllocator<VoidAlloc2, 0>;
-        using Pair = std::pair<T, U>;
-        using Outer = CountingAllocator<Pair, 1>;
-        using Inner = CountingAllocator<Pair, 2>;
-        using SA = std::scoped_allocator_adaptor<Outer, Inner>;
-        using SAInner = std::scoped_allocator_adaptor<Inner>;
-        static_assert(!std::uses_allocator<T, Outer>::value, "");
-        static_assert(std::uses_allocator<T, Inner>::value, "");
-        Pair * ptr = (Pair*)std::malloc(sizeof(Pair));
-        assert(ptr);
-        Outer O(POuter);
-        Inner I(PInner);
-        SA A(O, I);
-        A.construct(ptr);
-        assert(checkConstruct<>(ptr->first, UA_AllocArg, I));
-        assert(checkConstruct<>(ptr->second, UA_None));
+    A.destroy(ptr);
+    std::free(ptr);
+  }
+  PInner.reset();
+  POuter.reset();
+  {
+    using T       = UsesAllocatorV3<VoidAlloc2, 0>;
+    using U       = NotUsesAllocator<VoidAlloc2, 0>;
+    using Pair    = std::pair<T, U>;
+    using Outer   = CountingAllocator<Pair, 1>;
+    using Inner   = CountingAllocator<Pair, 2>;
+    using SA      = std::scoped_allocator_adaptor<Outer, Inner>;
+    using SAInner = std::scoped_allocator_adaptor<Inner>;
+    static_assert(!std::uses_allocator<T, Outer>::value, "");
+    static_assert(std::uses_allocator<T, Inner>::value, "");
+    Pair* ptr = (Pair*)std::malloc(sizeof(Pair));
+    assert(ptr);
+    Outer O(POuter);
+    Inner I(PInner);
+    SA A(O, I);
+    A.construct(ptr);
+    assert(checkConstruct<>(ptr->first, UA_AllocArg, I));
+    assert(checkConstruct<>(ptr->second, UA_None));
 #if TEST_STD_VER >= 20
-        assert((POuter.checkConstruct<std::piecewise_construct_t&&,
-                                 std::tuple<std::allocator_arg_t, const SAInner&>&&,
-                                 std::tuple<>&&
-              >(O, ptr)));
+    assert((POuter.checkConstruct<std::piecewise_construct_t&&,
+                                  std::tuple<std::allocator_arg_t, const SAInner&>&&,
+                                  std::tuple<>&& >(O, ptr)));
 #else
-        assert((POuter.checkConstruct<std::piecewise_construct_t const&,
-                                 std::tuple<std::allocator_arg_t, SAInner&>&&,
-                                 std::tuple<>&&
-              >(O, ptr)));
+    assert((POuter.checkConstruct<std::piecewise_construct_t const&,
+                                  std::tuple<std::allocator_arg_t, SAInner&>&&,
+                                  std::tuple<>&& >(O, ptr)));
 #endif
-        A.destroy(ptr);
-        std::free(ptr);
-    }
+    A.destroy(ptr);
+    std::free(ptr);
+  }
 }
 int main(int, char**) {
-    test_no_inner_alloc();
-    test_with_inner_alloc();
+  test_no_inner_alloc();
+  test_with_inner_alloc();
 
   return 0;
 }

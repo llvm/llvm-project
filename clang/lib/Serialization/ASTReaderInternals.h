@@ -49,15 +49,15 @@ public:
   static const int MaxTables = 4;
 
   /// The lookup result is a list of global declaration IDs.
-  using data_type = SmallVector<DeclID, 4>;
+  using data_type = SmallVector<GlobalDeclID, 4>;
 
   struct data_type_builder {
     data_type &Data;
-    llvm::DenseSet<DeclID> Found;
+    llvm::DenseSet<GlobalDeclID> Found;
 
     data_type_builder(data_type &D) : Data(D) {}
 
-    void insert(DeclID ID) {
+    void insert(GlobalDeclID ID) {
       // Just use a linear scan unless we have more than a few IDs.
       if (Found.empty() && !Data.empty()) {
         if (Data.size() <= 4) {
@@ -108,7 +108,7 @@ public:
 
   static void MergeDataInto(const data_type &From, data_type_builder &To) {
     To.Data.reserve(To.Data.size() + From.size());
-    for (DeclID ID : From)
+    for (GlobalDeclID ID : From)
       To.insert(ID);
   }
 
@@ -117,6 +117,88 @@ public:
 
 struct DeclContextLookupTable {
   MultiOnDiskHashTable<ASTDeclContextNameLookupTrait> Table;
+};
+
+using LazySpecializationInfo = GlobalDeclID;
+
+/// Class that performs lookup to specialized decls.
+class LazySpecializationInfoLookupTrait {
+  ASTReader &Reader;
+  ModuleFile &F;
+
+public:
+  // Maximum number of lookup tables we allow before condensing the tables.
+  static const int MaxTables = 4;
+
+  /// The lookup result is a list of global declaration IDs.
+  using data_type = SmallVector<LazySpecializationInfo, 4>;
+
+  struct data_type_builder {
+    data_type &Data;
+    llvm::DenseSet<LazySpecializationInfo> Found;
+
+    data_type_builder(data_type &D) : Data(D) {}
+
+    void insert(LazySpecializationInfo Info) {
+      // Just use a linear scan unless we have more than a few IDs.
+      if (Found.empty() && !Data.empty()) {
+        if (Data.size() <= 4) {
+          for (auto I : Found)
+            if (I == Info)
+              return;
+          Data.push_back(Info);
+          return;
+        }
+
+        // Switch to tracking found IDs in the set.
+        Found.insert(Data.begin(), Data.end());
+      }
+
+      if (Found.insert(Info).second)
+        Data.push_back(Info);
+    }
+  };
+  using hash_value_type = unsigned;
+  using offset_type = unsigned;
+  using file_type = ModuleFile *;
+
+  using external_key_type = unsigned;
+  using internal_key_type = unsigned;
+
+  explicit LazySpecializationInfoLookupTrait(ASTReader &Reader, ModuleFile &F)
+      : Reader(Reader), F(F) {}
+
+  static bool EqualKey(const internal_key_type &a, const internal_key_type &b) {
+    return a == b;
+  }
+
+  static hash_value_type ComputeHash(const internal_key_type &Key) {
+    return Key;
+  }
+
+  static internal_key_type GetInternalKey(const external_key_type &Name) {
+    return Name;
+  }
+
+  static std::pair<unsigned, unsigned>
+  ReadKeyDataLength(const unsigned char *&d);
+
+  internal_key_type ReadKey(const unsigned char *d, unsigned);
+
+  void ReadDataInto(internal_key_type, const unsigned char *d, unsigned DataLen,
+                    data_type_builder &Val);
+
+  static void MergeDataInto(const data_type &From, data_type_builder &To) {
+    To.Data.reserve(To.Data.size() + From.size());
+    for (LazySpecializationInfo Info : From)
+      To.insert(Info);
+  }
+
+  file_type ReadFileRef(const unsigned char *&d);
+};
+
+struct LazySpecializationInfoLookupTable {
+  MultiOnDiskHashTable<LazySpecializationInfoLookupTrait> Table;
 };
 
 /// Base class for the trait describing the on-disk hash table for the
@@ -175,7 +257,7 @@ public:
                      const unsigned char* d,
                      unsigned DataLen);
 
-  IdentID ReadIdentifierID(const unsigned char *d);
+  IdentifierID ReadIdentifierID(const unsigned char *d);
 
   ASTReader &getReader() const { return Reader; }
 };
@@ -243,8 +325,6 @@ using ASTSelectorLookupTable =
 class HeaderFileInfoTrait {
   ASTReader &Reader;
   ModuleFile &M;
-  HeaderSearch *HS;
-  const char *FrameworkStrings;
 
 public:
   using external_key_type = FileEntryRef;
@@ -262,9 +342,8 @@ public:
   using hash_value_type = unsigned;
   using offset_type = unsigned;
 
-  HeaderFileInfoTrait(ASTReader &Reader, ModuleFile &M, HeaderSearch *HS,
-                      const char *FrameworkStrings)
-      : Reader(Reader), M(M), HS(HS), FrameworkStrings(FrameworkStrings) {}
+  HeaderFileInfoTrait(ASTReader &Reader, ModuleFile &M)
+      : Reader(Reader), M(M) {}
 
   static hash_value_type ComputeHash(internal_key_ref ikey);
   internal_key_type GetInternalKey(external_key_type ekey);
@@ -278,7 +357,7 @@ public:
   data_type ReadData(internal_key_ref,const unsigned char *d, unsigned DataLen);
 
 private:
-  const FileEntry *getFile(const internal_key_type &Key);
+  OptionalFileEntryRef getFile(const internal_key_type &Key);
 };
 
 /// The on-disk hash table used for known header files.

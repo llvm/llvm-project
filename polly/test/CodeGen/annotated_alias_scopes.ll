@@ -1,25 +1,27 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s --check-prefix=SCOPES
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s --check-prefix=SCOPES
 ;
 ; Check that we create alias scopes that indicate the accesses to A, B and C cannot alias in any way.
 ;
 ; SCOPES-LABEL: polly.stmt.for.body:
 ; SCOPES:      %[[BIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} ptr %B, i64 %{{.*}}
-; SCOPES:      load i32, ptr %[[BIdx]], align 4, !alias.scope !0, !noalias !3
+; SCOPES:      load i32, ptr %[[BIdx]], align 4, !alias.scope !2, !noalias !5
 ; SCOPES:      %[[CIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} ptr %C, i64 %{{.*}}
-; SCOPES:      load float, ptr %[[CIdx]], align 4, !alias.scope !6, !noalias !7
+; SCOPES:      load float, ptr %[[CIdx]], align 4, !alias.scope !8, !noalias !9
 ; SCOPES:      %[[AIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} ptr %A, i64 %{{.*}}
-; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, ptr %[[AIdx]], align 4, !alias.scope !8, !noalias !9
+; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, ptr %[[AIdx]], align 4, !alias.scope !10, !noalias !11
 ;
-; SCOPES: !0 = !{!1}
-; SCOPES: !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_B"}
-; SCOPES: !2 = distinct !{!2, !"polly.alias.scope.domain"}
-; SCOPES: !3 = !{!4, !5}
-; SCOPES: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_C"}
-; SCOPES: !5 = distinct !{!5, !2, !"polly.alias.scope.MemRef_A"}
-; SCOPES: !6 = !{!4}
-; SCOPES: !7 = !{!1, !5}
-; SCOPES: !8 = !{!5}
-; SCOPES: !9 = !{!1, !4}
+; SCOPES: !0 = distinct !{!0, !1}
+; SCOPES: !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; SCOPES: !2 = !{!3}
+; SCOPES: !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_B"}
+; SCOPES: !4 = distinct !{!4, !"polly.alias.scope.domain"}
+; SCOPES: !5 = !{!6, !7}
+; SCOPES: !6 = distinct !{!6, !4, !"polly.alias.scope.MemRef_C"}
+; SCOPES: !7 = distinct !{!7, !4, !"polly.alias.scope.MemRef_A"}
+; SCOPES: !8 = !{!6}
+; SCOPES: !9 = !{!3, !7}
+; SCOPES: !10 = !{!7}
+; SCOPES: !11 = !{!3, !6}
 ;
 ;    void jd(int *A, int *B, float *C) {
 ;      for (int i = 0; i < 1024; i++)

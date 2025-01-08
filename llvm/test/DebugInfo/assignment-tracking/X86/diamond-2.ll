@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s
+
 ;; Same as diamond-1.ll except that the DIAssignID attached to the store has
 ;; been deleted. In this case, we expect the same output as for diamond-1.ll
 ;; because we choose to interpret stores to stack slots that don't link to

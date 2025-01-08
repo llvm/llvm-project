@@ -43,13 +43,13 @@ define void @step_direction_unknown(i32 %arg, ptr %dst) {
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP18]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[LOOP]] ]
@@ -102,14 +102,14 @@ define void @integer_induction_wraps_scev_predicate_known(i32 %x, ptr %call, ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[VECTOR_GEP]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 30, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967264
@@ -117,8 +117,8 @@ define void @integer_induction_wraps_scev_predicate_known(i32 %x, ptr %call, ptr
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -2, [[MIDDLE_BLOCK]] ], [ 30, [[ENTRY:%.*]] ], [ 30, [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[ENTRY]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -2, [[MIDDLE_BLOCK]] ], [ 30, [[VECTOR_SCEVCHECK]] ], [ 30, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[START]], [[VECTOR_SCEVCHECK]] ], [ [[START]], [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]
@@ -147,5 +147,100 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 %tobool.not, label %for.end, label %for.cond
 
 for.end:                                          ; preds = %for.cond
+  ret void
+}
+
+@h = global i64 0
+
+define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
+; CHECK-LABEL: define void @implied_wrap_predicate
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A3:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[C2:%.*]] = ptrtoint ptr [[C]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[A3]], 16
+; CHECK-NEXT:    [[UMAX4:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[UMAX4]], -9
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[A3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK:       vector.scevcheck:
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[A1]], 16
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP5]], i64 add (i64 ptrtoint (ptr @h to i64), i64 1))
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[UMAX]], -9
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[A1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = add i16 2, [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i16 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ugt i64 [[TMP8]], 65535
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[C2]], [[A3]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], 32
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
+; CHECK-NEXT:    [[IND_END:%.*]] = add i16 1, [[DOTCAST]]
+; CHECK-NEXT:    [[IND_END5:%.*]] = add i64 1, [[N_VEC]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i64, ptr [[TMP16]], i32 0
+; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP18]], i32 0
+; CHECK-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP19]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_MEMCHECK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i64 [ [[IND_END5]], [[MIDDLE_BLOCK]] ], [ 1, [[VECTOR_MEMCHECK]] ], [ 1, [[VECTOR_SCEVCHECK]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_EXT:%.*]] = phi i64 [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ], [ [[IV_EXT_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr i64, ptr [[C]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP_C]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
+; CHECK-NEXT:    [[IV_EXT_NEXT]] = zext i16 [[IV_NEXT]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV_EXT_NEXT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP]], @h
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop ]
+  %iv.ext = phi i64 [ 1, %entry ], [ %iv.ext.next, %loop ]
+  %gep.A = getelementptr i64, ptr %A, i64 %iv.ext
+  store i64 0, ptr %gep.A
+  %gep.C = getelementptr i64, ptr %C, i64 %iv.ext
+  store i64 0, ptr %gep.C
+  %iv.next = add i16 %iv, 1
+  %iv.ext.next = zext i16 %iv.next to i64
+  %gep = getelementptr i64, ptr %A, i64 %iv.ext.next
+  %cmp = icmp ugt ptr %gep, @h
+  br i1 %cmp, label %exit, label %loop
+
+exit:
   ret void
 }

@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \

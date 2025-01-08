@@ -42,6 +42,7 @@ Error emitDebugAddr(raw_ostream &OS, const Data &DI);
 Error emitDebugStrOffsets(raw_ostream &OS, const Data &DI);
 Error emitDebugRnglists(raw_ostream &OS, const Data &DI);
 Error emitDebugLoclists(raw_ostream &OS, const Data &DI);
+Error emitDebugNames(raw_ostream &OS, const Data &DI);
 
 std::function<Error(raw_ostream &, const Data &)>
 getDWARFEmitterByName(StringRef SecName);

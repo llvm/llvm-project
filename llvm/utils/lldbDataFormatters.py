@@ -3,6 +3,7 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+from __future__ import annotations
 
 import collections
 import lldb
@@ -90,6 +91,12 @@ def __lldb_init_module(debugger, internal_dict):
         "type synthetic add -w llvm "
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
+    )
+
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.ExpectedSynthetic "
+        '-x "^llvm::Expected<.+>$"'
     )
 
 
@@ -218,12 +225,14 @@ class OptionalSynthProvider:
 
 
 def SmallStringSummaryProvider(valobj, internal_dict):
-    num_elements = valobj.GetNumChildren()
+    # The underlying SmallVector base class is the first child.
+    vector = valobj.GetChildAtIndex(0)
+    num_elements = vector.GetNumChildren()
     res = '"'
-    for i in range(0, num_elements):
-        c = valobj.GetChildAtIndex(i).GetValue()
+    for i in range(num_elements):
+        c = vector.GetChildAtIndex(i)
         if c:
-            res += c.strip("'")
+            res += chr(c.GetValueAsUnsigned())
     res += '"'
     return res
 
@@ -429,3 +438,43 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class ExpectedSynthetic:
+    # The llvm::Expected<T> value.
+    expected: lldb.SBValue
+    # The stored success value or error value.
+    stored_value: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.expected = valobj
+
+    def update(self) -> None:
+        has_error = self.expected.GetChildMemberWithName("HasError").unsigned
+        if not has_error:
+            name = "value"
+            member = "TStorage"
+        else:
+            name = "error"
+            member = "ErrorStorage"
+        # Anonymous union.
+        union = self.expected.child[0]
+        storage = union.GetChildMemberWithName(member)
+        stored_type = storage.type.template_args[0]
+        self.stored_value = storage.Cast(stored_type).Clone(name)
+
+    def num_children(self) -> int:
+        return 1
+
+    def get_child_index(self, name: str) -> int:
+        if name == self.stored_value.name:
+            return 0
+        # Allow dereferencing for values, not errors.
+        if name == "$$dereference$$" and self.stored_value.name == "value":
+            return 0
+        return -1
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        if idx == 0:
+            return self.stored_value
+        return lldb.SBValue()

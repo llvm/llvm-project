@@ -24,7 +24,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -43,6 +42,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
@@ -53,7 +53,7 @@ using namespace lldb_private;
 const char *SBThread::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Thread::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString();
 }
 
 // Constructors
@@ -192,6 +192,9 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonSignal:
           return 1;
 
+        case eStopReasonInterrupt:
+          return 1;
+
         case eStopReasonException:
           return 1;
 
@@ -259,6 +262,9 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
           return stop_info_sp->GetValue();
 
         case eStopReasonSignal:
+          return stop_info_sp->GetValue();
+
+        case eStopReasonInterrupt:
           return stop_info_sp->GetValue();
 
         case eStopReasonException:
@@ -493,13 +499,13 @@ SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
 
   Process *process = exe_ctx.GetProcessPtr();
   if (!process) {
-    sb_error.SetErrorString("No process in SBThread::ResumeNewPlan");
+    sb_error = Status::FromErrorString("No process in SBThread::ResumeNewPlan");
     return sb_error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   if (!thread) {
-    sb_error.SetErrorString("No thread in SBThread::ResumeNewPlan");
+    sb_error = Status::FromErrorString("No thread in SBThread::ResumeNewPlan");
     return sb_error;
   }
 
@@ -535,7 +541,7 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
@@ -582,7 +588,7 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
@@ -599,8 +605,11 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
     if (end_line == LLDB_INVALID_LINE_NUMBER)
       range = sc.line_entry.range;
     else {
-      if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+      llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
+      if (err) {
+        error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
         return;
+      }
     }
 
     const LazyBool step_out_avoids_code_without_debug_info =
@@ -619,7 +628,7 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepOut() {
@@ -636,7 +645,7 @@ void SBThread::StepOut(SBError &error) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
@@ -654,7 +663,7 @@ void SBThread::StepOut(SBError &error) {
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepOutOfFrame(SBFrame &sb_frame) {
@@ -671,14 +680,14 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!sb_frame.IsValid()) {
-    error.SetErrorString("passed invalid SBFrame object");
+    error = Status::FromErrorString("passed invalid SBFrame object");
     return;
   }
 
   StackFrameSP frame_sp(sb_frame.GetFrameSP());
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
@@ -686,7 +695,7 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   bool stop_other_threads = false;
   Thread *thread = exe_ctx.GetThreadPtr();
   if (sb_frame.GetThread().GetThreadID() != thread->GetID()) {
-    error.SetErrorString("passed a frame from another thread");
+    error = Status::FromErrorString("passed a frame from another thread");
     return;
   }
 
@@ -698,7 +707,7 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepInstruction(bool step_over) {
@@ -715,19 +724,19 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
   Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepSingleInstruction(
-      step_over, true, true, new_plan_status));
+      step_over, false, true, new_plan_status));
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::RunToAddress(lldb::addr_t addr) {
@@ -744,7 +753,7 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return;
   }
 
@@ -762,7 +771,7 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
 SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
@@ -782,7 +791,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     Thread *thread = exe_ctx.GetThreadPtr();
 
     if (line == 0) {
-      sb_error.SetErrorString("invalid line argument");
+      sb_error = Status::FromErrorString("invalid line argument");
       return sb_error;
     }
 
@@ -798,7 +807,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
 
     SymbolContext frame_sc;
     if (!frame_sp) {
-      sb_error.SetErrorString("no valid frames in thread to step");
+      sb_error = Status::FromErrorString("no valid frames in thread to step");
       return sb_error;
     }
 
@@ -808,7 +817,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
         eSymbolContextLineEntry | eSymbolContextSymbol);
 
     if (frame_sc.comp_unit == nullptr) {
-      sb_error.SetErrorStringWithFormat(
+      sb_error = Status::FromErrorStringWithFormat(
           "frame %u doesn't have debug information", frame_sp->GetFrameIndex());
       return sb_error;
     }
@@ -819,9 +828,10 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       step_file_spec = sb_file_spec.ref();
     } else {
       if (frame_sc.line_entry.IsValid())
-        step_file_spec = frame_sc.line_entry.file;
+        step_file_spec = frame_sc.line_entry.GetFile();
       else {
-        sb_error.SetErrorString("invalid file argument or no file for frame");
+        sb_error = Status::FromErrorString(
+            "invalid file argument or no file for frame");
         return sb_error;
       }
     }
@@ -859,10 +869,11 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     if (step_over_until_addrs.empty()) {
       if (all_in_function) {
         step_file_spec.GetPath(path, sizeof(path));
-        sb_error.SetErrorStringWithFormat("No line entries for %s:%u", path,
-                                          line);
+        sb_error = Status::FromErrorStringWithFormat(
+            "No line entries for %s:%u", path, line);
       } else
-        sb_error.SetErrorString("step until target not in current function");
+        sb_error = Status::FromErrorString(
+            "step until target not in current function");
     } else {
       Status new_plan_status;
       ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepUntil(
@@ -873,10 +884,10 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       if (new_plan_status.Success())
         sb_error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
       else
-        sb_error.SetErrorString(new_plan_status.AsCString());
+        sb_error = Status::FromErrorString(new_plan_status.AsCString());
     }
   } else {
-    sb_error.SetErrorString("this SBThread object is invalid");
+    sb_error = Status::FromErrorString("this SBThread object is invalid");
   }
   return sb_error;
 }
@@ -907,7 +918,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
     return error;
   }
 
@@ -919,7 +930,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
       false, script_class_name, obj_sp, false, new_plan_status);
 
   if (new_plan_status.Fail()) {
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
     return error;
   }
 
@@ -929,7 +940,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
-    error.SetErrorString(new_plan_status.AsCString());
+    error = Status::FromErrorString(new_plan_status.AsCString());
 
   return error;
 }
@@ -943,14 +954,14 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope()) {
-    sb_error.SetErrorString("this SBThread object is invalid");
+    sb_error = Status::FromErrorString("this SBThread object is invalid");
     return sb_error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
   Status err = thread->JumpToLine(file_spec.ref(), line, true);
-  sb_error.SetError(err);
+  sb_error.SetError(std::move(err));
   return sb_error;
 }
 
@@ -1009,10 +1020,10 @@ bool SBThread::Suspend(SBError &error) {
       exe_ctx.GetThreadPtr()->SetResumeState(eStateSuspended);
       result = true;
     } else {
-      error.SetErrorString("process is running");
+      error = Status::FromErrorString("process is running");
     }
   } else
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
   return result;
 }
 
@@ -1037,10 +1048,10 @@ bool SBThread::Resume(SBError &error) {
       exe_ctx.GetThreadPtr()->SetResumeState(eStateRunning, override_suspend);
       result = true;
     } else {
-      error.SetErrorString("process is running");
+      error = Status::FromErrorString("process is running");
     }
   } else
-    error.SetErrorString("this SBThread object is invalid");
+    error = Status::FromErrorString("this SBThread object is invalid");
   return result;
 }
 
@@ -1202,7 +1213,8 @@ bool SBThread::GetStatus(SBStream &status) const {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (exe_ctx.HasThreadScope()) {
-    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true);
+    exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true,
+                                      /*show_hidden=*/true);
   } else
     strm.PutCString("No status");
 
@@ -1238,7 +1250,7 @@ SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
 
   SBError error;
   if (!format) {
-    error.SetErrorString("The provided SBFormat object is invalid");
+    error = Status::FromErrorString("The provided SBFormat object is invalid");
     return error;
   }
 
@@ -1252,7 +1264,7 @@ SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
     }
   }
 
-  error.SetErrorStringWithFormat(
+  error = Status::FromErrorStringWithFormat(
       "It was not possible to generate a thread description with the given "
       "format string '%s'",
       format.GetFormatEntrySP()->string.c_str());
@@ -1330,6 +1342,8 @@ bool SBThread::SafeToCallFunctions() {
     return thread_sp->SafeToCallFunctions();
   return true;
 }
+
+lldb::ThreadSP SBThread::GetSP() const { return m_opaque_sp->GetThreadSP(); }
 
 lldb_private::Thread *SBThread::operator->() {
   return get();

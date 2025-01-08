@@ -45,6 +45,7 @@ getAttrKindToNameMapping() {
       {llvm::Attribute::AttrKind::NonNull, LLVMDialect::getNonNullAttrName()},
       {llvm::Attribute::AttrKind::Preallocated,
        LLVMDialect::getPreallocatedAttrName()},
+      {llvm::Attribute::AttrKind::Range, LLVMDialect::getRangeAttrName()},
       {llvm::Attribute::AttrKind::ReadOnly, LLVMDialect::getReadonlyAttrName()},
       {llvm::Attribute::AttrKind::ReadNone, LLVMDialect::getReadnoneAttrName()},
       {llvm::Attribute::AttrKind::Returned, LLVMDialect::getReturnedAttrName()},
@@ -57,6 +58,21 @@ getAttrKindToNameMapping() {
        LLVMDialect::getWriteOnlyAttrName()},
       {llvm::Attribute::AttrKind::ZExt, LLVMDialect::getZExtAttrName()}};
   return kindNamePairs;
+}
+
+/// Returns a dense map from LLVM attribute name to their kind in LLVM IR
+/// dialect.
+[[maybe_unused]] static llvm::DenseMap<llvm::StringRef,
+                                       llvm::Attribute::AttrKind>
+getAttrNameToKindMapping() {
+  static auto attrNameToKindMapping = []() {
+    llvm::DenseMap<llvm::StringRef, llvm::Attribute::AttrKind> nameKindMap;
+    for (auto kindNamePair : getAttrKindToNameMapping()) {
+      nameKindMap.insert({kindNamePair.second, kindNamePair.first});
+    }
+    return nameKindMap;
+  }();
+  return attrNameToKindMapping;
 }
 
 } // namespace detail

@@ -29,7 +29,7 @@ static constexpr unsigned kVersionPosInBox = 2;
 static constexpr unsigned kRankPosInBox = 3;
 static constexpr unsigned kTypePosInBox = 4;
 static constexpr unsigned kAttributePosInBox = 5;
-static constexpr unsigned kF18AddendumPosInBox = 6;
+static constexpr unsigned kExtraPosInBox = 6;
 static constexpr unsigned kDimsPosInBox = 7;
 static constexpr unsigned kOptTypePtrPosInBox = 8;
 static constexpr unsigned kOptRowTypePosInBox = 9;
@@ -60,7 +60,7 @@ public:
   mlir::Type indexType() const;
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  std::optional<mlir::LogicalResult>
+  std::optional<llvm::LogicalResult>
   convertRecordType(fir::RecordType derived,
                     llvm::SmallVectorImpl<mlir::Type> &results);
 
@@ -89,24 +89,9 @@ public:
   // fir.char<k,n>  -->  llvm.array<n x "ix">
   mlir::Type convertCharType(fir::CharacterType charTy) const;
 
-  // Use the target specifics to figure out how to map complex to LLVM IR. The
-  // use of complex values in function signatures is handled before conversion
-  // to LLVM IR dialect here.
-  //
-  // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C> mlir::Type convertComplexType(C cmplx) const {
-    LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
-    auto eleTy = cmplx.getElementType();
-    return convertType(specifics->complexMemoryType(eleTy));
-  }
-
   template <typename A> mlir::Type convertPointerLike(A &ty) const {
     return mlir::LLVM::LLVMPointerType::get(ty.getContext());
   }
-
-  // convert a front-end kind value to either a std or LLVM IR dialect type
-  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::Type convertRealType(fir::KindTy kind) const;
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::Type convertSequenceType(SequenceType seq) const;
@@ -123,10 +108,16 @@ public:
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const;
 
+  const mlir::DataLayout &getDataLayout() const {
+    assert(dataLayout && "must be set in ctor");
+    return *dataLayout;
+  }
+
 private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
   std::unique_ptr<TBAABuilder> tbaaBuilder;
+  const mlir::DataLayout *dataLayout;
 };
 
 } // namespace fir

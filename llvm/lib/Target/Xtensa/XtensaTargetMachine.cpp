@@ -14,6 +14,7 @@
 
 #include "XtensaTargetMachine.h"
 #include "TargetInfo/XtensaTargetInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -49,9 +50,10 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OL, bool JIT,
                                          bool IsLittle)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, IsLittle), TT,
-                        CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, IsLittle),
+                               TT, CPU, FS, Options,
+                               getEffectiveRelocModel(JIT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
@@ -64,6 +66,55 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OL, bool JIT)
     : XtensaTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
+const XtensaSubtarget *
+XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  auto CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  auto &I = SubtargetMap[CPU + FS];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    I = std::make_unique<XtensaSubtarget>(TargetTriple, CPU, FS, *this);
+  }
+  return I.get();
+}
+
+MachineFunctionInfo *XtensaTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return XtensaMachineFunctionInfo::create<XtensaMachineFunctionInfo>(Allocator,
+                                                                      F, STI);
+}
+
+namespace {
+/// Xtensa Code Generator Pass Configuration Options.
+class XtensaPassConfig : public TargetPassConfig {
+public:
+  XtensaPassConfig(XtensaTargetMachine &TM, PassManagerBase &PM)
+      : TargetPassConfig(TM, PM) {}
+
+  XtensaTargetMachine &getXtensaTargetMachine() const {
+    return getTM<XtensaTargetMachine>();
+  }
+
+  bool addInstSelector() override;
+  void addPreEmitPass() override;
+};
+} // end anonymous namespace
+
+bool XtensaPassConfig::addInstSelector() {
+  addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
+  return false;
+}
+
+void XtensaPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
+
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(*this, PM);
+  return new XtensaPassConfig(*this, PM);
 }

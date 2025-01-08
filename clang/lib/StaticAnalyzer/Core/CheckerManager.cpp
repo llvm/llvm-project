@@ -48,16 +48,6 @@ bool CheckerManager::hasPathSensitiveCheckers() const {
       EvalCallCheckers, EndOfTranslationUnitCheckers);
 }
 
-void CheckerManager::finishedCheckerRegistration() {
-#ifndef NDEBUG
-  // Make sure that for every event that has listeners, there is at least
-  // one dispatcher registered for it.
-  for (const auto &Event : Events)
-    assert(Event.second.HasDispatcher &&
-           "No dispatcher registered for an event");
-#endif
-}
-
 void CheckerManager::reportInvalidCheckerOptionValue(
     const CheckerBase *C, StringRef OptionName,
     StringRef ExpectedValueDesc) const {
@@ -76,13 +66,10 @@ void CheckerManager::runCheckersOnASTDecl(const Decl *D, AnalysisManager& mgr,
   assert(D);
 
   unsigned DeclKind = D->getKind();
-  CachedDeclCheckers *checkers = nullptr;
-  CachedDeclCheckersMapTy::iterator CCI = CachedDeclCheckersMap.find(DeclKind);
-  if (CCI != CachedDeclCheckersMap.end()) {
-    checkers = &(CCI->second);
-  } else {
+  auto [CCI, Inserted] = CachedDeclCheckersMap.try_emplace(DeclKind);
+  CachedDeclCheckers *checkers = &(CCI->second);
+  if (Inserted) {
     // Find the checkers that should run for this Decl and cache them.
-    checkers = &CachedDeclCheckersMap[DeclKind];
     for (const auto &info : DeclCheckers)
       if (info.IsForDeclFn(D))
         checkers->push_back(info.CheckFn);
@@ -679,7 +666,6 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
           std::string Buf;
           llvm::raw_string_ostream OS(Buf);
           Call.dump(OS);
-          OS.flush();
           return Buf;
         };
         std::string AssertionMessage = llvm::formatv(
@@ -907,14 +893,13 @@ CheckerManager::getCachedStmtCheckersFor(const Stmt *S, bool isPreVisit) {
   assert(S);
 
   unsigned Key = (S->getStmtClass() << 1) | unsigned(isPreVisit);
-  CachedStmtCheckersMapTy::iterator CCI = CachedStmtCheckersMap.find(Key);
-  if (CCI != CachedStmtCheckersMap.end())
-    return CCI->second;
-
-  // Find the checkers that should run for this Stmt and cache them.
-  CachedStmtCheckers &Checkers = CachedStmtCheckersMap[Key];
-  for (const auto &Info : StmtCheckers)
-    if (Info.IsPreVisit == isPreVisit && Info.IsForStmtFn(S))
-      Checkers.push_back(Info.CheckFn);
+  auto [CCI, Inserted] = CachedStmtCheckersMap.try_emplace(Key);
+  CachedStmtCheckers &Checkers = CCI->second;
+  if (Inserted) {
+    // Find the checkers that should run for this Stmt and cache them.
+    for (const auto &Info : StmtCheckers)
+      if (Info.IsPreVisit == isPreVisit && Info.IsForStmtFn(S))
+        Checkers.push_back(Info.CheckFn);
+  }
   return Checkers;
 }

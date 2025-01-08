@@ -16,7 +16,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -48,8 +47,8 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -60,7 +59,7 @@ char SILateBranchLowering::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SILateBranchLowering, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILateBranchLowering, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
@@ -114,7 +113,7 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
     DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
   }
   DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
-  MDT->getBase().applyUpdates(DTUpdates);
+  MDT->applyUpdates(DTUpdates);
 }
 
 void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
@@ -142,14 +141,14 @@ void SILateBranchLowering::earlyTerm(MachineInstr &MI,
     splitBlock(MBB, *BranchMI, MDT);
 
   MBB.addSuccessor(EarlyExitBlock);
-  MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
+  MDT->insertEdge(&MBB, EarlyExitBlock);
 }
 
 bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
@@ -226,7 +225,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
     }
 
     for (auto *MI : EpilogInstrs) {
-      auto MBB = MI->getParent();
+      auto *MBB = MI->getParent();
       if (MBB == &MF.back() && MI == &MBB->back())
         continue;
 
@@ -238,7 +237,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
       }
 
       MBB->addSuccessor(EmptyMBBAtEnd);
-      MDT->getBase().insertEdge(MBB, EmptyMBBAtEnd);
+      MDT->insertEdge(MBB, EmptyMBBAtEnd);
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
           .addMBB(EmptyMBBAtEnd);
       MI->eraseFromParent();

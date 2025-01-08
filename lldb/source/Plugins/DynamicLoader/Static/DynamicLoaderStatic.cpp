@@ -84,51 +84,43 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
   // Disable JIT for static dynamic loader targets
   m_process->SetCanJIT(false);
 
+  Target &target = m_process->GetTarget();
   for (ModuleSP module_sp : module_list.Modules()) {
     if (module_sp) {
       bool changed = false;
+      bool no_load_addresses = true;
+      // If this module has a section with a load address set in
+      // the target, assume all necessary work is already done. There
+      // may be sections without a load address set intentionally
+      // and we don't want to mutate that.
+      // For a module with no load addresses set, set the load addresses
+      // to slide == 0, the same as the file addresses, in the target.
       ObjectFile *image_object_file = module_sp->GetObjectFile();
       if (image_object_file) {
         SectionList *section_list = image_object_file->GetSectionList();
         if (section_list) {
-          // All sections listed in the dyld image info structure will all
-          // either be fixed up already, or they will all be off by a single
-          // slide amount that is determined by finding the first segment that
-          // is at file offset zero which also has bytes (a file size that is
-          // greater than zero) in the object file.
-
-          // Determine the slide amount (if any)
           const size_t num_sections = section_list->GetSize();
-          size_t sect_idx = 0;
-          for (sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
-            // Iterate through the object file sections to find the first
-            // section that starts of file offset zero and that has bytes in
-            // the file...
+          for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
             SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
             if (section_sp) {
-              // If this section already has a load address set in the target,
-              // don't re-set it to the file address.  Something may have
-              // set it to a more correct value already.
-              if (m_process->GetTarget()
-                      .GetSectionLoadList()
-                      .GetSectionLoadAddress(section_sp) !=
-                  LLDB_INVALID_ADDRESS) {
-                continue;
+              if (target.GetSectionLoadList().GetSectionLoadAddress(
+                      section_sp) != LLDB_INVALID_ADDRESS) {
+                no_load_addresses = false;
+                break;
               }
-              if (m_process->GetTarget().SetSectionLoadAddress(
-                      section_sp, section_sp->GetFileAddress()))
-                changed = true;
             }
           }
         }
       }
+      if (no_load_addresses)
+        module_sp->SetLoadAddress(target, 0, true /*value_is_offset*/, changed);
 
       if (changed)
         loaded_module_list.AppendIfNeeded(module_sp);
     }
   }
 
-  m_process->GetTarget().ModulesDidLoad(loaded_module_list);
+  target.ModulesDidLoad(loaded_module_list);
 }
 
 ThreadPlanSP
@@ -138,9 +130,8 @@ DynamicLoaderStatic::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 Status DynamicLoaderStatic::CanLoadImage() {
-  Status error;
-  error.SetErrorString("can't load images on with a static debug session");
-  return error;
+  return Status::FromErrorString(
+      "can't load images on with a static debug session");
 }
 
 void DynamicLoaderStatic::Initialize() {

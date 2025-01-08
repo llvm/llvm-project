@@ -9,6 +9,8 @@
 #include "GlobalCompilationDatabase.h"
 #include "Config.h"
 #include "FS.h"
+#include "ProjectModules.h"
+#include "ScanningProjectModules.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -30,6 +32,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -740,6 +743,20 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
   return Res->PI;
 }
 
+std::unique_ptr<ProjectModules>
+DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
+  CDBLookupRequest Req;
+  Req.FileName = File;
+  Req.ShouldBroadcast = false;
+  Req.FreshTime = Req.FreshTimeMissing =
+      std::chrono::steady_clock::time_point::min();
+  auto Res = lookupCDB(Req);
+  if (!Res)
+    return {};
+
+  return scanningProjectModules(Res->CDB, Opts.TFS);
+}
+
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
                        CommandMangler Mangler)
@@ -790,7 +807,7 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   return Cmd;
 }
 
-void OverlayCDB::setCompileCommand(PathRef File,
+bool OverlayCDB::setCompileCommand(PathRef File,
                                    std::optional<tooling::CompileCommand> Cmd) {
   // We store a canonical version internally to prevent mismatches between set
   // and get compile commands. Also it assures clients listening to broadcasts
@@ -798,12 +815,19 @@ void OverlayCDB::setCompileCommand(PathRef File,
   std::string CanonPath = removeDots(File);
   {
     std::unique_lock<std::mutex> Lock(Mutex);
-    if (Cmd)
-      Commands[CanonPath] = std::move(*Cmd);
-    else
+    if (Cmd) {
+      if (auto [It, Inserted] =
+              Commands.try_emplace(CanonPath, std::move(*Cmd));
+          !Inserted) {
+        if (It->second == *Cmd)
+          return false;
+        It->second = *Cmd;
+      }
+    } else
       Commands.erase(CanonPath);
   }
   OnCommandChanged.broadcast({CanonPath});
+  return true;
 }
 
 DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
@@ -830,6 +854,13 @@ std::optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
   if (!Base)
     return std::nullopt;
   return Base->getProjectInfo(File);
+}
+
+std::unique_ptr<ProjectModules>
+DelegatingCDB::getProjectModules(PathRef File) const {
+  if (!Base)
+    return nullptr;
+  return Base->getProjectModules(File);
 }
 
 tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {

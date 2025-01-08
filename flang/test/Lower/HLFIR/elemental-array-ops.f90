@@ -1,5 +1,5 @@
 ! Test lowering of elemental intrinsic operations with array arguments to HLFIR
-! RUN: bbc -emit-hlfir --polymorphic-type -I nowhere -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -I nowhere -o - %s 2>&1 | FileCheck %s
 
 subroutine binary(x, y)
   integer :: x(100), y(100)
@@ -166,9 +166,9 @@ end subroutine char_return
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFchar_returnEl"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEx"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEx"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
-! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEy"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_11]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEy"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_12]]#0, %[[VAL_13]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]]#1 : (index) -> !fir.shape<1>
@@ -182,12 +182,10 @@ end subroutine char_return
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : index
 ! CHECK:             %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_22]], %[[VAL_23]] : index
-! CHECK:             %[[VAL_26:.*]] = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
-! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_25]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:             %[[MustFree:.*]] = arith.constant false
 ! CHECK:             %[[ResultTemp:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[MustFree]] : (!fir.ref<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>
-! CHECK:             fir.call @llvm.stackrestore.p0(%[[VAL_26]]) fastmath<contract> : (!fir.ref<i8>) -> ()
 ! CHECK:             hlfir.yield_element %[[ResultTemp]] : !hlfir.expr<!fir.char<1,3>>
 ! CHECK:           }
 ! CHECK:           %[[VAL_29:.*]] = arith.constant 0 : index
@@ -225,8 +223,8 @@ end subroutine polymorphic_parenthesis
 ! CHECK-LABEL:   func.func @_QPpolymorphic_parenthesis(
 ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFpolymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>)
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFpolymorphic_parenthesisEy"} : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>) -> (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFpolymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFpolymorphic_parenthesisEy"} : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.dscope) -> (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, !fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_4]] : (!fir.class<!fir.array<?x!fir.type<_QFpolymorphic_parenthesisTt>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
@@ -249,8 +247,8 @@ end subroutine unlimited_polymorphic_parenthesis
 ! CHECK-LABEL:   func.func @_QPunlimited_polymorphic_parenthesis(
 ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>> {fir.bindc_name = "x"},
 ! CHECK-SAME:        %[[VAL_1:.*]]: !fir.class<!fir.array<?xnone>> {fir.bindc_name = "y"}) {
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFunlimited_polymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFunlimited_polymorphic_parenthesisEy"} : (!fir.class<!fir.array<?xnone>>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFunlimited_polymorphic_parenthesisEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.dscope) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFunlimited_polymorphic_parenthesisEy"} : (!fir.class<!fir.array<?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_4]] : (!fir.class<!fir.array<?xnone>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>

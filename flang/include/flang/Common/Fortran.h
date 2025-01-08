@@ -14,18 +14,17 @@
 
 #include "enum-set.h"
 #include "idioms.h"
+#include "flang/Common/Fortran-consts.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
 
 namespace Fortran::common {
-
-// Fortran has five kinds of intrinsic data types, plus the derived types.
-ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
-ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
+class LanguageFeatureControl;
 
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
-  return category == TypeCategory::Integer || category == TypeCategory::Real ||
+  return category == TypeCategory::Integer ||
+      category == TypeCategory::Unsigned || category == TypeCategory::Real ||
       category == TypeCategory::Complex;
 }
 
@@ -46,9 +45,6 @@ const char *AsFortran(RelationalOperator);
 
 ENUM_CLASS(Intent, Default, In, Out, InOut)
 
-ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,
-    Print, Read, Rewind, Wait, Write)
-
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
@@ -60,32 +56,21 @@ ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Dispose, // nonstandard
 )
 
-// Defined I/O variants
-ENUM_CLASS(
-    DefinedIo, ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
 const char *AsFortran(DefinedIo);
-
-// Floating-point rounding modes; these are packed into a byte to save
-// room in the runtime's format processing context structure.
-enum class RoundingMode : std::uint8_t {
-  TiesToEven, // ROUND=NEAREST, RN - default IEEE rounding
-  ToZero, // ROUND=ZERO, RZ - truncation
-  Down, // ROUND=DOWN, RD
-  Up, // ROUND=UP, RU
-  TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
-};
 
 // Fortran label. Must be in [1..99999].
 using Label = std::uint64_t;
-
-// Fortran arrays may have up to 15 dimensions (See Fortran 2018 section 5.4.6).
-static constexpr int maxRank{15};
 
 // CUDA subprogram attribute combinations
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
-ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture)
+ENUM_CLASS(
+    CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture, Unified)
+
+// OpenACC device types
+ENUM_CLASS(
+    OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
 
 // OpenMP atomic_default_mem_order clause allowed values
 ENUM_CLASS(OmpAtomicDefaultMemOrderType, SeqCst, AcqRel, Relaxed)
@@ -101,16 +86,18 @@ ENUM_CLASS(IgnoreTKR,
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
     Managed, // M - don't check managed storage
-    Contiguous) // C - legacy; disabled NVFORTRAN's convention that leading
-                // dimension of assumed-shape was contiguous
+    Contiguous) // C - don't check for storage sequence association with a
+                // potentially non-contiguous object
 using IgnoreTKRSet = EnumSet<IgnoreTKR, 8>;
 // IGNORE_TKR(A) = IGNORE_TKR(TKRDM)
 static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
     IgnoreTKR::Rank, IgnoreTKR::Device, IgnoreTKR::Managed};
 std::string AsFortran(IgnoreTKRSet);
 
-bool AreCompatibleCUDADataAttrs(
-    std::optional<CUDADataAttr>, std::optional<CUDADataAttr>, IgnoreTKRSet);
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
+    std::optional<CUDADataAttr>, IgnoreTKRSet, std::optional<std::string> *,
+    bool allowUnifiedMatchingRule,
+    const LanguageFeatureControl *features = nullptr);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

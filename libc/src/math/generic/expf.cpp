@@ -16,11 +16,10 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -50,24 +49,24 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return FPBits::min_denormal();
+        return FPBits::min_subnormal().get_val();
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0f;
     }
     // x >= 89 or nan
-    if (!xbits.get_sign() && (xbits.uintval() >= 0x42b2'0000)) {
+    if (xbits.is_pos() && (xbits.uintval() >= 0x42b2'0000)) {
       // x is finite
       if (xbits.uintval() < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return FPBits::max_normal();
+          return FPBits::max_normal().get_val();
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + static_cast<float>(FPBits::inf());
+      return x + FPBits::inf().get_val();
     }
   }
   // For -104 < x < 89, to compute exp(x), we perform the following range
@@ -105,4 +104,4 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

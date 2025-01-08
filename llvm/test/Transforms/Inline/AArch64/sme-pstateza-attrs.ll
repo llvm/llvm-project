@@ -14,32 +14,50 @@ define void @nonza_callee() {
 ; CHECK-LABEL: define void @nonza_callee
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
 
-define void @shared_za_callee() "aarch64_pstate_za_shared" {
+define void @shared_za_callee() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
 entry:
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
 
-define void @new_za_callee() "aarch64_pstate_za_new" {
+define void @new_za_callee() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_callee
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @agnostic_za_callee() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_callee
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
   call void @inlined_body()
   ret void
 }
@@ -49,15 +67,18 @@ define void @new_za_callee() "aarch64_pstate_za_new" {
 ; Test for a number of combinations, where:
 ; N   Not using ZA.
 ; S   Shared ZA interface
-; Z   New ZA interface
+; Z   New ZA with Private-ZA interface
+; A   Agnostic ZA interface
 
 ; [x] N -> N
 ; [ ] N -> S (This combination is invalid)
 ; [ ] N -> Z
+; [ ] N -> A
 define void @nonza_caller_nonza_callee_inline() {
 ; CHECK-LABEL: define void @nonza_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -69,6 +90,7 @@ entry:
 ; [ ] N -> N
 ; [ ] N -> S (This combination is invalid)
 ; [x] N -> Z
+; [ ] N -> A
 define void @nonza_caller_new_za_callee_dont_inline() {
 ; CHECK-LABEL: define void @nonza_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR0]] {
@@ -81,14 +103,32 @@ entry:
   ret void
 }
 
+; [ ] N -> N
+; [ ] N -> S (This combination is invalid)
+; [ ] N -> Z
+; [x] N -> A
+define void @nonza_caller_agnostic_za_callee_inline() {
+; CHECK-LABEL: define void @nonza_caller_agnostic_za_callee_inline
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @agnostic_za_callee()
+  ret void
+}
+
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_nonza_callee_inline() "aarch64_pstate_za_new" {
-; CHECK-LABEL: define void @new_za_caller_nonza_callee_inline
+; [ ] Z -> A
+define void @new_za_caller_nonza_callee_dont_inline() "aarch64_new_za" {
+; CHECK-LABEL: define void @new_za_caller_nonza_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    call void @nonza_callee()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -99,10 +139,12 @@ entry:
 ; [ ] Z -> N
 ; [x] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_shared_za_callee_inline() "aarch64_pstate_za_new" {
+; [ ] Z -> A
+define void @new_za_caller_shared_za_callee_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -114,7 +156,8 @@ entry:
 ; [ ] Z -> N
 ; [ ] Z -> S
 ; [x] Z -> Z
-define void @new_za_caller_new_za_callee_dont_inline() "aarch64_pstate_za_new" {
+; [ ] Z -> A
+define void @new_za_caller_new_za_callee_dont_inline() "aarch64_new_za" {
 ; CHECK-LABEL: define void @new_za_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -126,14 +169,32 @@ entry:
   ret void
 }
 
-; [x] Z -> N
+; [ ] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @shared_za_caller_nonza_callee_inline() "aarch64_pstate_za_shared" {
-; CHECK-LABEL: define void @shared_za_caller_nonza_callee_inline
+; [x] Z -> A
+define void @new_za_caller_agnostic_za_callee_inline() "aarch64_new_za" {
+; CHECK-LABEL: define void @new_za_caller_agnostic_za_callee_inline
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @agnostic_za_callee()
+  ret void
+}
+
+; [x] S -> N
+; [ ] S -> S
+; [ ] S -> Z
+; [ ] S -> A
+define void @shared_za_caller_nonza_callee_dont_inline() "aarch64_inout_za" {
+; CHECK-LABEL: define void @shared_za_caller_nonza_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    call void @nonza_callee()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -144,7 +205,8 @@ entry:
 ; [ ] S -> N
 ; [x] S -> Z
 ; [ ] S -> S
-define void @shared_za_caller_new_za_callee_dont_inline() "aarch64_pstate_za_shared" {
+; [ ] S -> A
+define void @shared_za_caller_new_za_callee_dont_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_new_za_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -159,10 +221,12 @@ entry:
 ; [ ] S -> N
 ; [ ] S -> Z
 ; [x] S -> S
-define void @shared_za_caller_shared_za_callee_inline() "aarch64_pstate_za_shared" {
+; [ ] S -> A
+define void @shared_za_caller_shared_za_callee_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_shared_za_callee_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
@@ -170,6 +234,90 @@ entry:
   call void @shared_za_callee()
   ret void
 }
+
+; [ ] S -> N
+; [ ] S -> Z
+; [ ] S -> S
+; [x] S -> A
+define void @shared_za_caller_agnostic_za_callee_inline() "aarch64_inout_za" {
+; CHECK-LABEL: define void @shared_za_caller_agnostic_za_callee_inline
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @agnostic_za_callee()
+  ret void
+}
+
+; [x] A -> N
+; [ ] A -> Z
+; [ ] A -> S
+; [ ] A -> A
+define void @agnostic_za_caller_nonza_callee_dont_inline() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_caller_nonza_callee_dont_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @nonza_callee()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @nonza_callee()
+  ret void
+}
+
+; [ ] A -> N
+; [x] A -> Z
+; [ ] A -> S
+; [ ] A -> A
+define void @agnostic_za_caller_new_za_callee_dont_inline() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_caller_new_za_callee_dont_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @new_za_callee()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @new_za_callee()
+  ret void
+}
+
+; [ ] A -> N
+; [ ] A -> Z
+; [x] A -> S (invalid)
+; [ ] A -> A
+define void @agnostic_za_caller_shared_za_callee_dont_inline() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_caller_shared_za_callee_dont_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @shared_za_callee()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @shared_za_callee()
+  ret void
+}
+
+; [ ] A -> N
+; [ ] A -> Z
+; [ ] A -> S
+; [x] A -> A
+define void @agnostic_za_caller_agnostic_za_callee_inline() "aarch64_za_state_agnostic" {
+; CHECK-LABEL: define void @agnostic_za_caller_agnostic_za_callee_inline
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @agnostic_za_callee()
+  ret void
+}
+
+
 
 define void @private_za_callee_call_za_disable() {
 ; CHECK-LABEL: define void @private_za_callee_call_za_disable
@@ -181,7 +329,7 @@ define void @private_za_callee_call_za_disable() {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_za_disable() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_za_disable() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_za_disable
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_za_disable()
@@ -201,7 +349,7 @@ define void @private_za_callee_call_tpidr2_save() {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline() "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline() "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_tpidr2_save_dont_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_tpidr2_save()
@@ -221,13 +369,82 @@ define void @private_za_callee_call_tpidr2_restore(ptr %ptr) {
   ret void
 }
 
-define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline(ptr %ptr) "aarch64_pstate_za_shared" {
+define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline(ptr %ptr) "aarch64_inout_za" {
 ; CHECK-LABEL: define void @shared_za_caller_private_za_callee_call_tpidr2_restore_dont_inline
 ; CHECK-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @private_za_callee_call_tpidr2_restore(ptr [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   call void @private_za_callee_call_tpidr2_restore(ptr %ptr)
+  ret void
+}
+
+define void @nonzt0_callee() {
+; CHECK-LABEL: define void @nonzt0_callee
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @new_zt0_callee() "aarch64_new_zt0" {
+; CHECK-LABEL: define void @new_zt0_callee
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @nonzt0_caller_new_zt0_callee_dont_inline() {
+; CHECK-LABEL: define void @nonzt0_caller_new_zt0_callee_dont_inline
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @new_zt0_callee()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @new_zt0_callee()
+  ret void
+}
+
+define void @shared_zt0_caller_nonzt0_callee_dont_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_nonzt0_callee_dont_inline
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    call void @nonzt0_callee()
+; CHECK-NEXT:    ret void
+;
+  call void @nonzt0_callee()
+  ret void
+}
+
+define void @shared_zt0_callee() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_callee
+; CHECK-SAME: () #[[ATTR5]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @shared_zt0_caller_shared_zt0_callee_inline() "aarch64_inout_zt0" {
+; CHECK-LABEL: define void @shared_zt0_caller_shared_zt0_callee_inline
+; CHECK-SAME: () #[[ATTR5]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void @shared_zt0_callee()
   ret void
 }
 

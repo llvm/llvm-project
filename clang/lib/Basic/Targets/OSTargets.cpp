@@ -114,9 +114,6 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     assert(OsVersion.getMinor().value_or(0) < 100 &&
            OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     Builder.defineMacro("__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__", Str);
-
-    // Tell users about the kernel if there is one.
-    Builder.defineMacro("__MACH__");
   }
 
   PlatformMinVersion = OsVersion;
@@ -173,10 +170,10 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   // "Under /fp:precise and /fp:strict, the compiler doesn't do any mathematical
   // transformation unless the transformation is guaranteed to produce a bitwise
   // identical result."
-  const bool any_imprecise_flags =
-      Opts.FastMath || Opts.FiniteMathOnly || Opts.UnsafeFPMath ||
-      Opts.AllowFPReassoc || Opts.NoHonorNaNs || Opts.NoHonorInfs ||
-      Opts.NoSignedZero || Opts.AllowRecip || Opts.ApproxFunc;
+  const bool any_imprecise_flags = Opts.FastMath || Opts.UnsafeFPMath ||
+                                   Opts.AllowFPReassoc || Opts.NoHonorNaNs ||
+                                   Opts.NoHonorInfs || Opts.NoSignedZero ||
+                                   Opts.AllowRecip || Opts.ApproxFunc;
 
   // "Under both /fp:precise and /fp:fast, the compiler generates code intended
   // to run in the default floating-point environment."
@@ -214,9 +211,11 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
 
     if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
-      if (Opts.CPlusPlus23)
+      if (Opts.CPlusPlus26)
         // TODO update to the proper value.
-        Builder.defineMacro("_MSVC_LANG", "202004L");
+        Builder.defineMacro("_MSVC_LANG", "202400L");
+      else if (Opts.CPlusPlus23)
+        Builder.defineMacro("_MSVC_LANG", "202302L");
       else if (Opts.CPlusPlus20)
         Builder.defineMacro("_MSVC_LANG", "202002L");
       else if (Opts.CPlusPlus17)

@@ -371,7 +371,7 @@ private:
       Stmt *parent = E;
       do {
         parent = StmtMap->getParentIgnoreParenImpCasts(parent);
-      } while (parent && isa<FullExpr>(parent));
+      } while (isa_and_nonnull<FullExpr>(parent));
 
       if (ReturnStmt *retS = dyn_cast_or_null<ReturnStmt>(parent)) {
         std::string note = "remove the cast and change return type of function "

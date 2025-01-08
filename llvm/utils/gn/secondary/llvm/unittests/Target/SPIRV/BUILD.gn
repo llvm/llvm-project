@@ -1,0 +1,9 @@
+# FIXME: If we add the SPIRV target to the GN build, add SPIRVTests here.
+group("dummy") {
+  sources = [
+    "SPIRVAPITest.cpp",
+    "SPIRVConvergenceRegionAnalysisTests.cpp",
+    "SPIRVPartialOrderingVisitorTests.cpp",
+    "SPIRVSortBlocksTests.cpp",
+  ]
+}

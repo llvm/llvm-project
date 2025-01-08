@@ -1,13 +1,23 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.assert
+    libc.include.complex
     libc.include.ctype
+    libc.include.dlfcn
+    libc.include.elf
     libc.include.errno
     libc.include.features
     libc.include.fenv
+    libc.include.float
+    libc.include.stdint
     libc.include.inttypes
+    libc.include.limits
+    libc.include.link
+    libc.include.malloc
     libc.include.math
     libc.include.pthread
     libc.include.signal
+    libc.include.stdckdint
+    libc.include.stdbit
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
@@ -20,4 +30,10 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.threads
     libc.include.time
     libc.include.unistd
+    libc.include.wchar
+    libc.include.uchar
+
+    libc.include.sys_ioctl
+    # Disabled due to epoll_wait syscalls not being available on this platform.
+    # libc.include.sys_epoll
 )

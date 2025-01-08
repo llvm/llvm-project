@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -linalg-bufferize \
-// RUN: -arith-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -buffer-deallocation-pipeline -convert-bufferization-to-memref \
+// RUN: mlir-opt %s \
+// RUN: -one-shot-bufferize="bufferize-function-boundaries" \
+// RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref \
 // RUN: -convert-scf-to-cf -expand-strided-metadata -lower-affine -convert-cf-to-llvm -convert-arith-to-llvm \
 // RUN: -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_runner_utils \
+// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils \
 // RUN: | FileCheck %s
 
 
@@ -35,6 +35,12 @@ func.func @main() {
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)
 
 func.func @expand_dynamic_shape(%arg0 : tensor<2x?x?xf32>) -> tensor<2x2x?x1x?xf32> {
-  %0 = tensor.expand_shape %arg0 [[0], [1, 2, 3], [4]]: tensor<2x?x?xf32> into tensor<2x2x?x1x?xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %d1 = tensor.dim %arg0, %c1 : tensor<2x?x?xf32>
+  %d2 = tensor.dim %arg0, %c2 : tensor<2x?x?xf32>
+  %sz1 = arith.divui %d1, %c2 : index
+  %0 = tensor.expand_shape %arg0 [[0], [1, 2, 3], [4]] output_shape [2, 2, %sz1, 1, %d2] : tensor<2x?x?xf32> into tensor<2x2x?x1x?xf32>
   return %0 : tensor<2x2x?x1x?xf32>
 }

@@ -7,7 +7,6 @@ config.test_format = lit.formats.ShTest(True)
 config.suffixes = [".test"]
 config.test_source_root = os.path.dirname(__file__)
 config.available_features.add(config.target_arch)
-lit_config.note(f'arch feature "{config.target_arch}" available')
 
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
@@ -34,19 +33,18 @@ if (
 ):
     lit_config.note("lsan feature unavailable")
 else:
-    lit_config.note("lsan feature available")
     config.available_features.add("lsan")
 
 # MemorySanitizer is not supported on OSX or Windows right now
 if (
     sys.platform.startswith("darwin")
     or sys.platform.startswith("win")
-    or config.target_arch == "i386"
 ):
     lit_config.note("msan feature unavailable")
     assert "msan" not in config.available_features
+elif config.target_arch == "i386":
+    assert "msan" not in config.available_features
 else:
-    lit_config.note("msan feature available")
     config.available_features.add("msan")
 
 if sys.platform.startswith("win") or sys.platform.startswith("cygwin"):
@@ -58,10 +56,7 @@ if sys.platform.startswith("darwin"):
 if sys.platform.startswith("linux"):
     # Note the value of ``sys.platform`` is not consistent
     # between python 2 and 3, hence the use of ``.startswith()``.
-    lit_config.note("linux feature available")
     config.available_features.add("linux")
-else:
-    lit_config.note("linux feature unavailable")
 
 if config.arm_thumb:
     config.available_features.add("thumb")
@@ -89,9 +84,25 @@ def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
     if fuzzer_enabled:
         sanitizers.append("fuzzer")
     sanitizers_cmd = "-fsanitize=%s" % ",".join(sanitizers)
+
+    # Since clang_rt.fuzzer-x86_64.lib is built without -fsanitize=address and
+    # we're building with that flag here, the MSVC STL needs all libs to be
+    # compiled with the same -fsanitize flags, see:
+    # https://learn.microsoft.com/en-us/cpp/sanitizers/error-container-overflow?view=msvc-170
+    # Avoids linker error:
+    #   /failifmismatch: mismatch detected for 'annotate_string'
+    if "windows" in config.available_features:
+        extra_cmd = extra_cmd + " -D_DISABLE_VECTOR_ANNOTATION -D_DISABLE_STRING_ANNOTATION"
+
+    if "darwin" in config.available_features and getattr(
+        config, "darwin_linker_version", None
+    ):
+        extra_cmd = extra_cmd + " -mlinker-version=" + config.darwin_linker_version
+
     return " ".join(
         [
             compiler_cmd,
+            config.target_cflags,
             std_cmd,
             "-O2 -gline-tables-only",
             sanitizers_cmd,

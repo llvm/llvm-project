@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "mod-file.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/unparse.h"
@@ -51,6 +52,14 @@ public:
   }
   void Post(const parser::OpenMPThreadprivate &) { currStmt_ = std::nullopt; }
   void Post(const parser::Name &name);
+
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OpenMPDeclareMapperConstruct &) {
+    currStmt_ = std::nullopt;
+  }
 
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
@@ -97,5 +106,42 @@ void UnparseWithSymbols(llvm::raw_ostream &out, const parser::Program &program,
       [&](const parser::CharBlock &location, llvm::raw_ostream &out,
           int indent) { visitor.PrintSymbols(location, out, indent); }};
   parser::Unparse(out, program, encoding, false, true, &preStatement);
+}
+
+// UnparseWithModules()
+
+class UsedModuleVisitor {
+public:
+  UnorderedSymbolSet &modulesUsed() { return modulesUsed_; }
+  UnorderedSymbolSet &modulesDefined() { return modulesDefined_; }
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+  void Post(const parser::ModuleStmt &module) {
+    if (module.v.symbol) {
+      modulesDefined_.insert(*module.v.symbol);
+    }
+  }
+  void Post(const parser::UseStmt &use) {
+    if (use.moduleName.symbol) {
+      modulesUsed_.insert(*use.moduleName.symbol);
+    }
+  }
+
+private:
+  UnorderedSymbolSet modulesUsed_;
+  UnorderedSymbolSet modulesDefined_;
+};
+
+void UnparseWithModules(llvm::raw_ostream &out, SemanticsContext &context,
+    const parser::Program &program, parser::Encoding encoding) {
+  UsedModuleVisitor visitor;
+  parser::Walk(program, visitor);
+  UnorderedSymbolSet nonIntrinsicModulesWritten{
+      std::move(visitor.modulesDefined())};
+  ModFileWriter writer{context};
+  for (SymbolRef moduleRef : visitor.modulesUsed()) {
+    writer.WriteClosure(out, *moduleRef, nonIntrinsicModulesWritten);
+  }
+  parser::Unparse(out, program, encoding, false, true);
 }
 } // namespace Fortran::semantics

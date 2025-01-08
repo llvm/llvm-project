@@ -22,7 +22,7 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace arith {
-void populateArithToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void populateArithToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                   RewritePatternSet &patterns);
 
 std::unique_ptr<OperationPass<>> createConvertArithToSPIRVPass();

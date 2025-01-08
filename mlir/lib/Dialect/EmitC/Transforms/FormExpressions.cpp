@@ -36,7 +36,9 @@ struct FormExpressionsPass
     // Wrap each C operator op with an expression op.
     OpBuilder builder(context);
     auto matchFun = [&](Operation *op) {
-      if (emitc::ExpressionOp::isCExpression(*op))
+      if (op->hasTrait<OpTrait::emitc::CExpression>() &&
+          !op->getParentOfType<emitc::ExpressionOp>() &&
+          op->getNumResults() == 1)
         createExpression(op, builder);
     };
     rootOp->walk(matchFun);
@@ -45,7 +47,7 @@ struct FormExpressionsPass
     RewritePatternSet patterns(context);
     populateExpressionPatterns(patterns);
 
-    if (failed(applyPatternsAndFoldGreedily(rootOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
       return signalPassFailure();
   }
 

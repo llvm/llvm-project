@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-allow-modref-calls -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=MODREF
-; RUN: opt %loadPolly -basic-aa                           -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-modref-calls '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=MODREF
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa                           '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop: for.body => for.end
 ; MODREF: Valid Region for Scop: for.body => for.end

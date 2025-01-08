@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-unused-local-non-trivial-variable %t -- \
-// RUN:       -config="{CheckOptions: {bugprone-unused-local-non-trivial-variable.IncludeTypes: '::async::Future;::async::Foo.*', bugprone-unused-local-non-trivial-variable.ExcludeTypes: '::async::FooBar'}}"
-
+// RUN:       -config="{CheckOptions: {bugprone-unused-local-non-trivial-variable.IncludeTypes: '::async::Future;::async::Foo.*', bugprone-unused-local-non-trivial-variable.ExcludeTypes: '::async::FooBar'}}" \
+// RUN:       -- -fexceptions
 
 namespace async {
 template <typename T>
@@ -19,7 +19,7 @@ class Ptr {
 
 template<typename T>
 class Future {
-public:    
+public:
     T get() {
         return Pending;
     }
@@ -76,7 +76,8 @@ T qux(T Generic) {
     async::Future<T> TemplateType;
     // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: unused local variable 'TemplateType' of type 'async::Future<T>' [bugprone-unused-local-non-trivial-variable]
     a::Future<T> AliasTemplateType;
-    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unused local variable 'AliasTemplateType' of type 'a::Future<T>' (aka 'Future<type-parameter-0-0>') [bugprone-unused-local-non-trivial-variable]
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unused local variable 'AliasTemplateType' of type 'a::Future<T>' (aka 'Future<T>') [bugprone-unused-local-non-trivial-variable]
+    [[maybe_unused]] async::Future<Units> MaybeUnused;
     return Generic;
 }
 

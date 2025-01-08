@@ -288,10 +288,10 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
   else
     line_entry.range.SetByteSize(0);
 
-  line_entry.file =
-      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
-  line_entry.original_file =
-      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
+  line_entry.file_sp =
+      m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);
+  line_entry.original_file_sp =
+      m_comp_unit->GetSupportFiles().GetSupportFileAtIndex(entry.file_idx);
   line_entry.line = entry.line;
   line_entry.column = entry.column;
   line_entry.is_start_of_statement = entry.is_start_of_statement;
@@ -357,13 +357,13 @@ void LineTable::Dump(Stream *s, Target *target, Address::DumpStyle style,
                      Address::DumpStyle fallback_style, bool show_line_ranges) {
   const size_t count = m_entries.size();
   LineEntry line_entry;
-  FileSpec prev_file;
+  SupportFileSP prev_file;
   for (size_t idx = 0; idx < count; ++idx) {
     ConvertEntryAtIndexToLineEntry(idx, line_entry);
-    line_entry.Dump(s, target, prev_file != line_entry.original_file, style,
-                    fallback_style, show_line_ranges);
+    line_entry.Dump(s, target, !prev_file->Equal(*line_entry.original_file_sp),
+                    style, fallback_style, show_line_ranges);
     s->EOL();
-    prev_file = line_entry.original_file;
+    prev_file = line_entry.original_file_sp;
   }
 }
 

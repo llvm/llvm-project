@@ -19,6 +19,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -48,12 +49,30 @@ STATISTIC(NumNoAlias, "Number of function returns inferred as noalias");
 STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
+STATISTIC(NumCold, "Number of functions inferred as cold");
+STATISTIC(NumNoReturn, "Number of functions inferred as no return");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
     return false;
   F.setDoesNotAccessMemory();
   ++NumReadNone;
+  return true;
+}
+
+static bool setIsCold(Function &F) {
+  if (F.hasFnAttribute(Attribute::Cold))
+    return false;
+  F.addFnAttr(Attribute::Cold);
+  ++NumCold;
+  return true;
+}
+
+static bool setNoReturn(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+  F.addFnAttr(Attribute::NoReturn);
+  ++NumNoReturn;
   return true;
 }
 
@@ -270,6 +289,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setNonLazyBind(F);
 
   switch (TheLibFunc) {
+  case LibFunc_nan:
+  case LibFunc_nanf:
+  case LibFunc_nanl:
   case LibFunc_strlen:
   case LibFunc_strnlen:
   case LibFunc_wcslen:
@@ -554,6 +576,20 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setArgNoUndef(F, 1);
+    break;
+  case LibFunc_reallocarray:
+    Changed |= setAllocFamily(F, "malloc");
+    Changed |= setAllocKind(F, AllocFnKind::Realloc);
+    Changed |= setAllocatedPointerParam(F, 0);
+    Changed |= setAllocSize(F, 1, 2);
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
+    Changed |= setRetNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setRetDoesNotAlias(F);
+    Changed |= setWillReturn(F);
+    Changed |= setDoesNotCapture(F, 0);
+    Changed |= setArgNoUndef(F, 1);
+    Changed |= setArgNoUndef(F, 2);
     break;
   case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
@@ -1087,6 +1123,18 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotThrow(F);
     break;
+  case LibFunc_abort:
+    Changed |= setIsCold(F);
+    break;
+  case LibFunc_terminate:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    break;
+  case LibFunc_cxa_throw:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    // Don't add `nofree` on `__cxa_throw`
+    return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1098,6 +1146,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ldexpl:
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
+    Changed |= setDoesNotCapture(F, 2);
+    [[fallthrough]];
   case LibFunc_abs:
   case LibFunc_acos:
   case LibFunc_acosf:
@@ -1137,6 +1190,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_cosl:
   case LibFunc_cospi:
   case LibFunc_cospif:
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
+  case LibFunc_tgamma:
+  case LibFunc_tgammaf:
+  case LibFunc_tgammal:
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -1149,6 +1208,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fabs:
   case LibFunc_fabsf:
   case LibFunc_fabsl:
+  case LibFunc_fdim:
+  case LibFunc_fdiml:
+  case LibFunc_fdimf:
   case LibFunc_ffs:
   case LibFunc_ffsl:
   case LibFunc_ffsll:
@@ -1167,6 +1229,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fmod:
   case LibFunc_fmodf:
   case LibFunc_fmodl:
+  case LibFunc_hypot:
+  case LibFunc_hypotf:
+  case LibFunc_hypotl:
   case LibFunc_isascii:
   case LibFunc_isdigit:
   case LibFunc_labs:
@@ -1184,6 +1249,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_logb:
   case LibFunc_logbf:
   case LibFunc_logbl:
+  case LibFunc_ilogb:
+  case LibFunc_ilogbf:
+  case LibFunc_ilogbl:
   case LibFunc_logf:
   case LibFunc_logl:
   case LibFunc_nearbyint:
@@ -1192,12 +1260,21 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+  case LibFunc_remainderl:
   case LibFunc_rint:
   case LibFunc_rintf:
   case LibFunc_rintl:
   case LibFunc_round:
   case LibFunc_roundf:
   case LibFunc_roundl:
+  case LibFunc_scalbln:
+  case LibFunc_scalblnf:
+  case LibFunc_scalblnl:
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
   case LibFunc_sin:
   case LibFunc_sincospif_stret:
   case LibFunc_sinf:
@@ -1223,6 +1300,18 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setOnlyWritesMemory(F);
+    Changed |= setWillReturn(F);
+    break;
+  case LibFunc_sincos:
+  case LibFunc_sincosf:
+  case LibFunc_sincosl:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotFreeMemory(F);
+    Changed |= setOnlyWritesMemory(F);
+    Changed |= setOnlyWritesMemory(F, 1);
+    Changed |= setOnlyWritesMemory(F, 2);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
     break;
   default:
@@ -1252,7 +1341,7 @@ static void setRetExtAttr(Function &F,
 }
 
 // Modeled after X86TargetLowering::markLibCallAttributes.
-static void markRegisterParameterAttributes(Function *F) {
+void llvm::markRegisterParameterAttributes(Function *F) {
   if (!F->arg_size() || F->isVarArg())
     return;
 
@@ -1823,8 +1912,8 @@ Value *llvm::emitPutS(Value *Str, IRBuilderBase &B,
 
   Type *IntTy = getIntTy(B, TLI);
   StringRef PutsName = TLI->getName(LibFunc_puts);
-  FunctionCallee PutS = getOrInsertLibFunc(M, *TLI, LibFunc_puts, IntTy,
-                                           B.getPtrTy());
+  FunctionCallee PutS =
+      getOrInsertLibFunc(M, *TLI, LibFunc_puts, IntTy, B.getPtrTy());
   inferNonMandatoryLibFuncAttrs(M, PutsName, *TLI);
   CallInst *CI = B.CreateCall(PutS, Str, PutsName);
   if (const Function *F =
@@ -1881,9 +1970,9 @@ Value *llvm::emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilderBase &B,
 
   Type *SizeTTy = getSizeTTy(B, TLI);
   StringRef FWriteName = TLI->getName(LibFunc_fwrite);
-  FunctionCallee F = getOrInsertLibFunc(M, *TLI, LibFunc_fwrite,
-                                        SizeTTy, B.getPtrTy(), SizeTTy,
-                                        SizeTTy, File->getType());
+  FunctionCallee F =
+      getOrInsertLibFunc(M, *TLI, LibFunc_fwrite, SizeTTy, B.getPtrTy(),
+                         SizeTTy, SizeTTy, File->getType());
 
   if (File->getType()->isPointerTy())
     inferNonMandatoryLibFuncAttrs(M, FWriteName, *TLI);
@@ -1905,8 +1994,8 @@ Value *llvm::emitMalloc(Value *Num, IRBuilderBase &B, const DataLayout &DL,
 
   StringRef MallocName = TLI->getName(LibFunc_malloc);
   Type *SizeTTy = getSizeTTy(B, TLI);
-  FunctionCallee Malloc = getOrInsertLibFunc(M, *TLI, LibFunc_malloc,
-                                             B.getPtrTy(), SizeTTy);
+  FunctionCallee Malloc =
+      getOrInsertLibFunc(M, *TLI, LibFunc_malloc, B.getPtrTy(), SizeTTy);
   inferNonMandatoryLibFuncAttrs(M, MallocName, *TLI);
   CallInst *CI = B.CreateCall(Malloc, Num, MallocName);
 
@@ -1918,20 +2007,70 @@ Value *llvm::emitMalloc(Value *Num, IRBuilderBase &B, const DataLayout &DL,
 }
 
 Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
-                        const TargetLibraryInfo &TLI) {
+                        const TargetLibraryInfo &TLI, unsigned AddrSpace) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, &TLI, LibFunc_calloc))
     return nullptr;
 
   StringRef CallocName = TLI.getName(LibFunc_calloc);
   Type *SizeTTy = getSizeTTy(B, &TLI);
-  FunctionCallee Calloc = getOrInsertLibFunc(M, TLI, LibFunc_calloc,
-                                             B.getPtrTy(), SizeTTy, SizeTTy);
+  FunctionCallee Calloc = getOrInsertLibFunc(
+      M, TLI, LibFunc_calloc, B.getPtrTy(AddrSpace), SizeTTy, SizeTTy);
   inferNonMandatoryLibFuncAttrs(M, CallocName, TLI);
   CallInst *CI = B.CreateCall(Calloc, {Num, Size}, CallocName);
 
   if (const auto *F =
           dyn_cast<Function>(Calloc.getCallee()->stripPointerCasts()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
+                                         const TargetLibraryInfo *TLI,
+                                         LibFunc SizeFeedbackNewFunc,
+                                         uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, SizedPtrT, Num->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
+    CI->setCallingConv(F->getCallingConv());
+
+  return CI;
+}
+
+Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
+                                                IRBuilderBase &B,
+                                                const TargetLibraryInfo *TLI,
+                                                LibFunc SizeFeedbackNewFunc,
+                                                uint8_t HotCold) {
+  Module *M = B.GetInsertBlock()->getModule();
+  if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
+    return nullptr;
+
+  StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+
+  // __sized_ptr_t struct return type { void*, size_t }
+  StructType *SizedPtrT =
+      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
+  FunctionCallee Func = M->getOrInsertFunction(Name, SizedPtrT, Num->getType(),
+                                               Align->getType(), B.getInt8Ty());
+  inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
+  CallInst *CI =
+      B.CreateCall(Func, {Num, Align, B.getInt8(HotCold)}, "sized_ptr");
+
+  if (const Function *F = dyn_cast<Function>(Func.getCallee()))
     CI->setCallingConv(F->getCallingConv());
 
   return CI;
@@ -1945,8 +2084,8 @@ Value *llvm::emitHotColdNew(Value *Num, IRBuilderBase &B,
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func = M->getOrInsertFunction(Name, B.getPtrTy(),
-                                               Num->getType(), B.getInt8Ty());
+  FunctionCallee Func =
+      M->getOrInsertFunction(Name, B.getPtrTy(), Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, B.getInt8(HotCold)}, Name);
 
@@ -1965,9 +2104,8 @@ Value *llvm::emitHotColdNewNoThrow(Value *Num, Value *NoThrow, IRBuilderBase &B,
     return nullptr;
 
   StringRef Name = TLI->getName(NewFunc);
-  FunctionCallee Func =
-      M->getOrInsertFunction(Name, B.getPtrTy(), Num->getType(),
-                             NoThrow->getType(), B.getInt8Ty());
+  FunctionCallee Func = M->getOrInsertFunction(
+      Name, B.getPtrTy(), Num->getType(), NoThrow->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, NoThrow, B.getInt8(HotCold)}, Name);
 
@@ -2008,8 +2146,8 @@ Value *llvm::emitHotColdNewAlignedNoThrow(Value *Num, Value *Align,
 
   StringRef Name = TLI->getName(NewFunc);
   FunctionCallee Func = M->getOrInsertFunction(
-      Name, B.getPtrTy(), Num->getType(), Align->getType(),
-      NoThrow->getType(), B.getInt8Ty());
+      Name, B.getPtrTy(), Num->getType(), Align->getType(), NoThrow->getType(),
+      B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI =
       B.CreateCall(Func, {Num, Align, NoThrow, B.getInt8(HotCold)}, Name);

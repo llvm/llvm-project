@@ -317,7 +317,8 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
                        !MFI.adjustsStack() &&       // No calls.
                        !MustSaveLR(MF, LR) &&       // No need to save LR.
                        !FI->mustSaveTOC() &&        // No need to save TOC.
-                       !RegInfo->hasBasePointer(MF); // No special alignment.
+                       !RegInfo->hasBasePointer(MF) && // No special alignment.
+                       !MFI.isFrameAddressTaken();
 
   // Note: for PPC32 SVR4ABI, we can still generate stackless
   // code if all local vars are reg-allocated.
@@ -354,9 +355,9 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   return FrameSize;
 }
 
-// hasFP - Return true if the specified function actually has a dedicated frame
-// pointer register.
-bool PPCFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function actually has a dedicated
+// frame pointer register.
+bool PPCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   // FIXME: This is pretty much broken by design: hasFP() might be called really
   // early, before the stack layout was calculated and thus hasFP() might return
@@ -383,7 +384,10 @@ bool PPCFrameLowering::needsFP(const MachineFunction &MF) const {
 }
 
 void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
-  bool is31 = needsFP(MF);
+  // When there is dynamic alloca in this function, we can not use the frame
+  // pointer X31/R31 for the frameaddress lowering. In this case, only X1/R1
+  // always points to the backchain.
+  bool is31 = needsFP(MF) && !MF.getFrameInfo().hasVarSizedObjects();
   unsigned FPReg  = is31 ? PPC::R31 : PPC::R1;
   unsigned FP8Reg = is31 ? PPC::X31 : PPC::X1;
 
@@ -609,8 +613,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
 
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   DebugLoc dl;
   // AIX assembler does not support cfi directives.
   const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
@@ -1004,7 +1007,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         // R0 cannot be used as a base register, but it can be used as an
         // index in a store-indexed.
         int LastOffset = 0;
-        if (HasFP)  {
+        if (HasFP) {
           // R0 += (FPOffset-LastOffset).
           // Need addic, since addi treats R0 as 0.
           BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDIC), ScratchReg)
@@ -1191,12 +1194,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
         continue;
 
-      // For SVR4, don't emit a move for the CR spill slot if we haven't
-      // spilled CRs.
-      if (isSVR4ABI && (PPC::CR2 <= Reg && Reg <= PPC::CR4)
-          && !MustSaveCR)
-        continue;
-
       // For 64-bit SVR4 when we have spilled CRs, the spill location
       // is SP+8, not a frame-relative slot.
       if (isSVR4ABI && isPPC64 && (PPC::CR2 <= Reg && Reg <= PPC::CR4)) {
@@ -1241,8 +1238,7 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   // AIX assembler does not support cfi directives.
   const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
   auto StackAllocMIPos = llvm::find_if(PrologMBB, [](MachineInstr &MI) {
@@ -1441,8 +1437,7 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
       ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
     }
     // Update liveins.
-    recomputeLiveIns(*ProbeLoopBodyMBB);
-    recomputeLiveIns(*ProbeExitMBB);
+    fullyRecomputeLiveIns({ProbeExitMBB, ProbeLoopBodyMBB});
     return ProbeExitMBB;
   };
   // For case HasBP && MaxAlign > 1, we have to realign the SP by performing
@@ -1534,8 +1529,7 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
         buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
       }
       // Update liveins.
-      recomputeLiveIns(*LoopMBB);
-      recomputeLiveIns(*ExitMBB);
+      fullyRecomputeLiveIns({ExitMBB, LoopMBB});
     }
   }
   ++NumPrologProbed;
@@ -1974,6 +1968,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  if (Subtarget.isAIXABI())
+    updateCalleeSaves(MF, SavedRegs);
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
@@ -2029,8 +2025,18 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // code. Same goes for the base pointer and the PIC base register.
   if (needsFP(MF))
     SavedRegs.reset(isPPC64 ? PPC::X31 : PPC::R31);
-  if (RegInfo->hasBasePointer(MF))
+  if (RegInfo->hasBasePointer(MF)) {
     SavedRegs.reset(RegInfo->getBaseRegister(MF));
+    // On AIX, when BaseRegister(R30) is used, need to spill r31 too to match
+    // AIX trackback table requirement.
+    if (!needsFP(MF) && !SavedRegs.test(isPPC64 ? PPC::X31 : PPC::R31) &&
+        Subtarget.isAIXABI()) {
+      assert(
+          (RegInfo->getBaseRegister(MF) == (isPPC64 ? PPC::X30 : PPC::R30)) &&
+          "Invalid base register on AIX!");
+      SavedRegs.set(isPPC64 ? PPC::X31 : PPC::R31);
+    }
+  }
   if (FI->usesPICBase())
     SavedRegs.reset(PPC::R30);
 
@@ -2418,8 +2424,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   // or two GPRs, so we need table to record information for later save/restore.
   for (const CalleeSavedInfo &Info : CSI) {
     if (Info.isSpilledToReg()) {
-      auto &SpilledVSR =
-          VSRContainingGPRs.FindAndConstruct(Info.getDstReg()).second;
+      auto &SpilledVSR = VSRContainingGPRs[Info.getDstReg()];
       assert(SpilledVSR.second == 0 &&
              "Can't spill more than two GPRs into VSR!");
       if (SpilledVSR.first == 0)
@@ -2677,7 +2682,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         Restored.set(Dst);
 
       } else {
-       // Default behavior for non-CR saves.
+        // Default behavior for non-CR saves.
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
 
         // Functions without NoUnwind need to preserve the order of elements in
@@ -2731,6 +2736,71 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   if (MF.getInfo<PPCFunctionInfo>()->shrinkWrapDisabled())
     return false;
   return !MF.getSubtarget<PPCSubtarget>().is32BitELFABI();
+}
+
+void PPCFrameLowering::updateCalleeSaves(const MachineFunction &MF,
+                                         BitVector &SavedRegs) const {
+  // The AIX ABI uses traceback tables for EH which require that if callee-saved
+  // register N is used, all registers N-31 must be saved/restored.
+  // NOTE: The check for AIX is not actually what is relevant. Traceback tables
+  // on Linux have the same requirements. It is just that AIX is the only ABI
+  // for which we actually use traceback tables. If another ABI needs to be
+  // supported that also uses them, we can add a check such as
+  // Subtarget.usesTraceBackTables().
+  assert(Subtarget.isAIXABI() &&
+         "Function updateCalleeSaves should only be called for AIX.");
+
+  // If there are no callee saves then there is nothing to do.
+  if (SavedRegs.none())
+    return;
+
+  const MCPhysReg *CSRegs =
+      Subtarget.getRegisterInfo()->getCalleeSavedRegs(&MF);
+  MCPhysReg LowestGPR = PPC::R31;
+  MCPhysReg LowestG8R = PPC::X31;
+  MCPhysReg LowestFPR = PPC::F31;
+  MCPhysReg LowestVR = PPC::V31;
+
+  // Traverse the CSRs twice so as not to rely on ascending ordering of
+  // registers in the array. The first pass finds the lowest numbered
+  // register and the second pass marks all higher numbered registers
+  // for spilling.
+  for (int i = 0; CSRegs[i]; i++) {
+    // Get the lowest numbered register for each class that actually needs
+    // to be saved.
+    MCPhysReg Cand = CSRegs[i];
+    if (!SavedRegs.test(Cand))
+      continue;
+    // When R2/X2 is a CSR and not used for passing arguments, it is allocated
+    // earlier than other volatile registers. R2/X2 is not contiguous with
+    // R13/X13 to R31/X31.
+    if (Cand == PPC::X2 || Cand == PPC::R2) {
+      SavedRegs.set(Cand);
+      continue;
+    }
+
+    if (PPC::GPRCRegClass.contains(Cand) && Cand < LowestGPR)
+      LowestGPR = Cand;
+    else if (PPC::G8RCRegClass.contains(Cand) && Cand < LowestG8R)
+      LowestG8R = Cand;
+    else if ((PPC::F4RCRegClass.contains(Cand) ||
+              PPC::F8RCRegClass.contains(Cand)) &&
+             Cand < LowestFPR)
+      LowestFPR = Cand;
+    else if (PPC::VRRCRegClass.contains(Cand) && Cand < LowestVR)
+      LowestVR = Cand;
+  }
+
+  for (int i = 0; CSRegs[i]; i++) {
+    MCPhysReg Cand = CSRegs[i];
+    if ((PPC::GPRCRegClass.contains(Cand) && Cand > LowestGPR) ||
+        (PPC::G8RCRegClass.contains(Cand) && Cand > LowestG8R) ||
+        ((PPC::F4RCRegClass.contains(Cand) ||
+          PPC::F8RCRegClass.contains(Cand)) &&
+         Cand > LowestFPR) ||
+        (PPC::VRRCRegClass.contains(Cand) && Cand > LowestVR))
+      SavedRegs.set(Cand);
+  }
 }
 
 uint64_t PPCFrameLowering::getStackThreshold() const {

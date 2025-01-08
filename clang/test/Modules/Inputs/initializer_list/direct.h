@@ -2,7 +2,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
 
   template<typename T> struct initializer_list {
-    initializer_list(T*, size_t);
+    const T* ptr; size_t sz;
   };
 
   template<typename T> int min(initializer_list<T>);

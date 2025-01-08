@@ -8,7 +8,7 @@ typedef union __attribute__((aligned(4))) {
 void bar(vect32 p[][2]);
 
 // CHECK-LABEL: define dso_local void @fred
-// CHECK-SAME: (i32 noundef [[NUM:%.*]], ptr nocapture noundef writeonly [[VEC:%.*]], ptr nocapture noundef readonly [[INDEX:%.*]], ptr nocapture noundef readonly [[ARR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (i32 noundef [[NUM:%.*]], ptr nocapture noundef writeonly initializes((0, 8)) [[VEC:%.*]], ptr nocapture noundef readonly [[INDEX:%.*]], ptr nocapture noundef readonly [[ARR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [4 x [2 x %union.vect32]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]
@@ -27,10 +27,10 @@ void bar(vect32 p[][2]);
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[VEC]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [4 x [2 x %union.vect32]], ptr [[TMP]], i32 0, i32 [[TMP4]], i32 1
-// CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds [2 x i16], ptr [[ARRAYIDX14]], i32 0, i32 1
+// CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX14]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX15]], align 2, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[CONV16:%.*]] = zext i16 [[TMP5]] to i32
-// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, ptr [[VEC]], i32 1
+// CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i32 4
 // CHECK-NEXT:    store i32 [[CONV16]], ptr [[ARRAYIDX17]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[TMP]]) #[[ATTR3]]

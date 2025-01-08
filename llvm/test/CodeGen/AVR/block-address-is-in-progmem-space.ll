@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=atmega328 < %s -march=avr | FileCheck %s
+; RUN: llc -mcpu=atmega328 < %s -mtriple=avr | FileCheck %s
 
 ; This test verifies that the pointer to a basic block
 ; should always be a pointer in address space 1.
@@ -19,7 +19,7 @@ second:
   ; CHECK:      ldi r30, .Ltmp0+2
   ; CHECK-NEXT: ldi r31, .Ltmp0+4
   ; CHECK: lpm r24, Z
-  %bar = load i8, i8 addrspace(1)* blockaddress(@function_with_no_forward_reference, %second)
+  %bar = load i8, ptr addrspace(1) blockaddress(@function_with_no_forward_reference, %second)
   ret i8 %bar
 }
 
@@ -35,7 +35,7 @@ second:
   ; CHECK:      ldi r30, .Ltmp1+2
   ; CHECK-NEXT: ldi r31, .Ltmp1+4
   ; CHECK-NEXT: lpm r24, Z
-  %result2 = load i8, i8 addrspace(1)* blockaddress(@load_from_local_label, %second)
+  %result2 = load i8, ptr addrspace(1) blockaddress(@load_from_local_label, %second)
   ret i8 %result2
 }
 

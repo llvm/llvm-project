@@ -38,9 +38,13 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
-def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
-def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
+
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions (default)">;
 
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
@@ -58,7 +62,7 @@ def compress_relocations: F<"compress-relocations">,
   HelpText<"Compress the relocation targets in the code section.">;
 
 defm demangle: B<"demangle",
-    "Demangle symbol names",
+    "Demangle symbol names (default)",
     "Do not demangle symbol names">;
 
 def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
@@ -70,21 +74,25 @@ defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
     "Do not put symbols in the dynamic symbol table (default)">;
 
+def end_lib: F<"end-lib">,
+  HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
+
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 
 defm error_limit:
   EEq<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
-def fatal_warnings: F<"fatal-warnings">,
-  HelpText<"Treat warnings as errors">;
+defm fatal_warnings: B<"fatal-warnings",
+    "Treat warnings as errors",
+    "Do not treat warnings as errors (default)">;
 
 defm gc_sections: B<"gc-sections",
-    "Enable garbage collection of unused sections",
+    "Enable garbage collection of unused sections (defualt)",
     "Disable garbage collection of unused sections">;
 
 defm merge_data_segments: BB<"merge-data-segments",
-    "Enable merging data segments",
+    "Enable merging data segments (default)",
     "Disable merging data segments">;
 
 def help: F<"help">, HelpText<"Print option help">;
@@ -101,7 +109,8 @@ defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option proces
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
 
-def no_fatal_warnings: F<"no-fatal-warnings">;
+def noinhibit_exec: F<"noinhibit-exec">,
+  HelpText<"Retain the executable output file whenever it is still usable">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -114,7 +123,7 @@ defm pie: B<"pie",
 
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
-    "Do not list removed unused sections">;
+    "Do not list removed unused sections (default)">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
@@ -127,6 +136,9 @@ defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
+
+def start_lib: F<"start-lib">,
+  HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 
@@ -224,8 +236,14 @@ def initial_memory: JJ<"initial-memory=">,
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 
+def no_growable_memory: FF<"no-growable-memory">,
+  HelpText<"Set maximum size of the linear memory to its initial size">;
+
 def no_entry: FF<"no-entry">,
   HelpText<"Do not output any entry point">;
+
+def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
+  HelpText<"Do not check signatures of functions defined in shared libraries.">;
 
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
@@ -270,6 +288,7 @@ def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
 def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -278,13 +297,20 @@ def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
   HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def disable_verify: F<"disable-verify">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_index_files: FF<"thinlto-emit-index-files">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

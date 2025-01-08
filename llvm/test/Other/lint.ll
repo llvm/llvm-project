@@ -124,13 +124,6 @@ define void @0() nounwind {
   ret void
 }
 
-; CHECK: va_start called in a non-varargs function
-declare void @llvm.va_start(ptr)
-define void @not_vararg(ptr %p) nounwind {
-  call void @llvm.va_start(ptr %p)
-  ret void
-}
-
 ; CHECK: Undefined behavior: Branch to non-blockaddress
 define void @use_indbr() {
   indirectbr ptr @foo, [label %block]

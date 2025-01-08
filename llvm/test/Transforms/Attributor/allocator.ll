@@ -7,7 +7,7 @@
 @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
 
 ;.
-; CHECK: @[[_STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
+; CHECK: @.str = private unnamed_addr constant [17 x i8] c"The value is %d\0A\00", align 1
 ;.
 define dso_local void @positive_alloca_1(i32 noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_alloca_1
@@ -511,8 +511,13 @@ declare i32 @printf(ptr noundef, ...) #1
 ; Function Attrs: nounwind allocsize(0)
 declare noalias ptr @malloc(i64 noundef) #1
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
 ;.

@@ -74,7 +74,8 @@ public:
         this->TLSSupported = !Triple.isOSVersionLT(3);
     } else if (Triple.isDriverKit()) {
       // No TLS on DriverKit.
-    }
+    } else if (Triple.isXROS())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }
@@ -108,6 +109,9 @@ public:
       break;
     case llvm::Triple::WatchOS: // Earliest supporting version is 5.0.0.
       MinVersion = llvm::VersionTuple(5U);
+      break;
+    case llvm::Triple::XROS:
+      MinVersion = llvm::VersionTuple(0);
       break;
     default:
       // Conservatively return 8 bytes if OS is unknown.
@@ -227,6 +231,9 @@ public:
     case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
+    case llvm::Triple::loongarch32:
+    case llvm::Triple::loongarch64:
+      break;
     }
   }
 };
@@ -333,6 +340,10 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+    if (Triple.isTime64ABI()) {
+      Builder.defineMacro("_FILE_OFFSET_BITS", "64");
+      Builder.defineMacro("_TIME_BITS", "64");
+    }
   }
 
 public:
@@ -465,7 +476,7 @@ public:
     this->IntMaxType = TargetInfo::SignedLongLong;
     this->Int64Type = TargetInfo::SignedLongLong;
     this->SizeType = TargetInfo::UnsignedInt;
-    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-n32:64");
+    this->resetDataLayout("E-m:e-p:32:32-Fi64-i64:64-i128:128-n32:64");
   }
 };
 
@@ -774,6 +785,23 @@ public:
   }
 };
 
+// UEFI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY UEFITargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__UEFI__");
+  }
+
+public:
+  UEFITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->WCharType = TargetInfo::UnsignedShort;
+    this->WIntType = TargetInfo::UnsignedShort;
+  }
+};
+
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
                        MacroBuilder &Builder);
 
@@ -837,9 +865,6 @@ public:
                             "i64:64-i128:128-n8:16:32:64-S128");
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
-    } else {
-      assert(Triple.getArch() == llvm::Triple::le32);
-      this->resetDataLayout("e-p:32:32-i64:64");
     }
   }
 };
@@ -864,6 +889,7 @@ protected:
 public:
   FuchsiaTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
+    this->WIntType = TargetInfo::UnsignedInt;
     this->MCountName = "__mcount";
     this->TheCXXABI.set(TargetCXXABI::Fuchsia);
   }

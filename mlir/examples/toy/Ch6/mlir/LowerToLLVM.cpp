@@ -28,7 +28,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "toy/Dialect.h"
 #include "toy/Passes.h"

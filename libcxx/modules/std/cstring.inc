@@ -8,28 +8,28 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-  using std::size_t;
+  using std::size_t _LIBCPP_USING_IF_EXISTS;
 
-  using std::memchr;
-  using std::memcmp;
-  using std::memcpy;
-  using std::memmove;
-  using std::memset;
-  using std::strcat;
-  using std::strchr;
-  using std::strcmp;
-  using std::strcoll;
-  using std::strcpy;
-  using std::strcspn;
-  using std::strerror;
-  using std::strlen;
-  using std::strncat;
-  using std::strncmp;
-  using std::strncpy;
-  using std::strpbrk;
-  using std::strrchr;
-  using std::strspn;
-  using std::strstr;
-  using std::strtok;
-  using std::strxfrm;
+  using std::memchr _LIBCPP_USING_IF_EXISTS;
+  using std::memcmp _LIBCPP_USING_IF_EXISTS;
+  using std::memcpy _LIBCPP_USING_IF_EXISTS;
+  using std::memmove _LIBCPP_USING_IF_EXISTS;
+  using std::memset _LIBCPP_USING_IF_EXISTS;
+  using std::strcat _LIBCPP_USING_IF_EXISTS;
+  using std::strchr _LIBCPP_USING_IF_EXISTS;
+  using std::strcmp _LIBCPP_USING_IF_EXISTS;
+  using std::strcoll _LIBCPP_USING_IF_EXISTS;
+  using std::strcpy _LIBCPP_USING_IF_EXISTS;
+  using std::strcspn _LIBCPP_USING_IF_EXISTS;
+  using std::strerror _LIBCPP_USING_IF_EXISTS;
+  using std::strlen _LIBCPP_USING_IF_EXISTS;
+  using std::strncat _LIBCPP_USING_IF_EXISTS;
+  using std::strncmp _LIBCPP_USING_IF_EXISTS;
+  using std::strncpy _LIBCPP_USING_IF_EXISTS;
+  using std::strpbrk _LIBCPP_USING_IF_EXISTS;
+  using std::strrchr _LIBCPP_USING_IF_EXISTS;
+  using std::strspn _LIBCPP_USING_IF_EXISTS;
+  using std::strstr _LIBCPP_USING_IF_EXISTS;
+  using std::strtok _LIBCPP_USING_IF_EXISTS;
+  using std::strxfrm _LIBCPP_USING_IF_EXISTS;
 } // namespace std

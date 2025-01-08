@@ -273,6 +273,93 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     Diags.Report(diag::err_mips_fp64_req) << "-mfp64";
     return false;
   }
+  // FPXX requires mips2+
+  if (FPMode == FPXX && CPU == "mips1") {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx" << CPU;
+    return false;
+  }
+  // -mmsa with -msoft-float makes nonsense
+  if (FloatABI == SoftFloat && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-msoft-float"
+                                                   << "-mmsa";
+    return false;
+  }
+  // Option -mmsa permitted on Mips32 iff revision 2 or higher is present
+  if (HasMSA && (CPU == "mips1" || CPU == "mips2" || getISARev() < 2) &&
+      ABI == "o32") {
+    Diags.Report(diag::err_mips_fp64_req) << "-mmsa";
+    return false;
+  }
+  // MSA requires FP64
+  if (FPMode == FPXX && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx"
+                                                   << "-mmsa";
+    return false;
+  }
+  if (FPMode == FP32 && HasMSA) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfp32"
+                                                   << "-mmsa";
+    return false;
+  }
 
   return true;
+}
+
+WindowsMipsTargetInfo::WindowsMipsTargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : WindowsTargetInfo<MipsTargetInfo>(Triple, Opts), Triple(Triple) {}
+
+void WindowsMipsTargetInfo::getVisualStudioDefines(
+    const LangOptions &Opts, MacroBuilder &Builder) const {
+  Builder.defineMacro("_M_MRX000", "4000");
+}
+
+TargetInfo::BuiltinVaListKind
+WindowsMipsTargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
+TargetInfo::CallingConvCheckResult
+WindowsMipsTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_X86StdCall:
+  case CC_X86ThisCall:
+  case CC_X86FastCall:
+  case CC_X86VectorCall:
+    return CCCR_Ignore;
+  case CC_C:
+  case CC_OpenCLKernel:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+  case CC_Swift:
+  case CC_SwiftAsync:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
+// Windows MIPS, MS (C++) ABI
+MicrosoftMipsTargetInfo::MicrosoftMipsTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : WindowsMipsTargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+}
+
+void MicrosoftMipsTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                               MacroBuilder &Builder) const {
+  WindowsMipsTargetInfo::getTargetDefines(Opts, Builder);
+  WindowsMipsTargetInfo::getVisualStudioDefines(Opts, Builder);
+}
+
+MinGWMipsTargetInfo::MinGWMipsTargetInfo(const llvm::Triple &Triple,
+                                         const TargetOptions &Opts)
+    : WindowsMipsTargetInfo(Triple, Opts) {
+  TheCXXABI.set(TargetCXXABI::GenericMIPS);
+}
+
+void MinGWMipsTargetInfo::getTargetDefines(const LangOptions &Opts,
+                                           MacroBuilder &Builder) const {
+  WindowsMipsTargetInfo::getTargetDefines(Opts, Builder);
+  Builder.defineMacro("_MIPS_");
 }

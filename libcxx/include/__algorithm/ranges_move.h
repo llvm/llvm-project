@@ -23,6 +23,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -32,8 +35,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using move_result = in_out_result<_InIter, _OutIter>;
 
-namespace __move {
-struct __fn {
+struct __move {
   template <class _InIter, class _Sent, class _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr static move_result<_InIter, _OutIter>
   __move_impl(_InIter __first, _Sent __last, _OutIter __result) {
@@ -55,15 +57,16 @@ struct __fn {
     return __move_impl(ranges::begin(__range), ranges::end(__range), std::move(__result));
   }
 };
-} // namespace __move
 
 inline namespace __cpo {
-inline constexpr auto move = __move::__fn{};
+inline constexpr auto move = __move{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MOVE_H

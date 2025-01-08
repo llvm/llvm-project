@@ -90,14 +90,14 @@ static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
 // TestCustomType
 //===----------------------------------------------------------------------===//
 
-static LogicalResult parseCustomTypeA(AsmParser &parser, int &aResult) {
+static ParseResult parseCustomTypeA(AsmParser &parser, int &aResult) {
   return parser.parseInteger(aResult);
 }
 
 static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
 
-static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
-                                      std::optional<int> &bResult) {
+static ParseResult parseCustomTypeB(AsmParser &parser, int a,
+                                    std::optional<int> &bResult) {
   if (a < 0)
     return success();
   for (int i : llvm::seq(0, a))
@@ -116,7 +116,7 @@ static void printCustomTypeB(AsmPrinter &printer, int a, std::optional<int> b) {
   printer << *b;
 }
 
-static LogicalResult parseFooString(AsmParser &parser, std::string &foo) {
+static ParseResult parseFooString(AsmParser &parser, std::string &foo) {
   std::string result;
   if (parser.parseString(&result))
     return failure();
@@ -128,7 +128,7 @@ static void printFooString(AsmPrinter &printer, StringRef foo) {
   printer << '"' << foo << '"';
 }
 
-static LogicalResult parseBarString(AsmParser &parser, StringRef foo) {
+static ParseResult parseBarString(AsmParser &parser, StringRef foo) {
   return parser.parseKeyword(foo);
 }
 
@@ -139,6 +139,7 @@ static void printBarString(AsmPrinter &printer, StringRef foo) {
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
+#include "TestTypeInterfaces.cpp.inc"
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.cpp.inc"
 
@@ -276,6 +277,12 @@ uint64_t TestTypeWithLayoutType::getPreferredAlignment(
   return extractKind(params, "preferred");
 }
 
+std::optional<uint64_t>
+TestTypeWithLayoutType::getIndexBitwidth(const DataLayout &dataLayout,
+                                         DataLayoutEntryListRef params) const {
+  return extractKind(params, "index");
+}
+
 bool TestTypeWithLayoutType::areCompatible(
     DataLayoutEntryListRef oldLayout, DataLayoutEntryListRef newLayout) const {
   unsigned old = extractKind(oldLayout, "alignment");
@@ -297,7 +304,7 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
     (void)kind;
     assert(kind &&
            (kind.getValue() == "size" || kind.getValue() == "alignment" ||
-            kind.getValue() == "preferred") &&
+            kind.getValue() == "preferred" || kind.getValue() == "index") &&
            "unexpected kind");
     assert(llvm::isa<IntegerAttr>(array.getValue().back()));
   }

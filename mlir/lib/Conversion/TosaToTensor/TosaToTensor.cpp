@@ -19,24 +19,98 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include <numeric>
+
 using namespace mlir;
 using namespace tosa;
 
-static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
-                                  ArrayRef<int64_t> rhsShape,
-                                  SmallVector<int64_t> &intermediateShape,
-                                  bool isDynamic) {
-  if (isDynamic) {
-    // TODO (natashaknk): Make dynamic intermediate shape not always be rank-1
-    intermediateShape = {ShapedType::kDynamic};
-    return true;
-  }
+namespace {
 
-  if (lhsShape.empty() || rhsShape.empty()) {
-    intermediateShape = {};
-    return true;
-  }
+// Infer the type to which the input of a 'tosa.reshape' op must be cast when
+// lowered.
+TensorType inferReshapeInputType(TypedValue<TensorType> input,
+                                 ArrayRef<int64_t> newShape) {
+  // No need to cast input for non-empty target shape
+  if (!newShape.empty())
+    return input.getType();
 
+  // The input type must be cast into a tensor with the same rank and all static
+  // dimensions set to 1. This prevents the generation of a tensor.collapse_shape
+  // op that converts a dynamically shaped tensor into a 0D tensor. While such
+  // construct is not incorrect on its own, bufferization cannot properly handle
+  // it at the moment, so we avoid it.
+  SmallVector<int64_t> shape(input.getType().getRank(), 1);
+  return input.getType().clone(shape);
+}
+
+// Infer the result type of 'tensor.expand_shape' in the collapse-expand
+// pair emitted for a 'tosa.reshape' op.
+TensorType inferReshapeExpandedType(TensorType inputType,
+                                    ArrayRef<int64_t> newShape) {
+  // Special case for 0D output tensor. Note: Watch out when using Type::clone()
+  // with just '{}', as it will invoke the incorrect overload.
+  if (newShape.empty())
+    return inputType.clone(ArrayRef<int64_t>{});
+
+  // Check if the input is static, and if so, get its total size
+  bool inputIsStatic = inputType.hasStaticShape();
+  int64_t totalSize = inputIsStatic ? inputType.getNumElements() : -1;
+
+  // Compute result shape
+  auto resultShape = llvm::map_to_vector(newShape, [&](int64_t size) -> int64_t {
+    // If this is not a placeholder, do not change it
+    if (size >= 0)
+      return size;
+
+    // If we do not know the total size of the tensor, keep this dimension
+    // dynamic in the result shape.
+    if (!inputIsStatic)
+      return ShapedType::kDynamic;
+
+    // Calculate the product of all elements in 'newShape' except for the -1
+    // placeholder, which we discard by negating the result.
+    int64_t totalSizeNoPlaceholder = -std::accumulate(
+        newShape.begin(), newShape.end(), 1, std::multiplies<int64_t>());
+
+    // If there is a 0 component in 'newShape', resolve the placeholder as 0.
+    if (totalSizeNoPlaceholder == 0)
+      return 0;
+
+    // Resolve the placeholder as the quotient between the total tensor size and
+    // the product of all other sizes.
+    return totalSize / totalSizeNoPlaceholder;
+  });
+
+  bool resultIsStatic = !ShapedType::isDynamicShape(resultShape);
+
+  // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
+  // shaped input from being reshaped into a statically shaped result. We may
+  // simply turn the first result dimension dynamic to address this.
+  if (!inputIsStatic && resultIsStatic)
+    resultShape[0] = ShapedType::kDynamic;
+
+  // The 'tensor.expand_shape' op also forbids a statically shaped input from
+  // being reshaped into a dynamically shaped result, but the placeholder
+  // inference algorithm above guarantees that this will never be the case.
+  assert(!inputIsStatic || resultIsStatic);
+
+  // Create result type
+  return inputType.clone(resultShape);
+}
+
+// Infer the result type of 'tensor.collapse_shape' in the collapse-expand
+// pair emitted for a 'tosa.reshape' op.
+TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
+  auto lhsShape = lhsType.getShape();
+  auto rhsShape = rhsType.getShape();
+
+  if (lhsShape.empty() || rhsShape.empty())
+    return lhsType.clone(ArrayRef<int64_t>{});
+
+  if (ShapedType::isDynamicShape(lhsShape) || ShapedType::isDynamicShape(rhsShape))
+    return lhsType.clone({ShapedType::kDynamic});
+
+  SmallVector<int64_t> intermediateShape;
   unsigned currLhsDim = 0, currRhsDim = 0;
   while (currLhsDim < lhsShape.size() && currRhsDim < rhsShape.size()) {
     int64_t rhsSize = rhsShape[currRhsDim];
@@ -62,174 +136,122 @@ static bool findIntermediateShape(ArrayRef<int64_t> lhsShape,
     currLhsDim++;
   }
 
-  // If the iterators didn't reach the end and their leftover dimensions are not
-  // equal to 1 an intermediate shape was not found.
-  while (currLhsDim < lhsShape.size()) {
-    if (lhsShape[currLhsDim++] != 1) {
-      return false;
-    }
+  // Static shapes are guaranteed to be compatible by the op verifier, so all
+  // leftover dimensions should be 1.
+  for (; currLhsDim < lhsShape.size(); currLhsDim++) {
+    assert(lhsShape[currLhsDim] == 1);
+  }
+  for (; currRhsDim < rhsShape.size(); currRhsDim++) {
+    assert(rhsShape[currRhsDim] == 1);
   }
 
-  while (currRhsDim < rhsShape.size()) {
-    if (rhsShape[currRhsDim++] != 1) {
-      return false;
-    }
-  }
-
-  return true;
+  return lhsType.clone(intermediateShape);
 }
 
-static bool createReassociationMapsForCollapse(
-    PatternRewriter &rewriter, ArrayRef<int64_t> srcShape,
-    ArrayRef<int64_t> dstShape,
-    SmallVector<ReassociationExprs, 4> &reassociationMap, bool isDynamic) {
+SmallVector<ReassociationExprs>
+createReassociationMapForCollapse(OpBuilder &builder, Type srcType, Type dstType) {
+  auto srcShape = cast<TensorType>(srcType).getShape();
+  auto dstShape = cast<TensorType>(dstType).getShape();
 
-  // If the shape is dynamic, create a map for collapsing into one dimension.
-  if (isDynamic) {
+  if (srcShape.empty() || dstShape.empty())
+    return {};
+
+  if (ShapedType::isDynamicShape(srcShape) || ShapedType::isDynamicShape(dstShape)) {
+    assert(dstShape.size() == 1);
     SmallVector<AffineExpr, 2> exprs;
-    for (int i = 0, s = srcShape.size(); i < s; ++i)
-      exprs.push_back(rewriter.getAffineDimExpr(i));
-    reassociationMap = {exprs};
-    return true;
+    for (auto i : llvm::seq<int64_t>(srcShape.size()))
+      exprs.push_back(builder.getAffineDimExpr(i));
+    return {exprs};
   }
 
-  if (dstShape.empty()) {
-    reassociationMap = {};
-    return true;
-  }
-
-  reassociationMap.resize(dstShape.size());
+  SmallVector<ReassociationExprs> reassociationMap(dstShape.size());
   unsigned currSrcDim = 0, currDstDim = 0;
   while (currSrcDim < srcShape.size() && currDstDim < dstShape.size()) {
     int64_t dstSize = dstShape[currDstDim];
     int64_t srcSize = srcShape[currSrcDim];
     while (srcSize < dstSize && currSrcDim < srcShape.size()) {
       reassociationMap[currDstDim].push_back(
-          rewriter.getAffineDimExpr(currSrcDim++));
+          builder.getAffineDimExpr(currSrcDim++));
       srcSize *= srcShape[currSrcDim];
     }
     if (srcSize == dstSize) {
       reassociationMap[currDstDim].push_back(
-          rewriter.getAffineDimExpr(currSrcDim++));
+          builder.getAffineDimExpr(currSrcDim++));
       // If the next dim in collapsedShape is not 1, treat subsequent dims in
       // expandedShape which are 1 to be collapsed.
       if (currDstDim == dstShape.size() - 1 || dstShape[currDstDim + 1] != 1) {
         while (currSrcDim < srcShape.size() && srcShape[currSrcDim] == 1) {
           reassociationMap[currDstDim].push_back(
-              rewriter.getAffineDimExpr(currSrcDim++));
+              builder.getAffineDimExpr(currSrcDim++));
         }
       }
     }
     currDstDim++;
   }
 
-  // If both iterators didn't reach the end, we have leftover dimentions which
-  // implies that we have a mismatch in shape.
-  return currSrcDim == srcShape.size() && currDstDim == dstShape.size();
+  // If the source and target shapes are compatible, both iterators must have
+  // reached the end. This condition is guaranteed by the op verifier for
+  // static shapes.
+  assert(currSrcDim == srcShape.size() && currDstDim == dstShape.size());
+  return reassociationMap;
 }
 
-namespace {
-Value createCollapse(ConversionPatternRewriter &rewriter, Location loc,
-                     ShapedType resultTy, Value operand) {
-  ShapedType operandTy = cast<ShapedType>(operand.getType());
-  if (resultTy == operandTy)
-    return operand;
-
-  bool isDynamic = !operandTy.hasStaticShape();
-
-  if (isDynamic && resultTy.getRank() != 1) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "Cannot collapse dynamic dims to more than one dimension");
-    return {};
-  }
-
-  SmallVector<ReassociationExprs, 4> reassociationMap;
-  if (!createReassociationMapsForCollapse(rewriter, operandTy.getShape(),
-                                          resultTy.getShape(),
-                                          reassociationMap, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Attempting to collapse into an incompatible shape");
-    return {};
-  }
-
-  SmallVector<int64_t> intermediateShape;
-  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                             intermediateShape, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Cannot collapse into given shape");
-    return {};
-  }
-  return rewriter.create<tensor::CollapseShapeOp>(loc, resultTy, operand,
-                                                  reassociationMap);
+// Create a tensor.collapse_shape op that reshapes the input into the given
+// result type.
+Value createCollapse(OpBuilder &builder, Location loc, TensorType resultType,
+                     Value input) {
+  auto reassociationMap =
+      createReassociationMapForCollapse(builder, input.getType(), resultType);
+  return builder.createOrFold<tensor::CollapseShapeOp>(loc, resultType, input,
+                                                       reassociationMap);
 }
 
-Value createExpand(ConversionPatternRewriter &rewriter, Location loc,
-                   ShapedType resultTy, Value operand) {
-  ShapedType operandTy = cast<ShapedType>(operand.getType());
-  if (resultTy == operandTy)
-    return operand;
-
-  bool isDynamic = !operandTy.hasStaticShape();
-
-  if (isDynamic && operandTy.getRank() != 1) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "Cannot expand dynamic dims from more than one dimension");
-    return {};
-  }
-
-  SmallVector<ReassociationExprs, 4> reassociationMap;
-  if (!createReassociationMapsForCollapse(rewriter, resultTy.getShape(),
-                                          operandTy.getShape(),
-                                          reassociationMap, isDynamic)) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Attempting to expand into an incompatible shape");
-    return {};
-  }
-
-  SmallVector<int64_t> intermediateShape;
-  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                             intermediateShape, isDynamic) ||
-      intermediateShape != operandTy.getShape()) {
-    (void)rewriter.notifyMatchFailure(
-        loc, "tosa.reshape Cannot expand into given shape");
-    return {};
-  }
-  return rewriter.create<tensor::ExpandShapeOp>(loc, resultTy, operand,
-                                                reassociationMap);
+// Create a tensor.expand_shape op that reshapes the input into the given result
+// type.
+Value createExpand(OpBuilder &builder, Location loc, TensorType resultType,
+                   Value input) {
+  auto reassociationMap =
+      createReassociationMapForCollapse(builder, resultType, input.getType());
+  return builder.createOrFold<tensor::ExpandShapeOp>(loc, resultType, input,
+                                                     reassociationMap);
 }
 
-class ReshapeConverterCollapseExpand
-    : public OpConversionPattern<tosa::ReshapeOp> {
+class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
-    ShapedType resultTy = cast<ShapedType>(reshape.getType());
-    bool isDynamic = !operandTy.hasStaticShape();
-
-    SmallVector<int64_t> intermediateShape;
-    if (!findIntermediateShape(resultTy.getShape(), operandTy.getShape(),
-                               intermediateShape, isDynamic)) {
-      return rewriter.notifyMatchFailure(
-          reshape, "tosa.reshape Cannot identify an intermediate shape between "
-                   "the given two shapes");
+    auto loc = reshape.getLoc();
+    auto resultType = cast_if_present<ShapedType>(
+        getTypeConverter()->convertType(reshape.getType()));
+    if (!resultType) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "could not convert result type");
     }
-    auto intermediateTy = RankedTensorType::get(
-        intermediateShape, reshape.getType().getElementType());
+    auto input = dyn_cast<TypedValue<TensorType>>(adaptor.getInput1());
+    if (!input) {
+      return rewriter.notifyMatchFailure(reshape.getLoc(),
+                                         "expected input type to be tensor");
+    }
+    auto newShape = reshape.getNewShape();
 
-    Value collapse = createCollapse(rewriter, reshape.getLoc(), intermediateTy,
-                                    adaptor.getInput1());
-    if (!collapse)
-      return failure();
+    // Infer all intermediate types
+    auto inputType = inferReshapeInputType(input, newShape);
+    auto expandedType = inferReshapeExpandedType(inputType, newShape);
+    auto collapsedType = inferReshapeCollapsedType(inputType, expandedType);
 
-    Value expand = createExpand(rewriter, reshape.getLoc(), resultTy, collapse);
-    if (!expand)
-      return failure();
+    // Cast input if needed
+    auto castInput = rewriter.createOrFold<tensor::CastOp>(loc, inputType, input);
 
-    rewriter.replaceOp(reshape, expand);
+    // Emit collaspe-expand pair
+    auto collapsed = createCollapse(rewriter, loc, collapsedType, castInput);
+    auto expanded = createExpand(rewriter, loc, expandedType, collapsed);
+
+    // Cast to final result type if needed
+    auto result = rewriter.createOrFold<tensor::CastOp>(loc, resultType, expanded);
+    rewriter.replaceOp(reshape, result);
     return success();
   }
 };
@@ -242,7 +264,7 @@ public:
   matchAndRewrite(tosa::SliceOp sliceOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
-    Value input = adaptor.getInput();
+    Value input = adaptor.getInput1();
     ShapedType resultType = cast<ShapedType>(sliceOp.getType());
     if (llvm::isa<UnrankedTensorType>(resultType))
       return failure();
@@ -275,12 +297,13 @@ public:
   }
 };
 
-class PadConverter : public OpRewritePattern<tosa::PadOp> {
+class PadConverter : public OpConversionPattern<tosa::PadOp> {
 public:
-  using OpRewritePattern<tosa::PadOp>::OpRewritePattern;
+  using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(tosa::PadOp padOp,
-                                PatternRewriter &rewriter) const final {
+  LogicalResult
+  matchAndRewrite(tosa::PadOp padOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
     auto loc = padOp.getLoc();
     auto input = padOp.getInput1();
     auto padding = padOp.getPadding();
@@ -315,11 +338,6 @@ public:
           padOp, "tosa.pad was unable to determine the pad constant value.");
     }
 
-    Value lowIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
-    Value highIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
-
     SmallVector<OpFoldResult, 3> lowValues;
     SmallVector<OpFoldResult, 3> highValues;
 
@@ -327,11 +345,12 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value inputIndex = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
+      Value lowIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i);
+      Value highIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i + 1);
       Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, lowIndex}));
+          loc, padding, ValueRange({lowIndex}));
       Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, highIndex}));
+          loc, padding, ValueRange({highIndex}));
 
       lowVal = rewriter.createOrFold<arith::IndexCastOp>(
           loc, rewriter.getIndexType(), lowVal);
@@ -360,8 +379,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 
     Location loc = op.getLoc();
     int axis = op.getAxis();
-    Value axisValue = rewriter.createOrFold<arith::ConstantOp>(
-        loc, rewriter.getIndexAttr(axis));
+    Value axisValue =
+        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(axis));
     int64_t rank = resultType.getRank();
 
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
@@ -415,9 +434,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
-    RewritePatternSet *patterns) {
-  patterns->add<SliceConverter, PadConverter, ConcatConverter>(
-      patterns->getContext());
-
-  patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext());
+    const TypeConverter &converter, RewritePatternSet *patterns) {
+  patterns
+      ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
+          converter, patterns->getContext());
 }

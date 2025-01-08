@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/SparcInstPrinter.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
 #include "SparcInstrInfo.h"
@@ -49,8 +50,7 @@ namespace {
     StringRef getPassName() const override { return "Sparc Assembly Printer"; }
 
     void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
-    void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,
-                         const char *Modifier = nullptr);
+    void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
 
     void emitFunctionBodyStart() override;
     void emitInstruction(const MachineInstr *MI) override;
@@ -109,6 +109,15 @@ static void EmitCall(MCStreamer &OutStreamer,
   CallInst.setOpcode(SP::CALL);
   CallInst.addOperand(Callee);
   OutStreamer.emitInstruction(CallInst, STI);
+}
+
+static void EmitRDPC(MCStreamer &OutStreamer, MCOperand &RD,
+                     const MCSubtargetInfo &STI) {
+  MCInst RDPCInst;
+  RDPCInst.setOpcode(SP::RDASR);
+  RDPCInst.addOperand(RD);
+  RDPCInst.addOperand(MCOperand::createReg(SP::ASR5));
+  OutStreamer.emitInstruction(RDPCInst, STI);
 }
 
 static void EmitSETHI(MCStreamer &OutStreamer,
@@ -226,7 +235,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   MCOperand RegO7   = MCOperand::createReg(SP::O7);
 
   // <StartLabel>:
-  //   call <EndLabel>
+  //   <GET-PC> // This will be either `call <EndLabel>` or `rd %pc, %o7`.
   // <SethiLabel>:
   //     sethi %hi(_GLOBAL_OFFSET_TABLE_+(<SethiLabel>-<StartLabel>)), <MO>
   // <EndLabel>:
@@ -234,8 +243,17 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   //   add <MO>, %o7, <MO>
 
   OutStreamer->emitLabel(StartLabel);
-  MCOperand Callee =  createPCXCallOP(EndLabel, OutContext);
-  EmitCall(*OutStreamer, Callee, STI);
+  if (!STI.getTargetTriple().isSPARC64() ||
+      STI.hasFeature(Sparc::TuneSlowRDPC)) {
+    MCOperand Callee = createPCXCallOP(EndLabel, OutContext);
+    EmitCall(*OutStreamer, Callee, STI);
+  } else {
+    // TODO find out whether it is possible to store PC
+    // in other registers, to enable leaf function optimization.
+    // (On the other hand, approx. over 97.8% of GETPCXes happen
+    // in non-leaf functions, so would this be worth the effort?)
+    EmitRDPC(*OutStreamer, RegO7, STI);
+  }
   OutStreamer->emitLabel(SethiLabel);
   MCOperand hiImm = createPCXRelExprOp(SparcMCExpr::VK_Sparc_PC22,
                                        GOTLabel, StartLabel, SethiLabel,
@@ -258,6 +276,12 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::DBG_VALUE:
     // FIXME: Debug Value.
     return;
+  case SP::CASArr:
+  case SP::SWAPrr:
+  case SP::SWAPri:
+    if (MF->getSubtarget<SparcSubtarget>().fixTN0011())
+      OutStreamer->emitCodeAlignment(Align(16), &getSubtargetInfo());
+    break;
   case SP::GETPCX:
     LowerGETPCXAndEmitMCInsts(MI, getSubtargetInfo());
     return;
@@ -295,57 +319,6 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   const MachineOperand &MO = MI->getOperand (opNum);
   SparcMCExpr::VariantKind TF = (SparcMCExpr::VariantKind) MO.getTargetFlags();
 
-#ifndef NDEBUG
-  // Verify the target flags.
-  if (MO.isGlobal() || MO.isSymbol() || MO.isCPI()) {
-    if (MI->getOpcode() == SP::CALL)
-      assert(TF == SparcMCExpr::VK_Sparc_None &&
-             "Cannot handle target flags on call address");
-    else if (MI->getOpcode() == SP::SETHIi)
-      assert((TF == SparcMCExpr::VK_Sparc_HI
-              || TF == SparcMCExpr::VK_Sparc_H44
-              || TF == SparcMCExpr::VK_Sparc_HH
-              || TF == SparcMCExpr::VK_Sparc_LM
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDO_HIX22
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_HI22
-              || TF == SparcMCExpr::VK_Sparc_TLS_LE_HIX22) &&
-             "Invalid target flags for address operand on sethi");
-    else if (MI->getOpcode() == SP::TLS_CALL)
-      assert((TF == SparcMCExpr::VK_Sparc_None
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_CALL
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_CALL) &&
-             "Cannot handle target flags on tls call address");
-    else if (MI->getOpcode() == SP::TLS_ADDrr)
-      assert((TF == SparcMCExpr::VK_Sparc_TLS_GD_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDO_ADD
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_ADD) &&
-             "Cannot handle target flags on add for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDrr)
-      assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LD &&
-             "Cannot handle target flags on ld for TLS");
-    else if (MI->getOpcode() == SP::TLS_LDXrr)
-      assert(TF == SparcMCExpr::VK_Sparc_TLS_IE_LDX &&
-             "Cannot handle target flags on ldx for TLS");
-    else if (MI->getOpcode() == SP::XORri)
-      assert((TF == SparcMCExpr::VK_Sparc_TLS_LDO_LOX10
-              || TF == SparcMCExpr::VK_Sparc_TLS_LE_LOX10) &&
-             "Cannot handle target flags on xor for TLS");
-    else
-      assert((TF == SparcMCExpr::VK_Sparc_LO
-              || TF == SparcMCExpr::VK_Sparc_M44
-              || TF == SparcMCExpr::VK_Sparc_L44
-              || TF == SparcMCExpr::VK_Sparc_HM
-              || TF == SparcMCExpr::VK_Sparc_TLS_GD_LO10
-              || TF == SparcMCExpr::VK_Sparc_TLS_LDM_LO10
-              || TF == SparcMCExpr::VK_Sparc_TLS_IE_LO10 ) &&
-             "Invalid target flags for small address operand");
-  }
-#endif
-
-
   bool CloseParen = SparcMCExpr::printVariantKind(O, TF);
 
   switch (MO.getType()) {
@@ -382,15 +355,8 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
 }
 
 void SparcAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
-                                      raw_ostream &O, const char *Modifier) {
+                                      raw_ostream &O) {
   printOperand(MI, opNum, O);
-
-  // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
-    O << ", ";
-    printOperand(MI, opNum+1, O);
-    return;
-  }
 
   if (MI->getOperand(opNum+1).isReg() &&
       MI->getOperand(opNum+1).getReg() == SP::G0)
@@ -415,6 +381,50 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'L': // Low order register of a twin word register operand
+    case 'H': // High order register of a twin word register operand
+    {
+      const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+      Register MOReg = MO.getReg();
+
+      Register HiReg, LoReg;
+      if (!SP::IntPairRegClass.contains(MOReg)) {
+        // If we aren't given a register pair already, find out which pair it
+        // belongs to. Note that here, the specified register operand, which
+        // refers to the high part of the twinword, needs to be an even-numbered
+        // register.
+        MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
+                                                  &SP::IntPairRegClass);
+        if (!MOReg) {
+          SMLoc Loc;
+          OutContext.reportError(
+              Loc, "Hi part of pair should point to an even-numbered register");
+          OutContext.reportError(
+              Loc, "(note that in some cases it might be necessary to manually "
+                   "bind the input/output registers instead of relying on "
+                   "automatic allocation)");
+          return true;
+        }
+      }
+
+      HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+      LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
+
+      Register Reg;
+      switch (ExtraCode[0]) {
+      case 'L':
+        Reg = LoReg;
+        break;
+      case 'H':
+        Reg = HiReg;
+        break;
+      }
+
+      O << '%' << SparcInstPrinter::getRegisterName(Reg);
+      return false;
+    }
     case 'f':
     case 'r':
      break;

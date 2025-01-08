@@ -25,7 +25,7 @@ int main(int, char**)
 //  Test the implicit deduction guides
     {
 //  optional()
-    std::optional opt;   // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'optional'}}
+    std::optional opt;   // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}optional'}}
     }
 
     {

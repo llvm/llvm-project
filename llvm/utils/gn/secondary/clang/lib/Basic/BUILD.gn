@@ -21,13 +21,18 @@ static_library("Basic") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
-    "//clang/include/clang/Basic:AttrLeftSideCanPrintList",
-    "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
-    "//clang/include/clang/Basic:AttrTokenKinds",
+    "//clang/include/clang/Basic:Builtins",
+    "//clang/include/clang/Basic:BuiltinsBPF",
+    "//clang/include/clang/Basic:BuiltinsRISCV",
+    "//clang/include/clang/Basic:BuiltinsSPIRV",
+    "//clang/include/clang/Basic:BuiltinsX86",
+    "//clang/include/clang/Basic:BuiltinsX86_64",
     "//clang/include/clang/Basic:DiagnosticGroups",
+    "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",
+    "//clang/include/clang/Basic:arm_immcheck_types",
     "//clang/include/clang/Basic:arm_mve_builtins",
     "//clang/include/clang/Basic:arm_sme_builtins",
     "//clang/include/clang/Basic:arm_sve_builtins",
@@ -60,6 +65,7 @@ static_library("Basic") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "ASTSourceDescriptor.cpp",
     "Attributes.cpp",
     "Builtins.cpp",
     "CLWarnings.cpp",
@@ -93,6 +99,7 @@ static_library("Basic") {
     "SourceManager.cpp",
     "SourceMgrAdapter.cpp",
     "Stack.cpp",
+    "StackExhaustionHandler.cpp",
     "TargetID.cpp",
     "TargetInfo.cpp",
     "Targets.cpp",
@@ -106,7 +113,6 @@ static_library("Basic") {
     "Targets/DirectX.cpp",
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
-    "Targets/Le64.cpp",
     "Targets/LoongArch.cpp",
     "Targets/M68k.cpp",
     "Targets/MSP430.cpp",
@@ -124,6 +130,7 @@ static_library("Basic") {
     "Targets/WebAssembly.cpp",
     "Targets/X86.cpp",
     "Targets/XCore.cpp",
+    "Targets/Xtensa.cpp",
     "TokenKinds.cpp",
     "TypeTraits.cpp",
     "Version.cpp",

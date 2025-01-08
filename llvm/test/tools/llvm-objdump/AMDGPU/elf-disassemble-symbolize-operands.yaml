@@ -43,7 +43,7 @@
 #
 # I compiled it to a relocatable ELF:
 #
-#   llc -march=amdgcn -mcpu=gfx1030 llvm/a.ll -filetype=obj -o a.elf
+#   llc -mtriple=amdgcn -mcpu=gfx1030 llvm/a.ll -filetype=obj -o a.elf
 #
 # then converted it to YAML:
 #

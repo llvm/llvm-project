@@ -3,5 +3,5 @@
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   set(CLANG_VISUALIZERS clang.natvis)
   add_custom_target(ClangVisualizers SOURCES ${CLANG_VISUALIZERS})
-  set_target_properties(ClangVisualizers PROPERTIES FOLDER "Utils")
+  set_target_properties(ClangVisualizers PROPERTIES FOLDER "Clang/Misc")
 endif()

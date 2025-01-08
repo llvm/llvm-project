@@ -63,15 +63,17 @@ export int aa = 43;
   std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
-    const char *Args[] = {
-        "clang++",       "-std=c++20", "--precompile", "-working-directory",
-        TestDir.c_str(), "a.cppm",     "-o",           BMIPath.c_str()};
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
+    CIOpts.Diags = Diags;
+
+    const char *Args[] = {"clang++",       "-std=c++20",
+                          "--precompile",  "-working-directory",
+                          TestDir.c_str(), "a.cppm"};
     std::shared_ptr<CompilerInvocation> Invocation =
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
@@ -88,6 +90,8 @@ export int aa = 43;
     Instance.setDiagnostics(Diags.get());
     Instance.setInvocation(Invocation);
 
+    Instance.getFrontendOpts().OutputFile = BMIPath;
+
     if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
             Instance.getInvocation(), Instance.getDiagnostics(), CIOpts.VFS))
       CIOpts.VFS = VFSWithRemapping;
@@ -95,17 +99,18 @@ export int aa = 43;
 
     Instance.getHeaderSearchOpts().ValidateASTInputFilesContent = true;
 
-    GenerateModuleInterfaceAction Action;
+    GenerateReducedModuleInterfaceAction Action;
     EXPECT_TRUE(Instance.ExecuteAction(Action));
     EXPECT_FALSE(Diags->hasErrorOccurred());
   }
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS,
+                                            new DiagnosticOptions());
+    CIOpts.Diags = Diags;
 
     std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
     const char *Args[] = {

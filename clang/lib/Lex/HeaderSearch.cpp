@@ -24,12 +24,11 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Errc.h"
@@ -37,6 +36,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -60,20 +60,21 @@ ALWAYS_ENABLED_STATISTIC(NumSubFrameworkLookups,
 
 const IdentifierInfo *
 HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
-  if (ControllingMacro) {
-    if (ControllingMacro->isOutOfDate()) {
-      assert(External && "We must have an external source if we have a "
-                         "controlling macro that is out of date.");
-      External->updateOutOfDateIdentifier(
-          *const_cast<IdentifierInfo *>(ControllingMacro));
-    }
-    return ControllingMacro;
+  if (LazyControllingMacro.isID()) {
+    if (!External)
+      return nullptr;
+
+    LazyControllingMacro =
+        External->GetIdentifier(LazyControllingMacro.getID());
+    return LazyControllingMacro.getPtr();
   }
 
-  if (!ControllingMacroID || !External)
-    return nullptr;
-
-  ControllingMacro = External->GetIdentifier(ControllingMacroID);
+  IdentifierInfo *ControllingMacro = LazyControllingMacro.getPtr();
+  if (ControllingMacro && ControllingMacro->isOutOfDate()) {
+    assert(External && "We must have an external source if we have a "
+                       "controlling macro that is out of date.");
+    External->updateOutOfDateIdentifier(*ControllingMacro);
+  }
   return ControllingMacro;
 }
 
@@ -141,6 +142,28 @@ std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
   return UserEntryUsage;
 }
 
+std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
+  std::vector<bool> VFSUsage;
+  if (!getHeaderSearchOpts().ModulesIncludeVFSUsage)
+    return VFSUsage;
+
+  llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
+  // TODO: This only works if the `RedirectingFileSystem`s were all created by
+  //       `createVFSFromOverlayFiles`.
+  RootFS.visit([&](llvm::vfs::FileSystem &FS) {
+    if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
+      VFSUsage.push_back(RFS->hasBeenUsed());
+      RFS->clearHasBeenUsed();
+    }
+  });
+  assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
+         "A different number of RedirectingFileSystem's were present than "
+         "-ivfsoverlay options passed to Clang!");
+  // VFS visit order is the opposite of VFSOverlayFiles order.
+  std::reverse(VFSUsage.begin(), VFSUsage.end());
+  return VFSUsage;
+}
+
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
 /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
 const HeaderMap *HeaderSearch::CreateHeaderMap(FileEntryRef FE) {
@@ -203,7 +226,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
                                           ".pcm");
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
-    if (getFileMgr().getFile(Result.str()))
+    if (getFileMgr().getOptionalFileRef(Result))
       return std::string(Result);
   }
 
@@ -222,7 +245,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
-    if (!FileName.empty() && getFileMgr().getFile(FileName))
+    if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
       return FileName;
   }
   return {};
@@ -243,7 +266,6 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     return {};
 
   SmallString<256> Result(CachePath);
-  llvm::sys::fs::make_absolute(Result);
 
   if (HSOpts->DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
@@ -259,10 +281,10 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
 
-    llvm::hash_code Hash = llvm::hash_combine(CanonicalPath.str().lower());
+    auto Hash = llvm::xxh3_64bits(CanonicalPath.str().lower());
 
     SmallString<128> HashStr;
-    llvm::APInt(64, size_t(Hash)).toStringUnsigned(HashStr, /*Radix*/36);
+    llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
   return Result.str().str();
@@ -354,20 +376,22 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
         break;
     }
 
-    // If we've already performed the exhaustive search for module maps in this
-    // search directory, don't do it again.
-    if (Dir.haveSearchedAllModuleMaps())
-      continue;
+    if (HSOpts->AllowModuleMapSubdirectorySearch) {
+      // If we've already performed the exhaustive search for module maps in
+      // this search directory, don't do it again.
+      if (Dir.haveSearchedAllModuleMaps())
+        continue;
 
-    // Load all module maps in the immediate subdirectories of this search
-    // directory if ModuleName was from @import.
-    if (AllowExtraModuleMapSearch)
-      loadSubdirectoryModuleMaps(Dir);
+      // Load all module maps in the immediate subdirectories of this search
+      // directory if ModuleName was from @import.
+      if (AllowExtraModuleMapSearch)
+        loadSubdirectoryModuleMaps(Dir);
 
-    // Look again for the module.
-    Module = ModMap.findModule(ModuleName);
-    if (Module)
-      break;
+      // Look again for the module.
+      Module = ModMap.findModule(ModuleName);
+      if (Module)
+        break;
+    }
   }
 
   return Module;
@@ -630,7 +654,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     ++NumFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
-    auto Dir = FileMgr.getDirectory(FrameworkName);
+    auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkName);
     if (!Dir)
       return std::nullopt;
 
@@ -693,7 +717,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     bool FoundFramework = false;
     do {
       // Determine whether this directory exists.
-      auto Dir = FileMgr.getDirectory(FrameworkPath);
+      auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkPath);
       if (!Dir)
         break;
 
@@ -925,9 +949,13 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       // If we have no includer, that means we're processing a #include
       // from a module build. We should treat this as a system header if we're
       // building a [system] module.
-      bool IncluderIsSystemHeader =
-          Includer ? getFileInfo(*Includer).DirInfo != SrcMgr::C_User :
-          BuildSystemModule;
+      bool IncluderIsSystemHeader = [&]() {
+        if (!Includer)
+          return BuildSystemModule;
+        const HeaderFileInfo *HFI = getExistingFileInfo(*Includer);
+        assert(HFI && "includer without file info");
+        return HFI->DirInfo != SrcMgr::C_User;
+      }();
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
@@ -942,15 +970,12 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         // Note that we only use one of FromHFI/ToHFI at once, due to potential
         // reallocation of the underlying vector potentially making the first
         // reference binding dangling.
-        HeaderFileInfo &FromHFI = getFileInfo(*Includer);
-        unsigned DirInfo = FromHFI.DirInfo;
-        bool IndexHeaderMapHeader = FromHFI.IndexHeaderMapHeader;
-        StringRef Framework = FromHFI.Framework;
+        const HeaderFileInfo *FromHFI = getExistingFileInfo(*Includer);
+        assert(FromHFI && "includer without file info");
+        unsigned DirInfo = FromHFI->DirInfo;
 
         HeaderFileInfo &ToHFI = getFileInfo(*FE);
         ToHFI.DirInfo = DirInfo;
-        ToHFI.IndexHeaderMapHeader = IndexHeaderMapHeader;
-        ToHFI.Framework = Framework;
 
         if (SearchPath) {
           StringRef SearchPathRef(IncluderAndDir.second.getName());
@@ -1092,23 +1117,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       }
     }
 
-    // Set the `Framework` info if this file is in a header map with framework
-    // style include spelling or found in a framework dir. The header map case
-    // is possible when building frameworks which use header maps.
-    if (CurDir->isHeaderMap() && isAngled) {
-      size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos)
-        HFI.Framework =
-            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
-      if (CurDir->isIndexHeaderMap())
-        HFI.IndexHeaderMapHeader = 1;
-    } else if (CurDir->isFramework()) {
-      size_t SlashPos = Filename.find('/');
-      if (SlashPos != StringRef::npos)
-        HFI.Framework =
-            getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
-    }
-
     if (checkMSVCHeaderSearch(Diags, MSFE, &File->getFileEntry(), IncludeLoc)) {
       if (SuggestedModule)
         *SuggestedModule = MSSuggestedModule;
@@ -1124,39 +1132,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     // Remember this location for the next lookup we do.
     cacheLookupSuccess(CacheLookup, It, IncludeLoc);
     return File;
-  }
-
-  // If we are including a file with a quoted include "foo.h" from inside
-  // a header in a framework that is currently being built, and we couldn't
-  // resolve "foo.h" any other way, change the include to <Foo/foo.h>, where
-  // "Foo" is the name of the framework in which the including header was found.
-  if (!Includers.empty() && Includers.front().first && !isAngled &&
-      !Filename.contains('/')) {
-    HeaderFileInfo &IncludingHFI = getFileInfo(*Includers.front().first);
-    if (IncludingHFI.IndexHeaderMapHeader) {
-      SmallString<128> ScratchFilename;
-      ScratchFilename += IncludingHFI.Framework;
-      ScratchFilename += '/';
-      ScratchFilename += Filename;
-
-      OptionalFileEntryRef File = LookupFile(
-          ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir, &CurDir,
-          Includers.front(), SearchPath, RelativePath, RequestingModule,
-          SuggestedModule, IsMapped, /*IsFrameworkFound=*/nullptr);
-
-      if (checkMSVCHeaderSearch(Diags, MSFE,
-                                File ? &File->getFileEntry() : nullptr,
-                                IncludeLoc)) {
-        if (SuggestedModule)
-          *SuggestedModule = MSSuggestedModule;
-        return MSFE;
-      }
-
-      cacheLookupSuccess(LookupFileCache[Filename],
-                         LookupFileCache[ScratchFilename].HitIt, IncludeLoc);
-      // FIXME: SuggestedModule.
-      return File;
-    }
   }
 
   if (checkMSVCHeaderSearch(Diags, MSFE, nullptr, IncludeLoc)) {
@@ -1265,11 +1240,11 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
   }
 
   // This file is a system header or C++ unfriendly if the old file is.
-  //
-  // Note that the temporary 'DirInfo' is required here, as either call to
-  // getFileInfo could resize the vector and we don't want to rely on order
-  // of evaluation.
-  unsigned DirInfo = getFileInfo(ContextFileEnt).DirInfo;
+  const HeaderFileInfo *ContextHFI = getExistingFileInfo(ContextFileEnt);
+  assert(ContextHFI && "context file without file info");
+  // Note that the temporary 'DirInfo' is required here, as the call to
+  // getFileInfo could resize the vector and might invalidate 'ContextHFI'.
+  unsigned DirInfo = ContextHFI->DirInfo;
   getFileInfo(*File).DirInfo = DirInfo;
 
   FrameworkName.pop_back(); // remove the trailing '/'
@@ -1285,6 +1260,30 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
 // File Info Management.
 //===----------------------------------------------------------------------===//
 
+static bool moduleMembershipNeedsMerge(const HeaderFileInfo *HFI,
+                                       ModuleMap::ModuleHeaderRole Role) {
+  if (ModuleMap::isModular(Role))
+    return !HFI->isModuleHeader || HFI->isTextualModuleHeader;
+  if (!HFI->isModuleHeader && (Role & ModuleMap::TextualHeader))
+    return !HFI->isTextualModuleHeader;
+  return false;
+}
+
+static void mergeHeaderFileInfoModuleBits(HeaderFileInfo &HFI,
+                                          bool isModuleHeader,
+                                          bool isTextualModuleHeader) {
+  HFI.isModuleHeader |= isModuleHeader;
+  if (HFI.isModuleHeader)
+    HFI.isTextualModuleHeader = false;
+  else
+    HFI.isTextualModuleHeader |= isTextualModuleHeader;
+}
+
+void HeaderFileInfo::mergeModuleMembership(ModuleMap::ModuleHeaderRole Role) {
+  mergeHeaderFileInfoModuleBits(*this, ModuleMap::isModular(Role),
+                                (Role & ModuleMap::TextualHeader));
+}
+
 /// Merge the header file info provided by \p OtherHFI into the current
 /// header file info (\p HFI)
 static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
@@ -1293,24 +1292,17 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 
   HFI.isImport |= OtherHFI.isImport;
   HFI.isPragmaOnce |= OtherHFI.isPragmaOnce;
-  HFI.isModuleHeader |= OtherHFI.isModuleHeader;
+  mergeHeaderFileInfoModuleBits(HFI, OtherHFI.isModuleHeader,
+                                OtherHFI.isTextualModuleHeader);
 
-  if (!HFI.ControllingMacro && !HFI.ControllingMacroID) {
-    HFI.ControllingMacro = OtherHFI.ControllingMacro;
-    HFI.ControllingMacroID = OtherHFI.ControllingMacroID;
-  }
+  if (!HFI.LazyControllingMacro.isValid())
+    HFI.LazyControllingMacro = OtherHFI.LazyControllingMacro;
 
   HFI.DirInfo = OtherHFI.DirInfo;
   HFI.External = (!HFI.IsValid || HFI.External);
   HFI.IsValid = true;
-  HFI.IndexHeaderMapHeader = OtherHFI.IndexHeaderMapHeader;
-
-  if (HFI.Framework.empty())
-    HFI.Framework = OtherHFI.Framework;
 }
 
-/// getFileInfo - Return the HeaderFileInfo structure for the specified
-/// FileEntry.
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
   if (FE.getUID() >= FileInfo.size())
     FileInfo.resize(FE.getUID() + 1);
@@ -1327,27 +1319,20 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
   }
 
   HFI->IsValid = true;
-  // We have local information about this header file, so it's no longer
-  // strictly external.
+  // We assume the caller has local information about this header file, so it's
+  // no longer strictly external.
   HFI->External = false;
   return *HFI;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingFileInfo(FileEntryRef FE, bool WantExternal) const {
-  // If we have an external source, ensure we have the latest information.
-  // FIXME: Use a generation count to check whether this is really up to date.
+const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size()) {
-      if (!WantExternal)
-        return nullptr;
+    if (FE.getUID() >= FileInfo.size())
       FileInfo.resize(FE.getUID() + 1);
-    }
 
     HFI = &FileInfo[FE.getUID()];
-    if (!WantExternal && (!HFI->IsValid || HFI->External))
-      return nullptr;
+    // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
       if (ExternalHFI.IsValid) {
@@ -1356,16 +1341,25 @@ HeaderSearch::getExistingFileInfo(FileEntryRef FE, bool WantExternal) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() >= FileInfo.size()) {
-    return nullptr;
-  } else {
+  } else if (FE.getUID() < FileInfo.size()) {
     HFI = &FileInfo[FE.getUID()];
+  } else {
+    HFI = nullptr;
   }
 
-  if (!HFI->IsValid || (HFI->External && !WantExternal))
-    return nullptr;
+  return (HFI && HFI->IsValid) ? HFI : nullptr;
+}
 
-  return HFI;
+const HeaderFileInfo *
+HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
+  HeaderFileInfo *HFI;
+  if (FE.getUID() < FileInfo.size()) {
+    HFI = &FileInfo[FE.getUID()];
+  } else {
+    HFI = nullptr;
+  }
+
+  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
@@ -1373,27 +1367,24 @@ bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
   // once. Note that we dor't check for #import, because that's not a property
   // of the file itself.
   if (auto *HFI = getExistingFileInfo(File))
-    return HFI->isPragmaOnce || HFI->ControllingMacro ||
-           HFI->ControllingMacroID;
+    return HFI->isPragmaOnce || HFI->LazyControllingMacro.isValid();
   return false;
 }
 
 void HeaderSearch::MarkFileModuleHeader(FileEntryRef FE,
                                         ModuleMap::ModuleHeaderRole Role,
                                         bool isCompilingModuleHeader) {
-  bool isModularHeader = ModuleMap::isModular(Role);
-
   // Don't mark the file info as non-external if there's nothing to change.
   if (!isCompilingModuleHeader) {
-    if (!isModularHeader)
+    if ((Role & ModuleMap::ExcludedHeader))
       return;
     auto *HFI = getExistingFileInfo(FE);
-    if (HFI && HFI->isModuleHeader)
+    if (HFI && !moduleMembershipNeedsMerge(HFI, Role))
       return;
   }
 
   auto &HFI = getFileInfo(FE);
-  HFI.isModuleHeader |= isModularHeader;
+  HFI.mergeModuleMembership(Role);
   HFI.isCompilingModuleHeader |= isCompilingModuleHeader;
 }
 
@@ -1401,74 +1392,128 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
                                           FileEntryRef File, bool isImport,
                                           bool ModulesEnabled, Module *M,
                                           bool &IsFirstIncludeOfFile) {
-  ++NumIncluded; // Count # of attempted #includes.
-
+  // An include file should be entered if either:
+  // 1. This is the first include of the file.
+  // 2. This file can be included multiple times, that is it's not an
+  //    "include-once" file.
+  //
+  // Include-once is controlled by these preprocessor directives.
+  //
+  // #pragma once
+  // This directive is in the include file, and marks it as an include-once
+  // file.
+  //
+  // #import <file>
+  // This directive is in the includer, and indicates that the include file
+  // should only be entered if this is the first include.
+  ++NumIncluded;
   IsFirstIncludeOfFile = false;
-
-  // Get information about this file.
   HeaderFileInfo &FileInfo = getFileInfo(File);
 
-  // FIXME: this is a workaround for the lack of proper modules-aware support
-  // for #import / #pragma once
-  auto TryEnterImported = [&]() -> bool {
-    if (!ModulesEnabled)
+  auto MaybeReenterImportedFile = [&]() -> bool {
+    // Modules add a wrinkle though: what's included isn't necessarily visible.
+    // Consider this module.
+    // module Example {
+    //   module A { header "a.h" export * }
+    //   module B { header "b.h" export * }
+    // }
+    // b.h includes c.h. The main file includes a.h, which will trigger a module
+    // build of Example, and c.h will be included. However, c.h isn't visible to
+    // the main file. Normally this is fine, the main file can just include c.h
+    // if it needs it. If c.h is in a module, the include will translate into a
+    // module import, this function will be skipped, and everything will work as
+    // expected. However, if c.h is not in a module (or is `textual`), then this
+    // function will run. If c.h is include-once, it will not be entered from
+    // the main file and it will still not be visible.
+
+    // If modules aren't enabled then there's no visibility issue. Always
+    // respect `#pragma once`.
+    if (!ModulesEnabled || FileInfo.isPragmaOnce)
       return false;
+
     // Ensure FileInfo bits are up to date.
     ModMap.resolveHeaderDirectives(File);
-    // Modules with builtins are special; multiple modules use builtins as
-    // modular headers, example:
-    //
-    //    module stddef { header "stddef.h" export * }
-    //
-    // After module map parsing, this expands to:
-    //
-    //    module stddef {
-    //      header "/path_to_builtin_dirs/stddef.h"
-    //      textual "stddef.h"
-    //    }
-    //
-    // It's common that libc++ and system modules will both define such
-    // submodules. Make sure cached results for a builtin header won't
-    // prevent other builtin modules from potentially entering the builtin
-    // header. Note that builtins are header guarded and the decision to
-    // actually enter them is postponed to the controlling macros logic below.
-    bool TryEnterHdr = false;
-    if (FileInfo.isCompilingModuleHeader && FileInfo.isModuleHeader)
-      TryEnterHdr = ModMap.isBuiltinHeader(File);
 
-    // Textual headers can be #imported from different modules. Since ObjC
-    // headers find in the wild might rely only on #import and do not contain
-    // controlling macros, be conservative and only try to enter textual headers
-    // if such macro is present.
-    if (!FileInfo.isModuleHeader &&
-        FileInfo.getControllingMacro(ExternalLookup))
-      TryEnterHdr = true;
-    return TryEnterHdr;
+    // This brings up a subtlety of #import - it's not a very good indicator of
+    // include-once. Developers are often unaware of the difference between
+    // #include and #import, and tend to use one or the other indiscrimiately.
+    // In order to support #include on include-once headers that lack macro
+    // guards and `#pragma once` (which is the vast majority of Objective-C
+    // headers), if a file is ever included with #import, it's marked as
+    // isImport in the HeaderFileInfo and treated as include-once. This allows
+    // #include to work in Objective-C.
+    // #include <Foundation/Foundation.h>
+    // #include <Foundation/NSString.h>
+    // Foundation.h has an #import of NSString.h, and so the second #include is
+    // skipped even though NSString.h has no `#pragma once` and no macro guard.
+    //
+    // However, this helpfulness causes problems with modules. If c.h is not an
+    // include-once file, but something included it with #import anyway (as is
+    // typical in Objective-C code), this include will be skipped and c.h will
+    // not be visible. Consider it not include-once if it is a `textual` header
+    // in a module.
+    if (FileInfo.isTextualModuleHeader)
+      return true;
+
+    if (FileInfo.isCompilingModuleHeader) {
+      // It's safer to re-enter a file whose module is being built because its
+      // declarations will still be scoped to a single module.
+      if (FileInfo.isModuleHeader) {
+        // Headers marked as "builtin" are covered by the system module maps
+        // rather than the builtin ones. Some versions of the Darwin module fail
+        // to mark stdarg.h and stddef.h as textual. Attempt to re-enter these
+        // files while building their module to allow them to function properly.
+        if (ModMap.isBuiltinHeader(File))
+          return true;
+      } else {
+        // Files that are excluded from their module can potentially be
+        // re-entered from their own module. This might cause redeclaration
+        // errors if another module saw this file first, but there's a
+        // reasonable chance that its module will build first. However if
+        // there's no controlling macro, then trust the #import and assume this
+        // really is an include-once file.
+        if (FileInfo.getControllingMacro(ExternalLookup))
+          return true;
+      }
+    }
+    // If the include file has a macro guard, then it might still not be
+    // re-entered if the controlling macro is visibly defined. e.g. another
+    // header in the module being built included this file and local submodule
+    // visibility is not enabled.
+
+    // It might be tempting to re-enter the include-once file if it's not
+    // visible in an attempt to make it visible. However this will still cause
+    // redeclaration errors against the known-but-not-visible declarations. The
+    // include file not being visible will most likely cause "undefined x"
+    // errors, but at least there's a slim chance of compilation succeeding.
+    return false;
   };
 
-  // If this is a #import directive, check that we have not already imported
-  // this header.
   if (isImport) {
-    // If this has already been imported, don't import it again.
+    // As discussed above, record that this file was ever `#import`ed, and treat
+    // it as an include-once file from here out.
     FileInfo.isImport = true;
-
-    // Has this already been #import'ed or #include'd?
-    if (PP.alreadyIncluded(File) && !TryEnterImported())
+    if (PP.alreadyIncluded(File) && !MaybeReenterImportedFile())
       return false;
   } else {
-    // Otherwise, if this is a #include of a file that was previously #import'd
-    // or if this is the second #include of a #pragma once file, ignore it.
-    if ((FileInfo.isPragmaOnce || FileInfo.isImport) && !TryEnterImported())
+    // isPragmaOnce and isImport are only set after the file has been included
+    // at least once. If either are set then this is a repeat #include of an
+    // include-once file.
+    if (FileInfo.isPragmaOnce ||
+        (FileInfo.isImport && !MaybeReenterImportedFile()))
       return false;
   }
 
-  // Next, check to see if the file is wrapped with #ifndef guards.  If so, and
-  // if the macro that guards it is defined, we know the #include has no effect.
-  if (const IdentifierInfo *ControllingMacro
-      = FileInfo.getControllingMacro(ExternalLookup)) {
+  // As a final optimization, check for a macro guard and skip entering the file
+  // if the controlling macro is defined. The macro guard will effectively erase
+  // the file's contents, and the include would have no effect other than to
+  // waste time opening and reading a file.
+  if (const IdentifierInfo *ControllingMacro =
+          FileInfo.getControllingMacro(ExternalLookup)) {
     // If the header corresponds to a module, check whether the macro is already
-    // defined in that module rather than checking in the current set of visible
-    // modules.
+    // defined in that module rather than checking all visible modules. This is
+    // mainly to cover corner cases where the same controlling macro is used in
+    // different files in multiple modules.
     if (M ? PP.isMacroDefinedInLocalModule(ControllingMacro, M)
           : PP.isMacroDefined(ControllingMacro)) {
       ++NumMultiIncludeFileOptzn;
@@ -1477,7 +1522,6 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
   }
 
   IsFirstIncludeOfFile = PP.markIncluded(File);
-
   return true;
 }
 
@@ -1941,6 +1985,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   using namespace llvm::sys;
 
   llvm::SmallString<32> FilePath = File;
+  if (!WorkingDir.empty() && !path::is_absolute(FilePath))
+    fs::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).

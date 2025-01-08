@@ -582,7 +582,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
   int gtid;
 
 #if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   gtid = __kmp_entry_gtid();
 #elif KMP_OS_WINDOWS
   if (!__kmp_init_parallel ||
@@ -1427,6 +1427,8 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_PAUSE_RESOURCE)(kmp_pause_status_t kind,
 #ifdef KMP_STUB
   return 1; // just fail
 #else
+  if (kind == kmp_stop_tool_paused)
+    return 1; // stop_tool must not be specified
   if (device_num == KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)())
     return __kmpc_pause_resource(kind);
   else {

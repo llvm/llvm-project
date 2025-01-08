@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/bar.s -o %t/bar.o
 # RUN: %lld -lSystem %t/foo.o %t/bar.o -o %t/main.exe
 # RUN: llvm-otool -l %t/main.exe > %t/objdump
-# RUN: llvm-objdump --macho --data-in-code %t/main.exe >> %t/objdump
+# RUN: llvm-otool -Gv %t/main.exe >> %t/objdump
 # RUN: FileCheck %s < %t/objdump
 
 # CHECK-LABEL:  sectname __text
@@ -18,12 +18,13 @@
 # CHECK-LABEL:  cmd LC_DATA_IN_CODE
 # CHECK-NEXT:   cmdsize 16
 # CHECK-NEXT:   dataoff
-# CHECK-NEXT:   datasize 16
+# CHECK-NEXT:   datasize 24
 
-# CHECK-LABEL:  Data in code table (2 entries)
+# CHECK-LABEL:  Data in code table (3 entries)
 # CHECK-NEXT:   offset length kind
 # CHECK-NEXT:   [[#%x,TEXT + 28]] 24 JUMP_TABLE32
-# CHECK-NEXT:   [[#%x,TEXT + 68]] 12 JUMP_TABLE32
+# CHECK-NEXT:   [[#%x,TEXT + 68]] 8 JUMP_TABLE32
+# CHECK-NEXT:   [[#%x,TEXT + 84]] 12 JUMP_TABLE32
 
 # RUN: %lld -lSystem %t/foo.o %t/bar.o -no_data_in_code_info -o %t/main.exe
 # RUN: llvm-otool -l %t/main.exe | FileCheck --check-prefix=OMIT %s
@@ -32,11 +33,22 @@
 
 # RUN: %lld -lSystem %t/foo.o %t/bar.o -no_data_in_code_info -data_in_code_info -o %t/main.exe
 # RUN: llvm-otool -l %t/main.exe > %t/objdump
-# RUN: llvm-objdump --macho --data-in-code %t/main.exe >> %t/objdump
+# RUN: llvm-otool -Gv %t/main.exe >> %t/objdump
 # RUN: FileCheck %s < %t/objdump
 
 #--- foo.s
 .text
+.section __TEXT,__StaticInit,regular,pure_instructions
+.p2align 4, 0x90
+_some_init_function:
+retq
+.p2align 2, 0x90
+.data_region jt32
+.long 0
+.long 0
+.end_data_region
+
+.section __TEXT,__text,regular,pure_instructions
 .globl _main
 .p2align 4, 0x90
 _main:

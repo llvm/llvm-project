@@ -5,6 +5,14 @@
 ; RUN: llc < %s -filetype=obj -o %t
 ; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
 
+; Repeat with experimental debuginfo iterators:
+; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc --try-experimental-debuginfo-iterators < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefixes=YAML,YAML-STDOUT
+; RUN: llc --try-experimental-debuginfo-iterators < %s -filetype=obj -o %t
+; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
+
 ; C++ source to regenerate:
 ; $ cat a.cpp
 ; int first;

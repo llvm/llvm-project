@@ -8,8 +8,6 @@
 //
 // This file describes the RISC-V instructions from the standard Integer
 // Conditional operations extension (Zicond).
-// This version is still experimental as the 'Zicond' extension hasn't been
-// ratified yet. It is based on v1.0-rc1 of the specification.
 //
 //===----------------------------------------------------------------------===//
 

@@ -12,6 +12,7 @@ clang_diag_gen(Common)
 clang_diag_gen(CrossTU)
 clang_diag_gen(Driver)
 clang_diag_gen(Frontend)
+clang_diag_gen(InstallAPI)
 clang_diag_gen(Lex)
 clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
@@ -30,25 +31,15 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
-clang_tablegen(AttrLeftSideCanPrintList.inc -gen-clang-attr-can-print-left-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
-  SOURCE Attr.td
-  TARGET ClangAttrCanPrintLeftList)
-
-clang_tablegen(AttrLeftSideMustPrintList.inc -gen-clang-attr-must-print-left-list
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
-  SOURCE Attr.td
-  TARGET ClangAttrMustPrintLeftList)
-
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
-clang_tablegen(AttrTokenKinds.inc -gen-clang-attr-token-kinds
+clang_tablegen(RegularKeywordAttrInfo.inc -gen-clang-regular-keyword-attr-info
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
-  TARGET ClangAttrTokenKinds
+  TARGET ClangRegularKeywordAttrInfo
   )
 
 clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
@@ -57,6 +48,30 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   TARGET ClangAttrHasAttributeImpl
   )
 
+clang_tablegen(Builtins.inc -gen-clang-builtins
+  SOURCE Builtins.td
+  TARGET ClangBuiltins)
+
+clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
+  SOURCE BuiltinsBPF.td
+  TARGET ClangBuiltinsBPF)
+
+clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
+  SOURCE BuiltinsRISCV.td
+  TARGET ClangBuiltinsRISCV)
+
+clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRV.td
+  TARGET ClangBuiltinsSPIRV)
+
+clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
+  SOURCE BuiltinsX86.td
+  TARGET ClangBuiltinsX86)
+
+clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
+  SOURCE BuiltinsX86_64.td
+  TARGET ClangBuiltinsX86_64)
+
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema
   SOURCE arm_neon.td
@@ -64,6 +79,9 @@ clang_tablegen(arm_neon.inc -gen-arm-neon-sema
 clang_tablegen(arm_fp16.inc -gen-arm-neon-sema
   SOURCE arm_fp16.td
   TARGET ClangARMFP16)
+clang_tablegen(arm_immcheck_types.inc -gen-arm-immcheck-types
+  SOURCE arm_sve.td
+  TARGET ClangARMImmChecks)
 clang_tablegen(arm_mve_builtins.inc -gen-arm-mve-builtin-def
   SOURCE arm_mve.td
   TARGET ClangARMMveBuiltinsDef)

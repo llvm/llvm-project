@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo(i1 %c) {
 entry:
-; CHECK: %[[BIAS:[0-9]+]] = load i64, ptr @__llvm_profile_counter_bias
+; CHECK: %[[BIAS:.+]] = load i64, ptr @__llvm_profile_counter_bias
   br label %while.cond
 
 while.cond:                                       ; preds = %land.rhs, %while.cond.preheader

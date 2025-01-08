@@ -191,7 +191,7 @@ public:
 };
 
 /// Class that handles pre-initialization statement for some clauses, like
-/// 'shedule', 'firstprivate' etc.
+/// 'schedule', 'firstprivate' etc.
 class OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
@@ -316,10 +316,10 @@ public:
   unsigned varlist_size() const { return NumVars; }
   bool varlist_empty() const { return NumVars == 0; }
 
-  varlist_range varlists() {
+  varlist_range varlist() {
     return varlist_range(varlist_begin(), varlist_end());
   }
-  varlist_const_range varlists() const {
+  varlist_const_range varlist() const {
     return varlist_const_range(varlist_begin(), varlist_end());
   }
 
@@ -340,6 +340,66 @@ public:
         static_cast<const T *>(this)->template getTrailingObjects<Expr *>(),
         NumVars);
   }
+};
+
+/// Class that represents a list of directive kinds (parallel, target, etc.)
+/// as used in \c absent, \c contains clauses.
+template <class T> class OMPDirectiveListClause : public OMPClause {
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+protected:
+  /// Number of directive kinds listed in the clause
+  unsigned NumKinds;
+
+public:
+  /// Build a clause with \a NumKinds directive kinds.
+  ///
+  /// \param K The clause kind.
+  /// \param StartLoc Starting location of the clause (the clause keyword).
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPDirectiveListClause(OpenMPClauseKind K, SourceLocation StartLoc,
+                         SourceLocation LParenLoc, SourceLocation EndLoc,
+                         unsigned NumKinds)
+      : OMPClause(K, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        NumKinds(NumKinds) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
+    return MutableArrayRef<OpenMPDirectiveKind>(
+        static_cast<T *>(this)
+            ->template getTrailingObjects<OpenMPDirectiveKind>(),
+        NumKinds);
+  }
+
+  void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
+    assert(
+        DK.size() == NumKinds &&
+        "Number of directive kinds is not the same as the preallocated buffer");
+    std::copy(DK.begin(), DK.end(),
+              static_cast<T *>(this)
+                  ->template getTrailingObjects<OpenMPDirectiveKind>());
+  }
+
+  SourceLocation getLParenLoc() { return LParenLoc; }
+
+  void setLParenLoc(SourceLocation S) { LParenLoc = S; }
 };
 
 /// This represents 'allocator' clause in the '#pragma omp ...'
@@ -426,7 +486,8 @@ public:
 /// #pragma omp parallel private(a) allocate(omp_default_mem_alloc :a)
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'private'
-/// and clause 'allocate' for the variable 'a'.
+/// and clause 'allocate' for the variable 'a', which specifies an explicit
+/// memory allocator.
 class OMPAllocateClause final
     : public OMPVarListClause<OMPAllocateClause>,
       private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
@@ -439,6 +500,10 @@ class OMPAllocateClause final
   Expr *Allocator = nullptr;
   /// Position of the ':' delimiter in the clause;
   SourceLocation ColonLoc;
+  /// Modifier of 'allocate' clause.
+  OpenMPAllocateClauseModifier AllocatorModifier = OMPC_ALLOCATE_unknown;
+  /// Location of allocator modifier if any.
+  SourceLocation AllocatorModifierLoc;
 
   /// Build clause with number of variables \a N.
   ///
@@ -450,10 +515,14 @@ class OMPAllocateClause final
   /// \param N Number of the variables in the clause.
   OMPAllocateClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                     Expr *Allocator, SourceLocation ColonLoc,
-                    SourceLocation EndLoc, unsigned N)
+                    OpenMPAllocateClauseModifier AllocatorModifier,
+                    SourceLocation AllocatorModifierLoc, SourceLocation EndLoc,
+                    unsigned N)
       : OMPVarListClause<OMPAllocateClause>(llvm::omp::OMPC_allocate, StartLoc,
                                             LParenLoc, EndLoc, N),
-        Allocator(Allocator), ColonLoc(ColonLoc) {}
+        Allocator(Allocator), ColonLoc(ColonLoc),
+        AllocatorModifier(AllocatorModifier),
+        AllocatorModifierLoc(AllocatorModifierLoc) {}
 
   /// Build an empty clause.
   ///
@@ -467,6 +536,9 @@ class OMPAllocateClause final
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
 
   void setAllocator(Expr *A) { Allocator = A; }
+  void setAllocatorModifier(OpenMPAllocateClauseModifier AM) {
+    AllocatorModifier = AM;
+  }
 
 public:
   /// Creates clause with a list of variables \a VL.
@@ -476,18 +548,31 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param Allocator Allocator expression.
   /// \param ColonLoc Location of ':' delimiter.
+  /// \param AllocatorModifier Allocator modifier.
+  /// \param SourceLocation Allocator modifier location.
   /// \param EndLoc Ending location of the clause.
   /// \param VL List of references to the variables.
-  static OMPAllocateClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                   SourceLocation LParenLoc, Expr *Allocator,
-                                   SourceLocation ColonLoc,
-                                   SourceLocation EndLoc, ArrayRef<Expr *> VL);
+  static OMPAllocateClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         Expr *Allocator, SourceLocation ColonLoc,
+         OpenMPAllocateClauseModifier AllocatorModifier,
+         SourceLocation AllocatorModifierLoc, SourceLocation EndLoc,
+         ArrayRef<Expr *> VL);
 
   /// Returns the allocator expression or nullptr, if no allocator is specified.
   Expr *getAllocator() const { return Allocator; }
 
+  /// Return 'allocate' modifier.
+  OpenMPAllocateClauseModifier getAllocatorModifier() const {
+    return AllocatorModifier;
+  }
+
   /// Returns the location of the ':' delimiter.
   SourceLocation getColonLoc() const { return ColonLoc; }
+  /// Return the location of the modifier.
+  SourceLocation getAllocatorModifierLoc() const {
+    return AllocatorModifierLoc;
+  }
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -867,6 +952,105 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_sizes;
+  }
+};
+
+/// This class represents the 'permutation' clause in the
+/// '#pragma omp interchange' directive.
+///
+/// \code{.c}
+///   #pragma omp interchange permutation(2,1)
+///   for (int i = 0; i < 64; ++i)
+///     for (int j = 0; j < 64; ++j)
+/// \endcode
+class OMPPermutationClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPSizesClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPSizesClause, Expr *>;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Number of arguments in the clause, and hence also the number of loops to
+  /// be permuted.
+  unsigned NumLoops;
+
+  /// Sets the permutation index expressions.
+  void setArgRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumLoops && "Expecting one expression per loop");
+    llvm::copy(VL, static_cast<OMPPermutationClause *>(this)
+                       ->template getTrailingObjects<Expr *>());
+  }
+
+  /// Build an empty clause.
+  explicit OMPPermutationClause(int NumLoops)
+      : OMPClause(llvm::omp::OMPC_permutation, SourceLocation(),
+                  SourceLocation()),
+        NumLoops(NumLoops) {}
+
+public:
+  /// Build a 'permutation' clause AST node.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'permutation' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Args      Content of the clause.
+  static OMPPermutationClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> Args);
+
+  /// Build an empty 'permutation' AST node for deserialization.
+  ///
+  /// \param C        Context of the AST.
+  /// \param NumLoops Number of arguments in the clause.
+  static OMPPermutationClause *CreateEmpty(const ASTContext &C,
+                                           unsigned NumLoops);
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the number of list items.
+  unsigned getNumLoops() const { return NumLoops; }
+
+  /// Returns the permutation index expressions.
+  ///@{
+  MutableArrayRef<Expr *> getArgsRefs() {
+    return MutableArrayRef<Expr *>(static_cast<OMPPermutationClause *>(this)
+                                       ->template getTrailingObjects<Expr *>(),
+                                   NumLoops);
+  }
+  ArrayRef<Expr *> getArgsRefs() const {
+    return ArrayRef<Expr *>(static_cast<const OMPPermutationClause *>(this)
+                                ->template getTrailingObjects<Expr *>(),
+                            NumLoops);
+  }
+  ///@}
+
+  child_range children() {
+    MutableArrayRef<Expr *> Args = getArgsRefs();
+    return child_range(reinterpret_cast<Stmt **>(Args.begin()),
+                       reinterpret_cast<Stmt **>(Args.end()));
+  }
+  const_child_range children() const {
+    ArrayRef<Expr *> Args = getArgsRefs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(Args.begin()),
+                             reinterpret_cast<Stmt *const *>(Args.end()));
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_permutation;
   }
 };
 
@@ -2013,6 +2197,184 @@ public:
   }
 };
 
+/// This represents the 'absent' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume absent(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has an 'absent' clause.
+class OMPAbsentClause final
+    : public OMPDirectiveListClause<OMPAbsentClause>,
+      private llvm::TrailingObjects<OMPAbsentClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'absent' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPAbsentClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPAbsentClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPAbsentClause>(
+            llvm::omp::OMPC_absent, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPAbsentClause *Create(const ASTContext &C,
+                                 ArrayRef<OpenMPDirectiveKind> DKVec,
+                                 SourceLocation Loc, SourceLocation LLoc,
+                                 SourceLocation RLoc);
+
+  static OMPAbsentClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_absent;
+  }
+};
+
+/// This represents the 'contains' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume contains(<directive-name list>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'contains' clause.
+class OMPContainsClause final
+    : public OMPDirectiveListClause<OMPContainsClause>,
+      private llvm::TrailingObjects<OMPContainsClause, OpenMPDirectiveKind> {
+  friend OMPDirectiveListClause;
+  friend TrailingObjects;
+
+  /// Build 'contains' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumKinds Number of directive kinds listed in the clause.
+  OMPContainsClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc, unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, StartLoc, LParenLoc, EndLoc, NumKinds) {}
+
+  /// Build an empty clause.
+  OMPContainsClause(unsigned NumKinds)
+      : OMPDirectiveListClause<OMPContainsClause>(
+            llvm::omp::OMPC_contains, SourceLocation(), SourceLocation(),
+            SourceLocation(), NumKinds) {}
+
+public:
+  static OMPContainsClause *Create(const ASTContext &C,
+                                   ArrayRef<OpenMPDirectiveKind> DKVec,
+                                   SourceLocation Loc, SourceLocation LLoc,
+                                   SourceLocation RLoc);
+
+  static OMPContainsClause *CreateEmpty(const ASTContext &C, unsigned NumKinds);
+
+  static bool classof(const OMPClause *C) {
+    return C->getClauseKind() == llvm::omp::OMPC_contains;
+  }
+};
+
+/// This represents the 'holds' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume holds(<expr>)
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'holds' clause.
+class OMPHoldsClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_holds, OMPClause> {
+  friend class OMPClauseReader;
+
+public:
+  /// Build 'holds' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPHoldsClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPOneStmtClause(E, StartLoc, LParenLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPHoldsClause() : OMPOneStmtClause() {}
+
+  Expr *getExpr() const { return getStmtAs<Expr>(); }
+  void setExpr(Expr *E) { setStmt(E); }
+};
+
+/// This represents the 'no_openmp' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp' clause.
+class OMPNoOpenMPClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp> {
+public:
+  /// Build 'no_openmp' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPClause() : OMPNoChildClause() {}
+};
+
+/// This represents the 'no_openmp_routines' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_routines
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_routines'
+/// clause.
+class OMPNoOpenMPRoutinesClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_routines> {
+public:
+  /// Build 'no_openmp_routines' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPRoutinesClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
+};
+
+/// This represents the 'no_parallelism' clause in the '#pragma omp assume'
+/// directive.
+///
+/// \code
+/// #pragma omp assume no_parallelism
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_parallelism'
+/// clause.
+class OMPNoParallelismClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_parallelism> {
+public:
+  /// Build 'no_parallelism' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoParallelismClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoParallelismClause() : OMPNoChildClause() {}
+};
+
 /// This represents 'read' clause in the '#pragma omp atomic' directive.
 ///
 /// \code
@@ -2308,8 +2670,8 @@ public:
   }
 };
 
-/// This represents 'seq_cst' clause in the '#pragma omp atomic'
-/// directive.
+/// This represents 'seq_cst' clause in the '#pragma omp atomic|flush'
+/// directives.
 ///
 /// \code
 /// #pragma omp atomic seq_cst
@@ -2510,6 +2872,46 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == llvm::omp::OMPC_relaxed;
+  }
+};
+
+/// This represents 'weak' clause in the '#pragma omp atomic'
+/// directives.
+///
+/// \code
+/// #pragma omp atomic compare weak
+/// \endcode
+/// In this example directive '#pragma omp atomic' has 'weak' clause.
+class OMPWeakClause final : public OMPClause {
+public:
+  /// Build 'weak' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPWeakClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_weak, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPWeakClause()
+      : OMPClause(llvm::omp::OMPC_weak, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_weak;
   }
 };
 
@@ -5731,14 +6133,14 @@ public:
     return const_component_lists_iterator(
         getUniqueDeclsRef(), getDeclNumListsRef(), getComponentListSizesRef(),
         getComponentsRef(), SupportsMapper,
-        SupportsMapper ? getUDMapperRefs() : std::nullopt);
+        SupportsMapper ? getUDMapperRefs() : ArrayRef<Expr *>());
   }
   const_component_lists_iterator component_lists_end() const {
     return const_component_lists_iterator(
         ArrayRef<ValueDecl *>(), ArrayRef<unsigned>(), ArrayRef<unsigned>(),
         MappableExprComponentListRef(getComponentsRef().end(),
                                      getComponentsRef().end()),
-        SupportsMapper, std::nullopt);
+        SupportsMapper, {});
   }
   const_component_lists_range component_lists() const {
     return {component_lists_begin(), component_lists_end()};
@@ -5751,7 +6153,7 @@ public:
     return const_component_lists_iterator(
         VD, getUniqueDeclsRef(), getDeclNumListsRef(),
         getComponentListSizesRef(), getComponentsRef(), SupportsMapper,
-        SupportsMapper ? getUDMapperRefs() : std::nullopt);
+        SupportsMapper ? getUDMapperRefs() : ArrayRef<Expr *>());
   }
   const_component_lists_iterator decl_component_lists_end() const {
     return component_lists_end();
@@ -6091,43 +6493,54 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'num_teams'
 /// with single expression 'n'.
-class OMPNumTeamsClause : public OMPClause, public OMPClauseWithPreInit {
-  friend class OMPClauseReader;
+///
+/// When 'ompx_bare' clause exists on a 'target' directive, 'num_teams' clause
+/// can accept up to three expressions.
+///
+/// \code
+/// #pragma omp target teams ompx_bare num_teams(x, y, z)
+/// \endcode
+class OMPNumTeamsClause final
+    : public OMPVarListClause<OMPNumTeamsClause>,
+      public OMPClauseWithPreInit,
+      private llvm::TrailingObjects<OMPNumTeamsClause, Expr *> {
+  friend OMPVarListClause;
+  friend TrailingObjects;
 
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// NumTeams number.
-  Stmt *NumTeams = nullptr;
+  OMPNumTeamsClause(const ASTContext &C, SourceLocation StartLoc,
+                    SourceLocation LParenLoc, SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_num_teams, StartLoc, LParenLoc, EndLoc,
+                         N),
+        OMPClauseWithPreInit(this) {}
 
-  /// Set the NumTeams number.
-  ///
-  /// \param E NumTeams number.
-  void setNumTeams(Expr *E) { NumTeams = E; }
+  /// Build an empty clause.
+  OMPNumTeamsClause(unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_num_teams, SourceLocation(),
+                         SourceLocation(), SourceLocation(), N),
+        OMPClauseWithPreInit(this) {}
 
 public:
-  /// Build 'num_teams' clause.
+  /// Creates clause with a list of variables \a VL.
   ///
-  /// \param E Expression associated with this clause.
-  /// \param HelperE Helper Expression associated with this clause.
-  /// \param CaptureRegion Innermost OpenMP region where expressions in this
-  /// clause must be captured.
+  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPNumTeamsClause(Expr *E, Stmt *HelperE, OpenMPDirectiveKind CaptureRegion,
-                    SourceLocation StartLoc, SourceLocation LParenLoc,
-                    SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_num_teams, StartLoc, EndLoc),
-        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), NumTeams(E) {
-    setPreInitStmt(HelperE, CaptureRegion);
-  }
+  /// \param VL List of references to the variables.
+  /// \param PreInit
+  static OMPNumTeamsClause *
+  Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+         SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
 
-  /// Build an empty clause.
-  OMPNumTeamsClause()
-      : OMPClause(llvm::omp::OMPC_num_teams, SourceLocation(),
-                  SourceLocation()),
-        OMPClauseWithPreInit(this) {}
+  /// Creates an empty clause with \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPNumTeamsClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -6135,16 +6548,22 @@ public:
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// Return NumTeams number.
-  Expr *getNumTeams() { return cast<Expr>(NumTeams); }
+  /// Return NumTeams expressions.
+  ArrayRef<Expr *> getNumTeams() { return getVarRefs(); }
 
-  /// Return NumTeams number.
-  Expr *getNumTeams() const { return cast<Expr>(NumTeams); }
+  /// Return NumTeams expressions.
+  ArrayRef<Expr *> getNumTeams() const {
+    return const_cast<OMPNumTeamsClause *>(this)->getNumTeams();
+  }
 
-  child_range children() { return child_range(&NumTeams, &NumTeams + 1); }
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
 
   const_child_range children() const {
-    return const_child_range(&NumTeams, &NumTeams + 1);
+    auto Children = const_cast<OMPNumTeamsClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   child_range used_children() {
@@ -6167,44 +6586,55 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'thread_limit'
 /// with single expression 'n'.
-class OMPThreadLimitClause : public OMPClause, public OMPClauseWithPreInit {
-  friend class OMPClauseReader;
+///
+/// When 'ompx_bare' clause exists on a 'target' directive, 'thread_limit'
+/// clause can accept up to three expressions.
+///
+/// \code
+/// #pragma omp target teams ompx_bare thread_limit(x, y, z)
+/// \endcode
+class OMPThreadLimitClause final
+    : public OMPVarListClause<OMPThreadLimitClause>,
+      public OMPClauseWithPreInit,
+      private llvm::TrailingObjects<OMPThreadLimitClause, Expr *> {
+  friend OMPVarListClause;
+  friend TrailingObjects;
 
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// ThreadLimit number.
-  Stmt *ThreadLimit = nullptr;
+  OMPThreadLimitClause(const ASTContext &C, SourceLocation StartLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc,
+                       unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_thread_limit, StartLoc, LParenLoc,
+                         EndLoc, N),
+        OMPClauseWithPreInit(this) {}
 
-  /// Set the ThreadLimit number.
-  ///
-  /// \param E ThreadLimit number.
-  void setThreadLimit(Expr *E) { ThreadLimit = E; }
+  /// Build an empty clause.
+  OMPThreadLimitClause(unsigned N)
+      : OMPVarListClause(llvm::omp::OMPC_thread_limit, SourceLocation(),
+                         SourceLocation(), SourceLocation(), N),
+        OMPClauseWithPreInit(this) {}
 
 public:
-  /// Build 'thread_limit' clause.
+  /// Creates clause with a list of variables \a VL.
   ///
-  /// \param E Expression associated with this clause.
-  /// \param HelperE Helper Expression associated with this clause.
-  /// \param CaptureRegion Innermost OpenMP region where expressions in this
-  /// clause must be captured.
+  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPThreadLimitClause(Expr *E, Stmt *HelperE,
-                       OpenMPDirectiveKind CaptureRegion,
-                       SourceLocation StartLoc, SourceLocation LParenLoc,
-                       SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_thread_limit, StartLoc, EndLoc),
-        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), ThreadLimit(E) {
-    setPreInitStmt(HelperE, CaptureRegion);
-  }
+  /// \param VL List of references to the variables.
+  /// \param PreInit
+  static OMPThreadLimitClause *
+  Create(const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
+         SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL, Stmt *PreInit);
 
-  /// Build an empty clause.
-  OMPThreadLimitClause()
-      : OMPClause(llvm::omp::OMPC_thread_limit, SourceLocation(),
-                  SourceLocation()),
-        OMPClauseWithPreInit(this) {}
+  /// Creates an empty clause with \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  static OMPThreadLimitClause *CreateEmpty(const ASTContext &C, unsigned N);
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -6212,16 +6642,22 @@ public:
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
-  /// Return ThreadLimit number.
-  Expr *getThreadLimit() { return cast<Expr>(ThreadLimit); }
+  /// Return ThreadLimit expressions.
+  ArrayRef<Expr *> getThreadLimit() { return getVarRefs(); }
 
-  /// Return ThreadLimit number.
-  Expr *getThreadLimit() const { return cast<Expr>(ThreadLimit); }
+  /// Return ThreadLimit expressions.
+  ArrayRef<Expr *> getThreadLimit() const {
+    return const_cast<OMPThreadLimitClause *>(this)->getThreadLimit();
+  }
 
-  child_range children() { return child_range(&ThreadLimit, &ThreadLimit + 1); }
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
 
   const_child_range children() const {
-    return const_child_range(&ThreadLimit, &ThreadLimit + 1);
+    auto Children = const_cast<OMPThreadLimitClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   child_range used_children() {

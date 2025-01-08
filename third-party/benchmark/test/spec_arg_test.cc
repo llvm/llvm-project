@@ -17,11 +17,11 @@ namespace {
 
 class TestReporter : public benchmark::ConsoleReporter {
  public:
-  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
+  bool ReportContext(const Context& context) override {
     return ConsoleReporter::ReportContext(context);
   };
 
-  virtual void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
+  void ReportRuns(const std::vector<Run>& report) override {
     assert(report.size() == 1);
     matched_functions.push_back(report[0].run_name.function_name);
     ConsoleReporter::ReportRuns(report);
@@ -29,7 +29,7 @@ class TestReporter : public benchmark::ConsoleReporter {
 
   TestReporter() {}
 
-  virtual ~TestReporter() {}
+  ~TestReporter() override {}
 
   const std::vector<std::string>& GetMatchedFunctions() const {
     return matched_functions;
@@ -90,6 +90,16 @@ int main(int argc, char** argv) {
     std::cerr << "Expected benchmark [" << spec << "] to run, but got ["
               << matched_functions.front() << "]\n";
     return 2;
+  }
+
+  // Test that SetBenchmarkFilter works.
+  const std::string golden_value = "golden_value";
+  benchmark::SetBenchmarkFilter(golden_value);
+  std::string current_value = benchmark::GetBenchmarkFilter();
+  if (golden_value != current_value) {
+    std::cerr << "Expected [" << golden_value
+              << "] for --benchmark_filter but got [" << current_value << "]\n";
+    return 3;
   }
   return 0;
 }

@@ -16,7 +16,6 @@
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
@@ -28,7 +27,7 @@ using namespace llvm;
 namespace llvm {
 extern const SubtargetFeatureKV
     AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures - 1];
-}
+} // namespace llvm
 
 namespace {
 
@@ -105,7 +104,8 @@ constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
                                         AMDGPU::FeatureDot8Insts,
                                         AMDGPU::FeatureExtendedImageInsts,
                                         AMDGPU::FeatureSMemRealTime,
-                                        AMDGPU::FeatureSMemTimeInst};
+                                        AMDGPU::FeatureSMemTimeInst,
+                                        AMDGPU::FeatureGWS};
 
 FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
   FeatureBitset Result = Features;
@@ -138,10 +138,10 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   const GCNSubtarget *ST =
       static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F));
 
-  // Check the GPU isn't generic. Generic is used for testing only
-  // and we don't want this pass to interfere with it.
+  // Check the GPU isn't generic or generic-hsa. Generic is used for testing
+  // only and we don't want this pass to interfere with it.
   StringRef GPUName = ST->getCPU();
-  if (GPUName.empty() || GPUName.contains("generic"))
+  if (GPUName.empty() || GPUName.starts_with("generic"))
     return false;
 
   // Try to fetch the GPU's info. If we can't, it's likely an unknown processor

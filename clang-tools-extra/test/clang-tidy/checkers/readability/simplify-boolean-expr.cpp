@@ -353,6 +353,23 @@ bool conditional_return_statements(int i) {
 // CHECK-FIXES:      {{^}}  return i == 0;{{$}}
 // CHECK-FIXES-NEXT: {{^}$}}
 
+bool conditional_return_statements_no_fix_1(int i) {
+  if (i == 0) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: {{.*}} in conditional return statement
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: note: conditions that can be simplified
+  // comment
+  return false;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: return statement that can be simplified
+}
+
+bool conditional_return_statements_no_fix_2(int i) {
+  if (i == 0) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: {{.*}} in conditional return statement
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: note: conditions that can be simplified
+  // comment
+  else return false;
+}
+
 bool conditional_return_statements_then_expr(int i, int j) {
   if (i == j) return (i == 0); else return false;
 }

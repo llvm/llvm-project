@@ -40,7 +40,8 @@ BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsInteger(
       GetKey(OptionNames::AddressOffset), addr_offset);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find address offset entry.");
+    error = Status::FromErrorString(
+        "BRFL::CFSD: Couldn't find address offset entry.");
     return nullptr;
   }
   Address address(addr_offset);
@@ -50,7 +51,8 @@ BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
     success = options_dict.GetValueForKeyAsString(
         GetKey(OptionNames::ModuleName), module_name);
     if (!success) {
-      error.SetErrorString("BRA::CFSD: Couldn't read module name entry.");
+      error = Status::FromErrorString(
+          "BRA::CFSD: Couldn't read module name entry.");
       return nullptr;
     }
     module_filespec.SetFile(module_name, FileSpec::Style::native);
@@ -65,13 +67,11 @@ BreakpointResolverAddress::SerializeToStructuredData() {
       new StructuredData::Dictionary());
   SectionSP section_sp = m_addr.GetSection();
   if (section_sp) {
-    ModuleSP module_sp = section_sp->GetModule();
-    ConstString module_name;
-    if (module_sp)
-      module_name.SetCString(module_name.GetCString());
-
-    options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
-                                   module_name.GetCString());
+    if (ModuleSP module_sp = section_sp->GetModule()) {
+      const FileSpec &module_fspec = module_sp->GetFileSpec();
+      options_dict_sp->AddStringItem(GetKey(OptionNames::ModuleName),
+                                     module_fspec.GetPath().c_str());
+    }
     options_dict_sp->AddIntegerItem(GetKey(OptionNames::AddressOffset),
                                     m_addr.GetOffset());
   } else {

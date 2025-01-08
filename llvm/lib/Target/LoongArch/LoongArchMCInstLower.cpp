@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -20,7 +19,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -94,6 +92,36 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case LoongArchII::MO_GD_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20;
+    break;
+  case LoongArchII::MO_CALL36:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL36;
+    break;
+  case LoongArchII::MO_DESC_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20;
+    break;
+  case LoongArchII::MO_DESC_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12;
+    break;
+  case LoongArchII::MO_DESC64_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20;
+    break;
+  case LoongArchII::MO_DESC64_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12;
+    break;
+  case LoongArchII::MO_DESC_LD:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
+    break;
+  case LoongArchII::MO_DESC_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL;
+    break;
+  case LoongArchII::MO_LE_HI_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20_R;
+    break;
+  case LoongArchII::MO_LE_ADD_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_ADD_R;
+    break;
+  case LoongArchII::MO_LE_LO_R:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R;
     break;
     // TODO: Handle more target-flags.
   }

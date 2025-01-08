@@ -37,11 +37,15 @@ struct ARM64 : ARM64Common {
                             uint64_t entryAddr) const override;
 
   void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                            uint64_t stubOffset, uint64_t selrefsVA,
-                            uint64_t selectorIndex, uint64_t gotAddr,
-                            uint64_t msgSendIndex) const override;
+                            uint64_t &stubOffset, uint64_t selrefVA,
+                            Symbol *objcMsgSend) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ObjFile &) const override;
+
+  void initICFSafeThunkBody(InputSection *thunk,
+                            InputSection *branchTarget) const override;
+  InputSection *getThunkBranchTarget(InputSection *thunk) const override;
+  uint32_t getICFSafeThunkSize() const override;
 };
 
 } // namespace
@@ -117,13 +121,41 @@ static constexpr uint32_t objcStubsFastCode[] = {
     0xd4200020, // brk   #0x1
 };
 
+static constexpr uint32_t objcStubsSmallCode[] = {
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x14000000, // b     _objc_msgSend
+};
+
 void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
-                                 uint64_t stubOffset, uint64_t selrefsVA,
-                                 uint64_t selectorIndex, uint64_t gotAddr,
-                                 uint64_t msgSendIndex) const {
-  ::writeObjCMsgSendStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
-                               stubOffset, selrefsVA, selectorIndex, gotAddr,
-                               msgSendIndex);
+                                 uint64_t &stubOffset, uint64_t selrefVA,
+                                 Symbol *objcMsgSend) const {
+  uint64_t objcMsgSendAddr;
+  uint64_t objcStubSize;
+  uint64_t objcMsgSendIndex;
+
+  if (config->objcStubsMode == ObjCStubsMode::fast) {
+    objcStubSize = target->objcStubsFastSize;
+    objcMsgSendAddr = in.got->addr;
+    objcMsgSendIndex = objcMsgSend->gotIndex;
+    ::writeObjCMsgSendFastStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
+                                     stubOffset, selrefVA, objcMsgSendAddr,
+                                     objcMsgSendIndex);
+  } else {
+    assert(config->objcStubsMode == ObjCStubsMode::small);
+    objcStubSize = target->objcStubsSmallSize;
+    if (auto *d = dyn_cast<Defined>(objcMsgSend)) {
+      objcMsgSendAddr = d->getVA();
+      objcMsgSendIndex = 0;
+    } else {
+      objcMsgSendAddr = in.stubs->addr;
+      objcMsgSendIndex = objcMsgSend->stubsIndex;
+    }
+    ::writeObjCMsgSendSmallStub<LP64>(buf, objcStubsSmallCode, sym, stubsAddr,
+                                      stubOffset, selrefVA, objcMsgSendAddr,
+                                      objcMsgSendIndex);
+  }
+  stubOffset += objcStubSize;
 }
 
 // A thunk is the relaxed variation of stubCode. We don't need the
@@ -148,6 +180,35 @@ void ARM64::populateThunk(InputSection *thunk, Symbol *funcSym) {
                              /*offset=*/0, /*addend=*/0,
                              /*referent=*/funcSym);
 }
+// Just a single direct branch to the target function.
+static constexpr uint32_t icfSafeThunkCode[] = {
+    0x14000000, // 08: b    target
+};
+
+void ARM64::initICFSafeThunkBody(InputSection *thunk,
+                                 InputSection *branchTarget) const {
+  // The base data here will not be itself modified, we'll just be adding a
+  // reloc below. So we can directly use the constexpr above as the data.
+  thunk->data = {reinterpret_cast<const uint8_t *>(icfSafeThunkCode),
+                 sizeof(icfSafeThunkCode)};
+
+  thunk->relocs.emplace_back(/*type=*/ARM64_RELOC_BRANCH26,
+                             /*pcrel=*/true, /*length=*/2,
+                             /*offset=*/0, /*addend=*/0,
+                             /*referent=*/branchTarget);
+}
+
+InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
+  assert(thunk->relocs.size() == 1 &&
+         "expected a single reloc on ARM64 ICF thunk");
+  auto &reloc = thunk->relocs[0];
+  assert(isa<InputSection *>(reloc.referent) &&
+         "ARM64 thunk reloc is expected to point to an InputSection");
+
+  return reloc.referent.dyn_cast<InputSection *>();
+}
+
+uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }
 
 ARM64::ARM64() : ARM64Common(LP64()) {
   cpuType = CPU_TYPE_ARM64;
@@ -157,7 +218,9 @@ ARM64::ARM64() : ARM64Common(LP64()) {
   thunkSize = sizeof(thunkCode);
 
   objcStubsFastSize = sizeof(objcStubsFastCode);
-  objcStubsAlignment = 32;
+  objcStubsFastAlignment = 32;
+  objcStubsSmallSize = sizeof(objcStubsSmallCode);
+  objcStubsSmallAlignment = 4;
 
   // Branch immediate is two's complement 26 bits, which is implicitly
   // multiplied by 4 (since all functions are 4-aligned: The branch range

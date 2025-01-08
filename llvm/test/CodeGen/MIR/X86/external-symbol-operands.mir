@@ -1,26 +1,26 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the external symbol machine
 # operands correctly.
 
 --- |
-  @__stack_chk_guard = external global i8*
+  @__stack_chk_guard = external global ptr
 
   define i32 @test(i32 %n) #0 {
   entry:
-    %StackGuardSlot = alloca i8*
-    %StackGuard = load i8*, i8** @__stack_chk_guard
-    call void @llvm.stackprotector(i8* %StackGuard, i8** %StackGuardSlot)
+    %StackGuardSlot = alloca ptr
+    %StackGuard = load ptr, ptr @__stack_chk_guard
+    call void @llvm.stackprotector(ptr %StackGuard, ptr %StackGuardSlot)
     %a = alloca [128 x i32], align 16
     %idxprom = sext i32 %n to i64
-    %arrayidx = getelementptr inbounds [128 x i32], [128 x i32]* %a, i64 0, i64 %idxprom
-    %0 = load i32, i32* %arrayidx, align 4
-    call void @llvm.stackprotectorcheck(i8** @__stack_chk_guard)
+    %arrayidx = getelementptr inbounds [128 x i32], ptr %a, i64 0, i64 %idxprom
+    %0 = load i32, ptr %arrayidx, align 4
+    call void @llvm.stackprotectorcheck(ptr @__stack_chk_guard)
     ret i32 %0
   }
 
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
-  declare void @llvm.stackprotectorcheck(i8**) #1
+  declare void @llvm.stackprotectorcheck(ptr) #1
 
   attributes #0 = { ssp "stack-protector-buffer-size"="8" }
   attributes #1 = { nounwind }

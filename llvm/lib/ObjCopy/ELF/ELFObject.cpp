@@ -13,13 +13,11 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
@@ -33,6 +31,7 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::objcopy::elf;
 using namespace llvm::object;
+using namespace llvm::support;
 
 template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
   uint8_t *B = reinterpret_cast<uint8_t *>(Buf->getBufferStart()) +
@@ -106,12 +105,29 @@ Error ELFSectionSizer<ELFT>::visit(SymbolTableSection &Sec) {
   return Error::success();
 }
 
+template <bool Is64>
+static SmallVector<char, 0> encodeCrel(ArrayRef<Relocation> Relocations) {
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  SmallVector<char, 0> Content;
+  raw_svector_ostream OS(Content);
+  ELF::encodeCrel<Is64>(OS, Relocations, [&](const Relocation &R) {
+    uint32_t CurSymIdx = R.RelocSymbol ? R.RelocSymbol->Index : 0;
+    return ELF::Elf_Crel<Is64>{static_cast<uint>(R.Offset), CurSymIdx, R.Type,
+                               std::make_signed_t<uint>(R.Addend)};
+  });
+  return Content;
+}
+
 template <class ELFT>
 Error ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
-  Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
-  Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
-  // Align to the largest field in Elf_Rel(a).
-  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+  if (Sec.Type == SHT_CREL) {
+    Sec.Size = encodeCrel<ELFT::Is64Bits>(Sec.Relocations).size();
+  } else {
+    Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
+    Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
+    // Align to the largest field in Elf_Rel(a).
+    Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+  }
   return Error::success();
 }
 
@@ -547,6 +563,7 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
                         CompressedData);
 
   Flags |= ELF::SHF_COMPRESSED;
+  OriginalFlags |= ELF::SHF_COMPRESSED;
   size_t ChdrSize = Is64Bits ? sizeof(object::Elf_Chdr_Impl<object::ELF64LE>)
                              : sizeof(object::Elf_Chdr_Impl<object::ELF32LE>);
   Size = ChdrSize + CompressedData.size();
@@ -872,6 +889,8 @@ StringRef RelocationSectionBase::getNamePrefix() const {
     return ".rel";
   case SHT_RELA:
     return ".rela";
+  case SHT_CREL:
+    return ".crel";
   default:
     llvm_unreachable("not a relocation section");
   }
@@ -964,12 +983,16 @@ static void writeRel(const RelRange &Relocations, T *Buf, bool IsMips64EL) {
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const RelocationSection &Sec) {
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  if (Sec.Type == SHT_REL)
+  if (Sec.Type == SHT_CREL) {
+    auto Content = encodeCrel<ELFT::Is64Bits>(Sec.Relocations);
+    memcpy(Buf, Content.data(), Content.size());
+  } else if (Sec.Type == SHT_REL) {
     writeRel(Sec.Relocations, reinterpret_cast<Elf_Rel *>(Buf),
              Sec.getObject().IsMips64EL);
-  else
+  } else {
     writeRel(Sec.Relocations, reinterpret_cast<Elf_Rela *>(Buf),
              Sec.getObject().IsMips64EL);
+  }
   return Error::success();
 }
 
@@ -1175,9 +1198,9 @@ template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
   ELF::Elf32_Word *Buf =
       reinterpret_cast<ELF::Elf32_Word *>(Out.getBufferStart() + Sec.Offset);
-  support::endian::write32<ELFT::TargetEndianness>(Buf++, Sec.FlagWord);
+  endian::write32<ELFT::Endianness>(Buf++, Sec.FlagWord);
   for (SectionBase *S : Sec.GroupMembers)
-    support::endian::write32<ELFT::TargetEndianness>(Buf++, S->Index);
+    endian::write32<ELFT::Endianness>(Buf++, S->Index);
   return Error::success();
 }
 
@@ -1234,6 +1257,12 @@ static bool compareSegmentsByOffset(const Segment *A, const Segment *B) {
     return true;
   if (A->OriginalOffset > B->OriginalOffset)
     return false;
+  // If alignments are different, the one with a smaller alignment cannot be the
+  // parent; otherwise, layoutSegments will not respect the larger alignment
+  // requirement. This rule ensures that PT_LOAD/PT_INTERP/PT_GNU_RELRO/PT_TLS
+  // segments at the same offset will be aligned correctly.
+  if (A->Align != B->Align)
+    return A->Align > B->Align;
   return A->Index < B->Index;
 }
 
@@ -1516,10 +1545,9 @@ Error ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
       reinterpret_cast<const ELF::Elf32_Word *>(GroupSec->Contents.data());
   const ELF::Elf32_Word *End =
       Word + GroupSec->Contents.size() / sizeof(ELF::Elf32_Word);
-  GroupSec->setFlagWord(
-      support::endian::read32<ELFT::TargetEndianness>(Word++));
+  GroupSec->setFlagWord(endian::read32<ELFT::Endianness>(Word++));
   for (; Word != End; ++Word) {
-    uint32_t Index = support::endian::read32<ELFT::TargetEndianness>(Word);
+    uint32_t Index = support::endian::read32<ELFT::Endianness>(Word);
     Expected<SectionBase *> Sec = SecTable.getSection(
         Index, "group member index " + Twine(Index) + " in section '" +
                    GroupSec->Name + "' is invalid");
@@ -1677,6 +1705,7 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   switch (Shdr.sh_type) {
   case SHT_REL:
   case SHT_RELA:
+  case SHT_CREL:
     if (Shdr.sh_flags & SHF_ALLOC) {
       if (Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr))
         return Obj.addSection<DynamicRelocationSection>(*Data);
@@ -1854,7 +1883,15 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
 
       const typename ELFFile<ELFT>::Elf_Shdr *Shdr =
           Sections->begin() + RelSec->Index;
-      if (RelSec->Type == SHT_REL) {
+      if (RelSec->Type == SHT_CREL) {
+        auto RelsOrRelas = ElfFile.crels(*Shdr);
+        if (!RelsOrRelas)
+          return RelsOrRelas.takeError();
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->first))
+          return Err;
+        if (Error Err = initRelocations(RelSec, RelsOrRelas->second))
+          return Err;
+      } else if (RelSec->Type == SHT_REL) {
         Expected<typename ELFFile<ELFT>::Elf_Rel_Range> Rels =
             ElfFile.rels(*Shdr);
         if (!Rels)
@@ -1987,9 +2024,8 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_ident[EI_MAG2] = 'L';
   Ehdr.e_ident[EI_MAG3] = 'F';
   Ehdr.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  Ehdr.e_ident[EI_DATA] = ELFT::TargetEndianness == llvm::endianness::big
-                              ? ELFDATA2MSB
-                              : ELFDATA2LSB;
+  Ehdr.e_ident[EI_DATA] =
+      ELFT::Endianness == llvm::endianness::big ? ELFDATA2MSB : ELFDATA2LSB;
   Ehdr.e_ident[EI_VERSION] = EV_CURRENT;
   Ehdr.e_ident[EI_OSABI] = Obj.OSABI;
   Ehdr.e_ident[EI_ABIVERSION] = Obj.ABIVersion;
@@ -2156,9 +2192,18 @@ Error Object::removeSections(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
         if (ToRemove(*Sec))
           return false;
+        // TODO: A compressed relocation section may be recognized as
+        // RelocationSectionBase. We don't want such a section to be removed.
+        if (isa<CompressedSection>(Sec))
+          return true;
         if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get())) {
           if (auto ToRelSec = RelSec->getSection())
             return !ToRemove(*ToRelSec);
+        }
+        // Remove empty group sections.
+        if (Sec->Type == ELF::SHT_GROUP) {
+          auto GroupSec = cast<GroupSection>(Sec.get());
+          return !llvm::all_of(GroupSec->members(), ToRemove);
         }
         return true;
       });
@@ -2707,10 +2752,52 @@ Error BinaryWriter::finalize() {
   return Error::success();
 }
 
-bool IHexWriter::SectionCompare::operator()(const SectionBase *Lhs,
-                                            const SectionBase *Rhs) const {
-  return (sectionPhysicalAddr(Lhs) & 0xFFFFFFFFU) <
-         (sectionPhysicalAddr(Rhs) & 0xFFFFFFFFU);
+Error ASCIIHexWriter::checkSection(const SectionBase &S) const {
+  if (addressOverflows32bit(S.Addr) ||
+      addressOverflows32bit(S.Addr + S.Size - 1))
+    return createStringError(
+        errc::invalid_argument,
+        "section '%s' address range [0x%llx, 0x%llx] is not 32 bit",
+        S.Name.c_str(), S.Addr, S.Addr + S.Size - 1);
+  return Error::success();
+}
+
+Error ASCIIHexWriter::finalize() {
+  // We can't write 64-bit addresses.
+  if (addressOverflows32bit(Obj.Entry))
+    return createStringError(errc::invalid_argument,
+                             "entry point address 0x%llx overflows 32 bits",
+                             Obj.Entry);
+
+  for (const SectionBase &S : Obj.sections()) {
+    if ((S.Flags & ELF::SHF_ALLOC) && S.Type != ELF::SHT_NOBITS && S.Size > 0) {
+      if (Error E = checkSection(S))
+        return E;
+      Sections.push_back(&S);
+    }
+  }
+
+  llvm::sort(Sections, [](const SectionBase *A, const SectionBase *B) {
+    return sectionPhysicalAddr(A) < sectionPhysicalAddr(B);
+  });
+
+  std::unique_ptr<WritableMemoryBuffer> EmptyBuffer =
+      WritableMemoryBuffer::getNewMemBuffer(0);
+  if (!EmptyBuffer)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of 0 bytes");
+
+  Expected<size_t> ExpTotalSize = getTotalSize(*EmptyBuffer);
+  if (!ExpTotalSize)
+    return ExpTotalSize.takeError();
+  TotalSize = *ExpTotalSize;
+
+  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
+  if (!Buf)
+    return createStringError(errc::not_enough_memory,
+                             "failed to allocate memory buffer of 0x" +
+                                 Twine::utohexstr(TotalSize) + " bytes");
+  return Error::success();
 }
 
 uint64_t IHexWriter::writeEntryPointRecord(uint8_t *Buf) {
@@ -2740,6 +2827,20 @@ uint64_t IHexWriter::writeEndOfFileRecord(uint8_t *Buf) {
   return HexData.size();
 }
 
+Expected<size_t>
+IHexWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
+  IHexSectionWriterBase LengthCalc(EmptyBuffer);
+  for (const SectionBase *Sec : Sections)
+    if (Error Err = Sec->accept(LengthCalc))
+      return std::move(Err);
+
+  // We need space to write section records + StartAddress record
+  // (if start adress is not zero) + EndOfFile record.
+  return LengthCalc.getBufferOffset() +
+         (Obj.Entry ? IHexRecord::getLineLength(4) : 0) +
+         IHexRecord::getLineLength(0);
+}
+
 Error IHexWriter::write() {
   IHexSectionWriter Writer(*Buf);
   // Write sections.
@@ -2762,54 +2863,196 @@ Error IHexWriter::write() {
   return Error::success();
 }
 
-Error IHexWriter::checkSection(const SectionBase &Sec) {
-  uint64_t Addr = sectionPhysicalAddr(&Sec);
-  if (addressOverflows32bit(Addr) || addressOverflows32bit(Addr + Sec.Size - 1))
-    return createStringError(
-        errc::invalid_argument,
-        "Section '%s' address range [0x%llx, 0x%llx] is not 32 bit",
-        Sec.Name.c_str(), Addr, Addr + Sec.Size - 1);
+Error SRECSectionWriterBase::visit(const StringTableSection &Sec) {
+  // Check that the sizer has already done its work.
+  assert(Sec.Size == Sec.StrTabBuilder.getSize() &&
+         "Expected section size to have been finalized");
+  // We don't need to write anything here because the real writer has already
+  // done it.
   return Error::success();
 }
 
-Error IHexWriter::finalize() {
-  // We can't write 64-bit addresses.
-  if (addressOverflows32bit(Obj.Entry))
-    return createStringError(errc::invalid_argument,
-                             "Entry point address 0x%llx overflows 32 bits",
-                             Obj.Entry);
+Error SRECSectionWriterBase::visit(const Section &Sec) {
+  writeSection(Sec, Sec.Contents);
+  return Error::success();
+}
 
-  for (const SectionBase &Sec : Obj.sections())
-    if ((Sec.Flags & ELF::SHF_ALLOC) && Sec.Type != ELF::SHT_NOBITS &&
-        Sec.Size > 0) {
-      if (Error E = checkSection(Sec))
-        return E;
-      Sections.insert(&Sec);
-    }
+Error SRECSectionWriterBase::visit(const OwnedDataSection &Sec) {
+  writeSection(Sec, Sec.Data);
+  return Error::success();
+}
 
-  std::unique_ptr<WritableMemoryBuffer> EmptyBuffer =
-      WritableMemoryBuffer::getNewMemBuffer(0);
-  if (!EmptyBuffer)
-    return createStringError(errc::not_enough_memory,
-                             "failed to allocate memory buffer of 0 bytes");
+Error SRECSectionWriterBase::visit(const DynamicRelocationSection &Sec) {
+  writeSection(Sec, Sec.Contents);
+  return Error::success();
+}
 
-  IHexSectionWriterBase LengthCalc(*EmptyBuffer);
+void SRECSectionWriter::writeRecord(SRecord &Record, uint64_t Off) {
+  SRecLineData Data = Record.toString();
+  memcpy(Out.getBufferStart() + Off, Data.data(), Data.size());
+}
+
+void SRECSectionWriterBase::writeRecords(uint32_t Entry) {
+  // The ELF header could contain an entry point outside of the sections we have
+  // seen that does not fit the current record Type.
+  Type = std::max(Type, SRecord::getType(Entry));
+  uint64_t Off = HeaderSize;
+  for (SRecord &Record : Records) {
+    Record.Type = Type;
+    writeRecord(Record, Off);
+    Off += Record.getSize();
+  }
+  Offset = Off;
+}
+
+void SRECSectionWriterBase::writeSection(const SectionBase &S,
+                                         ArrayRef<uint8_t> Data) {
+  const uint32_t ChunkSize = 16;
+  uint32_t Address = sectionPhysicalAddr(&S);
+  uint32_t EndAddr = Address + S.Size - 1;
+  Type = std::max(SRecord::getType(EndAddr), Type);
+  while (!Data.empty()) {
+    uint64_t DataSize = std::min<uint64_t>(Data.size(), ChunkSize);
+    SRecord Record{Type, Address, Data.take_front(DataSize)};
+    Records.push_back(Record);
+    Data = Data.drop_front(DataSize);
+    Address += DataSize;
+  }
+}
+
+Error SRECSectionWriter::visit(const StringTableSection &Sec) {
+  assert(Sec.Size == Sec.StrTabBuilder.getSize() &&
+         "Section size does not match the section's string table builder size");
+  std::vector<uint8_t> Data(Sec.Size);
+  Sec.StrTabBuilder.write(Data.data());
+  writeSection(Sec, Data);
+  return Error::success();
+}
+
+SRecLineData SRecord::toString() const {
+  SRecLineData Line(getSize());
+  auto *Iter = Line.begin();
+  *Iter++ = 'S';
+  *Iter++ = '0' + Type;
+  // Write 1 byte (2 hex characters) record count.
+  Iter = toHexStr(getCount(), Iter, 2);
+  // Write the address field with length depending on record type.
+  Iter = toHexStr(Address, Iter, getAddressSize());
+  // Write data byte by byte.
+  for (uint8_t X : Data)
+    Iter = toHexStr(X, Iter, 2);
+  // Write the 1 byte checksum.
+  Iter = toHexStr(getChecksum(), Iter, 2);
+  *Iter++ = '\r';
+  *Iter++ = '\n';
+  assert(Iter == Line.end());
+  return Line;
+}
+
+uint8_t SRecord::getChecksum() const {
+  uint32_t Sum = getCount();
+  Sum += (Address >> 24) & 0xFF;
+  Sum += (Address >> 16) & 0xFF;
+  Sum += (Address >> 8) & 0xFF;
+  Sum += Address & 0xFF;
+  for (uint8_t Byte : Data)
+    Sum += Byte;
+  return 0xFF - (Sum & 0xFF);
+}
+
+size_t SRecord::getSize() const {
+  // Type, Count, Checksum, and CRLF are two characters each.
+  return 2 + 2 + getAddressSize() + Data.size() * 2 + 2 + 2;
+}
+
+uint8_t SRecord::getAddressSize() const {
+  switch (Type) {
+  case Type::S2:
+    return 6;
+  case Type::S3:
+    return 8;
+  case Type::S7:
+    return 8;
+  case Type::S8:
+    return 6;
+  default:
+    return 4;
+  }
+}
+
+uint8_t SRecord::getCount() const {
+  uint8_t DataSize = Data.size();
+  uint8_t ChecksumSize = 1;
+  return getAddressSize() / 2 + DataSize + ChecksumSize;
+}
+
+uint8_t SRecord::getType(uint32_t Address) {
+  if (isUInt<16>(Address))
+    return SRecord::S1;
+  if (isUInt<24>(Address))
+    return SRecord::S2;
+  return SRecord::S3;
+}
+
+SRecord SRecord::getHeader(StringRef FileName) {
+  // Header is a record with Type S0, Address 0, and Data that is a
+  // vendor-specific text comment. For the comment we will use the output file
+  // name truncated to 40 characters to match the behavior of GNU objcopy.
+  StringRef HeaderContents = FileName.slice(0, 40);
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>(HeaderContents.data()),
+      HeaderContents.size());
+  return {SRecord::S0, 0, Data};
+}
+
+size_t SRECWriter::writeHeader(uint8_t *Buf) {
+  SRecLineData Record = SRecord::getHeader(OutputFileName).toString();
+  memcpy(Buf, Record.data(), Record.size());
+  return Record.size();
+}
+
+size_t SRECWriter::writeTerminator(uint8_t *Buf, uint8_t Type) {
+  assert(Type >= SRecord::S7 && Type <= SRecord::S9 &&
+         "Invalid record type for terminator");
+  uint32_t Entry = Obj.Entry;
+  SRecLineData Data = SRecord{Type, Entry, {}}.toString();
+  memcpy(Buf, Data.data(), Data.size());
+  return Data.size();
+}
+
+Expected<size_t>
+SRECWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
+  SRECSizeCalculator SizeCalc(EmptyBuffer, 0);
   for (const SectionBase *Sec : Sections)
-    if (Error Err = Sec->accept(LengthCalc))
-      return Err;
+    if (Error Err = Sec->accept(SizeCalc))
+      return std::move(Err);
 
-  // We need space to write section records + StartAddress record
-  // (if start adress is not zero) + EndOfFile record.
-  TotalSize = LengthCalc.getBufferOffset() +
-              (Obj.Entry ? IHexRecord::getLineLength(4) : 0) +
-              IHexRecord::getLineLength(0);
+  SizeCalc.writeRecords(Obj.Entry);
+  // We need to add the size of the Header and Terminator records.
+  SRecord Header = SRecord::getHeader(OutputFileName);
+  uint8_t TerminatorType = 10 - SizeCalc.getType();
+  SRecord Terminator = {TerminatorType, static_cast<uint32_t>(Obj.Entry), {}};
+  return Header.getSize() + SizeCalc.getBufferOffset() + Terminator.getSize();
+}
 
-  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
-  if (!Buf)
-    return createStringError(errc::not_enough_memory,
-                             "failed to allocate memory buffer of " +
-                                 Twine::utohexstr(TotalSize) + " bytes");
+Error SRECWriter::write() {
+  uint32_t HeaderSize =
+      writeHeader(reinterpret_cast<uint8_t *>(Buf->getBufferStart()));
+  SRECSectionWriter Writer(*Buf, HeaderSize);
+  for (const SectionBase *S : Sections) {
+    if (Error E = S->accept(Writer))
+      return E;
+  }
+  Writer.writeRecords(Obj.Entry);
+  uint64_t Offset = Writer.getBufferOffset();
 
+  // An S1 record terminates with an S9 record, S2 with S8, and S3 with S7.
+  uint8_t TerminatorType = 10 - Writer.getType();
+  Offset += writeTerminator(
+      reinterpret_cast<uint8_t *>(Buf->getBufferStart() + Offset),
+      TerminatorType);
+  assert(Offset == TotalSize);
+  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
   return Error::success();
 }
 

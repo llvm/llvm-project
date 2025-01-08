@@ -195,6 +195,15 @@ class Sema;
     /// Fixed point type conversions according to N1169.
     ICK_Fixed_Point_Conversion,
 
+    /// HLSL vector truncation.
+    ICK_HLSL_Vector_Truncation,
+
+    /// HLSL non-decaying array rvalue cast.
+    ICK_HLSL_Array_RValue,
+
+    // HLSL vector splat from scalar or boolean type.
+    ICK_HLSL_Vector_Splat,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -207,14 +216,23 @@ class Sema;
     /// Exact Match
     ICR_Exact_Match = 0,
 
+    /// HLSL Scalar Widening
+    ICR_HLSL_Scalar_Widening,
+
     /// Promotion
     ICR_Promotion,
+
+    /// HLSL Scalar Widening with promotion
+    ICR_HLSL_Scalar_Widening_Promotion,
 
     /// Conversion
     ICR_Conversion,
 
     /// OpenCL Scalar Widening
     ICR_OCL_Scalar_Widening,
+
+    /// HLSL Scalar Widening with conversion
+    ICR_HLSL_Scalar_Widening_Conversion,
 
     /// Complex <-> Real conversion
     ICR_Complex_Real_Conversion,
@@ -227,10 +245,23 @@ class Sema;
 
     /// Conversion not allowed by the C standard, but that we accept as an
     /// extension anyway.
-    ICR_C_Conversion_Extension
+    ICR_C_Conversion_Extension,
+
+    /// HLSL Matching Dimension Reduction
+    ICR_HLSL_Dimension_Reduction,
+
+    /// HLSL Dimension reduction with promotion
+    ICR_HLSL_Dimension_Reduction_Promotion,
+
+    /// HLSL Dimension reduction with conversion
+    ICR_HLSL_Dimension_Reduction_Conversion,
   };
 
   ImplicitConversionRank GetConversionRank(ImplicitConversionKind Kind);
+
+  ImplicitConversionRank
+  GetDimensionConversionRank(ImplicitConversionRank Base,
+                             ImplicitConversionKind Dimension);
 
   /// NarrowingKind - The kind of narrowing conversion being performed by a
   /// standard conversion sequence according to C++11 [dcl.init.list]p7.
@@ -271,6 +302,11 @@ class Sema;
     /// pointer-to-member conversion, or boolean conversion.
     ImplicitConversionKind Second : 8;
 
+    /// Dimension - Between the second and third conversion a vector or matrix
+    /// dimension conversion may occur. If this is not ICK_Identity this
+    /// conversion truncates the vector or matrix, or extends a scalar.
+    ImplicitConversionKind Dimension : 8;
+
     /// Third - The third conversion can be a qualification conversion
     /// or a function conversion.
     ImplicitConversionKind Third : 8;
@@ -278,40 +314,50 @@ class Sema;
     /// Whether this is the deprecated conversion of a
     /// string literal to a pointer to non-const character data
     /// (C++ 4.2p2).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DeprecatedStringLiteralToCharPtr : 1;
 
     /// Whether the qualification conversion involves a change in the
     /// Objective-C lifetime (for automatic reference counting).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned QualificationIncludesObjCLifetime : 1;
 
     /// IncompatibleObjC - Whether this is an Objective-C conversion
     /// that we should warn about (if we actually use it).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IncompatibleObjC : 1;
 
     /// ReferenceBinding - True when this is a reference binding
     /// (C++ [over.ics.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ReferenceBinding : 1;
 
     /// DirectBinding - True when this is a reference binding that is a
     /// direct binding (C++ [dcl.init.ref]).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned DirectBinding : 1;
 
     /// Whether this is an lvalue reference binding (otherwise, it's
     /// an rvalue reference binding).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsLvalueReference : 1;
 
     /// Whether we're binding to a function lvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToFunctionLvalue : 1;
 
     /// Whether we're binding to an rvalue.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToRvalue : 1;
 
     /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned BindsImplicitObjectArgumentWithoutRefQualifier : 1;
 
     /// Whether this binds a reference to an object with a different
     /// Objective-C lifetime qualifier.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ObjCLifetimeConversionBinding : 1;
 
     /// FromType - The type that this conversion is converting
@@ -357,7 +403,8 @@ class Sema;
     void setAsIdentityConversion();
 
     bool isIdentityConversion() const {
-      return Second == ICK_Identity && Third == ICK_Identity;
+      return Second == ICK_Identity && Dimension == ICK_Identity &&
+             Third == ICK_Identity;
     }
 
     ImplicitConversionRank getRank() const;
@@ -541,9 +588,11 @@ class Sema;
     };
 
     /// ConversionKind - The kind of implicit conversion sequence.
+    LLVM_PREFERRED_TYPE(Kind)
     unsigned ConversionKind : 31;
 
     // Whether the initializer list was of an incomplete array.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InitializerListOfIncompleteArray : 1;
 
     /// When initializing an array or std::initializer_list from an
@@ -874,10 +923,13 @@ class Sema;
     /// object argument.
     bool IgnoreObjectArgument : 1;
 
+    bool TookAddressOfOverload : 1;
+
     /// True if the candidate was found using ADL.
     CallExpr::ADLCallKind IsADLCandidate : 1;
 
     /// Whether this is a rewritten candidate, and if so, of what kind?
+    LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
 
     /// FailureKind - The reason why this candidate is not viable.
@@ -932,7 +984,7 @@ class Sema;
     unsigned getNumParams() const {
       if (IsSurrogate) {
         QualType STy = Surrogate->getConversionType();
-        while (STy->isPointerType() || STy->isReferenceType())
+        while (STy->isPointerOrReferenceType())
           STy = STy->getPointeeType();
         return STy->castAs<FunctionProtoType>()->getNumParams();
       }
@@ -946,7 +998,9 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsSurrogate(false), IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+        : IsSurrogate(false), IgnoreObjectArgument(false),
+          TookAddressOfOverload(false), IsADLCandidate(CallExpr::NotADL),
+          RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
@@ -973,6 +1027,10 @@ class Sema;
       /// Initialization of an object of class type by constructor,
       /// using either a parenthesized or braced list of arguments.
       CSK_InitByConstructor,
+
+      /// C++ [over.match.call.general]
+      /// Resolve a call through the address of an overload set.
+      CSK_AddressOfOverloadSet,
     };
 
     /// Information about operator rewrites to consider when adding operator
@@ -1148,9 +1206,8 @@ class Sema;
 
     /// Add a new candidate with NumConversions conversion sequence slots
     /// to the overload set.
-    OverloadCandidate &
-    addCandidate(unsigned NumConversions = 0,
-                 ConversionSequenceList Conversions = std::nullopt) {
+    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
+                                    ConversionSequenceList Conversions = {}) {
       assert((Conversions.empty() || Conversions.size() == NumConversions) &&
              "preallocated conversion sequence has wrong length");
 

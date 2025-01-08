@@ -9,12 +9,15 @@
 #include "SnippetFile.h"
 #include "BenchmarkRunner.h"
 #include "Error.h"
+#include "LlvmState.h"
+#include "Target.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -34,10 +37,9 @@ namespace {
 // An MCStreamer that reads a BenchmarkCode definition from a file.
 class BenchmarkCodeStreamer : public MCStreamer, public AsmCommentConsumer {
 public:
-  explicit BenchmarkCodeStreamer(
-      MCContext *Context, const DenseMap<StringRef, unsigned> &RegNameToRegNo,
-      BenchmarkCode *Result)
-      : MCStreamer(*Context), RegNameToRegNo(RegNameToRegNo), Result(Result) {}
+  explicit BenchmarkCodeStreamer(MCContext *Context, const LLVMState &State,
+                                 BenchmarkCode *Result)
+      : MCStreamer(*Context), State(State), Result(Result) {}
 
   // Implementation of the MCStreamer interface. We only care about
   // instructions.
@@ -150,8 +152,8 @@ public:
     }
     if (CommentText.consume_front("SNIPPET-ADDRESS")) {
       // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
-      if (!to_integer<intptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
-                                16)) {
+      if (!to_integer<uintptr_t>(CommentText.trim(), Result->Key.SnippetAddress,
+                                 16)) {
         errs() << "invalid comment 'LLVM-EXEGESIS-SNIPPET-ADDRESS "
                << CommentText
                << "', expected <ADDRESS> to contain a valid integer in "
@@ -175,6 +177,20 @@ public:
 
       return;
     }
+    if (CommentText.consume_front("LOOP-REGISTER")) {
+      // LLVM-EXEGESIS-LOOP-REGISTER <loop register>
+      unsigned LoopRegister;
+
+      if (!(LoopRegister = findRegisterByName(CommentText.trim()))) {
+        errs() << "unknown register '" << CommentText
+               << "' in 'LLVM-EXEGESIS-LOOP-REGISTER " << CommentText << "'\n";
+        ++InvalidComments;
+        return;
+      }
+
+      Result->Key.LoopRegister = LoopRegister;
+      return;
+    }
   }
 
   unsigned numInvalidComments() const { return InvalidComments; }
@@ -192,15 +208,17 @@ private:
                     Align ByteAlignment, SMLoc Loc) override {}
 
   unsigned findRegisterByName(const StringRef RegName) const {
-    auto Iter = RegNameToRegNo.find(RegName);
-    if (Iter != RegNameToRegNo.end())
-      return Iter->second;
-    errs() << "'" << RegName
-           << "' is not a valid register name for the target\n";
-    return 0;
+    std::optional<MCRegister> RegisterNumber =
+        State.getRegisterNumberFromName(RegName);
+    if (!RegisterNumber.has_value()) {
+      errs() << "'" << RegName
+             << "' is not a valid register name for the target\n";
+      return MCRegister::NoRegister;
+    }
+    return *RegisterNumber;
   }
 
-  const DenseMap<StringRef, unsigned> &RegNameToRegNo;
+  const LLVMState &State;
   BenchmarkCode *const Result;
   unsigned InvalidComments = 0;
 };
@@ -221,6 +239,11 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
 
   BenchmarkCode Result;
 
+  // Ensure that there is a default loop register value specified.
+  Result.Key.LoopRegister =
+      State.getExegesisTarget().getDefaultLoopCounterRegister(
+          State.getTargetMachine().getTargetTriple());
+
   const TargetMachine &TM = State.getTargetMachine();
   MCContext Context(TM.getTargetTriple(), TM.getMCAsmInfo(),
                     TM.getMCRegisterInfo(), TM.getMCSubtargetInfo());
@@ -228,8 +251,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
       TM.getTarget().createMCObjectFileInfo(Context, /*PIC=*/false));
   Context.setObjectFileInfo(ObjectFileInfo.get());
   Context.initInlineSourceManager();
-  BenchmarkCodeStreamer Streamer(&Context, State.getRegNameToRegNoMapping(),
-                                 &Result);
+  BenchmarkCodeStreamer Streamer(&Context, State, &Result);
 
   std::string Error;
   raw_string_ostream ErrorStream(Error);
@@ -240,8 +262,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
           *TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
   // The following call will take care of calling Streamer.setTargetStreamer.
   TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
-                                         InstPrinter.get(),
-                                         TM.Options.MCOptions.AsmVerbose);
+                                         InstPrinter.get());
   if (!Streamer.getTargetStreamer())
     return make_error<Failure>("cannot create target asm streamer");
 

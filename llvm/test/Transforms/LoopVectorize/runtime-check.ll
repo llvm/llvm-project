@@ -32,7 +32,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]], !dbg [[DBG9]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !dbg [[DBG9]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00), !dbg [[DBG9]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]], !dbg [[DBG9]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP4]], align 4, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG9]]
@@ -42,7 +42,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]], !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG9]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ], !dbg [[DBG9]]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[FOR_BODY_PREHEADER]] ], !dbg [[DBG9]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG9]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], !dbg [[DBG9]]
@@ -53,7 +53,7 @@ define i32 @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) nounwind uwtable ssp
 ; CHECK-NEXT:    store float [[MUL]], ptr [[ARRAYIDX2]], align 4, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1, !dbg [[DBG9]]
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32, !dbg [[DBG9]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]], !dbg [[DBG9]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[N]], [[LFTR_WIDEIV]], !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT]], label [[FOR_BODY]], !dbg [[DBG9]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG14:![0-9]+]]
@@ -144,10 +144,10 @@ define void @test_runtime_check(ptr %a, float %b, i64 %offset, i64 %offset2, i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -157,7 +157,7 @@ define void @test_runtime_check(ptr %a, float %b, i64 %offset, i64 %offset2, i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP13]], i64 [[OFFSET2]]
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
-; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B]]
+; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[B]], [[L2]]
 ; CHECK-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
 ; CHECK-NEXT:    store float [[AD]], ptr [[ARR_IDX]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
@@ -231,14 +231,14 @@ define void @test_runtime_check2(ptr %a, float %b, i64 %offset, i64 %offset2, i6
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[ARR_IDX2:%.*]] = getelementptr float, ptr [[TMP1]], i64 [[OFFSET2:%.*]]
 ; CHECK-NEXT:    [[L2:%.*]] = load float, ptr [[ARR_IDX2]], align 4
-; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[L2]], [[B:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = fmul fast float [[B:%.*]], [[L2]]
 ; CHECK-NEXT:    [[AD:%.*]] = fadd fast float [[L1]], [[M]]
 ; CHECK-NEXT:    store float [[AD]], ptr [[ARR_IDX]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[C:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr float, ptr [[TMP2]], i64 -1
+; CHECK-NEXT:    [[C_IDX:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -4
 ; CHECK-NEXT:    [[LC:%.*]] = load float, ptr [[C_IDX]], align 4
 ; CHECK-NEXT:    [[VC:%.*]] = fadd float [[LC]], 1.000000e+00
-; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[C_IDX2:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[IV]]
 ; CHECK-NEXT:    store float [[VC]], ptr [[C_IDX2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]

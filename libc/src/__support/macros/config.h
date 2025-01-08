@@ -13,22 +13,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H
 
-// LIBC_HAS_BUILTIN()
-//
-// Checks whether the compiler supports a Clang Feature Checking Macro, and if
-// so, checks whether it supports the provided builtin function "x" where x
-// is one of the functions noted in
-// https://clang.llvm.org/docs/LanguageExtensions.html
-//
-// Note: Use this macro to avoid an extra level of #ifdef __has_builtin check.
-// http://releases.llvm.org/3.3/tools/clang/docs/LanguageExtensions.html
-
-// Compiler builtin-detection.
-// clang.llvm.org/docs/LanguageExtensions.html#has-builtin
-#ifdef __has_builtin
-#define LIBC_HAS_BUILTIN(x) __has_builtin(x)
-#else
-#define LIBC_HAS_BUILTIN(x) 0
+// Workaround for compilers that do not support builtin detection.
+// FIXME: This is only required for the GPU portion which should be moved.
+#ifndef __has_builtin
+#define __has_builtin(b) 0
 #endif
 
 // Compiler feature-detection.
@@ -39,12 +27,20 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
-// Compiler attribute-detection.
-// https://clang.llvm.org/docs/LanguageExtensions.html#has-attribute
-#ifdef __has_attribute
-#define LIBC_HAS_ATTRIBUTE(f) __has_attribute(f)
+#ifdef __clang__
+// Declare a LIBC_NAMESPACE with hidden visibility. `namespace
+// LIBC_NAMESPACE_DECL {` should be used around all declarations and definitions
+// for libc internals as opposed to just `namespace LIBC_NAMESPACE {`. This
+// ensures that all declarations within this namespace have hidden
+// visibility, which optimizes codegen for uses of symbols defined in other
+// translation units in ways that can be necessary for correctness by avoiding
+// dynamic relocations. This does not affect the public C symbols which are
+// controlled independently via `LLVM_LIBC_FUNCTION_ATTR`.
+#define LIBC_NAMESPACE_DECL [[gnu::visibility("hidden")]] LIBC_NAMESPACE
 #else
-#define LIBC_HAS_ATTRIBUTE(f) 0
+// TODO(#98548): GCC emits a warning when using the visibility attribute which
+// needs to be diagnosed and addressed.
+#define LIBC_NAMESPACE_DECL LIBC_NAMESPACE
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_CONFIG_H

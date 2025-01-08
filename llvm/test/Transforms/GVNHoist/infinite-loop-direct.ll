@@ -11,39 +11,39 @@
 ; CHECK: bitcast
 ; CHECK-NEXT: load
 
-%class.bar = type { i8*, %class.base* }
-%class.base = type { i32 (...)** }
+%class.bar = type { ptr, ptr }
+%class.base = type { ptr }
 
 ; Function Attrs: noreturn nounwind uwtable
 define void @bazv1() local_unnamed_addr {
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x.sroa.2.0..sroa_idx2 = getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  store %class.base* null, %class.base** %x.sroa.2.0..sroa_idx2, align 8
-  call void @_Z3foo3bar(%class.bar* nonnull %agg.tmp)
-  %0 = load %class.base*, %class.base** %x.sroa.2.0..sroa_idx2, align 8
-  %1 = bitcast %class.bar* %agg.tmp to %class.base*
-  %cmp.i = icmp eq %class.base* %0, %1
+  %x.sroa.2.0..sroa_idx2 = getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  store ptr null, ptr %x.sroa.2.0..sroa_idx2, align 8
+  call void @_Z3foo3bar(ptr nonnull %agg.tmp)
+  %0 = load ptr, ptr %x.sroa.2.0..sroa_idx2, align 8
+  %1 = bitcast ptr %agg.tmp to ptr
+  %cmp.i = icmp eq ptr %0, %1
   br i1 %cmp.i, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
-  %2 = bitcast %class.base* %0 to void (%class.base*)***
-  %vtable.i = load void (%class.base*)**, void (%class.base*)*** %2, align 8
-  %vfn.i = getelementptr inbounds void (%class.base*)*, void (%class.base*)** %vtable.i, i64 2
-  %3 = load void (%class.base*)*, void (%class.base*)** %vfn.i, align 8
-  call void %3(%class.base* %0)
+  %2 = bitcast ptr %0 to ptr
+  %vtable.i = load ptr, ptr %2, align 8
+  %vfn.i = getelementptr inbounds ptr, ptr %vtable.i, i64 2
+  %3 = load ptr, ptr %vfn.i, align 8
+  call void %3(ptr %0)
   br label %while.cond.preheader
 
 if.else.i:                                        ; preds = %entry
-  %tobool.i = icmp eq %class.base* %0, null
+  %tobool.i = icmp eq ptr %0, null
   br i1 %tobool.i, label %while.cond.preheader, label %if.then4.i
 
 if.then4.i:                                       ; preds = %if.else.i
-  %4 = bitcast %class.base* %0 to void (%class.base*)***
-  %vtable6.i = load void (%class.base*)**, void (%class.base*)*** %4, align 8
-  %vfn7.i = getelementptr inbounds void (%class.base*)*, void (%class.base*)** %vtable6.i, i64 3
-  %5 = load void (%class.base*)*, void (%class.base*)** %vfn7.i, align 8
-  call void %5(%class.base* nonnull %0)
+  %4 = bitcast ptr %0 to ptr
+  %vtable6.i = load ptr, ptr %4, align 8
+  %vfn7.i = getelementptr inbounds ptr, ptr %vtable6.i, i64 3
+  %5 = load ptr, ptr %vfn7.i, align 8
+  call void %5(ptr nonnull %0)
   br label %while.cond.preheader
 
 while.cond.preheader:                             ; preds = %if.then.i, %if.else.i, %if.then4.i
@@ -54,7 +54,7 @@ while.cond:                                       ; preds = %while.cond.preheade
   br label %while.cond
 }
 
-declare void @_Z3foo3bar(%class.bar*) local_unnamed_addr
+declare void @_Z3foo3bar(ptr) local_unnamed_addr
 
 declare i32 @sleep(i32) local_unnamed_addr
 
@@ -69,28 +69,28 @@ declare i32 @sleep(i32) local_unnamed_addr
 define void @bazv() {
 entry:
   %agg.tmp = alloca %class.bar, align 8
-  %x= getelementptr inbounds %class.bar, %class.bar* %agg.tmp, i64 0, i32 1
-  %0 = load %class.base*, %class.base** %x, align 8
-  %1 = bitcast %class.bar* %agg.tmp to %class.base*
-  %cmp.i = icmp eq %class.base* %0, %1
+  %x= getelementptr inbounds %class.bar, ptr %agg.tmp, i64 0, i32 1
+  %0 = load ptr, ptr %x, align 8
+  %1 = bitcast ptr %agg.tmp to ptr
+  %cmp.i = icmp eq ptr %0, %1
   br i1 %cmp.i, label %bb1, label %bb4
 
 bb1:
-  %b1 = bitcast %class.base* %0 to void (%class.base*)***
-  %i = load void (%class.base*)**, void (%class.base*)*** %b1, align 8
-  %vfn.i = getelementptr inbounds void (%class.base*)*, void (%class.base*)** %i, i64 2
-  %cmp.j = icmp eq %class.base* %0, %1
+  %b1 = bitcast ptr %0 to ptr
+  %i = load ptr, ptr %b1, align 8
+  %vfn.i = getelementptr inbounds ptr, ptr %i, i64 2
+  %cmp.j = icmp eq ptr %0, %1
   br i1 %cmp.j, label %bb2, label %bb3
 
 bb2:
-  %l1 = load void (%class.base*)*, void (%class.base*)** %vfn.i, align 8
+  %l1 = load ptr, ptr %vfn.i, align 8
   br label %bb3
 
 bb3:
-  %l2 = load void (%class.base*)*, void (%class.base*)** %vfn.i, align 8
+  %l2 = load ptr, ptr %vfn.i, align 8
   br label %bb2
 
 bb4:
-  %b2 = bitcast %class.base* %0 to void (%class.base*)***
+  %b2 = bitcast ptr %0 to ptr
   ret void
 }

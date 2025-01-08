@@ -26,6 +26,10 @@ private:
   // Hold Strings that can be free'd all together with NVPTXRegisterInfo
   BumpPtrAllocator StrAlloc;
   UniqueStringSaver StrPool;
+  // State for debug register mapping that can be mutated even through a const
+  // pointer so that we can get the proper dwarf register encoding during ASM
+  // emission.
+  mutable DenseMap<uint64_t, uint64_t> debugRegisterMap;
 
 public:
   NVPTXRegisterInfo();
@@ -56,6 +60,18 @@ public:
     return getStrPool().save(O.str()).data();
   }
 
+  // Manage the debugRegisterMap.  PTX virtual registers for DebugInfo are
+  // encoded using the names used in the emitted text of the PTX assembly. This
+  // mapping must be managed during assembly emission.
+  //
+  // These are marked const because the interfaces used to access this
+  // RegisterInfo object are all const, but we need to communicate some state
+  // here, because the proper encoding for debug registers is available only
+  // temporarily during ASM emission.
+  void addToDebugRegisterMap(uint64_t preEncodedVirtualRegister,
+                             std::string registerName) const;
+  void clearDebugRegisterMap() const;
+  int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const override;
 };
 
 std::string getNVPTXRegClassName(const TargetRegisterClass *RC);

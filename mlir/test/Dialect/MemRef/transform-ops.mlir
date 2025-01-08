@@ -66,7 +66,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
     %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
   }
 }
@@ -103,7 +103,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
     %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
   }
 }
@@ -224,7 +224,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
     %1 = transform.memref.multibuffer %0 {factor = 2 : i64} : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
   }
 }
@@ -260,7 +260,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
     %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
   }
 }
@@ -299,7 +299,7 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!transform.any_op) -> !transform.op<"memref.alloc">
     %1 = transform.memref.multibuffer %0 {factor = 2 : i64, skip_analysis} : (!transform.op<"memref.alloc">) -> !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %1, "transformed" : !transform.any_op
     transform.yield
   }
 }

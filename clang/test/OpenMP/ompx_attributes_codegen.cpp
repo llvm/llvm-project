@@ -3,15 +3,17 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
 // RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -dwarf-version=5 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple nvptx64 -fopenmp-targets=nvptx64 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=NVIDIA
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple nvptx64 -fopenmp-targets=nvptx64 -emit-llvm %s -fopenmp-is-target-device -dwarf-version=5 -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=NVIDIA
 // expected-no-diagnostics
 
 
 // Check that the target attributes are set on the generated kernel
 void func() {
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l16(ptr {{[^,]+}}) #0
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}})
-  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}}) #4
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l18(ptr {{[^,]+}}) #0
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l20(ptr {{[^,]+}})
+  // AMD: amdgpu_kernel void @__omp_offloading[[HASH:.*]]_l22(ptr {{[^,]+}}) #4
 
   #pragma omp target ompx_attribute([[clang::amdgpu_flat_work_group_size(10, 20)]])
   {}
@@ -35,7 +37,6 @@ void func() {
 // NVIDIA: "omp_target_thread_limit"="20"
 // NVIDIA: "omp_target_thread_limit"="45"
 // NVIDIA: "omp_target_thread_limit"="17"
-// NVIDIA: !{ptr @__omp_offloading[[HASH1:.*]]_l16, !"maxntidx", i32 20}
-// NVIDIA: !{ptr @__omp_offloading[[HASH2:.*]]_l18, !"minctasm", i32 90}
-// NVIDIA: !{ptr @__omp_offloading[[HASH2]]_l18, !"maxntidx", i32 45}
-// NVIDIA: !{ptr @__omp_offloading[[HASH3:.*]]_l20, !"maxntidx", i32 17}
+// NVIDIA: !{ptr @__omp_offloading[[HASH1:.*]]_l18, !"maxntidx", i32 20}
+// NVIDIA: !{ptr @__omp_offloading[[HASH2:.*]]_l20, !"maxntidx", i32 45}
+// NVIDIA: !{ptr @__omp_offloading[[HASH3:.*]]_l22, !"maxntidx", i32 17}

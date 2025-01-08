@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float acos(float x) {
     // Computes arccos(x).
@@ -171,3 +171,5 @@ _CLC_OVERLOAD _CLC_DEF double acos(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, acos, double);
 
 #endif // cl_khr_fp64
+
+_CLC_DEFINE_UNARY_BUILTIN_FP16(acos)

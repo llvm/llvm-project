@@ -50,7 +50,7 @@ declare i32 @snprintf(ptr, i64, ptr, ...)
 
 define ptr @fold_strchr_past_end() {
 ; CHECK-LABEL: @fold_strchr_past_end(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a5, i64 5)
 ;
   %p = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
   %q = call ptr @strchr(ptr %p, i32 0)
@@ -62,7 +62,7 @@ define ptr @fold_strchr_past_end() {
 define void @fold_strcmp_past_end(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strcmp_past_end(
 ; CHECK-NEXT:    store i32 1, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 -1, ptr [[PC50]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -84,7 +84,7 @@ define void @fold_strcmp_past_end(ptr %pcmp) {
 define void @fold_strncmp_past_end(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strncmp_past_end(
 ; CHECK-NEXT:    store i32 1, ptr [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; CHECK-NEXT:    store i32 -1, ptr [[PC50]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -118,7 +118,7 @@ define ptr @fold_strrchr_past_end(i32 %c) {
 define void @fold_strstr_past_end(ptr %psub) {
 ; CHECK-LABEL: @fold_strstr_past_end(
 ; CHECK-NEXT:    store ptr @a5, ptr [[PSUB:%.*]], align 8
-; CHECK-NEXT:    [[PS50:%.*]] = getelementptr ptr, ptr [[PSUB]], i64 1
+; CHECK-NEXT:    [[PS50:%.*]] = getelementptr i8, ptr [[PSUB]], i64 8
 ; CHECK-NEXT:    store ptr null, ptr [[PS50]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -202,7 +202,7 @@ define ptr @fold_strncpy_past_end(ptr %dst) {
 define void @fold_strpbrk_past_end(ptr %psub) {
 ; CHECK-LABEL: @fold_strpbrk_past_end(
 ; CHECK-NEXT:    store ptr null, ptr [[PSUB:%.*]], align 8
-; CHECK-NEXT:    [[PS50:%.*]] = getelementptr ptr, ptr [[PSUB]], i64 1
+; CHECK-NEXT:    [[PS50:%.*]] = getelementptr i8, ptr [[PSUB]], i64 8
 ; CHECK-NEXT:    store ptr null, ptr [[PS50]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -224,7 +224,7 @@ define void @fold_strpbrk_past_end(ptr %psub) {
 define void @fold_strspn_past_end(ptr %poff) {
 ; CHECK-LABEL: @fold_strspn_past_end(
 ; CHECK-NEXT:    store i64 0, ptr [[POFF:%.*]], align 4
-; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, ptr [[POFF]], i64 1
+; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i8, ptr [[POFF]], i64 8
 ; CHECK-NEXT:    store i64 0, ptr [[PO50]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -246,7 +246,7 @@ define void @fold_strspn_past_end(ptr %poff) {
 define void @fold_strcspn_past_end(ptr %poff) {
 ; CHECK-LABEL: @fold_strcspn_past_end(
 ; CHECK-NEXT:    store i64 2, ptr [[POFF:%.*]], align 4
-; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, ptr [[POFF]], i64 1
+; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i8, ptr [[POFF]], i64 8
 ; CHECK-NEXT:    store i64 0, ptr [[PO50]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -268,7 +268,7 @@ define void @fold_strcspn_past_end(ptr %poff) {
 
 define i32 @fold_atoi_past_end() {
 ; CHECK-LABEL: @fold_atoi_past_end(
-; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
   %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
@@ -282,22 +282,22 @@ define i32 @fold_atoi_past_end() {
 
 define void @fold_atol_strtol_past_end(ptr %ps) {
 ; CHECK-LABEL: @fold_atol_strtol_past_end(
-; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    store i64 [[I0]], ptr [[PS:%.*]], align 4
-; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[PS]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[PS]], i64 8
 ; CHECK-NEXT:    store i64 [[I1]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 0)
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
+; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 0)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[PS]], i64 16
 ; CHECK-NEXT:    store i64 [[I2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 8)
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
+; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 8)
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[PS]], i64 24
 ; CHECK-NEXT:    store i64 [[I3]], ptr [[P3]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 10)
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i64, ptr [[PS]], i64 4
+; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 10)
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[PS]], i64 32
 ; CHECK-NEXT:    store i64 [[I4]], ptr [[P4]], align 4
-; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 16)
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr i64, ptr [[PS]], i64 5
+; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5), ptr null, i32 16)
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr i8, ptr [[PS]], i64 40
 ; CHECK-NEXT:    store i64 [[I5]], ptr [[P5]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -336,7 +336,7 @@ define void @fold_atol_strtol_past_end(ptr %ps) {
 define void @fold_sprintf_past_end(ptr %pcnt, ptr %dst) {
 ; CHECK-LABEL: @fold_sprintf_past_end(
 ; CHECK-NEXT:    store i32 0, ptr [[PCNT:%.*]], align 4
-; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, ptr [[PCNT]], i64 1
+; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i8, ptr [[PCNT]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[PN05]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -358,10 +358,10 @@ define void @fold_sprintf_past_end(ptr %pcnt, ptr %dst) {
 
 define void @fold_snprintf_past_end(ptr %pcnt, ptr %dst, i64 %n) {
 ; CHECK-LABEL: @fold_snprintf_past_end(
-; CHECK-NEXT:    [[N5_:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST:%.*]], i64 [[N:%.*]], ptr nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[N5_:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST:%.*]], i64 [[N:%.*]], ptr nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
 ; CHECK-NEXT:    store i32 [[N5_]], ptr [[PCNT:%.*]], align 4
-; CHECK-NEXT:    [[N05:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST]], i64 [[N]], ptr nonnull @a5, ptr nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
-; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, ptr [[PCNT]], i64 1
+; CHECK-NEXT:    [[N05:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST]], i64 [[N]], ptr nonnull @a5, ptr nonnull getelementptr inbounds nuw (i8, ptr @a5, i64 5))
+; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i8, ptr [[PCNT]], i64 4
 ; CHECK-NEXT:    store i32 [[N05]], ptr [[PN05]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -67,7 +68,7 @@ module {
   }
 
   // Driver method to call and verify tensor kernel.
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %d1 = arith.constant -1.0 : f64
 
@@ -90,22 +91,34 @@ module {
     // Call sparse vector kernels.
     %0 = call @tensor_scale(%st) : (tensor<?x?x?xf64, #ST1>) -> tensor<?x?x?xf64, #ST2>
 
+    //
     // Sanity check on stored values.
     //
-    // CHECK:      5
-    // CHECK-NEXT: ( 1, 2, 3, 4, 5 )
-    // CHECK-NEXT: 24
-    // CHECK-NEXT: ( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 6, 8, 0, 0, 0, 0, 10 )
-    %m1 = sparse_tensor.values %st : tensor<?x?x?xf64, #ST1> to memref<?xf64>
-    %m2 = sparse_tensor.values %0  : tensor<?x?x?xf64, #ST2> to memref<?xf64>
-    %n1 = sparse_tensor.number_of_entries %st : tensor<?x?x?xf64, #ST1>
-    %n2 = sparse_tensor.number_of_entries %0 : tensor<?x?x?xf64, #ST2>
-    %v1 = vector.transfer_read %m1[%c0], %d1: memref<?xf64>, vector<5xf64>
-    %v2 = vector.transfer_read %m2[%c0], %d1: memref<?xf64>, vector<24xf64>
-    vector.print %n1 : index
-    vector.print %v1 : vector<5xf64>
-    vector.print %n2 : index
-    vector.print %v2 : vector<24xf64>
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 5
+    // CHECK-NEXT: dim = ( 3, 4, 8 )
+    // CHECK-NEXT: lvl = ( 3, 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 5 )
+    // CHECK-NEXT: crd[2] : ( 0, 7, 1, 2, 7 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
+    // CHECK-NEXT: ----
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 24
+    // CHECK-NEXT: dim = ( 3, 4, 8 )
+    // CHECK-NEXT: lvl = ( 3, 4, 8 )
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 2 )
+    // CHECK-NEXT: values : ( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 6, 8, 0, 0, 0, 0, 10 )
+    // CHECK-NEXT: ----
+    //
+    sparse_tensor.print %st : tensor<?x?x?xf64, #ST1>
+    sparse_tensor.print %0  : tensor<?x?x?xf64, #ST2>
 
     // Release the resources.
     bufferization.dealloc_tensor %st : tensor<?x?x?xf64, #ST1>

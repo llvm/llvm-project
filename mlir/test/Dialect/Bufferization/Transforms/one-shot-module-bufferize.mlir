@@ -2,9 +2,9 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
@@ -42,6 +42,21 @@ func.func private @external_func_with_return_val(tensor<4xi32>) -> f32
 
 // -----
 
+// Bufferization of bodiless function that returns a tensor.
+
+// CHECK: func.func private @foo(memref<?xf32, strided<[?], offset: ?>>) -> (f32, memref<?xf32, strided<[?], offset: ?>>, f32)
+func.func private @foo(%t : tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
+
+// CHECK: func.func @call_to_unknown_tensor_returning_func(
+// CHECK-SAME: %[[arg0:.*]]: memref<?xf32, strided<[?], offset: ?>>) {
+func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
+  // CHECK: call @foo(%[[arg0]]) : (memref<?xf32, strided<[?], offset: ?>>) -> (f32, memref<?xf32, strided<[?], offset: ?>>, f32)
+  call @foo(%t) : (tensor<?xf32>) -> (f32, tensor<?xf32>, f32)
+  return
+}
+
+// -----
+
 // A function that returns a non-equivalent tensor with layout map.
 
 // CHECK-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32, strided<[10, 1], offset: ?>>
@@ -52,7 +67,7 @@ func.func private @external_func_with_return_val(tensor<4xi32>) -> f32
 // CHECK-NO-LAYOUT-MAP-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<20x10xf32>
 //       CHECK-NO-LAYOUT-MAP:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, strided<[10, 1], offset: ?>>
-//       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) : memref<2x?xf32>
+//       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   memref.copy %[[subview]], %[[alloc_no_layout]]
 // TODO: %alloc should be deallocated here, but we currently do not dealloc
 // buffers that are inserted due to to_tensor/to_memref canonicalization (when
@@ -67,6 +82,30 @@ func.func @return_extract_slice(%idx: index, %sz: index) -> (tensor<2x?xf32>)
   %0 = tensor.extract_slice %t[%idx, %idx][2, %sz][1, 1]
       : tensor<20x10xf32> to tensor<2x?xf32>
   return %0 : tensor<2x?xf32>
+}
+
+// -----
+
+// CHECK-NO-LAYOUT-MAP-LABEL:   func.func @foo(
+// CHECK-NO-LAYOUT-MAP-SAME:                   %[[VAL_0:.*]]: memref<3x8xf16>) -> memref<3x8xf16> {
+// CHECK-NO-LAYOUT-MAP:           return %[[VAL_0]] : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:         }
+func.func @foo(%arg0: tensor<3x8xf16>) -> tensor<3x8xf16> {
+  return %arg0 : tensor<3x8xf16>
+}
+
+// CHECK-NO-LAYOUT-MAP-LABEL:   func.func @call_extract_slice(
+// CHECK-NO-LAYOUT-MAP-SAME:                                  %[[VAL_0:.*]]: memref<4x8xf16>) -> memref<3x8xf16> {
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_1:.*]] = memref.subview %[[VAL_0]][1, 0] [3, 8] [1, 1] : memref<4x8xf16> to memref<3x8xf16, strided<[8, 1], offset: 8>>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           memref.copy %[[VAL_1]], %[[VAL_2]] : memref<3x8xf16, strided<[8, 1], offset: 8>> to memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           %[[VAL_3:.*]] = call @foo(%[[VAL_2]]) : (memref<3x8xf16>) -> memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:           return %[[VAL_3]] : memref<3x8xf16>
+// CHECK-NO-LAYOUT-MAP:         }
+func.func @call_extract_slice(%arg0: tensor<4x8xf16>) -> (tensor<3x8xf16>) {
+  %0 = tensor.extract_slice %arg0[1, 0] [3, 8] [1, 1] : tensor<4x8xf16> to tensor<3x8xf16>
+  %1 = call @foo(%0) : (tensor<3x8xf16>) -> tensor<3x8xf16>
+  return %1 : tensor<3x8xf16>
 }
 
 // -----
@@ -640,7 +679,7 @@ func.func @to_memref_op_unsupported(
   // to_memref op.
   // CHECK: %[[alloc:.*]] = memref.alloc
   // CHECK: memref.copy %[[arg0]], %[[alloc]]
-  %0 = bufferization.to_memref %t1 : memref<?xf32>
+  %0 = bufferization.to_memref %t1 : tensor<?xf32> to memref<?xf32>
   // CHECK: "test.foo"(%[[alloc]])
   "test.foo"(%0) : (memref<?xf32>) -> ()
 
@@ -683,3 +722,77 @@ func.func @bar(%t: tensor<5xf32>, %m: memref<5xf32>) -> memref<5xf32> {
   %0 = func.call @foo(%m) : (memref<5xf32>) -> (memref<5xf32>)
   return %0 : memref<5xf32>
 }
+
+// -----
+
+// A recursive function.
+
+// CHECK-LABEL: func.func @foo(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
+func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
+  // We are conservative around recursive functions. The analysis cannot handle
+  // them, so we have to assume the op operand of the call op bufferizes to a
+  // memory read and write. This causes a copy in this test case.
+  // CHECK: %[[copy:.*]] = memref.alloc() {alignment = 64 : i64} : memref<5xf32>
+  // CHECK: memref.copy %[[arg0]], %[[copy]]
+  // CHECK: %[[cast:.*]] = memref.cast %[[copy]] : memref<5xf32> to memref<5xf32, strided<[?], offset: ?>>
+  // CHECK: %[[call:.*]] = call @foo(%[[cast]])
+  %0 = call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+
+  // CHECK: memref.load %[[arg0]]
+  %c0 = arith.constant 0 : index
+  %extr = tensor.extract %t[%c0] : tensor<5xf32>
+  vector.print %extr : f32
+
+  // CHECK: return %[[call]]
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+// Two functions calling each other recursively.
+
+// CHECK-LABEL: func.func @foo(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
+//       CHECK:   %[[call:.*]] = call @bar(%[[arg0]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   return %[[call]]
+//       CHECK: }
+func.func @foo(%t: tensor<5xf32>) -> tensor<5xf32> {
+  %0 = call @bar(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+  return %0 : tensor<5xf32>
+}
+
+// CHECK-LABEL: func.func @bar(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>> {
+//       CHECK:   %[[call:.*]] = call @foo(%[[arg0]]) : (memref<5xf32, strided<[?], offset: ?>>) -> memref<5xf32, strided<[?], offset: ?>>
+//       CHECK:   return %[[call]]
+//       CHECK: }
+func.func @bar(%t: tensor<5xf32>) -> tensor<5xf32>{
+  %0 = call @foo(%t) : (tensor<5xf32>) -> (tensor<5xf32>)
+  return %0 : tensor<5xf32>
+}
+
+// -----
+
+// The two func.return operands have different types after bufferization. Make
+// sure that memref.cast ops are inserted.
+
+// CHECK-LABEL: func @result_type_mismatch({{.*}}) -> memref<5xf32, strided<[?], offset: ?>>
+func.func @result_type_mismatch(%c: i1) -> tensor<5xf32> {
+  // CHECK: %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<10xf32>
+  %t = tensor.empty() : tensor<10xf32>
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  // CHECK: %[[m0:.*]] = memref.subview %[[alloc]][0] [5] [2] : memref<10xf32> to memref<5xf32, strided<[2]>>
+  // CHECK: %[[cast0:.*]] = memref.cast %[[m0]] : memref<5xf32, strided<[2]>> to memref<5xf32, strided<[?], offset: ?>>
+  %0 = tensor.extract_slice %t[0][5][2] : tensor<10xf32> to tensor<5xf32>
+  // CHECK: return %[[cast0]] : memref<5xf32, strided<[?], offset: ?>
+  return %0 : tensor<5xf32>
+^bb2:
+  // CHECK: %[[m1:.*]] = memref.subview %[[alloc]][2] [5] [1] : memref<10xf32> to memref<5xf32, strided<[1], offset: 2>>
+  // CHECK: %[[cast1:.*]] = memref.cast %[[m1]] : memref<5xf32, strided<[1], offset: 2>> to memref<5xf32, strided<[?], offset: ?>>
+  %1 = tensor.extract_slice %t[2][5][1] : tensor<10xf32> to tensor<5xf32>
+  // CHECK: return %[[cast1]] : memref<5xf32, strided<[?], offset: ?>>
+  return %1 : tensor<5xf32>
+}
+

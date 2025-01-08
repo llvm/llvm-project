@@ -31,6 +31,11 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#if CLANG_ENABLE_CIR
+#include "clang/CIR/FrontendAction/CIRGenAction.h"
+#endif
+
 using namespace clang;
 using namespace llvm::opt;
 
@@ -41,6 +46,13 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   using namespace clang::frontend;
   StringRef Action("unknown");
   (void)Action;
+
+  unsigned UseCIR = CI.getFrontendOpts().UseClangIRPipeline;
+  frontend::ActionKind Act = CI.getFrontendOpts().ProgramAction;
+  bool EmitsCIR = Act == EmitCIR;
+
+  if (!UseCIR && EmitsCIR)
+    llvm::report_fatal_error("-emit-cir and only valid when using -fclangir");
 
   switch (CI.getFrontendOpts().ProgramAction) {
   case ASTDeclList:            return std::make_unique<ASTDeclListAction>();
@@ -53,6 +65,12 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case DumpTokens:             return std::make_unique<DumpTokensAction>();
   case EmitAssembly:           return std::make_unique<EmitAssemblyAction>();
   case EmitBC:                 return std::make_unique<EmitBCAction>();
+  case EmitCIR:
+#if CLANG_ENABLE_CIR
+    return std::make_unique<cir::EmitCIRAction>();
+#else
+    llvm_unreachable("CIR suppport not built into clang");
+#endif
   case EmitHTML:               return std::make_unique<HTMLPrintAction>();
   case EmitLLVM:               return std::make_unique<EmitLLVMAction>();
   case EmitLLVMOnly:           return std::make_unique<EmitLLVMOnlyAction>();
@@ -65,6 +83,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return std::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateReducedModuleInterface:
+    return std::make_unique<GenerateReducedModuleInterfaceAction>();
   case GenerateHeaderUnit:
     return std::make_unique<GenerateHeaderUnitAction>();
   case GeneratePCH:            return std::make_unique<GeneratePCHAction>();
@@ -179,9 +199,13 @@ CreateFrontendAction(CompilerInstance &CI) {
 #endif
 
   // Wrap the base FE action in an extract api action to generate
-  // symbol graph as a biproduct of comilation ( enabled with
-  // --emit-symbol-graph option )
-  if (!FEOpts.SymbolGraphOutputDir.empty()) {
+  // symbol graph as a biproduct of compilation (enabled with
+  // --emit-symbol-graph option)
+  if (FEOpts.EmitSymbolGraph) {
+    if (FEOpts.SymbolGraphOutputDir.empty()) {
+      CI.getDiagnostics().Report(diag::warn_missing_symbol_graph_dir);
+      CI.getFrontendOpts().SymbolGraphOutputDir = ".";
+    }
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
   }

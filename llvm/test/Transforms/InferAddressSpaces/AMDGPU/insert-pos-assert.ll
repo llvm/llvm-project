@@ -80,6 +80,6 @@ define void @bitcast_insert_pos_assert_2() {
   %itp0 = inttoptr i64 %pti0 to ptr
   %itp1 = ptrtoint ptr %asc0 to i64
   %itp2 = inttoptr i64 %itp1 to ptr
-  %gep0 = getelementptr i64, i64* %itp2, i64 1
+  %gep0 = getelementptr i64, ptr %itp2, i64 1
   ret void
 }

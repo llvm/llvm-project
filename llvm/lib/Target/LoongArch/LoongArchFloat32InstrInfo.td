@@ -19,12 +19,16 @@ def SDT_LoongArchMOVGR2FR_W_LA64
 def SDT_LoongArchMOVFR2GR_S_LA64
     : SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, f32>]>;
 def SDT_LoongArchFTINT : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def SDT_LoongArchFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def SDT_LoongArchFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
 
 def loongarch_movgr2fr_w_la64
     : SDNode<"LoongArchISD::MOVGR2FR_W_LA64", SDT_LoongArchMOVGR2FR_W_LA64>;
 def loongarch_movfr2gr_s_la64
     : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
 def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+def loongarch_frecipe : SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchFRECIPE>;
+def loongarch_frsqrte : SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchFRSQRTE>;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -50,6 +54,8 @@ def FNEG_S   : FP_ALU_2R<0x01141400>;
 def FSQRT_S  : FP_ALU_2R<0x01144400>;
 def FRECIP_S : FP_ALU_2R<0x01145400>;
 def FRSQRT_S : FP_ALU_2R<0x01146400>;
+def FRECIPE_S : FP_ALU_2R<0x01147400>;
+def FRSQRTE_S : FP_ALU_2R<0x01148400>;
 def FSCALEB_S : FP_ALU_3R<0x01108000>;
 def FLOGB_S   : FP_ALU_2R<0x01142400>;
 def FCOPYSIGN_S : FP_ALU_3R<0x01128000>;
@@ -279,6 +285,14 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
+
+let Predicates = [HasFrecipe] in {
+// FP approximate reciprocal operation
+def : Pat<(int_loongarch_frecipe_s FPR32:$src), (FRECIPE_S FPR32:$src)>;
+def : Pat<(int_loongarch_frsqrte_s FPR32:$src), (FRSQRTE_S FPR32:$src)>;
+def : Pat<(loongarch_frecipe FPR32:$src), (FRECIPE_S FPR32:$src)>;
+def : Pat<(loongarch_frsqrte FPR32:$src), (FRSQRTE_S FPR32:$src)>;
+}
 
 // fmadd.s: fj * fk + fa
 def : Pat<(fma FPR32:$fj, FPR32:$fk, FPR32:$fa), (FMADD_S $fj, $fk, $fa)>;

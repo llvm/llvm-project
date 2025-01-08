@@ -11,6 +11,8 @@ The following types of variables are excluded from this check:
 * exception variables in catch clauses
 * static or thread local
 * structured bindings
+* variables with ``[[maybe_unused]]`` attribute
+* name-independent variables
 
 This check can be configured to warn on all non-trivial variables by setting
 `IncludeTypes` to `.*`, and excluding specific types using `ExcludeTypes`.
@@ -38,19 +40,18 @@ Options
 .. option:: IncludeTypes
 
    Semicolon-separated list of regular expressions matching types of variables
-   to check. 
-   By default the following types are checked: 
+   to check. By default the following types are checked:
 
    * `::std::.*mutex`
    * `::std::future`
-   * `::std::string`
+   * `::std::basic_string`
    * `::std::basic_regex`
    * `::std::basic_istringstream`
    * `::std::basic_stringstream`
    * `::std::bitset`
-   * `::std::path`
+   * `::std::filesystem::path`
 
 .. option:: ExcludeTypes
 
-   A semicolon-separated list of regular expressions matching types that are 
+   A semicolon-separated list of regular expressions matching types that are
    excluded from the `IncludeTypes` matches. By default it is an empty list.

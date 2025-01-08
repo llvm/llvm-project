@@ -3,17 +3,17 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 ;; Ensure we don't infinite loop when all phi arguments are really unreachable or self-defined
-define void @fn1(i64 noundef %arg) {
+define void @fn1(i64 noundef %arg, i1 %arg2) {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 false, label [[FIRSTPHIBLOCK:%.*]], label [[TEMP:%.*]]
 ; CHECK:       firstphiblock:
-; CHECK-NEXT:    br i1 undef, label %for.cond17thread-pre-split, label [[SECONDPHIBLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[FOR_COND17THREAD_PRE_SPLIT:%.*]], label [[SECONDPHIBLOCK:%.*]]
 ; CHECK:       secondphiblock:
 ; CHECK-NEXT:    [[SECONDPHI:%.*]] = phi i64 [ [[THIRDPHI:%.*]], [[THIRDPHIBLOCK:%.*]] ], [ undef, [[FIRSTPHIBLOCK]] ]
-; CHECK-NEXT:    br i1 undef, label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
 ; CHECK:       thirdphiblock:
 ; CHECK-NEXT:    [[THIRDPHI]] = phi i64 [ [[SECONDPHI]], [[SECONDPHIBLOCK]] ], [ [[DIV:%.*]], [[COND_TRUE]] ]
 ; CHECK-NEXT:    br label [[SECONDPHIBLOCK]]
@@ -26,15 +26,15 @@ define void @fn1(i64 noundef %arg) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.then, label %cond.true
+  br i1 %arg2, label %if.then, label %cond.true
 if.then:
   br i1 false, label %firstphiblock, label %temp
 firstphiblock:
   %firstphi = phi i64 [ %arg, %if.then ], [ undef, %secondphiblock ]
-  br i1 undef, label %for.cond17thread-pre-split, label %secondphiblock
+  br i1 %arg2, label %for.cond17thread-pre-split, label %secondphiblock
 secondphiblock:
   %secondphi = phi i64 [ %thirdphi, %thirdphiblock ], [ %firstphi, %firstphiblock ]
-  br i1 undef, label %firstphiblock, label %thirdphiblock
+  br i1 %arg2, label %firstphiblock, label %thirdphiblock
 thirdphiblock:
   %thirdphi = phi i64 [ %secondphi, %secondphiblock ], [ %div, %cond.true ]
   br label %secondphiblock
@@ -47,40 +47,40 @@ cond.true:
 temp:
   ret void
 }
-define void @fn2(i64 noundef %arg) {
+define void @fn2(i64 noundef %arg, i1 %arg2) {
 ; CHECK-LABEL: @fn2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 false, label [[FIRSTPHIBLOCK:%.*]], label [[TEMP:%.*]]
 ; CHECK:       firstphiblock:
 ; CHECK-NEXT:    [[FIRSTPHI:%.*]] = phi i64 [ poison, [[IF_THEN]] ], [ [[SECONDPHI:%.*]], [[SECONDPHIBLOCK:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label %for.cond17thread-pre-split, label [[SECONDPHIBLOCK]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[FOR_COND17THREAD_PRE_SPLIT:%.*]], label [[SECONDPHIBLOCK]]
 ; CHECK:       secondphiblock:
 ; CHECK-NEXT:    [[SECONDPHI]] = phi i64 [ [[THIRDPHI:%.*]], [[THIRDPHIBLOCK:%.*]] ], [ [[FIRSTPHI]], [[FIRSTPHIBLOCK]] ]
-; CHECK-NEXT:    br i1 undef, label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
+; CHECK-NEXT:    br i1 [[ARG2]], label [[FIRSTPHIBLOCK]], label [[THIRDPHIBLOCK]]
 ; CHECK:       thirdphiblock:
 ; CHECK-NEXT:    [[THIRDPHI]] = phi i64 [ [[SECONDPHI]], [[SECONDPHIBLOCK]] ], [ [[DIV:%.*]], [[COND_TRUE]] ]
 ; CHECK-NEXT:    br label [[SECONDPHIBLOCK]]
 ; CHECK:       for.cond17thread-pre-split:
 ; CHECK-NEXT:    br label [[COND_TRUE]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[FOURTHPHI:%.*]] = phi i64 [ [[ARG:%.*]], [[ENTRY:%.*]] ], [ [[FIRSTPHI]], %for.cond17thread-pre-split ]
+; CHECK-NEXT:    [[FOURTHPHI:%.*]] = phi i64 [ [[ARG:%.*]], [[ENTRY:%.*]] ], [ [[FIRSTPHI]], [[FOR_COND17THREAD_PRE_SPLIT]] ]
 ; CHECK-NEXT:    [[DIV]] = sdiv i64 [[FOURTHPHI]], 4
 ; CHECK-NEXT:    br label [[THIRDPHIBLOCK]]
 ; CHECK:       temp:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %if.then, label %cond.true
+  br i1 %arg2, label %if.then, label %cond.true
 if.then:
   br i1 false, label %firstphiblock, label %temp
 firstphiblock:
   %firstphi = phi i64 [ %arg, %if.then ], [ %secondphi, %secondphiblock ]
-  br i1 undef, label %for.cond17thread-pre-split, label %secondphiblock
+  br i1 %arg2, label %for.cond17thread-pre-split, label %secondphiblock
 secondphiblock:
   %secondphi = phi i64 [ %thirdphi, %thirdphiblock ], [ %firstphi, %firstphiblock ]
-  br i1 undef, label %firstphiblock, label %thirdphiblock
+  br i1 %arg2, label %firstphiblock, label %thirdphiblock
 thirdphiblock:
   %thirdphi = phi i64 [ %secondphi, %secondphiblock ], [ %div, %cond.true ]
   br label %secondphiblock
@@ -95,7 +95,7 @@ temp:
 }
 @b = external global i32, align 4
 @a = external global i32, align 4
-define void @fn3() {
+define void @fn3(i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: @fn3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L1:%.*]]
@@ -105,16 +105,16 @@ define void @fn3() {
 ; CHECK-NEXT:    [[F_0:%.*]] = phi ptr [ @b, [[ENTRY:%.*]] ], [ @a, [[L1_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond.loopexit:
-; CHECK-NEXT:    store i8 poison, ptr null
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_END14:%.*]], label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.cond1:
 ; CHECK-NEXT:    br label [[L2:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    br i1 undef, label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[FOR_COND1:%.*]], label [[L1_LOOPEXIT]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[G_4:%.*]] = phi ptr [ @b, [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
 ; CHECK-NEXT:    [[F_2:%.*]] = phi ptr [ [[F_0]], [[FOR_END14]] ], [ @a, [[FOR_COND1]] ]
@@ -138,13 +138,13 @@ for.cond.loopexit:
 for.cond:
   %g.1 = phi ptr [ %g.0, %l1 ], [ %g.4, %for.cond.loopexit ]
   %f.1 = phi ptr [ %f.0, %l1 ], [ %f.2, %for.cond.loopexit ]
-  br i1 undef, label %for.end14, label %for.cond1.preheader
+  br i1 %arg, label %for.end14, label %for.cond1.preheader
 for.cond1.preheader:
   br label %for.body3
 for.cond1:
   br label %l2
 for.body3:
-  br i1 undef, label %for.cond1, label %l1.loopexit
+  br i1 %arg2, label %for.cond1, label %l1.loopexit
 l2:
   %g.4 = phi ptr [ %g.1, %for.end14 ], [ @a, %for.cond1 ]
   %f.2 = phi ptr [ %f.1, %for.end14 ], [ @a, %for.cond1 ]

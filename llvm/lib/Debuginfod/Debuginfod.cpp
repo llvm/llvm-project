@@ -54,7 +54,7 @@ std::optional<SmallVector<StringRef>> DebuginfodUrls;
 llvm::sys::RWMutex UrlsMutex;
 } // namespace
 
-static std::string uniqueKey(llvm::StringRef S) {
+std::string getDebuginfodCacheKey(llvm::StringRef S) {
   return utostr(xxh3_64bits(S));
 }
 
@@ -72,7 +72,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   std::shared_lock<llvm::sys::RWMutex> ReadGuard(UrlsMutex);
   if (!DebuginfodUrls) {
     // Only read from the environment variable if the user hasn't already
-    // set the value
+    // set the value.
     ReadGuard.unlock();
     std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
     DebuginfodUrls = SmallVector<StringRef>();
@@ -86,7 +86,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
   return DebuginfodUrls.value();
 }
 
-// Set the default debuginfod URL list, override the environment variable
+// Set the default debuginfod URL list, override the environment variable.
 void setDefaultDebuginfodUrls(const SmallVector<StringRef> &URLs) {
   std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
   DebuginfodUrls = URLs;
@@ -120,27 +120,43 @@ std::chrono::milliseconds getDefaultDebuginfodTimeout() {
 /// cache and return the cached file path. They first search the local cache,
 /// followed by the debuginfod servers.
 
-Expected<std::string> getCachedOrDownloadSource(BuildIDRef ID,
-                                                StringRef SourceFilePath) {
+std::string getDebuginfodSourceUrlPath(BuildIDRef ID,
+                                       StringRef SourceFilePath) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "source",
                     sys::path::convert_to_slash(SourceFilePath));
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
 }
 
-Expected<std::string> getCachedOrDownloadExecutable(BuildIDRef ID) {
+Expected<std::string> getCachedOrDownloadSource(BuildIDRef ID,
+                                                StringRef SourceFilePath) {
+  std::string UrlPath = getDebuginfodSourceUrlPath(ID, SourceFilePath);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
+}
+
+std::string getDebuginfodExecutableUrlPath(BuildIDRef ID) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "executable");
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
 }
 
-Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
+Expected<std::string> getCachedOrDownloadExecutable(BuildIDRef ID) {
+  std::string UrlPath = getDebuginfodExecutableUrlPath(ID);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
+}
+
+std::string getDebuginfodDebuginfoUrlPath(BuildIDRef ID) {
   SmallString<64> UrlPath;
   sys::path::append(UrlPath, sys::path::Style::posix, "buildid",
                     buildIDToString(ID), "debuginfo");
-  return getCachedOrDownloadArtifact(uniqueKey(UrlPath), UrlPath);
+  return std::string(UrlPath);
+}
+
+Expected<std::string> getCachedOrDownloadDebuginfo(BuildIDRef ID) {
+  std::string UrlPath = getDebuginfodDebuginfoUrlPath(ID);
+  return getCachedOrDownloadArtifact(getDebuginfodCacheKey(UrlPath), UrlPath);
 }
 
 // General fetching function.
@@ -332,7 +348,8 @@ DebuginfodLogEntry DebuginfodLog::pop() {
 }
 
 DebuginfodCollection::DebuginfodCollection(ArrayRef<StringRef> PathsRef,
-                                           DebuginfodLog &Log, ThreadPool &Pool,
+                                           DebuginfodLog &Log,
+                                           ThreadPoolInterface &Pool,
                                            double MinInterval)
     : Log(Log), Pool(Pool), MinInterval(MinInterval) {
   for (StringRef Path : PathsRef)
@@ -398,7 +415,7 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
   sys::fs::recursive_directory_iterator I(Twine(Path), EC), E;
   std::mutex IteratorMutex;
   ThreadPoolTaskGroup IteratorGroup(Pool);
-  for (unsigned WorkerIndex = 0; WorkerIndex < Pool.getThreadCount();
+  for (unsigned WorkerIndex = 0; WorkerIndex < Pool.getMaxConcurrency();
        WorkerIndex++) {
     IteratorGroup.async([&, this]() -> void {
       std::string FilePath;

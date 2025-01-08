@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_FMAXTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_FMAXTEST_H
+
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class FMaxTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FMaxTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -59,10 +64,10 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      if (isnan(x) || isinf(x))
+      T x = FPBits(v).get_val(), y = FPBits(w).get_val();
+      if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
-      if (isnan(y) || isinf(y))
+      if (FPBits(w).is_nan() || FPBits(w).is_inf())
         continue;
       if ((x == 0) && (y == 0))
         continue;
@@ -83,3 +88,5 @@ public:
   TEST_F(LlvmLibcFMaxTest, NegInfArg) { testNegInfArg(&func); }                \
   TEST_F(LlvmLibcFMaxTest, BothZero) { testBothZero(&func); }                  \
   TEST_F(LlvmLibcFMaxTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_FMAXTEST_H

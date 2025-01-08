@@ -11,11 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
-#include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
@@ -23,14 +20,12 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -293,22 +288,13 @@ protected:
           UseMO.substVirtReg(KilledProdReg, KilledProdSubReg, *TRI);
         }
 
-        // Extend the live intervals of the killed product operand to hold the
-        // fma result.
+        // Recalculate the live intervals of the killed product operand.
+        LIS->removeInterval(KilledProdReg);
+        LiveInterval &NewFMAInt =
+            LIS->createAndComputeVirtRegInterval(KilledProdReg);
 
-        LiveInterval &NewFMAInt = LIS->getInterval(KilledProdReg);
-        for (auto &AI : FMAInt) {
-          // Don't add the segment that corresponds to the original copy.
-          if (AI.valno == AddendValNo)
-            continue;
-
-          VNInfo *NewFMAValNo =
-              NewFMAInt.getNextValue(AI.start, LIS->getVNInfoAllocator());
-
-          NewFMAInt.addSegment(
-              LiveInterval::Segment(AI.start, AI.end, NewFMAValNo));
-        }
         LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
+        (void)NewFMAInt;
 
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
@@ -347,7 +333,7 @@ public:
       if (!STI.hasVSX())
         return false;
 
-      LIS = &getAnalysis<LiveIntervals>();
+      LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
       TII = STI.getInstrInfo();
 
@@ -364,12 +350,12 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervals>();
-      AU.addPreserved<LiveIntervals>();
-      AU.addRequired<SlotIndexes>();
-      AU.addPreserved<SlotIndexes>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<LiveIntervalsWrapperPass>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
+      AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addPreserved<SlotIndexesWrapperPass>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -377,9 +363,9 @@ public:
 
 INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 

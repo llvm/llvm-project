@@ -21,10 +21,6 @@
 
 namespace clang {
 
-inline PartialDiagnostic Sema::PDiag(unsigned DiagID) {
-  return PartialDiagnostic(DiagID, Context.getDiagAllocator());
-}
-
 inline bool
 FTIHasSingleVoidParameter(const DeclaratorChunk::FunctionTypeInfo &FTI) {
   return FTI.NumParams == 1 && !FTI.isVariadic &&
@@ -62,7 +58,7 @@ inline InheritableAttr *getDLLAttr(Decl *D) {
 }
 
 /// Retrieve the depth and index of a template parameter.
-inline std::pair<unsigned, unsigned> getDepthAndIndex(NamedDecl *ND) {
+inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(ND))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
@@ -79,7 +75,7 @@ getDepthAndIndex(UnexpandedParameterPack UPP) {
   if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
-  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
+  return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {

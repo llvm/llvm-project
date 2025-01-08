@@ -4,6 +4,7 @@ add_flang_library(HLFIRTransforms
   BufferizeHLFIR.cpp
   ConvertToFIR.cpp
   InlineElementals.cpp
+  InlineHLFIRAssign.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
@@ -11,16 +12,20 @@ add_flang_library(HLFIRTransforms
   OptimizedBufferization.cpp
 
   DEPENDS
+  CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
   ${dialect_libs}
 
   LINK_LIBS
+  CUFAttrs
   FIRAnalysis
   FIRDialect
   FIRBuilder
   FIRDialectSupport
   FIRSupport
+  FIRTransforms
+  FlangOpenMPTransforms
   HLFIRDialect
   MLIRIR
   ${dialect_libs}

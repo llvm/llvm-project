@@ -1,5 +1,8 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
+ integer :: m(100)
+ integer, constant :: c(10)
+ integer, parameter :: p(5) = [1,2,3,4,5]
  contains
   attributes(device) subroutine devsub
     !ERROR: Statement may not appear in device code
@@ -7,9 +10,117 @@ module m
     do k=1,10
     end do
   end
+  attributes(device) subroutine devsub2
+    real, device :: x(10)
+    print*,'from device'
+    print '(f10.5)', (x(ivar), ivar = 1, 10)
+    write(*,*), "Hello world from device!"
+    !WARNING: I/O statement might not be supported on device
+    write(12,'(10F4.1)'), x
+  end
+  attributes(global) subroutine hostglobal(a)
+    integer :: a(*)
+    i = threadIdx%x
+    !ERROR: Host array 'm' cannot be present in device context
+    if (i .le. N) a(i) = m(i)
+  end subroutine
+
+  attributes(global) subroutine hostparameter(a)
+    integer :: a(*)
+    i = threadIdx%x
+    if (i .le. N) a(i) = p(i) ! ok. p is parameter
+  end subroutine
+
+  attributes(global) subroutine localarray()
+    integer :: a(10)
+    i = threadIdx%x
+    a(i) = i
+  end subroutine
+
+  attributes(global) subroutine sharedarray(a)
+    integer, device :: a(10)
+    integer, shared :: s(10)
+    i = threadIdx%x
+    a(i) = s(10) ! ok, a is device and s is shared
+  end subroutine
+
+  attributes(global) subroutine cstarray(a)
+    integer, device :: a(10)
+    i = threadIdx%x
+    a(i) = c(10) ! ok, a is device and c is constant
+  end subroutine
+
+  attributes(global) subroutine stoptest()
+    print*,threadIdx%x
+    stop ! ok
+  end subroutine
+
+  attributes(global) subroutine cycletest()
+    integer :: i
+    do i = 1, 10
+      cycle ! ok
+    end do
+  end subroutine
+
+  attributes(global) subroutine gototest()
+    integer :: i
+    goto 10
+    10 print *, "X is negative!" 
+  end subroutine
+
+  attributes(global) subroutine exittest()
+    integer :: i
+    do i = 1, 10
+      if (i == 1) then
+        exit ! ok
+      end if
+    end do
+  end subroutine
+
+  attributes(global) subroutine selectcasetest()
+    integer :: i
+    select case(i)
+    case (1)
+      print*,'main'
+    case default
+      print*, 'default'
+    end select
+  end subroutine
+
+  subroutine host()
+    integer :: i
+    !$cuf kernel do
+    do i = 1, 10
+      !ERROR: Statement may not appear in cuf kernel code
+      cycle
+    end do
+
+    !$cuf kernel do
+    do i = 1, 10
+      if (i == 1) then
+        !ERROR: Statement may not appear in cuf kernel code
+        exit ! ok
+      end if
+
+      !ERROR: Statement may not appear in cuf kernel code
+      goto 10
+      10 print *, "X is negative!"
+    end do
+  end subroutine
 end
 
 program main
+  integer, device :: a_d(10 ,10)
+  integer :: b(10, 10)
+  !$cuf kernel do <<< *, * >>> ! ok
+  do j = 1, 0
+  end do
+  !$cuf kernel do <<< (*), (*) >>> ! ok
+  do j = 1, 0
+  end do
+  !$cuf kernel do <<< (1,*), (2,*) >>> ! ok
+  do j = 1, 0
+  end do
   !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
   !$cuf kernel do <<< 1, 2 >>>
   do while (.false.)
@@ -73,4 +184,12 @@ program main
     else if (ifunc() /= 1) then
     end if
   end do
+
+  !$cuf kernel do (2) <<<*, *>>>
+  do j = 1, 10
+     do i = 1, 10
+        !ERROR: Host array 'b' cannot be present in device context
+        a_d(i,j) = b(i,j)
+     enddo
+  enddo
 end

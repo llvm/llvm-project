@@ -17,14 +17,9 @@
 
 #include "Encoding.h"
 #include "FormatToken.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Regex.h"
 
 #include <stack>
 
@@ -95,6 +90,13 @@ private:
 
   void handleCSharpVerbatimAndInterpolatedStrings();
 
+  // Handles TableGen multiline strings. It has the form [{ ... }].
+  void handleTableGenMultilineString();
+  // Handles TableGen numeric like identifiers.
+  // They have a forms of [0-9]*[_a-zA-Z]([_a-zA-Z0-9]*). But limited to the
+  // case it is not lexed as an integer.
+  void handleTableGenNumericLikeIdentifier();
+
   void tryParsePythonComment();
 
   bool tryMerge_TMacro();
@@ -127,7 +129,8 @@ private:
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
-  llvm::SmallPtrSet<IdentifierInfo *, 8> TypeNames;
+  llvm::SmallPtrSet<IdentifierInfo *, 8> TemplateNames, TypeNames,
+      VariableTemplates;
 
   bool FormattingDisabled;
 

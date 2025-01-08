@@ -8,6 +8,7 @@
 
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
+#include "src/stdio/remove.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fsync.h"
 #include "src/unistd/read.h"
@@ -19,9 +20,11 @@
 
 TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "__unistd_read_write.test";
+  constexpr const char *FILENAME = "__unistd_read_write.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
+
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   constexpr const char HELLO[] = "hello";
   constexpr int HELLO_SIZE = sizeof(HELLO);
@@ -31,7 +34,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
   int read_fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(read_fd, 0);
   char read_buf[10];
   ASSERT_THAT(LIBC_NAMESPACE::read(read_fd, read_buf, HELLO_SIZE),
@@ -39,7 +42,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   EXPECT_STREQ(read_buf, HELLO);
   ASSERT_THAT(LIBC_NAMESPACE::close(read_fd), Succeeds(0));
 
-  // TODO: 'remove' the test file after the test.
+  ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }
 
 TEST(LlvmLibcUniStd, WriteFails) {

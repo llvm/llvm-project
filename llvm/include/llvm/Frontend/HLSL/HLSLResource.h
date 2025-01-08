@@ -13,79 +13,25 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 #define LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 
-#include "llvm/IR/Metadata.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DXILABI.h"
 
 namespace llvm {
 class GlobalVariable;
+class MDNode;
 
 namespace hlsl {
 
-enum class ResourceClass : uint8_t {
-  SRV = 0,
-  UAV,
-  CBuffer,
-  Sampler,
-  Invalid,
-  NumClasses = Invalid,
-};
-
-// The value ordering of this enumeration is part of the DXIL ABI. Elements
-// can only be added to the end, and not removed.
-enum class ResourceKind : uint32_t {
-  Invalid = 0,
-  Texture1D,
-  Texture2D,
-  Texture2DMS,
-  Texture3D,
-  TextureCube,
-  Texture1DArray,
-  Texture2DArray,
-  Texture2DMSArray,
-  TextureCubeArray,
-  TypedBuffer,
-  RawBuffer,
-  StructuredBuffer,
-  CBuffer,
-  Sampler,
-  TBuffer,
-  RTAccelerationStructure,
-  FeedbackTexture2D,
-  FeedbackTexture2DArray,
-  NumEntries,
-};
-
-// The value ordering of this enumeration is part of the DXIL ABI. Elements
-// can only be added to the end, and not removed.
-enum class ElementType : uint32_t {
-  Invalid = 0,
-  I1,
-  I16,
-  U16,
-  I32,
-  U32,
-  I64,
-  U64,
-  F16,
-  F32,
-  F64,
-  SNormF16,
-  UNormF16,
-  SNormF32,
-  UNormF32,
-  SNormF64,
-  UNormF64,
-  PackedS8x32,
-  PackedU8x32,
-};
+// For now we use DXIL ABI enum values directly. This may change in the future.
+using dxil::ResourceClass;
+using dxil::ElementType;
+using dxil::ResourceKind;
 
 class FrontendResource {
   MDNode *Entry;
 
 public:
-  FrontendResource(MDNode *E) : Entry(E) {
-    assert(Entry->getNumOperands() == 6 && "Unexpected metadata shape");
-  }
-
+  FrontendResource(MDNode *E);
   FrontendResource(GlobalVariable *GV, ResourceKind RK, ElementType ElTy,
                    bool IsROV, uint32_t ResIndex, uint32_t Space);
 

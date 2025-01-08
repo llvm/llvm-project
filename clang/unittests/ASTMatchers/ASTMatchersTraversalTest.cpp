@@ -283,6 +283,12 @@ TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
           hasDeclaration(typeAliasTemplateDecl()))))))));
 }
 
+TEST(HasDeclaration, HasDeclarationOfObjCInterface) {
+  EXPECT_TRUE(matchesObjC("@interface BaseClass @end void f() {BaseClass* b;}",
+                          varDecl(hasType(objcObjectPointerType(
+                              pointee(hasDeclaration(objcInterfaceDecl())))))));
+}
+
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
   EXPECT_TRUE(
       matches("struct A {}; using B = A; B b;",
@@ -428,12 +434,6 @@ TEST(HasTypeLoc, MatchesCXXUnresolvedConstructExpr) {
   EXPECT_TRUE(
       matches("template <typename T> T make() { return T(); }",
               cxxUnresolvedConstructExpr(hasTypeLoc(loc(asString("T"))))));
-}
-
-TEST(HasTypeLoc, MatchesClassTemplateSpecializationDecl) {
-  EXPECT_TRUE(matches(
-      "template <typename T> class Foo; template <> class Foo<int> {};",
-      classTemplateSpecializationDecl(hasTypeLoc(loc(asString("Foo<int>"))))));
 }
 
 TEST(HasTypeLoc, MatchesCompoundLiteralExpr) {
@@ -658,27 +658,27 @@ void check_match_co_return() {
   co_return 1;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoReturnCode, 
-                                   coreturnStmt(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoReturnCode,
+                                   coreturnStmt(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
   StringRef CoAwaitCode = R"cpp(
 #include <coro_header>
 void check_match_co_await() {
   co_await a;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoAwaitCode, 
-                                   coawaitExpr(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoAwaitCode,
+                                   coawaitExpr(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
   StringRef CoYieldCode = R"cpp(
 #include <coro_header>
 void check_match_co_yield() {
   co_yield 1.0;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoYieldCode, 
-                                   coyieldExpr(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoYieldCode,
+                                   coyieldExpr(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
 
   StringRef NonCoroCode = R"cpp(
 #include <coro_header>
@@ -985,6 +985,38 @@ TEST(ForEachArgumentWithParam, HandlesBoundNodesForNonMatches) {
     std::make_unique<VerifyIdIsBoundTo<VarDecl>>("v", 4)));
 }
 
+TEST_P(ASTMatchersTest,
+       ForEachArgumentWithParamMatchesExplicitObjectParamOnOperatorCalls) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto DeclRef = declRefExpr(to(varDecl().bind("declOfArg"))).bind("arg");
+  auto SelfParam = parmVarDecl().bind("param");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParam(DeclRef, SelfParam));
+
+  StringRef S = R"cpp(
+  struct A {
+    int operator()(this const A &self);
+  };
+  A obj;
+  int global = obj();
+  )cpp";
+
+  auto Args = GetParam().getCommandLineArgs();
+  auto Filename = getFilenameForTesting(GetParam().Language);
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<ParmVarDecl>>("param", "self"), Args,
+      Filename));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<VarDecl>>("declOfArg", "obj"), Args,
+      Filename));
+}
+
 TEST(ForEachArgumentWithParamType, ReportsNoFalsePositives) {
   StatementMatcher ArgumentY =
       declRefExpr(to(varDecl(hasName("y")))).bind("arg");
@@ -1166,6 +1198,37 @@ TEST(ForEachArgumentWithParamType, MatchesVariadicFunctionPtrCalls) {
       S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("type")));
   EXPECT_TRUE(matchAndVerifyResultTrue(
       S, CallExpr, std::make_unique<VerifyIdIsBoundTo<DeclRefExpr>>("arg")));
+}
+
+TEST_P(ASTMatchersTest,
+       ForEachArgumentWithParamTypeMatchesExplicitObjectParamOnOperatorCalls) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto DeclRef = declRefExpr(to(varDecl().bind("declOfArg"))).bind("arg");
+  auto SelfTy = qualType(asString("const A &")).bind("selfType");
+  StatementMatcher CallExpr =
+      callExpr(forEachArgumentWithParamType(DeclRef, SelfTy));
+
+  StringRef S = R"cpp(
+  struct A {
+    int operator()(this const A &self);
+  };
+  A obj;
+  int global = obj();
+  )cpp";
+
+  auto Args = GetParam().getCommandLineArgs();
+  auto Filename = getFilenameForTesting(GetParam().Language);
+
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr, std::make_unique<VerifyIdIsBoundTo<QualType>>("selfType"),
+      Args, Filename));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      S, CallExpr,
+      std::make_unique<VerifyIdIsBoundTo<VarDecl>>("declOfArg", "obj"), Args,
+      Filename));
 }
 
 TEST(QualType, hasCanonicalType) {
@@ -1688,6 +1751,18 @@ TEST(MatchBinaryOperator, HasOperands) {
   EXPECT_TRUE(notMatches("void x() { 0 + 1; }", HasOperands));
 }
 
+TEST(MatchBinaryOperator, HasOperandsEnsureOrdering) {
+  StatementMatcher HasOperandsWithBindings = binaryOperator(hasOperands(
+      cStyleCastExpr(has(declRefExpr(hasDeclaration(valueDecl().bind("d"))))),
+      declRefExpr(hasDeclaration(valueDecl(equalsBoundNode("d"))))));
+  EXPECT_TRUE(matches(
+      "int a; int b = ((int) a) + a;",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+  EXPECT_TRUE(matches(
+      "int a; int b = a + ((int) a);",
+      traverse(TK_IgnoreUnlessSpelledInSource, HasOperandsWithBindings)));
+}
+
 TEST(Matcher, BinaryOperatorTypes) {
   // Integration test that verifies the AST provides all binary operators in
   // a way we expect.
@@ -1998,6 +2073,146 @@ TEST(Matcher, UnaryOperatorTypes) {
   EXPECT_TRUE(notMatches(
     "struct A { bool operator!() const { return false; } };"
       "void x() { A a; !a; }", unaryOperator(hasOperatorName("!"))));
+}
+
+TEST_P(ASTMatchersTest, HasInit) {
+  if (!GetParam().isCXX11OrLater()) {
+    // FIXME: Add a test for `hasInit()` that does not depend on C++.
+    return;
+  }
+
+  EXPECT_TRUE(matches("int x{0};", initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(matches("int x{0};", initListExpr(hasInit(1, expr()))));
+  EXPECT_FALSE(matches("int x;", initListExpr(hasInit(0, expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasFoldInit) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasFoldInit(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasFoldInit(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(hasFoldInit(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasPattern) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasPattern(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasPattern(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasPattern(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasLHSAndHasRHS) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(hasLHS(expr()))));
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(hasRHS(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasEitherOperandAndHasOperands) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasEitherOperand(integerLiteral()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasEitherOperand(integerLiteral()))));
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+
+  EXPECT_TRUE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (0 + ... + args); }",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_TRUE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (args + ... + 0); }",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_FALSE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (... + args); };",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_FALSE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (args + ...); };",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+}
+
+TEST_P(ASTMatchersTest, Callee) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "struct Dummy {}; Dummy operator+(Dummy, Dummy); template "
+      "<typename... Args> auto sum(Args... args) { return (0 + ... + args); }",
+      cxxFoldExpr(callee(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(callee(expr()))));
 }
 
 TEST(ArraySubscriptMatchers, ArrayIndex) {
@@ -2873,10 +3088,13 @@ B func1() { return 42; }
     auto M = expr(unless(integerLiteral(equals(24)))).bind("intLit");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6),
+        {"-std=c++11"}));
+
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1),
+        {"-std=c++11"}));
   }
   {
     auto M =
@@ -2919,7 +3137,8 @@ B func1() { return 42; }
     auto M = expr().bind("allExprs");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6),
+        {"-std=c++11"}));
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
         std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 1)));
@@ -4843,6 +5062,19 @@ TEST(ForEachConstructorInitializer, MatchesInitializers) {
     cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer()))));
 }
 
+TEST(LambdaCapture, InvalidLambdaCapture) {
+  // not crash
+  EXPECT_FALSE(matches(
+      R"(int main() {
+        struct A { A()=default; A(A const&)=delete; };
+        A a; [a]() -> void {}();
+        return 0;
+      })",
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(has(lambdaCapture()))),
+      langCxx11OrLater()));
+}
+
 TEST(ForEachLambdaCapture, MatchesCaptures) {
   EXPECT_TRUE(matches(
       "int main() { int x, y; auto f = [x, y]() { return x + y; }; }",
@@ -5440,7 +5672,6 @@ TEST(HasParent, MatchesAllParents) {
 TEST(HasParent, NoDuplicateParents) {
   class HasDuplicateParents : public BoundNodesCallback {
   public:
-    bool run(const BoundNodes *Nodes) override { return false; }
     bool run(const BoundNodes *Nodes, ASTContext *Context) override {
       const Stmt *Node = Nodes->getNodeAs<Stmt>("node");
       std::set<const void *> Parents;
@@ -5649,16 +5880,14 @@ template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
 public:
   VerifyMatchOnNode(StringRef Id, const internal::Matcher<T> &InnerMatcher,
                     StringRef InnerId)
-    : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {
-  }
-
-  bool run(const BoundNodes *Nodes) override { return false; }
+      : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {}
 
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>(Id);
     return selectFirst<T>(InnerId, match(InnerMatcher, *Node, *Context)) !=
-      nullptr;
+           nullptr;
   }
+
 private:
   std::string Id;
   internal::Matcher<T> InnerMatcher;
@@ -5776,6 +6005,37 @@ TEST(StatementMatcher, ForCallable) {
   EXPECT_TRUE(notMatches(CppString2,
                          returnStmt(forCallable(functionDecl(hasName("F"))))));
 
+  StringRef CodeWithDeepCallExpr = R"cpp(
+void Other();
+void Function() {
+  {
+    (
+      Other()
+    );
+  }
+}
+)cpp";
+  auto ForCallableFirst =
+      callExpr(forCallable(functionDecl(hasName("Function"))),
+               callee(functionDecl(hasName("Other")).bind("callee")))
+          .bind("call");
+  auto ForCallableSecond =
+      callExpr(callee(functionDecl(hasName("Other")).bind("callee")),
+               forCallable(functionDecl(hasName("Function"))))
+          .bind("call");
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableFirst,
+      std::make_unique<VerifyIdIsBoundTo<CallExpr>>("call")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableFirst,
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("callee")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableSecond,
+      std::make_unique<VerifyIdIsBoundTo<CallExpr>>("call")));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      CodeWithDeepCallExpr, ForCallableSecond,
+      std::make_unique<VerifyIdIsBoundTo<FunctionDecl>>("callee")));
+
   // These tests are specific to forCallable().
   StringRef ObjCString1 = "@interface I"
                           "-(void) foo;"
@@ -5815,6 +6075,101 @@ TEST(StatementMatcher, ForCallable) {
     notMatchesObjC(
       ObjCString2,
       binaryOperator(forCallable(blockDecl()))));
+}
+
+namespace {
+class ForCallablePreservesBindingWithMultipleParentsTestCallback
+    : public BoundNodesCallback {
+public:
+  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
+    FunctionDecl const *FunDecl =
+        BoundNodes->getNodeAs<FunctionDecl>("funDecl");
+    // Validate test assumptions. This would be expressed as ASSERT_* in
+    // a TEST().
+    if (!FunDecl) {
+      EXPECT_TRUE(false && "Incorrect test setup");
+      return false;
+    }
+    auto const *FunDef = FunDecl->getDefinition();
+    if (!FunDef || !FunDef->getBody() ||
+        FunDef->getNameAsString() != "Function") {
+      EXPECT_TRUE(false && "Incorrect test setup");
+      return false;
+    }
+
+    ExpectCorrectResult(
+        "Baseline",
+        callExpr(callee(cxxMethodDecl().bind("callee"))).bind("call"), //
+        FunDecl);
+
+    ExpectCorrectResult("ForCallable first",
+                        callExpr(forCallable(equalsNode(FunDecl)),
+                                 callee(cxxMethodDecl().bind("callee")))
+                            .bind("call"),
+                        FunDecl);
+
+    ExpectCorrectResult("ForCallable second",
+                        callExpr(callee(cxxMethodDecl().bind("callee")),
+                                 forCallable(equalsNode(FunDecl)))
+                            .bind("call"),
+                        FunDecl);
+
+    // This value does not really matter: the EXPECT_* will set the exit code.
+    return true;
+  }
+
+private:
+  void ExpectCorrectResult(StringRef LogInfo,
+                           ArrayRef<BoundNodes> Results) const {
+    EXPECT_EQ(Results.size(), 1u) << LogInfo;
+    if (Results.empty())
+      return;
+    auto const &R = Results.front();
+    EXPECT_TRUE(R.getNodeAs<CallExpr>("call")) << LogInfo;
+    EXPECT_TRUE(R.getNodeAs<CXXMethodDecl>("callee")) << LogInfo;
+  }
+
+  template <typename MatcherT>
+  void ExpectCorrectResult(StringRef LogInfo, MatcherT Matcher,
+                           FunctionDecl const *FunDef) const {
+    auto &Context = FunDef->getASTContext();
+    auto const &Results = match(findAll(Matcher), *FunDef->getBody(), Context);
+    ExpectCorrectResult(LogInfo, Results);
+  }
+};
+} // namespace
+
+TEST(StatementMatcher, ForCallablePreservesBindingWithMultipleParents) {
+  // Tests in this file are fairly simple and therefore can rely on matches,
+  // matchAndVerifyResultTrue, etc. This test, however, needs a FunctionDecl* in
+  // order to call equalsNode in order to reproduce the observed issue (bindings
+  // being removed despite forCallable matching the node).
+  //
+  // Because of this and because the machinery to compile the code into an
+  // ASTUnit is not exposed outside matchAndVerifyResultConditionally, it is
+  // cheaper to have a custom BoundNodesCallback for the purpose of this test.
+  StringRef codeWithTemplateFunction = R"cpp(
+struct Klass {
+  void Method();
+  template <typename T>
+  void Function(T t); // Declaration
+};
+
+void Instantiate(Klass k) {
+  k.Function(0);
+}
+
+template <typename T>
+void Klass::Function(T t) { // Definition
+  // Compound statement has two parents: the declaration and the definition.
+  Method();
+}
+)cpp";
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      codeWithTemplateFunction,
+      callExpr(callee(functionDecl(hasName("Function")).bind("funDecl"))),
+      std::make_unique<
+          ForCallablePreservesBindingWithMultipleParentsTestCallback>()));
 }
 
 TEST(Matcher, ForEachOverriden) {
@@ -6181,8 +6536,7 @@ TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
@@ -6191,8 +6545,7 @@ TEST(HasAnyTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<double> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6202,24 +6555,20 @@ TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(
       matches(code, classTemplateSpecializationDecl(
-                        hasName("A"), hasTypeLoc(templateSpecializationTypeLoc(
-                                          hasAnyTemplateArgumentLoc(hasTypeLoc(
-                                              loc(asString("double")))))))));
+                        hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                          loc(asString("double")))))));
+
   EXPECT_TRUE(matches(
-      code,
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))))));
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(notMatches(
-      "template<typename T> class A {}; A<int> a;",
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(notMatches("template<typename T> class A {}; A<int> a;",
+                         classTemplateSpecializationDecl(
+                             hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                               loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
@@ -6228,8 +6577,7 @@ TEST(HasAnyTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
-              hasTypeLoc(loc(asString("double")))))))));
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
@@ -6250,13 +6598,21 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
                               0, hasTypeLoc(loc(asString("double")))))))))));
 }
 
+TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; A<int> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                  templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                      0, hasTypeLoc(loc(asString("double")))))))))));
+}
+
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
   EXPECT_TRUE(matches(
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(
-              hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
@@ -6264,8 +6620,7 @@ TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
       "template<typename T> class A {}; template<> class A<double> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6275,23 +6630,12 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    0, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  0, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    1, hasTypeLoc(loc(asString("int")))))))));
-}
-
-TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(notMatches(
-      "template<typename T> class A {}; A<int> a;",
-      classTemplateSpecializationDecl(
-          hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+                hasTemplateArgumentLoc(1, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6300,8 +6644,7 @@ TEST(HasTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-              0, hasTypeLoc(loc(asString("double")))))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6312,14 +6655,12 @@ TEST(HasTemplateArgumentLoc,
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    1, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    0, hasTypeLoc(loc(asString("int")))))))));
+                hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
@@ -6329,14 +6670,12 @@ TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    -1, hasTypeLoc(loc(asString("double")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  -1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                    100, hasTypeLoc(loc(asString("int")))))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  100, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToDeclRefExprWithIntArgument) {

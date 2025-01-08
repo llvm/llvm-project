@@ -1,6 +1,6 @@
 # System modules
-from distutils.version import LooseVersion
 from functools import wraps
+from packaging import version
 import ctypes
 import locale
 import os
@@ -11,7 +11,7 @@ import tempfile
 import subprocess
 
 # Third-party modules
-import unittest2
+import unittest
 
 # LLDB modules
 import lldb
@@ -65,10 +65,8 @@ def _check_expected_version(comparison, expected, actual):
         ">=": fn_geq,
         "<=": fn_leq,
     }
-    expected_str = ".".join([str(x) for x in expected])
-    actual_str = ".".join([str(x) for x in actual])
 
-    return op_lookup[comparison](LooseVersion(actual_str), LooseVersion(expected_str))
+    return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
 def _match_decorator_property(expected, actual):
@@ -113,27 +111,15 @@ def _compiler_supports(
     return True
 
 
-def expectedFailureIfFn(expected_fn, bugnumber=None):
+def expectedFailureIf(condition, bugnumber=None):
     def expectedFailure_impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
 
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            xfail_reason = expected_fn(*args, **kwargs)
-            if xfail_reason is not None:
-                xfail_func = unittest2.expectedFailure(func)
-                xfail_func(*args, **kwargs)
-            else:
-                func(*args, **kwargs)
+        if condition:
+            return unittest.expectedFailure(func)
+        return func
 
-        return wrapper
-
-    # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
-    # or with arguments (e.g. @expectedFailureWindows(compilers=['gcc'])).  When called
-    # the first way, the first argument will be the actual function because decorators are
-    # weird like that.  So this is basically a check that says "which syntax was the original
-    # function decorated with?"
     if callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
@@ -142,11 +128,11 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
 
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
             reason = expected_fn()
             # The return value is the reason (or None if we don't skip), so
             # reason is used for both args.
-            return unittest2.skipIf(condition=reason, reason=reason)(func)
+            return unittest.skipIf(condition=reason, reason=reason)(func)
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -174,6 +160,34 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
+def _xfailForDebugInfo(expected_fn, bugnumber=None):
+    def expectedFailure_impl(func):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return expectedFailure_impl(bugnumber)
+    else:
+        return expectedFailure_impl
+
+
+def _skipForDebugInfo(expected_fn, bugnumber=None):
+    def skipImpl(func):
+        if isinstance(func, type) and issubclass(func, unittest.TestCase):
+            raise Exception("Decorator can only be used to decorate a test method")
+
+        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        return func
+
+    if callable(bugnumber):
+        return skipImpl(bugnumber)
+    else:
+        return skipImpl
+
+
 def _decorateTest(
     mode,
     bugnumber=None,
@@ -190,8 +204,9 @@ def _decorateTest(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
-    def fn(self):
+    def fn(actual_debug_info=None):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -204,7 +219,7 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, self.getDebugInfo())
+        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -222,7 +237,9 @@ def _decorateTest(
             )
         )
         skip_for_py_version = (py_version is None) or _check_expected_version(
-            py_version[0], py_version[1], sys.version_info
+            py_version[0],
+            py_version[1],
+            "{}.{}".format(sys.version_info.major, sys.version_info.minor),
         )
         skip_for_macos_version = (macos_version is None) or (
             (platform.mac_ver()[0] != "")
@@ -238,6 +255,7 @@ def _decorateTest(
             )
         )
         skip_for_setting = (setting is None) or (setting in configuration.settings)
+        skip_for_asan = (asan is None) or is_running_under_asan()
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -255,6 +273,7 @@ def _decorateTest(
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
+            (asan, skip_for_asan, "running under asan"),
         ]
         reasons = []
         final_skip_result = True
@@ -279,9 +298,13 @@ def _decorateTest(
         return reason_str
 
     if mode == DecorateMode.Skip:
+        if debug_info:
+            return _skipForDebugInfo(fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
-        return expectedFailureIfFn(fn, bugnumber)
+        if debug_info:
+            return _xfailForDebugInfo(fn, bugnumber)
+        return expectedFailureIf(fn(), bugnumber)
     else:
         return None
 
@@ -309,6 +332,7 @@ def expectedFailureAll(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Xfail,
@@ -326,6 +350,7 @@ def expectedFailureAll(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
@@ -334,7 +359,7 @@ def expectedFailureAll(
 # for example,
 # @skipIf, skip for all platform/compiler/arch,
 # @skipIf(compiler='gcc'), skip for gcc on all platform/architecture
-# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386
+# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386 (all conditions must be true)
 def skipIf(
     bugnumber=None,
     oslist=None,
@@ -350,6 +375,7 @@ def skipIf(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Skip,
@@ -367,11 +393,12 @@ def skipIf(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
-def _skip_for_android(reason, api_levels, archs):
-    def impl(obj):
+def _skip_fn_for_android(reason, api_levels, archs):
+    def impl():
         result = lldbplatformutil.match_android_device(
             lldbplatformutil.getArchitecture(),
             valid_archs=archs,
@@ -387,10 +414,6 @@ def add_test_categories(cat):
     cat = test_categories.validate(cat, True)
 
     def impl(func):
-        if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception(
-                "@add_test_categories can only be used to decorate a test method"
-            )
         try:
             if hasattr(func, "categories"):
                 cat.extend(func.categories)
@@ -403,22 +426,10 @@ def add_test_categories(cat):
     return impl
 
 
-def benchmarks_test(func):
-    """Decorate the item as a benchmarks test."""
-
-    def should_skip_benchmarks_test():
-        return "benchmarks test"
-
-    # Mark this function as such to separate them from the regular tests.
-    result = skipTestIfFn(should_skip_benchmarks_test)(func)
-    result.__benchmarks_test__ = True
-    return result
-
-
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
-    if isinstance(func, type) and issubclass(func, unittest2.TestCase):
+    if isinstance(func, type) and issubclass(func, unittest.TestCase):
         raise Exception(
             "@no_debug_info_test can only be used to decorate a test method"
         )
@@ -444,9 +455,8 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
         try:
-            DEVNULL = open(os.devnull, "w")
             output = subprocess.check_output(
-                ["xcodebuild", "-showsdks"], stderr=DEVNULL
+                ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
             if re.search("%ssimulator" % platform, output):
                 return None
@@ -502,8 +512,8 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
         arch - A sequence of architecture names specifying the architectures
             for which a test is expected to fail. None means all architectures.
     """
-    return expectedFailureIfFn(
-        _skip_for_android("xfailing on android", api_levels, archs), bugnumber
+    return expectedFailureIf(
+        _skip_fn_for_android("xfailing on android", api_levels, archs)(), bugnumber
     )
 
 
@@ -565,7 +575,7 @@ def expectedFlakeyNetBSD(bugnumber=None, compilers=None):
 
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
     return expectedFlakey(
-        _skip_for_android("flakey on android", api_levels, archs), bugnumber
+        _skip_fn_for_android("flakey on android", api_levels, archs), bugnumber
     )
 
 
@@ -584,7 +594,7 @@ def skipIfOutOfTreeDebugserver(func):
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
-    return unittest2.skipIf(lldb.remote_platform, "skip on remote platform")(func)
+    return unittest.skipIf(lldb.remote_platform, "skip on remote platform")(func)
 
 
 def skipIfNoSBHeaders(func):
@@ -721,23 +731,19 @@ def skipUnlessDarwin(func):
 
 
 def skipUnlessTargetAndroid(func):
-    return unittest2.skipUnless(
+    return unittest.skipUnless(
         lldbplatformutil.target_is_android(), "requires target to be Android"
     )(func)
 
 
-def skipIfHostIncompatibleWithRemote(func):
-    """Decorate the item to skip tests if binaries built on this host are incompatible."""
+def skipIfHostIncompatibleWithTarget(func):
+    """Decorate the item to skip tests when the host and target are incompatible."""
 
     def is_host_incompatible_with_remote():
         host_arch = lldbplatformutil.getLLDBArchitecture()
         host_platform = lldbplatformutil.getHostPlatform()
         target_arch = lldbplatformutil.getArchitecture()
-        target_platform = (
-            "darwin"
-            if lldbplatformutil.platformIsDarwin()
-            else lldbplatformutil.getPlatform()
-        )
+        target_platform = lldbplatformutil.getPlatform()
         if (
             not (target_arch == "x86_64" and host_arch == "i386")
             and host_arch != target_arch
@@ -762,7 +768,7 @@ def skipIfPlatform(oslist):
     """Decorate the item to skip tests if running on one of the listed platforms."""
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
     # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipIf(
+    return unittest.skipIf(
         lldbplatformutil.getPlatform() in oslist, "skip on %s" % (", ".join(oslist))
     )
 
@@ -771,7 +777,7 @@ def skipUnlessPlatform(oslist):
     """Decorate the item to skip tests unless running on one of the listed platforms."""
     # This decorator cannot be ported to `skipIf` yet because it is used on entire
     # classes, which `skipIf` explicitly forbids.
-    return unittest2.skipUnless(
+    return unittest.skipUnless(
         lldbplatformutil.getPlatform() in oslist,
         "requires one of %s" % (", ".join(oslist)),
     )
@@ -799,7 +805,7 @@ def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
             for which a test is skipped. None means all architectures.
     """
     return skipTestIfFn(
-        _skip_for_android("skipping for android", api_levels, archs), bugnumber
+        _skip_fn_for_android("skipping for android", api_levels, archs), bugnumber
     )
 
 
@@ -983,13 +989,19 @@ def skipUnlessAArch64MTELinuxCompiler(func):
 
     def is_toolchain_with_mte():
         compiler_path = lldbplatformutil.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile(delete=False)
         if lldbplatformutil.getPlatform() == "windows":
             return "MTE tests are not compatible with 'windows'"
 
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        # Note hostos may be Windows.
+        f.close()
+
+        cmd = f"{compiler_path} -x c -o {f.name} -"
+        if (
+            subprocess.run(cmd, shell=True, input="int main() {}".encode()).returncode
+            != 0
+        ):
+            os.remove(f.name)
             # Cannot compile at all, don't skip the test
             # so that we report the broken compiler normally.
             return None
@@ -1004,12 +1016,10 @@ def skipUnlessAArch64MTELinuxCompiler(func):
             int main() {
                 void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
             }"""
-        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (
-            test_src,
-            compiler_path,
-            f.name,
-        )
-        if os.popen(cmd).close() is not None:
+        cmd = f"{compiler_path} -march=armv8.5-a+memtag -x c -o {f.name} -"
+        res = subprocess.run(cmd, shell=True, input=test_src.encode())
+        os.remove(f.name)
+        if res.returncode != 0:
             return "Toolchain does not support MTE"
         return None
 
@@ -1031,7 +1041,11 @@ def _get_bool_config(key, fail_value=True):
 
 def _get_bool_config_skip_if_decorator(key):
     have = _get_bool_config(key)
-    return unittest2.skipIf(not have, "requires " + key)
+    return unittest.skipIf(not have, "requires " + key)
+
+
+def skipIfCurlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curl")(func)
 
 
 def skipIfCursesSupportMissing(func):
@@ -1063,7 +1077,7 @@ def skipIfLLVMTargetMissing(target):
             found = True
             break
 
-    return unittest2.skipIf(not found, "requires " + target)
+    return unittest.skipIf(not found, "requires " + target)
 
 
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.
@@ -1071,13 +1085,12 @@ def skipUnlessFeature(feature):
     def is_feature_enabled():
         if platform.system() == "Darwin":
             try:
-                DEVNULL = open(os.devnull, "w")
                 output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=DEVNULL
+                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
-                if re.match("%s: 1\s*" % feature, output):
+                if re.match(r"%s: 1\s*" % feature, output):
                     return None
                 else:
                     return "%s is not supported on this system." % feature

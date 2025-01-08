@@ -51,7 +51,7 @@ define i32 @_ZN1B1nEi(ptr %this, i32 %a) #0 comdat($_ZTV1B) {
 ; Ensures that vtable of B is live so that we will attempt devirt.
 define dso_local i32 @use_B(ptr %a) {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, inrange i32 0, i64 2), ptr %a, align 8
+  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, i32 0, i64 2), ptr %a, align 8
   ret i32 0
 }
 

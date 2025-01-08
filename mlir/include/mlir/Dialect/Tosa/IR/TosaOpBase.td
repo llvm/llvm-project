@@ -40,7 +40,7 @@ def Tosa_Dialect : Dialect {
     there will be tools to lower from the ML frameworks into TOSA.
   }];
 
-  let dependentDialects = ["tensor::TensorDialect", "quant::QuantizationDialect"];
+  let dependentDialects = ["tensor::TensorDialect", "quant::QuantDialect"];
 
   let cppNamespace = "mlir::tosa";
   let hasConstantMaterializer = 1;
@@ -126,11 +126,12 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
   (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
        "::mlir::Value":$weight, "::mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$pad, "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$dilation),
+       "::mlir::DenseI64ArrayAttr":$dilation,
+       "::mlir::TypeAttr":$acc_type),
   [{
     buildConvOpWithQuantInfo($_builder, $_state, outputType,
                              input, weight, bias,
-                             pad, stride, dilation);
+                             pad, stride, dilation, acc_type);
   }]>;
 
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
@@ -139,12 +140,13 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
        "::mlir::Value":$weight, "mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$outpad,
        "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$outputShape),
+       "::mlir::DenseI64ArrayAttr":$outputShape,
+       "::mlir::TypeAttr":$acc_type),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
                                   outpad, stride,
-                                  outputShape);
+                                  outputShape, acc_type);
   }]>;
 
 // The tosa.fully_connected op has its own builder as it does not have
@@ -207,6 +209,15 @@ def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
   }]>;
 
 //===----------------------------------------------------------------------===//
+// TOSA Operator Trait.
+//===----------------------------------------------------------------------===//
+
+// Permits broadcasting. Elementwise trait is too strict.
+def TosaElementwiseOperator : NativeOpTrait<"TosaElementwiseOperator"> {
+  let cppNamespace = "mlir::OpTrait::tosa";
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Operator Class.
 //===----------------------------------------------------------------------===//
 
@@ -219,10 +230,16 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
+              TosaElementwiseOperator,
               Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
 }
+
+class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
+    Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
+              SameOperandsAndResultShape,
+              SameOperandsAndResultElementType])> {}
 
 class Tosa_InferTensorTypeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [InferTensorTypeAdaptor, Pure])> {

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs -frame-pointer=non-leaf %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs -frame-pointer=non-leaf -outliner-leaf-descendants=false %s -o - | FileCheck %s
 --- |
 
   @x = common global i32 0, align 4

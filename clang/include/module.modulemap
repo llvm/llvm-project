@@ -37,26 +37,24 @@ module Clang_Basic {
   umbrella "clang/Basic"
 
   textual header "clang/Basic/AArch64SVEACLETypes.def"
+  textual header "clang/Basic/AMDGPUTypes.def"
+  textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsAArch64.def"
-  textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
+  textual header "clang/Basic/BuiltinsAMDGPU.def"
   textual header "clang/Basic/BuiltinsARM.def"
-  textual header "clang/Basic/BuiltinsBPF.def"
-  textual header "clang/Basic/Builtins.def"
-  textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsHexagon.def"
   textual header "clang/Basic/BuiltinsHexagonDep.def"
   textual header "clang/Basic/BuiltinsHexagonMapCustomDep.def"
   textual header "clang/Basic/BuiltinsLoongArch.def"
   textual header "clang/Basic/BuiltinsLoongArchBase.def"
-  textual header "clang/Basic/BuiltinsLoongArchLSX.def"
   textual header "clang/Basic/BuiltinsLoongArchLASX.def"
+  textual header "clang/Basic/BuiltinsLoongArchLSX.def"
   textual header "clang/Basic/BuiltinsMips.def"
   textual header "clang/Basic/BuiltinsNEON.def"
   textual header "clang/Basic/BuiltinsNVPTX.def"
   textual header "clang/Basic/BuiltinsPPC.def"
-  textual header "clang/Basic/BuiltinsRISCV.def"
   textual header "clang/Basic/BuiltinsRISCVVector.def"
   textual header "clang/Basic/BuiltinsSME.def"
   textual header "clang/Basic/BuiltinsSVE.def"
@@ -64,27 +62,29 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsVE.def"
   textual header "clang/Basic/BuiltinsVEVL.gen.def"
   textual header "clang/Basic/BuiltinsWebAssembly.def"
-  textual header "clang/Basic/BuiltinsX86.def"
-  textual header "clang/Basic/BuiltinsX86_64.def"
   textual header "clang/Basic/BuiltinsXCore.def"
+  textual header "clang/Basic/CFProtectionOptions.def"
   textual header "clang/Basic/CodeGenOptions.def"
   textual header "clang/Basic/DebugOptions.def"
   textual header "clang/Basic/DiagnosticOptions.def"
-  textual header "clang/Basic/Features.def"
   textual header "clang/Basic/FPOptions.def"
-  textual header "clang/Basic/MSP430Target.def"
+  textual header "clang/Basic/Features.def"
+  textual header "clang/Basic/HLSLIntangibleTypes.def"
   textual header "clang/Basic/LangOptions.def"
+  textual header "clang/Basic/MSP430Target.def"
+  textual header "clang/Basic/OpenACCClauses.def"
+  textual header "clang/Basic/OpenCLExtensionTypes.def"
   textual header "clang/Basic/OpenCLExtensions.def"
   textual header "clang/Basic/OpenCLImageTypes.def"
-  textual header "clang/Basic/OpenCLExtensionTypes.def"
   textual header "clang/Basic/OpenMPKinds.def"
   textual header "clang/Basic/OperatorKinds.def"
   textual header "clang/Basic/PPCTypes.def"
   textual header "clang/Basic/RISCVVTypes.def"
   textual header "clang/Basic/Sanitizers.def"
   textual header "clang/Basic/TargetCXXABI.def"
-  textual header "clang/Basic/TransformTypeTraits.def"
+  textual header "clang/Basic/TargetOSMacros.def"
   textual header "clang/Basic/TokenKinds.def"
+  textual header "clang/Basic/TransformTypeTraits.def"
   textual header "clang/Basic/WebAssemblyReferenceTypes.def"
 
   module * { export * }
@@ -113,8 +113,7 @@ module Clang_Diagnostics {
   module Driver { header "clang/Driver/DriverDiagnostic.h" export * }
   module Frontend { header "clang/Frontend/FrontendDiagnostic.h" export * }
   module Lex { header "clang/Lex/LexDiagnostic.h" export * }
-  module Parse { header "clang/Parse/ParseDiagnostic.h" export * }
-  module Sema { header "clang/Sema/SemaDiagnostic.h" export * }
+  module Parse { header "clang/Basic/DiagnosticParse.h" export * }
   module Serialization { header "clang/Serialization/SerializationDiagnostic.h" export * }
   module Refactoring { header "clang/Tooling/Refactoring/RefactoringDiagnostic.h" export * }
 }
@@ -182,9 +181,14 @@ module Clang_StaticAnalyzer_Frontend {
   module * { export * }
 }
 
+module Clang_Support { requires cplusplus umbrella "clang/Support" module * { export * } }
+
 module Clang_Testing {
   requires cplusplus
   umbrella "clang/Testing"
+
+  textual header "clang/Testing/TestLanguage.def"
+
   module * { export * }
 }
 

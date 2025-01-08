@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H
-#define __LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H
+#ifndef LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H
+#define LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H
 
 #define FD_SETSIZE 1024
 #define __FD_SET_WORD_TYPE unsigned long
@@ -32,4 +32,4 @@
 #define FD_ISSET(fd, set)                                                      \
   (int)(((set)->__set[__FD_WORD(fd)] & __FD_MASK(fd)) != 0)
 
-#endif // __LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H
+#endif // LLVM_LIBC_MACROS_SYS_SELECT_MACROS_H

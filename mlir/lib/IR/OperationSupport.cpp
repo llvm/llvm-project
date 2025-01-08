@@ -431,7 +431,7 @@ MutableOperandRange::MutableOperandRange(
     Operation *owner, unsigned start, unsigned length,
     ArrayRef<OperandSegment> operandSegments)
     : owner(owner), start(start), length(length),
-      operandSegments(operandSegments.begin(), operandSegments.end()) {
+      operandSegments(operandSegments) {
   assert((start + length) <= owner->getNumOperands() && "invalid range");
 }
 MutableOperandRange::MutableOperandRange(Operation *owner)
@@ -497,9 +497,14 @@ void MutableOperandRange::clear() {
   }
 }
 
+/// Explicit conversion to an OperandRange.
+OperandRange MutableOperandRange::getAsOperandRange() const {
+  return owner->getOperands().slice(start, length);
+}
+
 /// Allow implicit conversion to an OperandRange.
 MutableOperandRange::operator OperandRange() const {
-  return owner->getOperands().slice(start, length);
+  return getAsOperandRange();
 }
 
 MutableOperandRange::operator MutableArrayRef<OpOperand>() const {
@@ -652,7 +657,7 @@ ValueRange::OwnerT ValueRange::offset_base(const OwnerT &owner,
     return {value + index};
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return {operand + index};
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
@@ -660,7 +665,7 @@ Value ValueRange::dereference_iterator(const OwnerT &owner, ptrdiff_t index) {
     return value[index];
   if (auto *operand = llvm::dyn_cast_if_present<OpOperand *>(owner))
     return operand[index].get();
-  return owner.get<detail::OpResultImpl *>()->getNextResultAtOffset(index);
+  return cast<detail::OpResultImpl *>(owner)->getNextResultAtOffset(index);
 }
 
 //===----------------------------------------------------------------------===//
@@ -675,7 +680,7 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Attributes
   //   - Result Types
   llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getDiscardableAttrDictionary(),
+      llvm::hash_combine(op->getName(), op->getRawDictionaryAttrs(),
                          op->getResultTypes(), op->hashProperties());
 
   //   - Location if required
@@ -831,14 +836,13 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
 
   // 1. Compare the operation properties.
   if (lhs->getName() != rhs->getName() ||
-      lhs->getDiscardableAttrDictionary() !=
-          rhs->getDiscardableAttrDictionary() ||
+      lhs->getRawDictionaryAttrs() != rhs->getRawDictionaryAttrs() ||
       lhs->getNumRegions() != rhs->getNumRegions() ||
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
       lhs->getNumResults() != rhs->getNumResults() ||
       !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
-                                        rhs->getPropertiesStorage()))
+                                          rhs->getPropertiesStorage()))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;
@@ -912,18 +916,19 @@ static void addDataToHash(llvm::SHA1 &hasher, const T &data) {
       ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
 }
 
-OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
+OperationFingerPrint::OperationFingerPrint(Operation *topOp,
+                                           bool includeNested) {
   llvm::SHA1 hasher;
 
-  // Hash each of the operations based upon their mutable bits:
-  topOp->walk([&](Operation *op) {
+  // Helper function that hashes an operation based on its mutable bits:
+  auto addOperationToHash = [&](Operation *op) {
     //   - Operation pointer
     addDataToHash(hasher, op);
     //   - Parent operation pointer (to take into account the nesting structure)
     if (op != topOp)
       addDataToHash(hasher, op->getParentOp());
     //   - Attributes
-    addDataToHash(hasher, op->getDiscardableAttrDictionary());
+    addDataToHash(hasher, op->getRawDictionaryAttrs());
     //   - Properties
     addDataToHash(hasher, op->hashProperties());
     //   - Blocks in Regions
@@ -945,6 +950,12 @@ OperationFingerPrint::OperationFingerPrint(Operation *topOp) {
     //   - Result types
     for (Type t : op->getResultTypes())
       addDataToHash(hasher, t);
-  });
+  };
+
+  if (includeNested)
+    topOp->walk(addOperationToHash);
+  else
+    addOperationToHash(topOp);
+
   hash = hasher.result();
 }

@@ -1,4 +1,5 @@
 ; RUN: opt -passes=declare-to-assign -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=declare-to-assign -S %s -o - | FileCheck %s
 
 ;; Check assignment tracking debug info for structured bindings. FIXME only
 ;; variables at offset 0 in the backing alloca are currently tracked with the
@@ -12,13 +13,13 @@
 ;; }
 
 ; CHECK: %0 = alloca %struct.two, align 4, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i1 undef, metadata ![[AGGR:[0-9]+]], metadata !DIExpression(), metadata ![[ID1]], metadata ptr %0, metadata !DIExpression())
-; CHECK-NEXT: llvm.dbg.assign(metadata i1 undef, metadata ![[A:[0-9]+]], metadata !DIExpression(), metadata ![[ID1]], metadata ptr %0, metadata !DIExpression())
-; CHECK-NEXT: llvm.dbg.declare(metadata ptr %0, metadata ![[B:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 4))
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[AGGR:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 undef, ![[A:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_declare(ptr %0, ![[B:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 4),
 
 ; CHECK: store i64 %call, ptr %0, align 4,{{.*}}, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: llvm.dbg.assign(metadata i64 %call, metadata ![[AGGR]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %0, metadata !DIExpression())
-; CHECK-NEXT: llvm.dbg.assign(metadata i64 %call, metadata ![[A]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %0, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i64 %call, ![[AGGR]], !DIExpression(), ![[ID2]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i64 %call, ![[A]], !DIExpression(), ![[ID2]], ptr %0, !DIExpression(),
 
 ; CHECK: ![[AGGR]] = !DILocalVariable(scope:
 ; CHECK: ![[A]] = !DILocalVariable(name: "a", scope:

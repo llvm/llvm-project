@@ -1,27 +1,27 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK: [[uint:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: [[uint:%[0-9]+]] = OpTypeInt 32 0
 
 %A = type {
   i32,
   i32
 }
-; CHECK:    [[A:%[0-9]+]] = OpTypeStruct [[uint]] [[uint]]
+; CHECK-DAG:    [[A:%[0-9]+]] = OpTypeStruct [[uint]] [[uint]]
 
 %B = type {
   %A,
   i32,
   %A
 }
-; CHECK:    [[B:%[0-9]+]] = OpTypeStruct [[A]] [[uint]] [[A]]
+; CHECK-DAG:    [[B:%[0-9]+]] = OpTypeStruct [[A]] [[uint]] [[A]]
 
-; CHECK: [[uint_0:%[0-9]+]] = OpConstant [[uint]] 0
-; CHECK: [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
-; CHECK: [[uint_2:%[0-9]+]] = OpConstant [[uint]] 2
+; CHECK-DAG: [[uint_0:%[0-9]+]] = OpConstant [[uint]] 0
+; CHECK-DAG: [[uint_1:%[0-9]+]] = OpConstant [[uint]] 1
+; CHECK-DAG: [[uint_2:%[0-9]+]] = OpConstant [[uint]] 2
 
-; CHECK: [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
-; CHECK:    [[ptr_A:%[0-9]+]] = OpTypePointer Function [[A]]
-; CHECK:    [[ptr_B:%[0-9]+]] = OpTypePointer Function [[B]]
+; CHECK-DAG: [[ptr_uint:%[0-9]+]] = OpTypePointer Function [[uint]]
+; CHECK-DAG:    [[ptr_A:%[0-9]+]] = OpTypePointer Function [[A]]
+; CHECK-DAG:    [[ptr_B:%[0-9]+]] = OpTypePointer Function [[B]]
 
 define void @main() #1 {
 entry:

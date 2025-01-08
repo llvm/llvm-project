@@ -3,22 +3,22 @@
 // depending on -cl-fp32-correctly-rounded-divide-sqrt
 
 // Test with -fdeclare-opencl-builtins
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -S -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -emit-llvm -o %t.ll %s
 // RUN: FileCheck -check-prefixes=CHECK,DEFAULT %s < %t.ll
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -S -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -emit-llvm -o %t.ll %s
 // RUN: FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED %s < %t.ll
 
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-unsafe-math-optimizations -S -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-unsafe-math-optimizations -emit-llvm -o %t.ll %s
 // RUN: FileCheck -check-prefixes=CHECK,DEFAULT-UNSAFE %s < %t.ll
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -cl-unsafe-math-optimizations -S -emit-llvm -o %t.ll %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -fdeclare-opencl-builtins -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -cl-unsafe-math-optimizations -emit-llvm -o %t.ll %s
 // RUN: FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED-UNSAFE %s < %t.ll
 
 // Test without -fdeclare-opencl-builtins
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -S -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,DEFAULT %s
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -S -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,DEFAULT %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED %s
 
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-unsafe-math-optimizations -S -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,DEFAULT-UNSAFE %s
-// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -cl-unsafe-math-optimizations -S -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED-UNSAFE %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-unsafe-math-optimizations -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,DEFAULT-UNSAFE %s
+// RUN: %clang_cc1 -disable-llvm-passes -triple amdgcn-unknown-unknown -finclude-default-header -cl-fp32-correctly-rounded-divide-sqrt -cl-unsafe-math-optimizations -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK,CORRECTLYROUNDED-UNSAFE %s
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

@@ -125,12 +125,15 @@ def main():
         vl = 1
         e = False
         opt = f"parallelization-strategy=none"
+        builder = st.EncodingAttr.build_level_type
+        fmt = st.LevelFormat
+        prop = st.LevelProperty
         levels = [
-            [st.LevelType.compressed_nu, st.LevelType.singleton],
-            [st.LevelType.dense, st.LevelType.dense],
-            [st.LevelType.dense, st.LevelType.compressed],
-            [st.LevelType.compressed, st.LevelType.dense],
-            [st.LevelType.compressed, st.LevelType.compressed],
+            [builder(fmt.compressed, [prop.non_unique]), builder(fmt.singleton)],
+            [builder(fmt.dense), builder(fmt.dense)],
+            [builder(fmt.dense), builder(fmt.compressed)],
+            [builder(fmt.compressed), builder(fmt.dense)],
+            [builder(fmt.compressed), builder(fmt.compressed)],
         ]
         orderings = [
             ir.AffineMap.get_permutation([0, 1]),
@@ -138,7 +141,7 @@ def main():
         ]
         bitwidths = [0]
         compiler = sparsifier.Sparsifier(
-            options=opt, opt_level=0, shared_libs=[support_lib]
+            extras="", options=opt, opt_level=0, shared_libs=[support_lib]
         )
         for level in levels:
             for ordering in orderings:

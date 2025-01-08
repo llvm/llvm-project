@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=slsr,nary-reassociate -S | FileCheck %s
 ; RUN: opt < %s -passes=slsr -S | opt -passes='nary-reassociate' -S | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=PTX
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=PTX
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 
@@ -22,7 +22,7 @@ define void @nary_reassociate_after_slsr(i32 %a, i32 %b, i32 %c) {
   %abc = add i32 %ab, %c
   call void @foo(i32 %abc)
 ; CHECK: call void @foo(i32 %abc)
-; PTX: st.param.b32 [param0+0], [[abc:%r[0-9]+]];
+; PTX: st.param.b32 [param0], [[abc:%r[0-9]+]];
 
   %b2 = shl i32 %b, 1
   %ab2 = add i32 %a, %b2
@@ -31,7 +31,7 @@ define void @nary_reassociate_after_slsr(i32 %a, i32 %b, i32 %c) {
 ; PTX: add.s32 [[ab2c:%r[0-9]+]], [[abc]], [[b]]
   call void @foo(i32 %ab2c)
 ; CHECK-NEXT: call void @foo(i32 %ab2c)
-; PTX: st.param.b32 [param0+0], [[ab2c]];
+; PTX: st.param.b32 [param0], [[ab2c]];
 
   %b3 = mul i32 %b, 3
   %ab3 = add i32 %a, %b3
@@ -40,7 +40,7 @@ define void @nary_reassociate_after_slsr(i32 %a, i32 %b, i32 %c) {
 ; PTX: add.s32 [[ab3c:%r[0-9]+]], [[ab2c]], [[b]]
   call void @foo(i32 %ab3c)
 ; CHECK-NEXT: call void @foo(i32 %ab3c)
-; PTX: st.param.b32 [param0+0], [[ab3c]];
+; PTX: st.param.b32 [param0], [[ab3c]];
 
   ret void
 }

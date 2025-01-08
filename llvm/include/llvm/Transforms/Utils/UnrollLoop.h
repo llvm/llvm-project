@@ -16,12 +16,14 @@
 #define LLVM_TRANSFORMS_UTILS_UNROLLLOOP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
 class AssumptionCache;
+class AAResults;
 class BasicBlock;
 class BlockFrequencyInfo;
 class DependenceInfo;
@@ -72,6 +74,8 @@ struct UnrollLoopOptions {
   bool AllowExpensiveTripCount;
   bool UnrollRemainder;
   bool ForgetAllSCEV;
+  const Instruction *Heart = nullptr;
+  unsigned SCEVExpansionBudget;
 };
 
 LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
@@ -79,14 +83,15 @@ LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                             AssumptionCache *AC,
                             const llvm::TargetTransformInfo *TTI,
                             OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
-                            Loop **RemainderLoop = nullptr);
+                            Loop **RemainderLoop = nullptr,
+                            AAResults *AA = nullptr);
 
 bool UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
-    Loop **ResultLoop = nullptr);
+    unsigned SCEVExpansionBudget, Loop **ResultLoop = nullptr);
 
 LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   unsigned TripMultiple, bool UnrollRemainder,
@@ -102,7 +107,8 @@ bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                              ScalarEvolution *SE, DominatorTree *DT,
                              AssumptionCache *AC,
-                             const TargetTransformInfo *TTI);
+                             const TargetTransformInfo *TTI,
+                             AAResults *AA = nullptr);
 
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 
@@ -125,14 +131,15 @@ class UnrollCostEstimator {
 
 public:
   unsigned NumInlineCandidates;
-  bool Convergent;
+  ConvergenceKind Convergence;
+  bool ConvergenceAllowsRuntime;
 
   UnrollCostEstimator(const Loop *L, const TargetTransformInfo &TTI,
                       const SmallPtrSetImpl<const Value *> &EphValues,
                       unsigned BEInsns);
 
   /// Whether it is legal to unroll this loop.
-  bool canUnroll() const { return LoopSize.isValid() && !NotDuplicatable; }
+  bool canUnroll() const;
 
   uint64_t getRolledLoopSize() const { return *LoopSize.getValue(); }
 

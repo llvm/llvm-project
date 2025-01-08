@@ -114,10 +114,11 @@ endfunction()
 #   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
+#   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT"
+    "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
     "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
@@ -126,15 +127,20 @@ function(declare_mlir_python_extension name)
   endif()
   set(_install_destination "src/python/${name}")
 
+  if(NOT ARG_PYTHON_BINDINGS_LIBRARY)
+    set(ARG_PYTHON_BINDINGS_LIBRARY "pybind11")
+  endif()
+
   add_library(${name} INTERFACE)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
     mlir_python_SOURCES_TYPE extension
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
+    mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -203,8 +209,8 @@ endfunction()
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
-    "ROOT_PREFIX;INSTALL_PREFIX;COMMON_CAPI_LINK_LIBS"
-    "DECLARED_SOURCES"
+    "ROOT_PREFIX;INSTALL_PREFIX"
+    "COMMON_CAPI_LINK_LIBS;DECLARED_SOURCES"
     ${ARGN})
   # Helper to process an individual target.
   function(_process_target modules_target sources_target)
@@ -223,12 +229,14 @@ function(add_mlir_python_modules name)
     elseif(_source_type STREQUAL "extension")
       # Native CPP extension.
       get_target_property(_module_name ${sources_target} mlir_python_EXTENSION_MODULE_NAME)
+      get_target_property(_bindings_library ${sources_target} mlir_python_BINDINGS_LIBRARY)
       # Transform relative source to based on root dir.
       set(_extension_target "${modules_target}.extension.${_module_name}.dso")
       add_mlir_python_extension(${_extension_target} "${_module_name}"
         INSTALL_COMPONENT ${modules_target}
         INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
+        PYTHON_BINDINGS_LIBRARY ${_bindings_library}
         LINK_LIBS PRIVATE
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
@@ -504,7 +512,7 @@ function(add_mlir_python_common_capi_library name)
   )
   add_dependencies(${name} ${_header_sources_target})
 
-  if(MSVC)
+  if(WIN32)
     set_property(TARGET ${name} PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
   endif()
   set_target_properties(${name} PROPERTIES
@@ -565,8 +573,6 @@ function(add_mlir_python_sources_target name)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_sources_target(${name}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
-  add_custom_target(${name})
-
   # On Windows create_symlink requires special permissions. Use copy_if_different instead.
   if(CMAKE_HOST_WIN32)
     set(_link_or_copy copy_if_different)
@@ -575,8 +581,6 @@ function(add_mlir_python_sources_target name)
   endif()
 
   foreach(_sources_target ${ARG_SOURCES_TARGETS})
-    add_dependencies(${name} ${_sources_target})
-
     get_target_property(_src_paths ${_sources_target} SOURCES)
     if(NOT _src_paths)
       get_target_property(_src_paths ${_sources_target} INTERFACE_SOURCES)
@@ -590,6 +594,8 @@ function(add_mlir_python_sources_target name)
       get_target_property(_root_dir ${_sources_target} INTERFACE_INCLUDE_DIRECTORIES)
     endif()
 
+    # Initialize an empty list of all Python source destination paths.
+    set(all_dest_paths "")
     foreach(_src_path ${_src_paths})
       file(RELATIVE_PATH _source_relative_path "${_root_dir}" "${_src_path}")
       set(_dest_path "${ARG_OUTPUT_DIRECTORY}/${_source_relative_path}")
@@ -598,13 +604,17 @@ function(add_mlir_python_sources_target name)
       file(MAKE_DIRECTORY "${_dest_dir}")
 
       add_custom_command(
-        TARGET ${name} PRE_BUILD
+        OUTPUT "${_dest_path}"
+        PRE_BUILD
         COMMENT "Copying python source ${_src_path} -> ${_dest_path}"
         DEPENDS "${_src_path}"
-        BYPRODUCTS "${_dest_path}"
         COMMAND "${CMAKE_COMMAND}" -E ${_link_or_copy}
             "${_src_path}" "${_dest_path}"
       )
+
+      # Track the symlink or copy command output.
+      list(APPEND all_dest_paths "${_dest_path}")
+
       if(ARG_INSTALL_DIR)
         # We have to install each file individually because we need to preserve
         # the relative directory structure in the install destination.
@@ -621,6 +631,9 @@ function(add_mlir_python_sources_target name)
       endif()
     endforeach()
   endforeach()
+
+  # Create a new custom target that depends on all symlinked or copied sources.
+  add_custom_target("${name}" DEPENDS ${all_dest_paths})
 endfunction()
 
 ################################################################################
@@ -629,28 +642,56 @@ endfunction()
 function(add_mlir_python_extension libname extname)
   cmake_parse_arguments(ARG
   ""
-  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY"
+  "INSTALL_COMPONENT;INSTALL_DIR;OUTPUT_DIRECTORY;PYTHON_BINDINGS_LIBRARY"
   "SOURCES;LINK_LIBS"
   ${ARGN})
   if(ARG_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR "Unhandled arguments to add_mlir_python_extension(${libname}, ... : ${ARG_UNPARSED_ARGUMENTS}")
   endif()
 
-  # The actual extension library produces a shared-object or DLL and has
-  # sources that must be compiled in accordance with pybind11 needs (RTTI and
-  # exceptions).
-  pybind11_add_module(${libname}
-    ${ARG_SOURCES}
-  )
-
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.
   set(eh_rtti_enable)
   if (MSVC)
     set(eh_rtti_enable /EHsc /GR)
-  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
+
+  # The actual extension library produces a shared-object or DLL and has
+  # sources that must be compiled in accordance with pybind11 needs (RTTI and
+  # exceptions).
+  if(NOT DEFINED ARG_PYTHON_BINDINGS_LIBRARY OR ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "pybind11")
+    pybind11_add_module(${libname}
+      ${ARG_SOURCES}
+    )
+  elseif(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "nanobind")
+    nanobind_add_module(${libname}
+      NB_DOMAIN mlir
+      ${ARG_SOURCES}
+    )
+
+    if (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
+      # Avoids warnings from upstream nanobind.
+      target_compile_options(nanobind-static
+        PRIVATE
+          -Wno-cast-qual
+          -Wno-zero-length-array
+          -Wno-nested-anon-types
+          -Wno-c++98-compat-extra-semi
+          -Wno-covered-switch-default
+          ${eh_rtti_enable}
+      )
+    endif()
+    
+    if(APPLE)
+      # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
+      # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
+      # for downstream users that do not do something like `-undefined dynamic_lookup`.
+      set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-U -Wl,_PyClassMethod_New")
+    endif()
+  endif()
+
   target_compile_options(${libname} PRIVATE ${eh_rtti_enable})
 
   # Configure the output to match python expectations.

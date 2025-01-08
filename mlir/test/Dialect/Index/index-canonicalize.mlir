@@ -32,6 +32,19 @@ func.func @add_overflow() -> (index, index) {
   return %2, %3 : index, index
 }
 
+// CHECK-LABEL: @add_fold_constants
+func.func @add_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 1
+  %1 = index.constant 2
+  %2 = index.add %arg, %0
+  %3 = index.add %2, %1
+
+  // CHECK: [[C3:%.*]] = index.constant 3
+  // CHECK: [[V0:%.*]] = index.add %arg0, [[C3]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @sub
 func.func @sub() -> index {
   %0 = index.constant -2000000000
@@ -50,6 +63,19 @@ func.func @mul() -> index {
   // CHECK: %[[A:.*]] = index.constant -2446{{[0-9]+}}
   // CHECK: return %[[A]]
   return %2 : index
+}
+
+// CHECK-LABEL: @mul_fold_constants
+func.func @mul_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 2
+  %1 = index.constant 3
+  %2 = index.mul %arg, %0
+  %3 = index.mul %2, %1
+
+  // CHECK: [[C6:%.*]] = index.constant 6
+  // CHECK: [[V0:%.*]] = index.mul %arg0, [[C6]]
+  // CHECK: return [[V0]]
+  return %3 : index
 }
 
 // CHECK-LABEL: @divs
@@ -287,6 +313,19 @@ func.func @maxs_edge() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @maxs_fold_constants
+func.func @maxs_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant -2
+  %1 = index.constant 3
+  %2 = index.maxs %arg, %0
+  %3 = index.maxs %2, %1
+
+  // CHECK: [[C3:%.*]] = index.constant 3
+  // CHECK: [[V0:%.*]] = index.maxs %arg0, [[C3]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @maxu
 func.func @maxu() -> index {
   %lhs = index.constant -1
@@ -295,6 +334,19 @@ func.func @maxu() -> index {
   %0 = index.maxu %lhs, %rhs
   // CHECK: return %[[A]]
   return %0 : index
+}
+
+// CHECK-LABEL: @maxu_fold_constants
+func.func @maxu_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 2
+  %1 = index.constant 3
+  %2 = index.maxu %arg, %0
+  %3 = index.maxu %2, %1
+
+  // CHECK: [[C3:%.*]] = index.constant 3
+  // CHECK: [[V0:%.*]] = index.maxu %arg0, [[C3]]
+  // CHECK: return [[V0]]
+  return %3 : index
 }
 
 // CHECK-LABEL: @mins
@@ -327,6 +379,19 @@ func.func @mins_nofold_2() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @mins_fold_constants
+func.func @mins_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant -2
+  %1 = index.constant 3
+  %2 = index.mins %arg, %0
+  %3 = index.mins %2, %1
+
+  // CHECK: [[C2:%.*]] = index.constant -2
+  // CHECK: [[V0:%.*]] = index.mins %arg0, [[C2]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @minu
 func.func @minu() -> index {
   %lhs = index.constant -1
@@ -335,6 +400,19 @@ func.func @minu() -> index {
   %0 = index.minu %lhs, %rhs
   // CHECK: return %[[A]]
   return %0 : index
+}
+
+// CHECK-LABEL: @minu_fold_constants
+func.func @minu_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 2
+  %1 = index.constant 3
+  %2 = index.minu %arg, %0
+  %3 = index.minu %2, %1
+
+  // CHECK: [[C2:%.*]] = index.constant 2
+  // CHECK: [[V0:%.*]] = index.minu %arg0, [[C2]]
+  // CHECK: return [[V0]]
+  return %3 : index
 }
 
 // CHECK-LABEL: @shl
@@ -452,6 +530,19 @@ func.func @and() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @and_fold_constants
+func.func @and_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 5
+  %1 = index.constant 1
+  %2 = index.and %arg, %0
+  %3 = index.and %2, %1
+
+  // CHECK: [[C1:%.*]] = index.constant 1
+  // CHECK: [[V0:%.*]] = index.and %arg0, [[C1]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @or
 func.func @or() -> index {
   %lhs = index.constant 5
@@ -462,6 +553,19 @@ func.func @or() -> index {
   return %0 : index
 }
 
+// CHECK-LABEL: @or_fold_constants
+func.func @or_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 5
+  %1 = index.constant 1
+  %2 = index.or %arg, %0
+  %3 = index.or %2, %1
+
+  // CHECK: [[C5:%.*]] = index.constant 5
+  // CHECK: [[V0:%.*]] = index.or %arg0, [[C5]]
+  // CHECK: return [[V0]]
+  return %3 : index
+}
+
 // CHECK-LABEL: @xor
 func.func @xor() -> index {
   %lhs = index.constant 5
@@ -470,6 +574,19 @@ func.func @xor() -> index {
   %0 = index.xor %lhs, %rhs
   // CHECK: return %[[A]]
   return %0 : index
+}
+
+// CHECK-LABEL: @xor_fold_constants
+func.func @xor_fold_constants(%arg: index) -> (index) {
+  %0 = index.constant 5
+  %1 = index.constant 1
+  %2 = index.xor %arg, %0
+  %3 = index.xor %2, %1
+
+  // CHECK: [[C4:%.*]] = index.constant 4
+  // CHECK: [[V0:%.*]] = index.xor %arg0, [[C4]]
+  // CHECK: return [[V0]]
+  return %3 : index
 }
 
 // CHECK-LABEL: @cmp
@@ -497,6 +614,26 @@ func.func @cmp(%arg0: index) -> (i1, i1, i1, i1, i1, i1) {
   // CHECK-DAG: [[V5:%.*]] = index.cmp sgt(%arg0, [[IDX0]])
   // CHECK: return %[[FALSE]], %[[TRUE]], %[[TRUE]], %[[FALSE]]
   return %0, %1, %2, %3, %5, %7 : i1, i1, i1, i1, i1, i1
+}
+
+// CHECK-LABEL: @cmp_same_args
+func.func @cmp_same_args(%a: index) -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
+  %0 = index.cmp eq(%a, %a)
+  %1 = index.cmp sge(%a, %a)
+  %2 = index.cmp sle(%a, %a)
+  %3 = index.cmp uge(%a, %a)
+  %4 = index.cmp ule(%a, %a)
+  %5 = index.cmp ne(%a, %a)
+  %6 = index.cmp sgt(%a, %a)
+  %7 = index.cmp slt(%a, %a)
+  %8 = index.cmp ugt(%a, %a)
+  %9 = index.cmp ult(%a, %a)
+
+  // CHECK-DAG: %[[TRUE:.*]] = index.bool.constant true
+  // CHECK-DAG: %[[FALSE:.*]] = index.bool.constant false
+  // CHECK-NEXT: return %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]], %[[TRUE]],
+  // CHECK-SAME: %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]], %[[FALSE]]
+  return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
 // CHECK-LABEL: @cmp_nofold

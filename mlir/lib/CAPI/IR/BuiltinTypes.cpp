@@ -9,12 +9,15 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+
+#include <algorithm>
 
 using namespace mlir;
 
@@ -74,6 +77,50 @@ MlirType mlirIndexTypeGet(MlirContext ctx) {
 // Floating-point types.
 //===----------------------------------------------------------------------===//
 
+bool mlirTypeIsAFloat(MlirType type) {
+  return llvm::isa<FloatType>(unwrap(type));
+}
+
+unsigned mlirFloatTypeGetWidth(MlirType type) {
+  return llvm::cast<FloatType>(unwrap(type)).getWidth();
+}
+
+MlirTypeID mlirFloat4E2M1FNTypeGetTypeID() {
+  return wrap(Float4E2M1FNType::getTypeID());
+}
+
+bool mlirTypeIsAFloat4E2M1FN(MlirType type) {
+  return unwrap(type).isFloat4E2M1FN();
+}
+
+MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat4E2M1FN(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat6E2M3FNTypeGetTypeID() {
+  return wrap(Float6E2M3FNType::getTypeID());
+}
+
+bool mlirTypeIsAFloat6E2M3FN(MlirType type) {
+  return unwrap(type).isFloat6E2M3FN();
+}
+
+MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat6E2M3FN(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat6E3M2FNTypeGetTypeID() {
+  return wrap(Float6E3M2FNType::getTypeID());
+}
+
+bool mlirTypeIsAFloat6E3M2FN(MlirType type) {
+  return unwrap(type).isFloat6E3M2FN();
+}
+
+MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat6E3M2FN(unwrap(ctx)));
+}
+
 MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
   return wrap(Float8E5M2Type::getTypeID());
 }
@@ -84,6 +131,18 @@ bool mlirTypeIsAFloat8E5M2(MlirType type) {
 
 MlirType mlirFloat8E5M2TypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E5M2(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E4M3TypeGetTypeID() {
+  return wrap(Float8E4M3Type::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E4M3(MlirType type) {
+  return unwrap(type).isFloat8E4M3();
+}
+
+MlirType mlirFloat8E4M3TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E4M3(unwrap(ctx)));
 }
 
 MlirTypeID mlirFloat8E4M3FNTypeGetTypeID() {
@@ -132,6 +191,30 @@ bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type) {
 
 MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx) {
   return wrap(FloatType::getFloat8E4M3B11FNUZ(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E3M4TypeGetTypeID() {
+  return wrap(Float8E3M4Type::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E3M4(MlirType type) {
+  return unwrap(type).isFloat8E3M4();
+}
+
+MlirType mlirFloat8E3M4TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E3M4(unwrap(ctx)));
+}
+
+MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID() {
+  return wrap(Float8E8M0FNUType::getTypeID());
+}
+
+bool mlirTypeIsAFloat8E8M0FNU(MlirType type) {
+  return unwrap(type).isFloat8E8M0FNU();
+}
+
+MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx) {
+  return wrap(FloatType::getFloat8E8M0FNU(unwrap(ctx)));
 }
 
 MlirTypeID mlirBFloat16TypeGetTypeID() {
@@ -299,11 +382,11 @@ MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
 }
 
 bool mlirVectorTypeIsScalable(MlirType type) {
-  return unwrap(type).cast<VectorType>().isScalable();
+  return cast<VectorType>(unwrap(type)).isScalable();
 }
 
 bool mlirVectorTypeIsDimScalable(MlirType type, intptr_t dim) {
-  return unwrap(type).cast<VectorType>().getScalableDims()[dim];
+  return cast<VectorType>(unwrap(type)).getScalableDims()[dim];
 }
 
 //===----------------------------------------------------------------------===//
@@ -424,6 +507,18 @@ MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type) {
 
 MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type) {
   return wrap(llvm::cast<MemRefType>(unwrap(type)).getMemorySpace());
+}
+
+MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
+                                                    int64_t *strides,
+                                                    int64_t *offset) {
+  MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
+  SmallVector<int64_t> strides_;
+  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+    return mlirLogicalResultFailure();
+
+  (void)std::copy(strides_.begin(), strides_.end(), strides);
+  return mlirLogicalResultSuccess();
 }
 
 MlirTypeID mlirUnrankedMemRefTypeGetTypeID() {

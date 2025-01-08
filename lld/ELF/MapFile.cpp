@@ -44,31 +44,33 @@ static constexpr char indent8[] = "        ";          // 8 spaces
 static constexpr char indent16[] = "                "; // 16 spaces
 
 // Print out the first three columns of a line.
-static void writeHeader(raw_ostream &os, uint64_t vma, uint64_t lma,
+static void writeHeader(Ctx &ctx, raw_ostream &os, uint64_t vma, uint64_t lma,
                         uint64_t size, uint64_t align) {
-  if (config->is64)
+  if (ctx.arg.is64)
     os << format("%16llx %16llx %8llx %5lld ", vma, lma, size, align);
   else
     os << format("%8llx %8llx %8llx %5lld ", vma, lma, size, align);
 }
 
 // Returns a list of all symbols that we want to print out.
-static std::vector<Defined *> getSymbols() {
+static std::vector<Defined *> getSymbols(Ctx &ctx) {
   std::vector<Defined *> v;
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Defined>(b))
         if (!dr->isSection() && dr->section && dr->section->isLive() &&
-            (dr->file == file || dr->hasFlag(NEEDS_COPY) || dr->section->bss))
+            (dr->file == file || dr->hasFlag(NEEDS_COPY) ||
+             (isa<SyntheticSection>(dr->section) &&
+              cast<SyntheticSection>(dr->section)->bss)))
           v.push_back(dr);
   return v;
 }
 
 // Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
+static SymbolMapTy getSectionSyms(Ctx &ctx, ArrayRef<Defined *> syms) {
   SymbolMapTy ret;
   for (Defined *dr : syms)
-    ret[dr->section].emplace_back(dr, dr->getVA());
+    ret[dr->section].emplace_back(dr, dr->getVA(ctx));
 
   // Sort symbols by address. We want to print out symbols in the
   // order in the output file rather than the order they appeared
@@ -87,18 +89,18 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
 }
 
 // Construct a map from symbols to their stringified representations.
-// Demangling symbols (which is what toString() does) is slow, so
+// Demangling symbols (which is what toStr(ctx, ) does) is slow, so
 // we do that in batch using parallel-for.
 static DenseMap<Symbol *, std::string>
-getSymbolStrings(ArrayRef<Defined *> syms) {
+getSymbolStrings(Ctx &ctx, ArrayRef<Defined *> syms) {
   auto strs = std::make_unique<std::string[]>(syms.size());
   parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(strs[i]);
     OutputSection *osec = syms[i]->getOutputSection();
-    uint64_t vma = syms[i]->getVA();
+    uint64_t vma = syms[i]->getVA(ctx);
     uint64_t lma = osec ? osec->getLMA() + vma - osec->getVA(0) : 0;
-    writeHeader(os, vma, lma, syms[i]->getSize(), 1);
-    os << indent16 << toString(*syms[i]);
+    writeHeader(ctx, os, vma, lma, syms[i]->getSize(), 1);
+    os << indent16 << toStr(ctx, *syms[i]);
   });
 
   DenseMap<Symbol *, std::string> ret;
@@ -113,7 +115,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
 // .eh_frame tend to contain a lot of section pieces that are contiguous
 // both in input file and output file. Such pieces are squashed before
 // being displayed to make output compact.
-static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
+static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
   std::vector<EhSectionPiece> pieces;
 
   auto add = [&](const EhSectionPiece &p) {
@@ -121,7 +123,7 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
     if (!pieces.empty()) {
       EhSectionPiece &last = pieces.back();
       if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == p.outputOff) {
+          last.outputOff + last.size == (unsigned)p.outputOff) {
         last.size += p.size;
         return;
       }
@@ -139,37 +141,40 @@ static void printEhFrame(raw_ostream &os, const EhFrameSection *sec) {
   // Print out section pieces.
   const OutputSection *osec = sec->getOutputSection();
   for (EhSectionPiece &p : pieces) {
-    writeHeader(os, osec->addr + p.outputOff, osec->getLMA() + p.outputOff,
+    writeHeader(ctx, os, osec->addr + p.outputOff, osec->getLMA() + p.outputOff,
                 p.size, 1);
-    os << indent8 << toString(p.sec->file) << ":(" << p.sec->name << "+0x"
+    os << indent8 << toStr(ctx, p.sec->file) << ":(" << p.sec->name << "+0x"
        << Twine::utohexstr(p.inputOff) + ")\n";
   }
 }
 
-static void writeMapFile(raw_fd_ostream &os) {
+static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
   // Collect symbol info that we want to print out.
-  std::vector<Defined *> syms = getSymbols();
-  SymbolMapTy sectionSyms = getSectionSyms(syms);
-  DenseMap<Symbol *, std::string> symStr = getSymbolStrings(syms);
+  std::vector<Defined *> syms = getSymbols(ctx);
+  SymbolMapTy sectionSyms = getSectionSyms(ctx, syms);
+  DenseMap<Symbol *, std::string> symStr = getSymbolStrings(ctx, syms);
 
   // Print out the header line.
-  int w = config->is64 ? 16 : 8;
+  int w = ctx.arg.is64 ? 16 : 8;
   os << right_justify("VMA", w) << ' ' << right_justify("LMA", w)
      << "     Size Align Out     In      Symbol\n";
 
   OutputSection *osec = nullptr;
-  for (SectionCommand *cmd : script->sectionCommands) {
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
       if (assign->provide && !assign->sym)
         continue;
       uint64_t lma = osec ? osec->getLMA() + assign->addr - osec->getVA(0) : 0;
-      writeHeader(os, assign->addr, lma, assign->size, 1);
+      writeHeader(ctx, os, assign->addr, lma, assign->size, 1);
       os << assign->commandString << '\n';
       continue;
     }
+    if (isa<SectionClassDesc>(cmd))
+      continue;
 
     osec = &cast<OutputDesc>(cmd)->osec;
-    writeHeader(os, osec->addr, osec->getLMA(), osec->size, osec->addralign);
+    writeHeader(ctx, os, osec->addr, osec->getLMA(), osec->size,
+                osec->addralign);
     os << osec->name << '\n';
 
     // Dump symbols for each input section.
@@ -177,13 +182,13 @@ static void writeMapFile(raw_fd_ostream &os) {
       if (auto *isd = dyn_cast<InputSectionDescription>(subCmd)) {
         for (InputSection *isec : isd->sections) {
           if (auto *ehSec = dyn_cast<EhFrameSection>(isec)) {
-            printEhFrame(os, ehSec);
+            printEhFrame(ctx, os, ehSec);
             continue;
           }
 
-          writeHeader(os, isec->getVA(), osec->getLMA() + isec->outSecOff,
+          writeHeader(ctx, os, isec->getVA(), osec->getLMA() + isec->outSecOff,
                       isec->getSize(), isec->addralign);
-          os << indent8 << toString(isec) << '\n';
+          os << indent8 << toStr(ctx, isec) << '\n';
           for (Symbol *sym : llvm::make_first_range(sectionSyms[isec]))
             os << symStr[sym] << '\n';
         }
@@ -191,7 +196,7 @@ static void writeMapFile(raw_fd_ostream &os) {
       }
 
       if (auto *data = dyn_cast<ByteCommand>(subCmd)) {
-        writeHeader(os, osec->addr + data->offset,
+        writeHeader(ctx, os, osec->addr + data->offset,
                     osec->getLMA() + data->offset, data->size, 1);
         os << indent8 << data->commandString << '\n';
         continue;
@@ -200,7 +205,7 @@ static void writeMapFile(raw_fd_ostream &os) {
       if (auto *assign = dyn_cast<SymbolAssignment>(subCmd)) {
         if (assign->provide && !assign->sym)
           continue;
-        writeHeader(os, assign->addr,
+        writeHeader(ctx, os, assign->addr,
                     osec->getLMA() + assign->addr - osec->getVA(0),
                     assign->size, 1);
         os << indent8 << assign->commandString << '\n';
@@ -221,7 +226,7 @@ static void writeMapFile(raw_fd_ostream &os) {
 //
 // In this case, strlen is defined by libc.so.6 and used by other two
 // files.
-static void writeCref(raw_fd_ostream &os) {
+static void writeCref(Ctx &ctx, raw_fd_ostream &os) {
   // Collect symbols and files.
   MapVector<Symbol *, SetVector<InputFile *>> map;
   for (ELFFileBase *file : ctx.objectFiles) {
@@ -247,30 +252,30 @@ static void writeCref(raw_fd_ostream &os) {
     Symbol *sym = kv.first;
     SetVector<InputFile *> &files = kv.second;
 
-    print(toString(*sym), toString(sym->file));
+    print(toStr(ctx, *sym), toStr(ctx, sym->file));
     for (InputFile *file : files)
       if (file != sym->file)
-        print("", toString(file));
+        print("", toStr(ctx, file));
   }
 }
 
-void elf::writeMapAndCref() {
-  if (config->mapFile.empty() && !config->cref)
+void elf::writeMapAndCref(Ctx &ctx) {
+  if (ctx.arg.mapFile.empty() && !ctx.arg.cref)
     return;
 
   llvm::TimeTraceScope timeScope("Write map file");
 
   // Open a map file for writing.
   std::error_code ec;
-  StringRef mapFile = config->mapFile.empty() ? "-" : config->mapFile;
+  StringRef mapFile = ctx.arg.mapFile.empty() ? "-" : ctx.arg.mapFile;
   raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
-    error("cannot open " + mapFile + ": " + ec.message());
+    ErrAlways(ctx) << "cannot open " << mapFile << ": " << ec.message();
     return;
   }
 
-  if (!config->mapFile.empty())
-    writeMapFile(os);
-  if (config->cref)
-    writeCref(os);
+  if (!ctx.arg.mapFile.empty())
+    writeMapFile(ctx, os);
+  if (ctx.arg.cref)
+    writeCref(ctx, os);
 }

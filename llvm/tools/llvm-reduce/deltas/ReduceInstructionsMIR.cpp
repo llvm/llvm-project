@@ -65,7 +65,7 @@ static bool shouldNotRemoveInstruction(const TargetInstrInfo &TII,
 
 static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   MachineDominatorTree MDT;
-  MDT.runOnMachineFunction(MF);
+  MDT.recalculate(MF);
 
   auto MRI = &MF.getRegInfo();
   SetVector<MachineInstr *> ToDelete;

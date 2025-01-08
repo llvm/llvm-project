@@ -109,8 +109,8 @@ void R() {
 }
 
 void G() {
-  // CHECK: call addrspace(0) void asm sideeffect "subi r30, $0", "G"(i16 50)
-  asm("subi r30, %0" :: "G"(50));
+  // CHECK: call addrspace(0) void asm sideeffect "subi r30, $0", "G"(i16 0)
+  asm("subi r30, %0" :: "G"(0));
 }
 
 void Q() {

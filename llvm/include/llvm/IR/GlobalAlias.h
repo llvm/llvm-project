@@ -28,6 +28,8 @@ template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
 class GlobalAlias : public GlobalValue, public ilist_node<GlobalAlias> {
   friend class SymbolTableListTraits<GlobalAlias>;
 
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
   GlobalAlias(Type *Ty, unsigned AddressSpace, LinkageTypes Linkage,
               const Twine &Name, Constant *Aliasee, Module *Parent);
 
@@ -59,7 +61,7 @@ public:
   static GlobalAlias *create(const Twine &Name, GlobalValue *Aliasee);
 
   // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
   void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Provide fast operand accessors

@@ -13,14 +13,13 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#include <errno.h>
-
 #include "inv_trigf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t N_EXCEPTS = 2;
 
@@ -44,6 +43,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
   FPBits xbits(x);
   uint32_t x_uint = xbits.uintval();
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
@@ -108,7 +108,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_nan(FPBits::FRACTION_MASK);
+    return FPBits::quiet_nan().get_val();
   }
 
   // Check for exceptional values
@@ -139,11 +139,11 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   // |x| <= 0.5:
   //   asin(x) ~ pi/2 - 2 * sqrt(u) * P(u),
 
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
   double sign = SIGN[x_sign];
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
-  double c1 = sign * (-2 * fputil::sqrt(u));
+  double c1 = sign * (-2 * fputil::sqrt<double>(u));
   double c2 = fputil::multiply_add(sign, M_MATH_PI_2, c1);
   double c3 = c1 * u;
 
@@ -151,4 +151,4 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   return static_cast<float>(fputil::multiply_add(c3, r, c2));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

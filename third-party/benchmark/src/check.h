@@ -5,18 +5,34 @@
 #include <cstdlib>
 #include <ostream>
 
+#include "benchmark/export.h"
 #include "internal_macros.h"
 #include "log.h"
+
+#if defined(__GNUC__) || defined(__clang__)
+#define BENCHMARK_NOEXCEPT noexcept
+#define BENCHMARK_NOEXCEPT_OP(x) noexcept(x)
+#elif defined(_MSC_VER) && !defined(__clang__)
+#if _MSC_VER >= 1900
+#define BENCHMARK_NOEXCEPT noexcept
+#define BENCHMARK_NOEXCEPT_OP(x) noexcept(x)
+#else
+#define BENCHMARK_NOEXCEPT
+#define BENCHMARK_NOEXCEPT_OP(x)
+#endif
+#define __func__ __FUNCTION__
+#else
+#define BENCHMARK_NOEXCEPT
+#define BENCHMARK_NOEXCEPT_OP(x)
+#endif
 
 namespace benchmark {
 namespace internal {
 
 typedef void(AbortHandlerT)();
 
-inline AbortHandlerT*& GetAbortHandler() {
-  static AbortHandlerT* handler = &std::abort;
-  return handler;
-}
+BENCHMARK_EXPORT
+AbortHandlerT*& GetAbortHandler();
 
 BENCHMARK_NORETURN inline void CallAbortHandler() {
   GetAbortHandler()();
@@ -36,10 +52,17 @@ class CheckHandler {
 
   LogType& GetLog() { return log_; }
 
+#if defined(COMPILER_MSVC)
+#pragma warning(push)
+#pragma warning(disable : 4722)
+#endif
   BENCHMARK_NORETURN ~CheckHandler() BENCHMARK_NOEXCEPT_OP(false) {
     log_ << std::endl;
     CallAbortHandler();
   }
+#if defined(COMPILER_MSVC)
+#pragma warning(pop)
+#endif
 
   CheckHandler& operator=(const CheckHandler&) = delete;
   CheckHandler(const CheckHandler&) = delete;

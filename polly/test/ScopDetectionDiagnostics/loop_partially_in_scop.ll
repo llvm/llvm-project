@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -pass-remarks-missed="polly-detect" -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -pass-remarks-missed="polly-detect" -disable-output < %s 2>&1| FileCheck %s
 
 ; CHECK: remark: <unknown>:0:0: Loop cannot be handled because not all latches are part of loop region.
 ; CHECK: remark: <unknown>:0:0: Loop cannot be handled because not all latches are part of loop region.

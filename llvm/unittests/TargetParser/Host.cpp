@@ -83,8 +83,20 @@ TEST(getLinuxHostCPUName, AArch64) {
                                               "CPU part        : 0xd40"),
             "neoverse-v1");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd4f"),
+            "neoverse-v2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd84"),
+            "neoverse-v3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd0c"),
             "neoverse-n1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd49"),
+            "neoverse-n2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8e"),
+            "neoverse-n3");
   // Verify that both CPU implementer and CPU part are checked:
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
                                               "CPU part        : 0xd03"),
@@ -113,13 +125,27 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc01"),
             "saphira");
-
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x6d\n"
+                                              "CPU part        : 0xd49"),
+            "neoverse-n2");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac3"),
             "ampere1");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac4"),
             "ampere1a");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac5"),
+            "ampere1b");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
+                                              "CPU part        : 0x001"),
+            "oryon-1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x46\n"
+                                              "CPU part        : 0x003"),
+            "fujitsu-monaka");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x61\n"
+                                              "CPU part        : 0x039"),
+            "apple-m2");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
@@ -528,6 +554,7 @@ TEST(HostTest, AIXHostCPUDetect) {
                        .Case("POWER 8\n", "pwr8")
                        .Case("POWER 9\n", "pwr9")
                        .Case("POWER 10\n", "pwr10")
+                       .Case("POWER 11\n", "pwr11")
                        .Default("unknown");
 
   StringRef HostCPU = sys::getHostCPUName();

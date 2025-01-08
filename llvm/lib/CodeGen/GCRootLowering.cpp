@@ -27,6 +27,15 @@
 
 using namespace llvm;
 
+/// Lower barriers out of existence (if the associated GCStrategy hasn't
+/// already done so...), and insert initializing stores to roots as a defensive
+/// measure.  Given we're going to report all roots live at all safepoints, we
+/// need to be able to ensure each root has been initialized by the point the
+/// first safepoint is reached.  This really should have been done by the
+/// frontend, but the old API made this non-obvious, so we do a potentially
+/// redundant store just in case.
+static bool DoLowering(Function &F, GCStrategy &S);
+
 namespace {
 
 /// LowerIntrinsics - This pass rewrites calls to the llvm.gcread or
@@ -34,8 +43,6 @@ namespace {
 /// directed by the GCStrategy. It also performs automatic root initialization
 /// and custom intrinsic lowering.
 class LowerIntrinsics : public FunctionPass {
-  bool DoLowering(Function &F, GCStrategy &S);
-
 public:
   static char ID;
 
@@ -70,6 +77,22 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+}
+
+PreservedAnalyses GCLoweringPass::run(Function &F,
+                                      FunctionAnalysisManager &FAM) {
+  if (!F.hasGC())
+    return PreservedAnalyses::all();
+
+  auto &Info = FAM.getResult<GCFunctionAnalysis>(F);
+
+  bool Changed = DoLowering(F, Info.getStrategy());
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
 }
 
 // -----------------------------------------------------------------------------
@@ -158,7 +181,7 @@ static bool InsertRootInitializers(Function &F, ArrayRef<AllocaInst *> Roots) {
     if (!InitedRoots.count(Root)) {
       new StoreInst(
           ConstantPointerNull::get(cast<PointerType>(Root->getAllocatedType())),
-          Root, Root->getNextNode());
+          Root, std::next(Root->getIterator()));
       MadeChange = true;
     }
 
@@ -178,14 +201,7 @@ bool LowerIntrinsics::runOnFunction(Function &F) {
   return DoLowering(F, S);
 }
 
-/// Lower barriers out of existance (if the associated GCStrategy hasn't
-/// already done so...), and insert initializing stores to roots as a defensive
-/// measure.  Given we're going to report all roots live at all safepoints, we
-/// need to be able to ensure each root has been initialized by the point the
-/// first safepoint is reached.  This really should have been done by the
-/// frontend, but the old API made this non-obvious, so we do a potentially
-/// redundant store just in case.
-bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
+bool DoLowering(Function &F, GCStrategy &S) {
   SmallVector<AllocaInst *, 32> Roots;
 
   bool MadeChange = false;
@@ -200,8 +216,8 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
       default: break;
       case Intrinsic::gcwrite: {
         // Replace a write barrier with a simple store.
-        Value *St = new StoreInst(CI->getArgOperand(0),
-                                  CI->getArgOperand(2), CI);
+        Value *St = new StoreInst(CI->getArgOperand(0), CI->getArgOperand(2),
+                                  CI->getIterator());
         CI->replaceAllUsesWith(St);
         CI->eraseFromParent();
         MadeChange = true;
@@ -209,7 +225,8 @@ bool LowerIntrinsics::DoLowering(Function &F, GCStrategy &S) {
       }
       case Intrinsic::gcread: {
         // Replace a read barrier with a simple load.
-        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "", CI);
+        Value *Ld = new LoadInst(CI->getType(), CI->getArgOperand(1), "",
+                                 CI->getIterator());
         Ld->takeName(CI);
         CI->replaceAllUsesWith(Ld);
         CI->eraseFromParent();

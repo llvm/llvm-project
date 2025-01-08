@@ -12,6 +12,7 @@
 
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
@@ -62,6 +63,12 @@ template <typename T> StringRef XCOFFSectionHeader<T>::getName() const {
 template <typename T> uint16_t XCOFFSectionHeader<T>::getSectionType() const {
   const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
   return DerivedXCOFFSectionHeader.Flags & SectionFlagsTypeMask;
+}
+
+template <typename T>
+uint32_t XCOFFSectionHeader<T>::getSectionSubtype() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return DerivedXCOFFSectionHeader.Flags & ~SectionFlagsTypeMask;
 }
 
 template <typename T>
@@ -731,9 +738,11 @@ bool XCOFFObjectFile::isRelocatableObject() const {
 }
 
 Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
-  // TODO FIXME Should get from auxiliary_header->o_entry when support for the
-  // auxiliary_header is added.
-  return 0;
+  if (AuxiliaryHeader == nullptr)
+    return 0;
+
+  return is64Bit() ? auxiliaryHeader64()->getEntryPointAddr()
+                   : auxiliaryHeader32()->getEntryPointAddr();
 }
 
 StringRef XCOFFObjectFile::mapDebugSectionName(StringRef Name) const {
@@ -1052,9 +1061,9 @@ Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
       ExceptEntStart, ExceptEntStart + getSectionSize(DRI) / sizeof(ExceptEnt));
 }
 
-template Expected<ArrayRef<ExceptionSectionEntry32>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<ExceptionSectionEntry32>>
 XCOFFObjectFile::getExceptionEntries() const;
-template Expected<ArrayRef<ExceptionSectionEntry64>>
+template LLVM_EXPORT_TEMPLATE Expected<ArrayRef<ExceptionSectionEntry64>>
 XCOFFObjectFile::getExceptionEntries() const;
 
 Expected<XCOFFStringTable>
@@ -1361,21 +1370,23 @@ Expected<StringRef> XCOFFSymbolRef::getName() const {
   return getObject()->getStringTableEntry(getSymbol64()->Offset);
 }
 
-// Explictly instantiate template classes.
+// Explicitly instantiate template classes.
 template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
 template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
 
 template struct XCOFFRelocation<llvm::support::ubig32_t>;
 template struct XCOFFRelocation<llvm::support::ubig64_t>;
 
-template llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation64>>
-llvm::object::XCOFFObjectFile::relocations<llvm::object::XCOFFSectionHeader64,
-                                           llvm::object::XCOFFRelocation64>(
-    llvm::object::XCOFFSectionHeader64 const &) const;
-template llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation32>>
-llvm::object::XCOFFObjectFile::relocations<llvm::object::XCOFFSectionHeader32,
-                                           llvm::object::XCOFFRelocation32>(
-    llvm::object::XCOFFSectionHeader32 const &) const;
+template LLVM_EXPORT_TEMPLATE
+    llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation64>>
+    llvm::object::XCOFFObjectFile::relocations<
+        llvm::object::XCOFFSectionHeader64, llvm::object::XCOFFRelocation64>(
+        llvm::object::XCOFFSectionHeader64 const &) const;
+template LLVM_EXPORT_TEMPLATE
+    llvm::Expected<llvm::ArrayRef<llvm::object::XCOFFRelocation32>>
+    llvm::object::XCOFFObjectFile::relocations<
+        llvm::object::XCOFFSectionHeader32, llvm::object::XCOFFRelocation32>(
+        llvm::object::XCOFFSectionHeader32 const &) const;
 
 bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes) {
   if (Bytes.size() < 4)
@@ -1403,7 +1414,7 @@ TBVectorExt::TBVectorExt(StringRef TBvectorStrRef, Error &Err) {
   unsigned ParmsNum =
       GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask, NumberOfVectorParmsShift);
 
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   Expected<SmallString<32>> VecParmsTypeOrError =
       parseVectorParmsType(VecParmsTypeValue, ParmsNum);
   if (!VecParmsTypeOrError)
@@ -1447,7 +1458,7 @@ XCOFFTracebackTable::create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bit) {
 XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
                                          Error &Err, bool Is64Bit)
     : TBPtr(Ptr), Is64BitObj(Is64Bit) {
-  ErrorAsOutParameter EAO(&Err);
+  ErrorAsOutParameter EAO(Err);
   DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
                    /*AddressSize=*/0);
   DataExtractor::Cursor Cur(/*Offset=*/0);

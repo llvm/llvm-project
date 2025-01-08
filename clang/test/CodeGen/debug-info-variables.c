@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -debug-info-kind=standalone -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -o - | FileCheck %s
 
 // CHECK: DIGlobalVariable(name: "global",{{.*}} line: [[@LINE+1]]
 int global = 42;

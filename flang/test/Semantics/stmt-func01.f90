@@ -10,6 +10,7 @@ program main
     pure integer function ifunc()
     end function
   end interface
+  !PORTABILITY: Automatic data object 'x1' should not appear in the specification part of a main program
   type(t1(k=4,l=ifunc())) x1
   !PORTABILITY: Statement function 'sf1' should not contain an array constructor
   sf1(n) = sum([(j,j=1,n)])
@@ -37,7 +38,13 @@ program main
   !ERROR: Statement function 'sf10' may not reference another statement function 'sf11' that is defined later
   sf10(n) = sf11(n)
   sf11(n) = sf10(n) ! mutual recursion, caused crash
-  sf13 = 1.
+  integer(1) iarg1
+  !PORTABILITY: nonstandard usage: based POINTER
+  pointer(iarg1p, iarg1)
+  sf13(iarg1) = iarg1
+  ! executable part
+  print *, sf13(iarg1) ! ok
+  sf14 = 1.
  contains
   real function explicit(x,y)
     integer, intent(in) :: x
@@ -50,7 +57,7 @@ program main
   end function
   subroutine foo
     !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope
-    sf13(x) = 2.*x
+    sf14(x) = 2.*x
   end subroutine
 end
 
@@ -82,4 +89,12 @@ subroutine s4
   volatile :: sf
   !ERROR: VOLATILE attribute may apply only to a variable
   sf(x) = 1.
+end
+
+subroutine s5
+  !ERROR: Invalid specification expression: reference to impure function 'k'
+  real x(k())
+  !WARNING: Name 'k' from host scope should have a type declaration before its local statement function definition
+  !ERROR: 'k' is already declared in this scoping unit
+  k() = 0.0
 end

@@ -401,7 +401,7 @@ the symbol that belongs to the partition. It may be constructed as follows:
 This section stores the binary address of basic blocks along with other related
 metadata. This information can be used to map binary profiles (like perf
 profiles) directly to machine basic blocks.
-This section is emitted with ``-basic-block-sections=labels`` and will contain
+This section is emitted with ``-basic-block-address-map`` and will contain
 a BB address map table for every function.
 
 The ``SHT_LLVM_BB_ADDR_MAP`` type provides backward compatibility to allow
@@ -451,6 +451,90 @@ Example:
    .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
    .byte     y                            # BB_1 metadata
 
+PGO Analysis Map
+""""""""""""""""
+
+PGO related analysis data can be emitted after each function within the
+``SHT_LLVM_BB_ADDR_MAP`` through the optional ``pgo-analysis-map`` flag.
+Supported analyses currently are Function Entry Count, Basic Block Frequencies,
+and Branch Probabilities.
+
+Each analysis is enabled or disabled via a bit in the feature byte. Currently
+those bits are:
+
+#. Function Entry Count - Number of times the function was called as taken
+   from a PGO profile. This will always be zero if PGO was not used or the
+   function was not encountered in the profile.
+
+#. Basic Block Frequencies - Encoded as raw block frequency value taken from
+   MBFI analysis. This value is an integer that encodes the relative frequency
+   compared to the entry block. More information can be found in
+   'llvm/Support/BlockFrequency.h'.
+
+#. Branch Probabilities - Encoded as raw numerator for branch probability
+   taken from MBPI analysis. This value is the numerator for a fixed point ratio
+   defined in 'llvm/Support/BranchProbability.h'. It indicates the probability
+   that the block is followed by a given successor block during execution.
+
+This extra data requires version 2 or above. This is necessary since successors
+of basic blocks won't know their index but will know their BB ID.
+
+Example of BBAddrMap with PGO data:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     2                             # version number
+  .byte     7                             # feature byte - PGO analyses enabled mask
+  .quad     .Lfunc_begin0                 # address of the function
+  .uleb128  4                             # number of basic blocks
+  # BB record for BB_0
+   .uleb128  0                            # BB_0 BB ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     0x18                         # BB_0 metadata (multiple successors)
+  # BB record for BB_1
+   .uleb128  1                            # BB_1 BB ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
+   .byte     0x0                          # BB_1 metadata (two successors)
+  # BB record for BB_2
+   .uleb128  2                            # BB_2 BB ID
+   .uleb128  .LBB0_2-.LBB_END1_0          # BB_2 offset relative to the end of last block (BB_1).
+   .uleb128  .LBB_END0_2-.LBB0_2          # BB_2 size
+   .byte     0x0                          # BB_2 metadata (one successor)
+  # BB record for BB_3
+   .uleb128  3                            # BB_3 BB ID
+   .uleb128  .LBB0_3-.LBB_END0_2          # BB_3 offset relative to the end of last block (BB_2).
+   .uleb128  .LBB_END0_3-.LBB0_3          # BB_3 size
+   .byte     0x0                          # BB_3 metadata (zero successors)
+  # PGO Analysis Map
+  .uleb128  1000                          # function entry count (only when enabled)
+  # PGO data record for BB_0
+   .uleb128  1000                         # BB_0 basic block frequency (only when enabled)
+   .uleb128  3                            # BB_0 successors count (only enabled with branch probabilities)
+   .uleb128  1                            # BB_0 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0x22222222                   # BB_0 successor 1 branch probability (only enabled with branch probabilities)
+   .uleb128  2                            # BB_0 successor 2 BB ID (only enabled with branch probabilities)
+   .uleb128  0x33333333                   # BB_0 successor 2 branch probability (only enabled with branch probabilities)
+   .uleb128  3                            # BB_0 successor 3 BB ID (only enabled with branch probabilities)
+   .uleb128  0xaaaaaaaa                   # BB_0 successor 3 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_1
+   .uleb128  133                          # BB_1 basic block frequency (only when enabled)
+   .uleb128  2                            # BB_1 successors count (only enabled with branch probabilities)
+   .uleb128  2                            # BB_1 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0x11111111                   # BB_1 successor 1 branch probability (only enabled with branch probabilities)
+   .uleb128  3                            # BB_1 successor 2 BB ID (only enabled with branch probabilities)
+   .uleb128  0x11111111                   # BB_1 successor 2 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_2
+   .uleb128  18                           # BB_2 basic block frequency (only when enabled)
+   .uleb128  1                            # BB_2 successors count (only enabled with branch probabilities)
+   .uleb128  3                            # BB_2 successor 1 BB ID (only enabled with branch probabilities)
+   .uleb128  0xffffffff                   # BB_2 successor 1 branch probability (only enabled with branch probabilities)
+  # PGO data record for BB_3
+   .uleb128  1000                         # BB_3 basic block frequency (only when enabled)
+   .uleb128  0                            # BB_3 successors count (only enabled with branch probabilities)
+
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section stores the binary data used to perform offloading device linking
@@ -469,6 +553,12 @@ This section stores LLVM bitcode used to perform regular LTO or ThinLTO at link
 time. This section is generated when the compiler enables fat LTO. This section
 has the ``SHF_EXCLUDE`` flag so that it is stripped from the final executable
 or shared library.
+
+``SHT_LLVM_JT_SIZES`` Section (Jump table addresses and sizes)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores pairs of (jump table address, number of entries).
+This information is useful for tools that need to statically reconstruct
+the control flow of executables.
 
 CodeView-Dependent
 ------------------

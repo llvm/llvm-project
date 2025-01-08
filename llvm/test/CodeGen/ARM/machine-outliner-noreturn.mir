@@ -48,7 +48,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   tBL 14 /* CC::al */, $noreg, @noreturn, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit undef $r0, implicit undef $r1, implicit undef $r2, implicit-def $sp
   bb.0:

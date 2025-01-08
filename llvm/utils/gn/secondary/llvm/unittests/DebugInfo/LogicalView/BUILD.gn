@@ -2,19 +2,24 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("DebugInfoLogicalViewTests") {
   deps = [
+    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/LogicalView",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "../DWARF/DwarfGenerator.cpp",
+    "../DWARF/DwarfUtils.cpp",
     "CodeViewReaderTest.cpp",
     "CommandLineOptionsTest.cpp",
     "CompareElementsTest.cpp",
-    "ELFReaderTest.cpp",
+    "DWARFReaderTest.cpp",
+    "DWARFGeneratedTest.cpp",
     "LocationRangesTest.cpp",
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",

@@ -209,6 +209,16 @@ public:
 
   lldb::addr_t ReadPointerFromMemory(addr_t addr, lldb::SBError &error);
 
+  lldb::SBAddressRangeList FindRangesInMemory(const void *buf, uint64_t size,
+                                              const SBAddressRangeList &ranges,
+                                              uint32_t alignment,
+                                              uint32_t max_matches,
+                                              SBError &error);
+
+  lldb::addr_t FindInMemory(const void *buf, uint64_t size,
+                            const SBAddressRange &range, uint32_t alignment,
+                            SBError &error);
+
   // Events
   static lldb::StateType GetStateFromEvent(const lldb::SBEvent &event);
 
@@ -368,6 +378,12 @@ public:
   /// \param[in] file_name - The name of the file to save the core file to.
   lldb::SBError SaveCore(const char *file_name);
 
+  /// Save the state of the process with the desired settings
+  /// as defined in the options object.
+  ///
+  /// \param[in] options - The options to use when saving the core file.
+  lldb::SBError SaveCore(SBSaveCoreOptions &options);
+
   /// Query the address load_addr and store the details of the memory
   /// region that contains it in the supplied SBMemoryRegionInfo object.
   /// To iterate over all memory regions use GetMemoryRegionList.
@@ -397,6 +413,129 @@ public:
   /// alive, use SBProcessInfo::IsValid() to check returned info is
   /// valid.
   lldb::SBProcessInfo GetProcessInfo();
+
+  /// Get the file specification for the core file that is currently being used
+  /// for the process. If the process is not loaded from a core file, then an
+  /// invalid file specification will be returned.
+  ///
+  /// \return
+  ///     The path to the core file for this target or an invalid file spec if
+  ///     the process isn't loaded from a core file.
+  lldb::SBFileSpec GetCoreFile();
+
+  /// \{
+  /// \group Mask Address Methods
+  ///
+  /// \a type
+  /// All of the methods in this group take \a type argument
+  /// which is an AddressMaskType enum value.
+  /// There can be different address masks for code addresses and
+  /// data addresses, this argument can select which to get/set,
+  /// or to use when clearing non-addressable bits from an address.
+  /// This choice of mask can be important for example on AArch32
+  /// systems. Where instructions where instructions start on even addresses,
+  /// the 0th bit may be used to indicate that a function is thumb code.  On
+  /// such a target, the eAddressMaskTypeCode may clear the 0th bit from an
+  /// address to get the actual address Whereas eAddressMaskTypeData would not.
+  ///
+  /// \a addr_range
+  /// Many of the methods in this group take an \a addr_range argument
+  /// which is an AddressMaskRange enum value.
+  /// Needing to specify the address range is highly unusual, and the
+  /// default argument can be used in nearly all circumstances.
+  /// On some architectures (e.g., AArch64), it is possible to have
+  /// different page table setups for low and high memory, so different
+  /// numbers of bits relevant to addressing. It is possible to have
+  /// a program running in one half of memory and accessing the other
+  /// as heap, so we need to maintain two different sets of address masks
+  /// to debug this correctly.
+
+  /// Get the current address mask that will be applied to addresses
+  /// before reading from memory.
+  ///
+  /// \param[in] type
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     eAddressMaskTypeAny is often a suitable value when code and
+  ///     data masks are the same on a given target.
+  ///
+  /// \param[in] addr_range
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     This will default to eAddressMaskRangeLow which is the
+  ///     only set of masks used normally.
+  ///
+  /// \return
+  ///     The address mask currently in use.  Bits which are not used
+  ///     for addressing will be set to 1 in the mask.
+  lldb::addr_t GetAddressMask(
+      lldb::AddressMaskType type,
+      lldb::AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Set the current address mask that can be applied to addresses
+  /// before reading from memory.
+  ///
+  /// \param[in] type
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     eAddressMaskTypeAll is often a suitable value when the
+  ///     same mask is being set for both code and data.
+  ///
+  /// \param[in] mask
+  ///     The address mask to set.  Bits which are not used for addressing
+  ///     should be set to 1 in the mask.
+  ///
+  /// \param[in] addr_range
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     This will default to eAddressMaskRangeLow which is the
+  ///     only set of masks used normally.
+  void SetAddressMask(
+      lldb::AddressMaskType type, lldb::addr_t mask,
+      lldb::AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Set the number of bits used for addressing in this Process.
+  ///
+  /// On Darwin and similar systems, the addressable bits are expressed
+  /// as the number of low order bits that are relevant to addressing,
+  /// instead of a more general address mask.
+  /// This method calculates the correct mask value for a given number
+  /// of low order addressable bits.
+  ///
+  /// \param[in] type
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     eAddressMaskTypeAll is often a suitable value when the
+  ///     same mask is being set for both code and data.
+  ///
+  /// \param[in] num_bits
+  ///     Number of bits that are used for addressing.
+  ///     For example, a value of 42 indicates that the low 42 bits
+  ///     are relevant for addressing, and that higher-order bits may
+  ///     be used for various metadata like pointer authentication,
+  ///     Type Byte Ignore, etc.
+  ///
+  /// \param[in] addr_range
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     This will default to eAddressMaskRangeLow which is the
+  ///     only set of masks used normally.
+  void
+  SetAddressableBits(AddressMaskType type, uint32_t num_bits,
+                     AddressMaskRange addr_range = lldb::eAddressMaskRangeLow);
+
+  /// Clear the non-address bits of an \a addr value and return a
+  /// virtual address in memory.
+  ///
+  /// Bits that are not used in addressing may be used for other purposes;
+  /// pointer authentication, or metadata in the top byte, or the 0th bit
+  /// of armv7 code addresses to indicate arm/thumb are common examples.
+  ///
+  /// \param[in] addr
+  ///     The address that should be cleared of non-address bits.
+  ///
+  /// \param[in] type
+  ///     See \ref Mask Address Methods description of this argument.
+  ///     eAddressMaskTypeAny is the default value, correct when it
+  ///     is unknown if the address is a code or data address.
+  lldb::addr_t
+  FixAddress(lldb::addr_t addr,
+             lldb::AddressMaskType type = lldb::eAddressMaskTypeAny);
+  /// \}
 
   /// Allocate memory within the process.
   ///
@@ -439,12 +578,15 @@ public:
 
   lldb::SBScriptObject GetScriptedImplementation();
 
+  void GetStatus(SBStream &status);
+
 protected:
   friend class SBAddress;
   friend class SBBreakpoint;
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

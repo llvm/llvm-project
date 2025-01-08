@@ -12,19 +12,23 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/rotate.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/unique_temporary_buffer.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -129,14 +133,12 @@ __stable_partition_impl(_ForwardIterator __first, _ForwardIterator __last, _Pred
   // We now have a reduced range [__first, __last)
   // *__first is known to be false
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last);
+  __unique_temporary_buffer<value_type> __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
-  unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len >= __alloc_limit) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __p = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
-    __h.reset(__p.first);
+    __unique_buf = std::__allocate_unique_temporary_buffer<value_type>(__len);
+    __p.first    = __unique_buf.get();
+    __p.second   = __unique_buf.get_deleter().__count_;
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
       std::move(__first), std::move(__last), __pred, __len, __p, forward_iterator_tag());
@@ -269,14 +271,12 @@ _LIBCPP_HIDE_FROM_ABI _BidirectionalIterator __stable_partition_impl(
   // *__last is known to be true
   // __len >= 2
   difference_type __len = _IterOps<_AlgPolicy>::distance(__first, __last) + 1;
+  __unique_temporary_buffer<value_type> __unique_buf;
   pair<value_type*, ptrdiff_t> __p(0, 0);
-  unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len >= __alloc_limit) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __p = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
-    __h.reset(__p.first);
+    __unique_buf = std::__allocate_unique_temporary_buffer<value_type>(__len);
+    __p.first    = __unique_buf.get();
+    __p.second   = __unique_buf.get_deleter().__count_;
   }
   return std::__stable_partition_impl<_AlgPolicy, _Predicate&>(
       std::move(__first), std::move(__last), __pred, __len, __p, bidirectional_iterator_tag());
@@ -298,5 +298,7 @@ stable_partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate _
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_STABLE_PARTITION_H

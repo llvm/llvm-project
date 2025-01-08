@@ -1,0 +1,84 @@
+## Test that ECSYMBOLS section is created when ARM64EC is used.
+
+# RUN: yaml2obj %s -o %t.arm64ec.obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64EC
+# RUN: yaml2obj %s -o %t.arm64.obj -DMACHINE=IMAGE_FILE_MACHINE_ARM64
+# RUN: yaml2obj %s -o %t.amd64.obj -DMACHINE=IMAGE_FILE_MACHINE_AMD64
+
+## Create ARM64EC archive.
+# RUN: rm -f %t*.a
+# RUN: llvm-ar cr %t1.a %t.arm64ec.obj
+# RUN: llvm-nm --print-armap %t1.a | FileCheck --check-prefixes=NOMAP,ECMAP %s
+
+## Add ARM64 object to the archive.
+# RUN: llvm-ar r %t1.a %t.arm64.obj
+# RUN: llvm-nm --print-armap %t1.a | FileCheck --check-prefixes=MAP,ECMAP %s
+
+## Create ARM64 archive.
+# RUN: llvm-ar cr %t2.a %t.arm64.obj
+# RUN: llvm-nm --print-armap %t2.a | FileCheck --check-prefixes=MAP,NOECMAP %s
+
+## Add ARM64EC object to the archive.
+# RUN: llvm-ar r %t2.a %t.arm64ec.obj
+# RUN: llvm-nm --print-armap %t2.a | FileCheck --check-prefixes=MAP,ECMAP %s
+
+## Create mixed archive with ARM64 and ARM64EC members.
+# RUN: llvm-ar cr %t3.a %t.arm64ec.obj %t.arm64.obj
+# RUN: llvm-nm --print-armap %t3.a | FileCheck --check-prefixes=MAP,ECMAP %s
+
+## Create mixed archive with ARM64 and AMD64 members.
+# RUN: llvm-ar cr %t4.a %t.amd64.obj %t.arm64.obj
+# RUN: llvm-nm --print-armap %t4.a | FileCheck --check-prefixes=MAP,AMDECMAP %s
+
+## Create an archive with no symbol table.
+# RUN: llvm-ar crS %t5.a %t.amd64.obj %t.arm64.obj
+# RUN: llvm-nm --print-armap %t5.a | FileCheck --check-prefixes=NOMAP,NOECMAP %s
+
+# MAP: Archive map
+# MAP-NEXT: a in ecsymbols.yaml.tmp.arm64.obj
+# MAP-NEXT: b in ecsymbols.yaml.tmp.arm64.obj
+# MAP-NEXT: c in ecsymbols.yaml.tmp.arm64.obj
+# MAP-EMPTY:
+# NOMAP-NOT: Archive map
+
+# ECMAP: Archive EC map
+# ECMAP-NEXT: a in ecsymbols.yaml.tmp.arm64ec.obj
+# ECMAP-NEXT: b in ecsymbols.yaml.tmp.arm64ec.obj
+# ECMAP-NEXT: c in ecsymbols.yaml.tmp.arm64ec.obj
+# ECMAP-EMPTY:
+# NOECMAP-NOT: Archive EC map
+
+# AMDECMAP: Archive EC map
+# AMDECMAP-NEXT: a in ecsymbols.yaml.tmp.amd64.obj
+# AMDECMAP-NEXT: b in ecsymbols.yaml.tmp.amd64.obj
+# AMDECMAP-NEXT: c in ecsymbols.yaml.tmp.amd64.obj
+# AMDECMAP-EMPTY:
+
+--- !COFF
+header:
+  Machine:         [[MACHINE]]
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            b
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            c
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            a
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

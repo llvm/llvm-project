@@ -1,5 +1,7 @@
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
-# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52 -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=topdown 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=TOPDOWN
+# RUN: llc -o /dev/null %s -mtriple=arm-eabi -mcpu=cortex-r52plus -run-pass  machine-scheduler  -enable-misched -debug-only=machine-scheduler -misched-prera-direction=bottomup 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOTTOMUP
 # REQUIRES: asserts
 --- |
   ; ModuleID = 'foo.ll'

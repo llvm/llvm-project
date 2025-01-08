@@ -102,11 +102,21 @@ namespace PR33839 {
     for (auto [x] : a) { // expected-warning {{unused variable '[x]'}}
     }
   }
-  void use() { 
+  void use() {
     f<int>(); // expected-note {{instantiation of}}
     g<true>();
     g<false>();
     h<int>(); // expected-note {{instantiation of}}
   }
 }
+
+namespace maybe_unused_binding {
+
+void test() {
+  struct X { int a, b; } x;
+  auto [a [[maybe_unused]], b] = x; // expected-warning {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+}
+
+}
+
 #endif

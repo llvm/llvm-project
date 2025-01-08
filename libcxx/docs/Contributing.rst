@@ -4,9 +4,9 @@
 Contributing to libc++
 ======================
 
-This file contains notes about various tasks and processes specific to contributing
-to libc++. If this is your first time contributing, please also read `this document
-<https://www.llvm.org/docs/Contributing.html>`__ on general rules for contributing to LLVM.
+This file contains information useful when contributing to libc++. If this is your first time contributing,
+please also read `this document <https://www.llvm.org/docs/Contributing.html>`__ on general rules for
+contributing to LLVM.
 
 If you plan on contributing to libc++, it can be useful to join the ``#libcxx`` channel
 on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.
@@ -24,62 +24,22 @@ RFCs for significant user-affecting changes
 ===========================================
 
 Before you start working on a change that can have significant impact on users of the library,
-please consider creating a RFC on `libc++'s Discourse forum <https://discourse.llvm.org/c/runtimes/libcxx>`__.
+please consider creating a RFC on the `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx>`_.
 This will ensure that you work in a direction that the project endorses and will ease reviewing your
-contribution as directional questions can be raised early. Including a WIP patch is not mandatory, but
-it can be useful to ground the discussion in something concrete.
+contribution as directional questions can be raised early. Including a WIP patch is not mandatory,
+but it can be useful to ground the discussion in something concrete.
 
-Coding standards
-================
+Writing tests and running the test suite
+========================================
 
-In general, libc++ follows the
-`LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html>`_.
-There are some deviations from these standards.
+Every change in libc++ must come with appropriate tests. Libc++ has an extensive test suite that
+should be run locally by developers before submitting patches and is also run as part of our CI
+infrastructure. The documentation about writing tests and running them is :ref:`here <testing>`.
 
-Libc++ uses ``__ugly_names``. These names are reserved for implementations, so
-users may not use them in their own applications. When using a name like ``T``,
-a user may have defined a macro that changes the meaning of ``T``. By using
-``__ugly_names`` we avoid that problem. Other standard libraries and compilers
-use these names too. To avoid common clashes with other uglified names used in
-other implementations (e.g. system headers), the test in
-``libcxx/test/libcxx/system_reserved_names.gen.py`` contains the list of
-reserved names that can't be used.
+Coding Guidelines
+=================
 
-Unqualified function calls are susceptible to
-`argument-dependent lookup (ADL) <https://en.cppreference.com/w/cpp/language/adl>`_.
-This means calling ``move(UserType)`` might not call ``std::move``. Therefore,
-function calls must use qualified names to avoid ADL. Some functions in the
-standard library `require ADL usage <http://eel.is/c++draft/contents#3>`_.
-Names of classes, variables, concepts, and type aliases are not subject to ADL.
-They don't need to be qualified.
-
-Function overloading also applies to operators. Using ``&user_object`` may call
-a user-defined ``operator&``. Use ``std::addressof`` instead. Similarly, to
-avoid invoking a user-defined ``operator,``, make sure to cast the result to
-``void`` when using the ``,``. For example:
-
-.. code-block:: cpp
-
-    for (; __first1 != __last1; ++__first1, (void)++__first2) {
-      ...
-    }
-
-In general, try to follow the style of existing code. There are a few
-exceptions:
-
-- Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
-  by libc++ accept alias declarations in all standard modes.
-
-Other tips are:
-
-- Keep the number of formatting changes in patches minimal.
-- Provide separate patches for style fixes and for bug fixes or features. Keep in
-  mind that large formatting patches may cause merge conflicts with other patches
-  under review. In general, we prefer to avoid large reformatting patches.
-- Keep patches self-contained. Large and/or complicated patches are harder to
-  review and take a significant amount of time. It's fine to have multiple
-  patches to implement one feature if the feature can be split into
-  self-contained sub-tasks.
+libc++'s coding guidelines are documented :ref:`here <CodingGuidelines>`.
 
 
 Resources
@@ -156,12 +116,13 @@ sure you don't forget anything:
 - Did you add all new named declarations to the ``std`` module?
 - If you added a header:
 
-  - Did you add it to ``include/module.modulemap.in``?
+  - Did you add it to ``include/module.modulemap``?
   - Did you add it to ``include/CMakeLists.txt``?
   - If it's a public header, did you update ``utils/libcxx/header_information.py``?
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
+- If needed, did you add ``_LIBCPP_PUSH_MACROS`` and ``_LIBCPP_POP_MACROS`` to the relevant headers?
 
 The review process
 ==================
@@ -178,6 +139,17 @@ of the group to have approved the patch, excluding the patch author. This is not
 rule -- for very simple patches, use your judgement. The `"libc++" review group <https://reviews.llvm.org/project/members/64/>`__
 consists of frequent libc++ contributors with a good understanding of the project's
 guidelines -- if you would like to be added to it, please reach out on Discord.
+
+Some tips:
+
+- Keep the number of formatting changes in patches minimal.
+- Provide separate patches for style fixes and for bug fixes or features. Keep in
+  mind that large formatting patches may cause merge conflicts with other patches
+  under review. In general, we prefer to avoid large reformatting patches.
+- Keep patches self-contained. Large and/or complicated patches are harder to
+  review and take a significant amount of time. It's fine to have multiple
+  patches to implement one feature if the feature can be split into
+  self-contained sub-tasks.
 
 Exporting new symbols from the library
 ======================================

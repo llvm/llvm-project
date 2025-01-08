@@ -471,6 +471,7 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "NC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "OC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NN(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NO(G)?RK$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NOT(G)?R$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NX(G)?RK$")>;
 
 //===----------------------------------------------------------------------===//
@@ -530,9 +531,9 @@ def : InstRW<[WLat5LSU, WLat5LSU, FXa4, LSU, GroupAlone2],
 def : InstRW<[WLat2LSU, FXa, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBH(G|H|L)$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?(Z)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
@@ -822,9 +823,7 @@ def : InstRW<[WLat2, FXb2, GroupAlone], (instregex "LXR$")>;
 
 // Load and Test
 def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BR$")>;
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "LT(E|D)BRCompare$")>;
-def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone],
-             (instregex "LTXBR(Compare)?$")>;
+def : InstRW<[WLat10, WLat10, VecDF4, GroupAlone], (instregex "LTXBR$")>;
 
 // Copy sign
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "CPSDR(d|s)(d|s)$")>;
@@ -1721,8 +1720,14 @@ def : InstRW<[WLat30, MCD], (instregex "(M|S|ST|T)SCH$")>;
 def : InstRW<[WLat30, MCD], (instregex "RCHP$")>;
 def : InstRW<[WLat30, MCD], (instregex "SCHM$")>;
 def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
-def : InstRW<[WLat30, MCD], (instregex "TPI$")>;
+def : InstRW<[WLat30, MCD], (instregex "TPE?I$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
+//===----------------------------------------------------------------------===//
+// NOPs
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "NOP(R)?(Opt)?$")>;
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "J(G)?NOP$")>;
 }
 

@@ -6,60 +6,60 @@ target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[HASH:%.*]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], 124
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP753:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP753]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul float [[TMP9]], [[X:%.*]]
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd float [[TMP11]], 0.000000e+00
-; CHECK-NEXT:    [[TMP17_SUM52:%.*]] = or disjoint i32 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP17_SUM52]] to i64
-; CHECK-NEXT:    [[TMP1851:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[TMP1851]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul float [[TMP19]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP23:%.*]] = fadd float [[TMP21]], [[TMP13]]
-; CHECK-NEXT:    [[TMP27_SUM50:%.*]] = or disjoint i32 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP27_SUM50]] to i64
-; CHECK-NEXT:    [[TMP2849:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[TMP2849]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = fmul float [[TMP29]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP33:%.*]] = fadd float [[TMP31]], [[TMP23]]
-; CHECK-NEXT:    [[TMP37_SUM48:%.*]] = or disjoint i32 [[TMP5]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP37_SUM48]] to i64
-; CHECK-NEXT:    [[TMP3847:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP39:%.*]] = load float, ptr [[TMP3847]], align 4
-; CHECK-NEXT:    [[TMP41:%.*]] = fmul float [[TMP39]], [[W:%.*]]
-; CHECK-NEXT:    [[TMP43:%.*]] = fadd float [[TMP41]], [[TMP33]]
-; CHECK-NEXT:    ret float [[TMP43]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[HASH:%.*]], 2
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T3]], 124
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[T5]] to i64
+; CHECK-NEXT:    [[T753:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[T9:%.*]] = load float, ptr [[T753]], align 4
+; CHECK-NEXT:    [[T11:%.*]] = fmul float [[T9]], [[X:%.*]]
+; CHECK-NEXT:    [[T13:%.*]] = fadd float [[T11]], 0.000000e+00
+; CHECK-NEXT:    [[T17_SUM52:%.*]] = or disjoint i32 [[T5]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[T17_SUM52]] to i64
+; CHECK-NEXT:    [[T1851:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[T19:%.*]] = load float, ptr [[T1851]], align 4
+; CHECK-NEXT:    [[T21:%.*]] = fmul float [[T19]], [[Y:%.*]]
+; CHECK-NEXT:    [[T23:%.*]] = fadd float [[T21]], [[T13]]
+; CHECK-NEXT:    [[T27_SUM50:%.*]] = or disjoint i32 [[T5]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[T27_SUM50]] to i64
+; CHECK-NEXT:    [[T2849:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[T29:%.*]] = load float, ptr [[T2849]], align 4
+; CHECK-NEXT:    [[T31:%.*]] = fmul float [[T29]], [[Z:%.*]]
+; CHECK-NEXT:    [[T33:%.*]] = fadd float [[T31]], [[T23]]
+; CHECK-NEXT:    [[T37_SUM48:%.*]] = or disjoint i32 [[T5]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T37_SUM48]] to i64
+; CHECK-NEXT:    [[T3847:%.*]] = getelementptr [128 x float], ptr @C.0.1248, i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[T39:%.*]] = load float, ptr [[T3847]], align 4
+; CHECK-NEXT:    [[T41:%.*]] = fmul float [[T39]], [[W:%.*]]
+; CHECK-NEXT:    [[T43:%.*]] = fadd float [[T41]], [[T33]]
+; CHECK-NEXT:    ret float [[T43]]
 ;
 entry:
-  %lookupTable = alloca [128 x float], align 16		; <ptr> [#uses=5]
+  %lookupTable = alloca [128 x float], align 16
   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %lookupTable, ptr align 16 @C.0.1248, i64 512, i1 false)
 
 
-  %tmp3 = shl i32 %hash, 2		; <i32> [#uses=1]
-  %tmp5 = and i32 %tmp3, 124		; <i32> [#uses=4]
-  %tmp753 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %tmp5		; <ptr> [#uses=1]
-  %tmp9 = load float, ptr %tmp753		; <float> [#uses=1]
-  %tmp11 = fmul float %tmp9, %x		; <float> [#uses=1]
-  %tmp13 = fadd float %tmp11, 0.000000e+00		; <float> [#uses=1]
-  %tmp17.sum52 = or i32 %tmp5, 1		; <i32> [#uses=1]
-  %tmp1851 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %tmp17.sum52		; <ptr> [#uses=1]
-  %tmp19 = load float, ptr %tmp1851		; <float> [#uses=1]
-  %tmp21 = fmul float %tmp19, %y		; <float> [#uses=1]
-  %tmp23 = fadd float %tmp21, %tmp13		; <float> [#uses=1]
-  %tmp27.sum50 = or i32 %tmp5, 2		; <i32> [#uses=1]
-  %tmp2849 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %tmp27.sum50		; <ptr> [#uses=1]
-  %tmp29 = load float, ptr %tmp2849		; <float> [#uses=1]
-  %tmp31 = fmul float %tmp29, %z		; <float> [#uses=1]
-  %tmp33 = fadd float %tmp31, %tmp23		; <float> [#uses=1]
-  %tmp37.sum48 = or i32 %tmp5, 3		; <i32> [#uses=1]
-  %tmp3847 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %tmp37.sum48		; <ptr> [#uses=1]
-  %tmp39 = load float, ptr %tmp3847		; <float> [#uses=1]
-  %tmp41 = fmul float %tmp39, %w		; <float> [#uses=1]
-  %tmp43 = fadd float %tmp41, %tmp33		; <float> [#uses=1]
-  ret float %tmp43
+  %t3 = shl i32 %hash, 2
+  %t5 = and i32 %t3, 124
+  %t753 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %t5
+  %t9 = load float, ptr %t753
+  %t11 = fmul float %t9, %x
+  %t13 = fadd float %t11, 0.000000e+00
+  %t17.sum52 = or i32 %t5, 1
+  %t1851 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %t17.sum52
+  %t19 = load float, ptr %t1851
+  %t21 = fmul float %t19, %y
+  %t23 = fadd float %t21, %t13
+  %t27.sum50 = or i32 %t5, 2
+  %t2849 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %t27.sum50
+  %t29 = load float, ptr %t2849
+  %t31 = fmul float %t29, %z
+  %t33 = fadd float %t31, %t23
+  %t37.sum48 = or i32 %t5, 3
+  %t3847 = getelementptr [128 x float], ptr %lookupTable, i32 0, i32 %t37.sum48
+  %t39 = load float, ptr %t3847
+  %t41 = fmul float %t39, %w
+  %t43 = fadd float %t41, %t33
+  ret float %t43
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
@@ -220,7 +220,7 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds nuw (i8, ptr @H, i64 20), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -246,7 +246,7 @@ define void @test8_addrspacecast() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -257,7 +257,7 @@ define void @test9() {
 
 define void @test9_addrspacecast() {
 ; CHECK-LABEL: @test9_addrspacecast(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds ([2 x %U], ptr @H, i64 0, i64 1)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4

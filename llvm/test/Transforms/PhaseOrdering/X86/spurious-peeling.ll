@@ -16,14 +16,14 @@ define dso_local void @_Z13vecIncFromPtrP12FloatVecPair(ptr %FVP) {
 ; O1-LABEL: define {{[^@]+}}@_Z13vecIncFromPtrP12FloatVecPair
 ; O1-SAME: (ptr nocapture readonly [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  entry:
-; O1-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds [[CLASS_FLOATVECPAIR:%.*]], ptr [[FVP]], i64 0, i32 1
+; O1-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds nuw i8, ptr [[FVP]], i64 16
 ; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VSRC23_I]], align 8, !tbaa [[TBAA0:![0-9]+]]
-; O1-NEXT:    [[SIZE4_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0:%.*]], ptr [[TMP0]], i64 undef, i32 1
+; O1-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0:%.*]], ptr [[TMP0]], i64 undef
+; O1-NEXT:    [[SIZE4_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_I_I]], i64 8
 ; O1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIZE4_I]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; O1-NEXT:    [[CMP56_NOT_I:%.*]] = icmp eq i32 [[TMP1]], 0
 ; O1-NEXT:    br i1 [[CMP56_NOT_I]], label [[_ZN12FLOATVECPAIR6VECINCEV_EXIT:%.*]], label [[FOR_BODY7_LR_PH_I:%.*]]
 ; O1:       for.body7.lr.ph.i:
-; O1-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0]], ptr [[TMP0]], i64 undef
 ; O1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX_I_I]], align 8, !tbaa [[TBAA8:![0-9]+]]
 ; O1-NEXT:    [[ARRAYIDX_I3_I:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 undef
 ; O1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[FVP]], align 8, !tbaa [[TBAA0]]
@@ -46,14 +46,14 @@ define dso_local void @_Z13vecIncFromPtrP12FloatVecPair(ptr %FVP) {
 ; O23-LABEL: define {{[^@]+}}@_Z13vecIncFromPtrP12FloatVecPair
 ; O23-SAME: (ptr nocapture readonly [[FVP:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O23-NEXT:  entry:
-; O23-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds [[CLASS_FLOATVECPAIR:%.*]], ptr [[FVP]], i64 0, i32 1
+; O23-NEXT:    [[VSRC23_I:%.*]] = getelementptr inbounds nuw i8, ptr [[FVP]], i64 16
 ; O23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VSRC23_I]], align 8, !tbaa [[TBAA0:![0-9]+]]
-; O23-NEXT:    [[SIZE4_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0:%.*]], ptr [[TMP0]], i64 undef, i32 1
+; O23-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0:%.*]], ptr [[TMP0]], i64 undef
+; O23-NEXT:    [[SIZE4_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_I_I]], i64 8
 ; O23-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIZE4_I]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; O23-NEXT:    [[CMP56_NOT_I:%.*]] = icmp eq i32 [[TMP1]], 0
 ; O23-NEXT:    br i1 [[CMP56_NOT_I]], label [[_ZN12FLOATVECPAIR6VECINCEV_EXIT:%.*]], label [[FOR_BODY7_LR_PH_I:%.*]]
 ; O23:       for.body7.lr.ph.i:
-; O23-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0]], ptr [[TMP0]], i64 undef
 ; O23-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARRAYIDX_I_I]], align 8, !tbaa [[TBAA8:![0-9]+]]
 ; O23-NEXT:    [[ARRAYIDX_I3_I:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 undef
 ; O23-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[FVP]], align 8, !tbaa [[TBAA0]]

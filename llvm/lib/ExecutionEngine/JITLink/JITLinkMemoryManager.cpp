@@ -144,6 +144,7 @@ orc::shared::AllocActions &BasicLayout::graphAllocActions() {
 }
 
 void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
+                                std::shared_ptr<orc::SymbolStringPool> SSP,
                                 const JITLinkDylib *JD, SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
@@ -155,7 +156,7 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G = std::make_unique<LinkGraph>("", Triple(), 0,
+  auto G = std::make_unique<LinkGraph>("", std::move(SSP), Triple(), 0,
                                        llvm::endianness::native, nullptr);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
@@ -201,11 +202,12 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
 }
 
 Expected<SimpleSegmentAlloc>
-SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-                           SegmentMap Segments) {
+SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
+                           std::shared_ptr<orc::SymbolStringPool> SSP,
+                           const JITLinkDylib *JD, SegmentMap Segments) {
   std::promise<MSVCPExpected<SimpleSegmentAlloc>> AllocP;
   auto AllocF = AllocP.get_future();
-  Create(MemMgr, JD, std::move(Segments),
+  Create(MemMgr, std::move(SSP), JD, std::move(Segments),
          [&](Expected<SimpleSegmentAlloc> Result) {
            AllocP.set_value(std::move(Result));
          });
@@ -326,22 +328,21 @@ private:
 
 Expected<std::unique_ptr<InProcessMemoryManager>>
 InProcessMemoryManager::Create() {
-  if (auto PageSize = sys::Process::getPageSize())
+  if (auto PageSize = sys::Process::getPageSize()) {
+    // FIXME: Just check this once on startup.
+    if (!isPowerOf2_64((uint64_t)*PageSize))
+      return make_error<StringError>(
+          "Could not create InProcessMemoryManager: Page size " +
+              Twine(*PageSize) + " is not a power of 2",
+          inconvertibleErrorCode());
+
     return std::make_unique<InProcessMemoryManager>(*PageSize);
-  else
+  } else
     return PageSize.takeError();
 }
 
 void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                                       OnAllocatedFunction OnAllocated) {
-
-  // FIXME: Just check this once on startup.
-  if (!isPowerOf2_64((uint64_t)PageSize)) {
-    OnAllocated(make_error<StringError>("Page size is not a power of 2",
-                                        inconvertibleErrorCode()));
-    return;
-  }
-
   BasicLayout BL(G);
 
   /// Scan the request and calculate the group and total sizes.
@@ -449,8 +450,7 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
     for (auto &Alloc : Allocs) {
       auto *FA = Alloc.release().toPtr<FinalizedAllocInfo *>();
       StandardSegmentsList.push_back(std::move(FA->StandardSegments));
-      if (!FA->DeallocActions.empty())
-        DeallocActionsList.push_back(std::move(FA->DeallocActions));
+      DeallocActionsList.push_back(std::move(FA->DeallocActions));
       FA->~FinalizedAllocInfo();
       FinalizedAllocInfos.Deallocate(FA);
     }

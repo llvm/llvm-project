@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
@@ -333,6 +334,12 @@ public:
   ///     matches.
   void FindFunctions(ConstString name,
                      const CompilerDeclContext &parent_decl_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
+
+  /// Find functions by compiler context.
+  void FindFunctions(llvm::ArrayRef<CompilerContext> compiler_ctx,
                      lldb::FunctionNameType name_type_mask,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list);
@@ -874,6 +881,8 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
+  void ResetStatistics();
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///
@@ -1015,9 +1024,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                             /// objects created for this
-                                             /// Module's functions
+  UnwindTable m_unwind_table;      ///< Table of FuncUnwinders
+                                   /// objects created for this
+                                   /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
@@ -1051,8 +1060,11 @@ protected:
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
 
-  std::once_flag m_optimization_warning;
-  std::once_flag m_language_warning;
+  /// A set of hashes of all warnings and errors, to avoid reporting them
+  /// multiple times to the same Debugger.
+  llvm::DenseMap<llvm::stable_hash, std::unique_ptr<std::once_flag>>
+      m_shown_diagnostics;
+  std::recursive_mutex m_diagnostic_mutex;
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
                                         std::vector<uint32_t> &symbol_indexes,
@@ -1080,6 +1092,7 @@ private:
   void ReportWarning(const llvm::formatv_object_base &payload);
   void ReportError(const llvm::formatv_object_base &payload);
   void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
+  std::once_flag *GetDiagnosticOnceFlag(llvm::StringRef msg);
 };
 
 } // namespace lldb_private

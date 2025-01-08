@@ -17,8 +17,11 @@
 
 template <class T>
 void test() {
+  // LWG 3045. atomic<floating-point> doesn't have value_type or difference_type
+  // https://cplusplus.github.io/LWG/issue3045
   static_assert(std::is_same_v<typename std::atomic<T>::value_type, T>);
   static_assert(std::is_same_v<typename std::atomic<T>::difference_type, T>);
+
   static_assert(std::is_standard_layout_v<std::atomic<T>>);
   static_assert(std::is_trivially_destructible_v<std::atomic<T>>);
 }

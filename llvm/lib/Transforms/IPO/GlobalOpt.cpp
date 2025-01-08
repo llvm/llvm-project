@@ -87,8 +87,13 @@ STATISTIC(NumNestRemoved   , "Number of nest attributes removed");
 STATISTIC(NumAliasesResolved, "Number of global aliases resolved");
 STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
+STATISTIC(NumAtExitRemoved, "Number of atexit handlers removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
+STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
+STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
+STATISTIC(NumGlobalArraysPadded,
+          "Number of global arrays padded to alignment boundary");
 
 static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
@@ -100,7 +105,7 @@ static cl::opt<int> ColdCCRelFreq(
     "coldcc-rel-freq", cl::Hidden, cl::init(2),
     cl::desc(
         "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling"
+        "entry frequency, for a call site to be considered cold for enabling "
         "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,
@@ -294,7 +299,7 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       // A load from a uniform value is always the same, regardless of any
       // applied offset.
       Type *Ty = LI->getType();
-      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty)) {
+      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty, DL)) {
         LI->replaceAllUsesWith(Res);
         EraseFromParent(LI);
         continue;
@@ -304,6 +309,10 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       APInt Offset(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
       PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(PtrOp)) {
+        if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+          PtrOp = II->getArgOperand(0);
+      }
       if (PtrOp == GV) {
         if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
           LI->replaceAllUsesWith(Value);
@@ -316,6 +325,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U)) { // memset/cpy/mv
       if (getUnderlyingObject(MI->getRawDest()) == GV)
         EraseFromParent(MI);
+    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        append_range(WorkList, II->users());
     }
   }
 
@@ -563,15 +575,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
         Initializer, GV->getName() + "." + Twine(NameSuffix++), GV,
         GV->getThreadLocalMode(), GV->getAddressSpace());
+    // Start out by copying attributes from the original, including alignment.
     NGV->copyAttributesFrom(GV);
     NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
-    // had 256 byte alignment for example, something might depend on that:
+    // had 256 byte alignment for example, then the element at a given offset
+    // may also have a known alignment, and something might depend on that:
     // propagate info to each field.
     Align NewAlign = commonAlignment(StartAlignment, OffsetForTy);
-    if (NewAlign > DL.getABITypeAlign(Ty))
-      NGV->setAlignment(NewAlign);
+    NGV->setAlignment(NewAlign);
 
     // Copy over the debug info for the variable.
     transferSRADebugInfo(GV, NGV, OffsetForTy * 8,
@@ -933,11 +946,10 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
 
   // If there is a comparison against null, we will insert a global bool to
   // keep track of whether the global was initialized yet or not.
-  GlobalVariable *InitBool =
-    new GlobalVariable(Type::getInt1Ty(GV->getContext()), false,
-                       GlobalValue::InternalLinkage,
-                       ConstantInt::getFalse(GV->getContext()),
-                       GV->getName()+".init", GV->getThreadLocalMode());
+  GlobalVariable *InitBool = new GlobalVariable(
+      Type::getInt1Ty(GV->getContext()), false, GlobalValue::InternalLinkage,
+      ConstantInt::getFalse(GV->getContext()), GV->getName() + ".init",
+      GV->getThreadLocalMode(), GV->getAddressSpace());
   bool InitBoolUsed = false;
 
   // Loop over all instruction uses of GV, processing them in turn.
@@ -951,7 +963,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                         GV->getContext(),
                         !isa<ConstantPointerNull>(SI->getValueOperand())),
                     InitBool, false, Align(1), SI->getOrdering(),
-                    SI->getSyncScopeID(), SI);
+                    SI->getSyncScopeID(), SI->getIterator());
       SI->eraseFromParent();
       continue;
     }
@@ -968,7 +980,8 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       // Replace the cmp X, 0 with a use of the bool value.
       Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
                                InitBool->getName() + ".val", false, Align(1),
-                               LI->getOrdering(), LI->getSyncScopeID(), LI);
+                               LI->getOrdering(), LI->getSyncScopeID(),
+                               LI->getIterator());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -980,7 +993,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
         break;
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
-        LV = BinaryOperator::CreateNot(LV, "notinit", ICI);
+        LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1037,11 +1050,6 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
             SI->getPointerOperand()->stripPointerCasts() != GV)
           return false; // Storing the pointer not into GV... bad.
         continue; // Otherwise, storing through it, or storing into GV... fine.
-      }
-
-      if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        Worklist.push_back(BCI);
-        continue;
       }
 
       if (auto *GEPI = dyn_cast<GetElementPtrInst>(U)) {
@@ -1202,7 +1210,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       for(auto *GVe : GVs){
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
-        const DataLayout &DL = GV->getParent()->getDataLayout();
+        const DataLayout &DL = GV->getDataLayout();
         unsigned SizeInOctets =
             DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
 
@@ -1258,9 +1266,10 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         if (LoadInst *LI = dyn_cast<LoadInst>(StoredVal)) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
-          StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
-                                  LI->getName() + ".b", false, Align(1),
-                                  LI->getOrdering(), LI->getSyncScopeID(), LI);
+          StoreVal =
+              new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
+                           false, Align(1), LI->getOrdering(),
+                           LI->getSyncScopeID(), LI->getIterator());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
@@ -1270,19 +1279,19 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
       }
       StoreInst *NSI =
           new StoreInst(StoreVal, NewGV, false, Align(1), SI->getOrdering(),
-                        SI->getSyncScopeID(), SI);
+                        SI->getSyncScopeID(), SI->getIterator());
       NSI->setDebugLoc(SI->getDebugLoc());
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
-      LoadInst *NLI = new LoadInst(NewGV->getValueType(), NewGV,
-                                   LI->getName() + ".b", false, Align(1),
-                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
+      LoadInst *NLI = new LoadInst(
+          NewGV->getValueType(), NewGV, LI->getName() + ".b", false, Align(1),
+          LI->getOrdering(), LI->getSyncScopeID(), LI->getIterator());
       Instruction *NSI;
       if (IsOneZero)
-        NSI = new ZExtInst(NLI, LI->getType(), "", LI);
+        NSI = new ZExtInst(NLI, LI->getType(), "", LI->getIterator());
       else
-        NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI);
+        NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI->getIterator());
       NSI->takeName(LI);
       // Since LI is split into two instructions, NLI and NSI both inherit the
       // same DebugLoc
@@ -1326,6 +1335,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
+  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1344,7 +1354,7 @@ static bool isPointerValueDeadOnEntryToFunction(
   //
   // We don't do an exhaustive search for memory operations - simply look
   // through bitcasts as they're quite common and benign.
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   SmallVector<LoadInst *, 4> Loads;
   SmallVector<StoreInst *, 4> Stores;
   for (auto *U : GV->users()) {
@@ -1440,7 +1450,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
                       function_ref<TargetTransformInfo &(Function &)> GetTTI,
                       function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                       function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  auto &DL = GV->getParent()->getDataLayout();
+  auto &DL = GV->getDataLayout();
   // If this is a first class global and has only one accessing function and
   // this function is non-recursive, we replace the global with a local alloca
   // in this function.
@@ -1457,17 +1467,17 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       GS.AccessingFunction->doesNotRecurse() &&
       isPointerValueDeadOnEntryToFunction(GS.AccessingFunction, GV,
                                           LookupDomTree)) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
 
     LLVM_DEBUG(dbgs() << "LOCALIZING GLOBAL: " << *GV << "\n");
-    Instruction &FirstI = const_cast<Instruction&>(*GS.AccessingFunction
-                                                   ->getEntryBlock().begin());
+    BasicBlock::iterator FirstI =
+        GS.AccessingFunction->getEntryBlock().begin().getNonConst();
     Type *ElemTy = GV->getValueType();
     // FIXME: Pass Global's alignment when globals have alignment
-    AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(), nullptr,
-                                        GV->getName(), &FirstI);
+    AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(),
+                                        nullptr, GV->getName(), FirstI);
     if (!isa<UndefValue>(GV->getInitializer()))
-      new StoreInst(GV->getInitializer(), Alloca, &FirstI);
+      new StoreInst(GV->getInitializer(), Alloca, FirstI);
 
     GV->replaceAllUsesWith(Alloca);
     GV->eraseFromParent();
@@ -1528,7 +1538,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     ++NumMarked;
   }
   if (!GV->getInitializer()->getType()->isSingleValueType()) {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     if (SRAGlobal(GV, DL))
       return true;
   }
@@ -1857,7 +1867,7 @@ static void RemovePreallocated(Function *F) {
 
     assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
            "Unknown indirect call type");
-    CallBase *NewCB = CallBase::Create(CB, OpBundles, CB);
+    CallBase *NewCB = CallBase::Create(CB, OpBundles, CB->getIterator());
     CB->replaceAllUsesWith(NewCB);
     NewCB->takeName(CB);
     CB->eraseFromParent();
@@ -2021,6 +2031,165 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
+static bool callInstIsMemcpy(CallInst *CI) {
+  if (!CI)
+    return false;
+
+  Function *F = CI->getCalledFunction();
+  if (!F || !F->isIntrinsic() || F->getIntrinsicID() != Intrinsic::memcpy)
+    return false;
+
+  return true;
+}
+
+static bool destArrayCanBeWidened(CallInst *CI) {
+  auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+
+  if (!Alloca || !IsVolatile || IsVolatile->isOne())
+    return false;
+
+  if (!Alloca->isStaticAlloca())
+    return false;
+
+  if (!Alloca->getAllocatedType()->isArrayTy())
+    return false;
+
+  return true;
+}
+
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
+                                           unsigned NumBytesToPad,
+                                           unsigned NumBytesToCopy) {
+  if (!OldVar->hasInitializer())
+    return nullptr;
+
+  ConstantDataArray *DataArray =
+      dyn_cast<ConstantDataArray>(OldVar->getInitializer());
+  if (!DataArray)
+    return nullptr;
+
+  // Update to be word aligned (memcpy(...,X,...))
+  // create replacement with padded null bytes.
+  StringRef Data = DataArray->getRawDataValues();
+  std::vector<uint8_t> StrData(Data.begin(), Data.end());
+  for (unsigned int p = 0; p < NumBytesToPad; p++)
+    StrData.push_back('\0');
+  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
+  // Create new padded version of global variable.
+  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
+  GlobalVariable *NewGV = new GlobalVariable(
+      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
+      SourceReplace, SourceReplace->getName());
+  // Copy any other attributes from original global variable
+  // e.g. unamed_addr
+  NewGV->copyAttributesFrom(OldVar);
+  NewGV->takeName(OldVar);
+  return NewGV;
+}
+
+static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
+                           const unsigned NumBytesToCopy,
+                           ConstantDataArray *SourceDataArray) {
+
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+  if (Alloca) {
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
+    unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
+    // Update destination array to be word aligned (memcpy(X,...,...))
+    IRBuilder<> BuildAlloca(Alloca);
+    AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
+        Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
+    NewAlloca->takeName(Alloca);
+    NewAlloca->setAlignment(Alloca->getAlign());
+    Alloca->replaceAllUsesWith(NewAlloca);
+    Alloca->eraseFromParent();
+  }
+}
+
+static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+                                        const unsigned NumBytesToPad,
+                                        const unsigned NumBytesToCopy,
+                                        ConstantInt *BytesToCopyOp,
+                                        ConstantDataArray *SourceDataArray) {
+  auto *NewSourceGV =
+      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
+  if (!NewSourceGV)
+    return false;
+
+  // Update arguments of remaining uses  that
+  // are memcpys.
+  for (auto *User : SourceVar->users()) {
+    auto *CI = dyn_cast<CallInst>(User);
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
+      continue;
+
+    if (CI->getArgOperand(1) != SourceVar)
+      continue;
+
+    widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
+
+    CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
+                                          NumBytesToCopy + NumBytesToPad));
+  }
+  SourceVar->replaceAllUsesWith(NewSourceGV);
+
+  NumGlobalArraysPadded++;
+  return true;
+}
+
+static bool tryWidenGlobalArraysUsedByMemcpy(
+    GlobalVariable *GV,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+
+  if (!GV->hasInitializer() || !GV->isConstant() || !GV->hasLocalLinkage() ||
+      !GV->hasGlobalUnnamedAddr())
+    return false;
+
+  for (auto *User : GV->users()) {
+    CallInst *CI = dyn_cast<CallInst>(User);
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
+      continue;
+
+    Function *F = CI->getCalledFunction();
+
+    auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+    if (!BytesToCopyOp)
+      continue;
+
+    ConstantDataArray *SourceDataArray =
+        dyn_cast<ConstantDataArray>(GV->getInitializer());
+    if (!SourceDataArray)
+      continue;
+
+    unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
+
+    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+    uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
+    uint64_t SZSize = SourceDataArray->getType()->getNumElements();
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    // Calculate the number of elements to copy while avoiding floored
+    // division of integers returning wrong values i.e. copying one byte
+    // from an array of i16 would yield 0 elements to copy as supposed to 1.
+    unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
+
+    // For safety purposes lets add a constraint and only pad when
+    // NumElementsToCopy == destination array size ==
+    // source which is a constant
+    if (NumElementsToCopy != DZSize || DZSize != SZSize)
+      continue;
+
+    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
+        NumBytesToCopy, SourceDataArray->getType());
+    if (NumBytesToPad) {
+      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+                                         BytesToCopyOp, SourceDataArray);
+    }
+  }
+  return false;
+}
+
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
@@ -2049,6 +2218,10 @@ OptimizeGlobalVars(Module &M,
       Changed = true;
       continue;
     }
+
+    // For global variable arrays called in a memcpy
+    // we try to pad to nearest valid alignment boundary
+    Changed |= tryWidenGlobalArraysUsedByMemcpy(&GV, GetTTI);
 
     Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
   }
@@ -2212,6 +2385,9 @@ static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
                              bool &RenameTarget) {
+  if (GA.isWeakForLinker())
+    return false;
+
   RenameTarget = false;
   bool Ret = false;
   if (hasUseOtherThanLLVMUsed(GA, U))
@@ -2317,18 +2493,19 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *
-FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+FindAtExitLibFunc(Module &M,
+                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                  LibFunc Func) {
   // Hack to get a default TLI before we have actual Function.
   auto FuncIter = M.begin();
   if (FuncIter == M.end())
     return nullptr;
   auto *TLI = &GetTLI(*FuncIter);
 
-  LibFunc F = LibFunc_cxa_atexit;
-  if (!TLI->has(F))
+  if (!TLI->has(Func))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(F));
+  Function *Fn = M.getFunction(TLI->getName(Func));
   if (!Fn)
     return nullptr;
 
@@ -2336,17 +2513,18 @@ FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
+  LibFunc F;
+  if (!TLI->getLibFunc(*Fn, F) || F != Func)
     return nullptr;
 
   return Fn;
 }
 
-/// Returns whether the given function is an empty C++ destructor and can
-/// therefore be eliminated.
-/// Note that we assume that other optimization passes have already simplified
-/// the code so we simply check for 'ret'.
-static bool cxxDtorIsEmpty(const Function &Fn) {
+/// Returns whether the given function is an empty C++ destructor or atexit
+/// handler and can therefore be eliminated. Note that we assume that other
+/// optimization passes have already simplified the code so we simply check for
+/// 'ret'.
+static bool IsEmptyAtExitFunction(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
@@ -2362,7 +2540,7 @@ static bool cxxDtorIsEmpty(const Function &Fn) {
   return false;
 }
 
-static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
+static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   /// Itanium C++ ABI p3.3.5:
   ///
   ///   After constructing a global (or local static) object, that will require
@@ -2375,8 +2553,8 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   ///   registered before this one. It returns zero if registration is
   ///   successful, nonzero on failure.
 
-  // This pass will look for calls to __cxa_atexit where the function is trivial
-  // and remove them.
+  // This pass will look for calls to __cxa_atexit or atexit where the function
+  // is trivial and remove them.
   bool Changed = false;
 
   for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
@@ -2389,18 +2567,77 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
+    if (!DtorFn || !IsEmptyAtExitFunction(*DtorFn))
       continue;
 
     // Just remove the call.
     CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
     CI->eraseFromParent();
 
-    ++NumCXXDtorsRemoved;
+    if (isCXX)
+      ++NumCXXDtorsRemoved;
+    else
+      ++NumAtExitRemoved;
 
     Changed |= true;
   }
 
+  return Changed;
+}
+
+static Function *hasSideeffectFreeStaticResolution(GlobalIFunc &IF) {
+  if (IF.isInterposable())
+    return nullptr;
+
+  Function *Resolver = IF.getResolverFunction();
+  if (!Resolver)
+    return nullptr;
+
+  if (Resolver->isInterposable())
+    return nullptr;
+
+  // Only handle functions that have been optimized into a single basic block.
+  auto It = Resolver->begin();
+  if (++It != Resolver->end())
+    return nullptr;
+
+  BasicBlock &BB = Resolver->getEntryBlock();
+
+  if (any_of(BB, [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    return nullptr;
+
+  auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator());
+  if (!Ret)
+    return nullptr;
+
+  return dyn_cast<Function>(Ret->getReturnValue());
+}
+
+/// Find IFuncs that have resolvers that always point at the same statically
+/// known callee, and replace their callers with a direct call.
+static bool OptimizeStaticIFuncs(Module &M) {
+  bool Changed = false;
+  for (GlobalIFunc &IF : M.ifuncs())
+    if (Function *Callee = hasSideeffectFreeStaticResolution(IF))
+      if (!IF.use_empty() &&
+          (!Callee->isDeclaration() ||
+           none_of(IF.users(), [](User *U) { return isa<GlobalAlias>(U); }))) {
+        IF.replaceAllUsesWith(Callee);
+        NumIFuncsResolved++;
+        Changed = true;
+      }
+  return Changed;
+}
+
+static bool
+DeleteDeadIFuncs(Module &M,
+                 SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
+  bool Changed = false;
+  for (GlobalIFunc &IF : make_early_inc_range(M.ifuncs()))
+    if (deleteIfDead(IF, NotDiscardableComdats)) {
+      NumIFuncsDeleted++;
+      Changed = true;
+    }
   return Changed;
 }
 
@@ -2460,9 +2697,18 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
-    if (CXAAtExitFn)
-      LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
+    if (Function *CXAAtExitFn =
+            FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
+
+    if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
+
+    // Optimize IFuncs whose callee's are statically known.
+    LocalChange |= OptimizeStaticIFuncs(M);
+
+    // Remove any IFuncs that are now dead.
+    LocalChange |= DeleteDeadIFuncs(M, NotDiscardableComdats);
 
     Changed |= LocalChange;
   }

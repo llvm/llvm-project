@@ -11,7 +11,6 @@ group("scudo") {
   deps = []
   foreach(toolchain, supported_toolchains) {
     deps += [
-      "standalone/benchmarks:ScudoBenchmarks($toolchain)",
       "standalone/tests:ScudoCUnitTest($toolchain)",
       "standalone/tests:ScudoCxxUnitTest($toolchain)",
       "standalone/tests:ScudoHooksUnitTest($toolchain)",

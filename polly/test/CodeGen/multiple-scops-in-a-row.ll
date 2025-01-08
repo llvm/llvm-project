@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
 
 ; This test case has two scops in a row. When code generating the first scop,
 ; the second scop is invalidated. This test case verifies that we do not crash

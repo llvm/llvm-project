@@ -33,10 +33,34 @@ TEST_F(DataflowAnalysisContextTest, DistinctTopsNotEquivalent) {
   EXPECT_FALSE(Context.equivalentFormulas(X.formula(), Y.formula()));
 }
 
-TEST_F(DataflowAnalysisContextTest, EmptyFlowCondition) {
+TEST_F(DataflowAnalysisContextTest, TautologicalFlowConditionImplies) {
   Atom FC = A.makeFlowConditionToken();
-  auto &C = A.makeAtomRef(A.makeAtom());
-  EXPECT_FALSE(Context.flowConditionImplies(FC, C));
+  EXPECT_TRUE(Context.flowConditionImplies(FC, A.makeLiteral(true)));
+  EXPECT_FALSE(Context.flowConditionImplies(FC, A.makeLiteral(false)));
+  EXPECT_FALSE(Context.flowConditionImplies(FC, A.makeAtomRef(A.makeAtom())));
+}
+
+TEST_F(DataflowAnalysisContextTest, TautologicalFlowConditionAllows) {
+  Atom FC = A.makeFlowConditionToken();
+  EXPECT_TRUE(Context.flowConditionAllows(FC, A.makeLiteral(true)));
+  EXPECT_FALSE(Context.flowConditionAllows(FC, A.makeLiteral(false)));
+  EXPECT_TRUE(Context.flowConditionAllows(FC, A.makeAtomRef(A.makeAtom())));
+}
+
+TEST_F(DataflowAnalysisContextTest, ContradictoryFlowConditionImpliesAnything) {
+  Atom FC = A.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, A.makeLiteral(false));
+  EXPECT_TRUE(Context.flowConditionImplies(FC, A.makeLiteral(true)));
+  EXPECT_TRUE(Context.flowConditionImplies(FC, A.makeLiteral(false)));
+  EXPECT_TRUE(Context.flowConditionImplies(FC, A.makeAtomRef(A.makeAtom())));
+}
+
+TEST_F(DataflowAnalysisContextTest, ContradictoryFlowConditionAllowsNothing) {
+  Atom FC = A.makeFlowConditionToken();
+  Context.addFlowConditionConstraint(FC, A.makeLiteral(false));
+  EXPECT_FALSE(Context.flowConditionAllows(FC, A.makeLiteral(true)));
+  EXPECT_FALSE(Context.flowConditionAllows(FC, A.makeLiteral(false)));
+  EXPECT_FALSE(Context.flowConditionAllows(FC, A.makeAtomRef(A.makeAtom())));
 }
 
 TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {

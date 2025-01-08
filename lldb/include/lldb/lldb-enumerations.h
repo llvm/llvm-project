@@ -253,6 +253,7 @@ enum StopReason {
   eStopReasonFork,
   eStopReasonVFork,
   eStopReasonVForkDone,
+  eStopReasonInterrupt, ///< Thread requested interrupt
 };
 
 /// Command Return Status Types.
@@ -651,6 +652,11 @@ enum CommandArgumentType {
   eArgTypeTargetID,
   eArgTypeStopHookID,
   eArgTypeCompletionType,
+  eArgTypeRemotePath,
+  eArgTypeRemoteFilename,
+  eArgTypeModule,
+  eArgTypeCPUName,
+  eArgTypeCPUFeatures,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -757,6 +763,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
   eSectionTypeCTF,
+  eSectionTypeLLDBTypeSummaries,
+  eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
 };
 
@@ -875,6 +883,7 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindStructuralValue,
 };
 
 /// Type of match to be performed when looking for a formatter for a data type.
@@ -1103,7 +1112,12 @@ enum MemberFunctionKind {
 };
 
 /// String matching algorithm used by SBTarget.
-enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
+enum MatchType {
+  eMatchTypeNormal,
+  eMatchTypeRegex,
+  eMatchTypeStartsWith,
+  eMatchTypeRegexInsensitive
+};
 
 /// Bitmask that describes details about a type.
 FLAGS_ENUM(TypeFlags){
@@ -1212,6 +1226,7 @@ enum SaveCoreStyle {
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
   eSaveCoreStackOnly = 3,
+  eSaveCoreCustomOnly = 4,
 };
 
 /// Events that might happen during a trace session.
@@ -1302,6 +1317,55 @@ enum CompletionType {
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
   eTerminatorCompletion = (1ul << 27)
+};
+
+/// Specifies if children need to be re-computed
+/// after a call to \ref SyntheticChildrenFrontEnd::Update.
+enum ChildCacheState {
+  eRefetch = 0, ///< Children need to be recomputed dynamically.
+
+  eReuse = 1, ///< Children did not change and don't need to be recomputed;
+              ///< re-use what we computed the last time we called Update.
+};
+
+enum SymbolDownload {
+  eSymbolDownloadOff = 0,
+  eSymbolDownloadBackground = 1,
+  eSymbolDownloadForeground = 2,
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
+};
+
+/// Used by the debugger to indicate which events are being broadcasted.
+enum DebuggerBroadcastBit {
+  eBroadcastBitProgress = (1 << 0),
+  eBroadcastBitWarning = (1 << 1),
+  eBroadcastBitError = (1 << 2),
+  eBroadcastSymbolChange = (1 << 3),
+  eBroadcastBitProgressCategory = (1 << 4),
+  eBroadcastBitExternalProgress = (1 << 5),
+  eBroadcastBitExternalProgressCategory = (1 << 6),
+};
+
+/// Used for expressing severity in logs and diagnostics.
+enum Severity {
+  eSeverityError,
+  eSeverityWarning,
+  eSeverityInfo, // Equivalent to Remark used in clang.
 };
 
 } // namespace lldb

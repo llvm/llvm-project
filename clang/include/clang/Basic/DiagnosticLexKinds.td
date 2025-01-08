@@ -100,13 +100,24 @@ def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_invalid_char_raw_delim : Error<
-  "invalid character '%0' character in raw string delimiter"
+  "invalid character '%0' in raw string delimiter"
+  "; use PREFIX( )PREFIX to delimit raw string">;
+def err_invalid_newline_raw_delim : Error<
+  "invalid newline character in raw string delimiter"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_unterminated_raw_string : Error<
   "raw string missing terminating delimiter )%0\"">;
 def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+
+def warn_cxx26_compat_raw_string_literal_character_set : Warning<
+  " '%0' in a raw string literal delimiter is incompatible "
+  "with standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+def ext_cxx26_raw_string_literal_character_set : Extension<
+  " '%0' in a raw string literal delimiter is a C++2c extension">,
+  InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
@@ -246,7 +257,10 @@ def warn_cxx17_hex_literal : Warning<
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
-  "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
+  "binary integer literals are a C23 extension">, InGroup<C23>;
+def warn_c23_compat_binary_literal : Warning<
+  "binary integer literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<
@@ -269,6 +283,9 @@ def warn_cxx98_compat_unicode_literal : Warning<
 def warn_cxx14_compat_u8_character_literal : Warning<
   "unicode literals are incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
+def warn_c17_compat_u8_character_literal : Warning<
+  "unicode literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx11_compat_user_defined_literal : Warning<
   "identifier after literal will be treated as a user-defined literal suffix "
   "in C++11">, InGroup<CXX11Compat>, DefaultIgnore;
@@ -422,6 +439,14 @@ def warn_cxx23_compat_warning_directive : Warning<
 def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def ext_pp_embed_directive : ExtWarn<
+  "#embed is a %select{C23|Clang}0 extension">,
+  InGroup<C23>;
+def warn_compat_pp_embed_directive : Warning<
+  "#embed is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def err_pp_embed_dup_params : Error<
+  "cannot specify parameter '%0' twice in the same '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -459,9 +484,16 @@ def err_embedded_directive : Error<
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
-def ext_missing_varargs_arg : Extension<
-  "must specify at least one argument for '...' parameter of variadic macro">,
-  InGroup<GNUZeroVariadicMacroArguments>;
+def ext_c_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C23 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+def ext_cxx_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C++20 extension">, InGroup<VariadicMacroArgumentsOmitted>;
+def warn_c17_compat_missing_varargs_arg : Warning<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "incompatible with C standards before C23">,
+  InGroup<VariadicMacroArgumentsOmitted>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,
@@ -476,6 +508,8 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
+def err_opencl_logical_exclusive_or : Error<
+  "^^ is a reserved operator in OpenCL">;
 
 def ext_pp_gnu_line_directive : Extension<
   "this style of line directive is a GNU extension">,
@@ -484,6 +518,8 @@ def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
   err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
+def err_pp_unknown_parameter : Error<
+  "unknown%select{ | embed}0 preprocessor parameter '%1'">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -698,6 +734,8 @@ def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
+def err_defined_in_pp_embed : Error<
+  "'defined' cannot appear within this context">;
 def err_paste_at_start : Error<
   "'##' cannot appear at start of macro expansion">;
 def err_paste_at_end : Error<"'##' cannot appear at end of macro expansion">;
@@ -978,5 +1016,5 @@ def err_pp_unclosed_pragma_unsafe_buffer_usage :
 Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
-Error<"Expected 'begin' or 'end'">;
+Error<"expected 'begin' or 'end'">;
 }

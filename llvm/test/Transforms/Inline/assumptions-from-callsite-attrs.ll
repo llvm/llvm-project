@@ -8,7 +8,7 @@ declare void @h(ptr %p, ptr %q, ptr %z)
 define void @f(ptr %p, ptr %q, ptr %z) {
 ; CHECK-LABEL: define void @f
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[Z:%.*]]) {
-; CHECK-NEXT:    call void @h(ptr [[P]], ptr [[Q]], ptr [[Z]])
+; CHECK-NEXT:    call void @h(ptr nonnull [[P]], ptr [[Q]], ptr nonnull [[Z]])
 ; CHECK-NEXT:    ret void
 ;
   call void @g(ptr nonnull %p, ptr %q, ptr nonnull %z)

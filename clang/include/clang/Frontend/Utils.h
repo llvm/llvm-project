@@ -43,12 +43,14 @@ class PCHContainerReader;
 class Preprocessor;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
+class CodeGenOptions;
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
-                            const FrontendOptions &FEOpts);
+                            const FrontendOptions &FEOpts,
+                            const CodeGenOptions &CodeGenOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
@@ -118,6 +120,7 @@ protected:
 private:
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;

@@ -52,7 +52,13 @@ public:
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &DL,
-                            const MCSymbol *Sym) const override;
+                            const MCSymbol *Sym,
+                            const MachineModuleInfo *MMI) const override;
+
+  virtual void emitPersonalityValueImpl(MCStreamer &Streamer,
+                                        const DataLayout &DL,
+                                        const MCSymbol *Sym,
+                                        const MachineModuleInfo *MMI) const;
 
   /// Given a constant with the SectionKind, return a section that it should be
   /// placed in.
@@ -207,10 +213,13 @@ private:
 
 class TargetLoweringObjectFileWasm : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
+  SmallPtrSet<GlobalObject *, 2> Used;
 
 public:
   TargetLoweringObjectFileWasm() = default;
   ~TargetLoweringObjectFileWasm() override = default;
+
+  void getModuleMetadata(Module &M) override;
 
   MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
                                       const TargetMachine &TM) const override;

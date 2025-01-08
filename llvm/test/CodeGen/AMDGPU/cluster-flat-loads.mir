@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass machine-scheduler %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass machine-scheduler %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: cluster_flat_loads
 # GCN:      FLAT_LOAD_DWORD %0, 0

@@ -142,10 +142,10 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.23918"
 
-%struct.A = type { i32 (...)** }
-%struct.B = type { i32 (...)** }
+%struct.A = type { ptr }
+%struct.B = type { ptr }
 %struct.C = type { %struct.A, %struct.B, i32 }
-%struct.D = type { i32*, i32, %struct.B }
+%struct.D = type { ptr, i32, %struct.B }
 
 $"\01??0A@@QEAA@XZ" = comdat any
 
@@ -171,12 +171,12 @@ $"\01??_8D@@7B@" = comdat any
 
 $"\01??_7D@@6B@" = comdat any
 
-@"\01??_7A@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i32 (%struct.A*)* @"\01?f@A@@UEAAHXZ" to i8*)], comdat
-@"\01??_7B@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i32 (%struct.B*)* @"\01?g@B@@UEAAHXZ" to i8*)], comdat
-@"\01??_7C@@6BA@@@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i32 (%struct.A*)* @"\01?f@A@@UEAAHXZ" to i8*)], comdat
-@"\01??_7C@@6BB@@@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i32 (i8*)* @"\01?g@C@@UEAAHXZ" to i8*)], comdat
+@"\01??_7A@@6B@" = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @"\01?f@A@@UEAAHXZ"], comdat
+@"\01??_7B@@6B@" = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @"\01?g@B@@UEAAHXZ"], comdat
+@"\01??_7C@@6BA@@@" = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @"\01?f@A@@UEAAHXZ"], comdat
+@"\01??_7C@@6BB@@@" = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @"\01?g@C@@UEAAHXZ"], comdat
 @"\01??_8D@@7B@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 0, i32 16], comdat
-@"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i32 (i8*)* @"\01?g@D@@UEAAHXZ" to i8*)], comdat
+@"\01??_7D@@6B@" = linkonce_odr unnamed_addr constant [1 x ptr] [ptr @"\01?g@D@@UEAAHXZ"], comdat
 
 ; Function Attrs: uwtable
 define void @"\01?usetypes@@YAXXZ"() #0 !dbg !7 {
@@ -185,17 +185,17 @@ entry:
   %b = alloca %struct.B, align 8
   %c = alloca %struct.C, align 8
   %d = alloca %struct.D, align 8
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !10, metadata !23), !dbg !24
-  %call = call %struct.A* @"\01??0A@@QEAA@XZ"(%struct.A* %a) #5, !dbg !24
-  call void @llvm.dbg.declare(metadata %struct.B* %b, metadata !25, metadata !23), !dbg !33
-  %call1 = call %struct.B* @"\01??0B@@QEAA@XZ"(%struct.B* %b) #5, !dbg !33
-  call void @llvm.dbg.declare(metadata %struct.C* %c, metadata !34, metadata !23), !dbg !44
-  %call2 = call %struct.C* @"\01??0C@@QEAA@XZ"(%struct.C* %c) #5, !dbg !44
-  call void @llvm.dbg.declare(metadata %struct.D* %d, metadata !45, metadata !23), !dbg !55
-  %call3 = call %struct.D* @"\01??0D@@QEAA@XZ"(%struct.D* %d, i32 1) #5, !dbg !55
-  %0 = bitcast %struct.C* %c to i8*, !dbg !56
-  %1 = getelementptr i8, i8* %0, i64 8, !dbg !56
-  %call4 = call i32 @"\01?g@C@@UEAAHXZ"(i8* %1), !dbg !56
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !10, metadata !23), !dbg !24
+  %call = call ptr @"\01??0A@@QEAA@XZ"(ptr %a) #5, !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !25, metadata !23), !dbg !33
+  %call1 = call ptr @"\01??0B@@QEAA@XZ"(ptr %b) #5, !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !34, metadata !23), !dbg !44
+  %call2 = call ptr @"\01??0C@@QEAA@XZ"(ptr %c) #5, !dbg !44
+  call void @llvm.dbg.declare(metadata ptr %d, metadata !45, metadata !23), !dbg !55
+  %call3 = call ptr @"\01??0D@@QEAA@XZ"(ptr %d, i32 1) #5, !dbg !55
+  %0 = bitcast ptr %c to ptr, !dbg !56
+  %1 = getelementptr i8, ptr %0, i64 8, !dbg !56
+  %call4 = call i32 @"\01?g@C@@UEAAHXZ"(ptr %1), !dbg !56
   ret void, !dbg !57
 }
 
@@ -203,128 +203,128 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr %struct.A* @"\01??0A@@QEAA@XZ"(%struct.A* returned %this) unnamed_addr #2 comdat align 2 !dbg !58 {
+define linkonce_odr ptr @"\01??0A@@QEAA@XZ"(ptr returned %this) unnamed_addr #2 comdat align 2 !dbg !58 {
 entry:
-  %this.addr = alloca %struct.A*, align 8
-  store %struct.A* %this, %struct.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.A** %this.addr, metadata !62, metadata !23), !dbg !64
-  %this1 = load %struct.A*, %struct.A** %this.addr, align 8
-  %0 = bitcast %struct.A* %this1 to i32 (...)***, !dbg !65
-  store i32 (...)** bitcast ([1 x i8*]* @"\01??_7A@@6B@" to i32 (...)**), i32 (...)*** %0, align 8, !dbg !65
-  ret %struct.A* %this1, !dbg !65
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !62, metadata !23), !dbg !64
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = bitcast ptr %this1 to ptr, !dbg !65
+  store ptr @"\01??_7A@@6B@", ptr %0, align 8, !dbg !65
+  ret ptr %this1, !dbg !65
 }
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr %struct.B* @"\01??0B@@QEAA@XZ"(%struct.B* returned %this) unnamed_addr #2 comdat align 2 !dbg !66 {
+define linkonce_odr ptr @"\01??0B@@QEAA@XZ"(ptr returned %this) unnamed_addr #2 comdat align 2 !dbg !66 {
 entry:
-  %this.addr = alloca %struct.B*, align 8
-  store %struct.B* %this, %struct.B** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.B** %this.addr, metadata !70, metadata !23), !dbg !72
-  %this1 = load %struct.B*, %struct.B** %this.addr, align 8
-  %0 = bitcast %struct.B* %this1 to i32 (...)***, !dbg !73
-  store i32 (...)** bitcast ([1 x i8*]* @"\01??_7B@@6B@" to i32 (...)**), i32 (...)*** %0, align 8, !dbg !73
-  ret %struct.B* %this1, !dbg !73
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !70, metadata !23), !dbg !72
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = bitcast ptr %this1 to ptr, !dbg !73
+  store ptr @"\01??_7B@@6B@", ptr %0, align 8, !dbg !73
+  ret ptr %this1, !dbg !73
 }
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr %struct.C* @"\01??0C@@QEAA@XZ"(%struct.C* returned %this) unnamed_addr #2 comdat align 2 !dbg !74 {
+define linkonce_odr ptr @"\01??0C@@QEAA@XZ"(ptr returned %this) unnamed_addr #2 comdat align 2 !dbg !74 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !78, metadata !23), !dbg !80
-  %this1 = load %struct.C*, %struct.C** %this.addr, align 8
-  %0 = bitcast %struct.C* %this1 to %struct.A*, !dbg !81
-  %call = call %struct.A* @"\01??0A@@QEAA@XZ"(%struct.A* %0) #5, !dbg !81
-  %1 = bitcast %struct.C* %this1 to i8*, !dbg !81
-  %2 = getelementptr inbounds i8, i8* %1, i64 8, !dbg !81
-  %3 = bitcast i8* %2 to %struct.B*, !dbg !81
-  %call2 = call %struct.B* @"\01??0B@@QEAA@XZ"(%struct.B* %3) #5, !dbg !81
-  %4 = bitcast %struct.C* %this1 to i32 (...)***, !dbg !81
-  store i32 (...)** bitcast ([1 x i8*]* @"\01??_7C@@6BA@@@" to i32 (...)**), i32 (...)*** %4, align 8, !dbg !81
-  %5 = bitcast %struct.C* %this1 to i8*, !dbg !81
-  %add.ptr = getelementptr inbounds i8, i8* %5, i64 8, !dbg !81
-  %6 = bitcast i8* %add.ptr to i32 (...)***, !dbg !81
-  store i32 (...)** bitcast ([1 x i8*]* @"\01??_7C@@6BB@@@" to i32 (...)**), i32 (...)*** %6, align 8, !dbg !81
-  %c = getelementptr inbounds %struct.C, %struct.C* %this1, i32 0, i32 2, !dbg !82
-  store i32 42, i32* %c, align 8, !dbg !82
-  ret %struct.C* %this1, !dbg !81
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !78, metadata !23), !dbg !80
+  %this1 = load ptr, ptr %this.addr, align 8
+  %0 = bitcast ptr %this1 to ptr, !dbg !81
+  %call = call ptr @"\01??0A@@QEAA@XZ"(ptr %0) #5, !dbg !81
+  %1 = bitcast ptr %this1 to ptr, !dbg !81
+  %2 = getelementptr inbounds i8, ptr %1, i64 8, !dbg !81
+  %3 = bitcast ptr %2 to ptr, !dbg !81
+  %call2 = call ptr @"\01??0B@@QEAA@XZ"(ptr %3) #5, !dbg !81
+  %4 = bitcast ptr %this1 to ptr, !dbg !81
+  store ptr @"\01??_7C@@6BA@@@", ptr %4, align 8, !dbg !81
+  %5 = bitcast ptr %this1 to ptr, !dbg !81
+  %add.ptr = getelementptr inbounds i8, ptr %5, i64 8, !dbg !81
+  %6 = bitcast ptr %add.ptr to ptr, !dbg !81
+  store ptr @"\01??_7C@@6BB@@@", ptr %6, align 8, !dbg !81
+  %c = getelementptr inbounds %struct.C, ptr %this1, i32 0, i32 2, !dbg !82
+  store i32 42, ptr %c, align 8, !dbg !82
+  ret ptr %this1, !dbg !81
 }
 
 ; Function Attrs: inlinehint nounwind uwtable
-define linkonce_odr %struct.D* @"\01??0D@@QEAA@XZ"(%struct.D* returned %this, i32 %is_most_derived) unnamed_addr #2 comdat align 2 !dbg !83 {
+define linkonce_odr ptr @"\01??0D@@QEAA@XZ"(ptr returned %this, i32 %is_most_derived) unnamed_addr #2 comdat align 2 !dbg !83 {
 entry:
-  %retval = alloca %struct.D*, align 8
+  %retval = alloca ptr, align 8
   %is_most_derived.addr = alloca i32, align 4
-  %this.addr = alloca %struct.D*, align 8
-  store i32 %is_most_derived, i32* %is_most_derived.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %is_most_derived.addr, metadata !87, metadata !23), !dbg !88
-  store %struct.D* %this, %struct.D** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.D** %this.addr, metadata !89, metadata !23), !dbg !88
-  %this1 = load %struct.D*, %struct.D** %this.addr, align 8
-  store %struct.D* %this1, %struct.D** %retval, align 8
-  %is_most_derived2 = load i32, i32* %is_most_derived.addr, align 4
+  %this.addr = alloca ptr, align 8
+  store i32 %is_most_derived, ptr %is_most_derived.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %is_most_derived.addr, metadata !87, metadata !23), !dbg !88
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !89, metadata !23), !dbg !88
+  %this1 = load ptr, ptr %this.addr, align 8
+  store ptr %this1, ptr %retval, align 8
+  %is_most_derived2 = load i32, ptr %is_most_derived.addr, align 4
   %is_complete_object = icmp ne i32 %is_most_derived2, 0, !dbg !91
   br i1 %is_complete_object, label %ctor.init_vbases, label %ctor.skip_vbases, !dbg !91
 
 ctor.init_vbases:                                 ; preds = %entry
-  %this.int8 = bitcast %struct.D* %this1 to i8*, !dbg !91
-  %0 = getelementptr inbounds i8, i8* %this.int8, i64 0, !dbg !91
-  %vbptr.D = bitcast i8* %0 to i32**, !dbg !91
-  store i32* getelementptr inbounds ([2 x i32], [2 x i32]* @"\01??_8D@@7B@", i32 0, i32 0), i32** %vbptr.D, align 8, !dbg !91
-  %1 = bitcast %struct.D* %this1 to i8*, !dbg !91
-  %2 = getelementptr inbounds i8, i8* %1, i64 16, !dbg !91
-  %3 = bitcast i8* %2 to %struct.B*, !dbg !91
-  %call = call %struct.B* @"\01??0B@@QEAA@XZ"(%struct.B* %3) #5, !dbg !91
+  %this.int8 = bitcast ptr %this1 to ptr, !dbg !91
+  %0 = getelementptr inbounds i8, ptr %this.int8, i64 0, !dbg !91
+  %vbptr.D = bitcast ptr %0 to ptr, !dbg !91
+  store ptr @"\01??_8D@@7B@", ptr %vbptr.D, align 8, !dbg !91
+  %1 = bitcast ptr %this1 to ptr, !dbg !91
+  %2 = getelementptr inbounds i8, ptr %1, i64 16, !dbg !91
+  %3 = bitcast ptr %2 to ptr, !dbg !91
+  %call = call ptr @"\01??0B@@QEAA@XZ"(ptr %3) #5, !dbg !91
   br label %ctor.skip_vbases, !dbg !91
 
 ctor.skip_vbases:                                 ; preds = %ctor.init_vbases, %entry
-  %4 = bitcast %struct.D* %this1 to i8*, !dbg !91
-  %vbptr = getelementptr inbounds i8, i8* %4, i64 0, !dbg !91
-  %5 = bitcast i8* %vbptr to i32**, !dbg !91
-  %vbtable = load i32*, i32** %5, align 8, !dbg !91
-  %6 = getelementptr inbounds i32, i32* %vbtable, i32 1, !dbg !91
-  %vbase_offs = load i32, i32* %6, align 4, !dbg !91
+  %4 = bitcast ptr %this1 to ptr, !dbg !91
+  %vbptr = getelementptr inbounds i8, ptr %4, i64 0, !dbg !91
+  %5 = bitcast ptr %vbptr to ptr, !dbg !91
+  %vbtable = load ptr, ptr %5, align 8, !dbg !91
+  %6 = getelementptr inbounds i32, ptr %vbtable, i32 1, !dbg !91
+  %vbase_offs = load i32, ptr %6, align 4, !dbg !91
   %7 = sext i32 %vbase_offs to i64, !dbg !91
   %8 = add nsw i64 0, %7, !dbg !91
-  %9 = bitcast %struct.D* %this1 to i8*, !dbg !91
-  %add.ptr = getelementptr inbounds i8, i8* %9, i64 %8, !dbg !91
-  %10 = bitcast i8* %add.ptr to i32 (...)***, !dbg !91
-  store i32 (...)** bitcast ([1 x i8*]* @"\01??_7D@@6B@" to i32 (...)**), i32 (...)*** %10, align 8, !dbg !91
-  %d = getelementptr inbounds %struct.D, %struct.D* %this1, i32 0, i32 1, !dbg !92
-  store i32 13, i32* %d, align 8, !dbg !92
-  %11 = load %struct.D*, %struct.D** %retval, align 8, !dbg !91
-  ret %struct.D* %11, !dbg !91
+  %9 = bitcast ptr %this1 to ptr, !dbg !91
+  %add.ptr = getelementptr inbounds i8, ptr %9, i64 %8, !dbg !91
+  %10 = bitcast ptr %add.ptr to ptr, !dbg !91
+  store ptr @"\01??_7D@@6B@", ptr %10, align 8, !dbg !91
+  %d = getelementptr inbounds %struct.D, ptr %this1, i32 0, i32 1, !dbg !92
+  store i32 13, ptr %d, align 8, !dbg !92
+  %11 = load ptr, ptr %retval, align 8, !dbg !91
+  ret ptr %11, !dbg !91
 }
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr i32 @"\01?g@C@@UEAAHXZ"(i8*) unnamed_addr #3 comdat align 2 !dbg !93 {
+define linkonce_odr i32 @"\01?g@C@@UEAAHXZ"(ptr) unnamed_addr #3 comdat align 2 !dbg !93 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  %1 = getelementptr inbounds i8, i8* %0, i32 -8
-  %this = bitcast i8* %1 to %struct.C*
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !94, metadata !23), !dbg !95
-  %this1 = load %struct.C*, %struct.C** %this.addr, align 8
-  %c = getelementptr inbounds %struct.C, %struct.C* %this1, i32 0, i32 2, !dbg !96
-  %2 = load i32, i32* %c, align 8, !dbg !96
+  %this.addr = alloca ptr, align 8
+  %1 = getelementptr inbounds i8, ptr %0, i32 -8
+  %this = bitcast ptr %1 to ptr
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !94, metadata !23), !dbg !95
+  %this1 = load ptr, ptr %this.addr, align 8
+  %c = getelementptr inbounds %struct.C, ptr %this1, i32 0, i32 2, !dbg !96
+  %2 = load i32, ptr %c, align 8, !dbg !96
   ret i32 %2, !dbg !97
 }
 
-declare i32 @"\01?f@A@@UEAAHXZ"(%struct.A*) unnamed_addr #4
+declare i32 @"\01?f@A@@UEAAHXZ"(ptr) unnamed_addr #4
 
-declare i32 @"\01?g@B@@UEAAHXZ"(%struct.B*) unnamed_addr #4
+declare i32 @"\01?g@B@@UEAAHXZ"(ptr) unnamed_addr #4
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr i32 @"\01?g@D@@UEAAHXZ"(i8*) unnamed_addr #3 comdat align 2 !dbg !98 {
+define linkonce_odr i32 @"\01?g@D@@UEAAHXZ"(ptr) unnamed_addr #3 comdat align 2 !dbg !98 {
 entry:
-  %this.addr = alloca %struct.D*, align 8
-  %1 = getelementptr inbounds i8, i8* %0, i32 -16
-  %this = bitcast i8* %1 to %struct.D*
-  store %struct.D* %this, %struct.D** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.D** %this.addr, metadata !99, metadata !23), !dbg !100
-  %this1 = load %struct.D*, %struct.D** %this.addr, align 8
-  %d = getelementptr inbounds %struct.D, %struct.D* %this1, i32 0, i32 1, !dbg !101
-  %2 = load i32, i32* %d, align 8, !dbg !101
+  %this.addr = alloca ptr, align 8
+  %1 = getelementptr inbounds i8, ptr %0, i32 -16
+  %this = bitcast ptr %1 to ptr
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !99, metadata !23), !dbg !100
+  %this1 = load ptr, ptr %this.addr, align 8
+  %d = getelementptr inbounds %struct.D, ptr %this1, i32 0, i32 1, !dbg !101
+  %2 = load i32, ptr %d, align 8, !dbg !101
   ret i32 %2, !dbg !102
 }
 

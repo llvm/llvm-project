@@ -62,7 +62,7 @@ define i33 @fshr_mask_simplify1(i33 %x, i33 %y, i33 %sh) {
 
 define <2 x i31> @fshl_mask_simplify2(<2 x i31> %x, <2 x i31> %y, <2 x i31> %sh) {
 ; CHECK-LABEL: @fshl_mask_simplify2(
-; CHECK-NEXT:    [[MASKEDSH:%.*]] = and <2 x i31> [[SH:%.*]], <i31 32, i31 32>
+; CHECK-NEXT:    [[MASKEDSH:%.*]] = and <2 x i31> [[SH:%.*]], splat (i31 32)
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[Y:%.*]], <2 x i31> [[MASKEDSH]])
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
@@ -138,7 +138,7 @@ define <2 x i32> @fshr_set_but_not_demanded_vec(<2 x i32> %x, <2 x i32> %y, <2 x
 
 define <2 x i31> @fshl_set_but_not_demanded_vec(<2 x i31> %x, <2 x i31> %y, <2 x i31> %sh) {
 ; CHECK-LABEL: @fshl_set_but_not_demanded_vec(
-; CHECK-NEXT:    [[BOGUSBITS:%.*]] = or <2 x i31> [[SH:%.*]], <i31 32, i31 32>
+; CHECK-NEXT:    [[BOGUSBITS:%.*]] = or <2 x i31> [[SH:%.*]], splat (i31 32)
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[Y:%.*]], <2 x i31> [[BOGUSBITS]])
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
@@ -223,7 +223,7 @@ define i33 @fshr_op1_zero(i33 %x) {
 
 define <2 x i31> @fshl_op0_zero_splat_vec(<2 x i31> %x) {
 ; CHECK-LABEL: @fshl_op0_zero_splat_vec(
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i31> [[X:%.*]], <i31 24, i31 24>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i31> [[X:%.*]], splat (i31 24)
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> zeroinitializer, <2 x i31> %x, <2 x i31> <i31 7, i31 7>)
@@ -232,7 +232,7 @@ define <2 x i31> @fshl_op0_zero_splat_vec(<2 x i31> %x) {
 
 define <2 x i31> @fshl_op1_undef_splat_vec(<2 x i31> %x) {
 ; CHECK-LABEL: @fshl_op1_undef_splat_vec(
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i31> [[X:%.*]], <i31 7, i31 7>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i31> [[X:%.*]], splat (i31 7)
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> undef, <2 x i31> <i31 7, i31 7>)
@@ -241,7 +241,7 @@ define <2 x i31> @fshl_op1_undef_splat_vec(<2 x i31> %x) {
 
 define <2 x i32> @fshr_op0_undef_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @fshr_op0_undef_splat_vec(
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[X:%.*]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> undef, <2 x i32> %x, <2 x i32> <i32 7, i32 7>)
@@ -250,7 +250,7 @@ define <2 x i32> @fshr_op0_undef_splat_vec(<2 x i32> %x) {
 
 define <2 x i32> @fshr_op1_zero_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @fshr_op1_zero_splat_vec(
-; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[X:%.*]], <i32 25, i32 25>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[X:%.*]], splat (i32 25)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> zeroinitializer, <2 x i32> <i32 7, i32 7>)
@@ -341,7 +341,7 @@ define i33 @fshr_only_op0_demanded(i33 %x, i33 %y) {
 
 define <2 x i31> @fshl_only_op1_demanded_vec_splat(<2 x i31> %x, <2 x i31> %y) {
 ; CHECK-LABEL: @fshl_only_op1_demanded_vec_splat(
-; CHECK-NEXT:    [[Z:%.*]] = lshr <2 x i31> [[Y:%.*]], <i31 24, i31 24>
+; CHECK-NEXT:    [[Z:%.*]] = lshr <2 x i31> [[Y:%.*]], splat (i31 24)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i31> [[Z]], <i31 63, i31 31>
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
@@ -466,7 +466,7 @@ define i33 @rotr_common_demanded(i33 %a0) {
 
 define <2 x i31> @fshl_only_op1_demanded_vec_nonsplat(<2 x i31> %x, <2 x i31> %y) {
 ; CHECK-LABEL: @fshl_only_op1_demanded_vec_nonsplat(
-; CHECK-NEXT:    [[Z:%.*]] = lshr <2 x i31> [[Y:%.*]], <i31 24, i31 24>
+; CHECK-NEXT:    [[Z:%.*]] = lshr <2 x i31> [[Y:%.*]], splat (i31 24)
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i31> [[Z]], <i31 63, i31 31>
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
@@ -486,7 +486,7 @@ define i32 @rotl_constant_shift_amount(i32 %x) {
 
 define <2 x i31> @rotl_constant_shift_amount_vec(<2 x i31> %x) {
 ; CHECK-LABEL: @rotl_constant_shift_amount_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[X]], <2 x i31> <i31 1, i31 1>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[X]], <2 x i31> splat (i31 1))
 ; CHECK-NEXT:    ret <2 x i31> [[R]]
 ;
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %x, <2 x i31> <i31 32, i31 -1>)
@@ -722,9 +722,137 @@ define i32 @fsh_orconst_rotate(i32 %a) {
   ret i32 %t2
 }
 
+define i32 @fsh_rotate_5(i8 %x, i32 %y) {
+; CHECK-LABEL: @fsh_rotate_5(
+; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 5)
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+
+  %t1 = zext i8 %x to i32
+  %or1 = or i32 %t1, %y
+  %shr = lshr i32 %or1, 27
+  %shl = shl i32 %or1, 5
+  %or2 = or i32 %shr, %shl
+  ret i32 %or2
+}
+
+define i32 @fsh_rotate_18(i8 %x, i32 %y) {
+; CHECK-LABEL: @fsh_rotate_18(
+; CHECK-NEXT:    [[T1:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    [[OR2:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR1]], i32 [[OR1]], i32 18)
+; CHECK-NEXT:    ret i32 [[OR2]]
+;
+
+  %t1 = zext i8 %x to i32
+  %or1 = or i32 %t1, %y
+  %shr = lshr i32 %or1, 14
+  %shl = shl i32 %or1, 18
+  %or2 = or i32 %shr, %shl
+  ret i32 %or2
+}
+
+define i32 @fsh_load_rotate_12(ptr %data) {
+; CHECK-LABEL: @fsh_load_rotate_12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
+; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
+; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
+; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 12)
+; CHECK-NEXT:    ret i32 [[OR15]]
+;
+
+entry:
+  %0 = load i8, ptr %data
+  %conv = zext i8 %0 to i32
+  %shl = shl nuw i32 %conv, 24
+  %arrayidx1 = getelementptr inbounds i8, ptr %data, i64 1
+  %1 = load i8, ptr %arrayidx1
+  %conv2 = zext i8 %1 to i32
+  %shl3 = shl nuw nsw i32 %conv2, 16
+  %or = or i32 %shl3, %shl
+  %arrayidx4 = getelementptr inbounds i8, ptr %data, i64 2
+  %2 = load i8, ptr %arrayidx4
+  %conv5 = zext i8 %2 to i32
+  %shl6 = shl nuw nsw i32 %conv5, 8
+  %or7 = or i32 %or, %shl6
+  %arrayidx8 = getelementptr inbounds i8, ptr %data, i64 3
+  %3 = load i8, ptr %arrayidx8
+  %conv9 = zext i8 %3 to i32
+  %or10 = or i32 %or7, %conv9
+  %shr = lshr i32 %or10, 20
+  %shl7 = shl i32 %or10, 12
+  %or15 = or i32 %shr, %shl7
+  ret i32 %or15
+}
+
+define i32 @fsh_load_rotate_25(ptr %data) {
+; CHECK-LABEL: @fsh_load_rotate_25(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[CONV]], 24
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[SHL3:%.*]] = shl nuw nsw i32 [[CONV2]], 16
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL3]], [[SHL]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX4]], align 1
+; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP2]] to i32
+; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 8
+; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[SHL6]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX8]], align 1
+; CHECK-NEXT:    [[CONV9:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[CONV9]]
+; CHECK-NEXT:    [[OR15:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR10]], i32 [[OR10]], i32 25)
+; CHECK-NEXT:    ret i32 [[OR15]]
+;
+
+entry:
+  %0 = load i8, ptr %data
+  %conv = zext i8 %0 to i32
+  %shl = shl nuw i32 %conv, 24
+  %arrayidx1 = getelementptr inbounds i8, ptr %data, i64 1
+  %1 = load i8, ptr %arrayidx1
+  %conv2 = zext i8 %1 to i32
+  %shl3 = shl nuw nsw i32 %conv2, 16
+  %or = or i32 %shl3, %shl
+  %arrayidx4 = getelementptr inbounds i8, ptr %data, i64 2
+  %2 = load i8, ptr %arrayidx4
+  %conv5 = zext i8 %2 to i32
+  %shl6 = shl nuw nsw i32 %conv5, 8
+  %or7 = or i32 %or, %shl6
+  %arrayidx8 = getelementptr inbounds i8, ptr %data, i64 3
+  %3 = load i8, ptr %arrayidx8
+  %conv9 = zext i8 %3 to i32
+  %or10 = or i32 %or7, %conv9
+  %shr = lshr i32 %or10, 7
+  %shl7 = shl i32 %or10, 25
+  %or15 = or i32 %shr, %shl7
+  ret i32 %or15
+}
+
 define <2 x i31> @fshr_mask_args_same_vector(<2 x i31> %a) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector(
-; CHECK-NEXT:    [[T3:%.*]] = shl <2 x i31> [[A:%.*]], <i31 10, i31 10>
+; CHECK-NEXT:    [[T3:%.*]] = shl <2 x i31> [[A:%.*]], splat (i31 10)
 ; CHECK-NEXT:    ret <2 x i31> [[T3]]
 ;
   %t1 = and <2 x i31> %a, <i31 1000, i31 1000>
@@ -736,7 +864,7 @@ define <2 x i31> @fshr_mask_args_same_vector(<2 x i31> %a) {
 define <2 x i32> @fshr_mask_args_same_vector2(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector2(
 ; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1000000, i32 100000>
-; CHECK-NEXT:    [[T3:%.*]] = lshr exact <2 x i32> [[T1]], <i32 3, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact <2 x i32> [[T1]], splat (i32 3)
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t1 = and <2 x i32> %a, <i32 1000000, i32 100000>
@@ -747,7 +875,7 @@ define <2 x i32> @fshr_mask_args_same_vector2(<2 x i32> %a, <2 x i32> %b) {
 
 define <2 x i31> @fshr_mask_args_same_vector3_different_but_still_prunable(<2 x i31> %a) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector3_different_but_still_prunable(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i31> [[A:%.*]], <i31 1000, i31 1000>
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i31> [[A:%.*]], splat (i31 1000)
 ; CHECK-NEXT:    [[T3:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[A]], <2 x i31> [[T1]], <2 x i31> <i31 10, i31 3>)
 ; CHECK-NEXT:    ret <2 x i31> [[T3]]
 ;
@@ -872,4 +1000,13 @@ define <2 x i32> @fsh_unary_shuffle_ops_partial_widening(<3 x i32> %x, <2 x i32>
   %c = shufflevector <2 x i32> %z, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
   ret <2 x i32> %r
+}
+
+define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_vec_zero_elem(
+; CHECK-NEXT:    [[FSH:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 2, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[FSH]]
+;
+  %fsh = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 2, i32 0>)
+  ret <2 x i32> %fsh
 }

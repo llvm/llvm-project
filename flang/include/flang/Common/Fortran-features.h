@@ -12,6 +12,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include <optional>
 #include <vector>
 
 namespace Fortran::common {
@@ -24,7 +25,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DoubleComplex, Byte, StarKind, ExponentMatchingKindParam, QuadPrecision,
     SlashInitialization, TripletInArrayConstructor, MissingColons,
     SignedComplexLiteral, OldStyleParameter, ComplexConstructor, PercentLOC,
-    SignedPrimary, FileName, Carriagecontrol, Convert, Dispose,
+    SignedMultOperand, FileName, Carriagecontrol, Convert, Dispose,
     IOListLeadingComma, AbbreviatedEditDescriptor, ProgramParentheses,
     PercentRefAndVal, OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF,
     Assign, AssignedGOTO, Pause, OpenACC, OpenMP, CUDA, CruftAfterAmpersand,
@@ -41,43 +42,50 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ActualIntegerConvertedToSmallerKind, HollerithOrCharacterAsBOZ,
     BindingAsProcedure, StatementFunctionExtensions,
     UseGenericIntrinsicWhenSpecificDoesntMatch, DataStmtExtensions,
-    RedundantContiguous, InitBlankCommon, EmptyBindCDerivedType,
-    MiscSourceExtensions, AllocateToOtherLength, LongNames, IntrinsicAsSpecific,
-    BenignNameClash, BenignRedundancy, NullMoldAllocatableComponentValue,
-    NopassScalarBase, MiscUseExtensions, ImpliedDoIndexScope,
-    DistinctCommonSizes)
+    RedundantContiguous, RedundantAttribute, InitBlankCommon,
+    EmptyBindCDerivedType, MiscSourceExtensions, AllocateToOtherLength,
+    LongNames, IntrinsicAsSpecific, BenignNameClash, BenignRedundancy,
+    NullMoldAllocatableComponentValue, NopassScalarBase, MiscUseExtensions,
+    ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
+    IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
+    EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
+    BadBranchTarget, HollerithPolymorphic, ListDirectedSize,
+    NonBindCInteroperability, CudaManaged, CudaUnified,
+    PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
+    UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
+    SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
+    IgnoreIrrelevantAttributes, Unsigned)
 
-// Portability and suspicious usage warnings for conforming code
+// Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
-    ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
+    ShortCharacterActual, ShortArrayActual, ImplicitInterfaceActual,
     PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
-    F202XAllocatableBreakingChange, DimMustBePresent, CommonBlockPadding,
-    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes)
+    F202XAllocatableBreakingChange, OptionalMustBePresent, CommonBlockPadding,
+    LogicalVsCBool, BindCCharLength, ProcDummyArgShapes, ExternalNameConflict,
+    FoldingException, FoldingAvoidsRuntimeCrash, FoldingValueChecks,
+    FoldingFailure, FoldingLimit, Interoperability, CharacterInteroperability,
+    Bounds, Preprocessing, Scanning, OpenAccUsage, ProcPointerCompatibility,
+    VoidMold, KnownBadImplicitInterface, EmptyCase, CaseOverflow, CUDAUsage,
+    IgnoreTKRUsage, ExternalInterfaceMismatch, DefinedOperatorArgs, Final,
+    ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
+    HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
+    PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces, BadTypeForTarget,
+    VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
+    MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
 
+std::optional<LanguageFeature> FindLanguageFeature(const char *);
+std::optional<UsageWarning> FindUsageWarning(const char *);
+
 class LanguageFeatureControl {
 public:
-  LanguageFeatureControl() {
-    // These features must be explicitly enabled by command line options.
-    disable_.set(LanguageFeature::OldDebugLines);
-    disable_.set(LanguageFeature::OpenACC);
-    disable_.set(LanguageFeature::OpenMP);
-    disable_.set(LanguageFeature::CUDA); // !@cuf
-    disable_.set(LanguageFeature::ImplicitNoneTypeNever);
-    disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
-    disable_.set(LanguageFeature::DefaultSave);
-    disable_.set(LanguageFeature::SaveMainProgram);
-    // These features, if enabled, conflict with valid standard usage,
-    // so there are disabled here by default.
-    disable_.set(LanguageFeature::BackslashEscapes);
-    disable_.set(LanguageFeature::LogicalAbbreviations);
-    disable_.set(LanguageFeature::XOROperator);
-    disable_.set(LanguageFeature::OldStyleParameter);
-  }
+  LanguageFeatureControl();
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
+
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }
   void EnableWarning(LanguageFeature f, bool yes = true) {
     warnLanguage_.set(f, yes);
@@ -87,10 +95,19 @@ public:
   }
   void WarnOnAllNonstandard(bool yes = true) { warnAllLanguage_ = yes; }
   void WarnOnAllUsage(bool yes = true) { warnAllUsage_ = yes; }
+  void DisableAllNonstandardWarnings() {
+    warnAllLanguage_ = false;
+    warnLanguage_.clear();
+  }
+  void DisableAllUsageWarnings() {
+    warnAllUsage_ = false;
+    warnUsage_.clear();
+  }
+
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const {
     return (warnAllLanguage_ && f != LanguageFeature::OpenMP &&
-               f != LanguageFeature::OpenACC) ||
+               f != LanguageFeature::OpenACC && f != LanguageFeature::CUDA) ||
         warnLanguage_.test(f);
   }
   bool ShouldWarn(UsageWarning w) const {

@@ -1,8 +1,8 @@
 // REQUIRES: case-insensitive-filesystem
 
 // RUN: rm -rf %t && split-file %s %t
-// RUN: sed "s|DIR|%/t|g" %t/tu.c.in > %t/tu.c
-// RUN: %clang_cc1 -fsyntax-only %t/tu.c 2>&1 | FileCheck %s --DDIR=%/t
+// RUN: sed "s|DIR|%{/t:real}|g" %t/tu.c.in > %t/tu.c
+// RUN: %clang_cc1 -fsyntax-only %t/tu.c 2>&1 | FileCheck %s -DDIR=%{/t:real}
 
 //--- header.h
 //--- tu.c.in

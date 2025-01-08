@@ -3,7 +3,7 @@
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK-DAG: fir.global common @blk_(dense<0> : vector<24xi8>) : !fir.array<24xi8>
+!CHECK-DAG: fir.global common @blk_(dense<0> : vector<24xi8>) {alignment = 4 : i64} : !fir.array<24xi8>
 !CHECK-DAG: fir.global @_QMtestEy : f32 {
 
 module test

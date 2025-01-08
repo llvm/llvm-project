@@ -5,7 +5,7 @@ define i32 @i() alwaysinline {
   ret i32 45
 }
 
-; CHECK-LABEL: define i32 @main
+; CHECK-LABEL: define {{(noundef )?}}i32 @main
 ; CHECK-NEXT: ret i32 45
 
 define i32 @main() {

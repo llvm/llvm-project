@@ -52,8 +52,8 @@ public:
     /// Context-sensitive version of a keyword attribute.
     AS_ContextSensitiveKeyword,
 
-    /// <vardecl> : <semantic>
-    AS_HLSLSemantic,
+    /// <vardecl> : <annotation>
+    AS_HLSLAnnotation,
 
     /// The attibute has no source code manifestation and is only created
     /// implicitly.
@@ -67,6 +67,7 @@ public:
     IgnoredAttribute,
     UnknownAttribute,
   };
+  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, GSL, RISCV };
 
 private:
   const IdentifierInfo *AttrName = nullptr;
@@ -120,7 +121,7 @@ public:
     }
     static Form Pragma() { return AS_Pragma; }
     static Form ContextSensitiveKeyword() { return AS_ContextSensitiveKeyword; }
-    static Form HLSLSemantic() { return AS_HLSLSemantic; }
+    static Form HLSLAnnotation() { return AS_HLSLAnnotation; }
     static Form Implicit() { return AS_Implicit; }
 
   private:
@@ -255,6 +256,19 @@ protected:
     return SpellingIndex != SpellingNotCalculated;
   }
 };
+
+inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    return false;
+#define KEYWORD_ATTRIBUTE(NAME, HASARG, ...)                                   \
+  case tok::kw_##NAME:                                                         \
+    return HASARG;
+#include "clang/Basic/RegularKeywordAttrInfo.inc"
+#undef KEYWORD_ATTRIBUTE
+  }
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H

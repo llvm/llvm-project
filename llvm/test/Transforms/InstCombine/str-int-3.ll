@@ -21,11 +21,11 @@ declare i64 @strtoll(ptr, ptr, i32)
 define void @fold_atoi_member(ptr %pi) {
 ; CHECK-LABEL: @fold_atoi_member(
 ; CHECK-NEXT:    store i32 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i8, ptr [[PI]], i64 4
 ; CHECK-NEXT:    store i32 12, ptr [[PIA0B]], align 4
-; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i32 123, ptr [[PIA1A]], align 4
-; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i8, ptr [[PI]], i64 12
 ; CHECK-NEXT:    store i32 1234, ptr [[PIA1B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -66,9 +66,9 @@ define void @fold_atoi_member(ptr %pi) {
 
 define void @fold_atoi_offset_out_of_bounds(ptr %pi) {
 ; CHECK-LABEL: @fold_atoi_offset_out_of_bounds(
-; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds ([2 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 0))
+; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds nuw (i8, ptr @a, i64 32))
 ; CHECK-NEXT:    store i32 [[IA_0_0_32]], ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[IA_0_0_33:%.*]] = call i32 @atoi(ptr nocapture getelementptr ([2 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 1))
+; CHECK-NEXT:    [[IA_0_0_33:%.*]] = call i32 @atoi(ptr nocapture getelementptr (i8, ptr @a, i64 33))
 ; CHECK-NEXT:    store i32 [[IA_0_0_33]], ptr [[PI]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -92,15 +92,15 @@ define void @fold_atoi_offset_out_of_bounds(ptr %pi) {
 define void @fold_atol_member(ptr %pi) {
 ; CHECK-LABEL: @fold_atol_member(
 ; CHECK-NEXT:    store i64 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i64, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i64 12, ptr [[PIA0B]], align 4
-; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i64, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i8, ptr [[PI]], i64 16
 ; CHECK-NEXT:    store i64 56789, ptr [[PIA0C]], align 4
-; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i64, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i8, ptr [[PI]], i64 24
 ; CHECK-NEXT:    store i64 123, ptr [[PIA1A]], align 4
-; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i64, ptr [[PI]], i64 4
+; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i8, ptr [[PI]], i64 32
 ; CHECK-NEXT:    store i64 1234, ptr [[PIA1B]], align 4
-; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i64, ptr [[PI]], i64 5
+; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i8, ptr [[PI]], i64 40
 ; CHECK-NEXT:    store i64 67890, ptr [[PIA1C]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -148,15 +148,15 @@ define void @fold_atol_member(ptr %pi) {
 define void @fold_atoll_member_pC(ptr %pi) {
 ; CHECK-LABEL: @fold_atoll_member_pC(
 ; CHECK-NEXT:    store i64 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i64 2, ptr [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i8, ptr [[PI]], i64 16
 ; CHECK-NEXT:    store i64 89, ptr [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i8, ptr [[PI]], i64 24
 ; CHECK-NEXT:    store i64 3, ptr [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, ptr [[PI]], i64 4
+; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i8, ptr [[PI]], i64 32
 ; CHECK-NEXT:    store i64 4, ptr [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, ptr [[PI]], i64 5
+; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i8, ptr [[PI]], i64 40
 ; CHECK-NEXT:    store i64 0, ptr [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -204,15 +204,15 @@ define void @fold_atoll_member_pC(ptr %pi) {
 define void @fold_strtol_member_pC(ptr %pi) {
 ; CHECK-LABEL: @fold_strtol_member_pC(
 ; CHECK-NEXT:    store i64 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i64 2, ptr [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i8, ptr [[PI]], i64 16
 ; CHECK-NEXT:    store i64 89, ptr [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i8, ptr [[PI]], i64 24
 ; CHECK-NEXT:    store i64 3, ptr [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, ptr [[PI]], i64 4
+; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i8, ptr [[PI]], i64 32
 ; CHECK-NEXT:    store i64 4, ptr [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, ptr [[PI]], i64 5
+; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i8, ptr [[PI]], i64 40
 ; CHECK-NEXT:    store i64 0, ptr [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -260,15 +260,15 @@ define void @fold_strtol_member_pC(ptr %pi) {
 define void @fold_strtoll_member_pC(ptr %pi) {
 ; CHECK-LABEL: @fold_strtoll_member_pC(
 ; CHECK-NEXT:    store i64 1, ptr [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i64, ptr [[PI]], i64 1
+; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i8, ptr [[PI]], i64 8
 ; CHECK-NEXT:    store i64 2, ptr [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i64, ptr [[PI]], i64 2
+; CHECK-NEXT:    [[PIA0CP3:%.*]] = getelementptr i8, ptr [[PI]], i64 16
 ; CHECK-NEXT:    store i64 89, ptr [[PIA0CP3]], align 4
-; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i64, ptr [[PI]], i64 3
+; CHECK-NEXT:    [[PIA1AP2:%.*]] = getelementptr i8, ptr [[PI]], i64 24
 ; CHECK-NEXT:    store i64 3, ptr [[PIA1AP2]], align 4
-; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i64, ptr [[PI]], i64 4
+; CHECK-NEXT:    [[PIA1BP3:%.*]] = getelementptr i8, ptr [[PI]], i64 32
 ; CHECK-NEXT:    store i64 4, ptr [[PIA1BP3]], align 4
-; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i64, ptr [[PI]], i64 5
+; CHECK-NEXT:    [[PIA1CP4:%.*]] = getelementptr i8, ptr [[PI]], i64 40
 ; CHECK-NEXT:    store i64 0, ptr [[PIA1CP4]], align 4
 ; CHECK-NEXT:    ret void
 ;

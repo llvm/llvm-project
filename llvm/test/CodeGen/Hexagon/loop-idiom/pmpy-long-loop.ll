@@ -1,4 +1,5 @@
-; RUN: opt -march=hexagon -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -p hexagon-loop-idiom -S < %s | FileCheck %s
 ;
 ; The number of nested selects caused the simplification loop to take
 ; more than the maximum number of iterations. This caused the compiler

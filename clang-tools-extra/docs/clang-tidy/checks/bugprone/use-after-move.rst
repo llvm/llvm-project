@@ -177,6 +177,18 @@ When analyzing the order in which moves, uses and reinitializations happen (see
 section `Unsequenced moves, uses, and reinitializations`_), the move is assumed
 to occur in whichever function the result of the ``std::move`` is passed to.
 
+The check also handles perfect-forwarding with ``std::forward`` so the
+following code will also trigger a use-after-move warning.
+
+.. code-block:: c++
+
+  void consume(int);
+
+  void f(int&& i) {
+    consume(std::forward<int>(i));
+    consume(std::forward<int>(i)); // use-after-move
+  }
+
 Use
 ---
 
@@ -184,11 +196,13 @@ Any occurrence of the moved variable that is not a reinitialization (see below)
 is considered to be a use.
 
 An exception to this are objects of type ``std::unique_ptr``,
-``std::shared_ptr`` and ``std::weak_ptr``, which have defined move behavior
-(objects of these classes are guaranteed to be empty after they have been moved
-from). Therefore, an object of these classes will only be considered to be used
-if it is dereferenced, i.e. if ``operator*``, ``operator->`` or ``operator[]``
-(in the case of ``std::unique_ptr<T []>``) is called on it.
+``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``.
+An exception to this are objects of type ``std::unique_ptr``,
+``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``, which
+can be reinitialized via ``reset``. For smart pointers specifically, the
+moved-from objects have a well-defined state of being ``nullptr``s, and only
+``operator*``, ``operator->`` and ``operator[]`` are considered bad accesses as
+they would be dereferencing a ``nullptr``.
 
 If multiple uses occur after a move, only the first of these is flagged.
 
@@ -210,7 +224,8 @@ The check considers a variable to be reinitialized in the following cases:
     ``unordered_multimap``.
 
   - ``reset()`` is called on the variable and the variable is of type
-    ``std::unique_ptr``, ``std::shared_ptr`` or ``std::weak_ptr``.
+    ``std::unique_ptr``, ``std::shared_ptr``, ``std::weak_ptr``,
+    ``std::optional``, or ``std::any``.
 
   - A member function marked with the ``[[clang::reinitializes]]`` attribute is
     called on the variable.

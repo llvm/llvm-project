@@ -44,6 +44,74 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                      const DataLayoutAnalysis *analysis)
     : LLVMTypeConverter(ctx, LowerToLLVMOptions(ctx), analysis) {}
 
+/// Helper function that checks if the given value range is a bare pointer.
+static bool isBarePointer(ValueRange values) {
+  return values.size() == 1 &&
+         isa<LLVM::LLVMPointerType>(values.front().getType());
+}
+
+/// Pack SSA values into an unranked memref descriptor struct.
+static Value packUnrankedMemRefDesc(OpBuilder &builder,
+                                    UnrankedMemRefType resultType,
+                                    ValueRange inputs, Location loc,
+                                    const LLVMTypeConverter &converter) {
+  // Note: Bare pointers are not supported for unranked memrefs because a
+  // memref descriptor cannot be built just from a bare pointer.
+  if (TypeRange(inputs) != converter.getUnrankedMemRefDescriptorFields())
+    return Value();
+  return UnrankedMemRefDescriptor::pack(builder, loc, converter, resultType,
+                                        inputs);
+}
+
+/// Pack SSA values into a ranked memref descriptor struct.
+static Value packRankedMemRefDesc(OpBuilder &builder, MemRefType resultType,
+                                  ValueRange inputs, Location loc,
+                                  const LLVMTypeConverter &converter) {
+  assert(resultType && "expected non-null result type");
+  if (isBarePointer(inputs))
+    return MemRefDescriptor::fromStaticShape(builder, loc, converter,
+                                             resultType, inputs[0]);
+  if (TypeRange(inputs) ==
+      converter.getMemRefDescriptorFields(resultType,
+                                          /*unpackAggregates=*/true))
+    return MemRefDescriptor::pack(builder, loc, converter, resultType, inputs);
+  // The inputs are neither a bare pointer nor an unpacked memref descriptor.
+  // This materialization function cannot be used.
+  return Value();
+}
+
+/// MemRef descriptor elements -> UnrankedMemRefType
+static Value unrankedMemRefMaterialization(OpBuilder &builder,
+                                           UnrankedMemRefType resultType,
+                                           ValueRange inputs, Location loc,
+                                           const LLVMTypeConverter &converter) {
+  // A source materialization must return a value of type
+  // `resultType`, so insert a cast from the memref descriptor type
+  // (!llvm.struct) to the original memref type.
+  Value packed =
+      packUnrankedMemRefDesc(builder, resultType, inputs, loc, converter);
+  if (!packed)
+    return Value();
+  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+      .getResult(0);
+}
+
+/// MemRef descriptor elements -> MemRefType
+static Value rankedMemRefMaterialization(OpBuilder &builder,
+                                         MemRefType resultType,
+                                         ValueRange inputs, Location loc,
+                                         const LLVMTypeConverter &converter) {
+  // A source materialization must return a value of type `resultType`,
+  // so insert a cast from the memref descriptor type (!llvm.struct) to the
+  // original memref type.
+  Value packed =
+      packRankedMemRefDesc(builder, resultType, inputs, loc, converter);
+  if (!packed)
+    return Value();
+  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+      .getResult(0);
+}
+
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                      const LowerToLLVMOptions &options,
@@ -153,45 +221,50 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                        type.isVarArg());
   });
 
-  // Materialization for memrefs creates descriptor structs from individual
-  // values constituting them, when descriptors are used, i.e. more than one
-  // value represents a memref.
-  addArgumentMaterialization(
-      [&](OpBuilder &builder, UnrankedMemRefType resultType, ValueRange inputs,
-          Location loc) -> std::optional<Value> {
-        if (inputs.size() == 1)
-          return std::nullopt;
-        return UnrankedMemRefDescriptor::pack(builder, loc, *this, resultType,
-                                              inputs);
-      });
-  addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
-                                 ValueRange inputs,
-                                 Location loc) -> std::optional<Value> {
-    // TODO: bare ptr conversion could be handled here but we would need a way
-    // to distinguish between FuncOp and other regions.
-    if (inputs.size() == 1)
-      return std::nullopt;
-    return MemRefDescriptor::pack(builder, loc, *this, resultType, inputs);
-  });
   // Add generic source and target materializations to handle cases where
   // non-LLVM types persist after an LLVM conversion.
   addSourceMaterialization([&](OpBuilder &builder, Type resultType,
-                               ValueRange inputs,
-                               Location loc) -> std::optional<Value> {
-    if (inputs.size() != 1)
-      return std::nullopt;
-
+                               ValueRange inputs, Location loc) {
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
-                               ValueRange inputs,
-                               Location loc) -> std::optional<Value> {
-    if (inputs.size() != 1)
-      return std::nullopt;
-
+                               ValueRange inputs, Location loc) {
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
+  });
+
+  // Source materializations convert from the new block argument types
+  // (multiple SSA values that make up a memref descriptor) back to the
+  // original block argument type.
+  addSourceMaterialization([&](OpBuilder &builder,
+                               UnrankedMemRefType resultType, ValueRange inputs,
+                               Location loc) {
+    return unrankedMemRefMaterialization(builder, resultType, inputs, loc,
+                                         *this);
+  });
+  addSourceMaterialization([&](OpBuilder &builder, MemRefType resultType,
+                               ValueRange inputs, Location loc) {
+    return rankedMemRefMaterialization(builder, resultType, inputs, loc, *this);
+  });
+
+  // Bare pointer -> Packed MemRef descriptor
+  addTargetMaterialization([&](OpBuilder &builder, Type resultType,
+                               ValueRange inputs, Location loc,
+                               Type originalType) -> Value {
+    // The original MemRef type is required to build a MemRef descriptor
+    // because the sizes/strides of the MemRef cannot be inferred from just the
+    // bare pointer.
+    if (!originalType)
+      return Value();
+    if (resultType != convertType(originalType))
+      return Value();
+    if (auto memrefType = dyn_cast<MemRefType>(originalType))
+      return packRankedMemRefDesc(builder, memrefType, inputs, loc, *this);
+    if (auto unrankedMemrefType = dyn_cast<UnrankedMemRefType>(originalType))
+      return packUnrankedMemRefDesc(builder, unrankedMemrefType, inputs, loc,
+                                    *this);
+    return Value();
   });
 
   // Integer memory spaces map to themselves.
@@ -221,8 +294,11 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
-  if (type.isFloat8E5M2() || type.isFloat8E4M3FN() || type.isFloat8E5M2FNUZ() ||
-      type.isFloat8E4M3FNUZ() || type.isFloat8E4M3B11FNUZ())
+  if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
+      type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
+      type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
+      type.isFloat4E2M1FN() || type.isFloat6E2M3FN() || type.isFloat6E3M2FN() ||
+      type.isFloat8E8M0FNU())
     return IntegerType::get(&getContext(), type.getWidth());
   return type;
 }
@@ -243,13 +319,42 @@ Type LLVMTypeConverter::convertFunctionType(FunctionType type) const {
   return LLVM::LLVMPointerType::get(type.getContext());
 }
 
+/// Returns the `llvm.byval` or `llvm.byref` attributes that are present in the
+/// function arguments. Returns an empty container if none of these attributes
+/// are found in any of the arguments.
+static void
+filterByValRefArgAttrs(FunctionOpInterface funcOp,
+                       SmallVectorImpl<std::optional<NamedAttribute>> &result) {
+  assert(result.empty() && "Unexpected non-empty output");
+  result.resize(funcOp.getNumArguments(), std::nullopt);
+  bool foundByValByRefAttrs = false;
+  for (int argIdx : llvm::seq(funcOp.getNumArguments())) {
+    for (NamedAttribute namedAttr : funcOp.getArgAttrs(argIdx)) {
+      if ((namedAttr.getName() == LLVM::LLVMDialect::getByValAttrName() ||
+           namedAttr.getName() == LLVM::LLVMDialect::getByRefAttrName())) {
+        foundByValByRefAttrs = true;
+        result[argIdx] = namedAttr;
+        break;
+      }
+    }
+  }
+
+  if (!foundByValByRefAttrs)
+    result.clear();
+}
+
 // Function types are converted to LLVM Function types by recursively converting
-// argument and result types.  If MLIR Function has zero results, the LLVM
-// Function has one VoidType result.  If MLIR Function has more than one result,
+// argument and result types. If MLIR Function has zero results, the LLVM
+// Function has one VoidType result. If MLIR Function has more than one result,
 // they are into an LLVM StructType in their order of appearance.
-Type LLVMTypeConverter::convertFunctionSignature(
+// If `byValRefNonPtrAttrs` is provided, converted types of `llvm.byval` and
+// `llvm.byref` function arguments which are not LLVM pointers are overridden
+// with LLVM pointers. `llvm.byval` and `llvm.byref` arguments that were already
+// converted to LLVM pointer types are removed from 'byValRefNonPtrAttrs`.
+Type LLVMTypeConverter::convertFunctionSignatureImpl(
     FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
-    LLVMTypeConverter::SignatureConversion &result) const {
+    LLVMTypeConverter::SignatureConversion &result,
+    SmallVectorImpl<std::optional<NamedAttribute>> *byValRefNonPtrAttrs) const {
   // Select the argument converter depending on the calling convention.
   useBarePtrCallConv = useBarePtrCallConv || options.useBarePtrCallConv;
   auto funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
@@ -259,6 +364,19 @@ Type LLVMTypeConverter::convertFunctionSignature(
     SmallVector<Type, 8> converted;
     if (failed(funcArgConverter(*this, type, converted)))
       return {};
+
+    // Rewrite converted type of `llvm.byval` or `llvm.byref` function
+    // argument that was not converted to an LLVM pointer types.
+    if (byValRefNonPtrAttrs != nullptr && !byValRefNonPtrAttrs->empty() &&
+        converted.size() == 1 && (*byValRefNonPtrAttrs)[idx].has_value()) {
+      // If the argument was already converted to an LLVM pointer type, we stop
+      // tracking it as it doesn't need more processing.
+      if (isa<LLVM::LLVMPointerType>(converted[0]))
+        (*byValRefNonPtrAttrs)[idx] = std::nullopt;
+      else
+        converted[0] = LLVM::LLVMPointerType::get(&getContext());
+    }
+
     result.addInputs(idx, converted);
   }
 
@@ -273,6 +391,27 @@ Type LLVMTypeConverter::convertFunctionSignature(
     return {};
   return LLVM::LLVMFunctionType::get(resultType, result.getConvertedTypes(),
                                      isVariadic);
+}
+
+Type LLVMTypeConverter::convertFunctionSignature(
+    FunctionType funcTy, bool isVariadic, bool useBarePtrCallConv,
+    LLVMTypeConverter::SignatureConversion &result) const {
+  return convertFunctionSignatureImpl(funcTy, isVariadic, useBarePtrCallConv,
+                                      result,
+                                      /*byValRefNonPtrAttrs=*/nullptr);
+}
+
+Type LLVMTypeConverter::convertFunctionSignature(
+    FunctionOpInterface funcOp, bool isVariadic, bool useBarePtrCallConv,
+    LLVMTypeConverter::SignatureConversion &result,
+    SmallVectorImpl<std::optional<NamedAttribute>> &byValRefNonPtrAttrs) const {
+  // Gather all `llvm.byval` and `llvm.byref` function arguments. Only those
+  // that were not converted to LLVM pointer types will be returned for further
+  // processing.
+  filterByValRefArgAttrs(funcOp, byValRefNonPtrAttrs);
+  auto funcTy = cast<FunctionType>(funcOp.getFunctionType());
+  return convertFunctionSignatureImpl(funcTy, isVariadic, useBarePtrCallConv,
+                                      result, &byValRefNonPtrAttrs);
 }
 
 /// Converts the function type to a C-compatible format, in particular using
@@ -435,8 +574,11 @@ LLVMTypeConverter::getMemRefAddressSpace(BaseMemRefType type) const {
     return failure();
   if (!(*converted)) // Conversion to default is 0.
     return 0;
-  if (auto explicitSpace = llvm::dyn_cast_if_present<IntegerAttr>(*converted))
-    return explicitSpace.getInt();
+  if (auto explicitSpace = dyn_cast_if_present<IntegerAttr>(*converted)) {
+    if (explicitSpace.getType().isIndex() ||
+        explicitSpace.getType().isSignlessInteger())
+      return explicitSpace.getInt();
+  }
   return failure();
 }
 
@@ -482,8 +624,8 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) const {
 ///  * 1-D `vector<axT>` remains as is while,
 ///  * n>1 `vector<ax...xkxT>` convert via an (n-1)-D array type to
 ///    `!llvm.array<ax...array<jxvector<kxT>>>`.
-/// Returns failure for n-D scalable vector types as LLVM does not support
-/// arrays of scalable vectors.
+/// As LLVM supports arrays of scalable vectors, this method will also convert
+/// n-D scalable vectors provided that only the trailing dim is scalable.
 FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
   auto elementType = convertType(type.getElementType());
   if (!elementType)
@@ -494,7 +636,9 @@ FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
                                     type.getScalableDims().back());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
-  // Only the trailing dimension can be scalable.
+  // For n-D vector types for which a _non-trailing_ dim is scalable,
+  // return a failure. Supporting such cases would require LLVM
+  // to support something akin "scalable arrays" of vectors.
   if (llvm::is_contained(type.getScalableDims().drop_back(), true))
     return failure();
   auto shape = type.getShape();

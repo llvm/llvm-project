@@ -20,7 +20,9 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
@@ -38,11 +40,16 @@ namespace clang {
 namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
-  auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  assert(BlockIt != CFCtx.getStmtToBlock().end());
-  if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+  const CFGBlock *Block = ACFG.blockForStmt(S);
+  if (Block == nullptr) {
+    assert(false);
     return nullptr;
-  const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
+  }
+  if (!ACFG.isBlockReachable(*Block))
+    return nullptr;
+  if (Block->getBlockID() == CurBlockID)
+    return &CurState.Env;
+  const auto &State = BlockToState[Block->getBlockID()];
   if (!(State))
     return nullptr;
   return &State->Env;
@@ -59,6 +66,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
     if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
       return Env.makeIff(*LHSBool, *RHSBool);
+
+  if (auto *LHSPtr = dyn_cast_or_null<PointerValue>(LHSValue))
+    if (auto *RHSPtr = dyn_cast_or_null<PointerValue>(RHSValue))
+      // If the storage locations are the same, the pointers definitely compare
+      // the same. If the storage locations are different, they may still alias,
+      // so we fall through to the case below that returns an atom.
+      if (&LHSPtr->getPointeeLoc() == &RHSPtr->getPointeeLoc())
+        return Env.getBoolLiteralValue(true);
 
   return Env.makeAtomicBoolValue();
 }
@@ -92,6 +107,8 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
 }
 
 static void propagateValue(const Expr &From, const Expr &To, Environment &Env) {
+  if (From.getType()->isRecordType())
+    return;
   if (auto *Val = Env.getValue(From))
     Env.setValue(To, *Val);
 }
@@ -118,8 +135,9 @@ namespace {
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
-  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env)
-      : StmtToEnv(StmtToEnv), Env(Env) {}
+  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
+                  Environment::ValueModel &Model)
+      : StmtToEnv(StmtToEnv), Env(Env), Model(Model) {}
 
   void VisitBinaryOperator(const BinaryOperator *S) {
     const Expr *LHS = S->getLHS();
@@ -127,6 +145,13 @@ public:
 
     const Expr *RHS = S->getRHS();
     assert(RHS != nullptr);
+
+    // Do compound assignments up-front, as there are so many of them and we
+    // don't want to list all of them in the switch statement below.
+    // To avoid generating unnecessary values, we don't create a new value but
+    // instead leave it to the specific analysis to do this if desired.
+    if (S->isCompoundAssignmentOp())
+      propagateStorageLocation(*S->getLHS(), *S, Env);
 
     switch (S->getOpcode()) {
     case BO_Assign: {
@@ -363,6 +388,25 @@ public:
       Env.setValue(*S, Env.makeNot(*SubExprVal));
       break;
     }
+    case UO_PreInc:
+    case UO_PreDec:
+      // Propagate the storage location and clear out any value associated with
+      // it (to represent the fact that the value has definitely changed).
+      // To avoid generating unnecessary values, we leave it to the specific
+      // analysis to create a new value if desired.
+      propagateStorageLocation(*S->getSubExpr(), *S, Env);
+      if (StorageLocation *Loc = Env.getStorageLocation(*S->getSubExpr()))
+        Env.clearValue(*Loc);
+      break;
+    case UO_PostInc:
+    case UO_PostDec:
+      // Propagate the old value, then clear out any value associated with the
+      // storage location (to represent the fact that the value has definitely
+      // changed). See above for rationale.
+      propagateValue(*S->getSubExpr(), *S, Env);
+      if (StorageLocation *Loc = Env.getStorageLocation(*S->getSubExpr()))
+        Env.clearValue(*Loc);
+      break;
     default:
       break;
     }
@@ -399,6 +443,9 @@ public:
       return;
 
     if (Ret->isPRValue()) {
+      if (Ret->getType()->isRecordType())
+        return;
+
       auto *Val = Env.getValue(*Ret);
       if (Val == nullptr)
         return;
@@ -448,15 +495,43 @@ public:
     Env.setStorageLocation(*S, *MemberLoc);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
+    const Expr *ArgExpr = S->getExpr();
+    assert(ArgExpr != nullptr);
+    propagateValueOrStorageLocation(*ArgExpr, *S, Env);
+
+    if (S->isPRValue() && S->getType()->isRecordType()) {
+      auto &Loc = Env.getResultObjectLocation(*S);
+      Env.initializeFieldsWithValues(Loc);
+    }
+  }
+
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
+
+    // If this is a prvalue of record type, the handler for `*InitExpr` (if one
+    // exists) will initialize the result object; there is no value to propgate
+    // here.
+    if (S->getType()->isRecordType() && S->isPRValue())
+      return;
+
     propagateValueOrStorageLocation(*InitExpr, *S, Env);
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *S) {
     const CXXConstructorDecl *ConstructorDecl = S->getConstructor();
     assert(ConstructorDecl != nullptr);
+
+    // `CXXConstructExpr` can have array type if default-initializing an array
+    // of records. We don't handle this specifically beyond potentially inlining
+    // the call.
+    if (!S->getType()->isRecordType()) {
+      transferInlineCall(S, ConstructorDecl);
+      return;
+    }
+
+    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
 
     if (ConstructorDecl->isCopyOrMoveConstructor()) {
       // It is permissible for a copy/move constructor to have additional
@@ -470,24 +545,14 @@ public:
       if (ArgLoc == nullptr)
         return;
 
-      if (S->isElidable()) {
-        if (Value *Val = Env.getValue(*ArgLoc))
-          Env.setValue(*S, *Val);
-      } else {
-        auto &Val = *cast<RecordValue>(Env.createValue(S->getType()));
-        Env.setValue(*S, Val);
-        copyRecord(*ArgLoc, Val.getLoc(), Env);
-      }
+      // Even if the copy/move constructor call is elidable, we choose to copy
+      // the record in all cases (which isn't wrong, just potentially not
+      // optimal).
+      copyRecord(*ArgLoc, Loc, Env);
       return;
     }
 
-    // `CXXConstructExpr` can have array type if default-initializing an array
-    // of records, and we currently can't create values for arrays. So check if
-    // we've got a record type.
-    if (S->getType()->isRecordType()) {
-      auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
-      Env.setValue(*S, InitialVal);
-    }
+    Env.initializeFieldsWithValues(Loc, S->getType());
 
     transferInlineCall(S, ConstructorDecl);
   }
@@ -513,8 +578,7 @@ public:
 
       RecordStorageLocation *LocSrc = nullptr;
       if (Arg1->isPRValue()) {
-        if (auto *Val = Env.get<RecordValue>(*Arg1))
-          LocSrc = &Val->getLoc();
+        LocSrc = &Env.getResultObjectLocation(*Arg1);
       } else {
         LocSrc = Env.get<RecordStorageLocation>(*Arg1);
       }
@@ -523,32 +587,36 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      // The assignment operators are different from the type of the destination
-      // in this model (i.e. in one of their base classes). This must be very
-      // rare and we just bail.
-      if (Method->getFunctionObjectParameterType()
-              .getCanonicalType()
-              .getUnqualifiedType() !=
-          LocDst->getType().getCanonicalType().getUnqualifiedType())
-        return;
-
       copyRecord(*LocSrc, *LocDst, Env);
-      Env.setStorageLocation(*S, *LocDst);
+
+      // The assignment operator can have an arbitrary return type. We model the
+      // return value only if the return type is the same as or a base class of
+      // the destination type.
+      if (S->getType().getCanonicalType().getUnqualifiedType() !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType()) {
+        auto ReturnDecl = S->getType()->getAsCXXRecordDecl();
+        auto DstDecl = LocDst->getType()->getAsCXXRecordDecl();
+        if (ReturnDecl == nullptr || DstDecl == nullptr)
+          return;
+        if (!DstDecl->isDerivedFrom(ReturnDecl))
+          return;
+      }
+
+      if (S->isGLValue())
+        Env.setStorageLocation(*S, *LocDst);
+      else
+        copyRecord(*LocDst, Env.getResultObjectLocation(*S), Env);
+
+      return;
     }
+
+    // `CXXOperatorCallExpr` can be a prvalue. Call `VisitCallExpr`() to
+    // initialize the prvalue's fields with values.
+    VisitCallExpr(S);
   }
 
-  void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
-    if (S->getCastKind() == CK_ConstructorConversion) {
-      const Expr *SubExpr = S->getSubExpr();
-      assert(SubExpr != nullptr);
-
-      propagateValue(*SubExpr, *S, Env);
-    }
-  }
-
-  void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
-    if (Value *Val = Env.createValue(S->getType()))
-      Env.setValue(*S, *Val);
+  void VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *RBO) {
+    propagateValue(*RBO->getSemanticForm(), *RBO, Env);
   }
 
   void VisitCallExpr(const CallExpr *S) {
@@ -578,13 +646,12 @@ public:
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
 
-      // If this call produces a prvalue of record type, make sure that we have
-      // a `RecordValue` for it. This is required so that
-      // `Environment::getResultObjectLocation()` is able to return a location
-      // for this `CallExpr`.
-      if (S->getType()->isRecordType() && S->isPRValue())
-        if (Env.getValue(*S) == nullptr)
-          refreshRecordValue(*S, Env);
+      // If this call produces a prvalue of record type, initialize its fields
+      // with values.
+      if (S->getType()->isRecordType() && S->isPRValue()) {
+        RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
+        Env.initializeFieldsWithValues(Loc);
+      }
     }
   }
 
@@ -592,18 +659,16 @@ public:
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
-    Value *SubExprVal = Env.getValue(*SubExpr);
-    if (SubExprVal == nullptr)
-      return;
-
-    if (RecordValue *RecordVal = dyn_cast<RecordValue>(SubExprVal)) {
-      Env.setStorageLocation(*S, RecordVal->getLoc());
-      return;
-    }
-
     StorageLocation &Loc = Env.createStorageLocation(*S);
-    Env.setValue(Loc, *SubExprVal);
     Env.setStorageLocation(*S, Loc);
+
+    if (SubExpr->getType()->isRecordType())
+      // Nothing else left to do -- we initialized the record when transferring
+      // `SubExpr`.
+      return;
+
+    if (Value *SubExprVal = Env.getValue(*SubExpr))
+      Env.setValue(Loc, *SubExprVal);
   }
 
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
@@ -623,106 +688,104 @@ public:
   }
 
   void VisitConditionalOperator(const ConditionalOperator *S) {
-    // FIXME: Revisit this once flow conditions are added to the framework. For
-    // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
-    // condition.
-    // When we do this, we will need to retrieve the values of the operands from
-    // the environments for the basic blocks they are computed in, in a similar
-    // way to how this is done for short-circuited logical operators in
-    // `getLogicOperatorSubExprValue()`.
-    if (S->isGLValue())
-      Env.setStorageLocation(*S, Env.createObject(S->getType()));
-    else if (Value *Val = Env.createValue(S->getType()))
-      Env.setValue(*S, *Val);
+    const Environment *TrueEnv = StmtToEnv.getEnvironment(*S->getTrueExpr());
+    const Environment *FalseEnv = StmtToEnv.getEnvironment(*S->getFalseExpr());
+
+    if (TrueEnv == nullptr || FalseEnv == nullptr) {
+      // If the true or false branch is dead, we may not have an environment for
+      // it. We could handle this specifically by forwarding the value or
+      // location of the live branch, but this case is rare enough that this
+      // probably isn't worth the additional complexity.
+      return;
+    }
+
+    if (S->isGLValue()) {
+      StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
+      StorageLocation *FalseLoc =
+          FalseEnv->getStorageLocation(*S->getFalseExpr());
+      if (TrueLoc == FalseLoc && TrueLoc != nullptr)
+        Env.setStorageLocation(*S, *TrueLoc);
+    } else if (!S->getType()->isRecordType()) {
+      // The conditional operator can evaluate to either of the values of the
+      // two branches. To model this, join these two values together to yield
+      // the result of the conditional operator.
+      // Note: Most joins happen in `computeBlockInputState()`, but this case is
+      // different:
+      // - `computeBlockInputState()` (which in turn calls `Environment::join()`
+      //   joins values associated with the _same_ expression or storage
+      //   location, then associates the joined value with that expression or
+      //   storage location. This join has nothing to do with transfer --
+      //   instead, it joins together the results of performing transfer on two
+      //   different blocks.
+      // - Here, we join values associated with _different_ expressions (the
+      //   true and false branch), then associate the joined value with a third
+      //   expression (the conditional operator itself). This join is what it
+      //   means to perform transfer on the conditional operator.
+      if (Value *Val = Environment::joinValues(
+              S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
+              FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env, Model))
+        Env.setValue(*S, *Val);
+    }
   }
 
   void VisitInitListExpr(const InitListExpr *S) {
     QualType Type = S->getType();
 
-    if (!Type->isStructureOrClassType()) {
-      if (auto *Val = Env.createValue(Type))
-        Env.setValue(*S, *Val);
-
+    if (!Type->isRecordType()) {
+      // Until array initialization is implemented, we skip arrays and don't
+      // need to care about cases where `getNumInits() > 1`.
+      if (!Type->isArrayType() && S->getNumInits() == 1)
+        propagateValueOrStorageLocation(*S->getInit(0), *S, Env);
       return;
     }
 
-    // In case the initializer list is transparent, we just need to propagate
-    // the value that it contains.
-    if (S->isSemanticForm() && S->isTransparent()) {
-      propagateValue(*S->getInit(0), *S, Env);
+    // If the initializer list is transparent, there's nothing to do.
+    if (S->isSemanticForm() && S->isTransparent())
       return;
-    }
 
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
 
-    // This only contains the direct fields for the given type.
-    std::vector<FieldDecl *> FieldsForInit =
-        getFieldsForInitListExpr(Type->getAsRecordDecl());
+    // Initialization of base classes and fields of record type happens when we
+    // visit the nested `CXXConstructExpr` or `InitListExpr` for that base class
+    // or field. We therefore only need to deal with fields of non-record type
+    // here.
 
-    // `S->inits()` contains all the initializer epressions, including the
-    // ones for direct base classes.
-    auto Inits = S->inits();
-    size_t InitIdx = 0;
+    RecordInitListHelper InitListHelper(S);
 
-    // Initialize base classes.
-    if (auto* R = S->getType()->getAsCXXRecordDecl()) {
-      assert(FieldsForInit.size() + R->getNumBases() == Inits.size());
-      for ([[maybe_unused]] const CXXBaseSpecifier &Base : R->bases()) {
-        assert(InitIdx < Inits.size());
-        auto Init = Inits[InitIdx++];
-        assert(Base.getType().getCanonicalType() ==
+    for (auto [Field, Init] : InitListHelper.field_inits()) {
+      if (Field->getType()->isRecordType())
+        continue;
+      if (Field->getType()->isReferenceType()) {
+        assert(Field->getType().getCanonicalType()->getPointeeType() ==
                Init->getType().getCanonicalType());
-        auto *BaseVal = Env.get<RecordValue>(*Init);
-        if (!BaseVal)
-          BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
-        // Take ownership of the fields of the `RecordValue` for the base class
-        // and incorporate them into the "flattened" set of fields for the
-        // derived class.
-        auto Children = BaseVal->getLoc().children();
-        FieldLocs.insert(Children.begin(), Children.end());
+        Loc.setChild(*Field, &Env.createObject(Field->getType(), Init));
+        continue;
+      }
+      assert(Field->getType().getCanonicalType().getUnqualifiedType() ==
+             Init->getType().getCanonicalType().getUnqualifiedType());
+      StorageLocation *FieldLoc = Loc.getChild(*Field);
+      // Locations for non-reference fields must always be non-null.
+      assert(FieldLoc != nullptr);
+      Value *Val = Env.getValue(*Init);
+      if (Val == nullptr && isa<ImplicitValueInitExpr>(Init) &&
+          Init->getType()->isPointerType())
+        Val =
+            &Env.getOrCreateNullPointerValue(Init->getType()->getPointeeType());
+      if (Val == nullptr)
+        Val = Env.createValue(Field->getType());
+      if (Val != nullptr)
+        Env.setValue(*FieldLoc, *Val);
+    }
+
+    for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+      QualType FieldType = FieldLoc->getType();
+      if (FieldType->isRecordType()) {
+        Env.initializeFieldsWithValues(*cast<RecordStorageLocation>(FieldLoc));
+      } else {
+        if (Value *Val = Env.createValue(FieldType))
+          Env.setValue(*FieldLoc, *Val);
       }
     }
-
-    assert(FieldsForInit.size() == Inits.size() - InitIdx);
-    for (auto Field : FieldsForInit) {
-      assert(InitIdx < Inits.size());
-      auto Init = Inits[InitIdx++];
-      assert(
-          // The types are same, or
-          Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType().getUnqualifiedType() ||
-          // The field's type is T&, and initializer is T
-          (Field->getType()->isReferenceType() &&
-           Field->getType().getCanonicalType()->getPointeeType() ==
-               Init->getType().getCanonicalType()));
-      auto& Loc = Env.createObject(Field->getType(), Init);
-      FieldLocs.insert({Field, &Loc});
-    }
-
-    // Check that we satisfy the invariant that a `RecordStorageLoation`
-    // contains exactly the set of modeled fields for that type.
-    // `ModeledFields` includes fields from all the bases, but only the
-    // modeled ones. However, if a class type is initialized with an
-    // `InitListExpr`, all fields in the class, including those from base
-    // classes, are included in the set of modeled fields. The code above
-    // should therefore populate exactly the modeled fields.
-    assert(containsSameFields(
-        Env.getDataflowAnalysisContext().getModeledFields(Type), FieldLocs));
-
-    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
-    for (const auto &Entry :
-         Env.getDataflowAnalysisContext().getSyntheticFields(Type)) {
-      SyntheticFieldLocs.insert(
-          {Entry.getKey(), &Env.createObject(Entry.getValue())});
-    }
-
-    auto &Loc = Env.getDataflowAnalysisContext().createRecordStorageLocation(
-        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
-    RecordValue &RecordVal = Env.create<RecordValue>(Loc);
-
-    Env.setValue(Loc, RecordVal);
-
-    Env.setValue(*S, RecordVal);
 
     // FIXME: Implement array initialization.
   }
@@ -788,27 +851,26 @@ private:
           Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
 
-    const ControlFlowContext *CFCtx =
-        Env.getDataflowAnalysisContext().getControlFlowContext(F);
-    if (!CFCtx)
+    const AdornedCFG *ACFG = Env.getDataflowAnalysisContext().getAdornedCFG(F);
+    if (!ACFG)
       return;
 
     // FIXME: We don't support context-sensitive analysis of recursion, so
     // we should return early here if `F` is the same as the `FunctionDecl`
     // holding `S` itself.
 
-    auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
+    auto ExitBlock = ACFG->getCFG().getExit().getBlockID();
 
     auto CalleeEnv = Env.pushCall(S);
 
     // FIXME: Use the same analysis as the caller for the callee. Note,
     // though, that doing so would require support for changing the analysis's
     // ASTContext.
-    auto Analysis = NoopAnalysis(CFCtx->getDecl().getASTContext(),
+    auto Analysis = NoopAnalysis(ACFG->getDecl().getASTContext(),
                                  DataflowAnalysisOptions{Options});
 
     auto BlockToOutputState =
-        dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
+        dataflow::runDataflowAnalysis(*ACFG, Analysis, CalleeEnv);
     assert(BlockToOutputState);
     assert(ExitBlock < BlockToOutputState->size());
 
@@ -820,12 +882,14 @@ private:
 
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
+  Environment::ValueModel &Model;
 };
 
 } // namespace
 
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
-  TransferVisitor(StmtToEnv, Env).Visit(&S);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
+              Environment::ValueModel &Model) {
+  TransferVisitor(StmtToEnv, Env, Model).Visit(&S);
 }
 
 } // namespace dataflow

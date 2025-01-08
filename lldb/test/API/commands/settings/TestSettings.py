@@ -2,7 +2,6 @@
 Test lldb settings command.
 """
 
-
 import json
 import os
 import re
@@ -151,14 +150,22 @@ class SettingsCommandTestCase(TestBase):
         self.expect(
             "settings show term-width",
             SETTING_MSG("term-width"),
-            startstr="term-width (int) = 70",
+            startstr="term-width (unsigned) = 70",
         )
 
         # The overall display should also reflect the new setting.
         self.expect(
             "settings show",
             SETTING_MSG("term-width"),
-            substrs=["term-width (int) = 70"],
+            substrs=["term-width (unsigned) = 70"],
+        )
+
+        self.dbg.SetTerminalWidth(60)
+
+        self.expect(
+            "settings show",
+            SETTING_MSG("term-width"),
+            substrs=["term-width (unsigned) = 60"],
         )
 
     # rdar://problem/10712130
@@ -521,6 +528,59 @@ class SettingsCommandTestCase(TestBase):
             output, exe=False, startstr="This message should go to standard out."
         )
 
+    @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    def test_same_error_output_path(self):
+        """Test that setting target.error and output-path to the same file path for the launched process works."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        # Set the error-path and output-path and verify both are set.
+        self.runCmd(
+            "settings set target.error-path '{0}'".format(
+                lldbutil.append_to_process_working_directory(self, "output.txt")
+            )
+        )
+        self.runCmd(
+            "settings set target.output-path '{0}".format(
+                lldbutil.append_to_process_working_directory(self, "output.txt")
+            )
+        )
+        # And add hooks to restore the original settings during tearDown().
+        self.addTearDownHook(lambda: self.runCmd("settings clear target.output-path"))
+        self.addTearDownHook(lambda: self.runCmd("settings clear target.error-path"))
+
+        self.expect(
+            "settings show target.error-path",
+            SETTING_MSG("target.error-path"),
+            substrs=["target.error-path (file)", 'output.txt"'],
+        )
+
+        self.expect(
+            "settings show target.output-path",
+            SETTING_MSG("target.output-path"),
+            substrs=["target.output-path (file)", 'output.txt"'],
+        )
+
+        self.runCmd(
+            "process launch --working-dir '{0}'".format(
+                self.get_process_working_directory()
+            ),
+            RUN_SUCCEEDED,
+        )
+
+        output = lldbutil.read_file_from_process_wd(self, "output.txt")
+        err_message = "This message should go to standard error."
+        out_message = "This message should go to standard out."
+        # Error msg should get flushed by the output msg
+        self.expect(output, exe=False, substrs=[out_message])
+        self.assertNotIn(
+            err_message,
+            output,
+            "Race condition when both stderr/stdout redirects to the same file",
+        )
+
     def test_print_dictionary_setting(self):
         self.runCmd("settings clear target.env-vars")
         self.runCmd('settings set target.env-vars ["MY_VAR"]=some-value')
@@ -593,7 +653,7 @@ class SettingsCommandTestCase(TestBase):
         self.expect(
             "settings show term-width",
             SETTING_MSG("term-width"),
-            startstr="term-width (int) = 60",
+            startstr="term-width (unsigned) = 60",
         )
         self.runCmd("settings clear term-width", check=False)
         # string
@@ -946,7 +1006,7 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueFileSpec
         self.verify_setting_value_json(
-            "platform.module-cache-directory", self.get_process_working_directory()
+            "platform.module-cache-directory", self.getBuildDir()
         )
 
         # Test OptionValueArray

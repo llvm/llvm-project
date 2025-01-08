@@ -20,7 +20,6 @@
 #include "mlir/ExecutionEngine/Float16bits.h"
 #include "mlir/ExecutionEngine/SparseTensor/ArithmeticUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/MapRef.h"
 
 namespace mlir {
@@ -123,8 +122,8 @@ public:
   /// Safely checks if the level uses singleton storage.
   bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
 
-  /// Safely checks if the level uses 2 out of 4 storage.
-  bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4LT(getLvlType(l)); }
+  /// Safely checks if the level uses n out of m storage.
+  bool isNOutOfMLvl(uint64_t l) const { return isNOutOfMLT(getLvlType(l)); }
 
   /// Safely checks if the level is ordered.
   bool isOrderedLvl(uint64_t l) const { return isOrderedLT(getLvlType(l)); }
@@ -144,17 +143,16 @@ public:
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETCOORDINATES)
 #undef DECL_GETCOORDINATES
 
+  /// Gets coordinates-overhead storage buffer for the given level.
+#define DECL_GETCOORDINATESBUFFER(INAME, C)                                    \
+  virtual void getCoordinatesBuffer(std::vector<C> **, uint64_t);
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETCOORDINATESBUFFER)
+#undef DECL_GETCOORDINATESBUFFER
+
   /// Gets primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
-
-  /// Element-wise forwarding insertions. The first argument is the
-  /// dimension-coordinates for the value being inserted.
-#define DECL_FORWARDINGINSERT(VNAME, V)                                        \
-  virtual void forwardingInsert(const uint64_t *, V);
-  MLIR_SPARSETENSOR_FOREVERY_V(DECL_FORWARDINGINSERT)
-#undef DECL_FORWARDINGINSERT
 
   /// Element-wise insertion in lexicographic coordinate order. The first
   /// argument is the level-coordinates for the value being inserted.
@@ -170,9 +168,6 @@ public:
                          uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
-
-  /// Finalizes forwarding insertions.
-  virtual void endForwardingInsert() = 0;
 
   /// Finalizes lexicographic insertions.
   virtual void endLexInsert() = 0;
@@ -208,37 +203,22 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
                       const uint64_t *lvl2dim)
       : SparseTensorStorageBase(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                                 dim2lvl, lvl2dim),
-        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank), coo() {}
+        positions(lvlRank), coordinates(lvlRank), lvlCursor(lvlRank) {}
 
 public:
   /// Constructs a sparse tensor with the given encoding, and allocates
-  /// overhead storage according to some simple heuristics. When the
-  /// `bool` argument is true and `lvlTypes` are all dense, then this
-  /// ctor will also initialize the values array with zeros. That
-  /// argument should be true when an empty tensor is intended; whereas
-  /// it should usually be false when the ctor will be followed up by
-  /// some other form of initialization.
+  /// overhead storage according to some simple heuristics. When lvlCOO
+  /// is set, the sparse tensor initializes with the contents from that
+  /// data structure. Otherwise, an empty sparse tensor results.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
                       const LevelType *lvlTypes, const uint64_t *dim2lvl,
-                      const uint64_t *lvl2dim, SparseTensorCOO<V> *lvlCOO,
-                      bool initializeValuesIfAllDense);
+                      const uint64_t *lvl2dim, SparseTensorCOO<V> *lvlCOO);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
-  /// the contents from the COO. This ctor performs the same heuristic
-  /// overhead-storage allocation as the ctor above.
-  SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
-                      uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
-                      const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
-
-  /// Constructs a sparse tensor with the given encoding, and initializes
-  /// the contents from the level buffers. This ctor allocates exactly
-  /// the required amount of overhead storage, not using any heuristics.
-  /// It assumes that the data provided by `lvlBufs` can be directly used to
-  /// interpret the result sparse tensor and performs *NO* integrity test on the
-  /// input data. It also assume that the trailing COO coordinate buffer is
-  /// passed in as a single AoS memory.
+  /// the contents from the level buffers. The constructor assumes that the
+  /// data provided by `lvlBufs` can be directly used to interpret the result
+  /// sparse tensor and performs no integrity test on the input data.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
                       const LevelType *lvlTypes, const uint64_t *dim2lvl,
@@ -248,23 +228,21 @@ public:
   static SparseTensorStorage<P, C, V> *
   newEmpty(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
            const uint64_t *lvlSizes, const LevelType *lvlTypes,
-           const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding);
+           const uint64_t *dim2lvl, const uint64_t *lvl2dim);
 
   /// Allocates a new sparse tensor and initializes it from the given COO.
   static SparseTensorStorage<P, C, V> *
   newFromCOO(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
              const uint64_t *lvlSizes, const LevelType *lvlTypes,
              const uint64_t *dim2lvl, const uint64_t *lvl2dim,
-             SparseTensorCOO<V> &lvlCOO);
+             SparseTensorCOO<V> *lvlCOO);
 
-  /// Allocates a new sparse tensor and initialize it with the data stored level
-  /// buffers directly.
+  /// Allocates a new sparse tensor and initialize it from the given buffers.
   static SparseTensorStorage<P, C, V> *
-  packFromLvlBuffers(uint64_t dimRank, const uint64_t *dimSizes,
-                     uint64_t lvlRank, const uint64_t *lvlSizes,
-                     const LevelType *lvlTypes, const uint64_t *dim2lvl,
-                     const uint64_t *lvl2dim, uint64_t srcRank,
-                     const intptr_t *buffers);
+  newFromBuffers(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
+                 const uint64_t *lvlSizes, const LevelType *lvlTypes,
+                 const uint64_t *dim2lvl, const uint64_t *lvl2dim,
+                 uint64_t srcRank, const intptr_t *buffers);
 
   ~SparseTensorStorage() final = default;
 
@@ -279,16 +257,34 @@ public:
     assert(lvl < getLvlRank());
     *out = &coordinates[lvl];
   }
+  void getCoordinatesBuffer(std::vector<C> **out, uint64_t lvl) final {
+    assert(out && "Received nullptr for out parameter");
+    assert(lvl < getLvlRank());
+    // Note that the sparse tensor support library always stores COO in SoA
+    // format, even when AoS is requested. This is never an issue, since all
+    // actual code/library generation requests "views" into the coordinate
+    // storage for the individual levels, which is trivially provided for
+    // both AoS and SoA (as well as all the other storage formats). The only
+    // exception is when the buffer version of coordinate storage is requested
+    // (currently only for printing). In that case, we do the following
+    // potentially expensive transformation to provide that view. If this
+    // operation becomes more common beyond debugging, we should consider
+    // implementing proper AoS in the support library as well.
+    uint64_t lvlRank = getLvlRank();
+    uint64_t nnz = values.size();
+    crdBuffer.clear();
+    crdBuffer.reserve(nnz * (lvlRank - lvl));
+    for (uint64_t i = 0; i < nnz; i++) {
+      for (uint64_t l = lvl; l < lvlRank; l++) {
+        assert(i < coordinates[l].size());
+        crdBuffer.push_back(coordinates[l][i]);
+      }
+    }
+    *out = &crdBuffer;
+  }
   void getValues(std::vector<V> **out) final {
     assert(out && "Received nullptr for out parameter");
     *out = &values;
-  }
-
-  /// Partially specialize forwarding insertions based on template types.
-  void forwardingInsert(const uint64_t *dimCoords, V val) final {
-    assert(dimCoords && coo);
-    map.pushforward(dimCoords, lvlCursor.data());
-    coo->add(lvlCursor, val);
   }
 
   /// Partially specialize lexicographical insertions based on template types.
@@ -345,21 +341,6 @@ public:
     }
   }
 
-  /// Finalizes forwarding insertions.
-  void endForwardingInsert() final {
-    // Ensure COO is sorted.
-    assert(coo);
-    coo->sort();
-    // Now actually insert the `elements`.
-    const auto &elements = coo->getElements();
-    const uint64_t nse = elements.size();
-    assert(values.size() == 0);
-    values.reserve(nse);
-    fromCOO(elements, 0, nse, 0);
-    delete coo;
-    coo = nullptr;
-  }
-
   /// Finalizes lexicographic insertions.
   void endLexInsert() final {
     if (!allDense) {
@@ -368,16 +349,6 @@ public:
       else
         endPath(0);
     }
-  }
-
-  /// Allocates a new COO object and initializes it with the contents.
-  /// Callers must make sure to delete the COO when they're done with it.
-  SparseTensorCOO<V> *toCOO() {
-    std::vector<uint64_t> dimCoords(getDimRank());
-    coo = new SparseTensorCOO<V>(getDimSizes(), values.size());
-    toCOO(0, 0, dimCoords);
-    assert(coo->getElements().size() == values.size());
-    return coo;
   }
 
   /// Sort the unordered tensor in place, the method assumes that it is
@@ -450,7 +421,7 @@ private:
   void appendCrd(uint64_t lvl, uint64_t full, uint64_t crd) {
     if (!isDenseLvl(lvl)) {
       assert(isCompressedLvl(lvl) || isLooseCompressedLvl(lvl) ||
-             isSingletonLvl(lvl) || is2OutOf4Lvl(lvl));
+             isSingletonLvl(lvl) || isNOutOfMLvl(lvl));
       coordinates[lvl].push_back(detail::checkOverflowCast<C>(crd));
     } else { // Dense level.
       assert(crd >= full && "Coordinate was already filled");
@@ -465,15 +436,12 @@ private:
 
   /// Computes the assembled-size associated with the `l`-th level,
   /// given the assembled-size associated with the `(l-1)`-th level.
-  /// "Assembled-sizes" correspond to the (nominal) sizes of overhead
-  /// storage, as opposed to "level-sizes" which are the cardinality
-  /// of possible coordinates for that level.
   uint64_t assembledSize(uint64_t parentSz, uint64_t l) const {
     if (isCompressedLvl(l))
       return positions[l][parentSz];
     if (isLooseCompressedLvl(l))
       return positions[l][2 * parentSz - 1];
-    if (isSingletonLvl(l) || is2OutOf4Lvl(l))
+    if (isSingletonLvl(l) || isNOutOfMLvl(l))
       return parentSz; // new size same as the parent
     assert(isDenseLvl(l));
     return parentSz * getLvlSize(l);
@@ -527,7 +495,7 @@ private:
       uint64_t pos = coordinates[l].size();
       positions[l].insert(positions[l].end(), 2 * count,
                           detail::checkOverflowCast<P>(pos));
-    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
+    } else if (isSingletonLvl(l) || isNOutOfMLvl(l)) {
       return; // Nothing to finalize.
     } else {  // Dense dimension.
       assert(isDenseLvl(l));
@@ -592,58 +560,14 @@ private:
     return -1u;
   }
 
-  // Performs forall on level entries and inserts into dim COO.
-  void toCOO(uint64_t parentPos, uint64_t l, std::vector<uint64_t> &dimCoords) {
-    if (l == getLvlRank()) {
-      map.pushbackward(lvlCursor.data(), dimCoords.data());
-      assert(coo);
-      assert(parentPos < values.size());
-      coo->add(dimCoords, values[parentPos]);
-      return;
-    }
-    if (isCompressedLvl(l)) {
-      const std::vector<P> &positionsL = positions[l];
-      assert(parentPos + 1 < positionsL.size());
-      const uint64_t pstart = static_cast<uint64_t>(positionsL[parentPos]);
-      const uint64_t pstop = static_cast<uint64_t>(positionsL[parentPos + 1]);
-      const std::vector<C> &coordinatesL = coordinates[l];
-      assert(pstop <= coordinatesL.size());
-      for (uint64_t pos = pstart; pos < pstop; pos++) {
-        lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
-        toCOO(pos, l + 1, dimCoords);
-      }
-    } else if (isLooseCompressedLvl(l)) {
-      const std::vector<P> &positionsL = positions[l];
-      assert(2 * parentPos + 1 < positionsL.size());
-      const uint64_t pstart = static_cast<uint64_t>(positionsL[2 * parentPos]);
-      const uint64_t pstop =
-          static_cast<uint64_t>(positionsL[2 * parentPos + 1]);
-      const std::vector<C> &coordinatesL = coordinates[l];
-      assert(pstop <= coordinatesL.size());
-      for (uint64_t pos = pstart; pos < pstop; pos++) {
-        lvlCursor[l] = static_cast<uint64_t>(coordinatesL[pos]);
-        toCOO(pos, l + 1, dimCoords);
-      }
-    } else if (isSingletonLvl(l) || is2OutOf4Lvl(l)) {
-      assert(parentPos < coordinates[l].size());
-      lvlCursor[l] = static_cast<uint64_t>(coordinates[l][parentPos]);
-      toCOO(parentPos, l + 1, dimCoords);
-    } else { // Dense level.
-      assert(isDenseLvl(l));
-      const uint64_t sz = getLvlSizes()[l];
-      const uint64_t pstart = parentPos * sz;
-      for (uint64_t c = 0; c < sz; c++) {
-        lvlCursor[l] = c;
-        toCOO(pstart + c, l + 1, dimCoords);
-      }
-    }
-  }
-
+  // Sparse tensor storage components.
   std::vector<std::vector<P>> positions;
   std::vector<std::vector<C>> coordinates;
   std::vector<V> values;
+
+  // Auxiliary data structures.
   std::vector<uint64_t> lvlCursor;
-  SparseTensorCOO<V> *coo;
+  std::vector<C> crdBuffer; // just for AoS view
 };
 
 //===----------------------------------------------------------------------===//
@@ -656,13 +580,10 @@ template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
-    const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding) {
-  SparseTensorCOO<V> *lvlCOO = nullptr;
-  if (forwarding)
-    lvlCOO = new SparseTensorCOO<V>(lvlRank, lvlSizes);
+    const uint64_t *dim2lvl, const uint64_t *lvl2dim) {
+  SparseTensorCOO<V> *noLvlCOO = nullptr;
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
-                                          lvlTypes, dim2lvl, lvl2dim, lvlCOO,
-                                          !forwarding);
+                                          lvlTypes, dim2lvl, lvl2dim, noLvlCOO);
 }
 
 template <typename P, typename C, typename V>
@@ -670,13 +591,14 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
-    SparseTensorCOO<V> &lvlCOO) {
+    SparseTensorCOO<V> *lvlCOO) {
+  assert(lvlCOO);
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
                                           lvlTypes, dim2lvl, lvl2dim, lvlCOO);
 }
 
 template <typename P, typename C, typename V>
-SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
+SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromBuffers(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, uint64_t srcRank,
@@ -696,11 +618,9 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
     const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
-    SparseTensorCOO<V> *lvlCOO, bool initializeValuesIfAllDense)
+    SparseTensorCOO<V> *lvlCOO)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {
-  assert(!lvlCOO || lvlRank == lvlCOO->getRank());
-  coo = lvlCOO;
   // Provide hints on capacity of positions and coordinates.
   // TODO: needs much fine-tuning based on actual sparsity; currently
   // we reserve position/coordinate space based on all previous dense
@@ -721,8 +641,8 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
     } else if (isSingletonLvl(l)) {
       coordinates[l].reserve(sz);
       sz = 1;
-    } else if (is2OutOf4Lvl(l)) {
-      assert(l == lvlRank - 1 && "unexpected 2:4 usage");
+    } else if (isNOutOfMLvl(l)) {
+      assert(l == lvlRank - 1 && "unexpected n:m usage");
       sz = detail::checkedMul(sz, lvlSizes[l]) / 2;
       coordinates[l].reserve(sz);
       values.reserve(sz);
@@ -731,27 +651,20 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       sz = detail::checkedMul(sz, lvlSizes[l]);
     }
   }
-  if (allDense && initializeValuesIfAllDense)
+  if (lvlCOO) {
+    /* New from COO: ensure it is sorted. */
+    assert(lvlCOO->getRank() == lvlRank);
+    lvlCOO->sort();
+    // Now actually insert the `elements`.
+    const auto &elements = lvlCOO->getElements();
+    const uint64_t nse = elements.size();
+    assert(values.size() == 0);
+    values.reserve(nse);
+    fromCOO(elements, 0, nse, 0);
+  } else if (allDense) {
+    /* New empty (all dense) */
     values.resize(sz, 0);
-}
-
-template <typename P, typename C, typename V>
-SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
-    uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const LevelType *lvlTypes,
-    const uint64_t *dim2lvl, const uint64_t *lvl2dim,
-    SparseTensorCOO<V> &lvlCOO)
-    : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
-                          dim2lvl, lvl2dim, nullptr, false) {
-  // Ensure lvlCOO is sorted.
-  assert(lvlRank == lvlCOO.getRank());
-  lvlCOO.sort();
-  // Now actually insert the `elements`.
-  const auto &elements = lvlCOO.getElements();
-  const uint64_t nse = elements.size();
-  assert(values.size() == 0);
-  values.reserve(nse);
-  fromCOO(elements, 0, nse, 0);
+  }
 }
 
 template <typename P, typename C, typename V>
@@ -764,11 +677,6 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
   // Note that none of the buffers can be reused because ownership
   // of the memory passed from clients is not necessarily transferred.
   // Therefore, all data is copied over into a new SparseTensorStorage.
-  //
-  // TODO: this needs to be generalized to all formats AND
-  //       we need a proper audit of e.g. double compressed
-  //       levels where some are not filled
-  //
   uint64_t trailCOOLen = 0, parentSz = 1, bufIdx = 0;
   for (uint64_t l = 0; l < lvlRank; l++) {
     if (!isUniqueLvl(l) && (isCompressedLvl(l) || isLooseCompressedLvl(l))) {
@@ -791,8 +699,8 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
       }
     } else if (isSingletonLvl(l)) {
       assert(0 && "general singleton not supported yet");
-    } else if (is2OutOf4Lvl(l)) {
-      assert(0 && "2Out4 not supported yet");
+    } else if (isNOutOfMLvl(l)) {
+      assert(0 && "n ouf of m not supported yet");
     } else {
       assert(isDenseLvl(l));
     }

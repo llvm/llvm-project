@@ -1,4 +1,4 @@
-Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override. [OMP133]
+Call may contain unknown parallel regions. Use `[[omp::assume("omp_no_parallelism")]]` to override. [OMP133]
 ====================================================================================================================
 
 .. _omp133:
@@ -33,7 +33,7 @@ regions. This is typically coupled with the :ref:`OMP132 <omp132>` remark.
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp133.cpp
    omp133.cpp:6:5: remark: Call may contain unknown parallel regions. Use
-   `__attribute__((assume("omp_no_parallelism")))` to override. [OMP133]
+   `[[omp::assume("omp_no_parallelism")]]` to override. [OMP133]
    setup();
    ^
 
@@ -43,7 +43,7 @@ specialized state machine.
 
 .. code-block:: c++
 
-   __attribute__((assume("omp_no_parallelism"))) extern void setup();
+   [[omp::assume("omp_no_parallelism")]] extern void setup();
 
 
    void foo() {

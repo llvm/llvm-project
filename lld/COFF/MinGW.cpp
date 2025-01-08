@@ -50,7 +50,6 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
-      "libFortran_main",
       "libFortranRuntime",
       "libFortranDecimal",
       "libunwind",
@@ -171,13 +170,13 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   return !excludeObjects.count(fileName);
 }
 
-void lld::coff::writeDefFile(StringRef name,
+void lld::coff::writeDefFile(COFFLinkerContext &ctx, StringRef name,
                              const std::vector<Export> &exports) {
   llvm::TimeTraceScope timeScope("Write .def file");
   std::error_code ec;
   raw_fd_ostream os(name, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + name + ": " + ec.message());
+    Fatal(ctx) << "cannot open " << name << ": " << ec.message();
 
   os << "EXPORTS\n";
   for (const Export &e : exports) {

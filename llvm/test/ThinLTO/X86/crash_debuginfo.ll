@@ -4,6 +4,9 @@
 ; RUN: opt -passes=function-import,inline -summary-file %t-index.thinlto.bc %t-dst.bc -o %t.out
 ; RUN: llvm-nm -U %t.out | FileCheck %s --implicit-check-not=_bar
 
+; Ensure we can do the same thing in RemoveDIs mode.
+; RUN: opt -passes=function-import,inline -summary-file %t-index.thinlto.bc %t-dst.bc -o %t.out --try-experimental-debuginfo-iterators
+
 ; Verify that we import bar and inline it. It use to crash importing due to ODR type uniquing
 ; CHECK: _foo
 

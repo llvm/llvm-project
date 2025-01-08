@@ -13,14 +13,14 @@
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfNotSubtarget - Match if the current subtarget doesn't has a feature F.
 class CCIfNotSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("!static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("!State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfRegCallv4 - Match if RegCall ABIv4 is respected.
@@ -168,10 +168,6 @@ def CC_#NAME : CallingConv<[
     CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
     CCIfType<[i64, f64], CCAssignToStack<8, 4>>,
 
-    // MMX type gets 8 byte slot in stack , while alignment depends on target
-    CCIfSubtarget<"is64Bit()", CCIfType<[x86mmx], CCAssignToStack<8, 8>>>,
-    CCIfType<[x86mmx], CCAssignToStack<8, 4>>,
-
     // float 128 get stack slots whose size and alignment depends 
     // on the subtarget.
     CCIfType<[f80, f128], CCAssignToStack<0, 0>>,
@@ -286,10 +282,6 @@ def RetCC_X86Common : CallingConv<[
   CCIfType<[v64i8, v32i16, v16i32, v8i64, v32f16, v16f32, v8f64],
             CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
-  // MMX vector types are always returned in MM0. If the target doesn't have
-  // MM0, it doesn't support these vector types.
-  CCIfType<[x86mmx], CCAssignToReg<[MM0]>>,
-
   // Long double types are always returned in FP0 (even with SSE),
   // except on Win64.
   CCIfNotSubtarget<"isTargetWin64()", CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>
@@ -376,9 +368,6 @@ def RetCC_X86_64_C : CallingConv<[
   CCIfType<[f64], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f128], CCAssignToReg<[XMM0, XMM1]>>,
 
-  // MMX vector types are always returned in XMM0.
-  CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1]>>,
-
   // Pointers are always returned in full 64-bit registers.
   CCIfPtr<CCCustom<"CC_X86_64_Pointer">>,
 
@@ -389,9 +378,6 @@ def RetCC_X86_64_C : CallingConv<[
 
 // X86-Win64 C return-value convention.
 def RetCC_X86_Win64_C : CallingConv<[
-  // The X86-Win64 calling convention always returns __m64 values in RAX.
-  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
-
   // GCC returns FP values in RAX on Win64.
   CCIfType<[f32], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i32>>>,
   CCIfType<[f64], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i64>>>,
@@ -436,8 +422,6 @@ def RetCC_X86_64_Swift : CallingConv<[
   CCIfType<[f64], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
   CCIfType<[f128], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
 
-  // MMX vector types are returned in XMM0, XMM1, XMM2 and XMM3.
-  CCIfType<[x86mmx], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
   CCDelegateTo<RetCC_X86Common>
 ]>;
 
@@ -572,12 +556,6 @@ def CC_X86_64_C : CallingConv<[
 
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
 
-  // The first 8 MMX vector arguments are passed in XMM registers on Darwin.
-  CCIfType<[x86mmx],
-            CCIfSubtarget<"isTargetDarwin()",
-            CCIfSubtarget<"hasSSE2()",
-            CCPromoteToType<v2i64>>>>,
-
   // Boolean vectors of AVX-512 are passed in SIMD registers.
   // The call from AVX to AVX-512 function should work,
   // since the boolean types in AVX/AVX2 are promoted by default.
@@ -665,9 +643,6 @@ def CC_X86_Win64_C : CallingConv<[
 
   // Long doubles are passed by pointer
   CCIfType<[f80], CCPassIndirect<i64>>,
-
-  // The first 4 MMX vector arguments are passed in GPRs.
-  CCIfType<[x86mmx], CCBitConvertToType<i64>>,
 
   // If SSE was disabled, pass FP values smaller than 64-bits as integers in
   // GPRs or on the stack.
@@ -843,11 +818,6 @@ def CC_X86_32_Common : CallingConv<[
 
   CCIfNotVarArg<CCIfInReg<CCIfType<[f16], CCAssignToReg<[XMM0,XMM1,XMM2]>>>>,
 
-  // The first 3 __m64 vector arguments are passed in mmx registers if the
-  // call is not a vararg call.
-  CCIfNotVarArg<CCIfType<[x86mmx],
-                CCAssignToReg<[MM0, MM1, MM2]>>>,
-
   CCIfType<[f16], CCAssignToStack<4, 4>>,
 
   // Integer/Float values get stored in stack slots that are 4 bytes in
@@ -869,10 +839,6 @@ def CC_X86_32_Common : CallingConv<[
   CCIfType<[v16i1], CCPromoteToType<v16i8>>,
   CCIfType<[v32i1], CCPromoteToType<v32i8>>,
   CCIfType<[v64i1], CCPromoteToType<v64i8>>,
-
-  // __m64 vectors get 8-byte stack slots that are 4-byte aligned. They are
-  // passed in the parameter area.
-  CCIfType<[x86mmx], CCAssignToStack<8, 4>>,
 
   // Darwin passes vectors in a form that differs from the i386 psABI
   CCIfSubtarget<"isTargetDarwin()", CCDelegateTo<CC_X86_32_Vector_Darwin>>,
@@ -1056,6 +1022,25 @@ def CC_Intel_OCL_BI : CallingConv<[
   CCDelegateTo<CC_X86_32_C>
 ]>;
 
+def CC_X86_64_Preserve_None : CallingConv<[
+  // We don't preserve general registers, so all of them can be used to pass
+  // arguments except
+  //   - RBP        frame pointer
+  //   - R10        'nest' parameter
+  //   - RBX        base pointer
+  //   - R16 - R31  these are not available everywhere
+  // Use non-volatile registers first, so functions using this convention can
+  // call "normal" functions without saving and restoring incoming values:
+  CCIfType<[i32], CCAssignToReg<[R12D, R13D, R14D, R15D, EDI, ESI,
+                                 EDX, ECX, R8D, R9D, R11D, EAX]>>,
+
+  CCIfType<[i64], CCAssignToReg<[R12, R13, R14, R15, RDI, RSI,
+                                 RDX, RCX, R8, R9, R11, RAX]>>,
+
+  // Otherwise it's the same as the regular C calling convention.
+  CCDelegateTo<CC_X86_64_C>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -1095,6 +1080,7 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
 
   // Mingw64 and native Win64 use Win64 CC
@@ -1117,6 +1103,9 @@ def CC_X86 : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_IPRA_32 : CalleeSavedRegs<(add EBP, ESI)>;
+def CSR_IPRA_64 : CalleeSavedRegs<(add RBP, RBX)>;
 
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;
@@ -1184,6 +1173,7 @@ def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                       (sequence "ZMM%u", 0, 31),
                                                       (sequence "K%u", 0, 7)),
                                                  (sequence "XMM%u", 0, 15))>;
+def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,

@@ -596,3 +596,129 @@ define i16 @and_elide_poison_flags_missing_noundef(i16 %a) {
   %sel = select i1 %cmp, i16 %and, i16 24
   ret i16 %sel
 }
+
+define i32 @pr87854(i32 noundef %x.1, i32 noundef %i) {
+; CHECK-LABEL: @pr87854(
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X_1:%.*]], -1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[INBOUNDS:%.*]] = icmp ult i32 [[I:%.*]], [[X_1]]
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[INBOUNDS]], i32 [[NEXT]], i32 -1
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  %cond = icmp sgt i32 %x.1, -1
+  tail call void @llvm.assume(i1 %cond)
+  %inbounds = icmp ult i32 %i, %x.1
+  %next = add i32 %i, 1
+  %spec.select = select i1 %inbounds, i32 %next, i32 -1
+  ret i32 %spec.select
+}
+
+define i64 @test_shl_nsw_at_use(i64 noundef %x) {
+; CHECK-LABEL: @test_shl_nsw_at_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X:%.*]], 2147483648
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 4294967296
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[X]], 32
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i64 [[SHL]], 32
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i64 [[SHR]], i64 0
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %add = add i64 %x, 2147483648
+  %cmp = icmp ult i64 %add, 4294967296
+  %shl = shl i64 %x, 32
+  %shr = ashr exact i64 %shl, 32
+  %res = select i1 %cmp, i64 %shr, i64 0
+  ret i64 %res
+}
+
+define i1 @test_icmp_mod(i64 noundef %x) {
+; CHECK-LABEL: @test_icmp_mod(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X:%.*]], 86400
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[REM]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 86400, i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[COND]], [[REM]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %rem = srem i64 %x, 86400
+  %cmp = icmp slt i64 %rem, 0
+  %cond = select i1 %cmp, i64 86400, i64 0
+  %add = add nsw i64 %cond, %rem
+  %cmp1 = icmp ugt i64 %add, 86399
+  ret i1 %cmp1
+}
+
+define i1 @test_icmp_mod_commuted1(i64 noundef %x) {
+; CHECK-LABEL: @test_icmp_mod_commuted1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X:%.*]], 86400
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[REM]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 86400, i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[REM]], [[COND]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %rem = srem i64 %x, 86400
+  %cmp = icmp slt i64 %rem, 0
+  %cond = select i1 %cmp, i64 86400, i64 0
+  %add = add nsw i64 %rem, %cond
+  %cmp1 = icmp ugt i64 %add, 86399
+  ret i1 %cmp1
+}
+
+define i1 @test_icmp_mod_commuted2(i64 noundef %x) {
+; CHECK-LABEL: @test_icmp_mod_commuted2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X:%.*]], 86400
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[REM]], -1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 0, i64 86400
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[COND]], [[REM]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %rem = srem i64 %x, 86400
+  %cmp = icmp sgt i64 %rem, -1
+  %cond = select i1 %cmp, i64 0, i64 86400
+  %add = add nsw i64 %cond, %rem
+  %cmp1 = icmp ugt i64 %add, 86399
+  ret i1 %cmp1
+}
+
+define i1 @test_icmp_mod_undef(i64 %x) {
+; CHECK-LABEL: @test_icmp_mod_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X:%.*]], 86400
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[REM]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 86400, i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[COND]], [[REM]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[ADD]], 86399
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %rem = srem i64 %x, 86400
+  %cmp = icmp slt i64 %rem, 0
+  %cond = select i1 %cmp, i64 86400, i64 0
+  %add = add nsw i64 %cond, %rem
+  %cmp1 = icmp ugt i64 %add, 86399
+  ret i1 %cmp1
+}
+
+define i1 @test_icmp_mod_wrong_range(i64 noundef %x) {
+; CHECK-LABEL: @test_icmp_mod_wrong_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[X:%.*]], 86400
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[REM]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i64 86401, i64 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[COND]], [[REM]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i64 [[ADD]], 86399
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %rem = srem i64 %x, 86400
+  %cmp = icmp slt i64 %rem, 0
+  %cond = select i1 %cmp, i64 86401, i64 0
+  %add = add nsw i64 %cond, %rem
+  %cmp1 = icmp ugt i64 %add, 86399
+  ret i1 %cmp1
+}

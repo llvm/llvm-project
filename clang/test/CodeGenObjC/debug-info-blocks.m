@@ -5,15 +5,15 @@
 
 // CHECK: define {{.*}}_block_invoke
 // CHECK: store ptr %.block_descriptor, ptr %[[ALLOCA:block.addr]], align
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %d, metadata ![[D:[0-9]+]], metadata !{{.*}})
+// CHECK-NEXT: #dbg_declare(ptr %d, ![[D:[0-9]+]], !{{.*}})
+// CHECK-NEXT: #dbg_declare(ptr %[[ALLOCA]], ![[SELF:[0-9]+]], !{{.*}})
 
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
 // doesn't accidentally step into the function).
 // CHECK: define {{.*}} @__copy_helper_block_{{.*}}(ptr noundef %0, ptr noundef %1)
 // CHECK-NOT: ret
-// CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
+// CHECK: #dbg_declare({{.+}},  ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DBG_LINE]]
 // CHECK: ret {{.*}}, !dbg ![[DBG_LINE]]

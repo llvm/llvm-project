@@ -13,10 +13,73 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <numeric>
 
 using namespace mlir;
+
+std::optional<SmallVector<OpFoldResult>>
+mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
+                                  ShapedType expandedType,
+                                  ArrayRef<ReassociationIndices> reassociation,
+                                  ArrayRef<OpFoldResult> inputShape) {
+
+  SmallVector<Value> outputShapeValues;
+  SmallVector<int64_t> outputShapeInts;
+  // For zero-rank inputs, all dims in result shape are unit extent.
+  if (inputShape.empty()) {
+    outputShapeInts.resize(expandedType.getRank(), 1);
+    return getMixedValues(outputShapeInts, outputShapeValues, b);
+  }
+
+  // Check for all static shapes.
+  if (expandedType.hasStaticShape()) {
+    ArrayRef<int64_t> staticShape = expandedType.getShape();
+    outputShapeInts.assign(staticShape.begin(), staticShape.end());
+    return getMixedValues(outputShapeInts, outputShapeValues, b);
+  }
+
+  outputShapeInts.resize(expandedType.getRank(), ShapedType::kDynamic);
+  for (const auto &it : llvm::enumerate(reassociation)) {
+    ReassociationIndices indexGroup = it.value();
+
+    int64_t indexGroupStaticSizesProductInt = 1;
+    bool foundDynamicShape = false;
+    for (int64_t index : indexGroup) {
+      int64_t outputDimSize = expandedType.getDimSize(index);
+      // Cannot infer expanded shape with multiple dynamic dims in the
+      // same reassociation group!
+      if (ShapedType::isDynamic(outputDimSize)) {
+        if (foundDynamicShape)
+          return std::nullopt;
+        foundDynamicShape = true;
+      } else {
+        outputShapeInts[index] = outputDimSize;
+        indexGroupStaticSizesProductInt *= outputDimSize;
+      }
+    }
+    if (!foundDynamicShape)
+      continue;
+
+    int64_t inputIndex = it.index();
+    // Call get<Value>() under the assumption that we're not casting
+    // dynamism.
+    Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
+    Value indexGroupStaticSizesProduct =
+        b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
+    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+        loc, indexGroupSize, indexGroupStaticSizesProduct);
+    outputShapeValues.push_back(dynamicDimSize);
+  }
+
+  if ((int64_t)outputShapeValues.size() !=
+      llvm::count(outputShapeInts, ShapedType::kDynamic))
+    return std::nullopt;
+
+  return getMixedValues(outputShapeInts, outputShapeValues, b);
+}
 
 /// Matches a ConstantIndexOp.
 /// TODO: This should probably just be a general matcher that uses matchConstant
@@ -37,12 +100,20 @@ llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,
   return dimsToProject;
 }
 
+Value mlir::getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
+                                          OpFoldResult ofr) {
+  if (auto value = dyn_cast_if_present<Value>(ofr))
+    return value;
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+  return b.create<arith::ConstantOp>(
+      loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
+}
+
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                             OpFoldResult ofr) {
-  if (auto value = llvm::dyn_cast_if_present<Value>(ofr))
+  if (auto value = dyn_cast_if_present<Value>(ofr))
     return value;
-  auto attr = dyn_cast<IntegerAttr>(llvm::dyn_cast_if_present<Attribute>(ofr));
-  assert(attr && "expect the op fold result casts to an integer attribute");
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
   return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }
 
@@ -197,6 +268,47 @@ mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
       }));
 }
 
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, const APInt &value) {
+  TypedAttr attr;
+  if (isa<IntegerType>(type)) {
+    attr = builder.getIntegerAttr(type, value);
+  } else {
+    auto vecTy = cast<ShapedType>(type);
+    attr = SplatElementsAttr::get(vecTy, value);
+  }
+
+  return builder.create<arith::ConstantOp>(loc, attr);
+}
+
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, int64_t value) {
+  unsigned elementBitWidth = 0;
+  if (auto intTy = dyn_cast<IntegerType>(type))
+    elementBitWidth = intTy.getWidth();
+  else
+    elementBitWidth = cast<ShapedType>(type).getElementTypeBitWidth();
+
+  return createScalarOrSplatConstant(builder, loc, type,
+                                     APInt(elementBitWidth, value));
+}
+
+Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
+                                        Type type, const APFloat &value) {
+  if (isa<FloatType>(type))
+    return builder.createOrFold<arith::ConstantOp>(
+        loc, type, builder.getFloatAttr(type, value));
+  TypedAttr splat = SplatElementsAttr::get(cast<ShapedType>(type), value);
+  return builder.createOrFold<arith::ConstantOp>(loc, type, splat);
+}
+
+Type mlir::getType(OpFoldResult ofr) {
+  if (auto value = dyn_cast_if_present<Value>(ofr))
+    return value.getType();
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+  return attr.getType();
+}
+
 Value ArithBuilder::_and(Value lhs, Value rhs) {
   return b.create<arith::AndIOp>(loc, lhs, rhs);
 }
@@ -228,3 +340,44 @@ Value ArithBuilder::slt(Value lhs, Value rhs) {
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
   return b.create<arith::SelectOp>(loc, cmp, lhs, rhs);
 }
+
+namespace mlir::arith {
+
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values) {
+  return createProduct(builder, loc, values, values.front().getType());
+}
+
+Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
+                    Type resultType) {
+  Value one = builder.create<ConstantOp>(loc, resultType,
+                                         builder.getOneAttr(resultType));
+  ArithBuilder arithBuilder(builder, loc);
+  return std::accumulate(
+      values.begin(), values.end(), one,
+      [&arithBuilder](Value acc, Value v) { return arithBuilder.mul(acc, v); });
+}
+
+/// Map strings to float types.
+std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
+  Builder b(ctx);
+  return llvm::StringSwitch<std::optional<FloatType>>(name)
+      .Case("f4E2M1FN", b.getFloat4E2M1FNType())
+      .Case("f6E2M3FN", b.getFloat6E2M3FNType())
+      .Case("f6E3M2FN", b.getFloat6E3M2FNType())
+      .Case("f8E5M2", b.getFloat8E5M2Type())
+      .Case("f8E4M3", b.getFloat8E4M3Type())
+      .Case("f8E4M3FN", b.getFloat8E4M3FNType())
+      .Case("f8E5M2FNUZ", b.getFloat8E5M2FNUZType())
+      .Case("f8E4M3FNUZ", b.getFloat8E4M3FNUZType())
+      .Case("f8E3M4", b.getFloat8E3M4Type())
+      .Case("f8E8M0FNU", b.getFloat8E8M0FNUType())
+      .Case("bf16", b.getBF16Type())
+      .Case("f16", b.getF16Type())
+      .Case("f32", b.getF32Type())
+      .Case("f64", b.getF64Type())
+      .Case("f80", b.getF80Type())
+      .Case("f128", b.getF128Type())
+      .Default(std::nullopt);
+}
+
+} // namespace mlir::arith

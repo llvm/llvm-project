@@ -107,6 +107,15 @@ public:
     eRISCVSubType_riscv64,
   };
 
+  enum LoongArcheflags {
+    eLoongArch_abi_soft_float = 0x00000000, /// soft float
+    eLoongArch_abi_single_float =
+        0x00000001, /// single precision floating point, +f
+    eLoongArch_abi_double_float =
+        0x00000002, /// double precision floating point, +d
+    eLoongArch_abi_mask = 0x00000003,
+  };
+
   enum LoongArchSubType {
     eLoongArchSubType_unknown,
     eLoongArchSubType_loongarch32,
@@ -123,6 +132,7 @@ public:
     eCore_arm_armv6,
     eCore_arm_armv6m,
     eCore_arm_armv7,
+    eCore_arm_armv7a,
     eCore_arm_armv7l,
     eCore_arm_armv7f,
     eCore_arm_armv7s,
@@ -145,6 +155,7 @@ public:
     eCore_thumbv7em,
     eCore_arm_arm64,
     eCore_arm_armv8,
+    eCore_arm_armv8a,
     eCore_arm_armv8l,
     eCore_arm_arm64e,
     eCore_arm_arm64_32,
@@ -504,11 +515,6 @@ public:
   }
 
   bool IsFullySpecifiedTriple() const;
-
-  void PiecewiseTripleCompare(const ArchSpec &other, bool &arch_different,
-                              bool &vendor_different, bool &os_different,
-                              bool &os_version_different,
-                              bool &env_different) const;
 
   /// Detect whether this architecture uses thumb code exclusively
   ///

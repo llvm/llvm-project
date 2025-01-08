@@ -10,13 +10,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "XCoreTargetMachine.h"
-#include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "TargetInfo/XCoreTargetInfo.h"
 #include "XCore.h"
 #include "XCoreMachineFunctionInfo.h"
 #include "XCoreTargetObjectFile.h"
 #include "XCoreTargetTransformInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -48,7 +46,7 @@ XCoreTargetMachine::XCoreTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T, "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32",
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveXCoreCodeModel(CM), OL),
@@ -84,7 +82,7 @@ TargetPassConfig *XCoreTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void XCorePassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -107,7 +105,7 @@ void XCorePassConfig::addPreEmitPass() {
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   RegisterTargetMachine<XCoreTargetMachine> X(getTheXCoreTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeXCoreDAGToDAGISelPass(PR);
+  initializeXCoreDAGToDAGISelLegacyPass(PR);
 }
 
 TargetTransformInfo

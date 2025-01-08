@@ -115,7 +115,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Unevaluated strings</td>
   <td><a href="https://wg21.link/P2361R6">P2361R6</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Add @, $, and ` to the basic character set</td>
@@ -130,7 +130,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>On the ignorability of standard attributes</td>
   <td><a href="https://wg21.link/P2552R3">P2552R3</a> (<a href="#dr">DR</a>)</td>
-  <td class="none" align="center">No</td>
+  <td class="full" align="center">Yes</td>
  </tr>
  <tr>
   <td>Static storage for braced initializers</td>
@@ -145,25 +145,112 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Placeholder variables with no name</td>
   <td><a href="https://wg21.link/P2169R4">P2169R4</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <!-- Fall 2023 papers (Kona) -->
  <tr>
   <td>Template parameter initialization</td>
   <td><a href="https://wg21.link/P2308R1">P2308R1</a> (<a href="#dr">DR</a>)</td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
  <tr>
   <td>Pack Indexing</td>
   <td><a href="https://wg21.link/P2662R3">P2662R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="full" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Remove Deprecated Arithmetic Conversion on Enumerations</td>
   <td><a href="https://wg21.link/P2864R2">P2864R2</a></td>
-  <td class="unreleased" align="center">Clang 18</td>
+  <td class="full" align="center">Clang 18</td>
  </tr>
-
+ <!-- Winter 2024 papers (Tokyo) -->
+ <tr>
+  <td>Disallow Binding a Returned Glvalue to a Temporary</td>
+  <td><a href="https://wg21.link/P2748R5">P2748R5</a></td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Clarifying rules for brace elision in aggregate initialization</td>
+  <td><a href="https://wg21.link/P3106R1">P3106R1</a> (<a href="#dr">DR</a>)</td>
+  <td class="full" align="center">Clang 17</td>
+ </tr>
+ <tr>
+  <td>Attributes for Structured Bindings</td>
+  <td><a href="https://wg21.link/P0609R3">P0609R3</a></td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Module Declarations Shouldn’t be Macros</td>
+  <td><a href="https://wg21.link/P3034R1">P3034R1</a> (<a href="#dr">DR</a>)</td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Trivial infinite loops are not Undefined Behavior</td>
+  <td><a href="https://wg21.link/P2809R3">P2809R3</a> (<a href="#dr">DR</a>)</td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Erroneous behaviour for uninitialized reads</td>
+  <td><a href="https://wg21.link/P2795R5">P2795R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td><tt>= delete("should have a reason");</tt></td>
+  <td><a href="https://wg21.link/P2573R2">P2573R2</a></td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Variadic friends</td>
+  <td><a href="https://wg21.link/P2893R3">P2893R3</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
+ <!-- Summer 2024 papers (St Louis) -->
+ <tr>
+  <td><tt>constexpr</tt> placement new</td>
+  <td><a href="https://wg21.link/P2747R2">P2747R2</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
+ <tr>
+  <td>Deleting a Pointer to an Incomplete Type Should be Ill-formed</td>
+  <td><a href="https://wg21.link/P3144">P3144R2</a></td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Ordering of constraints involving fold expressions</td>
+  <td><a href="https://wg21.link/P2963R3">P2963R3</a></td>
+  <td class="full" align="center">Clang 19</td>
+ </tr>
+ <tr>
+  <td>Structured binding declaration as a condition</td>
+  <td><a href="https://wg21.link/P0963R3">P0963R3</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <!--Poland, Fall 2024-->
+ <tr>
+  <td>constexpr structured bindings</td>
+  <td><a href="https://wg21.link/P2686R5">P2686R5</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Allowing exception throwing in constant-evaluation</td>
+  <td><a href="https://wg21.link/P3068R6">P3068R6</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>Remove Deprecated Array Comparisons from C++26</td>
+  <td><a href="https://wg21.link/P2865R6">P2865R6</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
+ <tr>
+  <td>Structured Bindings can introduce a Pack</td>
+  <td><a href="https://wg21.link/P1061R10">P1061R10</a></td>
+  <td class="none" align="center">No</td>
+ </tr>
+ <tr>
+  <td>The Oxford variadic comma</td>
+  <td><a href="https://wg21.link/P3176R1">P3176R1</a></td>
+  <td class="unreleased" align="center">Clang 20</td>
+ </tr>
 </table>
 </details>
 
@@ -197,7 +284,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Simpler implicit move</td>
-      <td><a href="https://wg21.link/p2266r1">P2266R1</a></td>
+      <td><a href="https://wg21.link/p2266R3">P2266R3</a></td>
       <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
@@ -207,7 +294,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Allow duplicate attributes</td>
-      <td><a href="https://wg21.link/P2156R1">P2156R1</a></td>
+      <td><a href="https://wg21.link/P2156R1">P2156R1</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
@@ -227,7 +314,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>C++ identifier syntax using UAX 31</td>
-      <td><a href="https://wg21.link/P1949R7">P1949R7</a></td>
+      <td><a href="https://wg21.link/P1949R7">P1949R7</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
@@ -239,19 +326,19 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Deducing this</td>
       <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
-      <td class="unreleased" align="center">Clang 18</td>
+      <td class="full" align="center">Clang 18</td>
     </tr>
     <tr>
       <td><a href="https://wg21.link/P2797R0">P2797R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 19</td>
     </tr>
     <tr>
       <td rowspan=2>Change scope of lambda trailing-return-type</td>
-      <td><a href="https://wg21.link/P2036R3">P2036R3</a></td>
+      <td><a href="https://wg21.link/P2036R3">P2036R3</a> (<a href="#dr">DR</a>)</td>
       <td rowspan=2 class="full" align="center">Clang 17</td>
     </tr>
     <tr>
-      <td><a href="https://wg21.link/P2579R0">P2579R0</a></td>
+      <td><a href="https://wg21.link/P2579R0">P2579R0</a> (<a href="#dr">DR</a>)</td>
     </tr>
     <tr>
       <td>Multidimensional subscript operator</td>
@@ -307,25 +394,17 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Type trait to determine if a reference binds to a temporary</td>
       <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
-      <td class="partial" align="center">
-        <details><summary>Partial</summary>
-          Clang provides <tt>__reference_constructs_from_temporary</tt> type
-          trait builtin, with which <tt>std::reference_constructs_from_temporary</tt>
-          is implemented. <tt>__reference_converts_from_temporary</tt> needs to be
-          provided, following the normal cross-vendor convention to implement
-          traits requiring compiler support directly.
-        </details></td>
-      </td>
+      <td class="full" align="center">Clang 19</td>
     </tr>
     <!-- July 2022 papers -->
     <tr>
       <td>The Equality Operator You Are Looking For</td>
-      <td><a href="https://wg21.link/P2468R2">P2468R2</a></td>
+      <td><a href="https://wg21.link/P2468R2">P2468R2</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>De-deprecating volatile compound operations</td>
-      <td><a href="https://wg21.link/P2327R1">P2327R1</a></td>
+      <td><a href="https://wg21.link/P2327R1">P2327R1</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
@@ -356,14 +435,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Relaxing some constexpr restrictions</td>
       <td><a href="https://wg21.link/P2448R2">P2448R2</a></td>
-      <td class="partial" align="center">
-        <details><summary>Clang 17 (Partial)</summary>
-	  We do not support outside of defaulted special memeber functions the change that constexpr functions no
-          longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
-          functions. Which include allowing non-literal types as return values and parameters, allow calling of
-          non-constexpr functions and constructors.
-        </details></td>
-      </td>
+      <td class="full" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
@@ -388,7 +460,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Portable assumptions</td>
       <td><a href="https://wg21.link/P1774R8">P1774R8</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 19</td>
     </tr>
     <tr>
       <td>Support for UTF-8 as a portable source file encoding</td>
@@ -397,12 +469,12 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td><code>char8_t</code> Compatibility and Portability Fix</td>
-      <td><a href="https://wg21.link/P2513R3">P2513R3</a></td>
+      <td><a href="https://wg21.link/P2513R3">P2513R3</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Relax requirements on <code>wchar_t</code> to match existing practices</td>
-      <td><a href="https://wg21.link/P2460R2">P2460R2</a></td>
+      <td><a href="https://wg21.link/P2460R2">P2460R2</a> (<a href="#dr">DR</a>)</td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
@@ -429,7 +501,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
       <td><a href="https://wg21.link/P2718R0">P2718R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 20</td>
     </tr>
     <!--Issaquah 2023 papers-->
     <tr>
@@ -511,16 +583,8 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
-        <td rowspan="1" class="partial" align="center">
-          <details>
-            <summary>Clang 16 (Partial)</summary>
-            Because of other concepts implementation deficits, the __cpp_concepts macro is not yet set to 202002L.
-            Also, the related defect reports <a href="https://wg21.link/cwg1496">DR1496</a> and
-            <a href="https://wg21.link/cwg1734">DR1734</a> are not yet implemented. Accordingly, deleted
-            special member functions are treated as eligible even though they shouldn't be.
-          </details>
-        </td>
-        </tr>
+        <td rowspan="1" class="full" align="center">Clang 19</td>
+      </tr>
       <tr>
         <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
         <td rowspan="2" class="full" align="center">Clang 10</td>
@@ -539,7 +603,7 @@ C++23, informally referred to as C++26.</p>
         <td><a href="https://wg21.link/p2103r0">P2103R0</a></td>
       </tr>
       <tr> <!-- from February 2022 -->
-        <td><a href="https://wg21.link/p2493r0">P2493R0</a></td>
+        <td><a href="https://wg21.link/p2493r0">P2493R0</a> (<a href="#dr">DR</a>)</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
@@ -637,13 +701,21 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <!-- Rapperswil papers -->
     <tr>
-      <td rowspan="2">Class types as non-type template parameters</td>
+      <td>Class types as non-type template parameters</td>
       <td><a href="https://wg21.link/p0732r2">P0732R2</a></td>
-      <td rowspan="2" class="partial" align="center">Partial</td>
+      <td class="full" align="center">Clang 12</td>
     </tr>
-      <tr> <!-- from Belfast -->
-        <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
-      </tr>
+    <tr> <!-- from Belfast -->
+      <td>Generalized non-type template parameters of scalar type</td>
+      <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 18 (Partial)</summary>
+          Reference type template arguments referring to instantiation-dependent objects and subobjects
+          (i.e. declared inside a template but neither type- nor value-dependent) aren't fully supported.
+        </details>
+      </td>
+    </tr>
     <tr>
       <td>Destroying operator delete</td>
       <td><a href="https://wg21.link/p0722r3">P0722R3</a></td>
@@ -835,7 +907,13 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Class template argument deduction for alias templates</td>
       <td><a href="https://wg21.link/p1814r0">P1814R0</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+          This feature has been initially completed, but the feature macro
+          __cpp_deduction_guides has not been updated.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
@@ -877,7 +955,7 @@ C++23, informally referred to as C++26.</p>
 You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
 
-<details open>
+<details>
 <summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
@@ -1094,8 +1172,8 @@ You can use Clang in C++17 mode with the <code>-std=c++17</code> option
     <!-- Issaquah 2016 papers -->
     <tr>
       <td>Matching template template parameters to compatible arguments</td>
-      <td><a href="https://wg21.link/p0522r0">P0522R0</a></td>
-      <td class="partial" align="center">Partial <a href="#p0522">(10)</a></td>
+      <td><a href="https://wg21.link/p0522r0">P0522R0</a> (<a href="#dr">DR</a>)</td>
+      <td class="full" align="center">Clang 19 <a href="#p0522">(10)</a></td>
     </tr>
     <tr>
       <td>Removing deprecated dynamic exception specifications</td>
@@ -1123,13 +1201,11 @@ functions using expression syntax are no longer guaranteed to be destroyed in
 reverse construction order in that ABI.
 This is not fully supported during constant expression evaluation until Clang 12.
 </span><br>
-<span id="p0522">(10): Despite being the resolution to a Defect Report, this
-feature is disabled by default in all language versions, and can be enabled
-explicitly with the flag <tt>-frelaxed-template-template-args</tt> in Clang 4
-onwards.
-The change to the standard lacks a corresponding change for template partial
-ordering, resulting in ambiguity errors for reasonable and previously-valid
-code. This issue is expected to be rectified soon.
+<span id="p0522">(10): While this feature was initially implemented in Clang 4,
+it was not enabled by default prior to clang 19, but could be enabled with
+<tt>-frelaxed-template-template-args</tt>.
+Starting from Clang 19, the flag is deprecated and will be removed in a future
+version.
 </span>
 </p>
 </details>
@@ -1219,12 +1295,11 @@ code. This issue is expected to be rectified soon.
 </table>
 
 <p>
-<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
-if the user passes the <code>-fsized-deallocation</code> flag. The user must
-supply definitions of the sized deallocation functions, either by providing them
-explicitly or by using a C++ standard library that does. <code>libstdc++</code>
-added these functions in version 5.0, and <code>libc++</code> added them in
-version 3.7.
+<span id="n3778">(7): The user must supply definitions of the sized deallocation
+  functions, either by providing them explicitly or by using a C++ standard library
+  that does. <code>libstdc++</code> added these functions in version 5.0, and
+  <code>libc++</code> added them in version 3.7. The user can also use the
+  <code>-fno-sized-deallocation</code> option to disable sized deallocation.
 </span>
 </p>
 </details>

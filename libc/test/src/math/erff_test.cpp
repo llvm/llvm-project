@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/erff.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcErffTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -36,7 +35,7 @@ TEST_F(LlvmLibcErffTest, TrickyInputs) {
       0x4004'1e6aU, // |x| = 0x1.083cd4p+1f
   };
   for (int i = 0; i < N; ++i) {
-    float x = float(FPBits(INPUTS[i]));
+    float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, x,
                                    LIBC_NAMESPACE::erff(x), 0.5);
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Erf, -x,
@@ -64,12 +63,12 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x))
+      if (FPBits(v).is_nan())
         continue;
 
       float result = LIBC_NAMESPACE::erff(x);
       ++cc;
-      if (isnan(result))
+      if (FPBits(result).is_nan())
         continue;
 
       ++count;

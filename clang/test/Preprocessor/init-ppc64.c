@@ -632,6 +632,27 @@
 // PPCPOWER10:#define __PCREL__ 1
 // PPCPOWER10-NOT:#define __ROP_PROTECT__ 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr11 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER11 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power11 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER11 %s
+//
+// PPCPOWER11:#define _ARCH_PPC 1
+// PPCPOWER11:#define _ARCH_PPC64 1
+// PPCPOWER11:#define _ARCH_PPCGR 1
+// PPCPOWER11:#define _ARCH_PPCSQ 1
+// PPCPOWER11:#define _ARCH_PWR10 1
+// PPCPOWER11:#define _ARCH_PWR11 1
+// PPCPOWER11:#define _ARCH_PWR4 1
+// PPCPOWER11:#define _ARCH_PWR5 1
+// PPCPOWER11:#define _ARCH_PWR5X 1
+// PPCPOWER11:#define _ARCH_PWR6 1
+// PPCPOWER11-NOT:#define _ARCH_PWR6X 1
+// PPCPOWER11:#define _ARCH_PWR7 1
+// PPCPOWER11:#define _ARCH_PWR8 1
+// PPCPOWER11:#define _ARCH_PWR9 1
+// PPCPOWER11:#define __MMA__ 1
+// PPCPOWER11:#define __PCREL__ 1
+// PPCPOWER11-NOT:#define __ROP_PROTECT__ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
 //
 // PPCFUTURE:#define _ARCH_PPC 1
@@ -639,6 +660,7 @@
 // PPCFUTURE:#define _ARCH_PPCGR 1
 // PPCFUTURE:#define _ARCH_PPCSQ 1
 // PPCFUTURE:#define _ARCH_PWR10 1
+// PPCFUTURE:#define _ARCH_PWR11 1
 // PPCFUTURE:#define _ARCH_PWR4 1
 // PPCFUTURE:#define _ARCH_PWR5 1
 // PPCFUTURE:#define _ARCH_PWR5X 1
@@ -1088,3 +1110,21 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-freebsd < /dev/null | FileCheck -match-full-lines -check-prefix PPC64-FREEBSD %s
 // PPC64-FREEBSD-NOT: #define __LONG_DOUBLE_128__ 1
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix PPC64PWR4-RSQRT %s
+//
+// PPC64PWR4-RSQRT-NOT:#define __RSQRTEF__ 1
+// PPC64PWR4-RSQRT-NOT:#define __RSQRTE__ 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +frsqrte -target-feature +frsqrtes < /dev/null | FileCheck -match-full-lines -check-prefix PPC64PWR5-RSQRT %s
+//
+// PPC64PWR5-RSQRT:#define __RSQRTEF__ 1
+// PPC64PWR5-RSQRT:#define __RSQRTE__ 1
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-linux-gnu -target-feature -hard-float -xc /dev/null | FileCheck --check-prefix=PPC64-SOFTFLT %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64le-unknown-linux-gnu -target-feature -hard-float -xc /dev/null | FileCheck --check-prefix=PPC64-SOFTFLT %s
+// PPC64-SOFTFLT:#define _SOFT_DOUBLE 1
+// PPC64-SOFTFLT:#define _SOFT_FLOAT 1
+// PPC64-SOFTFLT:#define __NO_FPRS__ 1
+// PPC64-SOFTFLT-NOT:#define __RSQRTE__ 1
+// PPC64-SOFTFLT-NOT:#define __RSQRTEF__ 1

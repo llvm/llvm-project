@@ -26,4 +26,3 @@ list(APPEND DFSAN_TEST_DEPS dfsan)
 add_lit_testsuite(check-dfsan "Running the DataFlowSanitizer tests"
   ${DFSAN_TESTSUITES}
   DEPENDS ${DFSAN_TEST_DEPS})
-set_target_properties(check-dfsan PROPERTIES FOLDER "Compiler-RT Misc")

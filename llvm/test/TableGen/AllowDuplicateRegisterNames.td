@@ -41,7 +41,7 @@ def GPR64 : RegisterClass<"Arch", [i64], 64, (add
     (sequence "R%u_64", 0, 3)
 )>;
 
-// CHECK: static unsigned MatchRegisterName(StringRef Name) {
+// CHECK: static MCRegister MatchRegisterName(StringRef Name) {
 // CHECK:   switch (Name.size()) {
 // CHECK:   default: break;
 // CHECK:   case 2:  // 8 strings to match.
@@ -50,20 +50,20 @@ def GPR64 : RegisterClass<"Arch", [i64], 64, (add
 // CHECK:     switch (Name[1]) {
 // CHECK:     default: break;
 // CHECK:     case '0':  // 2 strings to match.
-// CHECK:       return 1;  // "r0"
+// CHECK:       return Arch::R0_32;  // "r0"
 // CHECK:     case '1':  // 2 strings to match.
-// CHECK:       return 3;  // "r1"
+// CHECK:       return Arch::R1_32;  // "r1"
 // CHECK:     case '2':  // 2 strings to match.
-// CHECK:       return 5;  // "r2"
+// CHECK:       return Arch::R2_32;  // "r2"
 // CHECK:     case '3':  // 2 strings to match.
-// CHECK:       return 7;  // "r3"
+// CHECK:       return Arch::R3_32;  // "r3"
 // CHECK:     }
 // CHECK:     break;
 // CHECK:   }
-// CHECK:   return 0;
+// CHECK:   return Arch::NoRegister;
 // CHECK: }
 
-// CHECK: static unsigned MatchRegisterAltName(StringRef Name) {
+// CHECK: static MCRegister MatchRegisterAltName(StringRef Name) {
 // CHECK:   switch (Name.size()) {
 // CHECK:   default: break;
 // CHECK:   case 2:  // 8 strings to match.
@@ -72,15 +72,15 @@ def GPR64 : RegisterClass<"Arch", [i64], 64, (add
 // CHECK:     switch (Name[1]) {
 // CHECK:     default: break;
 // CHECK:     case '0':  // 2 strings to match.
-// CHECK:       return 1;  // "x0"
+// CHECK:       return Arch::R0_32;  // "x0"
 // CHECK:     case '1':  // 2 strings to match.
-// CHECK:       return 3;  // "x1"
+// CHECK:       return Arch::R1_32;  // "x1"
 // CHECK:     case '2':  // 2 strings to match.
-// CHECK:       return 5;  // "x2"
+// CHECK:       return Arch::R2_32;  // "x2"
 // CHECK:     case '3':  // 2 strings to match.
-// CHECK:       return 7;  // "x3"
+// CHECK:       return Arch::R3_32;  // "x3"
 // CHECK:     }
 // CHECK:     break;
 // CHECK:   }
-// CHECK:   return 0;
+// CHECK:   return Arch::NoRegister;
 // CHECK: }

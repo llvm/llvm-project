@@ -1,16 +1,14 @@
 // RUN: mlir-opt %s \
-// RUN:   -func-bufferize -tensor-bufferize -arith-bufferize --canonicalize \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
 // RUN:   -convert-scf-to-cf --convert-complex-to-standard \
 // RUN:   -finalize-memref-to-llvm -convert-math-to-llvm -convert-math-to-libm \
 // RUN:   -convert-vector-to-llvm -convert-complex-to-llvm \
-// RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
+// RUN:   -convert-func-to-llvm -convert-arith-to-llvm -convert-cf-to-llvm \
+// RUN:   -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_c_runner_utils |\
 // RUN: FileCheck %s
-
-// XFAIL: target=aarch64{{.*}}
-// See: https://github.com/llvm/llvm-project/issues/58531
 
 func.func @test_unary(%input: tensor<?xcomplex<f32>>,
                       %func: (complex<f32>) -> complex<f32>) {
@@ -106,6 +104,27 @@ func.func @angle(%arg: complex<f32>) -> f32 {
   func.return %angle : f32
 }
 
+func.func @test_element_f64(%input: tensor<?xcomplex<f64>>,
+                      %func: (complex<f64>) -> f64) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %size = tensor.dim %input, %c0: tensor<?xcomplex<f64>>
+
+  scf.for %i = %c0 to %size step %c1 {
+    %elem = tensor.extract %input[%i]: tensor<?xcomplex<f64>>
+
+    %val = func.call_indirect %func(%elem) : (complex<f64>) -> f64
+    vector.print %val : f64
+    scf.yield
+  }
+  func.return
+}
+
+func.func @abs(%arg: complex<f64>) -> f64 {
+  %abs = complex.abs %arg : complex<f64>
+  func.return %abs : f64
+}
+
 func.func @entry() {
   // complex.sqrt test
   %sqrt_test = arith.constant dense<[
@@ -168,8 +187,9 @@ func.func @entry() {
     // CHECK-NEXT:  0
     // CHECK-NEXT:  0
     (0.0, 0.0), (-1.0, 0.0),
-    // CHECK-NEXT:  -nan
-    // CHECK-NEXT:  -nan
+    // Ignoring the sign of nan as that can't be tested in platform agnostic manner. See: #58531
+    // CHECK-NEXT:  nan
+    // CHECK-NEXT:  nan
     (1.0, 1.0), (1.0, 1.0)
     // CHECK-NEXT:  0.273
     // CHECK-NEXT:  0.583
@@ -223,7 +243,7 @@ func.func @entry() {
     // CHECK-NEXT:  0.321
     // CHECK-NEXT:  -0.776
     (0.0, 0.0),
-    // CHECK-NEXT:  nan
+    // CHECK-NEXT:  inf
     // CHECK-NEXT:  nan
     (0.0, 1.0),
     // CHECK-NEXT:  0.707
@@ -299,6 +319,39 @@ func.func @entry() {
   %angle_func = func.constant @angle : (complex<f32>) -> f32
   call @test_element(%angle_test_cast, %angle_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> f32) -> ()
+
+  // complex.abs test
+  %abs_test = arith.constant dense<[
+    (1.0, 1.0),
+    // CHECK:  1.414
+    (1.0e300, 1.0e300),
+    // CHECK-NEXT:  1.41421e+300
+    (1.0e-300, 1.0e-300),
+    // CHECK-NEXT:  1.41421e-300
+    (5.0, 0.0),
+    // CHECK-NEXT:  5
+    (0.0, 6.0),
+    // CHECK-NEXT:  6
+    (7.0, 8.0),
+    // CHECK-NEXT:  10.6301
+    (-1.0, -1.0),
+    // CHECK-NEXT: 1.414
+    (-1.0e300, -1.0e300),
+    // CHECK-NEXT:  1.41421e+300
+    (-1.0, 0.0),
+    // CHECK-NOT: -1
+    // CHECK-NEXT:  1
+    (0.0, -1.0)
+    // CHECK-NOT:  -1
+    // CHECK-NEXT:  1
+  ]> : tensor<10xcomplex<f64>>
+  %abs_test_cast = tensor.cast %abs_test
+    :  tensor<10xcomplex<f64>> to tensor<?xcomplex<f64>>
+
+  %abs_func = func.constant @abs : (complex<f64>) -> f64
+
+  call @test_element_f64(%abs_test_cast, %abs_func)
+    : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
 
   func.return
 }

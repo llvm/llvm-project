@@ -32,6 +32,10 @@ using namespace mlir::detail;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
+namespace mlir {
+#include "mlir/IR/BuiltinTypeConstraints.cpp.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // BuiltinDialect
 //===----------------------------------------------------------------------===//
@@ -87,26 +91,21 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  if (llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-          Float8E4M3FNUZType, Float8E4M3B11FNUZType>(*this))
-    return 8;
-  if (llvm::isa<Float16Type, BFloat16Type>(*this))
-    return 16;
-  if (llvm::isa<Float32Type, FloatTF32Type>(*this))
-    return 32;
-  if (llvm::isa<Float64Type>(*this))
-    return 64;
-  if (llvm::isa<Float80Type>(*this))
-    return 80;
-  if (llvm::isa<Float128Type>(*this))
-    return 128;
-  llvm_unreachable("unexpected float type");
+  return APFloat::semanticsSizeInBits(getFloatSemantics());
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
+  if (llvm::isa<Float4E2M1FNType>(*this))
+    return APFloat::Float4E2M1FN();
+  if (llvm::isa<Float6E2M3FNType>(*this))
+    return APFloat::Float6E2M3FN();
+  if (llvm::isa<Float6E3M2FNType>(*this))
+    return APFloat::Float6E3M2FN();
   if (llvm::isa<Float8E5M2Type>(*this))
     return APFloat::Float8E5M2();
+  if (llvm::isa<Float8E4M3Type>(*this))
+    return APFloat::Float8E4M3();
   if (llvm::isa<Float8E4M3FNType>(*this))
     return APFloat::Float8E4M3FN();
   if (llvm::isa<Float8E5M2FNUZType>(*this))
@@ -115,6 +114,10 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::Float8E4M3FNUZ();
   if (llvm::isa<Float8E4M3B11FNUZType>(*this))
     return APFloat::Float8E4M3B11FNUZ();
+  if (llvm::isa<Float8E3M4Type>(*this))
+    return APFloat::Float8E3M4();
+  if (llvm::isa<Float8E8M0FNUType>(*this))
+    return APFloat::Float8E8M0FNU();
   if (llvm::isa<BFloat16Type>(*this))
     return APFloat::BFloat();
   if (llvm::isa<Float16Type>(*this))
@@ -225,6 +228,10 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 // VectorType
 //===----------------------------------------------------------------------===//
 
+bool VectorType::isValidElementType(Type t) {
+  return isValidVectorTypeElementType(t);
+}
+
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
                                  ArrayRef<bool> scalableDims) {
@@ -273,7 +280,9 @@ Type TensorType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool TensorType::hasRank() const { return !llvm::isa<UnrankedTensorType>(*this); }
+bool TensorType::hasRank() const {
+  return !llvm::isa<UnrankedTensorType>(*this);
+}
 
 ArrayRef<int64_t> TensorType::getShape() const {
   return llvm::cast<RankedTensorType>(*this).getShape();
@@ -360,7 +369,9 @@ Type BaseMemRefType::getElementType() const {
           [](auto type) { return type.getElementType(); });
 }
 
-bool BaseMemRefType::hasRank() const { return !llvm::isa<UnrankedMemRefType>(*this); }
+bool BaseMemRefType::hasRank() const {
+  return !llvm::isa<UnrankedMemRefType>(*this);
+}
 
 ArrayRef<int64_t> BaseMemRefType::getShape() const {
   return llvm::cast<MemRefType>(*this).getShape();
@@ -408,24 +419,24 @@ unsigned BaseMemRefType::getMemorySpaceAsInt() const {
 // MemRefType
 //===----------------------------------------------------------------------===//
 
-/// Given an `originalShape` and a `reducedShape` assumed to be a subset of
-/// `originalShape` with some `1` entries erased, return the set of indices
-/// that specifies which of the entries of `originalShape` are dropped to obtain
-/// `reducedShape`. The returned mask can be applied as a projection to
-/// `originalShape` to obtain the `reducedShape`. This mask is useful to track
-/// which dimensions must be kept when e.g. compute MemRef strides under
-/// rank-reducing operations. Return std::nullopt if reducedShape cannot be
-/// obtained by dropping only `1` entries in `originalShape`.
 std::optional<llvm::SmallDenseSet<unsigned>>
 mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
-                               ArrayRef<int64_t> reducedShape) {
+                               ArrayRef<int64_t> reducedShape,
+                               bool matchDynamic) {
   size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();
   llvm::SmallDenseSet<unsigned> unusedDims;
   unsigned reducedIdx = 0;
   for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
     // Greedily insert `originalIdx` if match.
-    if (reducedIdx < reducedRank &&
-        originalShape[originalIdx] == reducedShape[reducedIdx]) {
+    int64_t origSize = originalShape[originalIdx];
+    // if `matchDynamic`, count dynamic dims as a match, unless `origSize` is 1.
+    if (matchDynamic && reducedIdx < reducedRank && origSize != 1 &&
+        (ShapedType::isDynamic(reducedShape[reducedIdx]) ||
+         ShapedType::isDynamic(origSize))) {
+      reducedIdx++;
+      continue;
+    }
+    if (reducedIdx < reducedRank && origSize == reducedShape[reducedIdx]) {
       reducedIdx++;
       continue;
     }
@@ -433,7 +444,7 @@ mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
     unusedDims.insert(originalIdx);
     // If no match on `originalIdx`, the `originalShape` at this dimension
     // must be 1, otherwise we bail.
-    if (originalShape[originalIdx] != 1)
+    if (origSize != 1)
       return std::nullopt;
   }
   // The whole reducedShape must be scanned, otherwise we bail.
@@ -787,20 +798,6 @@ static LogicalResult getStridesAndOffset(MemRefType t,
   for (auto &stride : strides)
     stride = simplifyAffineExpr(stride, numDims, numSymbols);
 
-  // In practice, a strided memref must be internally non-aliasing. Test
-  // against 0 as a proxy.
-  // TODO: static cases can have more advanced checks.
-  // TODO: dynamic cases would require a way to compare symbolic
-  // expressions and would probably need an affine set context propagated
-  // everywhere.
-  if (llvm::any_of(strides, [](AffineExpr e) {
-        return e == getAffineConstantExpr(0, e.getContext());
-      })) {
-    offset = AffineExpr();
-    strides.clear();
-    return failure();
-  }
-
   return success();
 }
 
@@ -921,7 +918,7 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
     return getAffineConstantExpr(0, context);
 
   assert(!exprs.empty() && "expected exprs");
-  auto maps = AffineMap::inferFromExprList(exprs);
+  auto maps = AffineMap::inferFromExprList(exprs, context);
   assert(!maps.empty() && "Expected one non-empty map");
   unsigned numDims = maps[0].getNumDims(), nSymbols = maps[0].getNumSymbols();
 
@@ -966,4 +963,36 @@ bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
   SmallVector<int64_t> strides;
   auto successStrides = getStridesAndOffset(type, strides, offset);
   return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
+bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
+  if (!isLastMemrefDimUnitStride(type))
+    return false;
+
+  auto memrefShape = type.getShape().take_back(n);
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  if (type.getLayout().isIdentity())
+    return true;
+
+  int64_t offset;
+  SmallVector<int64_t> stridesFull;
+  if (!succeeded(getStridesAndOffset(type, stridesFull, offset)))
+    return false;
+  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+
+  if (strides.empty())
+    return true;
+
+  // Check whether strides match "flattened" dims.
+  SmallVector<int64_t> flattenedDims;
+  auto dimProduct = 1;
+  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
+    dimProduct *= dim;
+    flattenedDims.push_back(dimProduct);
+  }
+
+  strides = strides.drop_back(1);
+  return llvm::equal(strides, llvm::reverse(flattenedDims));
 }

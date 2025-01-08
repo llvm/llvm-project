@@ -28,8 +28,8 @@ using namespace llvm;
 namespace llvm {
 cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
-    cl::desc("enable preservation of all attrbitues. even those that are "
-             "unlikely to be usefull"));
+    cl::desc("enable preservation of all attributes. even those that are "
+             "unlikely to be useful"));
 
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
@@ -225,7 +225,8 @@ struct AssumeBuilderState {
       return nullptr;
     if (!DebugCounter::shouldExecute(BuildAssumeCounter))
       return nullptr;
-    Function *FnAssume = Intrinsic::getDeclaration(M, Intrinsic::assume);
+    Function *FnAssume =
+        Intrinsic::getOrInsertDeclaration(M, Intrinsic::assume);
     LLVMContext &C = M->getContext();
     SmallVector<OperandBundleDef, 8> OpBundle;
     for (auto &MapElem : AssumedKnowledgeMap) {
@@ -320,7 +321,7 @@ RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
                                                   AssumptionCache *AC,
                                                   DominatorTree *DT) {
   AssumeBuilderState Builder(Assume->getModule(), Assume, AC, DT);
-  RK = canonicalizedKnowledge(RK, Assume->getModule()->getDataLayout());
+  RK = canonicalizedKnowledge(RK, Assume->getDataLayout());
 
   if (!Builder.isKnowledgeWorthPreserving(RK))
     return RetainedKnowledge::none();
@@ -411,7 +412,7 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             if (BOI.Begin != BOI.End) {
               Use *U = &Assume->op_begin()[BOI.Begin + ABA_WasOn];
-              U->set(UndefValue::get(U->get()->getType()));
+              U->set(PoisonValue::get(U->get()->getType()));
             }
             BOI.Tag = IgnoreTag;
           };

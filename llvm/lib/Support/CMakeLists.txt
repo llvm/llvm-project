@@ -37,10 +37,11 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
-if( MSVC OR MINGW )
+if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
+  # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -56,25 +57,30 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if( LLVM_ENABLE_TERMINFO )
-    set(imported_libs ${imported_libs} Terminfo::terminfo)
-  endif()
   set(system_libs ${system_libs} ${LLVM_ATOMIC_LIB})
   set(system_libs ${system_libs} ${LLVM_PTHREAD_LIB})
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
   if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
-    set(system_libs ${system_libs} kstat)
+    set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
   endif()
   if ( HAIKU )
     add_compile_definitions(_BSD_SOURCE)
-    set(system_libs ${system_libs} bsd)
+    set(system_libs ${system_libs} bsd network)
   endif()
-endif( MSVC OR MINGW )
+endif( WIN32 )
+
+set(WL "")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25"
+   AND MSVC
+   AND NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+  #IntelLLVM requires to pass linker flags with a wrapper
+  set(WL "$<$<OR:$<LINK_LANG_AND_ID:C,IntelLLVM>,$<LINK_LANG_AND_ID:CXX,IntelLLVM>,$<LINK_LANG_AND_ID:Fortran,IntelLLVM>>:-Qoption,link,>")
+endif()
 
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
@@ -83,7 +89,7 @@ if (MSVC)
   # than invoking `link.exe` directly.  In such a case, the flags should be
   # marked as `-Xlinker` to pass them directly to the linker.  As a temporary
   # workaround simply elide the delay loading.
-  set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp -delayload:shell32.dll -delayload:ole32.dll>)
+  set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp ${WL}-delayload:shell32.dll ${WL}-delayload:ole32.dll>)
 endif()
 
 # Link Z3 if the user wants to build it.
@@ -103,18 +109,19 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
   endif()
 
-  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
+  if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
+    set(delayload_flags "${delayload_flags} ${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
-    set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
+    set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
     set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
     if(NOT EXISTS "${MIMALLOC_LIB}")
 	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
     endif()
-    set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
+    set(system_libs ${system_libs} "${MIMALLOC_LIB}" "${WL}-INCLUDE:malloc")
   endif()
 endif()
 
@@ -169,13 +176,16 @@ add_llvm_component_library(LLVMSupport
   Debug.cpp
   DebugCounter.cpp
   DeltaAlgorithm.cpp
+  DeltaTree.cpp
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DynamicAPInt.cpp
   ELFAttributeParser.cpp
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp
@@ -186,7 +196,8 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hashing.cpp
+  HexagonAttributeParser.cpp
+  HexagonAttributes.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
@@ -202,26 +213,32 @@ add_llvm_component_library(LLVMSupport
   MemAlloc.cpp
   MemoryBuffer.cpp
   MemoryBufferRef.cpp
+  ModRef.cpp
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
+  OptionStrCmp.cpp
   PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   Regex.cpp
+  RewriteBuffer.cpp
+  RewriteRope.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
-  RISCVISAInfo.cpp
+  RISCVISAUtils.cpp
   ScaledNumber.cpp
   ScopedPrinter.cpp
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SipHash.cpp
+  SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp
@@ -239,6 +256,7 @@ add_llvm_component_library(LLVMSupport
   TimeProfiler.cpp
   Timer.cpp
   ToolOutputFile.cpp
+  TrieRawHashMap.cpp
   Twine.cpp
   TypeSize.cpp
   Unicode.cpp
@@ -318,16 +336,12 @@ if(LLVM_ENABLE_ZSTD)
   if(NOT zstd_library)
     get_property(zstd_library TARGET ${zstd_target} PROPERTY LOCATION)
   endif()
-  get_library_name(${zstd_library} zstd_library)
-  set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
-endif()
-
-if(LLVM_ENABLE_TERMINFO)
-  if(NOT terminfo_library)
-    get_property(terminfo_library TARGET Terminfo::terminfo PROPERTY LOCATION)
+  if (zstd_target STREQUAL zstd::libzstd_shared)
+    get_library_name(${zstd_library} zstd_library)
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_library}")
+  else()
+    set(llvm_system_libs ${llvm_system_libs} "${zstd_STATIC_LIBRARY}")
   endif()
-  get_library_name(${terminfo_library} terminfo_library)
-  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

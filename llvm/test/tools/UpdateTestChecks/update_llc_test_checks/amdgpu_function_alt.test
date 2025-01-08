@@ -1,0 +1,22 @@
+## Checks two things:
+# - matching functions in AMDGPU assembly output without certain comments in the assembly
+# - using the --tool and --default-march arguments
+
+# Using `cat` as a tool requires some unusual setup (compared to the other test
+# of UpdateTestChecks tools), because update_llc_test_checks only reliably
+# substitutes %S (source directory) when evaluating RUN lines in the .ll file.
+# The .ll file used during the test is a temporary copy, so we also need to
+# provide a temporary copy of the cat'd .s file to avoid relying on
+# implementation details of how llvm-lit chooses %t.
+
+# RUN: rm -rf %t.dir && mkdir %t.dir
+# RUN: cp -f %S/Inputs/amdgpu_function_alt.s %t.dir/
+# RUN: cp -f %S/Inputs/amdgpu_function_alt.ll %t.dir/
+
+# RUN: %update_llc_test_checks --llc-binary "" --tool cat --default-march=amdgcn --version 4 %t.dir/amdgpu_function_alt.ll
+# RUN: diff -u %S/Inputs/amdgpu_function_alt.ll.expected %t.dir/amdgpu_function_alt.ll
+
+# Check that re-running remembers the arguments and doesn't change anything
+
+# RUN: %update_llc_test_checks --llc-binary "" %t.dir/amdgpu_function_alt.ll
+# RUN: diff -u %S/Inputs/amdgpu_function_alt.ll.expected %t.dir/amdgpu_function_alt.ll

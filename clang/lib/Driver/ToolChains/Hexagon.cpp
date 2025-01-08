@@ -54,8 +54,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   auto makeFeature = [&Args](Twine T, bool Enable) -> StringRef {
     const std::string &S = T.str();
     StringRef Opt(S);
-    if (Opt.ends_with("="))
-      Opt = Opt.drop_back(1);
+    Opt.consume_back("=");
     if (Opt.starts_with("mno-"))
       Opt = Opt.drop_front(4);
     else if (Opt.starts_with("m"))
@@ -295,9 +294,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
-  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  bool UseLLD = (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
-                 llvm::sys::path::stem(Exec).equals_insensitive("ld.lld"));
+  bool UseLLD = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+           llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
@@ -367,18 +367,21 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
+    ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
+
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
         linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
 
-        CmdArgs.push_back("-lunwind");
+        if (UNW != ToolChain::UNW_None)
+          CmdArgs.push_back("-lunwind");
       }
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -412,7 +415,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   const std::string MCpuSuffix = "/" + CpuVer.str();
   const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
   const std::string RootDir =
-      HTC.getHexagonTargetDir(D.InstalledDir, D.PrefixDirs) + "/";
+      HTC.getHexagonTargetDir(D.Dir, D.PrefixDirs) + "/";
   const std::string StartSubDir =
       "hexagon/lib" + (UseG0 ? MCpuG0Suffix : MCpuSuffix);
 
@@ -550,7 +553,7 @@ std::string HexagonToolChain::getCompilerRTPath() const {
   if (!SelectedMultilibs.empty()) {
     Dir += SelectedMultilibs.back().gccSuffix();
   }
-  return std::string(Dir.str());
+  return std::string(Dir);
 }
 
 void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
@@ -570,8 +573,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   std::copy(D.PrefixDirs.begin(), D.PrefixDirs.end(),
             std::back_inserter(RootDirs));
 
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   if (!llvm::is_contained(RootDirs, TargetDir))
     RootDirs.push_back(TargetDir);
 
@@ -598,8 +600,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args)
     : Linux(D, Triple, Args) {
-  const std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                                    D.PrefixDirs);
+  const std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
 
   // Note: Generic_GCC::Generic_GCC adds InstalledDir and getDriver().Dir to
   // program paths
@@ -621,13 +622,24 @@ HexagonToolChain::~HexagonToolChain() {}
 void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                            ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
+  ToolChain::UnwindLibType UNW = GetUnwindLibType(Args);
+  if (UNW != ToolChain::UNW_None && UNW != ToolChain::UNW_CompilerRT) {
+    const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
+    if (A) {
+      getDriver().Diag(diag::err_drv_unsupported_unwind_for_platform)
+          << A->getValue() << getTriple().normalize();
+      return;
+    }
+  }
+
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
     if (Args.hasArg(options::OPT_fexperimental_library))
       CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
-    CmdArgs.push_back("-lunwind");
+    if (UNW != ToolChain::UNW_None)
+      CmdArgs.push_back("-lunwind");
     break;
 
   case ToolChain::CST_Libstdcxx:
@@ -729,8 +741,7 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (HasSysRoot)
     return;
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
 }
 
@@ -745,7 +756,7 @@ void HexagonToolChain::addLibCxxIncludePaths(
     addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", DriverArgs,
                              CC1Args);
   else {
-    std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
+    std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
     addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++/v1", "", "",
                              DriverArgs, CC1Args);
   }
@@ -754,7 +765,7 @@ void HexagonToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
-  std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++", "", "",
                            DriverArgs, CC1Args);
 }
@@ -801,7 +812,6 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
     CpuArg = A;
 
   StringRef CPU = CpuArg ? CpuArg->getValue() : GetDefaultCPU();
-  if (CPU.starts_with("hexagon"))
-    return CPU.substr(sizeof("hexagon") - 1);
+  CPU.consume_front("hexagon");
   return CPU;
 }

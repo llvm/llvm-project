@@ -18,7 +18,8 @@ class InstSystemZ<int size, dag outs, dag ins, string asmstr,
   dag InOperandList = ins;
   let Size = size;
   let Pattern = pattern;
-  let AsmString = asmstr;
+  // Convert tabs to spaces, and remove space after comma for HLASM syntax
+  let AsmString = !subst("\t", "{\t| }", !subst(", ", "{, |,}", asmstr));
 
   let hasSideEffects = 0;
   let mayLoad = 0;
@@ -363,7 +364,8 @@ class InstRIEe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
-class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
+               bits<8> I3Or = 0, bits<8> I4Or = 0>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
   field bits<48> SoftFail = 0;
@@ -377,8 +379,22 @@ class InstRIEf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{47-40} = op{15-8};
   let Inst{39-36} = R1;
   let Inst{35-32} = R2;
-  let Inst{31-24} = I3;
-  let Inst{23-16} = I4;
+  let Inst{31} = !if(I3Or{7}, 1, I3{7});
+  let Inst{30} = !if(I3Or{6}, 1, I3{6});
+  let Inst{29} = !if(I3Or{5}, 1, I3{5});
+  let Inst{28} = !if(I3Or{4}, 1, I3{4});
+  let Inst{27} = !if(I3Or{3}, 1, I3{3});
+  let Inst{26} = !if(I3Or{2}, 1, I3{2});
+  let Inst{25} = !if(I3Or{1}, 1, I3{1});
+  let Inst{24} = !if(I3Or{0}, 1, I3{0});
+  let Inst{23} = !if(I4Or{7}, 1, I4{7});
+  let Inst{22} = !if(I4Or{6}, 1, I4{6});
+  let Inst{21} = !if(I4Or{5}, 1, I4{5});
+  let Inst{20} = !if(I4Or{4}, 1, I4{4});
+  let Inst{19} = !if(I4Or{3}, 1, I4{3});
+  let Inst{18} = !if(I4Or{2}, 1, I4{2});
+  let Inst{17} = !if(I4Or{1}, 1, I4{1});
+  let Inst{16} = !if(I4Or{0}, 1, I4{0});
   let Inst{15-8}  = I5;
   let Inst{7-0}   = op{7-0};
 }
@@ -2035,7 +2051,7 @@ class CondVariant<bits<4> ccmaskin, string suffixin, bit alternatein,
   bit alternate = alternatein;
 
   // Whether this needs be to restricted to a specific dialect.
-  // Valid values are "att" and "hlasm", which when passed in
+  // Valid values are "gnu" and "hlasm", which when passed in
   // will set AsmVariantName.
   string asmvariant = asmvariantin;
 }
@@ -2048,20 +2064,20 @@ def CondAlways : CondVariant<15, "", 0>;
 def CondVariantO   : CondVariant<1,  "o",   0>;
 def CondVariantH   : CondVariant<2,  "h",   0>;
 def CondVariantP   : CondVariant<2,  "p",   1>;
-def CondVariantNLE : CondVariant<3,  "nle", 0, "att">;
+def CondVariantNLE : CondVariant<3,  "nle", 0, "gnu">;
 def CondVariantL   : CondVariant<4,  "l",   0>;
 def CondVariantM   : CondVariant<4,  "m",   1>;
-def CondVariantNHE : CondVariant<5,  "nhe", 0, "att">;
-def CondVariantLH  : CondVariant<6,  "lh",  0, "att">;
+def CondVariantNHE : CondVariant<5,  "nhe", 0, "gnu">;
+def CondVariantLH  : CondVariant<6,  "lh",  0, "gnu">;
 def CondVariantNE  : CondVariant<7,  "ne",  0>;
 def CondVariantNZ  : CondVariant<7,  "nz",  1>;
 def CondVariantE   : CondVariant<8,  "e",   0>;
 def CondVariantZ   : CondVariant<8,  "z",   1>;
-def CondVariantNLH : CondVariant<9,  "nlh", 0, "att">;
-def CondVariantHE  : CondVariant<10, "he",  0, "att">;
+def CondVariantNLH : CondVariant<9,  "nlh", 0, "gnu">;
+def CondVariantHE  : CondVariant<10, "he",  0, "gnu">;
 def CondVariantNL  : CondVariant<11, "nl",  0>;
 def CondVariantNM  : CondVariant<11, "nm",  1>;
-def CondVariantLE  : CondVariant<12, "le",  0, "att">;
+def CondVariantLE  : CondVariant<12, "le",  0, "gnu">;
 def CondVariantNH  : CondVariant<13, "nh",  0>;
 def CondVariantNP  : CondVariant<13, "np",  1>;
 def CondVariantNO  : CondVariant<14, "no",  0>;
@@ -2078,16 +2094,16 @@ class CV<string name>
 // and that the low bit of the mask is therefore always 0.  This means
 // that each condition has two names.  Conditions "o" and "no" are not used.
 def IntCondVariantH   : CondVariant<2,  "h",   0>;
-def IntCondVariantNLE : CondVariant<2,  "nle", 1, "att">;
+def IntCondVariantNLE : CondVariant<2,  "nle", 1, "gnu">;
 def IntCondVariantL   : CondVariant<4,  "l",   0>;
-def IntCondVariantNHE : CondVariant<4,  "nhe", 1, "att">;
-def IntCondVariantLH  : CondVariant<6,  "lh",  0, "att">;
+def IntCondVariantNHE : CondVariant<4,  "nhe", 1, "gnu">;
+def IntCondVariantLH  : CondVariant<6,  "lh",  0, "gnu">;
 def IntCondVariantNE  : CondVariant<6,  "ne",  1>;
 def IntCondVariantE   : CondVariant<8,  "e",   0>;
-def IntCondVariantNLH : CondVariant<8,  "nlh", 1, "att">;
-def IntCondVariantHE  : CondVariant<10, "he",  0, "att">;
+def IntCondVariantNLH : CondVariant<8,  "nlh", 1, "gnu">;
+def IntCondVariantHE  : CondVariant<10, "he",  0, "gnu">;
 def IntCondVariantNL  : CondVariant<10, "nl",  1>;
-def IntCondVariantLE  : CondVariant<12, "le",  0, "att">;
+def IntCondVariantLE  : CondVariant<12, "le",  0, "gnu">;
 def IntCondVariantNH  : CondVariant<12, "nh",  1>;
 
 // A helper class to look up one of the above by name.
@@ -2312,6 +2328,12 @@ class AsmCondBranchRI<string mnemonic, bits<12> opcode>
   : InstRIc<opcode, (outs), (ins imm32zx4:$M1, brtarget16:$RI2),
             mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRI<string mnemonic, bits<12> opcode>
+  : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
+            mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRI<CondVariant V, string mnemonic, bits<12> opcode,
                         SDPatternOperator operator = null_frag>
   : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
@@ -2331,6 +2353,12 @@ class AsmCondBranchRIL<string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins imm32zx4:$M1, brtarget32:$RI2),
              mnemonic#"\t$M1, $RI2", []>;
 
+class NeverCondBranchRIL<string mnemonic, bits<12> opcode>
+  : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
+             mnemonic#"\t$RI2", []> {
+  let M1 = 0;
+}
+
 class FixedCondBranchRIL<CondVariant V, string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
              !subst("#", V.suffix, mnemonic)#"\t$RI2", []> {
@@ -2348,6 +2376,18 @@ class CondBranchRR<string mnemonic, bits<8> opcode>
 class AsmCondBranchRR<string mnemonic, bits<8> opcode>
   : InstRR<opcode, (outs), (ins imm32zx4:$R1, GR64:$R2),
            mnemonic#"\t$R1, $R2", []>;
+
+multiclass NeverCondBranchRR<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRR<opcode, (outs), (ins GR64:$R2),
+                  mnemonic#"\t$R2", []> {
+             let R1 = 0;
+           }
+  def Opt : InstRR<opcode, (outs), (ins), mnemonic, []> {
+              let R1 = 0;
+              let R2 = 0;
+            }
+}
 
 class FixedCondBranchRR<CondVariant V, string mnemonic, bits<8> opcode,
                       SDPatternOperator operator = null_frag>
@@ -2369,6 +2409,21 @@ class AsmCondBranchRX<string mnemonic, bits<8> opcode>
   : InstRXb<opcode, (outs),
             (ins imm32zx4:$M1, (bdxaddr12only $B2, $D2, $X2):$XBD2),
             mnemonic#"\t$M1, $XBD2", []>;
+
+multiclass NeverCondBranchRX<string mnemonic, bits<8> opcode> {
+  // For the no-op (always false) branch, the target is optional.
+  def "" : InstRXb<opcode, (outs),
+                  (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                  mnemonic#"\t$XBD2", []> {
+             let M1 = 0;
+           }
+  def Opt : InstRXb<opcode, (outs), (ins), mnemonic, []> {
+              let M1 = 0;
+              let B2 = 0;
+              let D2 = 0;
+              let X2 = 0;
+            }
+}
 
 class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>
   : InstRXb<opcode, (outs), (ins (bdxaddr12only $B2, $D2, $X2):$XBD2),
@@ -3439,6 +3494,19 @@ class BinaryRRFa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let OpType = "reg";
 }
 
+
+class UnaryRRFa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+                 RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFa<opcode, (outs cls1:$R1), (ins cls2:$R2, cls2:$R3),
+             mnemonic#"\t$R1, $R2",
+             [(set cls1:$R1, (operator cls2:$R2, cls2:$R3))]> {
+  let R3 = R2;
+  let M4 = 0;
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
+}
+
+
 multiclass BinaryRRAndK<string mnemonic, bits<8> opcode1, bits<16> opcode2,
                         SDPatternOperator operator, RegisterOperand cls1,
                         RegisterOperand cls2> {
@@ -3777,7 +3845,7 @@ class BinarySI<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                Operand imm, AddressingMode mode = bdaddr12only>
   : InstSI<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
            mnemonic#"\t$BD1, $I2",
-           [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+           [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }
@@ -3786,7 +3854,7 @@ class BinarySIY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 Operand imm, AddressingMode mode = bdaddr20only>
   : InstSIY<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
             mnemonic#"\t$BD1, $I2",
-            [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+            [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }
@@ -4999,11 +5067,11 @@ multiclass CmpSwapRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
 }
 
 class RotateSelectRIEf<string mnemonic, bits<16> opcode, RegisterOperand cls1,
-                       RegisterOperand cls2>
+                       RegisterOperand cls2, bits<8> I3Or = 0, bits<8> I4Or = 0>
   : InstRIEf<opcode, (outs cls1:$R1),
              (ins cls1:$R1src, cls2:$R2, imm32zx8:$I3, imm32zx8:$I4,
                   imm32zx8:$I5),
-             mnemonic#"\t$R1, $R2, $I3, $I4, $I5", []> {
+             mnemonic#"\t$R1, $R2, $I3, $I4, $I5", [], I3Or, I4Or> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
 }
@@ -5035,18 +5103,6 @@ class BranchPreloadMII<string mnemonic, bits<8> opcode>
   : InstMII<opcode, (outs),
             (ins imm32zx4:$M1, brtarget12bpp:$RI2, brtarget24bpp:$RI3),
             mnemonic#"\t$M1, $RI2, $RI3", []>;
-
-// A floating-point load-and test operation.  Create both a normal unary
-// operation and one that acts as a comparison against zero.
-// Note that the comparison against zero operation is not available if we
-// have vector support, since load-and-test instructions will partially
-// clobber the target (vector) register.
-multiclass LoadAndTestRRE<string mnemonic, bits<16> opcode,
-                          RegisterOperand cls> {
-  def "" : UnaryRRE<mnemonic, opcode, null_frag, cls, cls>;
-  let isCodeGenOnly = 1, Predicates = [FeatureNoVector] in
-    def Compare : CompareRRE<mnemonic, opcode, null_frag, cls, cls>;
-}
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions

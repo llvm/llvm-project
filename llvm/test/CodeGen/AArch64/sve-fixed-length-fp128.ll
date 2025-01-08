@@ -85,10 +85,10 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #128
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
@@ -111,14 +111,14 @@ define void @fcvt_v4f128_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl __trunctfdf2
 ; CHECK-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ptrue p1.d, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    add x8, sp, #128
-; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    splice z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x19, x8, lsl #3]
 ; CHECK-NEXT:    add x8, sp, #128
 ; CHECK-NEXT:    ldr z0, [x8, #1, mul vl] // 16-byte Folded Reload

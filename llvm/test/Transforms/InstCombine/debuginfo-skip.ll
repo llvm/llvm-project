@@ -18,8 +18,8 @@ entry:
 ; should convert the declare to dbg value.
 ; CHECK-LABEL: define i32 @foo(i32 %j)
 ; CHECK-NOT: alloca
-; CHECK: call void @llvm.dbg.value(metadata i32 %j, {{.*}})
-; CHECK: call void @llvm.dbg.value(metadata i32 10, {{.*}})
+; CHECK: #dbg_value(i32 %j, {{.*}})
+; CHECK: #dbg_value(i32 10, {{.*}})
 ; CHECK: ret i32 %j
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

@@ -17,9 +17,9 @@ define dso_local void @multiple_stores() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lui a0, %hi(s)
 ; CHECK-NEXT:    addi a0, a0, %lo(s)
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    li a2, 20
 ; CHECK-NEXT:    sw a1, 160(a0)
-; CHECK-NEXT:    li a1, 20
-; CHECK-NEXT:    sw a1, 164(a0)
+; CHECK-NEXT:    sw a2, 164(a0)
 ; CHECK-NEXT:    ret
 entry:
   store i32 10, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
@@ -149,7 +149,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV32-NEXT:  .LBB8_2: # %if.then
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    call abort@plt
+; RV32-NEXT:    call abort
 ;
 ; RV64-LABEL: load_half:
 ; RV64:       # %bb.0: # %entry
@@ -163,7 +163,7 @@ define dso_local i32 @load_half() nounwind {
 ; RV64-NEXT:  .LBB8_2: # %if.then
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    call abort@plt
+; RV64-NEXT:    call abort
 entry:
   %0 = load i16, ptr getelementptr inbounds ([6 x i16], ptr @foo, i32 0, i32 4), align 2
   %cmp = icmp eq i16 %0, 140

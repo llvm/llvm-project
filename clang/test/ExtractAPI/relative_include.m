@@ -15,7 +15,7 @@
 // RUN: %hmaptool write %t/headermap.hmap.json %t/headermap.hmap
 
 // Input headers use paths to the framework root/DSTROOT
-// RUN: %clang_cc1 -extract-api -v --product-name=MyFramework \
+// RUN: %clang_cc1 -extract-api --pretty-sgf -v --product-name=MyFramework \
 // RUN: -triple arm64-apple-macosx \
 // RUN: -iquote%t -I%t/headermap.hmap -F%t/Frameworks \
 // RUN: -x objective-c-header \

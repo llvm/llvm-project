@@ -18,6 +18,7 @@
 #ifndef LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 #define LLVM_TRANSFORMS_INSTCOMBINE_INSTCOMBINER_H
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -48,7 +49,7 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
-  TargetTransformInfo &TTI;
+  TargetTransformInfo &TTIForTargetIntrinsicsOnly;
 
 public:
   /// Maximum size of array considered when transforming.
@@ -76,12 +77,11 @@ protected:
   SimplifyQuery SQ;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
 
-  // Optional analyses. When non-null, these can both be used to do better
-  // combining and will be updated to reflect any changes.
-  LoopInfo *LI;
+  ReversePostOrderTraversal<BasicBlock *> &RPOT;
 
   bool MadeIRChange = false;
 
@@ -91,18 +91,25 @@ protected:
   /// Order of predecessors to canonicalize phi nodes towards.
   SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
 
+  /// Backedges, used to avoid pushing instructions across backedges in cases
+  /// where this may result in infinite combine loops. For irreducible loops
+  /// this picks an arbitrary backedge.
+  SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
+  bool ComputedBackEdges = false;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-               const DataLayout &DL, LoopInfo *LI)
-      : TTI(TTI), Builder(Builder), Worklist(Worklist),
+               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+               ProfileSummaryInfo *PSI, const DataLayout &DL,
+               ReversePostOrderTraversal<BasicBlock *> &RPOT)
+      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 
@@ -131,21 +138,18 @@ public:
   /// This routine maps IR values to various complexity ranks:
   ///   0 -> undef
   ///   1 -> Constants
-  ///   2 -> Other non-instructions
-  ///   3 -> Arguments
-  ///   4 -> Cast and (f)neg/not instructions
-  ///   5 -> Other instructions
+  ///   2 -> Cast and (f)neg/not instructions
+  ///   3 -> Other instructions and arguments
   static unsigned getComplexity(Value *V) {
-    if (isa<Instruction>(V)) {
-      if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-          match(V, m_Not(PatternMatch::m_Value())) ||
-          match(V, m_FNeg(PatternMatch::m_Value())))
-        return 4;
-      return 5;
-    }
-    if (isa<Argument>(V))
-      return 3;
-    return isa<Constant>(V) ? (isa<UndefValue>(V) ? 0 : 1) : 2;
+    if (isa<Constant>(V))
+      return isa<UndefValue>(V) ? 0 : 1;
+
+    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
+        match(V, m_Not(PatternMatch::m_Value())) ||
+        match(V, m_FNeg(PatternMatch::m_Value())))
+      return 2;
+
+    return 3;
   }
 
   /// Predicate canonicalization reduces the number of patterns that need to be
@@ -153,7 +157,7 @@ public:
   /// conditional branch or select to create a compare with a canonical
   /// (inverted) predicate which is then more likely to be matched with other
   /// values.
-  static bool isCanonicalPredicate(CmpInst::Predicate Pred) {
+  static bool isCanonicalPredicate(CmpPredicate Pred) {
     switch (Pred) {
     case CmpInst::ICMP_NE:
     case CmpInst::ICMP_ULE:
@@ -170,45 +174,6 @@ public:
     }
   }
 
-  /// Given an exploded icmp instruction, return true if the comparison only
-  /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
-  /// the result of the comparison is true when the input value is signed.
-  static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                             bool &TrueIfSigned) {
-    switch (Pred) {
-    case ICmpInst::ICMP_SLT: // True if LHS s< 0
-      TrueIfSigned = true;
-      return RHS.isZero();
-    case ICmpInst::ICMP_SLE: // True if LHS s<= -1
-      TrueIfSigned = true;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGT: // True if LHS s> -1
-      TrueIfSigned = false;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGE: // True if LHS s>= 0
-      TrueIfSigned = false;
-      return RHS.isZero();
-    case ICmpInst::ICMP_UGT:
-      // True if LHS u> RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = true;
-      return RHS.isMaxSignedValue();
-    case ICmpInst::ICMP_UGE:
-      // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = true;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULT:
-      // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = false;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULE:
-      // True if LHS u<= RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = false;
-      return RHS.isMaxSignedValue();
-    default:
-      return false;
-    }
-  }
-
   /// Add one to a Constant
   static Constant *AddOne(Constant *C) {
     return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
@@ -218,13 +183,6 @@ public:
   static Constant *SubOne(Constant *C) {
     return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
   }
-
-  std::optional<std::pair<
-      CmpInst::Predicate,
-      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpInst::
-                                                                       Predicate
-                                                                           Pred,
-                                                                   Constant *C);
 
   static bool shouldAvoidAbsorbingNotIntoSelect(const SelectInst &SI) {
     // a ? b : false and a ? true : b are the canonical form of logical and/or.
@@ -383,7 +341,6 @@ public:
   }
   BlockFrequencyInfo *getBlockFrequencyInfo() const { return BFI; }
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
-  LoopInfo *getLoopInfo() const { return LI; }
 
   // Call target specific combiners
   std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
@@ -396,6 +353,13 @@ public:
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
+
+  void computeBackEdges();
+  bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
+    if (!ComputedBackEdges)
+      computeBackEdges();
+    return BackEdges.contains({From, To});
+  }
 
   /// Inserts an instruction \p New before instruction \p Old
   ///
@@ -479,7 +443,8 @@ public:
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
                               unsigned Depth = 0,
                               const Instruction *CxtI = nullptr) {
-    return llvm::isKnownToBeAPowerOfTwo(V, DL, OrZero, Depth, &AC, CxtI, &DT);
+    return llvm::isKnownToBeAPowerOfTwo(V, OrZero, Depth,
+                                        SQ.getWithInstruction(CxtI));
   }
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
@@ -499,9 +464,10 @@ public:
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               const Instruction *CxtI,
+                                               bool IsNSW = false) const {
+    return llvm::computeOverflowForUnsignedMul(
+        LHS, RHS, SQ.getWithInstruction(CxtI), IsNSW);
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
@@ -541,7 +507,14 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth = 0) = 0;
+                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+
+  bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
+                            const APInt &DemandedMask, KnownBits &Known) {
+    return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
+                                /*Depth=*/0, SQ.getWithInstruction(I));
+  }
+
   virtual Value *
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
                              unsigned Depth = 0,

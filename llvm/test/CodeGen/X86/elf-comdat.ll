@@ -7,5 +7,5 @@ define void @f() comdat($f) {
 }
 ; CHECK: .section        .text.f,"axG",@progbits,f,comdat
 ; CHECK: .globl  f
-; CHECK: .section        .bss.v,"aGw",@nobits,f,comdat
+; CHECK: .section        .bss.v,"awG",@nobits,f,comdat
 ; CHECK: .globl  v

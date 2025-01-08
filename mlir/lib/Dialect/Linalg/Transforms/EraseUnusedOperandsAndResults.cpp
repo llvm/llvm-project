@@ -183,7 +183,7 @@ private:
         dedupedOutpts;
     // If the op doesn't have tensor semantics or outputs should not be removed,
     // keep all the outputs as preserved.
-    if (!genericOp.hasTensorSemantics() || !removeOutputs) {
+    if (!genericOp.hasPureTensorSemantics() || !removeOutputs) {
       for (const auto &en : llvm::enumerate(genericOp.getDpsInitsMutable())) {
         origToNewPos[en.index()] = newOutputOperands.size();
         newOutputOperands.push_back(en.value().get());
@@ -317,7 +317,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
                                 PatternRewriter &rewriter) const override {
 
     // If the op doesnt have tensor semantics, preserve the outputs as is.
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     bool hasRemovedCycles = false;
@@ -354,7 +354,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
       // Directly replace the cycle with the blockArg such that
       // Deduplicate pattern can eliminate it along with unused yield.
       rewriter.replaceOp(cycleOp, outputArg);
-      rewriter.updateRootInPlace(genericOp, [] {});
+      rewriter.modifyOpInPlace(genericOp, [] {});
       hasRemovedCycles = true;
     }
 
@@ -404,7 +404,7 @@ struct FoldDuplicateInputBbArgs : public OpRewritePattern<GenericOp> {
       return failure();
 
     // Rewrite the op.
-    rewriter.updateRootInPlace(genericOp, [&]() {
+    rewriter.modifyOpInPlace(genericOp, [&]() {
       for (auto [before, after] : replacements) {
         BlockArgument bbArg = genericOp.getBody()->getArgument(before);
         BlockArgument replacement = genericOp.getBody()->getArgument(after);

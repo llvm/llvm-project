@@ -11,7 +11,7 @@
 //       sum = sum + a(i)
 //    end do
 //  end subroutine sum1d
-module {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
   func.func @sum1d(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
     %decl = fir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
     %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
@@ -113,8 +113,10 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK-LABEL: func.func @sum1dfixed(
 // CHECK-SAME:                        %[[ARG0:.*]]: !fir.ref<!fir.array<?xf64>> {{.*}})
 // CHECK: fir.do_loop {{.*}}
+// CHECK-NOT: fir.do_loop
 // CHECK: %[[COORD:.*]] = fir.coordinate_of %[[ARG0]], {{.*}}
 // CHECK: %{{.*}} = fir.load %[[COORD]]
+// CHECK-NOT: fir.do_loop
 
 // -----
 
@@ -263,7 +265,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK-SAME:            %[[N1:.*]]: !fir.ref<i32> {{.*}},
 // CHECK-SAME:            %[[M1:.*]]: !fir.ref<i32> {{.*}}) {
 // CHECK: fir.do_loop
-// CHECL:   %[[FOUR:.*]] = arith.constant 4 : index
+// CHECK:   %[[FOUR:.*]] = arith.constant 4 : index
 // CHECK:   %[[COMP:.*]] = arith.cmpi {{.*}}, %[[FOUR]]
 // CHECK:   fir.if %[[COMP]] -> {{.*}} {
 // CHECK:     %[[CONV:.*]] = fir.convert %[[B]] :
@@ -1477,5 +1479,519 @@ func.func @sum1drebox(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // No versioning -> no if-operation.
 // CHECK-NOT: fir.if
 
+
+// Check for a use in a different block (%12 = do_loop is used inside the if %14 block)
+func.func @minloc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "mask"}) -> f32 {
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32
+  %1 = fir.alloca !fir.array<1xi32>
+  %2 = fir.declare %arg1 {uniq_name = "_QFtestEmask"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.rebox %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %4 = fir.alloca f32 {bindc_name = "test", uniq_name = "_QFtestEtest"}
+  %5 = fir.declare %4 {uniq_name = "_QFtestEtest"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %6 = fir.declare %arg0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %7 = fir.rebox %6 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %8 = fir.shape %c1 : (index) -> !fir.shape<1>
+  %9 = fir.array_coor %1(%8) %c1 : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+  fir.store %c0_i32 to %9 : !fir.ref<i32>
+  fir.store %c0_i32 to %0 : !fir.ref<i32>
+  %10:3 = fir.box_dims %7, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+  %11 = arith.subi %10#1, %c1 : index
+  %12 = fir.do_loop %arg2 = %c0 to %11 step %c1 iter_args(%arg3 = %c2147483647_i32) -> (i32) {
+    %18 = arith.addi %arg2, %c1 : index
+    %19 = fir.array_coor %3 %18 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %20 = fir.load %19 : !fir.ref<i32>
+    %21 = arith.cmpi sge, %20, %c5_i32 : i32
+    %22 = fir.if %21 -> (i32) {
+      fir.store %c1_i32 to %0 : !fir.ref<i32>
+      %23 = arith.subi %10#0, %c1 : index
+      %24 = arith.addi %18, %23 : index
+      %25 = fir.array_coor %7 %24 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+      %26 = fir.load %25 : !fir.ref<i32>
+      %27 = arith.cmpi slt, %26, %arg3 : i32
+      %28 = fir.if %27 -> (i32) {
+        %29 = fir.convert %18 : (index) -> i32
+        fir.store %29 to %9 : !fir.ref<i32>
+        fir.result %26 : i32
+      } else {
+        fir.result %arg3 : i32
+      }
+      fir.result %28 : i32
+    } else {
+      fir.result %arg3 : i32
+    }
+    fir.result %22 : i32
+  }
+  %13 = fir.load %0 : !fir.ref<i32>
+  %14 = arith.cmpi eq, %13, %c1_i32 : i32
+  fir.if %14 {
+    %18 = arith.cmpi eq, %12, %c2147483647_i32 : i32
+    fir.if %18 {
+      %19 = fir.array_coor %1(%8) %c0 : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+      fir.store %c1_i32 to %19 : !fir.ref<i32>
+    }
+  }
+  %15 = fir.slice %c5, %c5, %c1 : (index, index, index) -> !fir.slice<1>
+  %16 = fir.rebox %7 [%15] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>) -> !fir.box<!fir.array<1xi32>>
+  fir.do_loop %arg2 = %c1 to %c1 step %c1 unordered {
+    %18 = fir.array_coor %1(%8) %arg2 : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %19 = fir.load %18 : !fir.ref<i32>
+    %20 = fir.array_coor %16 %arg2 : (!fir.box<!fir.array<1xi32>>, index) -> !fir.ref<i32>
+    fir.store %19 to %20 : !fir.ref<i32>
+  }
+  %17 = fir.load %5 : !fir.ref<f32>
+  return %17 : f32
+}
+// CHECK-LABEL: func @minloc
+// CHECK: %[[V17:.*]] = fir.if %{{.*}} -> (i32) {
+// CHECK:   %[[V27:.*]] = fir.do_loop
+// CHECK:   fir.result %[[V27]] : i32
+// CHECK: } else {
+// CHECK:   %[[V23:.*]] = fir.do_loop
+// CHECK:   fir.result %[[V23]] : i32
+// CHECK: fir.if %{{.*}} {
+// CHECK:   {{.*}} = arith.cmpi eq, %[[V17]], %c2147483647_i32
+
+func.func @_QPtest_real10(%arg0: !fir.box<!fir.array<?x?xf80>> {fir.bindc_name = "a"}) -> f80 {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f80
+  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_real10Ea"} : (!fir.box<!fir.array<?x?xf80>>) -> !fir.box<!fir.array<?x?xf80>>
+  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?xf80>>) -> !fir.box<!fir.array<?x?xf80>>
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_real10Ei"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_real10Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.alloca f80 {bindc_name = "res", uniq_name = "_QFtest_real10Eres"}
+  %5 = fir.declare %4 {uniq_name = "_QFtest_real10Eres"} : (!fir.ref<f80>) -> !fir.ref<f80>
+  %6 = fir.address_of(@_QFtest_real10ECxdp) : !fir.ref<i32>
+  %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_real10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  fir.store %cst to %5 : !fir.ref<f80>
+  %8 = fir.convert %c1 : (index) -> i32
+  %9:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %8) -> (index, i32) {
+    fir.store %arg2 to %3 : !fir.ref<i32>
+    %11 = fir.load %5 : !fir.ref<f80>
+    %12 = fir.load %3 : !fir.ref<i32>
+    %13 = fir.convert %12 : (i32) -> i64
+    %14 = fir.array_coor %1 %13, %13 : (!fir.box<!fir.array<?x?xf80>>, i64, i64) -> !fir.ref<f80>
+    %15 = fir.load %14 : !fir.ref<f80>
+    %16 = arith.addf %11, %15 fastmath<contract> : f80
+    fir.store %16 to %5 : !fir.ref<f80>
+    %17 = arith.addi %arg1, %c1 : index
+    %18 = fir.load %3 : !fir.ref<i32>
+    %19 = arith.addi %18, %8 : i32
+    fir.result %17, %19 : index, i32
+  }
+  fir.store %9#1 to %3 : !fir.ref<i32>
+  %10 = fir.load %5 : !fir.ref<f80>
+  return %10 : f80
+}
+// CHECK-LABEL:   func.func @_QPtest_real10(
+// CHECK:           fir.if
+// CHECK:             fir.do_loop
+// CHECK-DAG:           arith.shrsi %{{[^,]*}}, %[[SHIFT:.*]] : index
+// CHECK-DAG:           %[[SHIFT]] = arith.constant 4 : index
+// CHECK:             fir.result
+// CHECK:           } else {
+// CHECK:             fir.do_loop
+
+func.func @_QPtest_complex10(%arg0: !fir.box<!fir.array<?x?xcomplex<f80>>> {fir.bindc_name = "a"}) -> complex<f80> {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f80
+  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_complex10Ea"} : (!fir.box<!fir.array<?x?xcomplex<f80>>>) -> !fir.box<!fir.array<?x?xcomplex<f80>>>
+  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?xcomplex<f80>>>) -> !fir.box<!fir.array<?x?xcomplex<f80>>>
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_complex10Ei"}
+  %3 = fir.declare %2 {uniq_name = "_QFtest_complex10Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %4 = fir.alloca complex<f80> {bindc_name = "res", uniq_name = "_QFtest_complex10Eres"}
+  %5 = fir.declare %4 {uniq_name = "_QFtest_complex10Eres"} : (!fir.ref<complex<f80>>) -> !fir.ref<complex<f80>>
+  %6 = fir.address_of(@_QFtest_complex10ECxdp) : !fir.ref<i32>
+  %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_complex10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %8 = fir.undefined complex<f80>
+  %9 = fir.insert_value %8, %cst, [0 : index] : (complex<f80>, f80) -> complex<f80>
+  %10 = fir.insert_value %9, %cst, [1 : index] : (complex<f80>, f80) -> complex<f80>
+  fir.store %10 to %5 : !fir.ref<complex<f80>>
+  %11 = fir.convert %c1 : (index) -> i32
+  %12:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %11) -> (index, i32) {
+    fir.store %arg2 to %3 : !fir.ref<i32>
+    %14 = fir.load %5 : !fir.ref<complex<f80>>
+    %15 = fir.load %3 : !fir.ref<i32>
+    %16 = fir.convert %15 : (i32) -> i64
+    %17 = fir.array_coor %1 %16, %16 : (!fir.box<!fir.array<?x?xcomplex<f80>>>, i64, i64) -> !fir.ref<complex<f80>>
+    %18 = fir.load %17 : !fir.ref<complex<f80>>
+    %19 = fir.addc %14, %18 {fastmath = #arith.fastmath<contract>} : complex<f80>
+    fir.store %19 to %5 : !fir.ref<complex<f80>>
+    %20 = arith.addi %arg1, %c1 : index
+    %21 = fir.load %3 : !fir.ref<i32>
+    %22 = arith.addi %21, %11 : i32
+    fir.result %20, %22 : index, i32
+  }
+  fir.store %12#1 to %3 : !fir.ref<i32>
+  %13 = fir.load %5 : !fir.ref<complex<f80>>
+  return %13 : complex<f80>
+}
+// CHECK-LABEL:   func.func @_QPtest_complex10(
+// CHECK:           fir.if
+// CHECK:             fir.do_loop
+// CHECK-DAG:           arith.shrsi %{{[^,]*}}, %[[SHIFT:.*]] : index
+// CHECK-DAG:           %[[SHIFT]] = arith.constant 5 : index
+// CHECK:             fir.result
+// CHECK:           } else {
+// CHECK:             fir.do_loop
+
+// Test that the loop is not versioned with non-contiguous slices:
+//subroutine test_step2_slice(x, y)
+//  real :: x(:,:), y(:,:)
+//  do i=1,10
+//     x(::2,i) = y(::2,i) + 1.0
+//  end do
+//end subroutine
+func.func @_QPtest_step2_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_step2_sliceEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_step2_sliceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest_step2_sliceEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %5 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtest_step2_sliceEy"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (index, i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %9:3 = fir.box_dims %6, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %10 = arith.addi %9#1, %c1 : index
+    %11 = arith.divsi %10, %c2 : index
+    %12 = arith.cmpi sgt, %11, %c0 : index
+    %13 = arith.select %12, %11, %c0 : index
+    %14 = fir.load %2 : !fir.ref<i32>
+    %15 = fir.convert %14 : (i32) -> i64
+    %16 = fir.undefined index
+    %17 = fir.slice %c1, %9#1, %c2, %15, %16, %16 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %18 = fir.rebox %6 [%17] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    %19:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %20 = fir.slice %c1, %19#1, %c2, %15, %16, %16 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %21 = fir.rebox %4 [%20] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    fir.do_loop %arg4 = %c1 to %13 step %c1 unordered {
+      %25 = fir.array_coor %18 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      %26 = fir.load %25 : !fir.ref<f32>
+      %27 = arith.addf %26, %cst fastmath<fast> : f32
+      %28 = fir.array_coor %21 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      fir.store %27 to %28 : !fir.ref<f32>
+    }
+    %22 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %23 = fir.load %2 : !fir.ref<i32>
+    %24 = arith.addi %23, %7 overflow<nsw> : i32
+    fir.result %22, %24 : index, i32
+  }
+  fir.store %8#1 to %2 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_step2_slice(
+// CHECK-NOT: fir.if
+
+// Test that the loop is versioned with most probably
+// contiguous slices:
+//subroutine test_step1_slice(x, y)
+//  real :: x(:,:), y(:,:)
+//  do i=1,10
+//     x(:,i) = y(:,i) + 1.0
+//  end do
+//end subroutine
+func.func @_QPtest_step1_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_step1_sliceEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_step1_sliceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest_step1_sliceEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %5 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtest_step1_sliceEy"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (index, i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %9:3 = fir.box_dims %6, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %10 = arith.cmpi sgt, %9#1, %c0 : index
+    %11 = arith.select %10, %9#1, %c0 : index
+    %12 = fir.load %2 : !fir.ref<i32>
+    %13 = fir.convert %12 : (i32) -> i64
+    %14 = fir.undefined index
+    %15 = fir.slice %c1, %9#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    %17:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %18 = fir.slice %c1, %17#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %19 = fir.rebox %4 [%18] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    fir.do_loop %arg4 = %c1 to %11 step %c1 unordered {
+      %23 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      %24 = fir.load %23 : !fir.ref<f32>
+      %25 = arith.addf %24, %cst fastmath<fast> : f32
+      %26 = fir.array_coor %19 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      fir.store %25 to %26 : !fir.ref<f32>
+    }
+    %20 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %21 = fir.load %2 : !fir.ref<i32>
+    %22 = arith.addi %21, %7 overflow<nsw> : i32
+    fir.result %20, %22 : index, i32
+  }
+  fir.store %8#1 to %2 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_step1_slice(
+// CHECK:           fir.do_loop
+// CHECK:             fir.if
+// CHECK:               fir.do_loop
+// CHECK:             } else {
+// CHECK:               fir.do_loop
+
+// Test that the loop is versioned with logical arrays:
+//subroutine test_logical_slice(x, y)
+//  logical :: x(:,:), y(:,:)
+//  do i=1,10
+//     x(:,i) = y(:,i) .or. y(i,:)
+//  end do
+//end subroutine
+func.func @_QPtest_logical_slice(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_logical_sliceEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_logical_sliceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest_logical_sliceEx"} : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.logical<4>>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<!fir.array<?x?x!fir.logical<4>>>
+  %5 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtest_logical_sliceEy"} : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.dscope) -> !fir.box<!fir.array<?x?x!fir.logical<4>>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<!fir.array<?x?x!fir.logical<4>>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (index, i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %9:3 = fir.box_dims %6, %c0 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
+    %10 = arith.cmpi sgt, %9#1, %c0 : index
+    %11 = arith.select %10, %9#1, %c0 : index
+    %12 = fir.load %2 : !fir.ref<i32>
+    %13 = fir.convert %12 : (i32) -> i64
+    %14 = fir.undefined index
+    %15 = fir.slice %c1, %9#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
+    %17:3 = fir.box_dims %6, %c1 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
+    %18 = fir.slice %13, %14, %14, %c1, %17#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %19 = fir.rebox %6 [%18] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
+    %20:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
+    %21 = fir.slice %c1, %20#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %22 = fir.rebox %4 [%21] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
+    fir.do_loop %arg4 = %c1 to %11 step %c1 unordered {
+      %26 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+      %27 = fir.array_coor %19 %arg4 : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+      %28 = fir.load %26 : !fir.ref<!fir.logical<4>>
+      %29 = fir.load %27 : !fir.ref<!fir.logical<4>>
+      %30 = fir.convert %28 : (!fir.logical<4>) -> i1
+      %31 = fir.convert %29 : (!fir.logical<4>) -> i1
+      %32 = arith.ori %30, %31 : i1
+      %33 = fir.convert %32 : (i1) -> !fir.logical<4>
+      %34 = fir.array_coor %22 %arg4 : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+      fir.store %33 to %34 : !fir.ref<!fir.logical<4>>
+    }
+    %23 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %24 = fir.load %2 : !fir.ref<i32>
+    %25 = arith.addi %24, %7 overflow<nsw> : i32
+    fir.result %23, %25 : index, i32
+  }
+  fir.store %8#1 to %2 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_logical_slice(
+// CHECK:           fir.do_loop
+// CHECK:             fir.if
+// CHECK:               fir.do_loop
+// CHECK:             } else {
+// CHECK:               fir.do_loop
+
+// Test that the loop is versioned when a most probably
+// contiguous slices have known shape:
+//subroutine test_known_shape_slice(x, y)
+//  integer :: x(:,:), y(:,:)
+//  do i=1,10
+//     x(1:10,i) = y(1:10,i) + 1
+//  end do
+//end subroutine
+func.func @_QPtest_known_shape_slice(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_known_shape_sliceEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_known_shape_sliceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest_known_shape_sliceEx"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %5 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtest_known_shape_sliceEy"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (index, i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %9 = fir.load %2 : !fir.ref<i32>
+    %10 = fir.convert %9 : (i32) -> i64
+    %11 = fir.undefined index
+    %12 = fir.slice %c1, %c10, %c1, %10, %11, %11 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %13 = fir.rebox %6 [%12] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<10xi32>>
+    %14 = fir.rebox %4 [%12] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<10xi32>>
+    fir.do_loop %arg4 = %c1 to %c10 step %c1 unordered {
+      %18 = fir.array_coor %13 %arg4 : (!fir.box<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      %19 = fir.load %18 : !fir.ref<i32>
+      %20 = arith.addi %19, %c1_i32 : i32
+      %21 = fir.array_coor %14 %arg4 : (!fir.box<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+      fir.store %20 to %21 : !fir.ref<i32>
+    }
+    %15 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %16 = fir.load %2 : !fir.ref<i32>
+    %17 = arith.addi %16, %7 overflow<nsw> : i32
+    fir.result %15, %17 : index, i32
+  }
+  fir.store %8#1 to %2 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_known_shape_slice(
+// CHECK:           fir.do_loop
+// CHECK:             fir.if
+// CHECK:               fir.do_loop
+// CHECK:             } else {
+// CHECK:               fir.do_loop
+
+// Test that the loop is not versioned for most probably
+// not-contiguous slices:
+//subroutine test_maybe_noncontig_slice(x, y)
+//  real :: x(:,:), y(:,:)
+//  do i=1,10
+//     x(i,:) = y(i,:) + 1.0
+//  end do
+//end subroutine
+func.func @_QPtest_maybe_noncontig_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_maybe_noncontig_sliceEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_maybe_noncontig_sliceEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtest_maybe_noncontig_sliceEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %5 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtest_maybe_noncontig_sliceEy"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (index, i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %9 = fir.load %2 : !fir.ref<i32>
+    %10 = fir.convert %9 : (i32) -> i64
+    %11:3 = fir.box_dims %6, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %12 = arith.cmpi sgt, %11#1, %c0 : index
+    %13 = arith.select %12, %11#1, %c0 : index
+    %14 = fir.undefined index
+    %15 = fir.slice %10, %14, %14, %c1, %11#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    %17:3 = fir.box_dims %4, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+    %18 = fir.slice %10, %14, %14, %c1, %17#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %19 = fir.rebox %4 [%18] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    fir.do_loop %arg4 = %c1 to %13 step %c1 unordered {
+      %23 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      %24 = fir.load %23 : !fir.ref<f32>
+      %25 = arith.addf %24, %cst fastmath<fast> : f32
+      %26 = fir.array_coor %19 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+      fir.store %25 to %26 : !fir.ref<f32>
+    }
+    %20 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %21 = fir.load %2 : !fir.ref<i32>
+    %22 = arith.addi %21, %7 overflow<nsw> : i32
+    fir.result %20, %22 : index, i32
+  }
+  fir.store %8#1 to %2 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_maybe_noncontig_slice(
+// CHECK-NOT: fir.if
+
+// Regression test for facerec's GraphSimFct:
+//real function test_graphsimfct(a1, a2)
+//  integer :: i
+//  real, intent(in) :: a1(:,:,:)
+//  real, intent(in) :: a2(:,:,:,:)
+//  graphsimfct = 0.0
+//  do i=1,10
+//     test_graphsimfct = test_graphsimfct + SUM(a1(:,:,i) * a2(:,:,i,i))
+//  end do
+//end function
+func.func @_QPtest_graphsimfct(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name = "a1"}, %arg1: !fir.box<!fir.array<?x?x?x?xf32>> {fir.bindc_name = "a2"}) -> f32 {
+  %c10 = arith.constant 10 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_graphsimfctEa1"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+  %2 = fir.rebox %1 : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?xf32>>
+  %3 = fir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_graphsimfctEa2"} : (!fir.box<!fir.array<?x?x?x?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?x?x?x?xf32>>
+  %4 = fir.rebox %3 : (!fir.box<!fir.array<?x?x?x?xf32>>) -> !fir.box<!fir.array<?x?x?x?xf32>>
+  %5 = fir.alloca f32 {bindc_name = "graphsimfct", uniq_name = "_QFtest_graphsimfctEgraphsimfct"}
+  %6 = fir.declare %5 {uniq_name = "_QFtest_graphsimfctEgraphsimfct"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %7 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_graphsimfctEi"}
+  %8 = fir.declare %7 {uniq_name = "_QFtest_graphsimfctEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %9 = fir.alloca f32 {bindc_name = "test_graphsimfct", uniq_name = "_QFtest_graphsimfctEtest_graphsimfct"}
+  %10 = fir.declare %9 {uniq_name = "_QFtest_graphsimfctEtest_graphsimfct"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  fir.store %cst to %6 : !fir.ref<f32>
+  %11 = fir.convert %c1 : (index) -> i32
+  %12:2 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %11) -> (index, i32) {
+    fir.store %arg3 to %8 : !fir.ref<i32>
+    %14 = fir.load %10 : !fir.ref<f32>
+    %15:3 = fir.box_dims %2, %c0 : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
+    %16:3 = fir.box_dims %2, %c1 : (!fir.box<!fir.array<?x?x?xf32>>, index) -> (index, index, index)
+    %17 = arith.cmpi sgt, %15#1, %c0 : index
+    %18 = arith.select %17, %15#1, %c0 : index
+    %19 = arith.cmpi sgt, %16#1, %c0 : index
+    %20 = arith.select %19, %16#1, %c0 : index
+    %21 = fir.load %8 : !fir.ref<i32>
+    %22 = fir.convert %21 : (i32) -> i64
+    %23 = fir.undefined index
+    %24 = fir.slice %c1, %15#1, %c1, %c1, %16#1, %c1, %22, %23, %23 : (index, index, index, index, index, index, i64, index, index) -> !fir.slice<3>
+    %25 = fir.rebox %2 [%24] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
+    %26:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?x?x?xf32>>, index) -> (index, index, index)
+    %27:3 = fir.box_dims %4, %c1 : (!fir.box<!fir.array<?x?x?x?xf32>>, index) -> (index, index, index)
+    %28 = fir.slice %c1, %26#1, %c1, %c1, %27#1, %c1, %22, %23, %23, %22, %23, %23 : (index, index, index, index, index, index, i64, index, index, i64, index, index) -> !fir.slice<4>
+    %29 = fir.rebox %4 [%28] : (!fir.box<!fir.array<?x?x?x?xf32>>, !fir.slice<4>) -> !fir.box<!fir.array<?x?xf32>>
+    %30 = fir.do_loop %arg4 = %c1 to %20 step %c1 unordered iter_args(%arg5 = %cst) -> (f32) {
+      %35 = fir.do_loop %arg6 = %c1 to %18 step %c1 unordered iter_args(%arg7 = %arg5) -> (f32) {
+        %36 = fir.array_coor %25 %arg6, %arg4 : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+        %37 = fir.array_coor %29 %arg6, %arg4 : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
+        %38 = fir.load %36 : !fir.ref<f32>
+        %39 = fir.load %37 : !fir.ref<f32>
+        %40 = arith.mulf %38, %39 fastmath<fast> : f32
+        %41 = arith.addf %arg7, %40 fastmath<fast> : f32
+        fir.result %41 : f32
+      }
+      fir.result %35 : f32
+    }
+    %31 = arith.addf %14, %30 fastmath<fast> : f32
+    fir.store %31 to %10 : !fir.ref<f32>
+    %32 = arith.addi %arg2, %c1 overflow<nsw> : index
+    %33 = fir.load %8 : !fir.ref<i32>
+    %34 = arith.addi %33, %11 overflow<nsw> : i32
+    fir.result %32, %34 : index, i32
+  }
+  fir.store %12#1 to %8 : !fir.ref<i32>
+  %13 = fir.load %10 : !fir.ref<f32>
+  return %13 : f32
+}
+// CHECK-LABEL:   func.func @_QPtest_graphsimfct(
+// CHECK:           fir.do_loop
+// CHECK:             fir.do_loop
+// CHECK:               fir.if
+// CHECK:                 fir.do_loop
+// CHECK:               } else {
+// CHECK:                 fir.do_loop
 
 } // End module

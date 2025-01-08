@@ -35,18 +35,17 @@ define <4 x i32> @test_srem_odd_even(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_odd_allones_eq(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_allones_eq:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #153
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    mov w9, #39321 // =0x9999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    movk w9, #6553, lsl #16
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    dup v2.4s, w9
+; CHECK-NEXT:    dup v2.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 5, i32 4294967295, i32 5>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -56,18 +55,17 @@ define <4 x i32> @test_srem_odd_allones_eq(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_odd_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_allones_ne:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #153
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    mov w9, #39321 // =0x9999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    movk w9, #6553, lsl #16
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    dup v2.4s, w9
+; CHECK-NEXT:    dup v2.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 5, i32 4294967295, i32 5>
   %cmp = icmp ne <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -269,18 +267,17 @@ define <4 x i32> @test_srem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_odd_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_one:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #153
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    mov w9, #39321 // =0x9999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    movk w9, #6553, lsl #16
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    dup v2.4s, w9
+; CHECK-NEXT:    dup v2.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 5, i32 1, i32 5>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -522,18 +519,17 @@ define <4 x i32> @test_srem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwi
 define <4 x i32> @test_srem_odd_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_allones_and_one:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #153
 ; CHECK-NEXT:    mov w8, #52429 // =0xcccd
-; CHECK-NEXT:    mov w9, #39321 // =0x9999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    movk w9, #6553, lsl #16
-; CHECK-NEXT:    dup v1.4s, w8
-; CHECK-NEXT:    dup v2.4s, w9
+; CHECK-NEXT:    dup v2.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fneg v1.4s, v1.4s
+; CHECK-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI19_0]
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    cmhs v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 5, i32 4294967295, i32 1, i32 5>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>

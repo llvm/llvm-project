@@ -18,7 +18,7 @@ define void @TestvMeth(i32 %0, i64 %1) gc "statepoint-example" !prof !1 {
 ; CHECK-NEXT:    movl $400, %ecx # imm = 0x190
 ; CHECK-NEXT:    callq newarray@PLT
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [1.5E+1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    addss (%rax), %xmm0
 ; CHECK-NEXT:    movdqu (%rax), %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2

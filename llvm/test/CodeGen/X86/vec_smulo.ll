@@ -107,9 +107,8 @@ define <2 x i32> @smulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE41-NEXT:    pmuldq %xmm1, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE41-NEXT:    movq %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
+; SSE41-NEXT:    movq %xmm2, (%rdi)
 ; SSE41-NEXT:    psrad $31, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -139,7 +138,7 @@ define <2 x i32> @smulo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
 ; AVX512-NEXT:    vpsrad $31, %xmm2, %xmm0
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vmovq %xmm2, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<2 x i32>, <2 x i1>} @llvm.smul.with.overflow.v2i32(<2 x i32> %a0, <2 x i32> %a1)
@@ -270,7 +269,7 @@ define <3 x i32> @smulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0
@@ -401,7 +400,7 @@ define <4 x i32> @smulo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0
@@ -441,9 +440,8 @@ define <6 x i32> @smulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; SSE2-NEXT:    pmuludq %xmm6, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm7
+; SSE2-NEXT:    movd {{.*#+}} xmm7 = mem[0],zero,zero,zero
+; SSE2-NEXT:    pmuludq %xmm7, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1]
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE2-NEXT:    pxor %xmm6, %xmm6
@@ -516,9 +514,8 @@ define <6 x i32> @smulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm3
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; SSSE3-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    pmuludq %xmm6, %xmm0
-; SSSE3-NEXT:    movdqa %xmm6, %xmm7
+; SSSE3-NEXT:    movd {{.*#+}} xmm7 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    pmuludq %xmm7, %xmm0
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1]
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSSE3-NEXT:    pxor %xmm6, %xmm6
@@ -672,7 +669,7 @@ define <6 x i32> @smulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm3 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm4 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpmuldq %ymm3, %ymm4, %ymm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
 ; AVX512-NEXT:    vpermi2d %ymm3, %ymm2, %ymm4
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrad $31, %ymm1, %ymm0
@@ -871,7 +868,7 @@ define <8 x i32> @smulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm3 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpshufd {{.*#+}} ymm4 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX512-NEXT:    vpmuldq %ymm3, %ymm4, %ymm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [1,9,3,11,5,13,7,15]
 ; AVX512-NEXT:    vpermi2d %ymm3, %ymm2, %ymm4
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrad $31, %ymm1, %ymm0
@@ -1229,12 +1226,12 @@ define <16 x i32> @smulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwin
 ; AVX512-NEXT:    vpshufd {{.*#+}} zmm3 = zmm1[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX512-NEXT:    vpshufd {{.*#+}} zmm4 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; AVX512-NEXT:    vpmuldq %zmm3, %zmm4, %zmm3
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm4 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm4 = [1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31]
 ; AVX512-NEXT:    vpermi2d %zmm3, %zmm2, %zmm4
 ; AVX512-NEXT:    vpmulld %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpsrad $31, %zmm1, %zmm0
 ; AVX512-NEXT:    vpcmpneqd %zmm0, %zmm4, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vmovdqa64 %zmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<16 x i32>, <16 x i1>} @llvm.smul.with.overflow.v16i32(<16 x i32> %a0, <16 x i32> %a1)
@@ -1354,7 +1351,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm4, %xmm0
 ; SSE41-NEXT:    psrlw $8, %xmm0
 ; SSE41-NEXT:    packuswb %xmm3, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm1 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm1, %xmm5
 ; SSE41-NEXT:    pand %xmm1, %xmm4
 ; SSE41-NEXT:    packuswb %xmm5, %xmm4
@@ -1443,7 +1440,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpsraw $15, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpmovsxwd %ymm2, %zmm2
 ; AVX512F-NEXT:    vpcmpneqd %zmm0, %zmm2, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm1, (%rdi)
 ; AVX512F-NEXT:    retq
@@ -1457,7 +1454,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpsllw $8, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpsraw $15, %ymm2, %ymm2
 ; AVX512BW-NEXT:    vpcmpneqw %ymm0, %ymm2, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512BW-NEXT:    vpmovwb %ymm1, (%rdi)
 ; AVX512BW-NEXT:    retq
   %t = call {<16 x i8>, <16 x i1>} @llvm.smul.with.overflow.v16i8(<16 x i8> %a0, <16 x i8> %a1)
@@ -1674,7 +1671,7 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm3, %xmm7
 ; SSE41-NEXT:    psrlw $8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm5, %xmm7
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm5 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm5, %xmm6
 ; SSE41-NEXT:    pand %xmm5, %xmm3
 ; SSE41-NEXT:    packuswb %xmm6, %xmm3
@@ -1853,8 +1850,8 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpsraw $15, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512F-NEXT:    vpcmpneqd %zmm0, %zmm1, %k2
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k2} {z}
-; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k2} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm2, 16(%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
@@ -1870,9 +1867,9 @@ define <32 x i32> @smulo_v32i8(<32 x i8> %a0, <32 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpsllw $8, %zmm2, %zmm1
 ; AVX512BW-NEXT:    vpsraw $15, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpcmpneqw %zmm0, %zmm1, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512BW-NEXT:    kshiftrd $16, %k1, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; AVX512BW-NEXT:    vpmovwb %zmm2, (%rdi)
 ; AVX512BW-NEXT:    retq
   %t = call {<32 x i8>, <32 x i1>} @llvm.smul.with.overflow.v32i8(<32 x i8> %a0, <32 x i8> %a1)
@@ -2260,7 +2257,7 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movdqa %xmm7, %xmm10
 ; SSE41-NEXT:    psrlw $8, %xmm10
 ; SSE41-NEXT:    packuswb %xmm8, %xmm10
-; SSE41-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm8 = [255,255,255,255,255,255,255,255]
 ; SSE41-NEXT:    pand %xmm8, %xmm9
 ; SSE41-NEXT:    pand %xmm8, %xmm7
 ; SSE41-NEXT:    packuswb %xmm9, %xmm7
@@ -2637,10 +2634,10 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpsraw $15, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512F-NEXT:    vpcmpneqd %zmm0, %zmm1, %k4
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k4} {z}
-; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k3} {z}
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k2} {z}
-; AVX512F-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k4} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k3} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm4[0],zero,ymm4[1],zero,ymm4[2],zero,ymm4[3],zero,ymm4[4],zero,ymm4[5],zero,ymm4[6],zero,ymm4[7],zero,ymm4[8],zero,ymm4[9],zero,ymm4[10],zero,ymm4[11],zero,ymm4[12],zero,ymm4[13],zero,ymm4[14],zero,ymm4[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm4, 48(%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm5[0],zero,ymm5[1],zero,ymm5[2],zero,ymm5[3],zero,ymm5[4],zero,ymm5[5],zero,ymm5[6],zero,ymm5[7],zero,ymm5[8],zero,ymm5[9],zero,ymm5[10],zero,ymm5[11],zero,ymm5[12],zero,ymm5[13],zero,ymm5[14],zero,ymm5[15],zero
@@ -2670,13 +2667,13 @@ define <64 x i32> @smulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512BW-NEXT:    vpmovb2m %zmm4, %k0
 ; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
 ; AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k2
-; AVX512BW-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k2} {z}
-; AVX512BW-NEXT:    kshiftrq $32, %k1, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
-; AVX512BW-NEXT:    kshiftrd $16, %k1, %k1
-; AVX512BW-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3 {%k1} {z}
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512BW-NEXT:    kshiftrq $16, %k1, %k2
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 {%k2} {z} = -1
+; AVX512BW-NEXT:    kshiftrq $32, %k1, %k2
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
+; AVX512BW-NEXT:    kshiftrq $48, %k1, %k1
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
 ; AVX512BW-NEXT:    vmovdqa64 %zmm4, (%rdi)
 ; AVX512BW-NEXT:    retq
   %t = call {<64 x i8>, <64 x i1>} @llvm.smul.with.overflow.v64i8(<64 x i8> %a0, <64 x i8> %a1)
@@ -2770,7 +2767,7 @@ define <8 x i32> @smulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpmullw %xmm1, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpsraw $15, %xmm1, %xmm0
 ; AVX512F-NEXT:    vpcmpeqw %xmm0, %xmm2, %xmm0
-; AVX512F-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512F-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k1
 ; AVX512F-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
@@ -3191,7 +3188,7 @@ define <4 x i32> @smulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vpmuldq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,5,3,7]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm3, %xmm2, %xmm4
 ; AVX512-NEXT:    vpmulld %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrad $31, %xmm1, %xmm0

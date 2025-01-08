@@ -27,10 +27,19 @@ using __sanitizer::uptr;
 struct MappingDesc {
   uptr start;
   uptr end;
-  enum Type { INVALID, APP, SHADOW, ORIGIN } type;
+  enum Type {
+    INVALID = 1,
+    ALLOCATOR = 2,
+    APP = 4,
+    SHADOW = 8,
+    ORIGIN = 16,
+  } type;
   const char *name;
 };
 
+// Note: MappingDesc::ALLOCATOR entries are only used to check for memory
+// layout compatibility. The actual allocation settings are in
+// dfsan_allocator.cpp, which need to be kept in sync.
 #if SANITIZER_LINUX && SANITIZER_WORDSIZE == 64
 
 #  if defined(__aarch64__)
@@ -53,7 +62,8 @@ const MappingDesc kMemoryLayout[] = {
     {0X0B00000000000, 0X0C00000000000, MappingDesc::SHADOW, "shadow-10-13"},
     {0X0C00000000000, 0X0D00000000000, MappingDesc::INVALID, "invalid"},
     {0X0D00000000000, 0X0E00000000000, MappingDesc::ORIGIN, "origin-10-13"},
-    {0X0E00000000000, 0X1000000000000, MappingDesc::APP, "app-15"},
+    {0X0E00000000000, 0X0E40000000000, MappingDesc::ALLOCATOR, "allocator"},
+    {0X0E40000000000, 0X1000000000000, MappingDesc::APP, "app-15"},
 };
 #    define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
 #    define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
@@ -76,7 +86,8 @@ const MappingDesc kMemoryLayout[] = {
     {0x510000000000ULL, 0x600000000000ULL, MappingDesc::APP, "app-2"},
     {0x600000000000ULL, 0x610000000000ULL, MappingDesc::ORIGIN, "origin-1"},
     {0x610000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x700000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
+    {0x700000000000ULL, 0x740000000000ULL, MappingDesc::ALLOCATOR, "allocator"},
+    {0x740000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
 #    define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
 #    define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
 #  endif
@@ -93,20 +104,21 @@ const uptr kMemoryLayoutSize = sizeof(kMemoryLayout) / sizeof(kMemoryLayout[0]);
 __attribute__((optimize("unroll-loops")))
 #endif
 inline bool
-addr_is_type(uptr addr, MappingDesc::Type mapping_type) {
+addr_is_type(uptr addr, int mapping_types) {
 // It is critical for performance that this loop is unrolled (because then it is
 // simplified into just a few constant comparisons).
 #ifdef __clang__
 #  pragma unroll
 #endif
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
-    if (kMemoryLayout[i].type == mapping_type &&
+    if ((kMemoryLayout[i].type & mapping_types) &&
         addr >= kMemoryLayout[i].start && addr < kMemoryLayout[i].end)
       return true;
   return false;
 }
 
-#define MEM_IS_APP(mem) addr_is_type((uptr)(mem), MappingDesc::APP)
+#define MEM_IS_APP(mem) \
+  (addr_is_type((uptr)(mem), MappingDesc::APP | MappingDesc::ALLOCATOR))
 #define MEM_IS_SHADOW(mem) addr_is_type((uptr)(mem), MappingDesc::SHADOW)
 #define MEM_IS_ORIGIN(mem) addr_is_type((uptr)(mem), MappingDesc::ORIGIN)
 

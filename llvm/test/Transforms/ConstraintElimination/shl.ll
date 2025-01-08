@@ -1274,3 +1274,121 @@ entry:
   %shl.cmp = icmp uge i256 %shl.ub, 1
   ret i1 %shl.cmp
 }
+
+define i1 @shl_nsw_x8_slt_x7(i8 %start, i8 %high) {
+; CHECK-LABEL: @shl_nsw_x8_slt_x7(
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i8 [[HIGH:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[START_SHL_3]], [[HIGH]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[START_MUL_7:%.*]] = mul nsw i8 [[START]], 7
+; CHECK-NEXT:    ret i1 true
+;
+  %c.0 = icmp sge i8 %high, 0
+  call void @llvm.assume(i1 %c.0)
+
+  %start.shl.3 = shl nsw i8 %start, 3
+  %c.1 = icmp slt i8 %start.shl.3, %high
+  call void @llvm.assume(i1 %c.1)
+
+  %start.mul.7 = mul nsw i8 %start, 7
+  %t.1 = icmp slt i8 %start.mul.7, %high
+  ret i1 %t.1
+}
+
+define i1 @shl_nsw_x8_not_slt_x9(i8 %start, i8 %high) {
+; CHECK-LABEL: @shl_nsw_x8_not_slt_x9(
+; CHECK-NEXT:    [[C_0:%.*]] = icmp sge i8 [[HIGH:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[START_SHL_3]], [[HIGH]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[START_MUL_9:%.*]] = mul nsw i8 [[START]], 9
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_MUL_9]], [[HIGH]]
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %c.0 = icmp sge i8 %high, 0
+  call void @llvm.assume(i1 %c.0)
+
+  %start.shl.3 = shl nsw i8 %start, 3
+  %c.1 = icmp slt i8 %start.shl.3, %high
+  call void @llvm.assume(i1 %c.1)
+
+  %start.mul.9 = mul nsw i8 %start, 9
+  %t.1 = icmp slt i8 %start.mul.9, %high
+  ret i1 %t.1
+}
+
+define i1 @shl_nsw_sign_implication(i8 %x) {
+; CHECK-LABEL: @shl_nsw_sign_implication(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl nsw i8 %x, 2
+  %cmp1 = icmp slt i8 %x, 0
+  br i1 %cmp1, label %if, label %else
+
+if:
+  %cmp2 = icmp slt i8 %shl, 0
+  ret i1 %cmp2
+
+else:
+  %cmp3 = icmp sge i8 %shl, 0
+  ret i1 %cmp3
+}
+
+define i1 @shl_nsw_by_bw_minus_1(i64 %x) {
+; CHECK-LABEL: @shl_nsw_by_bw_minus_1(
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 63
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %x.shl = shl nsw i64 %x, 63
+  %c.1 = icmp slt i64 %x.shl, 0
+  call void @llvm.assume(i1 %c.1)
+
+  %t.1 = icmp slt i64 %x, 0
+  ret i1 %t.1
+}
+
+; Shift returns poison in this case, just make sure we don't crash.
+define i1 @shl_nsw_by_bw(i64 %x) {
+; CHECK-LABEL: @shl_nsw_by_bw(
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 64
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %x.shl = shl nsw i64 %x, 64
+  %c.1 = icmp slt i64 %x.shl, 0
+  call void @llvm.assume(i1 %c.1)
+
+  %t.1 = icmp slt i64 %x, 0
+  ret i1 %t.1
+}
+
+; Shift returns poison in this case, just make sure we don't crash.
+define i1 @shl_nsw_by_bw_plus_1(i64 %x) {
+; CHECK-LABEL: @shl_nsw_by_bw_plus_1(
+; CHECK-NEXT:    [[X_SHL:%.*]] = shl nsw i64 [[X:%.*]], 65
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[X_SHL]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[T_1]]
+;
+  %x.shl = shl nsw i64 %x, 65
+  %c.1 = icmp slt i64 %x.shl, 0
+  call void @llvm.assume(i1 %c.1)
+
+  %t.1 = icmp slt i64 %x, 0
+  ret i1 %t.1
+}

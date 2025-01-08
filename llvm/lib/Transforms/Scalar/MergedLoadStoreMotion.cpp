@@ -84,6 +84,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -199,7 +200,7 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
         CastInst::isBitOrNoopPointerCastable(
             Store0->getValueOperand()->getType(),
             Store1->getValueOperand()->getType(),
-            Store0->getModule()->getDataLayout()))
+            Store0->getDataLayout()))
       return Store1;
   }
   return nullptr;
@@ -255,7 +256,8 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
   // Intersect optional metadata.
   S0->andIRFlags(S1);
-  S0->dropUnknownNonDebugMetadata();
+
+  combineMetadataForCSE(S0, S1, true);
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
 

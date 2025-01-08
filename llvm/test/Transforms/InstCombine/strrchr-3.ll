@@ -13,7 +13,7 @@ define ptr @fold_strrchr_sp10_x(i32 %c) {
 ; CHECK-LABEL: @fold_strrchr_sp10_x(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[MEMRCHR_CHAR0CMP:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CHAR0CMP]], ptr getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 10), ptr null
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CHAR0CMP]], ptr getelementptr inbounds nuw (i8, ptr @s10, i64 10), ptr null
 ; CHECK-NEXT:    ret ptr [[MEMRCHR_SEL]]
 ;
   %psp10 = getelementptr [11 x i8], ptr @s10, i32 0, i32 10
@@ -26,7 +26,7 @@ define ptr @fold_strrchr_sp10_x(i32 %c) {
 
 define ptr @call_strrchr_sp9_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp9_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(2) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 9), i32 [[C:%.*]], i64 2)
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(2) getelementptr inbounds nuw (i8, ptr @s10, i64 9), i32 [[C:%.*]], i64 2)
 ; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
   %psp9 = getelementptr [11 x i8], ptr @s10, i32 0, i32 9
@@ -40,7 +40,7 @@ define ptr @call_strrchr_sp9_x(i32 %c) {
 
 define ptr @call_strrchr_sp2_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp2_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(9) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 2), i32 [[C:%.*]], i64 9)
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(9) getelementptr inbounds nuw (i8, ptr @s10, i64 2), i32 [[C:%.*]], i64 9)
 ; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
   %psp2 = getelementptr [11 x i8], ptr @s10, i32 0, i32 2
@@ -53,7 +53,7 @@ define ptr @call_strrchr_sp2_x(i32 %c) {
 
 define ptr @call_strrchr_sp1_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp1_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(10) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 1), i32 [[C:%.*]], i64 10)
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(10) getelementptr inbounds nuw (i8, ptr @s10, i64 1), i32 [[C:%.*]], i64 10)
 ; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
   %psp1 = getelementptr [11 x i8], ptr @s10, i32 0, i32 1

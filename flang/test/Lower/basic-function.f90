@@ -114,33 +114,33 @@ end
 
 complex(2) function cplxfct1()
 end
-! CHECK-LABEL: func @_QPcplxfct1() -> !fir.complex<2>
-! CHECK:         return %{{.*}} : !fir.complex<2>
+! CHECK-LABEL: func @_QPcplxfct1() -> complex<f16>
+! CHECK:         return %{{.*}} : complex<f16>
 
 complex(3) function cplxfct2()
 end
-! CHECK-LABEL: func @_QPcplxfct2() -> !fir.complex<3>
-! CHECK:         return %{{.*}} : !fir.complex<3>
+! CHECK-LABEL: func @_QPcplxfct2() -> complex<bf16>
+! CHECK:         return %{{.*}} : complex<bf16>
 
 complex(4) function cplxfct3()
 end
-! CHECK-LABEL: func @_QPcplxfct3() -> !fir.complex<4>
-! CHECK:         return %{{.*}} : !fir.complex<4>
+! CHECK-LABEL: func @_QPcplxfct3() -> complex<f32>
+! CHECK:         return %{{.*}} : complex<f32>
 
 complex(8) function cplxfct4()
 end
-! CHECK-LABEL: func @_QPcplxfct4() -> !fir.complex<8>
-! CHECK:         return %{{.*}} : !fir.complex<8>
+! CHECK-LABEL: func @_QPcplxfct4() -> complex<f64>
+! CHECK:         return %{{.*}} : complex<f64>
 
 complex(10) function cplxfct5()
 end
-! CHECK-LABEL: func @_QPcplxfct5() -> !fir.complex<10>
-! CHECK:         return %{{.*}} : !fir.complex<10>
+! CHECK-LABEL: func @_QPcplxfct5() -> complex<f80>
+! CHECK:         return %{{.*}} : complex<f80>
 
 complex(16) function cplxfct6()
 end
-! CHECK-LABEL: func @_QPcplxfct6() -> !fir.complex<16>
-! CHECK:         return %{{.*}} : !fir.complex<16>
+! CHECK-LABEL: func @_QPcplxfct6() -> complex<f128>
+! CHECK:         return %{{.*}} : complex<f128>
 
 function fct_with_character_return(i)
   character(10) :: fct_with_character_return

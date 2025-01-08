@@ -13,14 +13,16 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
-LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE void normalize(int &exponent,
+                           FPBits<long double>::StorageType &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
       cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
@@ -34,30 +36,26 @@ LIBC_INLINE long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 LIBC_INLINE long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);
+  constexpr auto LDNAN = LDBits::quiet_nan().get_val();
 
-  FPBits<long double> bits(x);
+  LDBits bits(x);
 
-  if (bits.is_inf_or_nan()) {
-    if (bits.get_sign() && (bits.get_mantissa() == 0)) {
-      // sqrt(-Inf) = NaN
-      return LDBits::build_quiet_nan(ONE >> 1);
-    } else {
-      // sqrt(NaN) = NaN
-      // sqrt(+Inf) = +Inf
-      return x;
-    }
-  } else if (bits.is_zero()) {
+  if (bits == LDBits::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
+    // sqrt(+Inf) = +Inf
     // sqrt(+0) = +0
     // sqrt(-0) = -0
+    // sqrt(NaN) = NaN
+    // sqrt(-NaN) = -NaN
     return x;
-  } else if (bits.get_sign()) {
-    // sqrt( negative numbers ) = NaN
-    return LDBits::build_quiet_nan(ONE >> 1);
+  } else if (bits.is_neg()) {
+    // sqrt(-Inf) = NaN
+    // sqrt(-x) = NaN
+    return LDNAN;
   } else {
     int x_exp = bits.get_explicit_exponent();
     StorageType x_mant = bits.get_mantissa();
@@ -65,7 +63,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // Step 1a: Normalize denormal input
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
-    } else if (bits.get_biased_exponent() == 0) {
+    } else if (bits.is_subnormal()) {
       normalize(x_exp, x_mant);
     }
 
@@ -131,13 +129,13 @@ LIBC_INLINE long double sqrt(long double x) {
     out.set_implicit_bit(1);
     out.set_mantissa((y & (ONE - 1)));
 
-    return out;
+    return out.get_val();
   }
 }
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace x86
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H

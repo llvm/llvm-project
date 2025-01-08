@@ -26,23 +26,38 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--fat-lto-objects`` option is added to support LLVM FatLTO.
-  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
-  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
-* common-page-size can now be larger than the system page-size.
-  (`#57618 <https://github.com/llvm/llvm-project/issues/57618>`_)
+* ``-z nosectionheader`` has been implemented to omit the section header table.
+  The operation is similar to ``llvm-objcopy --strip-sections``.
+  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
+* Section ``CLASS`` linker script syntax binds input sections to named classes,
+  which are referenced later one or more times. This provides access to the
+  automatic spilling mechanism of `--enable-non-contiguous-regions` without
+  globally changing the semantics of section matching. It also independently
+  increases the expressive power of linker scripts.
+  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
+* Supported relocation types for x86-64 target:
+  * ``R_X86_64_CODE_4_GOTPCRELX`` (`#109783 <https://github.com/llvm/llvm-project/pull/109783>`_) (`#116737 <https://github.com/llvm/llvm-project/pull/116737>`_)
+  * ``R_X86_64_CODE_4_GOTTPOFF`` (`#116634 <https://github.com/llvm/llvm-project/pull/116634>`_)
+  * ``R_X86_64_CODE_4_GOTPC32_TLSDESC`` (`#116909 <https://github.com/llvm/llvm-project/pull/116909>`_)
+  * ``R_X86_64_CODE_6_GOTTPOFF``  (`#117675 <https://github.com/llvm/llvm-project/pull/117675>`_)
 
 Breaking changes
 ----------------
 
+* Removed support for the (deprecated) `R_RISCV_RVC_LUI` relocation. This
+  was a binutils-internal relocation used during relaxation, and was not
+  emitted by compilers/assemblers.
+
 COFF Improvements
 -----------------
-
-* Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
-  This generates a .json profile trace of the linker execution.
+* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
+* ``/lldsavetemps`` allows saving select intermediate LTO compilation results (e.g. resolution, preopt, promote, internalize, import, opt, precodegen, prelink, combinedindex).
+* ``/machine:arm64ec`` support completed, enabling the linking of ARM64EC images.
+* COFF weak anti-dependency alias symbols are now supported.
 
 MinGW Improvements
 ------------------
+* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------

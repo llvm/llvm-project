@@ -29,10 +29,10 @@ define void @foo(ptr %P, ptr %X) {
 
 define ptr @test1() {
 ; CHECK32-LABEL: @test1(
-; CHECK32-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 3)
+; CHECK32-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @str, i32 3)
 ;
 ; CHECK16-LABEL: @test1(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 2), i32 103)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str, i32 2), i32 103)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([5 x i8], ptr @str, i32 0, i32 2), i32 103 )              ; <ptr> [#uses=1]
@@ -45,10 +45,10 @@ declare ptr @strchr(ptr, i32)
 
 define ptr @test2() {
 ; CHECK32-LABEL: @test2(
-; CHECK32-NEXT:    ret ptr getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 7)
+; CHECK32-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @str1, i32 7)
 ;
 ; CHECK16-LABEL: @test2(
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 2), i32 0)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str1, i32 2), i32 0)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
   %tmp3 = tail call ptr @strchr( ptr getelementptr ([8 x i8], ptr @str1, i32 0, i32 2), i32 0 )               ; <ptr> [#uses=1]
@@ -62,7 +62,7 @@ define ptr @test3() {
 ;
 ; CHECK16-LABEL: @test3(
 ; CHECK16-NEXT:  entry:
-; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str2, i32 0, i32 1), i32 80)
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds nuw (i8, ptr @str2, i32 1), i32 80)
 ; CHECK16-NEXT:    ret ptr [[TMP3]]
 ;
 entry:
@@ -154,18 +154,31 @@ declare ptr @fopen(ptr, ptr)
 declare void @exit(i32)
 
 define i32 @PR4645(i1 %c1) {
-; CHECK-LABEL: @PR4645(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[IF_THEN:%.*]]
-; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN]], label [[FOR_COND:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @exit(i32 1)
-; CHECK-NEXT:    br label [[FOR_COND]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    unreachable
-; CHECK:       for.end:
-; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK32-LABEL: @PR4645(
+; CHECK32-NEXT:  entry:
+; CHECK32-NEXT:    br label [[IF_THEN:%.*]]
+; CHECK32:       lor.lhs.false:
+; CHECK32-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN]], label [[FOR_COND:%.*]]
+; CHECK32:       if.then:
+; CHECK32-NEXT:    call void @exit(i32 1) #[[ATTR6:[0-9]+]]
+; CHECK32-NEXT:    br label [[FOR_COND]]
+; CHECK32:       for.cond:
+; CHECK32-NEXT:    unreachable
+; CHECK32:       for.end:
+; CHECK32-NEXT:    br label [[FOR_COND]]
+;
+; CHECK16-LABEL: @PR4645(
+; CHECK16-NEXT:  entry:
+; CHECK16-NEXT:    br label [[IF_THEN:%.*]]
+; CHECK16:       lor.lhs.false:
+; CHECK16-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN]], label [[FOR_COND:%.*]]
+; CHECK16:       if.then:
+; CHECK16-NEXT:    call void @exit(i32 1)
+; CHECK16-NEXT:    br label [[FOR_COND]]
+; CHECK16:       for.cond:
+; CHECK16-NEXT:    unreachable
+; CHECK16:       for.end:
+; CHECK16-NEXT:    br label [[FOR_COND]]
 ;
 entry:
   br label %if.then
@@ -341,6 +354,18 @@ define signext i32 @emit_stpncpy() {
   i32 noundef 2, i32 noundef 5)
   ret i32 0
 }
+
+define void @simplify_memset_chk_pr112633(ptr %p, i32 %conv) {
+; CHECK-LABEL: @simplify_memset_chk_pr112633(
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call ptr @__memset_chk(ptr [[P:%.*]], i32 range(i32 0, 123) [[CONV:%.*]], i64 1, i64 1)
+; CHECK-NEXT:    ret void
+;
+  %call.i = tail call ptr @__memset_chk(ptr %p, i32 range(i32 0, 123) %conv, i64 1, i64 1)
+  ret void
+}
+
+declare ptr @__memset_chk(ptr, i32, i64, i64)
+
 
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

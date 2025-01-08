@@ -32,6 +32,8 @@ endif()
 add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
+  OBJECT
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
@@ -47,7 +49,7 @@ add_mlir_dialect_library(MLIRNVVMTarget
   MLIRNVVMToLLVMIRTranslation
   )
 
-if(MLIR_ENABLE_CUDA_CONVERSIONS)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   # Find the CUDA toolkit.
   find_package(CUDAToolkit)
 
@@ -68,18 +70,38 @@ if(MLIR_ENABLE_CUDA_CONVERSIONS)
     if(MLIR_ENABLE_NVPTXCOMPILER)
       # Find the `nvptxcompiler` library.
       # TODO: Bump the MLIR CMake version to 3.25 and use `CUDA::nvptxcompiler_static`.
-      find_library(MLIR_NVPTXCOMPILER_LIB nvptxcompiler_static
+      find_library(MLIR_NVPTXCOMPILER_LIB_PATH nvptxcompiler_static
                   PATHS ${CUDAToolkit_LIBRARY_DIR} NO_DEFAULT_PATH)
 
       # Fail if `nvptxcompiler_static` couldn't be found.
-      if(MLIR_NVPTXCOMPILER_LIB STREQUAL "MLIR_NVPTXCOMPILER_LIB-NOTFOUND")
+      if(MLIR_NVPTXCOMPILER_LIB_PATH STREQUAL "MLIR_NVPTXCOMPILER_LIB_PATH-NOTFOUND")
         message(FATAL_ERROR
                 "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
       endif()
 
+      add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
+      # Downstream projects can modify this path and use it in CMake. For example:
+      # add_library(MLIR_NVPTXCOMPILER_LIB STATIC IMPORTED GLOBAL)
+      # set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${...})  
+      # where `...` is to be replaced with the path to the library.
+      set_property(TARGET MLIR_NVPTXCOMPILER_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVPTXCOMPILER_LIB_PATH})
       # Link against `nvptxcompiler_static`. TODO: use `CUDA::nvptxcompiler_static`.
-      target_link_libraries(MLIRNVVMTarget PRIVATE ${MLIR_NVPTXCOMPILER_LIB})
+      target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVPTXCOMPILER_LIB)
       target_include_directories(obj.MLIRNVVMTarget PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+
+      # Add the `nvfatbin` library.
+      find_library(MLIR_NVFATBIN_LIB_PATH nvfatbin_static
+                  PATHS ${CUDAToolkit_LIBRARY_DIR} NO_DEFAULT_PATH)
+      # Fail if `nvfatbin_static` couldn't be found.
+      if(MLIR_NVFATBIN_LIB_PATH STREQUAL "MLIR_NVFATBIN_LIB_PATH-NOTFOUND")
+        message(FATAL_ERROR
+                "Requested using the static `nvptxcompiler` library which requires the \
+                'nvfatbin` library, but it couldn't be found.")
+      endif()
+
+      add_library(MLIR_NVFATBIN_LIB STATIC IMPORTED GLOBAL)
+      set_property(TARGET MLIR_NVFATBIN_LIB PROPERTY IMPORTED_LOCATION ${MLIR_NVFATBIN_LIB_PATH})  
+      target_link_libraries(MLIRNVVMTarget PRIVATE MLIR_NVFATBIN_LIB)
     endif()
   else()
     # Fail if `MLIR_ENABLE_NVPTXCOMPILER` is enabled and the toolkit couldn't be found.
@@ -93,10 +115,48 @@ if(MLIR_ENABLE_CUDA_CONVERSIONS)
   # Define the `CUDAToolkit` path.
   target_compile_definitions(obj.MLIRNVVMTarget
     PRIVATE
-    MLIR_NVPTXCOMPILER_ENABLED=${MLIR_ENABLE_NVPTXCOMPILER}
     __DEFAULT_CUDATOOLKIT_PATH__="${MLIR_CUDAToolkit_ROOT}"
   )
 endif()
+
+
+function(embed_binary_to_src file output_file symbol)
+    file(READ ${file} filedata HEX)
+    # Convert hex data for C compatibility
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," filedata ${filedata})
+    # Write data to output file
+    file(WRITE ${output_file} "const char ${symbol}[] = {${filedata}};\nconst int ${symbol}_size = sizeof(${symbol});\n")
+endfunction()
+
+set(MLIR_NVVM_EMBED_LIBDEVICE 0 CACHE BOOL "Embed CUDA libdevice.bc in the binary at build time instead of looking it up at runtime")
+if (MLIR_NVVM_EMBED_LIBDEVICE)
+  if (NOT MLIR_NVVM_LIBDEVICE_PATH)
+    if(CUDAToolkit_FOUND)
+      find_file(MLIR_NVVM_LIBDEVICE_PATH libdevice.10.bc
+                PATHS ${CUDAToolkit_LIBRARY_ROOT}
+                PATH_SUFFIXES "nvvm/libdevice" NO_DEFAULT_PATH REQUIRED)
+    else()
+      message(FATAL_ERROR
+              "Requested using the `nvptxcompiler` library backend but it couldn't be found.")
+    endif()
+  endif()
+  
+  embed_binary_to_src(${MLIR_NVVM_LIBDEVICE_PATH} ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c _mlir_embedded_libdevice)
+  add_mlir_library(MLIRNVVMLibdevice
+    ${CMAKE_CURRENT_BINARY_DIR}/libdevice_embedded.c
+  )
+  target_link_libraries(MLIRNVVMTarget PRIVATE MLIRNVVMLibdevice)
+  target_compile_definitions(obj.MLIRNVVMTarget
+    PRIVATE
+    MLIR_NVVM_EMBED_LIBDEVICE=1
+  )
+else()
+  target_compile_definitions(obj.MLIRNVVMTarget
+    PRIVATE
+    MLIR_NVVM_EMBED_LIBDEVICE=0
+  )
+endif()
+
 
 if (MLIR_ENABLE_ROCM_CONVERSIONS)
   set(AMDGPU_LIBS
@@ -109,8 +169,12 @@ endif()
 
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
+  ROCDL/Utils.cpp
+
+  OBJECT
 
   LINK_COMPONENTS
+  FrontendOffloading
   MCParser
   ${AMDGPU_LIBS}
 
@@ -124,17 +188,18 @@ add_mlir_dialect_library(MLIRROCDLTarget
   )
 
 if(MLIR_ENABLE_ROCM_CONVERSIONS)
-  if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
-    message(SEND_ERROR
-      "Building mlir with ROCm support requires the AMDGPU backend")
-  endif()
-
   if (DEFINED ROCM_PATH)
     set(DEFAULT_ROCM_PATH "${ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   elseif(DEFINED ENV{ROCM_PATH})
     set(DEFAULT_ROCM_PATH "$ENV{ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   else()
-    set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+    if (WIN32)
+      # Avoid setting an UNIX path for Windows.
+      # TODO: Eventually migrate to FindHIP once it becomes a part of CMake.
+      set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")
+    else()
+      set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+    endif()
   endif()
   message(VERBOSE "MLIR Default ROCM toolkit path: ${DEFAULT_ROCM_PATH}")
 
@@ -143,3 +208,4 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
     __DEFAULT_ROCM_PATH__="${DEFAULT_ROCM_PATH}"
   )
 endif()
+

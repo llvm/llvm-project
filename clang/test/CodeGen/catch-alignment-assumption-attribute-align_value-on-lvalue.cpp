@@ -19,7 +19,7 @@ char **load_from_ac_struct(struct ac_struct *x) {
   // CHECK-NEXT:                        %[[STRUCT_AC_STRUCT_ADDR:.*]] = alloca ptr, align 8
   // CHECK-NEXT:                        store ptr %[[X]], ptr %[[STRUCT_AC_STRUCT_ADDR]], align 8
   // CHECK-NEXT:                        %[[X_RELOADED:.*]] = load ptr, ptr %[[STRUCT_AC_STRUCT_ADDR]], align 8
-  // CHECK:                             %[[A_ADDR:.*]] = getelementptr inbounds %[[STRUCT_AC_STRUCT]], ptr %[[X_RELOADED]], i32 0, i32 0
+  // CHECK:                             %[[A_ADDR:.*]] = getelementptr inbounds nuw %[[STRUCT_AC_STRUCT]], ptr %[[X_RELOADED]], i32 0, i32 0
   // CHECK:                             %[[A:.*]] = load ptr, ptr %[[A_ADDR]], align 8
   // CHECK-SANITIZE-NEXT:               %[[PTRINT:.*]] = ptrtoint ptr %[[A]] to i64
   // CHECK-SANITIZE-NEXT:               %[[MASKEDPTR:.*]] = and i64 %[[PTRINT]], 4294967295

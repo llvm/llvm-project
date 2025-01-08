@@ -263,11 +263,13 @@ namespace std {
   template< class T > struct remove_reference<T&>  {typedef T type;};
   template< class T > struct remove_reference<T&&> {typedef T type;};
 
-  template<class T> 
-  typename remove_reference<T>::type&& move(T&& a) {
-    typedef typename remove_reference<T>::type&& RvalRef;
-    return static_cast<RvalRef>(a);
-  }
+  template<typename T> typename remove_reference<T>::type&& move(T&& a);
+  template <typename T> T *__addressof(T &x);
+  template <typename T> T *addressof(T &x);
+  template <typename T> const T& as_const(T& x);
+  template <typename T> T&& forward(T&& x);
+  // FIXME: Declare forward_like
+  // FIXME: Declare move_if_noexcept
 
   template< class T >
   using remove_reference_t = typename remove_reference<T>::type;
@@ -754,7 +756,7 @@ namespace std {
     template<class InputIter, class OutputIter>
     OutputIter __copy(InputIter II, InputIter IE, OutputIter OI) {
       while (II != IE)
-        *OI++ = *II++;
+        *OI++ = *II++; // #system_header_simulator_cxx_std_copy_impl_loop
 
       return OI;
     }
@@ -1111,13 +1113,24 @@ ostream &operator<<(ostream &, const string &);
 template <class T>
 ostream &operator<<(ostream &, const std::unique_ptr<T> &);
 #endif
+
+template <class CharT>
+class basic_istream;
+
+using istream = basic_istream<char>;
+
+extern std::istream cin;
+
+istream &getline(istream &, string &, char);
+istream &getline(istream &, string &);
 } // namespace std
 
-#ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {
   void *malloc(size_t);
   void free(void *);
-}
+} // namespace std
+
+#ifdef TEST_INLINABLE_ALLOCATORS
 void* operator new(std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void* operator new[](std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void operator delete(void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }
@@ -1247,6 +1260,13 @@ template<
     Key *val;
     iterator begin() const { return iterator(val); }
     iterator end() const { return iterator(val + 1); }
+};
+
+template <typename T>
+class atomic {
+public:
+  T operator++();
+  T operator--();
 };
 
 namespace execution {

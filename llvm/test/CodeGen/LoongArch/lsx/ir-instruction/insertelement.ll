@@ -56,10 +56,10 @@ define void @insert_2xi64(ptr %src, ptr %dst, i64 %ins) nounwind {
 define void @insert_4xfloat(ptr %src, ptr %dst, float %ins) nounwind {
 ; CHECK-LABEL: insert_4xfloat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.s $a2, $fa0
-; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a2, 1
-; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a0, 0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 1
+; CHECK-NEXT:    vst $vr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <4 x float>, ptr %src
   %v_new = insertelement <4 x float> %v, float %ins, i32 1
@@ -70,10 +70,10 @@ define void @insert_4xfloat(ptr %src, ptr %dst, float %ins) nounwind {
 define void @insert_2xdouble(ptr %src, ptr %dst, double %ins) nounwind {
 ; CHECK-LABEL: insert_2xdouble:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.d $a2, $fa0
-; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a2, 1
-; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a0, 0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; CHECK-NEXT:    vst $vr1, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <2 x double>, ptr %src
   %v_new = insertelement <2 x double> %v, double %ins, i32 1

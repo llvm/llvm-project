@@ -1,4 +1,4 @@
-; RUN: llvm-reduce %s -o %t --delta-passes=metadata --test FileCheck --test-arg %s --test-arg --check-prefix=EXCITING --test-arg --input-file
+; RUN: llvm-reduce %s -o %t --abort-on-invalid-reduction --delta-passes=metadata --test FileCheck --test-arg %s --test-arg --check-prefix=EXCITING --test-arg --input-file
 ; RUN: FileCheck %s --input-file %t --check-prefix=REDUCED
 
 ; All exciting stuff must remain in the reduced file.

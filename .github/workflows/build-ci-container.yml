@@ -1,0 +1,88 @@
+name: Build CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container.yml
+      - '.github/workflows/containers/github-action-ci/**'
+
+jobs:
+  build-ci-container:
+    if: github.repository_owner == 'llvm'
+    runs-on: depot-ubuntu-22.04-16
+    outputs:
+      container-name: ${{ steps.vars.outputs.container-name }}
+      container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
+      container-filename: ${{ steps.vars.outputs.container-filename }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/workflows/containers/github-action-ci/
+      - name: Write Variables
+        id: vars
+        run: |
+          tag=`date +%s`
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/ci-ubuntu-22.04"
+          echo "container-name=$container_name" >> $GITHUB_OUTPUT
+          echo "container-name-tag=$container_name:$tag" >> $GITHUB_OUTPUT
+          echo "container-filename=$(echo $container_name:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+      - name: Build container
+        working-directory: ./.github/workflows/containers/github-action-ci/
+        run: |
+          podman build -t ${{ steps.vars.outputs.container-name-tag }} .
+
+      # Save the container so we have it in case the push fails.  This also
+      # allows us to separate the push step into a different job so we can
+      # maintain minimal permissions while building the container.
+      - name: Save container image
+        run: |
+          podman save  ${{ steps.vars.outputs.container-name-tag }} >  ${{ steps.vars.outputs.container-filename }}
+
+      - name: Upload container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: container
+          path: ${{ steps.vars.outputs.container-filename }}
+          retention-days: 14
+
+      - name: Test Container
+        run: |
+          for image in ${{ steps.vars.outputs.container-name-tag }}; do
+            # Use --pull=never to ensure we are testing the just built image.
+            podman run --pull=never --rm -it $image /usr/bin/bash -x -c 'cd $HOME && printf '\''#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }'\'' | clang++ -x c++ - && ./a.out | grep Hello'
+          done
+
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@v4
+        with:
+          name: container
+
+      - name: Push Container
+        run: |
+          podman load -i ${{ needs.build-ci-container.outputs.container-filename }}
+          podman tag ${{ needs.build-ci-container.outputs.container-name-tag }} ${{ needs.build-ci-container.outputs.container-name }}:latest
+          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+          podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
+          podman push ${{ needs.build-ci-container.outputs.container-name }}:latest

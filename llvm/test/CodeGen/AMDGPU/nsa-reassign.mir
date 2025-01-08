@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass greedy,amdgpu-nsa-reassign,virtregrewriter,si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass greedy,amdgpu-nsa-reassign,virtregrewriter,si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
 
 --- |
   define amdgpu_kernel void @nsa_reassign() #0 { ret void }

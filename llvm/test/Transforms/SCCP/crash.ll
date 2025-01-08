@@ -2,9 +2,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-apple-darwin10.0"
 
-define void @test1(i8 %arg) {
+define void @test1(i8 %arg, i1 %arg1) {
 entry:
-  br i1 undef, label %return, label %bb
+  br i1 %arg1, label %return, label %bb
 
 bb:   
   br label %bb34
@@ -28,7 +28,7 @@ define i32 @test2([4 x i32] %A) {
   ret i32 %B
 }
 
-define x86_mmx @test3() {
-  %load = load x86_mmx, ptr null
-  ret x86_mmx %load
+define <1 x i64> @test3() {
+  %load = load <1 x i64>, ptr null
+  ret <1 x i64> %load
 }

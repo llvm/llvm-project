@@ -1,0 +1,40 @@
+//===- DirectXPassRegistry.def - Registry of DirectX passes -----*- C++--*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the
+// DirectX backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_ANALYSIS
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)
+#endif
+MODULE_ANALYSIS("dx-shader-flags", dxil::ShaderFlagsAnalysis())
+MODULE_ANALYSIS("dxil-resource-md", DXILResourceMDAnalysis())
+#undef MODULE_ANALYSIS
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("dxil-data-scalarization", DXILDataScalarization())
+MODULE_PASS("dxil-flatten-arrays", DXILFlattenArrays())
+MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansion())
+MODULE_PASS("dxil-op-lower", DXILOpLowering())
+MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
+MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadata())
+// TODO: rename to print<foo> after NPM switch
+MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinter(dbgs()))
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("dxil-resource-access", DXILResourceAccess())
+#undef FUNCTION_PASS

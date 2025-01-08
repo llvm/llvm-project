@@ -45,6 +45,7 @@ public:
                       const ConcatInputSection *ib);
   bool equalsVariable(const ConcatInputSection *ia,
                       const ConcatInputSection *ib);
+  void applySafeThunksToRange(size_t begin, size_t end);
 
   // ICF needs a copy of the inputs vector because its equivalence-class
   // segregation algorithm destroys the proper sequence.
@@ -114,16 +115,16 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return false;
     if (ra.offset != rb.offset)
       return false;
-    if (ra.referent.is<Symbol *>() != rb.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent) != isa<Symbol *>(rb.referent))
       return false;
 
     InputSection *isecA, *isecB;
 
     uint64_t valueA = 0;
     uint64_t valueB = 0;
-    if (ra.referent.is<Symbol *>()) {
-      const auto *sa = ra.referent.get<Symbol *>();
-      const auto *sb = rb.referent.get<Symbol *>();
+    if (isa<Symbol *>(ra.referent)) {
+      const auto *sa = cast<Symbol *>(ra.referent);
+      const auto *sb = cast<Symbol *>(rb.referent);
       if (sa->kind() != sb->kind())
         return false;
       // ICF runs before Undefineds are treated (and potentially converted into
@@ -133,18 +134,29 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       assert(isa<Defined>(sa));
       const auto *da = cast<Defined>(sa);
       const auto *db = cast<Defined>(sb);
-      if (!da->isec || !db->isec) {
+      if (!da->isec() || !db->isec()) {
         assert(da->isAbsolute() && db->isAbsolute());
         return da->value + ra.addend == db->value + rb.addend;
       }
-      isecA = da->isec;
+      isecA = da->isec();
       valueA = da->value;
-      isecB = db->isec;
+      isecB = db->isec();
       valueB = db->value;
     } else {
-      isecA = ra.referent.get<InputSection *>();
-      isecB = rb.referent.get<InputSection *>();
+      isecA = cast<InputSection *>(ra.referent);
+      isecB = cast<InputSection *>(rb.referent);
     }
+
+    // Typically, we should not encounter sections marked with `keepUnique` at
+    // this point as they would have resulted in different hashes and therefore
+    // no need for a full comparison.
+    // However, in `safe_thunks` mode, it's possible for two different
+    // relocations to reference identical `keepUnique` functions that will be
+    // distinguished later via thunks - so we need to handle this case
+    // explicitly.
+    if ((isecA != isecB) && ((isecA->keepUnique && isCodeSection(isecA)) ||
+                             (isecB->keepUnique && isCodeSection(isecB))))
+      return false;
 
     if (isecA->parent != isecB->parent)
       return false;
@@ -155,7 +167,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return ra.addend == rb.addend;
     // Else we have two literal sections. References to them are equal iff their
     // offsets in the output section are equal.
-    if (ra.referent.is<Symbol *>())
+    if (isa<Symbol *>(ra.referent))
       // For symbol relocs, we compare the contents at the symbol address. We
       // don't do `getOffset(value + addend)` because value + addend may not be
       // a valid offset in the literal section.
@@ -183,21 +195,21 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     if (ra.referent == rb.referent)
       return true;
     const ConcatInputSection *isecA, *isecB;
-    if (ra.referent.is<Symbol *>()) {
+    if (isa<Symbol *>(ra.referent)) {
       // Matching DylibSymbols are already filtered out by the
       // identical-referent check above. Non-matching DylibSymbols were filtered
       // out in equalsConstant(). So we can safely cast to Defined here.
-      const auto *da = cast<Defined>(ra.referent.get<Symbol *>());
-      const auto *db = cast<Defined>(rb.referent.get<Symbol *>());
+      const auto *da = cast<Defined>(cast<Symbol *>(ra.referent));
+      const auto *db = cast<Defined>(cast<Symbol *>(rb.referent));
       if (da->isAbsolute())
         return true;
-      isecA = dyn_cast<ConcatInputSection>(da->isec);
+      isecA = dyn_cast<ConcatInputSection>(da->isec());
       if (!isecA)
         return true; // literal sections were checked in equalsConstant.
-      isecB = cast<ConcatInputSection>(db->isec);
+      isecB = cast<ConcatInputSection>(db->isec());
     } else {
-      const auto *sa = ra.referent.get<InputSection *>();
-      const auto *sb = rb.referent.get<InputSection *>();
+      const auto *sa = cast<InputSection *>(ra.referent);
+      const auto *sb = cast<InputSection *>(rb.referent);
       isecA = dyn_cast<ConcatInputSection>(sa);
       if (!isecA)
         return true;
@@ -212,7 +224,7 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   // info matches. For simplicity, we only handle the case where there are only
   // symbols at offset zero within the section (which is typically the case with
   // .subsections_via_symbols.)
-  auto hasUnwind = [](Defined *d) { return d->unwindEntry != nullptr; };
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
   const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
   const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
   if (itA == ia->symbols.end())
@@ -221,8 +233,8 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     return false;
   const Defined *da = *itA;
   const Defined *db = *itB;
-  if (da->unwindEntry->icfEqClass[icfPass % 2] !=
-          db->unwindEntry->icfEqClass[icfPass % 2] ||
+  if (da->unwindEntry()->icfEqClass[icfPass % 2] !=
+          db->unwindEntry()->icfEqClass[icfPass % 2] ||
       da->value != 0 || db->value != 0)
     return false;
   auto isZero = [](Defined *d) { return d->value == 0; };
@@ -248,6 +260,50 @@ void ICF::forEachClassRange(size_t begin, size_t end,
     size_t mid = findBoundary(begin, end);
     func(begin, mid);
     begin = mid;
+  }
+}
+
+// Given a range of identical icfInputs, replace address significant functions
+// with a thunk that is just a direct branch to the first function in the
+// series. This way we keep only one main body of the function but we still
+// retain the address uniqueness of relevant functions by having them be a
+// direct branch thunk rather than containing a full copy of the actual function
+// body.
+void ICF::applySafeThunksToRange(size_t begin, size_t end) {
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  uint32_t thunkSize = target->getICFSafeThunkSize();
+  if (icfInputs[begin]->data.size() <= thunkSize)
+    return;
+
+  // When creating a unique ICF thunk, use the first section as the section that
+  // all thunks will branch to.
+  ConcatInputSection *masterIsec = icfInputs[begin];
+
+  for (size_t i = begin + 1; i < end; ++i) {
+    ConcatInputSection *isec = icfInputs[i];
+    // When we're done processing keepUnique entries, we can stop. Sorting
+    // guaratees that all keepUnique will be at the front.
+    if (!isec->keepUnique)
+      break;
+
+    ConcatInputSection *thunk =
+        makeSyntheticInputSection(isec->getSegName(), isec->getName());
+    addInputSection(thunk);
+
+    target->initICFSafeThunkBody(thunk, masterIsec);
+    thunk->foldIdentical(isec, Symbol::ICFFoldKind::Thunk);
+
+    // Since we're folding the target function into a thunk, we need to adjust
+    // the symbols that now got relocated from the target function to the thunk.
+    // Since the thunk is only one branch, we move all symbols to offset 0 and
+    // make sure that the size of all non-zero-size symbols is equal to the size
+    // of the branch.
+    for (auto *sym : thunk->symbols) {
+      sym->value = 0;
+      if (sym->size != 0)
+        sym->size = thunkSize;
+    }
   }
 }
 
@@ -289,13 +345,13 @@ void ICF::run() {
       for (const Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
-            if (defined->isec) {
+            if (defined->isec()) {
               if (auto *referentIsec =
-                      dyn_cast<ConcatInputSection>(defined->isec))
+                      dyn_cast<ConcatInputSection>(defined->isec()))
                 hash += defined->value + referentIsec->icfEqClass[icfPass % 2];
               else
-                hash += defined->isec->kind() +
-                        defined->isec->getOffset(defined->value);
+                hash += defined->isec()->kind() +
+                        defined->isec()->getOffset(defined->value);
             } else {
               hash += defined->value;
             }
@@ -312,6 +368,12 @@ void ICF::run() {
 
   llvm::stable_sort(
       icfInputs, [](const ConcatInputSection *a, const ConcatInputSection *b) {
+        // When using safe_thunks, ensure that we first sort by icfEqClass and
+        // then by keepUnique (descending). This guarantees that within an
+        // equivalence class, the keepUnique inputs are always first.
+        if (config->icfLevel == ICFLevel::safe_thunks)
+          if (a->icfEqClass[0] == b->icfEqClass[0])
+            return a->keepUnique > b->keepUnique;
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
   forEachClass([&](size_t begin, size_t end) {
@@ -331,13 +393,37 @@ void ICF::run() {
     log("equalsVariable() called " + Twine(equalsVariableCount) + " times");
   }
 
+  // When using safe_thunks, we need to create thunks for all keepUnique
+  // functions that can be deduplicated. Since we're creating / adding new
+  // InputSections, we can't paralellize this.
+  if (config->icfLevel == ICFLevel::safe_thunks)
+    forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
+      applySafeThunksToRange(begin, end);
+    });
+
   // Fold sections within equivalence classes
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
       return;
+    bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
+
+    // For ICF level safe_thunks, replace keepUnique function bodies with
+    // thunks. For all other ICF levles, directly merge the functions.
+
     ConcatInputSection *beginIsec = icfInputs[begin];
-    for (size_t i = begin + 1; i < end; ++i)
+    for (size_t i = begin + 1; i < end; ++i) {
+      // Skip keepUnique inputs when using safe_thunks (already handeled above)
+      if (useSafeThunks && icfInputs[i]->keepUnique) {
+        // Assert keepUnique sections are either small or replaced with thunks.
+        assert(!icfInputs[i]->live ||
+               icfInputs[i]->data.size() <= target->getICFSafeThunkSize());
+        assert(!icfInputs[i]->replacement ||
+               icfInputs[i]->replacement->data.size() ==
+                   target->getICFSafeThunkSize());
+        continue;
+      }
       beginIsec->foldIdentical(icfInputs[i]);
+    }
   });
 }
 
@@ -368,8 +454,8 @@ void ICF::segregate(size_t begin, size_t end, EqualsFn equals) {
 
 void macho::markSymAsAddrSig(Symbol *s) {
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->isec)
-      d->isec->keepUnique = true;
+    if (d->isec())
+      d->isec()->keepUnique = true;
 }
 
 void macho::markAddrSigSymbols() {
@@ -395,6 +481,33 @@ void macho::markAddrSigSymbols() {
   }
 }
 
+// Given a symbol that was folded into a thunk, return the symbol pointing to
+// the actual body of the function. We use this approach rather than storing the
+// needed info in the Defined itself in order to minimize memory usage.
+Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
+  assert(isa<ConcatInputSection>(foldedSym->originalIsec) &&
+         "thunk-folded ICF symbol expected to be on a ConcatInputSection");
+  // foldedSec is the InputSection that was marked as deleted upon fold
+  ConcatInputSection *foldedSec =
+      cast<ConcatInputSection>(foldedSym->originalIsec);
+
+  // thunkBody is the actual live thunk, containing the code that branches to
+  // the actual body of the function.
+  InputSection *thunkBody = foldedSec->replacement;
+
+  // The actual (merged) body of the function that the thunk jumps to. This will
+  // end up in the final binary.
+  InputSection *functionBody = target->getThunkBranchTarget(thunkBody);
+
+  for (Symbol *sym : functionBody->symbols) {
+    Defined *d = dyn_cast<Defined>(sym);
+    // The symbol needs to be at the start of the InputSection
+    if (d && d->value == 0)
+      return d;
+  }
+
+  llvm_unreachable("could not find body symbol for ICF-generated thunk");
+}
 void macho::foldIdenticalSections(bool onlyCfStrings) {
   TimeTraceScope timeScope("Fold Identical Code Sections");
   // The ICF equivalence-class segregation algorithm relies on pre-computed
@@ -421,17 +534,28 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     // can still fold it.
     bool hasFoldableFlags = (isSelRefsSection(isec) ||
                              sectionType(isec->getFlags()) == MachO::S_REGULAR);
+
+    bool isCodeSec = isCodeSection(isec);
+
+    // When keepUnique is true, the section is not foldable. Unless we are at
+    // icf level safe_thunks, in which case we still want to fold code sections.
+    // When using safe_thunks we'll apply the safe_thunks logic at merge time
+    // based on the 'keepUnique' flag.
+    bool noUniqueRequirement =
+        !isec->keepUnique ||
+        ((config->icfLevel == ICFLevel::safe_thunks) && isCodeSec);
+
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
-                      (isCodeSection(isec) || isFoldableWithAddendsRemoved ||
+                      (isCodeSec || isFoldableWithAddendsRemoved ||
                        isGccExceptTabSection(isec)) &&
-                      !isec->keepUnique && !isec->hasAltEntry &&
+                      noUniqueRequirement && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);
       for (Defined *d : isec->symbols)
-        if (d->unwindEntry)
-          foldable.push_back(d->unwindEntry);
+        if (d->unwindEntry())
+          foldable.push_back(d->unwindEntry());
 
       // Some sections have embedded addends that foil ICF's hashing / equality
       // checks. (We can ignore embedded addends when doing ICF because the same

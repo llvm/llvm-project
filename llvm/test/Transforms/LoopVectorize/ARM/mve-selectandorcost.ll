@@ -8,8 +8,8 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: test
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
-; CHECK-COST: LV: Found an estimated cost of 26 for VF 2 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
-; CHECK-COST: LV: Found an estimated cost of 2 for VF 4 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
+; CHECK-COST: Cost of 26 for VF 2: WIDEN-SELECT ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
+; CHECK-COST: Cost of 2 for VF 4: WIDEN-SELECT ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
 
 define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %blockSize) #0 {
 ; CHECK-LABEL: @test(
@@ -30,65 +30,65 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PA]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[PB]], i32 [[TMP3]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PA]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[OFFSET_IDX5:%.*]] = shl i32 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[PB]], i32 [[OFFSET_IDX5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[NEXT_GEP5]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast oeq <4 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp fast oeq <4 x float> [[WIDE_LOAD6]], zeroinitializer
-; CHECK-NEXT:    [[DOTNOT8:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[WIDE_LOAD6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fdiv fast <4 x float> [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[DOTNOT8]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[PREDPHI]] = fadd fast <4 x float> [[VEC_PHI]], [[TMP12]]
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[NEXT_GEP6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp fast oeq <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast oeq <4 x float> [[WIDE_LOAD7]], zeroinitializer
+; CHECK-NEXT:    [[DOTNOT9:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[WIDE_LOAD7]])
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <4 x float> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = fdiv fast <4 x float> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[DOTNOT9]], <4 x float> splat (float -0.000000e+00), <4 x float> [[TMP9]]
+; CHECK-NEXT:    [[PREDPHI]] = fadd reassoc arcp contract afn <4 x float> [[VEC_PHI]], [[TMP10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[BLOCKSIZE]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PA]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END1]], [[MIDDLE_BLOCK]] ], [ [[PB]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP14]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP12]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PA_ADDR_020:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[IF_END:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PB_ADDR_019:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[BLOCKSIZE_ADDR_018:%.*]] = phi i32 [ [[DEC:%.*]], [[IF_END]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ACCUM_017:%.*]] = phi float [ [[ACCUM_1:%.*]], [[IF_END]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[PA_ADDR_020]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[PA_ADDR_020]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds float, ptr [[PB_ADDR_019]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = load float, ptr [[PB_ADDR_019]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast une float [[TMP15]], 0.000000e+00
-; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast une float [[TMP16]], 0.000000e+00
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PA_ADDR_020]], i32 4
+; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[PA_ADDR_020]], align 4
+; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds nuw i8, ptr [[PB_ADDR_019]], i32 4
+; CHECK-NEXT:    [[TMP14:%.*]] = load float, ptr [[PB_ADDR_019]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast une float [[TMP13]], 0.000000e+00
+; CHECK-NEXT:    [[CMP3:%.*]] = fcmp fast une float [[TMP14]], 0.000000e+00
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP3]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast float @llvm.fabs.f32(float [[TMP15]])
-; CHECK-NEXT:    [[TMP18:%.*]] = tail call fast float @llvm.fabs.f32(float [[TMP16]])
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP18]], [[TMP17]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = tail call fast float @llvm.fabs.f32(float [[SUB]])
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[TMP19]], [[ADD]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call fast float @llvm.fabs.f32(float [[TMP13]])
+; CHECK-NEXT:    [[TMP16:%.*]] = tail call fast float @llvm.fabs.f32(float [[TMP14]])
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast float @llvm.fabs.f32(float [[SUB]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[TMP17]], [[ADD]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[DIV]], [[ACCUM_017]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ACCUM_1]] = phi float [ [[ADD4]], [[IF_THEN]] ], [ [[ACCUM_017]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLOCKSIZE_ADDR_018]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[ACCUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ACCUM_1]], [[IF_END]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ACCUM_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ACCUM_1]], [[IF_END]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[ACCUM_0_LCSSA]]
 ;
 entry:

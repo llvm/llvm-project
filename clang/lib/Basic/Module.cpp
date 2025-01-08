@@ -34,8 +34,9 @@
 
 using namespace clang;
 
-Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-               bool IsFramework, bool IsExplicit, unsigned VisibilityID)
+Module::Module(ModuleConstructorTag, StringRef Name,
+               SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
+               bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
       VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
@@ -53,16 +54,11 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 }
 
-Module::~Module() {
-  for (auto *Submodule : SubModules) {
-    delete Submodule;
-  }
-}
+Module::~Module() = default;
 
 static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   StringRef Platform = Target.getPlatformName();
@@ -140,8 +136,8 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
       return true;
     }
     for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
-      if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
-              Current->Requirements[I].second) {
+      if (hasFeature(Current->Requirements[I].FeatureName, LangOpts, Target) !=
+          Current->Requirements[I].RequiredState) {
         Req = Current->Requirements[I];
         return true;
       }
@@ -252,7 +248,6 @@ std::string Module::getFullModuleName(bool AllowStringLiterals) const {
 
   llvm::raw_string_ostream Out(Result);
   printModuleId(Out, Names.rbegin(), Names.rend(), AllowStringLiterals);
-  Out.flush();
 
   return Result;
 }
@@ -301,10 +296,13 @@ bool Module::directlyUses(const Module *Requested) {
     if (Requested->isSubModuleOf(Use))
       return true;
 
-  // Anyone is allowed to use our builtin stdarg.h and stddef.h and their
-  // accompanying modules.
-  if (Requested->getTopLevelModuleName() == "_Builtin_stdarg" ||
-      Requested->getTopLevelModuleName() == "_Builtin_stddef")
+  // Anyone is allowed to use our builtin stddef.h and its accompanying modules.
+  if (Requested->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}) ||
+      Requested->fullModuleNameIs({"_Builtin_stddef_wint_t"}))
+    return true;
+  // Darwin is allowed is to use our builtin 'ptrauth.h' and its accompanying
+  // module.
+  if (!Requested->Parent && Requested->Name == "ptrauth")
     return true;
 
   if (NoUndeclaredIncludes)
@@ -316,7 +314,7 @@ bool Module::directlyUses(const Module *Requested) {
 void Module::addRequirement(StringRef Feature, bool RequiredState,
                             const LangOptions &LangOpts,
                             const TargetInfo &Target) {
-  Requirements.push_back(Requirement(std::string(Feature), RequiredState));
+  Requirements.push_back(Requirement{std::string(Feature), RequiredState});
 
   // If this feature is currently available, we're done.
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
@@ -352,31 +350,19 @@ void Module::markUnavailable(bool Unimportable) {
 }
 
 Module *Module::findSubmodule(StringRef Name) const {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos == SubModuleIndex.end())
-    return nullptr;
+  // Add new submodules into the index.
+  for (unsigned I = SubModuleIndex.size(), E = SubModules.size(); I != E; ++I)
+    SubModuleIndex[SubModules[I]->Name] = I;
 
-  return SubModules[Pos->getValue()];
-}
+  if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
+    return SubModules[It->second];
 
-Module *Module::findOrInferSubmodule(StringRef Name) {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos != SubModuleIndex.end())
-    return SubModules[Pos->getValue()];
-  if (!InferSubmodules)
-    return nullptr;
-  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
-  Result->InferExplicitSubmodules = InferExplicitSubmodules;
-  Result->InferSubmodules = InferSubmodules;
-  Result->InferExportWildcard = InferExportWildcard;
-  if (Result->InferExportWildcard)
-    Result->Exports.push_back(Module::ExportDecl(nullptr, true));
-  return Result;
+  return nullptr;
 }
 
 Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isExplicitGlobalModule())
@@ -387,7 +373,7 @@ Module *Module::getGlobalModuleFragment() const {
 
 Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isPrivateModule())
@@ -501,9 +487,9 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     for (unsigned I = 0, N = Requirements.size(); I != N; ++I) {
       if (I)
         OS << ", ";
-      if (!Requirements[I].second)
+      if (!Requirements[I].RequiredState)
         OS << "!";
-      OS << Requirements[I].first;
+      OS << Requirements[I].FeatureName;
     }
     OS << "\n";
   }
@@ -544,7 +530,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
 
   for (auto &K : Kinds) {
     assert(&K == &Kinds[K.Kind] && "kinds in wrong order");
-    for (auto &H : Headers[K.Kind]) {
+    for (auto &H : getHeaders(K.Kind)) {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);
@@ -720,27 +706,4 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
-}
-
-void VisibleModuleSet::makeTransitiveImportsVisible(Module *M,
-                                                    SourceLocation Loc,
-                                                    VisibleCallback Vis,
-                                                    ConflictCallback Cb) {
-  for (auto *I : M->Imports)
-    setVisible(I, Loc, Vis, Cb);
-}
-
-ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
-    : Signature(M.Signature), ClangModule(&M) {
-  if (M.Directory)
-    Path = M.Directory->getName();
-  if (auto File = M.getASTFile())
-    ASTFile = File->getName();
-}
-
-std::string ASTSourceDescriptor::getModuleName() const {
-  if (ClangModule)
-    return ClangModule->Name;
-  else
-    return std::string(PCHModuleName);
 }

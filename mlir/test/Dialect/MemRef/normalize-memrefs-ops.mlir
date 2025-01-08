@@ -149,3 +149,19 @@ func.func @test_norm_reinterpret_cast(%arg0 : memref<3xf32, #map_1d_tile>) -> (m
     // CHECK: memref.reinterpret_cast %[[v0]] to offset: [0], sizes: [3, 1, 1], strides: [1, 1, 1] : memref<3xf32> to memref<3x1x1xf32>
     return %1 : memref<3x1x1xf32>
 }
+
+
+// -----
+
+// Test normalization of memrefs for prefetch.affine
+
+// CHECK-LABEL: func.func @prefetch_normalize
+// CHECK-SAME:   ([[PARAM_0_:%.+]]: memref<16x32xf32>) {
+func.func @prefetch_normalize(%arg0: memref<512xf32, affine_map<(d0) -> (d0 floordiv 32, d0 mod 32)>>) -> () {
+  // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
+  affine.for %arg3 = 0 to 8  {
+    // CHECK: affine.prefetch [[PARAM_0_]]{{.}}[[I_0_]] floordiv 32, [[I_0_]] mod 32], read, locality<3>, data : memref<16x32xf32>
+    affine.prefetch %arg0[%arg3], read, locality<3>, data : memref<512xf32, affine_map<(d0) -> (d0 floordiv 32, d0 mod 32)>>
+  }
+  return
+}

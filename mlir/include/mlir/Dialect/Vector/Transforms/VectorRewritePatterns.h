@@ -15,12 +15,13 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
 namespace mlir {
+class ConversionTarget;
 class RewritePatternSet;
+class TypeConverter;
 
 namespace arith {
 class AndIOp;
@@ -55,7 +56,7 @@ struct UnrollVectorOptions {
 
   /// Set the native shape to use for unrolling.
   UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
-    SmallVector<int64_t> tsShape(shape.begin(), shape.end());
+    SmallVector<int64_t> tsShape(shape);
     nativeShape = [=](Operation *) -> std::optional<SmallVector<int64_t>> {
       return tsShape;
     };
@@ -143,9 +144,22 @@ void populateVectorTransferFullPartialPatterns(
 void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
-/// Patterns that remove redundant vector broadcasts.
-void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
-                                         PatternBenefit benefit = 1);
+/// Patterns that remove redundant Vector Ops by re-ordering them with
+/// e.g. elementwise Ops:
+/// ```
+/// %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+/// %bt = vector.transpose %b, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
+/// %r = arith.addf %at, %bt : vector<2x4xf32>
+/// ```
+/// gets converted to:
+/// ```
+/// %0 = arith.addf %a, %b : vector<4x2xf32>
+/// %r = vector.transpose %0, [1, 0] : vector<2x4xf32>
+/// ```
+/// At the moment, these patterns are limited to vector.broadcast and
+/// vector.transpose.
+void populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
+                                   PatternBenefit benefit = 1);
 
 /// Patterns that fold chained vector reductions. These patterns assume that
 /// elementwise operations (e.g., `arith.addf` with vector operands) are
@@ -328,8 +342,13 @@ void populateDropUnitDimWithShapeCastPatterns(RewritePatternSet &patterns,
 /// These patterns insert memref.collapse_shape + vector.shape_cast patterns
 /// to transform multiple small n-D transfers into a larger 1-D transfer where
 /// the memref contiguity properties allow it.
-void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
-                                           PatternBenefit benefit = 1);
+///
+/// Flattening is only applied if the bitwidth of the trailing vector dimension
+/// is smaller or equal to `targetVectorBitwidth`.
+void populateFlattenVectorTransferPatterns(
+    RewritePatternSet &patterns,
+    unsigned targetVectorBitwidth = std::numeric_limits<unsigned>::max(),
+    PatternBenefit benefit = 1);
 
 /// Collect a set of patterns that bubble up/down bitcast ops.
 ///
@@ -347,7 +366,7 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types.
 void populateVectorNarrowTypeEmulationPatterns(
-    arith::NarrowTypeEmulationConverter &typeConverter,
+    const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns);
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
@@ -370,6 +389,23 @@ FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
 /// Warning: these patterns currently only work for little endian targets.
 void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit = 1);
+
+/// Appends patterns for emulating a sub-byte vector transpose.
+void populateVectorTransposeNarrowTypeRewritePatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Populates patterns for ND vectors (N >= 2) linearization and sets up the
+/// provided ConversionTarget with the appropriate legality configuration for
+/// the ops to get converted properly.
+void populateVectorLinearizeTypeConversionsAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, unsigned targetBitWidth);
+
+/// Populates patterns for linearizing ND (N >= 2) vector operations to 1D
+/// vector shuffle operations.
+void populateVectorLinearizeShuffleLikeOpsPatterns(
+    const TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, unsigned targetBitWidth);
 
 } // namespace vector
 } // namespace mlir

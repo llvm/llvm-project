@@ -1,11 +1,18 @@
-# RUN: %PYTHON %s 2>&1 | FileCheck %s
+# RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
 import gc, sys, os, tempfile
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
+from ml_dtypes import bfloat16, float8_e5m2
 
+MLIR_RUNNER_UTILS = os.getenv(
+    "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
+)
+MLIR_C_RUNNER_UTILS = os.getenv(
+    "MLIR_C_RUNNER_UTILS", "../../../../lib/libmlir_c_runner_utils.so"
+)
 
 # Log everything to stderr and flush so that we have a unified stream to match
 # errors/info emitted by MLIR to stderr.
@@ -67,7 +74,7 @@ run(testInvalidModule)
 
 def lowerToLLVM(module):
     pm = PassManager.parse(
-        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)"
+        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
     )
     pm.run(module.operation)
     return module
@@ -299,7 +306,7 @@ def testUnrankedMemRefWithOffsetCallback():
         log(arr)
 
     with Context():
-        # The module takes a subview of the argument memref, casts it to an unranked memref and 
+        # The module takes a subview of the argument memref, casts it to an unranked memref and
         # calls the callback with it.
         module = Module.parse(
             r"""
@@ -521,6 +528,84 @@ def testComplexUnrankedMemrefAdd():
 run(testComplexUnrankedMemrefAdd)
 
 
+# Test bf16 memrefs
+# CHECK-LABEL: TEST: testBF16Memref
+def testBF16Memref():
+    with Context():
+        module = Module.parse(
+            """
+    module  {
+      func.func @main(%arg0: memref<1xbf16>,
+                      %arg1: memref<1xbf16>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xbf16>
+        memref.store %1, %arg1[%0] : memref<1xbf16>
+        return
+      }
+    } """
+        )
+
+        arg1 = np.array([0.5]).astype(bfloat16)
+        arg2 = np.array([0.0]).astype(bfloat16)
+
+        arg1_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg1))
+        )
+        arg2_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg2))
+        )
+
+        execution_engine = ExecutionEngine(lowerToLLVM(module))
+        execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
+
+        # test to-numpy utility
+        # CHECK: [0.5]
+        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        log(npout)
+
+
+run(testBF16Memref)
+
+
+# Test f8E5M2 memrefs
+# CHECK-LABEL: TEST: testF8E5M2Memref
+def testF8E5M2Memref():
+    with Context():
+        module = Module.parse(
+            """
+    module  {
+      func.func @main(%arg0: memref<1xf8E5M2>,
+                      %arg1: memref<1xf8E5M2>) attributes { llvm.emit_c_interface } {
+        %0 = arith.constant 0 : index
+        %1 = memref.load %arg0[%0] : memref<1xf8E5M2>
+        memref.store %1, %arg1[%0] : memref<1xf8E5M2>
+        return
+      }
+    } """
+        )
+
+        arg1 = np.array([0.5]).astype(float8_e5m2)
+        arg2 = np.array([0.0]).astype(float8_e5m2)
+
+        arg1_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg1))
+        )
+        arg2_memref_ptr = ctypes.pointer(
+            ctypes.pointer(get_ranked_memref_descriptor(arg2))
+        )
+
+        execution_engine = ExecutionEngine(lowerToLLVM(module))
+        execution_engine.invoke("main", arg1_memref_ptr, arg2_memref_ptr)
+
+        # test to-numpy utility
+        # CHECK: [0.5]
+        npout = ranked_memref_to_numpy(arg2_memref_ptr[0])
+        log(npout)
+
+
+run(testF8E5M2Memref)
+
+
 #  Test addition of two 2d_memref
 # CHECK-LABEL: TEST: testDynamicMemrefAdd2D
 def testDynamicMemrefAdd2D():
@@ -621,8 +706,8 @@ def testSharedLibLoad():
             ]
         else:
             shared_libs = [
-                "../../../../lib/libmlir_runner_utils.so",
-                "../../../../lib/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(
@@ -664,8 +749,8 @@ def testNanoTime():
             ]
         else:
             shared_libs = [
-                "../../../../lib/libmlir_runner_utils.so",
-                "../../../../lib/libmlir_c_runner_utils.so",
+                MLIR_RUNNER_UTILS,
+                MLIR_C_RUNNER_UTILS,
             ]
 
         execution_engine = ExecutionEngine(

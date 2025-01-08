@@ -14,7 +14,6 @@
 #include "SplitKit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -184,8 +183,7 @@ void SplitAnalysis::analyzeUses() {
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
-  UseSlots.erase(std::unique(UseSlots.begin(), UseSlots.end(),
-                             SlotIndex::isSameInstr),
+  UseSlots.erase(llvm::unique(UseSlots, SlotIndex::isSameInstr),
                  UseSlots.end());
 
   // Compute per-live block info.
@@ -1463,7 +1461,7 @@ void SplitEditor::deleteRematVictims() {
   if (Dead.empty())
     return;
 
-  Edit->eliminateDeadDefs(Dead, std::nullopt);
+  Edit->eliminateDeadDefs(Dead, {});
 }
 
 void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {

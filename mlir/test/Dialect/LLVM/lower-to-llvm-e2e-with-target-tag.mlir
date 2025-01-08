@@ -1,11 +1,11 @@
 // Note: We run CSE here to make the pattern matching more direct.
 
-// RUN: mlir-opt %s -test-lower-to-llvm -cse | FileCheck %s
+// RUN: mlir-opt %s -test-lower-to-llvm -cse -canonicalize | FileCheck %s
 
 // RUN: mlir-opt %s \
 // RUN:   -transform-preload-library="transform-library-paths=%p/lower-to-llvm-transform-symbol-def.mlir" \
 // RUN:   -transform-interpreter="debug-payload-root-tag=payload" \
-// RUN:   -test-transform-dialect-erase-schedule -cse \
+// RUN:   -test-transform-dialect-erase-schedule -cse -canonicalize \
 // RUN: | FileCheck %s
 
 module attributes {transform.target_tag="payload"} {
@@ -28,7 +28,7 @@ func.func @subview(%0 : memref<64x4xf32, strided<[4, 1], offset: 0>>, %arg0 : in
   // CHECK-SAME: -> !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>
 
   // CHECK-DAG: %[[STRIDE0:.*]] = llvm.mlir.constant(4 : index) : i64
-  // CHECK-DAG: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : i64
+  // CHECK-DAG: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] overflow<nsw> : i64
   // CHECK-DAG: %[[OFF2:.*]] = llvm.add %[[DESCSTRIDE0]], %[[ARG1]] : i64
   // CHECK-DAG: %[[DESC:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 

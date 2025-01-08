@@ -1,4 +1,4 @@
-if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_OS_IS_GPU)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
   # we just skip everything about files. The GPU does not currently support
   # files as well.
@@ -14,9 +14,9 @@ add_libc_test(
   LINK_LIBRARIES
     LibcMemoryHelpers
   DEPENDS
-    libc.include.errno
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
+    libc.src.errno.errno 
     libc.src.__support.CPP.new
     libc.src.__support.File.file
 )

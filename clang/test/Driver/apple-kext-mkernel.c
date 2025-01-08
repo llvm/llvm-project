@@ -13,8 +13,8 @@
 // CHECK-X86-2: "-fno-rtti"
 // CHECK-X86-2-NOT: "-fno-common"
 
-// RUN: not %clang -target x86_64-apple-darwin11 -arch armv7 -mkernel -mstrict-align -### -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
-// RUN: not %clang -target x86_64-apple-darwin11 -arch armv7 -mkernel -mstrict-align -### -fsyntax-only -fbuiltin -fno-builtin -fcommon -fno-common %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
+// RUN: %clang --target=x86_64-apple-darwin11 -arch armv7 -mkernel -mstrict-align -### -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
+// RUN: %clang --target=x86_64-apple-darwin11 -arch armv7 -mkernel -mstrict-align -### -fsyntax-only -fbuiltin -fno-builtin -fcommon -fno-common %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
 
 // CHECK-ARM: "-target-feature" "+long-calls"
 // CHECK-ARM: "-target-feature" "+strict-align"

@@ -83,14 +83,41 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
+// Type of the time trace event.
+enum class TimeTraceEventType {
+  // Complete events have a duration (start and end time points) and are marked
+  // by the "X" phase type.
+  CompleteEvent,
+  // Instant events don't have a duration, they happen at an instant in time.
+  // They are marked with "i" phase type. The field End is ignored for them.
+  InstantEvent,
+  // Async events mark asynchronous operations and are specified by the "b"
+  // (start) and "e" (end) phase types.
+  AsyncEvent
+};
+
+struct TimeTraceMetadata {
+  std::string Detail;
+  // Source file and line number information for the event.
+  std::string File;
+  int Line = 0;
+
+  bool isEmpty() const { return Detail.empty() && File.empty(); }
+};
+
 struct TimeTraceProfiler;
 TimeTraceProfiler *getTimeTraceProfilerInstance();
+
+bool isTimeTraceVerbose();
+
+struct TimeTraceProfilerEntry;
 
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
 void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                 StringRef ProcName);
+                                 StringRef ProcName,
+                                 bool TimeTraceVerbose = false);
 
 /// Cleanup the time trace profiler, if it was initialized.
 void timeTraceProfilerCleanup();
@@ -120,41 +147,60 @@ Error timeTraceProfilerWrite(StringRef PreferredFileName,
 /// Profiler copies the string data, so the pointers can be given into
 /// temporaries. Time sections can be hierarchical; every Begin must have a
 /// matching End pair but they can nest.
-void timeTraceProfilerBegin(StringRef Name, StringRef Detail);
-void timeTraceProfilerBegin(StringRef Name,
-                            llvm::function_ref<std::string()> Detail);
+TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
+                                               StringRef Detail);
+TimeTraceProfilerEntry *
+timeTraceProfilerBegin(StringRef Name,
+                       llvm::function_ref<std::string()> Detail);
+
+TimeTraceProfilerEntry *
+timeTraceProfilerBegin(StringRef Name,
+                       llvm::function_ref<TimeTraceMetadata()> MetaData);
+
+/// Manually begin a time section, with the given \p Name and \p Detail.
+/// This starts Async Events having \p Name as a category which is shown
+/// separately from other traces. See
+/// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.jh64i9l3vwa1
+/// for more details.
+TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
+                                                    StringRef Detail);
+
+// Mark an instant event.
+void timeTraceAddInstantEvent(StringRef Name,
+                              llvm::function_ref<std::string()> Detail);
 
 /// Manually end the last time section.
 void timeTraceProfilerEnd();
+void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 
 /// The TimeTraceScope is a helper class to call the begin and end functions
 /// of the time trace profiler.  When the object is constructed, it begins
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
-struct TimeTraceScope {
-
+class TimeTraceScope {
+public:
   TimeTraceScope() = delete;
   TimeTraceScope(const TimeTraceScope &) = delete;
   TimeTraceScope &operator=(const TimeTraceScope &) = delete;
   TimeTraceScope(TimeTraceScope &&) = delete;
   TimeTraceScope &operator=(TimeTraceScope &&) = delete;
 
-  TimeTraceScope(StringRef Name) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, StringRef(""));
-  }
-  TimeTraceScope(StringRef Name, StringRef Detail) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, Detail);
-  }
-  TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, Detail);
-  }
+  TimeTraceScope(StringRef Name)
+      : Entry(timeTraceProfilerBegin(Name, StringRef())) {}
+  TimeTraceScope(StringRef Name, StringRef Detail)
+      : Entry(timeTraceProfilerBegin(Name, Detail)) {}
+  TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail)
+      : Entry(timeTraceProfilerBegin(Name, Detail)) {}
+  TimeTraceScope(StringRef Name,
+                 llvm::function_ref<TimeTraceMetadata()> Metadata)
+      : Entry(timeTraceProfilerBegin(Name, Metadata)) {}
   ~TimeTraceScope() {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerEnd();
+    if (Entry)
+      timeTraceProfilerEnd(Entry);
   }
+
+private:
+  TimeTraceProfilerEntry *Entry = nullptr;
 };
 
 } // end namespace llvm

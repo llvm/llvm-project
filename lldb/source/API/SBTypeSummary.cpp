@@ -343,6 +343,7 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
   case TypeSummaryImpl::Kind::eCallback:
     return llvm::dyn_cast<CXXFunctionSummaryFormat>(m_opaque_sp.get()) ==
            llvm::dyn_cast<CXXFunctionSummaryFormat>(rhs.m_opaque_sp.get());
+  case TypeSummaryImpl::Kind::eBytecode:
   case TypeSummaryImpl::Kind::eScript:
     if (IsFunctionCode() != rhs.IsFunctionCode())
       return false;
@@ -381,7 +382,7 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
   if (!IsValid())
     return false;
 
-  if (m_opaque_sp.unique())
+  if (m_opaque_sp.use_count() == 1)
     return true;
 
   TypeSummaryImplSP new_sp;

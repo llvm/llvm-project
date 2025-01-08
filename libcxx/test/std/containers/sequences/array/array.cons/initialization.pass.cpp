@@ -28,10 +28,16 @@ struct test_initialization {
             // Before C++20, default initialization doesn't work inside constexpr for
             // trivially default constructible types. This only apply to non-empty arrays,
             // since empty arrays don't hold an element of type T.
-            if (TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED || !std::is_trivially_default_constructible<T>::value) {
-                std::array<T, 1> a1; (void)a1;
-                std::array<T, 2> a2; (void)a2;
-                std::array<T, 3> a3; (void)a3;
+#if TEST_STD_VER < 20
+            if (!(TEST_IS_CONSTANT_EVALUATED && std::is_trivially_default_constructible<T>::value))
+#endif
+            {
+              std::array<T, 1> a1;
+              (void)a1;
+              std::array<T, 2> a2;
+              (void)a2;
+              std::array<T, 3> a3;
+              (void)a3;
             }
 
             std::array<NoDefault, 0> nodefault; (void)nodefault;

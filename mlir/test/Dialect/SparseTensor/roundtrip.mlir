@@ -16,14 +16,14 @@ func.func @sparse_new(%arg0: !llvm.ptr) -> tensor<128xf64, #SparseVector> {
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed), posWidth=32, crdWidth=32}>
 
 // CHECK-LABEL: func @sparse_pack(
-// CHECK-SAME: %[[D:.*]]: tensor<6xf64>,
 // CHECK-SAME: %[[P:.*]]: tensor<2xi32>,
-// CHECK-SAME: %[[I:.*]]: tensor<6x1xi32>)
-//       CHECK: %[[R:.*]] = sparse_tensor.assemble %[[D]], %[[P]], %[[I]]
+// CHECK-SAME: %[[I:.*]]: tensor<6x1xi32>,
+// CHECK-SAME: %[[D:.*]]: tensor<6xf64>)
+//       CHECK: %[[R:.*]] = sparse_tensor.assemble (%[[P]], %[[I]]), %[[D]]
 //       CHECK: return %[[R]] : tensor<100xf64, #{{.*}}>
-func.func @sparse_pack(%data: tensor<6xf64>, %pos: tensor<2xi32>, %index: tensor<6x1xi32>)
+func.func @sparse_pack(%pos: tensor<2xi32>, %index: tensor<6x1xi32>, %data: tensor<6xf64>)
                             -> tensor<100xf64, #SparseVector> {
-  %0 = sparse_tensor.assemble %data, %pos, %index : tensor<6xf64>, tensor<2xi32>, tensor<6x1xi32>
+  %0 = sparse_tensor.assemble (%pos, %index), %data: (tensor<2xi32>, tensor<6x1xi32>), tensor<6xf64>
                                              to tensor<100xf64, #SparseVector>
   return %0 : tensor<100xf64, #SparseVector>
 }
@@ -33,20 +33,21 @@ func.func @sparse_pack(%data: tensor<6xf64>, %pos: tensor<2xi32>, %index: tensor
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed), crdWidth=32}>
 // CHECK-LABEL: func @sparse_unpack(
 //  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
-//  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>
-//  CHECK-SAME: %[[OP:.*]]: tensor<2xindex>
-//  CHECK-SAME: %[[OI:.*]]: tensor<6x1xi32>
-//       CHECK: %[[D:.*]], %[[P:.*]]:2, %[[DL:.*]], %[[PL:.*]]:2 = sparse_tensor.disassemble %[[T]]
-//       CHECK: return %[[D]], %[[P]]#0, %[[P]]#1
+//  CHECK-SAME: %[[OP:.*]]: tensor<2xindex>,
+//  CHECK-SAME: %[[OI:.*]]: tensor<6x1xi32>,
+//  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>)
+//       CHECK: %[[P:.*]]:2, %[[D:.*]], %[[PL:.*]]:2, %[[DL:.*]] = sparse_tensor.disassemble %[[T]]
+//       CHECK: return %[[P]]#0, %[[P]]#1, %[[D]]
 func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>,
-                         %od : tensor<6xf64>,
                          %op : tensor<2xindex>,
-                         %oi : tensor<6x1xi32>)
-                       -> (tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>) {
-  %rd, %rp, %ri, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100xf64, #SparseVector>
-                  outs(%od, %op, %oi : tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>)
-                  -> tensor<6xf64>, (tensor<2xindex>, tensor<6x1xi32>), index, (index, index)
-  return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x1xi32>
+                         %oi : tensor<6x1xi32>,
+                         %od : tensor<6xf64>)
+                       -> (tensor<2xindex>, tensor<6x1xi32>, tensor<6xf64>) {
+  %rp, %ri, %d, %rpl, %ril, %dl = sparse_tensor.disassemble %sp : tensor<100xf64, #SparseVector>
+                  out_lvls(%op, %oi : tensor<2xindex>, tensor<6x1xi32>)
+                  out_vals(%od : tensor<6xf64>)
+                  -> (tensor<2xindex>, tensor<6x1xi32>), tensor<6xf64>, (index, index), index
+  return %rp, %ri, %d : tensor<2xindex>, tensor<6x1xi32>, tensor<6xf64>
 }
 
 // -----
@@ -310,10 +311,10 @@ func.func @sparse_load_ins(%arg0: tensor<16x32xf64, #DenseMatrix>) -> tensor<16x
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #sparse{{[0-9]*}}>,
 //  CHECK-SAME: %[[B:.*]]: index,
 //  CHECK-SAME: %[[C:.*]]: f64)
-//       CHECK: %[[T:.*]] = sparse_tensor.insert %[[C]] into %[[A]][%[[B]]] : tensor<128xf64, #{{.*}}>
+//       CHECK: %[[T:.*]] = tensor.insert %[[C]] into %[[A]][%[[B]]] : tensor<128xf64, #{{.*}}>
 //       CHECK: return %[[T]] : tensor<128xf64, #{{.*}}>
 func.func @sparse_insert(%arg0: tensor<128xf64, #SparseVector>, %arg1: index, %arg2: f64) -> tensor<128xf64, #SparseVector> {
-  %0 = sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64, #SparseVector>
+  %0 = tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64, #SparseVector>
   return %0 : tensor<128xf64, #SparseVector>
 }
 
@@ -705,8 +706,143 @@ func.func @sparse_lvl(%arg0: index, %t : tensor<?x?xi32, #BSR>) -> index {
   map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
 }>
 
+// CHECK-LABEL:   func.func @sparse_reinterpret_map(
+// CHECK-SAME:      %[[A0:.*]]: tensor<6x12xi32, #sparse{{[0-9]*}}>)
+// CHECK:           %[[VAL:.*]] = sparse_tensor.reinterpret_map %[[A0]]
+// CHECK:           return %[[VAL]]
 func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xi32, #DSDD> {
   %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
                                          to tensor<3x4x2x3xi32, #DSDD>
   return %t1 : tensor<3x4x2x3xi32, #DSDD>
+}
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+
+// CHECK-LABEL:   func.func @sparse_print(
+// CHECK-SAME:      %[[A0:.*]]: tensor<10x10xf64, #sparse{{[0-9]*}}>)
+// CHECK:           sparse_tensor.print %[[A0]]
+// CHECK:           return
+func.func @sparse_print(%arg0: tensor<10x10xf64, #CSR>) {
+  sparse_tensor.print %arg0 : tensor<10x10xf64, #CSR>
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @sparse_has_runtime() -> i1
+// CHECK:           %[[H:.*]] = sparse_tensor.has_runtime_library
+// CHECK:           return %[[H]] : i1
+func.func @sparse_has_runtime() -> i1 {
+  %has_runtime = sparse_tensor.has_runtime_library
+  return %has_runtime : i1
+}
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+// CHECK-LABEL:   func.func @sparse_extract_value(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x8xf32, #sparse>,
+// CHECK-SAME:      %[[VAL_1:.*]]: !sparse_tensor.iterator<#sparse, lvls = 1>) -> f32 {
+// CHECK:           %[[VAL_2:.*]] = sparse_tensor.extract_value %[[VAL_0]] at %[[VAL_1]] : tensor<4x8xf32, #sparse>, !sparse_tensor.iterator<#sparse, lvls = 1>
+// CHECK:           return %[[VAL_2]] : f32
+// CHECK:         }
+func.func @sparse_extract_value(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 1>) -> f32 {
+  %f = sparse_tensor.extract_value %sp at %it1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 1>
+  return %f : f32
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+// CHECK-LABEL:   func.func @sparse_extract_iter_space(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x8xf32, #sparse{{[0-9]*}}>,
+// CHECK-SAME:      %[[VAL_1:.*]]: !sparse_tensor.iterator<#sparse{{[0-9]*}}, lvls = 0>)
+// CHECK:           %[[VAL_2:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] lvls = 0
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] at %[[VAL_1]] lvls = 1
+// CHECK:           return %[[VAL_2]], %[[VAL_3]] : !sparse_tensor.iter_space<#sparse{{[0-9]*}}, lvls = 0>, !sparse_tensor.iter_space<#sparse{{[0-9]*}}, lvls = 1>
+// CHECK:         }
+func.func @sparse_extract_iter_space(%sp : tensor<4x8xf32, #COO>, %it1 : !sparse_tensor.iterator<#COO, lvls = 0>)
+  -> (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>) {
+  // Extracting the iteration space for the first level needs no parent iterator.
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
+  // Extracting the iteration space for the second level needs a parent iterator.
+  %l2 = sparse_tensor.extract_iteration_space %sp at %it1 lvls = 1 : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+                                                                 -> !sparse_tensor.iter_space<#COO, lvls = 1>
+  return %l1, %l2 : !sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+// CHECK-LABEL:   func.func @sparse_iterate(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x8xf32, #sparse{{[0-9]*}}>,
+// CHECK-SAME:      %[[VAL_1:.*]]: index,
+// CHECK-SAME:      %[[VAL_2:.*]]: index) -> index {
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] lvls = 0 : tensor<4x8xf32, #sparse{{[0-9]*}}>
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.iterate %[[VAL_5:.*]] in %[[VAL_3]] at(%[[VAL_6:.*]]) iter_args(%[[VAL_7:.*]] = %[[VAL_1]]) : !sparse_tensor.iter_space<#sparse{{[0-9]*}}, lvls = 0> -> index {
+// CHECK:             sparse_tensor.yield %[[VAL_7]] : index
+// CHECK:           }
+// CHECK:           return %[[VAL_4]] : index
+// CHECK:         }
+func.func @sparse_iterate(%sp : tensor<4x8xf32, #COO>, %i : index, %j : index) -> index {
+  %l1 = sparse_tensor.extract_iteration_space %sp lvls = 0 : tensor<4x8xf32, #COO> -> !sparse_tensor.iter_space<#COO, lvls = 0>
+  %r1 = sparse_tensor.iterate %it1 in %l1 at (%crd) iter_args(%outer = %i): !sparse_tensor.iter_space<#COO, lvls = 0 to 1> -> index {
+    sparse_tensor.yield %outer : index
+  }
+  return %r1 : index
+}
+
+
+// -----
+
+#COO = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : singleton(soa)
+  )
+}>
+
+
+// CHECK-LABEL:   func.func @sparse_coiteration(
+// CHECK-SAME:      %[[SP1:.*]]: !sparse_tensor.iter_space<#sparse, lvls = 0>,
+// CHECK-SAME:      %[[SP2:.*]]: !sparse_tensor.iter_space<#sparse, lvls = 1>) -> index {
+// CHECK:           %[[INIT:.*]] = arith.constant 0 : index
+// CHECK:           %[[RET:.*]] = sparse_tensor.coiterate (%[[SP1]], %[[SP2]]) at(%[[COORD:.*]]) iter_args(%[[ARG:.*]] = %[[INIT]])
+// CHECK:           case %[[VAL_6:.*]], _ {
+// CHECK:             sparse_tensor.yield %[[ARG]] : index
+// CHECK:           }
+// CHECK:           return %[[RET]] : index
+// CHECK:         }
+func.func @sparse_coiteration(%sp1 : !sparse_tensor.iter_space<#COO, lvls = 0>,
+                              %sp2 : !sparse_tensor.iter_space<#COO, lvls = 1>) -> index {
+  %init = arith.constant 0 : index
+  %ret = sparse_tensor.coiterate (%sp1, %sp2) at (%coord) iter_args(%arg = %init)
+       : (!sparse_tensor.iter_space<#COO, lvls = 0>, !sparse_tensor.iter_space<#COO, lvls = 1>)
+       -> index
+  case %it1, _ {
+    sparse_tensor.yield %arg : index
+  }
+  return %ret : index
 }

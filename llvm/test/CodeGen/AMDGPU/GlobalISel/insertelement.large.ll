@@ -6,7 +6,7 @@
 define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addrspace(1) %ptr.out) #0 {
 ; GCN-LABEL: v_insert_v64i32_37:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v64, 8, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v64, s[0:1]
@@ -53,7 +53,7 @@ define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addr
 ;
 ; GFX10-LABEL: v_insert_v64i32_37:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v64, 8, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0xf
@@ -101,7 +101,9 @@ define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addr
 ;
 ; GFX11-LABEL: v_insert_v64i32_37:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v64, 8, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0xf
@@ -146,8 +148,6 @@ define amdgpu_kernel void @v_insert_v64i32_37(ptr addrspace(1) %ptr.in, ptr addr
 ; GFX11-NEXT:    global_store_b128 v64, v[56:59], s[2:3] offset:224
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v64, v[60:63], s[2:3] offset:240
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr <64 x i32>, ptr addrspace(1) %ptr.in, i32 %id

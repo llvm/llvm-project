@@ -9,13 +9,31 @@
 // RUN:  -o %t/A_Internals.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex1-tu2.cpp \
-// RUN:  -fmodule-file=%t/A_Internals.pcm -o %t/A_Foo.pcm
+// RUN:  -fmodule-file=A:Internals=%t/A_Internals.pcm -o %t/A_Foo.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex1-tu3.cpp \
-// RUN:  -fmodule-file=%t/A_Foo.pcm -o %t/A.pcm
+// RUN:  -fmodule-file=A:Foo=%t/A_Foo.pcm -fmodule-file=A:Internals=%t/A_Internals.pcm \
+// RUN:  -o %t/A.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/std10-1-ex1-tu4.cpp \
-// RUN:  -fmodule-file=%t/A.pcm -o %t/ex1.o
+// RUN:  -fmodule-file=A=%t/A.pcm -fmodule-file=A:Foo=%t/A_Foo.pcm \
+// RUN:  -fmodule-file=A:Internals=%t/A_Internals.pcm -o %t/ex1.o
+
+// RUN: rm %t/A_Internals.pcm %t/A_Foo.pcm %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex1-tu1.cpp \
+// RUN:  -o %t/A_Internals.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex1-tu2.cpp \
+// RUN:  -fmodule-file=A:Internals=%t/A_Internals.pcm -o %t/A_Foo.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/std10-1-ex1-tu3.cpp \
+// RUN:     -fmodule-file=A:Internals=%t/A_Internals.pcm \
+// RUN:     -fmodule-file=A:Foo=%t/A_Foo.pcm -o %t/A.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-obj %t/std10-1-ex1-tu4.cpp \
+// RUN:     -fmodule-file=A:Internals=%t/A_Internals.pcm \
+// RUN:     -fmodule-file=A:Foo=%t/A_Foo.pcm \
+// RUN:     -fmodule-file=A=%t/A.pcm -o %t/ex1.o
 
 // expected-no-diagnostics
 

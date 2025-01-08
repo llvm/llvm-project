@@ -15,12 +15,12 @@ define void @reg(i16 %a) nounwind {
 @foo = global i16 0, align 2
 
 define void @immmem() nounwind {
-        call void asm sideeffect "bic\09$0,r2", "i"(i16* getelementptr(i16, i16* @foo, i32 1)) nounwind
+        call void asm sideeffect "bic\09$0,r2", "i"(ptr getelementptr(i16, ptr @foo, i32 1)) nounwind
         ret void
 }
 
 define void @mem() nounwind {
-        %fooval = load i16, i16* @foo
+        %fooval = load i16, ptr @foo
         call void asm sideeffect "bic\09$0,r2", "m"(i16 %fooval) nounwind
         ret void
 }

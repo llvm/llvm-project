@@ -3,7 +3,7 @@
 
 define i32 @cttz_neg_value(i32 %x) {
 ; CHECK-LABEL: @cttz_neg_value(
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = sub i32 0, %x
@@ -15,7 +15,7 @@ define i32 @cttz_neg_value_multiuse(i32 %x) {
 ; CHECK-LABEL: @cttz_neg_value_multiuse(
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 false)
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = sub i32 0, %x
@@ -26,7 +26,7 @@ define i32 @cttz_neg_value_multiuse(i32 %x) {
 
 define i64 @cttz_neg_value_64(i64 %x) {
 ; CHECK-LABEL: @cttz_neg_value_64(
-; CHECK-NEXT:    [[B:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[B:%.*]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %a = sub i64 0, %x
@@ -36,7 +36,7 @@ define i64 @cttz_neg_value_64(i64 %x) {
 
 define i64 @cttz_neg_value2_64(i64 %x) {
 ; CHECK-LABEL: @cttz_neg_value2_64(
-; CHECK-NEXT:    [[B:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %a = sub i64 0, %x
@@ -46,7 +46,7 @@ define i64 @cttz_neg_value2_64(i64 %x) {
 
 define <2 x i64> @cttz_neg_value_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_neg_value_vec(
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = sub  <2 x i64> zeroinitializer, %x
@@ -59,7 +59,7 @@ define <2 x i64> @cttz_neg_value_vec(<2 x i64> %x) {
 define i32 @cttz_nonneg_value(i32 %x) {
 ; CHECK-LABEL: @cttz_nonneg_value(
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[B:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[A]], i1 false)
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = sub i32 1, %x
@@ -70,7 +70,7 @@ define i32 @cttz_nonneg_value(i32 %x) {
 define <2 x i64> @cttz_nonneg_value_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_nonneg_value_vec(
 ; CHECK-NEXT:    [[A:%.*]] = sub <2 x i64> <i64 1, i64 0>, [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[A]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[B:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[A]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = sub  <2 x i64> <i64 1, i64 0>, %x

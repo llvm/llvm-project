@@ -18,6 +18,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
@@ -219,7 +220,7 @@ void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
   // Create a copy of the call/invoke instruction and add the new bundle.
   assert((isa<CallInst>(CB) || isa<InvokeInst>(CB)) &&
          "Unknown indirect call type");
-  CallBase *NewCB = CallBase::Create(CB, Bundles, CB);
+  CallBase *NewCB = CallBase::Create(CB, Bundles, CB->getIterator());
 
   // Change the target of the call to be the guard dispatch function.
   NewCB->setCalledOperand(GuardDispatchLoad);

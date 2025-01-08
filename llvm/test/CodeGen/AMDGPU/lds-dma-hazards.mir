@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: buffer_load_dword_lds
 # GCN:      $m0 = S_MOV_B32 0

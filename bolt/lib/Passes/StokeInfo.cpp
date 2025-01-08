@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/StokeInfo.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -97,7 +97,8 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
 
   if (!BF.isSimple() || BF.isMultiEntry() || BF.empty())
     return false;
-  outs() << " STOKE-INFO: analyzing function " << Name << "\n";
+  BF.getBinaryContext().outs()
+      << " STOKE-INFO: analyzing function " << Name << "\n";
 
   FuncInfo.FuncName = Name;
   FuncInfo.Offset = BF.getFileOffset();
@@ -140,19 +141,19 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
   LiveOutBV &= DefaultLiveOutMask;
   getRegNameFromBitVec(BF.getBinaryContext(), LiveOutBV, &FuncInfo.LiveOut);
 
-  outs() << " STOKE-INFO: end function \n";
+  BF.getBinaryContext().outs() << " STOKE-INFO: end function \n";
   return true;
 }
 
-void StokeInfo::runOnFunctions(BinaryContext &BC) {
-  outs() << "STOKE-INFO: begin of stoke pass\n";
+Error StokeInfo::runOnFunctions(BinaryContext &BC) {
+  BC.outs() << "STOKE-INFO: begin of stoke pass\n";
 
   std::ofstream Outfile;
   if (!opts::StokeOutputDataFilename.empty()) {
     Outfile.open(opts::StokeOutputDataFilename);
   } else {
-    errs() << "STOKE-INFO: output file is required\n";
-    return;
+    BC.errs() << "STOKE-INFO: output file is required\n";
+    return Error::success();
   }
 
   // check some context meta data
@@ -185,7 +186,8 @@ void StokeInfo::runOnFunctions(BinaryContext &BC) {
       FuncInfo.printData(Outfile);
   }
 
-  outs() << "STOKE-INFO: end of stoke pass\n";
+  BC.outs() << "STOKE-INFO: end of stoke pass\n";
+  return Error::success();
 }
 
 } // namespace bolt

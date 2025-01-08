@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string_view>
 
 using namespace llvm;
 
@@ -38,6 +39,36 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, Suffix, src)          \
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
+
+#define CASE_MASK_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##k_Int:
+
+#define CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##kz_Int:
+
+#define CASE_AVX512_INS_COMMON_INT(Inst, Suffix, src) \
+  CASE_AVX_INS_COMMON(Inst, Suffix, src##_Int)        \
+  CASE_MASK_INS_COMMON_INT(Inst, Suffix, src)         \
+  CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src)
+
+#define CASE_FPCLASS_PACKED(Inst, src)    \
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
+  CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
+  CASE_AVX_INS_COMMON(Inst, Z128, src##i) \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
+
+#define CASE_FPCLASS_PACKED_MEM(Inst) \
+  CASE_FPCLASS_PACKED(Inst, m)        \
+  CASE_FPCLASS_PACKED(Inst, mb)
+
+#define CASE_FPCLASS_SCALAR(Inst, src)  \
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)  \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
+
+#define CASE_PTERNLOG(Inst, src)                                               \
+  CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
+  CASE_AVX512_INS_COMMON(Inst, Z256, r##src##i)                                \
+  CASE_AVX512_INS_COMMON(Inst, Z128, r##src##i)
 
 #define CASE_MOVDUP(Inst, src)                    \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
@@ -64,16 +95,6 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, , r##src)             \
   CASE_AVX_INS_COMMON(Inst, Y, r##src)            \
   CASE_SSE_INS_COMMON(Inst, r##src)
-
-#define CASE_MASK_PMOVZX(Inst, src)               \
-  CASE_MASK_INS_COMMON(Inst, Z, r##src)           \
-  CASE_MASK_INS_COMMON(Inst, Z256, r##src)        \
-  CASE_MASK_INS_COMMON(Inst, Z128, r##src)
-
-#define CASE_MASKZ_PMOVZX(Inst, src)              \
-  CASE_MASKZ_INS_COMMON(Inst, Z, r##src)          \
-  CASE_MASKZ_INS_COMMON(Inst, Z256, r##src)       \
-  CASE_MASKZ_INS_COMMON(Inst, Z128, r##src)
 
 #define CASE_UNPCK(Inst, src)                     \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
@@ -186,8 +207,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, r)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, r)
 
 #define CASE_FMA_SCALAR_MEM(Inst)                 \
   CASE_AVX_INS_COMMON(Inst##SD, , m)              \
@@ -196,8 +217,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, m)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, m)
 
 #define CASE_FMA4(Inst, suf)                      \
   CASE_AVX_INS_COMMON(Inst, 4, suf)               \
@@ -233,14 +254,14 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SD4, , mr_Int)        \
   CASE_AVX_INS_COMMON(Inst##SS4, , mr_Int)
 
-static unsigned getVectorRegSize(unsigned RegNo) {
-  if (X86II::isZMMReg(RegNo))
+static unsigned getVectorRegSize(MCRegister Reg) {
+  if (X86II::isZMMReg(Reg))
     return 512;
-  if (X86II::isYMMReg(RegNo))
+  if (X86II::isYMMReg(Reg))
     return 256;
-  if (X86II::isXMMReg(RegNo))
+  if (X86II::isXMMReg(Reg))
     return 128;
-  if (X86::MM0 <= RegNo && RegNo <= X86::MM7)
+  if (Reg >= X86::MM0 && Reg <= X86::MM7)
     return 64;
 
   llvm_unreachable("Unknown vector reg!");
@@ -248,7 +269,7 @@ static unsigned getVectorRegSize(unsigned RegNo) {
 
 static unsigned getRegOperandNumElts(const MCInst *MI, unsigned ScalarSize,
                                      unsigned OperandIndex) {
-  unsigned OpReg = MI->getOperand(OperandIndex).getReg();
+  MCRegister OpReg = MI->getOperand(OperandIndex).getReg();
   return getVectorRegSize(OpReg) / ScalarSize;
 }
 
@@ -627,6 +648,395 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
   return true;
 }
 
+// This table is indexed by the imm8 binary function specified in a
+// vpternlog{d,q} instruction. The symbols {a,b,c} correspond to the three
+// inputs to the binary function. This table was taken from
+// https://gist.github.com/dougallj/81a80cd381988466c4e1c4889ecac95b#file-2-x86-base-txt
+// with slight massaging.
+constexpr StringLiteral TernlogFunctions[] = {
+    "0",
+    "~(a | b | c)",
+    "c & ~(a | b)",
+    "~(a | b)",
+    "b & ~(a | c)",
+    "~(a | c)",
+    "~a & (b ^ c)",
+    "~(a | (b & c))",
+    "b & c & ~a",
+    "~(a | (b ^ c))",
+    "c & ~a",
+    "~a & (c | ~b)",
+    "b & ~a",
+    "~a & (b | ~c)",
+    "~a & (b | c)",
+    "~a",
+    "a & ~(b | c)",
+    "~(b | c)",
+    "~b & (a ^ c)",
+    "~((a & c) | b)",
+    "~c & (a ^ b)",
+    "~((a & b) | c)",
+    "a ^ ((a & b) | (b ^ c))",
+    "(a & (b ^ c)) ^ ~(b & c)",
+    "(a ^ b) & (a ^ c)",
+    "~((a & b) | (b ^ c))",
+    "a ^ ((a & b) | c)",
+    "(a & c) ^ (c | ~b)",
+    "a ^ ((a & c) | b)",
+    "(a & b) ^ (b | ~c)",
+    "a ^ (b | c)",
+    "~(a & (b | c))",
+    "a & c & ~b",
+    "~(b | (a ^ c))",
+    "c & ~b",
+    "~b & (c | ~a)",
+    "(a ^ b) & (b ^ c)",
+    "~((a & b) | (a ^ c))",
+    "b ^ ((a & b) | c)",
+    "(b & c) ^ (c | ~a)",
+    "c & (a ^ b)",
+    "(a | b) ^ ((a & b) | ~c)",
+    "c & ~(a & b)",
+    "(c & (a ^ b)) | ~(a | b)",
+    "(b | c) & (a ^ b)",
+    "a ^ (b | ~c)",
+    "(a & b) ^ (b | c)",
+    "(c & ~b) | ~a",
+    "a & ~b",
+    "~b & (a | ~c)",
+    "~b & (a | c)",
+    "~b",
+    "b ^ (a | (b & c))",
+    "(a & b) ^ (a | ~c)",
+    "b ^ (a | c)",
+    "~(b & (a | c))",
+    "(a | c) & (a ^ b)",
+    "b ^ (a | ~c)",
+    "(a & b) ^ (a | c)",
+    "(c & ~a) | ~b",
+    "a ^ b",
+    "~(a | c) | (a ^ b)",
+    "(c & ~a) | (a ^ b)",
+    "~(a & b)",
+    "a & b & ~c",
+    "~(c | (a ^ b))",
+    "(a ^ c) & (b ^ c)",
+    "~((a & c) | (a ^ b))",
+    "b & ~c",
+    "~c & (b | ~a)",
+    "c ^ ((a & c) | b)",
+    "(b & c) ^ (b | ~a)",
+    "b & (a ^ c)",
+    "(a | c) ^ ((a & c) | ~b)",
+    "(b | c) & (a ^ c)",
+    "a ^ (c | ~b)",
+    "b & ~(a & c)",
+    "(b & (a ^ c)) | ~(a | c)",
+    "(a & c) ^ (b | c)",
+    "(b & ~c) | ~a",
+    "a & ~c",
+    "~c & (a | ~b)",
+    "c ^ (a | (b & c))",
+    "(a & c) ^ (a | ~b)",
+    "~c & (a | b)",
+    "~c",
+    "c ^ (a | b)",
+    "~(c & (a | b))",
+    "(a | b) & (a ^ c)",
+    "c ^ (a | ~b)",
+    "a ^ c",
+    "~(a | b) | (a ^ c)",
+    "(a & c) ^ (a | b)",
+    "(b & ~a) | ~c",
+    "(b & ~a) | (a ^ c)",
+    "~(a & c)",
+    "a & (b ^ c)",
+    "~(b ^ c) ^ (a | (b & c))",
+    "(a | c) & (b ^ c)",
+    "b ^ (c | ~a)",
+    "(a | b) & (b ^ c)",
+    "c ^ (b | ~a)",
+    "b ^ c",
+    "~(a | b) | (b ^ c)",
+    "(a | b) & (c ^ (a & b))",
+    "b ^ c ^ ~a",
+    "c ^ (a & b)",
+    "~(a | b) | (c ^ (a & b))",
+    "b ^ (a & c)",
+    "~(a | c) | (b ^ (a & c))",
+    "(b & ~a) | (b ^ c)",
+    "~a | (b ^ c)",
+    "a & ~(b & c)",
+    "(a & (b ^ c)) | ~(b | c)",
+    "(b & c) ^ (a | c)",
+    "(a & ~c) | ~b",
+    "(b & c) ^ (a | b)",
+    "(a & ~b) | ~c",
+    "(a & ~b) | (b ^ c)",
+    "~(b & c)",
+    "a ^ (b & c)",
+    "~(b | c) | (a ^ (b & c))",
+    "(a & ~b) | (a ^ c)",
+    "~b | (a ^ c)",
+    "(a & ~c) | (a ^ b)",
+    "~c | (a ^ b)",
+    "(a ^ b) | (a ^ c)",
+    "~(a & b & c)",
+    "a & b & c",
+    "~((a ^ b) | (a ^ c))",
+    "c & ~(a ^ b)",
+    "~(a ^ b) & (c | ~a)",
+    "b & ~(a ^ c)",
+    "~(a ^ c) & (b | ~a)",
+    "(b | c) & (a ^ b ^ c)",
+    "(b & c) ^ ~a",
+    "b & c",
+    "~(b ^ c) & (b | ~a)",
+    "c & (b | ~a)",
+    "~((b & c) ^ (a | b))",
+    "b & (c | ~a)",
+    "~((b & c) ^ (a | c))",
+    "a ^ ((a ^ b) | (a ^ c))",
+    "(b & c) | ~a",
+    "a & ~(b ^ c)",
+    "~(b ^ c) & (a | ~b)",
+    "(a | c) & (a ^ b ^ c)",
+    "(a & c) ^ ~b",
+    "(a | b) & (a ^ b ^ c)",
+    "(a & b) ^ ~c",
+    "a ^ b ^ c",
+    "~(a | b) | (a ^ b ^ c)",
+    "~(b ^ c) & (a | b)",
+    "~(b ^ c)",
+    "c ^ (a & ~b)",
+    "~((a | b) & (b ^ c))",
+    "b ^ (a & ~c)",
+    "~((a | c) & (b ^ c))",
+    "(b & c) | (a ^ (b | c))",
+    "~(a & (b ^ c))",
+    "a & c",
+    "~(a ^ c) & (a | ~b)",
+    "c & (a | ~b)",
+    "~((a & c) ^ (a | b))",
+    "~(a ^ c) & (a | b)",
+    "~(a ^ c)",
+    "c ^ (b & ~a)",
+    "~((a | b) & (a ^ c))",
+    "c & (a | b)",
+    "~c ^ (a | b)",
+    "c",
+    "c | ~(a | b)",
+    "b ^ (a & (b ^ c))",
+    "(b & c) | ~(a ^ c)",
+    "(b & ~a) | c",
+    "c | ~a",
+    "a & (c | ~b)",
+    "~((a & c) ^ (b | c))",
+    "a ^ ((a ^ c) & (b ^ c))",
+    "(a & c) | ~b",
+    "a ^ (b & ~c)",
+    "~((b | c) & (a ^ c))",
+    "(a & c) | (a ^ b ^ c)",
+    "~(b & (a ^ c))",
+    "a ^ (b & (a ^ c))",
+    "(a & c) | ~(b ^ c)",
+    "(a & ~b) | c",
+    "c | ~b",
+    "(a & c) | (a ^ b)",
+    "~((a ^ c) & (b ^ c))",
+    "c | (a ^ b)",
+    "c | ~(a & b)",
+    "a & b",
+    "~(a ^ b) & (a | ~c)",
+    "~(a ^ b) & (a | c)",
+    "~(a ^ b)",
+    "b & (a | ~c)",
+    "~((a & b) ^ (a | c))",
+    "b ^ (c & ~a)",
+    "~((a | c) & (a ^ b))",
+    "b & (a | c)",
+    "~b ^ (a | c)",
+    "c ^ (a & (b ^ c))",
+    "(b & c) | ~(a ^ b)",
+    "b",
+    "b | ~(a | c)",
+    "(c & ~a) | b",
+    "b | ~a",
+    "a & (b | ~c)",
+    "~((a & b) ^ (b | c))",
+    "a ^ (c & ~b)",
+    "~((b | c) & (a ^ b))",
+    "a ^ ((a ^ b) & (b ^ c))",
+    "(a & b) | ~c",
+    "(a & b) | (a ^ b ^ c)",
+    "~(c & (a ^ b))",
+    "a ^ (c & (a ^ b))",
+    "(a & b) | ~(b ^ c)",
+    "(a & b) | (a ^ c)",
+    "~((a ^ b) & (b ^ c))",
+    "(a & ~c) | b",
+    "b | ~c",
+    "b | (a ^ c)",
+    "b | ~(a & c)",
+    "a & (b | c)",
+    "~a ^ (b | c)",
+    "c ^ (b & (a ^ c))",
+    "(a & c) | ~(a ^ b)",
+    "b ^ (c & (a ^ b))",
+    "(a & b) | ~(a ^ c)",
+    "(a & b) | (b ^ c)",
+    "~((a ^ b) & (a ^ c))",
+    "(a | b) & ((a & b) | c)",
+    "(a & b) | (b ^ c ^ ~a)",
+    "(a & b) | c",
+    "c | ~(a ^ b)",
+    "(a & c) | b",
+    "b | ~(a ^ c)",
+    "b | c",
+    "~a | b | c",
+    "a",
+    "a | ~(b | c)",
+    "a | (c & ~b)",
+    "a | ~b",
+    "a | (b & ~c)",
+    "a | ~c",
+    "a | (b ^ c)",
+    "a | ~(b & c)",
+    "a | (b & c)",
+    "a | ~(b ^ c)",
+    "a | c",
+    "~b | a | c",
+    "a | b",
+    "~c | a | b",
+    "a | b | c",
+    "-1",
+};
+
+static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
+                                  const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+
+  int Src2Idx;
+  int Src3Idx;
+  switch (MI->getOpcode()) {
+    // dest, src1, src2, src3, tbl
+    // dest, src1, mask, src2, src3, tbl
+    CASE_PTERNLOG(PTERNLOGD, r)
+    CASE_PTERNLOG(PTERNLOGQ, r)
+    Src2Idx = NumOperands - 3;
+    Src3Idx = NumOperands - 2;
+    break;
+
+    // dest, src1, src2, memory, tbl
+    // dest, src1, mask, src2, memory, tbl
+    CASE_PTERNLOG(PTERNLOGD, m)
+    CASE_PTERNLOG(PTERNLOGQ, m)
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -1;
+    break;
+
+  default:
+    return false;
+  }
+  StringRef DestName = getRegName(MI->getOperand(0).getReg());
+  StringRef Src1Name = getRegName(MI->getOperand(1).getReg());
+  StringRef Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
+  StringRef Src3Name =
+      Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
+  uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
+
+  StringRef SrcNames[] = {Src1Name, Src2Name, Src3Name};
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  static_assert(std::size(TernlogFunctions) == 256);
+  std::string_view BooleanFunction = TernlogFunctions[TruthTable];
+
+  while (!BooleanFunction.empty()) {
+    // Print the expression up to the next symbol.
+    size_t SymbolOffset = BooleanFunction.find_first_of("abc");
+    OS << BooleanFunction.substr(0, SymbolOffset);
+    if (SymbolOffset == std::string_view::npos) {
+      // No more symbols, that means we just printed everything.
+      break;
+    }
+    // Let's replace {a,b,c} with Src{1,2,3}Name.
+    char Symbol = BooleanFunction[SymbolOffset];
+    OS << SrcNames[Symbol - 'a'];
+    // Consume the part of the expression we handled.
+    BooleanFunction.remove_prefix(SymbolOffset + 1);
+  }
+  OS << '\n';
+  return true;
+}
+
+static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
+                                 const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+  int SrcIdx;
+  switch (MI->getOpcode()) {
+    CASE_FPCLASS_PACKED(FPCLASSPBF16, r)
+    CASE_FPCLASS_PACKED(FPCLASSPH, r)
+    CASE_FPCLASS_PACKED(FPCLASSPS, r)
+    CASE_FPCLASS_PACKED(FPCLASSPD, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSH, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSS, r)
+    CASE_FPCLASS_SCALAR(FPCLASSSD, r) {
+      SrcIdx = NumOperands - 2;
+      break;
+    }
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPBF16)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPH)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPS)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSPD)
+    CASE_FPCLASS_SCALAR(FPCLASSSH, m)
+    CASE_FPCLASS_SCALAR(FPCLASSSS, m)
+    CASE_FPCLASS_SCALAR(FPCLASSSD, m) {
+      SrcIdx = -1;
+      break;
+    }
+  default:
+    return false;
+  }
+  StringRef DestName = getRegName(MI->getOperand(0).getReg());
+  StringRef SrcName =
+      SrcIdx != -1 ? getRegName(MI->getOperand(SrcIdx).getReg()) : "mem";
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  uint8_t Categories = MI->getOperand(NumOperands - 1).getImm();
+  if (Categories == 0) {
+    OS << "false";
+  } else {
+    static constexpr StringLiteral CategoryNames[] = {
+      "QuietNaN",
+      "PositiveZero",
+      "NegativeZero",
+      "PositiveInfinity",
+      "NegativeInfinity",
+      "Subnormal",
+      "Negative",
+      "SignalingNaN",
+    };
+    bool Conjoin = false;
+    for (size_t I = 0, E = std::size(CategoryNames); I != E; ++I) {
+      if (Categories & (1 << I)) {
+        if (Conjoin)
+          OS << " | ";
+        Conjoin = true;
+        OS << "is" << CategoryNames[I] << '(' << SrcName << ')';
+      }
+    }
+  }
+  OS << '\n';
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
@@ -644,6 +1054,12 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   bool RegForm = false;
 
   if (printFMAComments(MI, OS, MCII))
+    return true;
+
+  if (printPTERNLOGComments(MI, OS, MCII))
+    return true;
+
+  if (printFPCLASSComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {
@@ -713,19 +1129,25 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr:
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
-    [[fallthrough]];
-  case X86::INSERTPSrm:
-  case X86::VINSERTPSrm:
-  case X86::VINSERTPSZrm:
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(),
-                         ShuffleMask);
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/false);
+    break;
+
+  case X86::INSERTPSrmi:
+  case X86::VINSERTPSrmi:
+  case X86::VINSERTPSZrmi:
+    DestName = getRegName(MI->getOperand(0).getReg());
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/true);
     break;
 
   case X86::MOVLHPSrr:
@@ -1168,13 +1590,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     [[fallthrough]];
 
-  case X86::VPERM2F128rm:
-  case X86::VPERM2I128rm:
+  case X86::VPERM2F128rmi:
+  case X86::VPERM2I128rmi:
     // For instruction comments purpose, assume the 256-bit vector is v4i64.
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodeVPERM2X128Mask(4, MI->getOperand(NumOperands - 1).getImm(),
@@ -1212,15 +1634,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVSDZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVSDrm_alt:
-  case X86::MOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-    DecodeScalarMoveMask(2, nullptr == Src2Name, ShuffleMask);
+    DecodeScalarMoveMask(2, false, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1229,15 +1643,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVSSZrr:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-    DecodeScalarMoveMask(4, nullptr == Src2Name, ShuffleMask);
+    DecodeScalarMoveMask(4, false, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1248,19 +1654,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VMOVZPQILo2PQIrr:
   case X86::VMOVZPQILo2PQIZrr:
     Src1Name = getRegName(MI->getOperand(1).getReg());
-    [[fallthrough]];
-
-  case X86::MOVQI2PQIrm:
-  case X86::VMOVQI2PQIrm:
-  case X86::VMOVQI2PQIZrm:
     DecodeZeroMoveLowMask(2, ShuffleMask);
-    DestName = getRegName(MI->getOperand(0).getReg());
-    break;
-
-  case X86::MOVDI2PDIrm:
-  case X86::VMOVDI2PDIrm:
-  case X86::VMOVDI2PDIZrm:
-    DecodeZeroMoveLowMask(4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
@@ -1287,18 +1681,18 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z256, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z, rm)
     DecodeSubVectorBroadcast(8, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X4, Z, rm)
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1307,13 +1701,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, Z, rm)
     DecodeSubVectorBroadcast(16, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X8, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X8, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X8, Z, rm)
     DecodeSubVectorBroadcast(16, 8, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1345,8 +1739,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXBW, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXBW, m)
     DecodeZeroExtendMask(8, 16, getRegOperandNumElts(MI, 16, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -1354,8 +1746,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXBD, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXBD, m)
     DecodeZeroExtendMask(8, 32, getRegOperandNumElts(MI, 32, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -1363,8 +1753,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXBQ, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXBQ, m)
     DecodeZeroExtendMask(8, 64, getRegOperandNumElts(MI, 64, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -1372,8 +1760,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXWD, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXWD, m)
     DecodeZeroExtendMask(16, 32, getRegOperandNumElts(MI, 32, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -1381,8 +1767,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXWQ, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXWQ, m)
     DecodeZeroExtendMask(16, 64, getRegOperandNumElts(MI, 64, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -1390,8 +1774,6 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   CASE_PMOVZX(PMOVZXDQ, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 1).getReg());
-    [[fallthrough]];
-  CASE_PMOVZX(PMOVZXDQ, m)
     DecodeZeroExtendMask(32, 64, getRegOperandNumElts(MI, 64, 0), false,
                          ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());

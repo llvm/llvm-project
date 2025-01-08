@@ -13,10 +13,11 @@
 
 #include "environment.h"
 #include "io-error.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
+#include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cinttypes>
-#include <optional>
 
 namespace Fortran::runtime {
 class Descriptor;
@@ -49,31 +50,34 @@ struct DataEdit {
   char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
 
   // Special internal data edit descriptors for list-directed & NAMELIST I/O
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr char ListDirected{'g'}; // non-COMPLEX list-directed
   static constexpr char ListDirectedRealPart{'r'}; // emit "(r," or "(r;"
   static constexpr char ListDirectedImaginaryPart{'z'}; // emit "z)"
   static constexpr char ListDirectedNullValue{'n'}; // see 13.10.3.2
-  constexpr bool IsListDirected() const {
+  static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
+  RT_OFFLOAD_VAR_GROUP_END
+  constexpr RT_API_ATTRS bool IsListDirected() const {
     return descriptor == ListDirected || descriptor == ListDirectedRealPart ||
         descriptor == ListDirectedImaginaryPart;
   }
-  constexpr bool IsNamelist() const {
+  constexpr RT_API_ATTRS bool IsNamelist() const {
     return IsListDirected() && modes.inNamelist;
   }
 
-  static constexpr char DefinedDerivedType{'d'}; // DT defined I/O
-
-  char variation{'\0'}; // N, S, or X for EN, ES, EX
-  std::optional<int> width; // the 'w' field; optional for A
-  std::optional<int> digits; // the 'm' or 'd' field
-  std::optional<int> expoDigits; // 'Ee' field
+  char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
+  Fortran::common::optional<int> width; // the 'w' field; optional for A
+  Fortran::common::optional<int> digits; // the 'm' or 'd' field
+  Fortran::common::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
 
   // "iotype" &/or "v_list" values for a DT'iotype'(v_list)
   // defined I/O data edit descriptor
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr std::size_t maxIoTypeChars{32};
   static constexpr std::size_t maxVListEntries{4};
+  RT_OFFLOAD_VAR_GROUP_END
   std::uint8_t ioTypeChars{0};
   std::uint8_t vListEntries{0};
   char ioType[maxIoTypeChars];
@@ -88,13 +92,13 @@ public:
   using Context = CONTEXT;
   using CharType = char; // formats are always default kind CHARACTER
 
-  FormatControl() {}
-  FormatControl(const Terminator &, const CharType *format,
+  RT_API_ATTRS FormatControl() {}
+  RT_API_ATTRS FormatControl(const Terminator &, const CharType *format,
       std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
       int maxHeight = maxMaxHeight);
 
   // For attempting to allocate in a user-supplied stack area
-  static std::size_t GetNeededSize(int maxHeight) {
+  static RT_API_ATTRS std::size_t GetNeededSize(int maxHeight) {
     return sizeof(FormatControl) -
         sizeof(Iteration) * (maxMaxHeight - maxHeight);
   }
@@ -102,13 +106,15 @@ public:
   // Extracts the next data edit descriptor, handling control edit descriptors
   // along the way.  If maxRepeat==0, this is a peek at the next data edit
   // descriptor.
-  std::optional<DataEdit> GetNextDataEdit(Context &, int maxRepeat = 1);
+  RT_API_ATTRS Fortran::common::optional<DataEdit> GetNextDataEdit(
+      Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)
   // and perform remaining record positioning actions.
-  void Finish(Context &);
+  RT_API_ATTRS void Finish(Context &);
 
 private:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr std::uint8_t maxMaxHeight{100};
 
   struct Iteration {
@@ -116,19 +122,20 @@ private:
     int start{0}; // offset in format_ of '(' or a repeated edit descriptor
     int remaining{0}; // while >0, decrement and iterate
   };
+  RT_OFFLOAD_VAR_GROUP_END
 
-  void SkipBlanks() {
+  RT_API_ATTRS void SkipBlanks() {
     while (offset_ < formatLength_ &&
         (format_[offset_] == ' ' || format_[offset_] == '\t' ||
             format_[offset_] == '\v')) {
       ++offset_;
     }
   }
-  CharType PeekNext() {
+  RT_API_ATTRS CharType PeekNext() {
     SkipBlanks();
     return offset_ < formatLength_ ? format_[offset_] : '\0';
   }
-  CharType GetNextChar(IoErrorHandler &handler) {
+  RT_API_ATTRS CharType GetNextChar(IoErrorHandler &handler) {
     SkipBlanks();
     if (offset_ >= formatLength_) {
       if (formatLength_ == 0) {
@@ -142,7 +149,7 @@ private:
     }
     return format_[offset_++];
   }
-  int GetIntField(
+  RT_API_ATTRS int GetIntField(
       IoErrorHandler &, CharType firstCh = '\0', bool *hadError = nullptr);
 
   // Advances through the FORMAT until the next data edit
@@ -150,13 +157,14 @@ private:
   // along the way.  Returns the repeat count that appeared
   // before the descriptor (defaulting to 1) and leaves offset_
   // pointing to the data edit.
-  int CueUpNextDataEdit(Context &, bool stop = false);
+  RT_API_ATTRS int CueUpNextDataEdit(Context &, bool stop = false);
 
-  static constexpr CharType Capitalize(CharType ch) {
+  static constexpr RT_API_ATTRS CharType Capitalize(CharType ch) {
     return ch >= 'a' && ch <= 'z' ? ch + 'A' - 'a' : ch;
   }
 
-  void ReportBadFormat(Context &context, const char *msg, int offset) const {
+  RT_API_ATTRS void ReportBadFormat(
+      Context &context, const char *msg, int offset) const {
     if constexpr (std::is_same_v<CharType, char>) {
       // Echo the bad format in the error message, but trim any leading or
       // trailing spaces.

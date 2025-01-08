@@ -9,9 +9,9 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @.str32190 = external constant [92 x i8], align 1		; <ptr> [#uses=1]
 @.str41 = external constant [25 x i8], align 1		; <ptr> [#uses=1]
 
-define void @_ZN8EtherBus10initializeEv() personality ptr @__gxx_personality_v0 {
+define void @_ZN8EtherBus10initializeEv(i1 %arg) personality ptr @__gxx_personality_v0 {
 entry:
-	br i1 undef, label %_ZN7cObjectnwEj.exit, label %bb.i
+	br i1 %arg, label %_ZN7cObjectnwEj.exit, label %bb.i
 
 bb.i:		; preds = %entry
 	br label %_ZN7cObjectnwEj.exit
@@ -21,19 +21,19 @@ _ZN7cObjectnwEj.exit:		; preds = %bb.i, %entry
 			to label %bb1 unwind label %lpad
 
 bb1:		; preds = %_ZN7cObjectnwEj.exit
-	br i1 undef, label %_ZNK5cGate4sizeEv.exit, label %bb.i110
+	br i1 %arg, label %_ZNK5cGate4sizeEv.exit, label %bb.i110
 
 bb.i110:		; preds = %bb1
 	br label %_ZNK5cGate4sizeEv.exit
 
 _ZNK5cGate4sizeEv.exit:		; preds = %bb.i110, %bb1
-	br i1 undef, label %_ZNK5cGate4sizeEv.exit122, label %bb.i120
+	br i1 %arg, label %_ZNK5cGate4sizeEv.exit122, label %bb.i120
 
 bb.i120:		; preds = %_ZNK5cGate4sizeEv.exit
 	br label %_ZNK5cGate4sizeEv.exit122
 
 _ZNK5cGate4sizeEv.exit122:		; preds = %bb.i120, %_ZNK5cGate4sizeEv.exit
-	br i1 undef, label %bb8, label %bb2
+	br i1 %arg, label %bb8, label %bb2
 
 bb2:		; preds = %_ZNK5cGate4sizeEv.exit122
 	unreachable
@@ -51,7 +51,7 @@ invcont10:		; preds = %invcont9
 			to label %invcont11 unwind label %lpad119
 
 invcont11:		; preds = %invcont10
-	br i1 undef, label %bb12, label %bb18
+	br i1 %arg, label %bb12, label %bb18
 
 bb12:		; preds = %invcont11
 	invoke void (ptr, ptr, ...) @_ZN6cEnvir6printfEPKcz(ptr null, ptr @.str12, i32 undef)
@@ -61,10 +61,10 @@ bb.i.i159:		; preds = %bb12
 	unreachable
 
 bb18:		; preds = %invcont11
-	br i1 undef, label %bb32, label %bb34
+	br i1 %arg, label %bb32, label %bb34
 
 bb32:		; preds = %bb18
-	br i1 undef, label %bb.i.i123, label %bb34
+	br i1 %arg, label %bb.i.i123, label %bb34
 
 bb.i.i123:		; preds = %bb32
 	br label %bb34
@@ -74,7 +74,7 @@ bb34:		; preds = %bb.i.i123, %bb32, %bb18
 			to label %invcont35 unwind label %lpad119		; <ptr> [#uses=0]
 
 invcont35:		; preds = %bb34
-	br i1 undef, label %bb49, label %bb61
+	br i1 %arg, label %bb49, label %bb61
 
 bb49:		; preds = %invcont35
 	invoke void (ptr, ptr, ...) @_ZNK13cSimpleModule5errorEPKcz(ptr undef, ptr @.str32190)

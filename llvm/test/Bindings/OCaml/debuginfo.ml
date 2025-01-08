@@ -39,6 +39,8 @@ let prepare_target llmod =
 let new_module () =
   let m = Llvm.create_module context module_name in
   let () = prepare_target m in
+  let () = Llvm_debuginfo.set_is_new_dbg_info_format m true in
+  insist (Llvm_debuginfo.is_new_dbg_info_format m);
   m
 
 let test_get_module () =
@@ -285,8 +287,8 @@ let test_variables f dibuilder file_di fun_di =
     ~var_info:auto_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
     ~location ~instr:entry_term
   in
-  let () = Printf.printf "%s\n" (Llvm.string_of_llvalue vdi) in
-  (* CHECK: call void @llvm.dbg.declare(metadata ptr %my_alloca, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
+  let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord vdi) in
+  (* CHECK: dbg_declare(ptr %my_alloca, ![[#]], !DIExpression(), ![[#]])
   *)
   let arg0 = (Llvm.params f).(0) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
@@ -297,8 +299,8 @@ let test_variables f dibuilder file_di fun_di =
     ~var_info:arg_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
     ~location ~instr:entry_term
   in
-  let () = Printf.printf "%s\n" (Llvm.string_of_llvalue argdi) in
-  (* CHECK: call void @llvm.dbg.declare(metadata i32 %0, metadata {{![0-9]+}}, metadata !DIExpression()), !dbg {{\![0-9]+}}
+  let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord argdi) in
+  (* CHECK: dbg_declare(i32 %0, ![[#]], !DIExpression(), ![[#]])
   *)
   ()
 

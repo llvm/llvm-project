@@ -35,12 +35,11 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __min {
-struct __fn {
+struct __min {
   template <class _Tp,
             class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&
   operator()(_LIBCPP_LIFETIMEBOUND const _Tp& __a,
              _LIBCPP_LIFETIMEBOUND const _Tp& __b,
              _Comp __comp = {},
@@ -51,7 +50,7 @@ struct __fn {
   template <copyable _Tp,
             class _Proj                                                    = identity,
             indirect_strict_weak_order<projected<const _Tp*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Tp
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp
   operator()(initializer_list<_Tp> __il, _Comp __comp = {}, _Proj __proj = {}) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __il.begin() != __il.end(), "initializer_list must contain at least one element");
@@ -62,7 +61,7 @@ struct __fn {
             class _Proj                                                         = identity,
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Rp>, range_value_t<_Rp>*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr range_value_t<_Rp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_value_t<_Rp>
   operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last  = ranges::end(__r);
@@ -79,10 +78,9 @@ struct __fn {
     }
   }
 };
-} // namespace __min
 
 inline namespace __cpo {
-inline constexpr auto min = __min::__fn{};
+inline constexpr auto min = __min{};
 } // namespace __cpo
 } // namespace ranges
 
@@ -90,6 +88,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 20 &&
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MIN_H

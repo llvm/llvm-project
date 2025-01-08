@@ -1,0 +1,1080 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
+load("@rules_python//python:defs.bzl", "py_binary")
+load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
+load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+exports_files([
+    "LICENSE.TXT",
+    "source/API/liblldb-private.exports",
+    "source/API/liblldb.exports",
+])
+
+bool_flag(
+    name = "enable_curses",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "curses_enabled_setting",
+    flag_values = {":enable_curses": "true"},
+)
+
+selects.config_setting_group(
+    name = "curses_enabled",
+    match_any = [
+        ":curses_enabled_setting",
+        "@platforms//os:macos",
+    ],
+)
+
+bool_flag(
+    name = "enable_libedit",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "libedit_enabled_setting",
+    flag_values = {":enable_libedit": "true"},
+)
+
+selects.config_setting_group(
+    name = "libedit_enabled",
+    match_any = [
+        ":libedit_enabled_setting",
+        "@platforms//os:macos",
+    ],
+)
+
+_VERSION_SUBSTITUTIONS = {
+    "@LLDB_VERSION@": PACKAGE_VERSION,
+    "@LLDB_VERSION_MAJOR@": LLVM_VERSION_MAJOR,
+    "@LLDB_VERSION_MINOR@": LLVM_VERSION_MINOR,
+    "@LLDB_VERSION_PATCH@": LLVM_VERSION_PATCH,
+    "@LLDB_VERSION_SUFFIX@": LLVM_VERSION_SUFFIX,
+    '#cmakedefine LLDB_FULL_VERSION_STRING "@LLDB_FULL_VERSION_STRING@"': "/* #undef LLDB_FULL_VERSION_STRING */",
+}
+
+genrule(
+    name = "vcs_version_gen",
+    outs = ["VCSVersion.inc"],
+    cmd = "echo '#undef LLDB_REVISION' >> $@\n" +
+          "echo '#undef LLDB_REPOSITORY' >> $@\n",
+)
+
+expand_template(
+    name = "version_inc_gen",
+    out = "Version/Version.inc",
+    substitutions = _VERSION_SUBSTITUTIONS,
+    template = "include/lldb/Version/Version.inc.in",
+)
+
+cc_library(
+    name = "Version",
+    srcs = [
+        "source/Version/Version.cpp",
+        ":vcs_version_gen",
+        ":version_inc_gen",
+    ],
+    hdrs = ["include/lldb/Version/Version.h"],
+    features = ["-layering_check"],  # Version.inc breaks this unintentionally
+    strip_include_prefix = "include",
+    deps = ["//clang:basic"],
+)
+
+expand_template(
+    name = "ConfigHeader",
+    out = "include/lldb/Host/Config.h",
+    substitutions = {
+        "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
+        "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
+
+        # TODO: Add LZMA support by including the library in bazel
+        "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
+
+        # TODO: lua support
+        "#cmakedefine01 LLDB_ENABLE_LUA": "#define LLDB_ENABLE_LUA 0",
+
+        # TODO: curl support
+        "#cmakedefine01 LLVM_ENABLE_CURL": "#define LLVM_ENABLE_CURL 0",
+
+        # TODO: python support
+        "#cmakedefine01 LLDB_ENABLE_PYTHON": "#define LLDB_ENABLE_PYTHON 0",
+        # Only enabled by default on Windows
+        "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
+        # Only used if LLDB_EMBED_PYTHON_HOME is true
+        "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"\"",
+
+        # Unsupported
+        "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
+        "#cmakedefine01 LLDB_ENABLE_FBSDVMCORE": "#define LLDB_ENABLE_FBSDVMCORE 0",
+
+        # Defaults that could be configurable if needed
+        "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
+        "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
+        "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
+        "${LLDB_BUG_REPORT_URL}": "",
+    } | select({
+        "@platforms//os:macos": {
+            "#cmakedefine HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION",
+            "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
+            "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 1",
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
+            "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
+        },
+        "@platforms//os:linux": {
+            "#cmakedefine HAVE_LIBCOMPRESSION": "/* #undef HAVE_LIBCOMPRESSION */",
+            "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 1",
+            "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
+            "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
+            "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
+            "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
+        },
+    }) | select({
+        ":curses_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 0",
+        },
+    }) | select({
+        ":libedit_enabled": {
+            "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 1",
+            "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 0",
+            "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
+        },
+    }),
+    template = "include/lldb/Host/Config.h.cmake",
+)
+
+cc_library(
+    name = "Config",
+    hdrs = [":ConfigHeader"],
+    include_prefix = "lldb/Host",
+)
+
+cc_binary(
+    name = "lldb-tblgen",
+    srcs = glob([
+        "utils/TableGen/*.cpp",
+        "utils/TableGen/*.h",
+    ]),
+    deps = [
+        "//llvm:CodeGenTypes",
+        "//llvm:Support",
+        "//llvm:TableGen",
+        "//llvm:TargetParser",
+        "//llvm:config",
+    ],
+)
+
+py_binary(
+    name = "generate-sbapi-dwarf-enum",
+    srcs = ["scripts/generate-sbapi-dwarf-enum.py"],
+)
+
+genrule(
+    name = "lldb-sbapi-dwarf-enums",
+    srcs = ["//llvm:include/llvm/BinaryFormat/Dwarf.def"],
+    outs = ["include/lldb/API/SBLanguages.h"],
+    cmd = "$(location :generate-sbapi-dwarf-enum) $(location //llvm:include/llvm/BinaryFormat/Dwarf.def) --output $@",
+    tools = [":generate-sbapi-dwarf-enum"],
+)
+
+cc_library(
+    name = "API",
+    srcs = glob([
+        "source/API/**/*.cpp",
+        "source/API/**/*.h",
+    ]),
+    hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
+    strip_include_prefix = "include",
+    deps = [
+        ":Breakpoint",
+        ":Commands",
+        ":Core",
+        ":DataFormatters",
+        ":Expression",
+        ":Headers",
+        ":Host",
+        ":Initialization",
+        ":InterpreterHeaders",
+        ":Symbol",
+        ":SymbolHeaders",
+        ":Target",
+        ":TargetHeaders",
+        ":Utility",
+        ":Version",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
+        "//lldb/source/Plugins:PluginExpressionParserClangHeaders",
+        "//lldb/source/Plugins:PluginsConfig",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:ExecutionEngine",
+        "//llvm:MCJIT",
+        "//llvm:Support",
+        "//llvm:config",
+    ] + [
+        "//lldb/source/Plugins:Plugin{}".format(x)
+        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
+    ] + select({
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginProcessMacOSXKernel",
+            "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
+            "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
+        ],
+        "@platforms//os:linux": [
+            "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "//conditions:default": [],
+    }),
+    alwayslink = True,
+)
+
+cc_library(
+    name = "Breakpoint",
+    srcs = glob(["source/Breakpoint/**/*.cpp"]),
+    hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
+    strip_include_prefix = "include",
+    deps = [
+        ":Core",
+        ":DataFormattersHeaders",
+        ":Expression",
+        ":Headers",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "DataFormatters",
+    srcs = glob([
+        "source/DataFormatters/**/*.cpp",
+        "source/DataFormatters/**/*.h",
+    ]),
+    hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
+    strip_include_prefix = "include",
+    textual_hdrs = glob(["source/DataFormatters/**/*.def"]),
+    deps = [
+        ":CoreHeaders",
+        ":Headers",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Expression",
+    srcs = glob(["source/Expression/**/*.cpp"]),
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
+    strip_include_prefix = "include",
+    deps = [
+        ":Core",
+        ":Headers",
+        ":Host",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        "//lldb/source/Plugins:PluginSymbolFileDWARFHeaders",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:ExecutionEngine",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Initialization",
+    srcs = glob(["source/Initialization/**/*.cpp"]),
+    hdrs = glob(["include/lldb/Initialization/**/*.h"]),
+    strip_include_prefix = "include",
+    deps = [
+        ":Core",
+        ":Headers",
+        ":Host",
+        ":TargetHeaders",
+        ":Utility",
+        ":Version",
+        "//lldb/source/Plugins:PluginProcessGDBRemote",
+        "//lldb/source/Plugins:PluginProcessPOSIX",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "InterpreterProperties",
+    strip_include_prefix = "source/Interpreter",
+    tbl_outs = [
+        (
+            ["-gen-lldb-property-defs"],
+            "source/Interpreter/InterpreterProperties.inc",
+        ),
+        (
+            ["-gen-lldb-property-enum-defs"],
+            "source/Interpreter/InterpreterPropertiesEnum.inc",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "source/Interpreter/InterpreterProperties.td",
+    deps = [":CoreTdFiles"],
+)
+
+cc_library(
+    name = "APIHeaders",
+    hdrs = glob(["include/lldb/API/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "InterpreterHeaders",
+    hdrs = glob(["include/lldb/Interpreter/**/*.h"]),
+    strip_include_prefix = "include",
+    deps = [":APIHeaders"],
+)
+
+cc_library(
+    name = "BreakpointHeaders",
+    hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "ExpressionHeaders",
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
+    strip_include_prefix = "include",
+    deps = ["//llvm:ExecutionEngine"],
+)
+
+cc_library(
+    name = "DataFormattersHeaders",
+    hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "Interpreter",
+    srcs = glob(["source/Interpreter/**/*.cpp"]),
+    deps = [
+        ":API",
+        ":Commands",
+        ":Core",
+        ":DataFormatters",
+        ":Headers",
+        ":Host",
+        ":InterpreterHeaders",
+        ":InterpreterProperties",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "CommandsTdFiles",
+    srcs = glob(["source/Commands/**/*.td"]),
+)
+
+gentbl_cc_library(
+    name = "CommandOptions",
+    strip_include_prefix = "source/Commands",
+    tbl_outs = [
+        (
+            ["-gen-lldb-option-defs"],
+            "source/Commands/CommandOptions.inc",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "source/Commands/Options.td",
+    deps = [":CommandsTdFiles"],
+)
+
+cc_library(
+    name = "Commands",
+    srcs = glob(["source/Commands/**/*.cpp"]),
+    hdrs = glob(["source/Commands/**/*.h"]),
+    strip_include_prefix = "source",
+    deps = [
+        ":Breakpoint",
+        ":CommandOptions",
+        ":Core",
+        ":DataFormatters",
+        ":Expression",
+        ":Headers",
+        ":Host",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":Target",
+        ":TargetHeaders",
+        ":Utility",
+        ":Version",
+        "//clang:codegen",
+        "//clang:frontend",
+        "//clang:serialization",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "SymbolHeaders",
+    hdrs = glob(["include/lldb/Symbol/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "Symbol",
+    srcs = glob(["source/Symbol/**/*.cpp"]),
+    deps = [
+        ":Core",
+        ":Expression",
+        ":Headers",
+        ":Host",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        ":UtilityPrivateHeaders",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "HostMacOSXHeaders",
+    hdrs = glob([
+        "include/lldb/Host/*.h",
+        "include/lldb/Host/macosx/*.h",
+        "include/lldb/Host/posix/*.h",
+    ]),
+    strip_include_prefix = "include",
+    deps = [":UtilityHeaders"],
+)
+
+cc_library(
+    name = "HostMacOSXPrivateHeaders",
+    hdrs = glob([
+        "source/Host/macosx/cfcpp/*.h",
+        "source/Host/macosx/objcxx/*.h",
+    ]),
+    strip_include_prefix = "source",
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [":UtilityHeaders"],
+)
+
+objc_library(
+    name = "HostMacOSXObjCXX",
+    srcs = glob([
+        "source/Host/macosx/objcxx/*.mm",
+    ]),
+    copts = OBJCPP_COPTS,
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":Headers",
+        ":HostMacOSXHeaders",
+        ":HostMacOSXPrivateHeaders",
+        ":UtilityHeaders",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "Host",
+    srcs = glob([
+        "source/Host/common/**/*.cpp",
+    ]) + select({
+        "@platforms//os:linux": glob(
+            [
+                "source/Host/posix/**/*.cpp",
+                "source/Host/linux/**/*.cpp",
+            ],
+            exclude = ["source/Host/linux/android/**/*.cpp"],
+        ),
+        "@platforms//os:macos": glob(
+            [
+                "source/Host/macosx/cfcpp/*.cpp",
+                "source/Host/posix/**/*.cpp",
+            ],
+        ),
+    }),
+    hdrs = [":ConfigHeader"] + glob([
+        "include/lldb/Host/*.h",
+        "include/lldb/Host/common/*.h",
+    ]) + select({
+        "@platforms//os:macos": glob([
+            "include/lldb/Host/macosx/*.h",
+            "include/lldb/Host/posix/*.h",
+        ]),
+        "@platforms//os:linux": glob([
+            "include/lldb/Host/linux/*.h",
+            "include/lldb/Host/posix/*.h",
+        ]),
+    }),
+    # TODO: Move this to Config library when https://github.com/bazelbuild/bazel/issues/21884 is fixed
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-lcompression",
+            "-lxml2",
+            "-Wl,-framework,CoreServices",
+            "-Wl,-framework,Security",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":curses_enabled": [
+            "-lcurses",
+            "-lpanel",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":libedit_enabled": [
+            "-ledit",
+        ],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "include",
+    deps = [
+        ":Headers",
+        ":UtilityHeaders",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:config",
+    ] + select({
+        "@platforms//os:macos": [
+            ":HostMacOSXObjCXX",
+            ":HostMacOSXPrivateHeaders",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+td_library(
+    name = "CoreTdFiles",
+    srcs = glob([
+        "source/Core/**/*.td",
+        "include/lldb/Core/*.td",
+    ]),
+)
+
+gentbl_cc_library(
+    name = "CoreProperties",
+    strip_include_prefix = "source/Core",
+    tbl_outs = [
+        (
+            ["-gen-lldb-property-defs"],
+            "source/Core/CoreProperties.inc",
+        ),
+        (
+            ["-gen-lldb-property-enum-defs"],
+            "source/Core/CorePropertiesEnum.inc",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "source/Core/CoreProperties.td",
+    deps = [":CoreTdFiles"],
+)
+
+cc_library(
+    name = "CoreHeaders",
+    hdrs = glob([
+        "include/lldb/Core/**/*.h",
+        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+    ]),
+    strip_include_prefix = "include",
+    deps = [
+        ":BreakpointHeaders",
+        ":CoreProperties",
+        ":DataFormattersHeaders",
+        ":ExpressionHeaders",
+        ":Host",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        "//clang:driver",
+        "//llvm:Demangle",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "Core",
+    srcs = glob([
+        "source/Core/**/*.cpp",
+        "source/ValueObject/**/*.cpp",  # This should be its own library.
+    ]),
+    hdrs = glob([
+        "include/lldb/Core/**/*.h",
+        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+    ]),
+    strip_include_prefix = "include",
+    deps = [
+        ":BreakpointHeaders",
+        ":CoreHeaders",
+        ":CoreProperties",
+        ":DataFormattersHeaders",
+        ":ExpressionHeaders",
+        ":Headers",
+        ":Host",
+        ":InterpreterHeaders",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":Utility",
+        "//clang:driver",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
+        "//lldb/source/Plugins:PluginObjCLanguageHeaders",
+        "//llvm:Demangle",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TargetProperties",
+    strip_include_prefix = "source/Target",
+    tbl_outs = [
+        (
+            ["-gen-lldb-property-defs"],
+            "source/Target/TargetProperties.inc",
+        ),
+        (
+            ["-gen-lldb-property-enum-defs"],
+            "source/Target/TargetPropertiesEnum.inc",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "source/Target/TargetProperties.td",
+    deps = [":CoreTdFiles"],
+)
+
+cc_library(
+    name = "AppleArm64ExceptionClass",
+    hdrs = ["include/lldb/Target/AppleArm64ExceptionClass.def"],
+    strip_include_prefix = "include/lldb/Target",
+)
+
+cc_library(
+    name = "TargetHeaders",
+    hdrs = glob(["include/lldb/Target/**/*.h"]),
+    strip_include_prefix = "include",
+    deps = [
+        ":AppleArm64ExceptionClass",
+        ":BreakpointHeaders",
+    ],
+)
+
+cc_library(
+    name = "Target",
+    srcs = glob(["source/Target/**/*.cpp"]),
+    deps = [
+        ":BreakpointHeaders",
+        ":Core",
+        ":DataFormattersHeaders",
+        ":ExpressionHeaders",
+        ":Headers",
+        ":Host",
+        ":InterpreterHeaders",
+        ":Symbol",
+        ":SymbolHeaders",
+        ":TargetHeaders",
+        ":TargetProperties",
+        ":Utility",
+        "//clang:codegen",
+        "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:BinaryFormat",
+        "//llvm:MC",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Headers",
+    hdrs = glob(["include/lldb/lldb-*.h"]) + [
+        "include/lldb/Symbol/SaveCoreOptions.h",
+    ],
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "UtilityPrivateHeaders",
+    hdrs = glob(["source/Utility/**/*.h"]),
+    strip_include_prefix = "source",
+    deps = [":Headers"],
+)
+
+cc_library(
+    name = "UtilityHeaders",
+    hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "Utility",
+    srcs = glob(["source/Utility/**/*.cpp"]),
+    hdrs = glob(["include/lldb/Utility/**/*.h"]),
+    strip_include_prefix = "include",
+    deps = [
+        ":CoreHeaders",
+        ":Headers",
+        ":TargetHeaders",
+        ":UtilityPrivateHeaders",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:config",
+    ],
+)
+
+genrule(
+    name = "gen_exports_file_linux",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_linux.txt"],
+    cmd = """
+cat > $(OUTS) <<EOF
+{
+  global:
+    $$(sed 's/$$/;/g' $(SRCS))
+};
+EOF
+""",
+)
+
+genrule(
+    name = "gen_exports_file_macos",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_macos.txt"],
+    cmd = "sed 's/^/_/g' $(SRCS) > $(OUTS)",
+)
+
+# Create a shared library using linkshared=True for liblldb. This uses
+# cc_binary instead of cc_shared_library since the latter expects you to
+# re-export all transitive dependencies vs them being relinked into other
+# binaries.
+cc_binary(
+    name = "lldb{}".format(PACKAGE_VERSION),
+    additional_linker_inputs = select({
+        "@platforms//os:linux": [
+            ":gen_exports_file_linux",
+        ],
+        "@platforms//os:macos": [
+            ":gen_exports_file_macos",
+        ],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
+        ],
+        "@platforms//os:macos": [
+            "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
+    deps = [
+        ":API",
+        ":Interpreter",
+    ],
+)
+
+# cc_binary targets using linkshared=True to build a shared library cannot be
+# imported directly and instead need to be referenced indirectly through
+# cc_import
+cc_import(
+    name = "liblldb.wrapper",
+    shared_library = "lldb{}".format(PACKAGE_VERSION),
+)
+
+gentbl_cc_library(
+    name = "lldb_options_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/driver/Options.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+alias(
+    name = "gdb-server",
+    actual = select({
+        "@platforms//os:macos": ":debugserver",
+        "//conditions:default": ":lldb-server",
+    }),
+)
+
+cc_binary(
+    name = "lldb",
+    srcs = glob([
+        "tools/driver/*.cpp",
+        "tools/driver/*.h",
+    ]),
+    deps = [
+        ":APIHeaders",
+        ":Host",
+        ":liblldb.wrapper",
+        ":lldb_options_inc_gen",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "DebugServerCommonMacOSXHeaders",
+    hdrs = glob(["tools/debugserver/source/MacOSX/**/*.h"]),
+    strip_include_prefix = "tools/debugserver/source/MacOSX",
+)
+
+cc_library(
+    name = "DebugServerCommonHeaders",
+    hdrs = glob(["tools/debugserver/source/**/*.h"]),
+    strip_include_prefix = "tools/debugserver/source",
+    deps = [":DebugServerCommonMacOSXHeaders"],
+)
+
+objc_library(
+    name = "DebugServerMacOSX",
+    srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
+    copts = OBJCPP_COPTS,
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+    ],
+)
+
+cc_library(
+    name = "DebugServerCommon",
+    srcs = glob(
+        ["tools/debugserver/source/**/*.cpp"],
+        exclude = ["tools/debugserver/source/debugserver.cpp"],
+    ),
+    local_defines = ["LLDB_USE_OS_LOG"],
+    tags = ["nobuildkite"],
+    deps = [
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+        ":DebugServerMacOSX",
+        ":Host",
+    ],
+)
+
+apple_genrule(
+    name = "mach_gen",
+    srcs = ["tools/debugserver/source/MacOSX/dbgnub-mig.defs"],
+    outs = [
+        "mach_exc.h",
+        "mach_excServer.c",
+        "mach_excUser.c",
+    ],
+    cmd = "mig -header $(location :mach_exc.h) -server $(location :mach_excServer.c) -user $(location :mach_excUser.c) $(SRCS)",
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+expand_template(
+    name = "debugserver_version_gen",
+    out = "debugserver_vers.c",
+    substitutions = _VERSION_SUBSTITUTIONS,
+    template = "tools/debugserver/source/debugserver_vers.c.in",
+)
+
+cc_binary(
+    name = "debugserver_unsigned",
+    srcs = [
+        "tools/debugserver/source/debugserver.cpp",
+        ":debugserver_version_gen",
+        ":mach_gen",
+    ],
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":DebugServerCommon",
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+    ],
+)
+
+apple_genrule(
+    name = "debugserver_signed",
+    srcs = [":debugserver_unsigned"],
+    outs = ["debugserver"],
+    cmd = "cp $(SRCS) $(OUTS) && xcrun codesign -f -s - --entitlements $(location tools/debugserver/resources/debugserver-macosx-entitlements.plist) $(OUTS)",
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    tools = [
+        "tools/debugserver/resources/debugserver-macosx-entitlements.plist",
+    ],
+)
+
+cc_binary(
+    name = "lldb-argdumper",
+    srcs = glob(["tools/argdumper/*.cpp"]),
+    deps = ["//llvm:Support"],
+)
+
+gentbl_cc_library(
+    name = "lldb_server_opts_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "LLGSOptions.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/lldb-server/LLGSOptions.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "lldb-server",
+    srcs = glob([
+        "tools/lldb-server/*.cpp",
+        "tools/lldb-server/*.h",
+    ]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        # TODO: This can theoretically support more platforms, but it hasn't been tested yet
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":Host",
+        ":Initialization",
+        ":Interpreter",
+        ":Utility",
+        ":Version",
+        ":lldb_server_opts_gen",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
+        "//lldb/source/Plugins:PluginInstructionARM",
+        "//lldb/source/Plugins:PluginInstructionARM64",
+        "//lldb/source/Plugins:PluginInstructionLoongArch",
+        "//lldb/source/Plugins:PluginInstructionMIPS",
+        "//lldb/source/Plugins:PluginInstructionMIPS64",
+        "//lldb/source/Plugins:PluginInstructionRISCV",
+        "//lldb/source/Plugins:PluginObjCLanguage",
+        "//lldb/source/Plugins:PluginProcessGDBRemote",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolFileNativePDB",
+        "//lldb/source/Plugins:PluginSymbolFilePDB",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Option",
+        "//llvm:Support",
+    ] + select({
+        "@platforms//os:linux": [
+            "//lldb/source/Plugins:PluginObjectFileELF",
+            "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginObjectFileMachO",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+expand_template(
+    name = "lldb-dap-plist",
+    out = "lldb-dap-Info.plist",
+    substitutions = {
+        "${LLDB_VERSION}": PACKAGE_VERSION,
+    },
+    template = "tools/lldb-dap/lldb-dap-Info.plist.in",
+)
+
+gentbl_cc_library(
+    name = "lldb_dap_opts_gen",
+    strip_include_prefix = "tools/lldb-dap",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "tools/lldb-dap/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/lldb-dap/Options.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "lldb-dap",
+    srcs = glob([
+        "tools/lldb-dap/*.cpp",
+        "tools/lldb-dap/*.h",
+    ]),
+    additional_linker_inputs = [
+        ":lldb-dap-plist",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldb_dap_opts_gen",
+        "//lldb:APIHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Utility",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
+)

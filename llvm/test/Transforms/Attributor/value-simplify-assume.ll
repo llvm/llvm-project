@@ -10,8 +10,8 @@ declare void @useI1p(ptr)
 declare void @unknown()
 
 ;.
-; CHECK: @[[GSTATIC_INT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GSTATIC_INT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
+; CHECK: @Gstatic_int1 = internal global i32 0, align 4
+; CHECK: @Gstatic_int2 = internal global i32 0, align 4
 ;.
 define i1 @readI1p(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)

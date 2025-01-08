@@ -28,20 +28,6 @@
 // LTO if default linker is GNU ld or gold anyway.
 // REQUIRES: lld-available
 
-// Test should fail where linkage-name and mangled-name diverges, see issue https://github.com/llvm/llvm-project/issues/74565).
-// Currently, this name divergence happens on Mach-O object file format, or on
-// many (but not all) 32-bit Windows systems.
-//
-// XFAIL: system-darwin
-//
-// Mark 32-bit Windows as UNSUPPORTED for now as opposed to XFAIL. This test
-// should fail on many (but not all) 32-bit Windows systems and succeed on the
-// rest. The flexibility in triple string parsing makes it tricky to capture
-// both sets accurately. i[3-9]86 specifies arch as Triple::ArchType::x86, (win32|windows)
-// specifies OS as Triple::OS::Win32
-//
-// UNSUPPORTED: target={{i.86.*windows.*}}
-
 // RUN: rm -rf %t && split-file %s %t && cd %t
 
 // Do setup work for all below tests.

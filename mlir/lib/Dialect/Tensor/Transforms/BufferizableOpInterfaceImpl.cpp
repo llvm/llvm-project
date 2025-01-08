@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
@@ -338,6 +339,9 @@ struct ExpandShapeOpInterface
 
     // Memref result type is inferred by the builder based on reassociation
     // indices and result shape.
+    // TODO: Instead of inferring the output shape argument of
+    // memref.expand_shape op, use output_shape argument of tensor.expand_shape
+    // op.
     replaceOpWithNewBufferizedOp<memref::ExpandShapeOp>(
         rewriter, op, tensorResultType.getShape(), *buffer,
         expandShapeOp.getReassociationIndices());
@@ -384,8 +388,8 @@ struct ExtractSliceOpInterface
     if (failed(resultMemrefType))
       return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref, mixedOffsets,
-        mixedSizes, mixedStrides);
+        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
+        mixedOffsets, mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
     return success();
@@ -404,8 +408,9 @@ struct ExtractSliceOpInterface
     SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
     SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
     return cast<BaseMemRefType>(memref::SubViewOp::inferRankReducedResultType(
-        extractSliceOp.getType().getShape(), llvm::cast<MemRefType>(*srcMemrefType),
-        mixedOffsets, mixedSizes, mixedStrides));
+        extractSliceOp.getType().getShape(),
+        llvm::cast<MemRefType>(*srcMemrefType), mixedOffsets, mixedSizes,
+        mixedStrides));
   }
 };
 
@@ -473,14 +478,10 @@ struct FromElementsOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
-
-    // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
-      return op->emitError("memory space not implemented yet");
+    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
 
     // Allocate a buffer for the result.
     Location loc = op->getLoc();
-    auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -488,10 +489,12 @@ struct FromElementsOpInterface
         /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    auto memrefType =
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+    FailureOr<BaseMemRefType> memrefType =
+        bufferization::getBufferType(*tensorAlloc, options);
+    if (failed(memrefType))
+      return failure();
     Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, *tensorAlloc);
+        op->getLoc(), *memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -508,7 +511,7 @@ struct FromElementsOpInterface
     }
 
     // Create constants for the range of possible indices [0, max{shape_i}).
-    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    auto maxDim = *llvm::max_element(shape);
     SmallVector<Value, 2> constants;
     constants.reserve(maxDim);
     for (int i = 0; i < maxDim; ++i)
@@ -588,8 +591,10 @@ struct GenerateOpInterface
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
 
+    auto type = generateOp.getResult().getType();
+
     // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
+    if (options.defaultMemorySpaceFn(type) != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
@@ -630,6 +635,28 @@ struct InsertOpInterface
   }
 };
 
+template <typename InsertOpTy>
+static bool insertSliceOpRequiresRead(InsertOpTy insertSliceOp,
+                                      OpOperand &opOperand) {
+  // The source is always read.
+  if (opOperand == insertSliceOp.getSourceMutable())
+    return true;
+
+  // For the destination, it depends...
+  assert(opOperand == insertSliceOp.getDestMutable() && "expected dest");
+
+  // Dest is not read if it is entirely overwritten. E.g.:
+  // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
+  bool allOffsetsZero =
+      llvm::all_of(insertSliceOp.getMixedOffsets(), isZeroIndex);
+  RankedTensorType destType = insertSliceOp.getDestType();
+  bool sizesMatchDestSizes =
+      areConstantIntValues(insertSliceOp.getMixedSizes(), destType.getShape());
+  bool allStridesOne =
+      areAllConstantIntValue(insertSliceOp.getMixedStrides(), 1);
+  return !(allOffsetsZero && sizesMatchDestSizes && allStridesOne);
+}
+
 /// Bufferization of tensor.insert_slice. Replace with a memory copy. Under
 /// certain circumstances, this op can also be a no-op.
 ///
@@ -640,32 +667,8 @@ struct InsertSliceOpInterface
                                                      tensor::InsertSliceOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    auto insertSliceOp = cast<tensor::InsertSliceOp>(op);
-    RankedTensorType destType = insertSliceOp.getDestType();
-
-    // The source is always read.
-    if (opOperand == insertSliceOp.getSourceMutable())
-      return true;
-
-    // For the destination, it depends...
-    assert(opOperand == insertSliceOp.getDestMutable() && "expected dest");
-
-    // Dest is not read if it is entirely overwritten. E.g.:
-    // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
-    bool allOffsetsZero =
-        llvm::all_of(insertSliceOp.getMixedOffsets(), [](OpFoldResult ofr) {
-          return isConstantIntValue(ofr, 0);
-        });
-    bool sizesMatchDestSizes = llvm::all_of(
-        llvm::enumerate(insertSliceOp.getMixedSizes()), [&](const auto &it) {
-          return getConstantIntValue(it.value()) ==
-                 destType.getDimSize(it.index());
-        });
-    bool allStridesOne =
-        llvm::all_of(insertSliceOp.getMixedStrides(), [](OpFoldResult ofr) {
-          return isConstantIntValue(ofr, 1);
-        });
-    return !(allOffsetsZero && sizesMatchDestSizes && allStridesOne);
+    return insertSliceOpRequiresRead(cast<tensor::InsertSliceOp>(op),
+                                     opOperand);
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -758,8 +761,8 @@ struct PadOpInterface
     RankedTensorType srcType = padOp.getSourceType();
 
     auto toValue = [&](OpFoldResult ofr) {
-      if (ofr.is<Value>())
-        return ofr.get<Value>();
+      if (auto value = dyn_cast<Value>(ofr))
+        return value;
       return rewriter
           .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
           .getResult();
@@ -925,7 +928,8 @@ struct ParallelInsertSliceOpInterface
 
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return true;
+    return insertSliceOpRequiresRead(cast<tensor::ParallelInsertSliceOp>(op),
+                                     opOperand);
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -983,13 +987,20 @@ struct ParallelInsertSliceOpInterface
     for (Operation *user : srcBuffer->getUsers()) {
       if (hasEffect<MemoryEffects::Free>(user)) {
         if (user->getBlock() == parallelCombiningParent->getBlock())
-          user->moveBefore(user->getBlock()->getTerminator());
+          rewriter.moveOpBefore(user, user->getBlock()->getTerminator());
         break;
       }
     }
 
     // Delete the op.
     rewriter.eraseOp(op);
+    return success();
+  }
+
+  /// tensor.parallel_insert_slice op has implicit inplace behavior. We
+  /// shouldn't create copy to resolve conflict.
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
     return success();
   }
 };
@@ -1007,10 +1018,6 @@ struct SplatOpInterface
     OpBuilder::InsertionGuard g(rewriter);
     auto splatOp = cast<tensor::SplatOp>(op);
 
-    // TODO: Implement memory space for this op.
-    if (options.defaultMemorySpace != Attribute())
-      return op->emitError("memory space not implemented yet");
-
     // Allocate memory.
     Location loc = op->getLoc();
     FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
@@ -1021,6 +1028,11 @@ struct SplatOpInterface
 
     // Create linalg::MapOp.
     auto tensorType = cast<RankedTensorType>(tensorAlloc->getType());
+
+    // TODO: Implement memory space for this op.
+    if (options.defaultMemorySpaceFn(tensorType) != Attribute())
+      return op->emitError("memory space not implemented yet");
+
     auto linalgOp =
         rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
                                        /*init=*/*tensorAlloc);

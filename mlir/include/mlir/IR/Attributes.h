@@ -50,14 +50,19 @@ public:
   /// Casting utility functions. These are deprecated and will be removed,
   /// please prefer using the `llvm` namespace variants instead.
   template <typename... Tys>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const;
   template <typename... Tys>
+  [[deprecated("Use mlir::isa_and_nonnull<U>() instead")]]
   bool isa_and_nonnull() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const;
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
   U dyn_cast_or_null() const;
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const;
 
   /// Return a unique identifier for the concrete attribute type. This is used
@@ -77,6 +82,10 @@ public:
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
+
+  /// Print the attribute without dialect wrapping.
+  void printStripped(raw_ostream &os) const;
+  void printStripped(raw_ostream &os, AsmState &state) const;
 
   /// Get an opaque pointer to the attribute.
   const void *getAsOpaquePointer() const { return impl; }
@@ -313,12 +322,19 @@ protected:
 // Core AttributeTrait
 //===----------------------------------------------------------------------===//
 
-/// This trait is used to determine if an attribute is mutable or not. It is
-/// attached on an attribute if the corresponding ImplType defines a `mutate`
-/// function with proper signature.
 namespace AttributeTrait {
+/// This trait is used to determine if an attribute is mutable or not. It is
+/// attached on an attribute if the corresponding ConcreteType defines a
+/// `mutate` function with proper signature.
 template <typename ConcreteType>
 using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+
+/// This trait is used to determine if an attribute is a location or not. It is
+/// attached to an attribute by the user if they intend the attribute to be used
+/// as a location.
+template <typename ConcreteType>
+struct IsLocation : public AttributeTrait::TraitBase<ConcreteType, IsLocation> {
+};
 } // namespace AttributeTrait
 
 } // namespace mlir.

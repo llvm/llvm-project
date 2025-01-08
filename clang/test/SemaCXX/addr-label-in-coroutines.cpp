@@ -13,9 +13,9 @@ struct resumable {
 };
 
 resumable f1(int &out, int *inst) {
-    static void* dispatch_table[] = {&&inc,      // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-                                     &&suspend,  // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-                                     &&stop};    // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
+    static void* dispatch_table[] = {&&inc,      // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+                                     &&suspend,  // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+                                     &&stop};    // expected-error {{the GNU address of label extension is not allowed in coroutines}}
     #define DISPATCH() goto *dispatch_table[*inst++]
 inc:
     out++;
@@ -31,9 +31,9 @@ stop:
 
 resumable f2(int &out, int *inst) {
     void* dispatch_table[] = {nullptr, nullptr, nullptr};
-    dispatch_table[0] = &&inc;      // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-    dispatch_table[1] = &&suspend;  // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-    dispatch_table[2] = &&stop;     // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
+    dispatch_table[0] = &&inc;      // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+    dispatch_table[1] = &&suspend;  // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+    dispatch_table[2] = &&stop;     // expected-error {{the GNU address of label extension is not allowed in coroutines}}
     #define DISPATCH() goto *dispatch_table[*inst++]
 inc:
     out++;
@@ -50,9 +50,9 @@ stop:
 resumable f3(int &out, int *inst) {
     void* dispatch_table[] = {nullptr, nullptr, nullptr};
     [&]() -> resumable {
-        dispatch_table[0] = &&inc;      // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-        dispatch_table[1] = &&suspend;  // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
-        dispatch_table[2] = &&stop;     // expected-error {{the GNU address of label extension is not allowed in coroutines.}}
+        dispatch_table[0] = &&inc;      // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+        dispatch_table[1] = &&suspend;  // expected-error {{the GNU address of label extension is not allowed in coroutines}}
+        dispatch_table[2] = &&stop;     // expected-error {{the GNU address of label extension is not allowed in coroutines}}
         #define DISPATCH() goto *dispatch_table[*inst++]
     inc:
         out++;

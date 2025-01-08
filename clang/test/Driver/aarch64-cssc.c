@@ -9,6 +9,7 @@
 // RUN: %clang -S -o - -emit-llvm --target=aarch64-none-elf -march=armv9.4-a        %s 2>&1 | FileCheck %s
 // RUN: %clang -S -o - -emit-llvm --target=aarch64-none-elf -march=armv9.4-a+cssc   %s 2>&1 | FileCheck %s
 // RUN: %clang -S -o - -emit-llvm --target=aarch64-none-elf -march=armv9.4-a+nocssc %s 2>&1 | FileCheck %s --check-prefix=NO_CSSC
+// RUN: %clang -S -o - -emit-llvm --target=aarch64-none-elf -mcpu=ampere1b          %s 2>&1 | FileCheck %s
 
 // CHECK: "target-features"="{{.*}},+cssc
 // NO_CSSC: "target-features"="{{.*}},-cssc

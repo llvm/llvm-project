@@ -10,10 +10,10 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -165,6 +165,7 @@ void Heatmap::print(raw_ostream &OS) const {
 
   // Print map legend
   OS << "Legend:\n";
+  OS << "\nRanges:\n";
   uint64_t PrevValue = 0;
   for (unsigned I = 0; I < sizeof(Range) / sizeof(Range[0]); ++I) {
     const uint64_t Value = Range[I];
@@ -172,6 +173,22 @@ void Heatmap::print(raw_ostream &OS) const {
     printValue(Value, 'o', /*ResetColor=*/true);
     OS << " : (" << PrevValue << ", " << Value << "]\n";
     PrevValue = Value;
+  }
+  if (opts::HeatmapPrintMappings) {
+    OS << "\nSections:\n";
+    unsigned SectionIdx = 0;
+    for (auto TxtSeg : TextSections) {
+      const char Upper = static_cast<char>('A' + ((SectionIdx++) % 26));
+      const char Lower = static_cast<char>(std::tolower(Upper));
+      OS << formatv("  {0}/{1} : {2,-10} ", Lower, Upper, TxtSeg.Name);
+      if (MaxAddress > 0xffffffff)
+        OS << format("0x%016" PRIx64, TxtSeg.BeginAddress) << "-"
+           << format("0x%016" PRIx64, TxtSeg.EndAddress) << "\n";
+      else
+        OS << format("0x%08" PRIx64, TxtSeg.BeginAddress) << "-"
+           << format("0x%08" PRIx64, TxtSeg.EndAddress) << "\n";
+    }
+    OS << "\n";
   }
 
   // Pos - character position from right in hex form.

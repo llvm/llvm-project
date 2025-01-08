@@ -8,6 +8,17 @@
 ; RUN:      -fast-isel -experimental-debug-variable-locations \
 ; RUN:    | FileCheck %s --check-prefix=FASTISEL --implicit-check-not=DBG_VALUE
 
+;; Repeat the tests using experimental debuginfo iterators.
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-- %s -o - -O0 -stop-before=finalize-isel \
+; RUN:      -experimental-debug-variable-locations \
+; RUN:    | FileCheck %s --check-prefix=O0 --implicit-check-not=DBG_INSTR_REF
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-- %s -o - -O2 -stop-before=finalize-isel \
+; RUN:      -experimental-debug-variable-locations \
+; RUN:    | FileCheck %s --check-prefix=O2 --implicit-check-not=DBG_VALUE
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-- %s -o - -stop-before=finalize-isel \
+; RUN:      -fast-isel -experimental-debug-variable-locations \
+; RUN:    | FileCheck %s --check-prefix=FASTISEL --implicit-check-not=DBG_VALUE
+
 ; Test that instruction-referencing variable locations are issued at -O2, but
 ; normal DBG_VALUEs are issued at -O0. This behaviour is desired as the former
 ; is slow when applied to unoptimized code.

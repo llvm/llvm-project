@@ -1,0 +1,225 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test lowering of CUDA allocatable allocate/deallocate statements.
+
+module globals
+  real, device, allocatable :: a_device(:)
+  real, managed, allocatable :: a_managed(:)
+  real, pinned, allocatable :: a_pinned(:)
+end module
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_device {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_managed {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+! CHECK-LABEL: fir.global @_QMglobalsEa_pinned {data_attr = #cuf.cuda<pinned>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: %{{.*}} = fir.embox %{{.*}}(%{{.*}}) {allocator_idx = 1 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+
+subroutine sub1()
+  real, allocatable, device :: a(:)
+  allocate(a(10))
+
+  deallocate(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub1()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+
+! CHECK: %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+
+! CHECK: %[[BOX_LOAD:.*]] = fir.load %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX_LOAD]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK: %[[ADDR_I64:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[NE_C0:.*]] = arith.cmpi ne, %[[ADDR_I64]], %[[C0]] : i64
+! CHECK: fir.if %[[NE_C0]] {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+
+subroutine sub2()
+  real, allocatable, managed :: a(:)
+  integer :: istat
+  allocate(a(10), stat=istat)
+
+  deallocate(a, stat=istat)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub2()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub2Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub2Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[ISTAT:.*]] = fir.alloca i32 {bindc_name = "istat", uniq_name = "_QFsub2Eistat"}
+! CHECK: %[[ISTAT_DECL:.*]]:2 = hlfir.declare %[[ISTAT]] {uniq_name = "_QFsub2Eistat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %[[STAT:.*]] = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+
+! CHECK: %[[STAT:.*]] = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
+
+subroutine sub3()
+  integer, allocatable, pinned :: a(:,:)
+  logical :: plog
+  allocate(a(20,30), pinned = plog)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub3()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "a", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFsub3Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 1 : i32}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub3Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>)
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsub3Eplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %5 {uniq_name = "_QFsub3Eplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK-2: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> pinned(%[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>) {data_attr = #cuf.cuda<pinned>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {data_attr = #cuf.cuda<pinned>}
+
+subroutine sub4()
+  real, allocatable, device :: a(:)
+  integer :: istream
+  allocate(a(10), stream=istream)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub4()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub4Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[ISTREAM:.*]] = fir.alloca i32 {bindc_name = "istream", uniq_name = "_QFsub4Eistream"}
+! CHECK: %[[ISTREAM_DECL:.*]]:2 = hlfir.declare %[[ISTREAM]] {uniq_name = "_QFsub4Eistream"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %[[STREAM:.*]] = fir.load %[[ISTREAM_DECL]]#0 : !fir.ref<i32>
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[STREAM]] : i32) {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+
+subroutine sub5()
+  real, allocatable, device :: a(:)
+  real, allocatable :: b(:)
+  allocate(a, source=b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub5()
+! CHECK: %[[BOX_A:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub5Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: %[[BOX_A_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub5Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[BOX_B:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "b", uniq_name = "_QFsub5Eb"}
+! CHECK: %[[BOX_B_DECL:.*]]:2 = hlfir.declare %[[BOX_B]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub5Eb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[LOAD_B:.*]] = fir.load %[[BOX_B_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> source(%[[LOAD_B]] : !fir.box<!fir.heap<!fir.array<?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.if
+! CHECK: fir.freemem
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+
+subroutine sub6()
+  real, allocatable, device :: a(:)
+  real, allocatable :: b(:)
+  allocate(a, mold=b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub6()
+! CHECK: %[[BOX_A:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub6Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: %[[BOX_A_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub6Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[BOX_B:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "b", uniq_name = "_QFsub6Eb"}
+! CHECK: %[[BOX_B_DECL:.*]]:2 = hlfir.declare %[[BOX_B]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub6Eb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[LOAD_B:.*]] = fir.load %[[BOX_B_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.call @_FortranAAllocatableApplyMold
+! CHECK: %{{.*}} = cuf.allocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+
+subroutine sub7()
+  real, allocatable, device :: a(:)
+  integer :: istat
+  character(50) :: err
+  allocate(a(100), stat=istat, errmsg=err)
+
+  deallocate(a, stat=istat, errmsg=err)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub7()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub7Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub7Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[ERR:.*]] = fir.alloca !fir.char<1,50> {bindc_name = "err", uniq_name = "_QFsub7Eerr"}
+! CHECK: %[[ERR_DECL:.*]]:2 = hlfir.declare %[[ERR]] typeparams %{{.*}} {uniq_name = "_QFsub7Eerr"} : (!fir.ref<!fir.char<1,50>>, index) -> (!fir.ref<!fir.char<1,50>>, !fir.ref<!fir.char<1,50>>)
+! CHECK: %[[ISTAT:.*]] = fir.alloca i32 {bindc_name = "istat", uniq_name = "_QFsub7Eistat"}
+! CHECK: %[[ISTAT_DECL:.*]]:2 = hlfir.declare %[[ISTAT]] {uniq_name = "_QFsub7Eistat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
+! CHECK: fir.call @_FortranAAllocatableSetBounds
+! CHECK: %[[STAT:.*]] = cuf.allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%[[ERR_BOX]] : !fir.box<!fir.char<1,50>>) {data_attr = #cuf.cuda<device>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+
+! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
+! CHECK: %[[STAT:.*]] = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%15 : !fir.box<!fir.char<1,50>>) {data_attr = #cuf.cuda<device>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
+
+attributes(global) subroutine sub8()
+  real, device, allocatable :: a(:)
+  allocate(a(2))
+  deallocate(a)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub8() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %[[DESC:.*]] = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub8Ea"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[DESC]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub8Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[HEAP:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {fir.must_be_heap = true, uniq_name = "_QFsub8Ea.alloc"}
+! CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[HEAP]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: fir.store %[[EMBOX]] to %[[A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[BOX:.*]] = fir.load %[[A]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[BOXADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK: fir.freemem %[[BOXADDR]] : !fir.heap<!fir.array<?xf32>>
+
+subroutine setpinned()
+  integer, allocatable :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinned()  
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>
+
+subroutine setpinnedpointer()
+  integer, pointer :: i(:)
+  logical :: plog
+  allocate(i(10), pinned=plog)
+end
+
+! CHECK-LABEL: func.func @_QPsetpinnedpointer()
+! CHECK: %[[PLOG:.*]] = fir.alloca !fir.logical<4> {bindc_name = "plog", uniq_name = "_QFsetpinnedpointerEplog"}
+! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %[[PLOG]] {uniq_name = "_QFsetpinnedpointerEplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK: fir.call @_FortranAPointerAllocate
+! CHECK: %[[FALSE:.*]] = arith.constant false
+! CHECK: %[[FLASE_CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
+! CHECK: fir.store %[[FLASE_CONV]] to %[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>

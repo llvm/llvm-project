@@ -8,7 +8,7 @@ target triple = "i386-apple-darwin11.0.0"
 define void @Bubble() nounwind noinline {
 ; CHECK-LABEL: @Bubble(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP7_PRE:%.*]] = load i32, ptr getelementptr inbounds ([5001 x i32], ptr @sortlist, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP7_PRE:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @sortlist, i32 4), align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY5:%.*]]
 ; CHECK:       while.body5:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP7_PRE]], [[ENTRY:%.*]] ], [ [[TMP71:%.*]], [[IF_END:%.*]] ]

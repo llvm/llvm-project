@@ -1,0 +1,762 @@
+# RUN: yaml2obj %s -o %t.dSYM
+
+## Verify that we don't keep merged functions by default
+# RUN: llvm-gsymutil --convert %t.dSYM --out-file=%t.default.gSYM
+# RUN: llvm-gsymutil --verify --verbose %t.default.gSYM | FileCheck --check-prefix=CHECK-GSYM-DEFAULT %s
+
+## Verify that we keep merged functions when specyfing --merged-functions
+# RUN: llvm-gsymutil --convert %t.dSYM --out-file=%t.keep.gSYM --merged-functions
+# RUN: llvm-gsymutil --verify --verbose %t.keep.gSYM | FileCheck --check-prefix=CHECK-GSYM-KEEP %s
+
+## Note: For identical functions, the dSYM / gSYM cannot be counted on to be deterministic.
+## So we can only match the general structure, not exact function names / offsets
+
+
+# CHECK-GSYM-DEFAULT-NOT: Merged FunctionInfos
+# CHECK-GSYM-DEFAULT:      FunctionInfo @ 0x{{[0-9a-fA-F]+}}: [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
+
+
+# CHECK-GSYM-KEEP:      Address Table:
+# CHECK-GSYM-KEEP-NEXT: INDEX  OFFSET16 (ADDRESS)
+# CHECK-GSYM-KEEP-NEXT: ====== ===============================
+# CHECK-GSYM-KEEP-NEXT: [   0] 0x{{[0-9a-fA-F]+}}
+
+# CHECK-GSYM-KEEP:      Address Info Offsets:
+# CHECK-GSYM-KEEP-NEXT: INDEX  Offset
+# CHECK-GSYM-KEEP-NEXT: ====== ==========
+# CHECK-GSYM-KEEP-NEXT: [   0] 0x{{[0-9a-fA-F]+}}
+
+# CHECK-GSYM-KEEP:      Files:
+# CHECK-GSYM-KEEP-NEXT: INDEX  DIRECTORY  BASENAME   PATH
+# CHECK-GSYM-KEEP-NEXT: ====== ========== ========== ==============================
+# CHECK-GSYM-KEEP-NEXT: [   0] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}}
+# CHECK-GSYM-KEEP-NEXT: [   1] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
+# CHECK-GSYM-KEEP-NEXT: [   2] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
+# CHECK-GSYM-KEEP-NEXT: [   3] 0x{{[0-9a-fA-F]+}} 0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp
+
+# CHECK-GSYM-KEEP:      FunctionInfo @ 0x{{[0-9a-fA-F]+}}: [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
+# CHECK-GSYM-KEEP-NEXT: LineTable:
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:   0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
+# CHECK-GSYM-KEEP-NEXT: ++ Merged FunctionInfos[0]:
+# CHECK-GSYM-KEEP-NEXT:     [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
+# CHECK-GSYM-KEEP-NEXT:     LineTable:
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
+# CHECK-GSYM-KEEP-NEXT: ++ Merged FunctionInfos[1]:
+# CHECK-GSYM-KEEP-NEXT:     [0x{{[0-9a-fA-F]+}} - 0x{{[0-9a-fA-F]+}}) "my_func_0{{[1-3]}}"
+# CHECK-GSYM-KEEP-NEXT:     LineTable:
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:7
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:9
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:8
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:11
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:10
+# CHECK-GSYM-KEEP-NEXT:       0x{{[0-9a-fA-F]+}} /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:6
+
+## Test the lookup functionality for merged functions:
+# RUN: llvm-gsymutil --verify %t.keep.gSYM --address 0x248 --merged-functions | FileCheck --check-prefix=CHECK-MERGED-LOOKUP %s
+# RUN: llvm-gsymutil --verify %t.keep.gSYM --address 0x248 | FileCheck --check-prefix=CHECK-NORMAL-LOOKUP %s
+
+#### TODO: Fix non-determinism leading that is currently worked around with `{{[1-3]}}` below.
+
+# CHECK-MERGED-LOOKUP: Found 3 functions at address 0x0000000000000248:
+# CHECK-MERGED-LOOKUP-NEXT:       0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+ 
+# CHECK-NORMAL-LOOKUP: 0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0xA
+  ncmds:           6
+  sizeofcmds:      1168
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44EA-5555-3144-A15B-1DD428F7F3A2
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             720896
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           3
+    stroff:          4144
+    strsize:         38
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x248
+        size:            40
+        offset:          0x0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         CFFAEDFE0C000001000000000A000000060000009004000000000000000000001B00000018000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        86
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         872
+    segname:         __DWARF
+    vmaddr:          20480
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        1405
+    maxprot:         7
+    initprot:        3
+    nsects:          10
+    flags:           0
+    Sections:
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x5000
+        size:            234
+        offset:          0x2000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_aranges
+        segname:         __DWARF
+        addr:            0x50EA
+        size:            144
+        offset:          0x20EA
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x517A
+        size:            324
+        offset:          0x217A
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_frame
+        segname:         __DWARF
+        addr:            0x52BE
+        size:            120
+        offset:          0x22BE
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         14000000FFFFFFFF0400080001781E0C1F000000000000001C0000000000000048020000000000002800000000000000440E1000000000001C0000000000000048020000000000002800000000000000440E1000000000001C0000000000000048020000000000002800000000000000440E100000000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x5336
+        size:            73
+        offset:          0x2336
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x537F
+        size:            221
+        offset:          0x237F
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x545C
+        size:            36
+        offset:          0x245C
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x5480
+        size:            116
+        offset:          0x2480
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000003000000030000000C00000000000000010000000100060000000000010000000200000038450B6E36450B6E37450B6E440000005400000064000000D200000001000000060100000000000094000000010000002E00000000000000B7000000010000009A00000000000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x54F4
+        size:            101
+        offset:          0x24F4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000100000001000000180000000000000004000000010006000300050005000B0006000600000000003080880B38000000A30000000300000064000000240000A4283A0CD0000000240000A4283A0C3C010000240000A4283A0C00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x5559
+        size:            36
+        offset:          0x2559
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         584
+    - n_strx:          14
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         584
+    - n_strx:          26
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         584
+  StringTable:
+    - ''
+    - ''
+    - _my_func_01
+    - _my_func_02
+    - _my_func_03
+DWARF:
+  debug_str:
+    - ''
+    - 'clang version 20.0.0git (https://github.com/alx32/llvm-project.git cfb92be0a9cdd0f4595100c5add4e2795a44134e)'
+    - 'out/file_01.cpp'
+    - '/'
+    - '/tmp/test_gsym_yaml'
+    - my_func_01
+    - a
+    - b
+    - int
+    - 'out/file_02.cpp'
+    - my_func_02
+    - 'out/file_03.cpp'
+    - my_func_03
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_APPLE_omit_frame_ptr
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x4
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_aranges:
+    - Length:          0x2C
+      Version:         2
+      CuOffset:        0x0
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x248
+          Length:          0x28
+    - Length:          0x2C
+      Version:         2
+      CuOffset:        0x6C
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x248
+          Length:          0x28
+    - Length:          0x2C
+      Version:         2
+      CuOffset:        0xD8
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x248
+          Length:          0x28
+  debug_info:
+    - Length:          0x68
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x21
+            - Value:           0x6E
+            - Value:           0x7E
+            - Value:           0x0
+            - Value:           0x80
+            - Value:           0x248
+            - Value:           0x28
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x248
+            - Value:           0x28
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x94
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x64
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0xC ]
+            - Value:           0x9F
+            - Value:           0x1
+            - Value:           0x3
+            - Value:           0x64
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0x8 ]
+            - Value:           0xA1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x64
+        - AbbrCode:        0x0
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0xA3
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+    - Length:          0x68
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x21
+            - Value:           0xA7
+            - Value:           0x7E
+            - Value:           0x4E
+            - Value:           0x80
+            - Value:           0x248
+            - Value:           0x28
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x248
+            - Value:           0x28
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0xB7
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0xD0
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0xC ]
+            - Value:           0x9F
+            - Value:           0x1
+            - Value:           0x3
+            - Value:           0xD0
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0x8 ]
+            - Value:           0xA1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0xD0
+        - AbbrCode:        0x0
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0xA3
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+    - Length:          0x68
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x21
+            - Value:           0xC2
+            - Value:           0x7E
+            - Value:           0x9C
+            - Value:           0x80
+            - Value:           0x248
+            - Value:           0x28
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x248
+            - Value:           0x28
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0xD2
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x13C
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0xC ]
+            - Value:           0x9F
+            - Value:           0x1
+            - Value:           0x3
+            - Value:           0x13C
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x2
+              BlockData:       [ 0x91, 0x8 ]
+            - Value:           0xA1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x13C
+        - AbbrCode:        0x0
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0xA3
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          74
+      Version:         4
+      PrologueLength:  39
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - out
+      Files:
+        - Name:            file_01.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            584
+        - Opcode:          0x16
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            7
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0xBC
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          0x4D
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_set_epilogue_begin
+          Data:            0
+        - Opcode:          0x46
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            8
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+    - Length:          74
+      Version:         4
+      PrologueLength:  39
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - out
+      Files:
+        - Name:            file_02.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            584
+        - Opcode:          0x16
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            7
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0xBC
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          0x4D
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_set_epilogue_begin
+          Data:            0
+        - Opcode:          0x46
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            8
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+    - Length:          74
+      Version:         4
+      PrologueLength:  39
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - out
+      Files:
+        - Name:            file_03.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            584
+        - Opcode:          0x16
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            7
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0xBC
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          0x4D
+          Data:            0
+        - Opcode:          0x49
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_set_epilogue_begin
+          Data:            0
+        - Opcode:          0x46
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            8
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...
+
+
+###################################################################################
+############################# yaml generation script ##############################
+# #!/bin/bash
+# set -ex
+# # Global variable for LLVM toolchain path
+# TOOLCHAIN_PATH=[...]
+# # Switch to the script directory
+# cd "$(dirname "$0")"
+# # Create and clean 'out' directory
+# mkdir -p out
+# rm -rf out/*
+# # Generate C++ files
+# for i in {1..3}; do
+#     cat << EOF > out/file_0${i}.cpp
+# extern "C" int my_func_0${i}(
+#     int a,
+#     int b)
+# {
+#     return
+#       a
+#       *
+#       a
+#       +
+#       b;
+# }
+# EOF
+# done
+# # Compile to object files with debug info
+# for i in {1..3}; do
+#     ${TOOLCHAIN_PATH}/bin/clang++  \
+#     -fno-unwind-tables -fno-asynchronous-unwind-tables  \
+#     -target arm64-apple-macos -c -g out/file_0${i}.cpp -o out/file_0${i}.o
+# done
+# # Link object files to dylib using lld directly
+# ${TOOLCHAIN_PATH}/bin/ld64.lld \
+#     -dylib \
+#     -arch arm64 \
+#     -platform_version macos 11.0 11.0 \
+#     -o out/libmyfuncs.dylib \
+#     --icf=all --keep-icf-stabs \
+#     -o out/mydylib out/file_01.o out/file_02.o out/file_03.o
+# # Create dsym with --flat option
+# "$TOOLCHAIN_PATH/bin/dsymutil" --flat out/mydylib -o out/mydylib.dSYM
+# # Convert dsym to yaml
+# "$TOOLCHAIN_PATH/bin/obj2yaml" out/mydylib.dSYM > out/mydylib.yaml
+###################################################################################

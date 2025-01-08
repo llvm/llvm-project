@@ -40,11 +40,9 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -192,6 +190,9 @@ PreservedAnalyses ThreadSanitizerPass::run(Function &F,
 
 PreservedAnalyses ModuleThreadSanitizerPass::run(Module &M,
                                                  ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_thread module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_thread"))
+    return PreservedAnalyses::all();
   insertModuleCtor(M);
   return PreservedAnalyses::none();
 }
@@ -512,7 +513,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   bool Res = false;
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
   for (auto &BB : F) {
@@ -569,9 +570,8 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // Instrument function entry/exit points if there were instrumented accesses.
   if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(F.getEntryBlock().getFirstNonPHI());
-    Value *ReturnAddress = IRB.CreateCall(
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::returnaddress),
-        IRB.getInt32(0));
+    Value *ReturnAddress =
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);
@@ -738,8 +738,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     Value *Args[] = {Addr,
                      IRB.CreateBitOrPointerCast(SI->getValueOperand(), Ty),
                      createOrdering(&IRB, SI->getOrdering())};
-    CallInst *C = CallInst::Create(TsanAtomicStore[Idx], Args);
-    ReplaceInstWithInst(I, C);
+    IRB.CreateCall(TsanAtomicStore[Idx], Args);
+    SI->eraseFromParent();
   } else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I)) {
     Value *Addr = RMWI->getPointerOperand();
     int Idx =
@@ -752,11 +752,12 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     const unsigned ByteSize = 1U << Idx;
     const unsigned BitSize = ByteSize * 8;
     Type *Ty = Type::getIntNTy(IRB.getContext(), BitSize);
-    Value *Args[] = {Addr,
-                     IRB.CreateIntCast(RMWI->getValOperand(), Ty, false),
+    Value *Val = RMWI->getValOperand();
+    Value *Args[] = {Addr, IRB.CreateBitOrPointerCast(Val, Ty),
                      createOrdering(&IRB, RMWI->getOrdering())};
-    CallInst *C = CallInst::Create(F, Args);
-    ReplaceInstWithInst(I, C);
+    Value *C = IRB.CreateCall(F, Args);
+    I->replaceAllUsesWith(IRB.CreateBitOrPointerCast(C, Val->getType()));
+    I->eraseFromParent();
   } else if (AtomicCmpXchgInst *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
     Value *Addr = CASI->getPointerOperand();
     Type *OrigOldValTy = CASI->getNewValOperand()->getType();
@@ -794,8 +795,8 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
     FunctionCallee F = FI->getSyncScopeID() == SyncScope::SingleThread
                            ? TsanAtomicSignalFence
                            : TsanAtomicThreadFence;
-    CallInst *C = CallInst::Create(F, Args);
-    ReplaceInstWithInst(I, C);
+    IRB.CreateCall(F, Args);
+    FI->eraseFromParent();
   }
   return true;
 }
@@ -803,6 +804,10 @@ bool ThreadSanitizer::instrumentAtomic(Instruction *I, const DataLayout &DL) {
 int ThreadSanitizer::getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr,
                                               const DataLayout &DL) {
   assert(OrigTy->isSized());
+  if (OrigTy->isScalableTy()) {
+    // FIXME: support vscale.
+    return -1;
+  }
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   if (TypeSize != 8  && TypeSize != 16 &&
       TypeSize != 32 && TypeSize != 64 && TypeSize != 128) {

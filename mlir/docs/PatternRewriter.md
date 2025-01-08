@@ -73,7 +73,7 @@ public:
     // otherwise.
     // ...
   }
-  void rewrite(Operation *op, PatternRewriter &rewriter) {
+  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     // The `rewrite` method performs mutations on the IR rooted at `op` using
     // the provided rewriter. All mutations must go through the provided
     // rewriter.
@@ -81,7 +81,7 @@ public:
 
   /// In this section, the `match` and `rewrite` implementation is specified
   /// using a single hook.
-  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) {
+  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const override {
     // The `matchAndRewrite` method performs both the matching and the mutation.
     // Note that the match must reach a successful point before IR mutation may
     // take place.
@@ -213,15 +213,15 @@ user is determined by the specific pattern driver.
 This method replaces an operation's results with a set of provided values, and
 erases the operation.
 
-*   Update an Operation in-place : `(start|cancel|finalize)RootUpdate`
+*   Update an Operation in-place : `(start|cancel|finalize)OpModification`
 
 This is a collection of methods that provide a transaction-like API for updating
 the attributes, location, operands, or successors of an operation in-place
 within a pattern. An in-place update transaction is started with
-`startRootUpdate`, and may either be canceled or finalized with
-`cancelRootUpdate` and `finalizeRootUpdate` respectively. A convenience wrapper,
-`updateRootInPlace`, is provided that wraps a `start` and `finalize` around a
-callback.
+`startOpModification`, and may either be canceled or finalized with
+`cancelOpModification` and `finalizeOpModification` respectively. A convenience
+wrapper, `modifyOpInPlace`, is provided that wraps a `start` and `finalize`
+around a callback.
 
 *   OpBuilder API
 
@@ -320,19 +320,45 @@ conversion target, via a set of pattern-based operation rewriting patterns. This
 framework also provides support for type conversions. More information on this
 driver can be found [here](DialectConversion.md).
 
+### Walk Pattern Rewrite Driver
+
+This is a fast and simple driver that walks the given op and applies patterns
+that locally have the most benefit. The benefit of a pattern is decided solely
+by the benefit specified on the pattern, and the relative order of the pattern
+within the pattern list (when two patterns have the same local benefit).
+
+The driver performs a post-order traversal. Note that it walks regions of the
+given op but does not visit the op.
+
+This driver does not (re)visit modified or newly replaced ops, and does not
+allow for progressive rewrites of the same op. Op and block erasure is only
+supported for the currently matched op and its descendant. If your pattern
+set requires these, consider using the Greedy Pattern Rewrite Driver instead,
+at the expense of extra overhead.
+
+This driver is exposed using the `walkAndApplyPatterns` function.
+
+Note: This driver listens for IR changes via the callbacks provided by
+`RewriterBase`. It is important that patterns announce all IR changes to the
+rewriter and do not bypass the rewriter API by modifying ops directly.
+
+#### Debugging
+
+You can debug the Walk Pattern Rewrite Driver by passing the
+`--debug-only=walk-rewriter` CLI flag. This will print the visited and matched
+ops.
+
 ### Greedy Pattern Rewrite Driver
 
 This driver processes ops in a worklist-driven fashion and greedily applies the
-patterns that locally have the most benefit. The benefit of a pattern is decided
-solely by the benefit specified on the pattern, and the relative order of the
-pattern within the pattern list (when two patterns have the same local benefit).
-Patterns are iteratively applied to operations until a fixed point is reached or
-until the configurable maximum number of iterations exhausted, at which point
-the driver finishes.
+patterns that locally have the most benefit (same as the Walk Pattern Rewrite
+Driver). Patterns are iteratively applied to operations until a fixed point is
+reached or until the configurable maximum number of iterations exhausted, at
+which point the driver finishes.
 
 This driver comes in two fashions:
 
-*   `applyPatternsAndFoldGreedily` ("region-based driver") applies patterns to
+*   `applyPatternsGreedily` ("region-based driver") applies patterns to
     all ops in a given region or a given container op (but not the container op
     itself). I.e., the worklist is initialized with all containing ops.
 *   `applyOpPatternsAndFold` ("op-based driver") applies patterns to the
@@ -366,9 +392,9 @@ Note: This driver listens for IR changes via the callbacks provided by
 rewriter and do not bypass the rewriter API by modifying ops directly.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
-[pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
+[pass](Passes.md/#-canonicalize) in MLIR.
 
-### Debugging
+#### Debugging
 
 To debug the execution of the greedy pattern rewrite driver,
 `-debug-only=greedy-rewriter` may be used. This command line flag activates
@@ -438,7 +464,7 @@ Passes that utilize rewrite patterns should aim to provide a common set of
 options and toggles to simplify the debugging experience when switching between
 different passes/projects/etc. To aid in this endeavor, MLIR provides a common
 set of utilities that can be easily included when defining a custom pass. These
-are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
+are defined in `mlir/Rewrite/PassUtil.td`; an example usage is shown below:
 
 ```tablegen
 def MyRewritePass : Pass<"..."> {

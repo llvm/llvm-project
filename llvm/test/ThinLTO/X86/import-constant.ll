@@ -35,7 +35,7 @@
 ; @outer is a write-only variable that's stored to once, so the store and the global can be removed.
 ; OPT-NOT: @outer
 
-; OPT:      define dso_local i32 @main()
+; OPT:      define dso_local noundef i32 @main()
 ; OPT-NEXT: entry:
 ; OPT-NEXT:   ret i32 12
 

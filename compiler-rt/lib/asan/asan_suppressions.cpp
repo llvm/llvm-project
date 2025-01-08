@@ -20,7 +20,7 @@
 
 namespace __asan {
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(SuppressionContext)];
 static SuppressionContext *suppression_ctx = nullptr;
 static const char kInterceptorName[] = "interceptor_name";
 static const char kInterceptorViaFunction[] = "interceptor_via_fun";
@@ -39,8 +39,7 @@ void InitializeSuppressions() {
   suppression_ctx = new (suppression_placeholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
   suppression_ctx->ParseFromFile(flags()->suppressions);
-  if (&__asan_default_suppressions)
-    suppression_ctx->Parse(__asan_default_suppressions());
+  suppression_ctx->Parse(__asan_default_suppressions());
 }
 
 bool IsInterceptorSuppressed(const char *interceptor_name) {
@@ -81,9 +80,10 @@ bool IsStackTraceSuppressed(const StackTrace *stack) {
     }
 
     if (suppression_ctx->HasSuppressionType(kInterceptorViaFunction)) {
-      SymbolizedStack *frames = symbolizer->SymbolizePC(addr);
+      SymbolizedStackHolder symbolized_stack(symbolizer->SymbolizePC(addr));
+      const SymbolizedStack *frames = symbolized_stack.get();
       CHECK(frames);
-      for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+      for (const SymbolizedStack *cur = frames; cur; cur = cur->next) {
         const char *function_name = cur->info.function;
         if (!function_name) {
           continue;
@@ -91,11 +91,9 @@ bool IsStackTraceSuppressed(const StackTrace *stack) {
         // Match "interceptor_via_fun" suppressions.
         if (suppression_ctx->Match(function_name, kInterceptorViaFunction,
                                    &s)) {
-          frames->ClearAll();
           return true;
         }
       }
-      frames->ClearAll();
     }
   }
   return false;

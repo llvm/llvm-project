@@ -27,7 +27,7 @@ func.func @no_shape_merge(%cdt: i1, %from: !fir.ref<!fir.array<?xf64>>, %to : !f
 // Note: block merging happens in the output below, but after FIR codegen.
 
 // CHECK-LABEL:  define void @no_shape_merge(
-// CHECK:  %[[GEP:.*]] = getelementptr double, ptr %{{.*}}
+// CHECK:  %[[GEP:.*]] = getelementptr i8, ptr %{{.*}}
 // CHECK:  %[[LOAD:.*]] = load double, ptr %[[GEP]]
 // CHECK:  store double %[[LOAD]], ptr %{{.*}}
 // CHECK:  ret void

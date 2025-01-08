@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonISelDAGToDAG.h"
 #include "HexagonISelLowering.h"
-#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -1760,7 +1756,7 @@ void HvxSelector::select(SDNode *ISelN) {
     // Don't want to select N0 if it's shared with another node, except if
     // it's shared with other ISELs.
     auto IsISelN = [](SDNode *T) { return T->getOpcode() == HexagonISD::ISEL; };
-    if (llvm::all_of(N0->uses(), IsISelN))
+    if (llvm::all_of(N0->users(), IsISelN))
       SubNodes.insert(N0);
   }
   if (SubNodes.empty()) {
@@ -1779,7 +1775,7 @@ void HvxSelector::select(SDNode *ISelN) {
       return true;
     if (T->use_empty() || NonDom.count(T))
       return false;
-    for (SDNode *U : T->uses()) {
+    for (SDNode *U : T->users()) {
       // If T is reachable from a known non-dominated node, then T itself
       // is non-dominated.
       if (!Rec(U, Rec)) {
@@ -1818,7 +1814,7 @@ void HvxSelector::select(SDNode *ISelN) {
 
   for (unsigned I = 0; I != TmpQ.size(); ++I) {
     SDNode *S = TmpQ[I];
-    for (SDNode *U : S->uses()) {
+    for (SDNode *U : S->users()) {
       if (U == ISelN)
         continue;
       auto F = OpCount.find(U);
@@ -2002,10 +1998,7 @@ SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
     if ((unsigned)llvm::popcount(P) < Count) {
       // Reset all occurences of P, if there are more occurrences of P
       // than there are bits in P.
-      for (unsigned &Q : Worklist) {
-        if (Q == P)
-          Q = 0;
-      }
+      llvm::replace(Worklist, P, 0U);
     }
   }
 
@@ -2573,8 +2566,7 @@ SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
 void HvxSelector::selectExtractSubvector(SDNode *N) {
   SDValue Inp = N->getOperand(0);
   MVT ResTy = N->getValueType(0).getSimpleVT();
-  auto IdxN = cast<ConstantSDNode>(N->getOperand(1));
-  unsigned Idx = IdxN->getZExtValue();
+  unsigned Idx = N->getConstantOperandVal(1);
 
   [[maybe_unused]] MVT InpTy = Inp.getValueType().getSimpleVT();
   [[maybe_unused]] unsigned ResLen = ResTy.getVectorNumElements();
@@ -2895,7 +2887,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2934,7 +2926,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
-  unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IntNo = N->getConstantOperandVal(1);
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected HVX gather intrinsic.");
@@ -2963,7 +2955,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectHVXDualOutput(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   SDNode *Result;
   switch (IID) {
   case Intrinsic::hexagon_V6_vaddcarry: {

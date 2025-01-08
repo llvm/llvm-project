@@ -49,7 +49,7 @@ program get_team_test
   !ERROR: repeated keyword argument to intrinsic 'get_team'
   result_team = get_team(level=initial_team, level=parent_team)
 
-  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types LOGICAL(4) and TYPE(__builtin_team_type)
+  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types LOGICAL(4) and TYPE(team_type)
   wrong_result_type = get_team()
 
 end program get_team_test

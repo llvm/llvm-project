@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W32 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W64 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W32 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -disassemble -show-encoding < %s | FileCheck -check-prefixes=GFX12,W64 %s
 
 # W32: v_cmp_class_f16_e64 s10, v1, v2           ; encoding: [0x0a,0x00,0x7d,0xd4,0x01,0x05,0x02,0x00]
 # W64: v_cmp_class_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x7d,0xd4,0x01,0x05,0x02,0x00]

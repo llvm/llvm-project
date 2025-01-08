@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/stpncpy.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_bzero.h"
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, stpncpy,
                    (char *__restrict dest, const char *__restrict src,
@@ -26,4 +27,4 @@ LLVM_LIBC_FUNCTION(char *, stpncpy,
   return dest + i;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

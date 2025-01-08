@@ -1,21 +1,19 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # This file defines the buildkite and github actions builder images.
-# You can build & push both images using:
+# You can build both images using:
 #
 #   docker compose build
-#   docker compose push
 #
-# Or you can select a single image to build & push using:
+# Or you can select a single image to build
 #
 #  docker compose build buildkite-builder
-#  docker compose push buildkite-builder
 #
 # The final images can be found at
 #
@@ -23,7 +21,8 @@
 #  ghcr.io/libcxx/actions-builder
 #  ghcr.io/libcxx/android-buildkite-builder
 #
-# Members of the github.com/libcxx/ organizations have permissions required to push new images.
+# Members of the github.com/libcxx/ organizations can push new images to the CI.
+# This is done by GitHub actions in the https://github.com/libcxx/builders repo.
 #
 # ===----------------------------------------------------------------------===##
 #                     Running the buildkite image
@@ -65,42 +64,49 @@ RUN <<EOF
   echo "ALL ALL = (ALL) NOPASSWD: ALL" | tee /etc/sudoers || true
 EOF
 
+# Installing tzdata before other packages avoids the time zone prompts.
+# These prompts seem to ignore DEBIAN_FRONTEND=noninteractive.
 RUN sudo apt-get update \
     && sudo apt-get install -y \
-        python3 \
-        python3-distutils \
-        python3-psutil \
-        git \
-        gdb \
-        ccache \
-        gpg \
-        wget \
+        tzdata
+
+RUN sudo apt-get update \
+    && sudo apt-get install -y \
         bash \
+        ccache \
         curl \
-        python3 \
-        python3-dev \
-        libpython3-dev \
-        uuid-dev \
-        libncurses5-dev \
-        swig3.0 \
-        libxml2-dev \
-        libedit-dev \
+        gdb \
+        git \
+        gpg \
         language-pack-en \
         language-pack-fr \
         language-pack-ja \
         language-pack-ru \
         language-pack-zh-hans \
+        libedit-dev \
+        libncurses5-dev \
+        libpython3-dev \
+        libxml2-dev \
         lsb-release \
-        wget \
-        unzip \
+        make \
+        python3 \
+        python3-dev \
+        python3-packaging \
+        python3-setuptools \
+        python3-psutil \
         software-properties-common \
+        swig \
+        unzip \
+        uuid-dev \
+        wget \
+        xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
-
 
 # Install various tools used by the build or the test suite
 #RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
 # TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
 RUN <<EOF
+  set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
   gunzip /tmp/ninja.gz
   chmod a+x /tmp/ninja
@@ -110,6 +116,7 @@ EOF
 
 # These two locales are not enabled by default so generate them
 RUN <<EOF
+  set -e
   printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /etc/locale.gen
   sudo mkdir /usr/local/share/i1en/
   printf "fr_CA ISO-8859-1\ncs_CZ ISO-8859-2" | sudo tee -a /usr/local/share/i1en/SUPPORTED
@@ -124,6 +131,7 @@ EOF
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
 RUN <<EOF
+  set -e
   sudo apt-get update
   wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
   chmod +x /tmp/llvm.sh
@@ -137,36 +145,28 @@ EOF
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 RUN <<EOF
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  sudo apt-get update
-  sudo apt-get install -y \
-    gcc-$((GCC_LATEST_VERSION - 1)) \
-    g++-$((GCC_LATEST_VERSION - 1)) \
-    gcc-$GCC_LATEST_VERSION \
-    g++-$GCC_LATEST_VERSION
-  sudo rm -rf /var/lib/apt/lists/*
+  set -e
+  sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
+  (cd /tmp/ce-infra && sudo make ce)
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $GCC_LATEST_VERSION.1.0
+  sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_LATEST_VERSION - 1)).1.0
+  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/gcc /usr/bin/gcc-$GCC_LATEST_VERSION
+  sudo ln -s /opt/compiler-explorer/gcc-$GCC_LATEST_VERSION.1.0/bin/g++ /usr/bin/g++-$GCC_LATEST_VERSION
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_LATEST_VERSION - 1))
+  sudo ln -s /opt/compiler-explorer/gcc-$((GCC_LATEST_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_LATEST_VERSION - 1))
+  sudo rm -rf /tmp/ce-infra
 EOF
 
 RUN <<EOF
     # Install a recent CMake
-    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+    set -e
+    wget https://github.com/Kitware/CMake/releases/download/v3.24.4/cmake-3.24.4-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    # Install a newer CMake for modules
-    # TODO Remove the duplicated installation when all runtimes can be build with CMake 3.28.
-    wget https://github.com/Kitware/CMake/releases/download/v3.27.1/cmake-3.27.1-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-
-    wget https://github.com/Kitware/CMake/releases/download/v3.28.0-rc4/cmake-3.28.0-rc4-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo mkdir /opt/cmake-3.28
-    sudo bash /tmp/install-cmake.sh --prefix=/opt/cmake-3.28 --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF
 
 # ===----------------------------------------------------------------------===##
-#                       Android Buildkite Image
+#                       Android Builder Base Image
 # ===----------------------------------------------------------------------===##
 
 FROM ubuntu:jammy AS android-builder-base
@@ -175,10 +175,11 @@ ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
 ARG ANDROID_SYSROOT_BID
 
-RUN  apt-get update && apt-get install -y curl unzip git
+RUN apt-get update && apt-get install -y curl bzip2 git unzip
 
 # Install the Android platform tools (e.g. adb) into /opt/android/sdk.
 RUN <<EOF
+  set -e
   mkdir -p /opt/android/sdk
   cd /opt/android/sdk
   curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
@@ -192,6 +193,7 @@ EOF
 ENV ANDROID_CLANG_VERSION=$ANDROID_CLANG_VERSION
 ENV ANDROID_CLANG_PREBUILTS_COMMIT=$ANDROID_CLANG_PREBUILTS_COMMIT
 RUN <<EOF
+    set -e
     git clone --filter=blob:none --sparse \
         https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
         /opt/android/clang
@@ -211,24 +213,12 @@ EOF
 
 ENV ANDROID_SYSROOT_BID=$ANDROID_SYSROOT_BID
 RUN <<EOF
+  set -e
   cd /opt/android
   curl -L -o ndk_platform.tar.bz2 \
       https://androidbuildinternal.googleapis.com/android/internal/build/v3/builds/${ANDROID_SYSROOT_BID}/ndk/attempts/latest/artifacts/ndk_platform.tar.bz2/url
   tar xf ndk_platform.tar.bz2
   rm ndk_platform.tar.bz2
-EOF
-
-# Install Docker
-RUN <<EOF
-  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  sh /tmp/get-docker.sh
-  rm /tmp/get-docker.sh
-
-  # Install Docker. Mark the binary setuid so it can be run without prefixing it
-  # with sudo. Adding the container user to the docker group doesn't work because
-  # /var/run/docker.sock is owned by the host's docker GID, not the container's
-  # docker GID.
-  chmod u+s /usr/bin/docker
 EOF
 
 # ===----------------------------------------------------------------------===##
@@ -248,6 +238,7 @@ WORKDIR /home/libcxx-builder
 # Install the Buildkite agent and dependencies. This must be done as non-root
 # for the Buildkite agent to be installed in a path where we can find it.
 RUN <<EOF
+  set -e
   cd /home/libcxx-builder
   curl -sL https://raw.githubusercontent.com/buildkite/agent/main/install.sh -o /tmp/install-agent.sh
   bash /tmp/install-agent.sh
@@ -276,6 +267,22 @@ COPY ./vendor/android/container-setup.sh /opt/android/container-setup.sh
 
 ENV PATH="/opt/android/sdk/platform-tools:${PATH}"
 
+USER root
+
+# Install Docker
+RUN <<EOF
+  set -e
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm /tmp/get-docker.sh
+
+  # Install Docker. Mark the binary setuid so it can be run without prefixing it
+  # with sudo. Adding the container user to the docker group doesn't work because
+  # /var/run/docker.sock is owned by the host's docker GID, not the container's
+  # docker GID.
+  chmod u+s /usr/bin/docker
+EOF
+
 USER libcxx-builder
 WORKDIR /home/libcxx-builder
 
@@ -294,12 +301,5 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 FROM builder-base AS actions-builder
 
-# Install 'act' for running github actions locally. This provides an alternative to the run-buildbot script
-# while still providing reproducability.
-RUN curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-
 WORKDIR /home/runner
 USER runner
-
-
-

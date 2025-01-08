@@ -112,7 +112,7 @@ static Register performCopyPropagation(Register Reg,
                                        bool &IsKill, const TargetInstrInfo &TII,
                                        const TargetRegisterInfo &TRI) {
   // First check if statepoint itself uses Reg in non-meta operands.
-  int Idx = RI->findRegisterUseOperandIdx(Reg, false, &TRI);
+  int Idx = RI->findRegisterUseOperandIdx(Reg, &TRI, false);
   if (Idx >= 0 && (unsigned)Idx < StatepointOpers(&*RI).getNumDeoptArgsIdx()) {
     IsKill = false;
     return Reg;
@@ -381,8 +381,6 @@ public:
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
       MachineOperand &MO = MI.getOperand(Idx);
-      // Leave `undef` operands as is, StackMaps will rewrite them
-      // into a constant.
       if (!MO.isReg() || MO.isImplicit() || MO.isUndef())
         continue;
       Register Reg = MO.getReg();

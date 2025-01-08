@@ -1,5 +1,5 @@
 RUN: llvm-dwarfdump -v %p/Inputs/dwarfdump-objc.x86_64.o | FileCheck %s
-RUN: not llvm-dwarfdump -verify %p/Inputs/dwarfdump-objc.x86_64.o | FileCheck %s --check-prefix=VERIFY
+RUN: not llvm-dwarfdump -error-display=details -verify %p/Inputs/dwarfdump-objc.x86_64.o | FileCheck %s --check-prefix=VERIFY
 
 Gather some DIE indexes to verify the accelerator table contents.
 CHECK: .debug_info contents

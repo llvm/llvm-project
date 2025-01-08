@@ -40,6 +40,30 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantComposite:
   case SPIRV::OpSpecConstantOp:
   case SPIRV::OpUndef:
+  case SPIRV::OpConstantFunctionPointerINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool SPIRVInstrInfo::isSpecConstantInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpSpecConstantTrue:
+  case SPIRV::OpSpecConstantFalse:
+  case SPIRV::OpSpecConstant:
+  case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantOp:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool SPIRVInstrInfo::isInlineAsmDefInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAsmTargetINTEL:
+  case SPIRV::OpAsmINTEL:
     return true;
   default:
     return false;
@@ -173,26 +197,17 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&FBB,
                                    SmallVectorImpl<MachineOperand> &Cond,
                                    bool AllowModify) const {
-  TBB = nullptr;
-  FBB = nullptr;
-  if (MBB.empty())
-    return false;
-  auto MI = MBB.getLastNonDebugInstr();
-  if (!MI.isValid())
-    return false;
-  if (MI->getOpcode() == SPIRV::OpBranch) {
-    TBB = MI->getOperand(0).getMBB();
-    return false;
-  } else if (MI->getOpcode() == SPIRV::OpBranchConditional) {
-    Cond.push_back(MI->getOperand(0));
-    TBB = MI->getOperand(1).getMBB();
-    if (MI->getNumOperands() == 3) {
-      FBB = MI->getOperand(2).getMBB();
-    }
-    return false;
-  } else {
-    return true;
-  }
+  // We do not allow to restructure blocks by results of analyzeBranch(),
+  // because it may potentially break structured control flow and anyway
+  // doubtedly may be useful in SPIRV, including such reasons as, e.g.:
+  // 1) there is no way to encode `if (Cond) then Stmt` logic, only full
+  // if-then-else is supported by OpBranchConditional, so if we supported
+  // splitting of blocks ending with OpBranchConditional MachineBasicBlock.cpp
+  // would expect successfull implementation of calls to insertBranch() setting
+  // FBB to null that is not feasible; 2) it's not possible to delete
+  // instructions after the unconditional branch, because this instruction must
+  // be the last instruction in a block.
+  return true;
 }
 
 // Remove the branching code at the end of the specific MBB.
@@ -201,9 +216,16 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 // If \p BytesRemoved is non-null, report the change in code size from the
 // removed instructions.
 unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
-  report_fatal_error("Branch removal not supported, as MBB info not propagated"
-                     " to OpPhi instructions. Try using -O0 instead.");
+                                      int * /*BytesRemoved*/) const {
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return 0;
+
+  if (I->getOpcode() == SPIRV::OpBranch) {
+    I->eraseFromParent();
+    return 1;
+  }
+  return 0;
 }
 
 // Insert branch code into the end of the specified MachineBasicBlock. The
@@ -219,18 +241,23 @@ unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
 //
 // The CFG information in MBB.Predecessors and MBB.Successors must be valid
 // before calling this function.
-unsigned SPIRVInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
-  report_fatal_error("Branch insertion not supported, as MBB info not "
-                     "propagated to OpPhi instructions. Try using "
-                     "-O0 instead.");
+unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL,
+                                      int * /*BytesAdded*/) const {
+  if (!TBB)
+    return 0;
+  BuildMI(&MBB, DL, get(SPIRV::OpBranch)).addMBB(TBB);
+  return 1;
 }
 
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc) const {
+                                 MCRegister SrcReg, bool KillSrc,
+                                 bool RenamableDest, bool RenamableSrc) const {
   // Actually we don't need this COPY instruction. However if we do nothing with
   // it, post RA pseudo instrs expansion just removes it and we get the code
   // with undef registers. Therefore, we need to replace all uses of dst with
@@ -247,7 +274,7 @@ void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 bool SPIRVInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   if (MI.getOpcode() == SPIRV::GET_ID || MI.getOpcode() == SPIRV::GET_fID ||
       MI.getOpcode() == SPIRV::GET_pID || MI.getOpcode() == SPIRV::GET_vfID ||
-      MI.getOpcode() == SPIRV::GET_vID) {
+      MI.getOpcode() == SPIRV::GET_vID || MI.getOpcode() == SPIRV::GET_vpID) {
     auto &MRI = MI.getMF()->getRegInfo();
     MRI.replaceRegWith(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
     MI.eraseFromParent();

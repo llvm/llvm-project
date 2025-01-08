@@ -12,6 +12,7 @@
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 // Evaluate polynomial using Horner's Scheme:
 // With polyeval(x, a_0, a_1, ..., a_n) = a_n * x^n + ... + a_1 * x + a_0, we
@@ -20,7 +21,7 @@
 // Example: to evaluate x^3 + 2*x^2 + 3*x + 4, call
 //   polyeval( x, 4.0, 3.0, 2.0, 1.0 )
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename T>
@@ -48,6 +49,6 @@ polyeval(T x, T a0, Ts... a) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H

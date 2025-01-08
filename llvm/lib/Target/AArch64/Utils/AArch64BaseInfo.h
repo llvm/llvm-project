@@ -27,8 +27,8 @@
 
 namespace llvm {
 
-inline static unsigned getWRegFromXReg(unsigned Reg) {
-  switch (Reg) {
+inline static MCRegister getWRegFromXReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::X0: return AArch64::W0;
   case AArch64::X1: return AArch64::W1;
   case AArch64::X2: return AArch64::W2;
@@ -67,8 +67,8 @@ inline static unsigned getWRegFromXReg(unsigned Reg) {
   return Reg;
 }
 
-inline static unsigned getXRegFromWReg(unsigned Reg) {
-  switch (Reg) {
+inline static MCRegister getXRegFromWReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::W0: return AArch64::X0;
   case AArch64::W1: return AArch64::X1;
   case AArch64::W2: return AArch64::X2;
@@ -107,8 +107,8 @@ inline static unsigned getXRegFromWReg(unsigned Reg) {
   return Reg;
 }
 
-inline static unsigned getXRegFromXRegTuple(unsigned RegTuple) {
-  switch (RegTuple) {
+inline static MCRegister getXRegFromXRegTuple(MCRegister RegTuple) {
+  switch (RegTuple.id()) {
   case AArch64::X0_X1_X2_X3_X4_X5_X6_X7: return AArch64::X0;
   case AArch64::X2_X3_X4_X5_X6_X7_X8_X9: return AArch64::X2;
   case AArch64::X4_X5_X6_X7_X8_X9_X10_X11: return AArch64::X4;
@@ -126,8 +126,8 @@ inline static unsigned getXRegFromXRegTuple(unsigned RegTuple) {
   return RegTuple;
 }
 
-static inline unsigned getBRegFromDReg(unsigned Reg) {
-  switch (Reg) {
+static inline MCRegister getBRegFromDReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::D0:  return AArch64::B0;
   case AArch64::D1:  return AArch64::B1;
   case AArch64::D2:  return AArch64::B2;
@@ -165,9 +165,8 @@ static inline unsigned getBRegFromDReg(unsigned Reg) {
   return Reg;
 }
 
-
-static inline unsigned getDRegFromBReg(unsigned Reg) {
-  switch (Reg) {
+static inline MCRegister getDRegFromBReg(MCRegister Reg) {
+  switch (Reg.id()) {
   case AArch64::B0:  return AArch64::D0;
   case AArch64::B1:  return AArch64::D1;
   case AArch64::B2:  return AArch64::D2;
@@ -372,79 +371,89 @@ namespace AArch64SVCR {
   struct SVCR : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_SVCR_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_SVCRValues_DECL
+#define GET_SVCRsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64AT{
   struct AT : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_AT_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ATValues_DECL
+#define GET_ATsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DB {
   struct DB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBValues_DECL
+#define GET_DBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64DBnXS {
   struct DBnXS : SysAliasImm {
     using SysAliasImm::SysAliasImm;
   };
-  #define GET_DBNXS_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DBnXSValues_DECL
+#define GET_DBnXSsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64DC {
   struct DC : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_DC_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_DCValues_DECL
+#define GET_DCsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64IC {
   struct IC : SysAliasReg {
     using SysAliasReg::SysAliasReg;
   };
-  #define GET_IC_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ICValues_DECL
+#define GET_ICsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64ISB {
   struct ISB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_ISB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_ISBValues_DECL
+#define GET_ISBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace  AArch64TSB {
   struct TSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_TSB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_TSBValues_DECL
+#define GET_TSBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PRFM_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PRFMValues_DECL
+#define GET_PRFMsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64SVEPRFM {
   struct SVEPRFM : SysAlias {
     using SysAlias::SysAlias;
   };
-#define GET_SVEPRFM_DECL
+#define GET_SVEPRFMValues_DECL
+#define GET_SVEPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -452,7 +461,8 @@ namespace AArch64RPRFM {
 struct RPRFM : SysAlias {
   using SysAlias::SysAlias;
 };
-#define GET_RPRFM_DECL
+#define GET_RPRFMValues_DECL
+#define GET_RPRFMsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64RPRFM
 
@@ -461,7 +471,8 @@ namespace AArch64SVEPredPattern {
     const char *Name;
     uint16_t Encoding;
   };
-#define GET_SVEPREDPAT_DECL
+#define GET_SVEPREDPATValues_DECL
+#define GET_SVEPREDPATsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -470,7 +481,8 @@ namespace AArch64SVEVecLenSpecifier {
     const char *Name;
     uint16_t Encoding;
   };
-#define GET_SVEVECLENSPECIFIER_DECL
+#define GET_SVEVECLENSPECIFIERValues_DECL
+#define GET_SVEVECLENSPECIFIERsList_DECL
 #include "AArch64GenSystemOperands.inc"
 } // namespace AArch64SVEVecLenSpecifier
 
@@ -552,12 +564,12 @@ LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
                              /* LargestValue */ (long)TailFoldingOpts::Reverse);
 
 namespace AArch64ExactFPImm {
-  struct ExactFPImm {
-    const char *Name;
-    int Enum;
-    const char *Repr;
-  };
-#define GET_EXACTFPIMM_DECL
+struct ExactFPImm {
+  int Enum;
+  const char *Repr;
+};
+#define GET_ExactFPImmValues_DECL
+#define GET_ExactFPImmsList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
 
@@ -565,30 +577,62 @@ namespace AArch64PState {
   struct PStateImm0_15 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_15_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PStateImm0_15Values_DECL
+#define GET_PStateImm0_15sList_DECL
+#include "AArch64GenSystemOperands.inc"
 
   struct PStateImm0_1 : SysAlias{
     using SysAlias::SysAlias;
   };
-  #define GET_PSTATEIMM0_1_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PStateImm0_1Values_DECL
+#define GET_PStateImm0_1sList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
 
 namespace AArch64PSBHint {
   struct PSB : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_PSB_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_PSBValues_DECL
+#define GET_PSBsList_DECL
+#include "AArch64GenSystemOperands.inc"
 }
+
+namespace AArch64PHint {
+struct PHint {
+  const char *Name;
+  unsigned Encoding;
+  FeatureBitset FeaturesRequired;
+
+  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
+           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+  }
+};
+
+#define GET_PHintValues_DECL
+#define GET_PHintsList_DECL
+#include "AArch64GenSystemOperands.inc"
+
+const PHint *lookupPHintByName(StringRef);
+const PHint *lookupPHintByEncoding(uint16_t);
+} // namespace AArch64PHint
 
 namespace AArch64BTIHint {
   struct BTI : SysAlias {
     using SysAlias::SysAlias;
   };
-  #define GET_BTI_DECL
-  #include "AArch64GenSystemOperands.inc"
+#define GET_BTIValues_DECL
+#define GET_BTIsList_DECL
+#include "AArch64GenSystemOperands.inc"
+}
+
+namespace AArch64SME {
+enum ToggleCondition : unsigned {
+  Always,
+  IfCallerIsStreaming,
+  IfCallerIsNonStreaming
+};
 }
 
 namespace AArch64SE {
@@ -673,8 +717,7 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 
 namespace AArch64SysReg {
   struct SysReg {
-    const char *Name;
-    const char *AltName;
+    const char Name[32];
     unsigned Encoding;
     bool Readable;
     bool Writeable;
@@ -686,11 +729,9 @@ namespace AArch64SysReg {
     }
   };
 
-  #define GET_SYSREG_DECL
-  #include "AArch64GenSystemOperands.inc"
-
-  const SysReg *lookupSysRegByName(StringRef);
-  const SysReg *lookupSysRegByEncoding(uint16_t);
+#define GET_SysRegsList_DECL
+#define GET_SysRegValues_DECL
+#include "AArch64GenSystemOperands.inc"
 
   uint32_t parseGenericRegister(StringRef Name);
   std::string genericRegisterString(uint32_t Bits);
@@ -704,104 +745,95 @@ namespace AArch64TLBI {
   #include "AArch64GenSystemOperands.inc"
 }
 
-namespace AArch64PRCTX {
-  struct PRCTX : SysAliasReg {
-    using SysAliasReg::SysAliasReg;
-  };
-  #define GET_PRCTX_DECL
-  #include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64II {
-  /// Target Operand Flag enum.
-  enum TOF {
-    //===------------------------------------------------------------------===//
-    // AArch64 Specific MachineOperand flags.
+/// Target Operand Flag enum.
+enum TOF {
+  //===------------------------------------------------------------------===//
+  // AArch64 Specific MachineOperand flags.
 
-    MO_NO_FLAG,
+  MO_NO_FLAG,
 
-    MO_FRAGMENT = 0x7,
+  MO_FRAGMENT = 0x7,
 
-    /// MO_PAGE - A symbol operand with this flag represents the pc-relative
-    /// offset of the 4K page containing the symbol.  This is used with the
-    /// ADRP instruction.
-    MO_PAGE = 1,
+  /// MO_PAGE - A symbol operand with this flag represents the pc-relative
+  /// offset of the 4K page containing the symbol.  This is used with the
+  /// ADRP instruction.
+  MO_PAGE = 1,
 
-    /// MO_PAGEOFF - A symbol operand with this flag represents the offset of
-    /// that symbol within a 4K page.  This offset is added to the page address
-    /// to produce the complete address.
-    MO_PAGEOFF = 2,
+  /// MO_PAGEOFF - A symbol operand with this flag represents the offset of
+  /// that symbol within a 4K page.  This offset is added to the page address
+  /// to produce the complete address.
+  MO_PAGEOFF = 2,
 
-    /// MO_G3 - A symbol operand with this flag (granule 3) represents the high
-    /// 16-bits of a 64-bit address, used in a MOVZ or MOVK instruction
-    MO_G3 = 3,
+  /// MO_G3 - A symbol operand with this flag (granule 3) represents the high
+  /// 16-bits of a 64-bit address, used in a MOVZ or MOVK instruction
+  MO_G3 = 3,
 
-    /// MO_G2 - A symbol operand with this flag (granule 2) represents the bits
-    /// 32-47 of a 64-bit address, used in a MOVZ or MOVK instruction
-    MO_G2 = 4,
+  /// MO_G2 - A symbol operand with this flag (granule 2) represents the bits
+  /// 32-47 of a 64-bit address, used in a MOVZ or MOVK instruction
+  MO_G2 = 4,
 
-    /// MO_G1 - A symbol operand with this flag (granule 1) represents the bits
-    /// 16-31 of a 64-bit address, used in a MOVZ or MOVK instruction
-    MO_G1 = 5,
+  /// MO_G1 - A symbol operand with this flag (granule 1) represents the bits
+  /// 16-31 of a 64-bit address, used in a MOVZ or MOVK instruction
+  MO_G1 = 5,
 
-    /// MO_G0 - A symbol operand with this flag (granule 0) represents the bits
-    /// 0-15 of a 64-bit address, used in a MOVZ or MOVK instruction
-    MO_G0 = 6,
+  /// MO_G0 - A symbol operand with this flag (granule 0) represents the bits
+  /// 0-15 of a 64-bit address, used in a MOVZ or MOVK instruction
+  MO_G0 = 6,
 
-    /// MO_HI12 - This flag indicates that a symbol operand represents the bits
-    /// 13-24 of a 64-bit address, used in a arithmetic immediate-shifted-left-
-    /// by-12-bits instruction.
-    MO_HI12 = 7,
+  /// MO_HI12 - This flag indicates that a symbol operand represents the bits
+  /// 13-24 of a 64-bit address, used in a arithmetic immediate-shifted-left-
+  /// by-12-bits instruction.
+  MO_HI12 = 7,
 
-    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
-    /// reference is actually to the ".refptr.FOO" symbol.  This is used for
-    /// stub symbols on windows.
-    MO_COFFSTUB = 0x8,
+  /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+  /// reference is actually to the ".refptr.FOO" symbol.  This is used for
+  /// stub symbols on windows.
+  MO_COFFSTUB = 0x8,
 
-    /// MO_GOT - This flag indicates that a symbol operand represents the
-    /// address of the GOT entry for the symbol, rather than the address of
-    /// the symbol itself.
-    MO_GOT = 0x10,
+  /// MO_GOT - This flag indicates that a symbol operand represents the
+  /// address of the GOT entry for the symbol, rather than the address of
+  /// the symbol itself.
+  MO_GOT = 0x10,
 
-    /// MO_NC - Indicates whether the linker is expected to check the symbol
-    /// reference for overflow. For example in an ADRP/ADD pair of relocations
-    /// the ADRP usually does check, but not the ADD.
-    MO_NC = 0x20,
+  /// MO_NC - Indicates whether the linker is expected to check the symbol
+  /// reference for overflow. For example in an ADRP/ADD pair of relocations
+  /// the ADRP usually does check, but not the ADD.
+  MO_NC = 0x20,
 
-    /// MO_TLS - Indicates that the operand being accessed is some kind of
-    /// thread-local symbol. On Darwin, only one type of thread-local access
-    /// exists (pre linker-relaxation), but on ELF the TLSModel used for the
-    /// referee will affect interpretation.
-    MO_TLS = 0x40,
+  /// MO_TLS - Indicates that the operand being accessed is some kind of
+  /// thread-local symbol. On Darwin, only one type of thread-local access
+  /// exists (pre linker-relaxation), but on ELF the TLSModel used for the
+  /// referee will affect interpretation.
+  MO_TLS = 0x40,
 
-    /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
-    /// to the symbol is for an import stub.  This is used for DLL import
-    /// storage class indication on Windows.
-    MO_DLLIMPORT = 0x80,
+  /// MO_DLLIMPORT - On a symbol operand, this represents that the reference
+  /// to the symbol is for an import stub.  This is used for DLL import
+  /// storage class indication on Windows.
+  MO_DLLIMPORT = 0x80,
 
-    /// MO_S - Indicates that the bits of the symbol operand represented by
-    /// MO_G0 etc are signed.
-    MO_S = 0x100,
+  /// MO_S - Indicates that the bits of the symbol operand represented by
+  /// MO_G0 etc are signed.
+  MO_S = 0x100,
 
-    /// MO_PREL - Indicates that the bits of the symbol operand represented by
-    /// MO_G0 etc are PC relative.
-    MO_PREL = 0x200,
+  /// MO_PREL - Indicates that the bits of the symbol operand represented by
+  /// MO_G0 etc are PC relative.
+  MO_PREL = 0x200,
 
-    /// MO_TAGGED - With MO_PAGE, indicates that the page includes a memory tag
-    /// in bits 56-63.
-    /// On a FrameIndex operand, indicates that the underlying memory is tagged
-    /// with an unknown tag value (MTE); this needs to be lowered either to an
-    /// SP-relative load or store instruction (which do not check tags), or to
-    /// an LDG instruction to obtain the tag value.
-    MO_TAGGED = 0x400,
+  /// MO_TAGGED - With MO_PAGE, indicates that the page includes a memory tag
+  /// in bits 56-63.
+  /// On a FrameIndex operand, indicates that the underlying memory is tagged
+  /// with an unknown tag value (MTE); this needs to be lowered either to an
+  /// SP-relative load or store instruction (which do not check tags), or to
+  /// an LDG instruction to obtain the tag value.
+  MO_TAGGED = 0x400,
 
-    /// MO_DLLIMPORTAUX - Symbol refers to "auxilliary" import stub. On
-    /// Arm64EC, there are two kinds of import stubs used for DLL import of
-    /// functions: MO_DLLIMPORT refers to natively callable Arm64 code, and
-    /// MO_DLLIMPORTAUX refers to the original address which can be compared
-    /// for equality.
-    MO_DLLIMPORTAUX = 0x800,
-  };
+  /// MO_ARM64EC_CALLMANGLE - Operand refers to the Arm64EC-mangled version
+  /// of a symbol, not the original. For dllimport symbols, this means it
+  /// uses "__imp_aux".  For other symbols, this means it uses the mangled
+  /// ("#" prefix for C) name.
+  MO_ARM64EC_CALLMANGLE = 0x800,
+};
 } // end namespace AArch64II
 
 //===----------------------------------------------------------------------===//

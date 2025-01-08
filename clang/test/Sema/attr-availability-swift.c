@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -fblocks -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -ast-dump %s | FileCheck %s
 //
 
 #if !__has_feature(attribute_availability_with_message)

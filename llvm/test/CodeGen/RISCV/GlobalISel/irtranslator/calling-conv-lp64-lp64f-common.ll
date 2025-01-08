@@ -33,7 +33,7 @@ define i64 @caller_double_in_regs() nounwind {
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
@@ -46,7 +46,7 @@ define i64 @caller_double_in_regs() nounwind {
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[C]](s64)
   ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_in_regs, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)
@@ -68,7 +68,7 @@ define i64 @caller_double_ret() nounwind {
   ; LP64-LABEL: name: caller_double_ret
   ; LP64: bb.1 (%ir-block.0):
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   $x10 = COPY [[COPY]](s64)
@@ -77,7 +77,7 @@ define i64 @caller_double_ret() nounwind {
   ; LP64F-LABEL: name: caller_double_ret
   ; LP64F: bb.1 (%ir-block.0):
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @callee_double_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_double_ret, csr_ilp32f_lp64f, implicit-def $x1, implicit-def $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   $x10 = COPY [[COPY]](s64)

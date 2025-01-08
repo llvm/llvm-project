@@ -27,8 +27,9 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 class Accumulator {
 public:
   using Result = AccumulationType<RCAT, RKIND>;
-  Accumulator(const Descriptor &x, const Descriptor &y) : x_{x}, y_{y} {}
-  void AccumulateIndexed(SubscriptValue xAt, SubscriptValue yAt) {
+  RT_API_ATTRS Accumulator(const Descriptor &x, const Descriptor &y)
+      : x_{x}, y_{y} {}
+  RT_API_ATTRS void AccumulateIndexed(SubscriptValue xAt, SubscriptValue yAt) {
     if constexpr (RCAT == TypeCategory::Logical) {
       sum_ = sum_ ||
           (IsLogicalElementTrue(x_, &xAt) && IsLogicalElementTrue(y_, &yAt));
@@ -36,14 +37,14 @@ public:
       const XT &xElement{*x_.Element<XT>(&xAt)};
       const YT &yElement{*y_.Element<YT>(&yAt)};
       if constexpr (RCAT == TypeCategory::Complex) {
-        sum_ += std::conj(static_cast<Result>(xElement)) *
+        sum_ += rtcmplx::conj(static_cast<Result>(xElement)) *
             static_cast<Result>(yElement);
       } else {
         sum_ += static_cast<Result>(xElement) * static_cast<Result>(yElement);
       }
     }
   }
-  Result GetResult() const { return sum_; }
+  RT_API_ATTRS Result GetResult() const { return sum_; }
 
 private:
   const Descriptor &x_, &y_;
@@ -51,7 +52,7 @@ private:
 };
 
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
-static inline CppTypeFor<RCAT, RKIND> DoDotProduct(
+static inline RT_API_ATTRS CppTypeFor<RCAT, RKIND> DoDotProduct(
     const Descriptor &x, const Descriptor &y, Terminator &terminator) {
   using Result = CppTypeFor<RCAT, RKIND>;
   RUNTIME_CHECK(terminator, x.rank() == 1 && y.rank() == 1);
@@ -71,9 +72,9 @@ static inline CppTypeFor<RCAT, RKIND> DoDotProduct(
           // TODO: call BLAS-1 SDOT or SDSDOT
         } else if constexpr (std::is_same_v<XT, double>) {
           // TODO: call BLAS-1 DDOT
-        } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+        } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
           // TODO: call BLAS-1 CDOTC
-        } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+        } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
           // TODO: call BLAS-1 ZDOTC
         }
       }
@@ -83,8 +84,14 @@ static inline CppTypeFor<RCAT, RKIND> DoDotProduct(
       AccumType accum{};
       if constexpr (RCAT == TypeCategory::Complex) {
         for (SubscriptValue j{0}; j < n; ++j) {
-          accum += std::conj(static_cast<AccumType>(*xp++)) *
+          // conj() may instantiate its argument twice,
+          // so xp has to be incremented separately.
+          // This is a workaround for an alleged bug in clang,
+          // that shows up as:
+          //   warning: multiple unsequenced modifications to 'xp'
+          accum += rtcmplx::conj(static_cast<AccumType>(*xp)) *
               static_cast<AccumType>(*yp++);
+          xp++;
         }
       } else {
         for (SubscriptValue j{0}; j < n; ++j) {
@@ -109,7 +116,7 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
   using Result = CppTypeFor<RCAT, RKIND>;
   template <TypeCategory XCAT, int XKIND> struct DP1 {
     template <TypeCategory YCAT, int YKIND> struct DP2 {
-      Result operator()(const Descriptor &x, const Descriptor &y,
+      RT_API_ATTRS Result operator()(const Descriptor &x, const Descriptor &y,
           Terminator &terminator) const {
         if constexpr (constexpr auto resultType{
                           GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
@@ -125,12 +132,12 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
             static_cast<int>(YCAT), YKIND);
       }
     };
-    Result operator()(const Descriptor &x, const Descriptor &y,
+    RT_API_ATTRS Result operator()(const Descriptor &x, const Descriptor &y,
         Terminator &terminator, TypeCategory yCat, int yKind) const {
       return ApplyType<DP2, Result>(yCat, yKind, terminator, x, y, terminator);
     }
   };
-  Result operator()(const Descriptor &x, const Descriptor &y,
+  RT_API_ATTRS Result operator()(const Descriptor &x, const Descriptor &y,
       const char *source, int line) const {
     Terminator terminator{source, line};
     if (RCAT != TypeCategory::Logical && x.type() == y.type()) {
@@ -148,78 +155,105 @@ template <TypeCategory RCAT, int RKIND> struct DotProduct {
 };
 
 extern "C" {
-CppTypeFor<TypeCategory::Integer, 1> RTNAME(DotProductInteger1)(
+RT_EXT_API_GROUP_BEGIN
+
+CppTypeFor<TypeCategory::Integer, 1> RTDEF(DotProductInteger1)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Integer, 1>{}(x, y, source, line);
 }
-CppTypeFor<TypeCategory::Integer, 2> RTNAME(DotProductInteger2)(
+CppTypeFor<TypeCategory::Integer, 2> RTDEF(DotProductInteger2)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Integer, 2>{}(x, y, source, line);
 }
-CppTypeFor<TypeCategory::Integer, 4> RTNAME(DotProductInteger4)(
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(DotProductInteger4)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Integer, 4>{}(x, y, source, line);
 }
-CppTypeFor<TypeCategory::Integer, 8> RTNAME(DotProductInteger8)(
+CppTypeFor<TypeCategory::Integer, 8> RTDEF(DotProductInteger8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Integer, 8>{}(x, y, source, line);
 }
 #ifdef __SIZEOF_INT128__
-CppTypeFor<TypeCategory::Integer, 16> RTNAME(DotProductInteger16)(
+CppTypeFor<TypeCategory::Integer, 16> RTDEF(DotProductInteger16)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Integer, 16>{}(x, y, source, line);
 }
 #endif
 
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(DotProductUnsigned1)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 1>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(DotProductUnsigned2)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 2>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(DotProductUnsigned4)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 4>{}(x, y, source, line);
+}
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(DotProductUnsigned8)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 8>{}(x, y, source, line);
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Unsigned, 16> RTDEF(DotProductUnsigned16)(
+    const Descriptor &x, const Descriptor &y, const char *source, int line) {
+  return DotProduct<TypeCategory::Unsigned, 16>{}(x, y, source, line);
+}
+#endif
+
 // TODO: REAL/COMPLEX(2 & 3)
 // Intermediate results and operations are at least 64 bits
-CppTypeFor<TypeCategory::Real, 4> RTNAME(DotProductReal4)(
+CppTypeFor<TypeCategory::Real, 4> RTDEF(DotProductReal4)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 4>{}(x, y, source, line);
 }
-CppTypeFor<TypeCategory::Real, 8> RTNAME(DotProductReal8)(
+CppTypeFor<TypeCategory::Real, 8> RTDEF(DotProductReal8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 8>{}(x, y, source, line);
 }
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(DotProductReal10)(
+#if HAS_FLOAT80
+CppTypeFor<TypeCategory::Real, 10> RTDEF(DotProductReal10)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTNAME(DotProductReal16)(
+#if HAS_LDBL128 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTDEF(DotProductReal16)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 16>{}(x, y, source, line);
 }
 #endif
 
-void RTNAME(CppDotProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
+void RTDEF(CppDotProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 4>{}(x, y, source, line);
 }
-void RTNAME(CppDotProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
+void RTDEF(CppDotProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 8>{}(x, y, source, line);
 }
-#if LDBL_MANT_DIG == 64
-void RTNAME(CppDotProductComplex10)(
+#if HAS_FLOAT80
+void RTDEF(CppDotProductComplex10)(
     CppTypeFor<TypeCategory::Complex, 10> &result, const Descriptor &x,
     const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-void RTNAME(CppDotProductComplex16)(
+#if HAS_LDBL128 || HAS_FLOAT128
+void RTDEF(CppDotProductComplex16)(
     CppTypeFor<TypeCategory::Complex, 16> &result, const Descriptor &x,
     const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 16>{}(x, y, source, line);
 }
 #endif
 
-bool RTNAME(DotProductLogical)(
+bool RTDEF(DotProductLogical)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Logical, 1>{}(x, y, source, line);
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

@@ -14,7 +14,6 @@
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -150,6 +149,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool IsLittleEndian;
   bool IsPicEnabled;
   bool IsCpRestoreSet;
+  bool CurForbiddenSlotAttr;
   int CpRestoreOffset;
   unsigned GPReg;
   unsigned CpSaveLocation;
@@ -173,7 +173,7 @@ class MipsAsmParser : public MCTargetAsmParser {
                                  const OperandVector &Operands) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -189,7 +189,7 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
@@ -552,6 +552,7 @@ public:
 
     CurrentFn = nullptr;
 
+    CurForbiddenSlotAttr = false;
     IsPicEnabled = getContext().getObjectFileInfo()->isPositionIndependent();
 
     IsCpRestoreSet = false;
@@ -722,6 +723,16 @@ public:
   bool hasGINV() const {
     return getSTI().hasFeature(Mips::FeatureGINV);
   }
+
+  bool hasForbiddenSlot(const MCInstrDesc &MCID) const {
+    return !inMicroMipsMode() && (MCID.TSFlags & MipsII::HasForbiddenSlot);
+  }
+
+  bool SafeInForbiddenSlot(const MCInstrDesc &MCID) const {
+    return !(MCID.TSFlags & MipsII::IsCTI);
+  }
+
+  void onEndOfFile() override;
 
   /// Warn if RegIndex is the same as the current AT.
   void warnIfRegIndexIsAT(unsigned RegIndex, SMLoc Loc);
@@ -1446,7 +1457,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     // As a special case until we sort out the definition of div/divu, accept
     // $0/$zero here so that MCK_ZERO works correctly.
     if (Kind == k_RegisterIndex && RegIdx.Index == 0 &&
@@ -2097,6 +2108,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   if ((Opcode == Mips::JAL || Opcode == Mips::JAL_MM) && inPicMode()) {
     warnIfNoMacro(IDLoc);
 
+    if (!Inst.getOperand(0).isExpr()) {
+      return Error(IDLoc, "unsupported constant in relocation");
+    }
+
     const MCExpr *JalExpr = Inst.getOperand(0).getExpr();
 
     // We can do this expansion if there's only 1 symbol in the argument
@@ -2307,7 +2322,41 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
   bool FillDelaySlot =
       MCID.hasDelaySlot() && AssemblerOptions.back()->isReorder();
-  if (FillDelaySlot)
+
+  // Get previous instruction`s forbidden slot attribute and
+  // whether set reorder.
+  bool PrevForbiddenSlotAttr = CurForbiddenSlotAttr;
+
+  // Flag represents we set reorder after nop.
+  bool SetReorderAfterNop = false;
+
+  // If previous instruction has forbidden slot and .set reorder
+  // is active and current instruction is CTI.
+  // Then emit a NOP after it.
+  if (PrevForbiddenSlotAttr && !SafeInForbiddenSlot(MCID)) {
+    TOut.emitEmptyDelaySlot(false, IDLoc, STI);
+    // When 'FillDelaySlot' is true, the existing logic will add
+    // noreorder before instruction and reorder after it. So there
+    // need exclude this case avoiding two '.set reorder'.
+    // The format of the first case is:
+    // .set noreorder
+    // bnezc
+    // nop
+    // .set reorder
+    if (AssemblerOptions.back()->isReorder() && !FillDelaySlot) {
+      SetReorderAfterNop = true;
+      TOut.emitDirectiveSetReorder();
+    }
+  }
+
+  // Save current instruction`s forbidden slot and whether set reorder.
+  // This is the judgment condition for whether to add nop.
+  // We would add a couple of '.set noreorder' and '.set reorder' to
+  // wrap the current instruction and the next instruction.
+  CurForbiddenSlotAttr =
+      hasForbiddenSlot(MCID) && AssemblerOptions.back()->isReorder();
+
+  if (FillDelaySlot || CurForbiddenSlotAttr)
     TOut.emitDirectiveSetNoReorder();
 
   MacroExpanderResultTy ExpandResult =
@@ -2322,6 +2371,17 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return true;
   }
 
+  // When current instruction was not CTI, recover reorder state.
+  // The format of the second case is:
+  // .set noreoder
+  // bnezc
+  // add
+  // .set reorder
+  if (PrevForbiddenSlotAttr && !SetReorderAfterNop && !FillDelaySlot &&
+      AssemblerOptions.back()->isReorder()) {
+    TOut.emitDirectiveSetReorder();
+  }
+
   // We know we emitted an instruction on the MER_NotAMacro or MER_Success path.
   // If we're in microMIPS mode then we must also set EF_MIPS_MICROMIPS.
   if (inMicroMipsMode()) {
@@ -2331,6 +2391,14 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
   // If this instruction has a delay slot and .set reorder is active,
   // emit a NOP after it.
+  // The format of the third case is:
+  // .set noreorder
+  // bnezc
+  // nop
+  // .set noreorder
+  // j
+  // nop
+  // .set reorder
   if (FillDelaySlot) {
     TOut.emitEmptyDelaySlot(hasShortDelaySlot(Inst), IDLoc, STI);
     TOut.emitDirectiveSetReorder();
@@ -2354,6 +2422,17 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   }
 
   return false;
+}
+
+void MipsAsmParser::onEndOfFile() {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+  SMLoc IDLoc = SMLoc();
+  // If has pending forbidden slot, fill nop and recover reorder.
+  if (CurForbiddenSlotAttr) {
+    TOut.emitEmptyDelaySlot(false, IDLoc, STI);
+    if (AssemblerOptions.back()->isReorder())
+      TOut.emitDirectiveSetReorder();
+  }
 }
 
 MipsAsmParser::MacroExpanderResultTy
@@ -2920,6 +2999,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         (Res.getSymA()->getSymbol().isELF() &&
          cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
              ELF::STB_LOCAL);
+    // For O32, "$"-prefixed symbols are recognized as temporary while
+    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // manually.
+    if (ABI.IsO32() && Res.getSymA()->getSymbol().getName().starts_with(".L"))
+      IsLocalSym = true;
     bool UseXGOT = STI->hasFeature(Mips::FeatureXGOT) && !IsLocalSym;
 
     // The case where the result register is $25 is somewhat special. If the
@@ -5701,9 +5785,9 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       sel = 3;
       break;
   }
-  unsigned Op0 = IsMFTR ? Inst.getOperand(0).getReg() : rd;
-  unsigned Op1 =
-      IsMFTR ? rd
+  MCRegister Op0 = IsMFTR ? Inst.getOperand(0).getReg() : MCRegister(rd);
+  MCRegister Op1 =
+      IsMFTR ? MCRegister(rd)
              : (Inst.getOpcode() != Mips::MTTDSP ? Inst.getOperand(1).getReg()
                                                  : Inst.getOperand(0).getReg());
 
@@ -5911,7 +5995,7 @@ static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
   return Loc;
 }
 
-bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -6329,7 +6413,12 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  // Setting the third parameter to true tells the parser to keep parsing even
+  // if the operands are not supported with the current feature set. In this
+  // case, the instruction matcher will output a "instruction requires a CPU
+  // feature not currently enabled" error. If this were false, the parser would
+  // stop here and output a less useful "invalid operand" error.
+  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic, true);
   if (Res.isSuccess())
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
@@ -6359,7 +6448,7 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-    MCSymbol *Sym = getContext().getOrCreateSymbol("$" + Identifier);
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
     // Otherwise create a symbol reference.
     const MCExpr *SymRef =
         MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
@@ -6911,10 +7000,10 @@ bool MipsAsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
   return Op1.getReg() == Op2.getReg();
 }
 
-bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool MipsAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  LLVM_DEBUG(dbgs() << "ParseInstruction\n");
+  LLVM_DEBUG(dbgs() << "parseInstruction\n");
 
   // We have reached first instruction, module directive are now forbidden.
   getTargetStreamer().forbidModuleDirective();

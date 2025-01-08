@@ -41,19 +41,7 @@ public:
             interpreter, "command source",
             "Read and execute LLDB commands from the file <filename>.",
             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData file_arg;
-
-    // Define the first (and only) variant of this arg.
-    file_arg.arg_type = eArgTypeFilename;
-    file_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(file_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeFilename);
   }
 
   ~CommandObjectCommandsSource() override = default;
@@ -61,13 +49,6 @@ public:
   std::optional<std::string> GetRepeatCommand(Args &current_command_args,
                                               uint32_t index) override {
     return std::string("");
-  }
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -341,7 +322,13 @@ rather than using a positional placeholder:"
 
 (lldb) command alias bl3 breakpoint set -f %1 -l 3
 
-    Always sets a breakpoint on line 3 of whatever file is indicated.)");
+    Always sets a breakpoint on line 3 of whatever file is indicated.
+
+)"
+
+        "If the alias abbreviation or the full alias command collides with another \
+existing command, the command resolver will prefer to use the alias over any \
+other command as far as there is only one alias command match.");
 
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
@@ -621,19 +608,7 @@ public:
             interpreter, "command unalias",
             "Delete one or more custom commands defined by 'command alias'.",
             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData alias_arg;
-
-    // Define the first (and only) variant of this arg.
-    alias_arg.arg_type = eArgTypeAliasName;
-    alias_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(alias_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeAliasName);
   }
 
   ~CommandObjectCommandsUnalias() override = default;
@@ -708,19 +683,7 @@ public:
             interpreter, "command delete",
             "Delete one or more custom commands defined by 'command regex'.",
             nullptr) {
-    CommandArgumentEntry arg;
-    CommandArgumentData alias_arg;
-
-    // Define the first (and only) variant of this arg.
-    alias_arg.arg_type = eArgTypeCommandName;
-    alias_arg.arg_repetition = eArgRepeatPlain;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg.push_back(alias_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg);
+    AddSimpleArgumentList(eArgTypeCommandName);
   }
 
   ~CommandObjectCommandsDelete() override = default;
@@ -822,8 +785,7 @@ a number follows 'f':"
         R"(
 
     (lldb) command regex f s/^$/finish/ 's/([0-9]+)/frame select %1/')");
-    CommandArgumentData thread_arg{eArgTypeSEDStylePair, eArgRepeatOptional};
-    m_arguments.push_back({thread_arg});
+    AddSimpleArgumentList(eArgTypeSEDStylePair, eArgRepeatOptional);
   }
 
   ~CommandObjectCommandsAddRegex() override = default;
@@ -916,7 +878,7 @@ protected:
     Status error;
 
     if (!m_regex_cmd_up) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "invalid regular expression command object for: '%.*s'",
           (int)regex_sed.size(), regex_sed.data());
       return error;
@@ -925,16 +887,17 @@ protected:
     size_t regex_sed_size = regex_sed.size();
 
     if (regex_sed_size <= 1) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "regular expression substitution string is too short: '%.*s'",
           (int)regex_sed.size(), regex_sed.data());
       return error;
     }
 
     if (regex_sed[0] != 's') {
-      error.SetErrorStringWithFormat("regular expression substitution string "
-                                     "doesn't start with 's': '%.*s'",
-                                     (int)regex_sed.size(), regex_sed.data());
+      return Status::FromErrorStringWithFormat(
+          "regular expression substitution string "
+          "doesn't start with 's': '%.*s'",
+          (int)regex_sed.size(), regex_sed.data());
       return error;
     }
     const size_t first_separator_char_pos = 1;
@@ -945,7 +908,7 @@ protected:
         regex_sed.find(separator_char, first_separator_char_pos + 1);
 
     if (second_separator_char_pos == std::string::npos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "missing second '%c' separator char after '%.*s' in '%.*s'",
           separator_char,
           (int)(regex_sed.size() - first_separator_char_pos - 1),
@@ -958,7 +921,7 @@ protected:
         regex_sed.find(separator_char, second_separator_char_pos + 1);
 
     if (third_separator_char_pos == std::string::npos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "missing third '%c' separator char after '%.*s' in '%.*s'",
           separator_char,
           (int)(regex_sed.size() - second_separator_char_pos - 1),
@@ -972,7 +935,7 @@ protected:
       if (regex_sed.find_first_not_of("\t\n\v\f\r ",
                                       third_separator_char_pos + 1) !=
           std::string::npos) {
-        error.SetErrorStringWithFormat(
+        return Status::FromErrorStringWithFormat(
             "extra data found after the '%.*s' regular expression substitution "
             "string: '%.*s'",
             (int)third_separator_char_pos + 1, regex_sed.data(),
@@ -981,13 +944,13 @@ protected:
         return error;
       }
     } else if (first_separator_char_pos + 1 == second_separator_char_pos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "<regex> can't be empty in 's%c<regex>%c<subst>%c' string: '%.*s'",
           separator_char, separator_char, separator_char, (int)regex_sed.size(),
           regex_sed.data());
       return error;
     } else if (second_separator_char_pos + 1 == third_separator_char_pos) {
-      error.SetErrorStringWithFormat(
+      return Status::FromErrorStringWithFormat(
           "<subst> can't be empty in 's%c<regex>%c<subst>%c' string: '%.*s'",
           separator_char, separator_char, separator_char, (int)regex_sed.size(),
           regex_sed.data());
@@ -1123,6 +1086,8 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
+    m_interpreter.IncreaseCommandUsage(*this);
+
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
@@ -1134,7 +1099,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData().empty())
+        if (result.GetOutputString().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1149,13 +1114,16 @@ private:
   CompletionType m_completion_type = eNoCompletion;
 };
 
-class CommandObjectScriptingObject : public CommandObjectRaw {
+/// This class implements a "raw" scripted command.  lldb does no parsing of the
+/// command line, instead passing the line unaltered (except for backtick
+/// substitution).
+class CommandObjectScriptingObjectRaw : public CommandObjectRaw {
 public:
-  CommandObjectScriptingObject(CommandInterpreter &interpreter,
-                               std::string name,
-                               StructuredData::GenericSP cmd_obj_sp,
-                               ScriptedCommandSynchronicity synch,
-                               CompletionType completion_type)
+  CommandObjectScriptingObjectRaw(CommandInterpreter &interpreter,
+                                  std::string name,
+                                  StructuredData::GenericSP cmd_obj_sp,
+                                  ScriptedCommandSynchronicity synch,
+                                  CompletionType completion_type)
       : CommandObjectRaw(interpreter, name), m_cmd_obj_sp(cmd_obj_sp),
         m_synchro(synch), m_fetched_help_short(false),
         m_fetched_help_long(false), m_completion_type(completion_type) {
@@ -1166,7 +1134,7 @@ public:
       GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
   }
 
-  ~CommandObjectScriptingObject() override = default;
+  ~CommandObjectScriptingObjectRaw() override = default;
 
   void
   HandleArgumentCompletion(CompletionRequest &request,
@@ -1180,6 +1148,15 @@ public:
   bool IsRemovable() const override { return true; }
 
   ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
+
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return std::nullopt;
+
+    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+  }
 
   llvm::StringRef GetHelp() override {
     if (m_fetched_help_short)
@@ -1228,7 +1205,7 @@ protected:
     } else {
       // Don't change the status if the command already set it...
       if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputData().empty())
+        if (result.GetOutputString().empty())
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
         else
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1244,6 +1221,943 @@ private:
   CompletionType m_completion_type = eNoCompletion;
 };
 
+
+/// This command implements a lldb parsed scripted command.  The command
+/// provides a definition of the options and arguments, and a option value
+/// setting callback, and then the command's execution function gets passed
+/// just the parsed arguments.
+/// Note, implementing a command in Python using these base interfaces is a bit
+/// of a pain, but it is much easier to export this low level interface, and
+/// then make it nicer on the Python side, than to try to do that in a
+/// script language neutral way.
+/// So I've also added a base class in Python that provides a table-driven
+/// way of defining the options and arguments, which automatically fills the
+/// option values, making them available as properties in Python.
+/// 
+class CommandObjectScriptingObjectParsed : public CommandObjectParsed {
+private: 
+  class CommandOptions : public Options {
+  public:
+    CommandOptions(CommandInterpreter &interpreter, 
+        StructuredData::GenericSP cmd_obj_sp) : m_interpreter(interpreter), 
+            m_cmd_obj_sp(cmd_obj_sp) {}
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      ScriptInterpreter *scripter = 
+        m_interpreter.GetDebugger().GetScriptInterpreter();
+      if (!scripter) {
+        return Status::FromErrorString(
+            "No script interpreter for SetOptionValue.");
+        return error;
+      }
+      if (!m_cmd_obj_sp) {
+        return Status::FromErrorString(
+            "SetOptionValue called with empty cmd_obj.");
+        return error;
+      }
+      if (!m_options_definition_up) {
+        return Status::FromErrorString(
+            "SetOptionValue called before options definitions "
+            "were created.");
+        return error;
+      }
+      // Pass the long option, since you aren't actually required to have a
+      // short_option, and for those options the index or short option character
+      // aren't meaningful on the python side.
+      const char * long_option = 
+        m_options_definition_up.get()[option_idx].long_option;
+      bool success = scripter->SetOptionValueForCommandObject(m_cmd_obj_sp, 
+        execution_context, long_option, option_arg);
+      if (!success)
+        return Status::FromErrorStringWithFormatv(
+            "Error setting option: {0} to {1}", long_option, option_arg);
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      ScriptInterpreter *scripter = 
+        m_interpreter.GetDebugger().GetScriptInterpreter();
+      if (!scripter || !m_cmd_obj_sp)
+        return;
+
+      scripter->OptionParsingStartedForCommandObject(m_cmd_obj_sp);
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      if (!m_options_definition_up)
+        return {};
+      return llvm::ArrayRef(m_options_definition_up.get(), m_num_options);
+    }
+    
+    static Status ParseUsageMaskFromArray(StructuredData::ObjectSP obj_sp, 
+        size_t counter, uint32_t &usage_mask) {
+      // If the usage entry is not provided, we use LLDB_OPT_SET_ALL.
+      // If the usage mask is a UINT, the option belongs to that group.
+      // If the usage mask is a vector of UINT's, the option belongs to all the
+      // groups listed.
+      // If a subelement of the vector is a vector of two ints, then the option
+      // belongs to the inclusive range from the first to the second element.
+      Status error;
+      if (!obj_sp) {
+        usage_mask = LLDB_OPT_SET_ALL;
+        return error;
+      }
+      
+      usage_mask = 0;
+      
+      StructuredData::UnsignedInteger *uint_val = 
+          obj_sp->GetAsUnsignedInteger();
+      if (uint_val) {
+        // If this is an integer, then this specifies a single group:
+        uint32_t value = uint_val->GetValue();
+        if (value == 0) {
+          return Status::FromErrorStringWithFormatv(
+              "0 is not a valid group for option {0}", counter);
+        }
+        usage_mask = (1 << (value - 1));
+        return error;
+      }
+      // Otherwise it has to be an array:
+      StructuredData::Array *array_val = obj_sp->GetAsArray();
+      if (!array_val) {
+        return Status::FromErrorStringWithFormatv(
+            "required field is not a array for option {0}", counter);
+      }
+      // This is the array ForEach for accumulating a group usage mask from
+      // an array of string descriptions of groups.
+      auto groups_accumulator 
+          = [counter, &usage_mask, &error] 
+            (StructuredData::Object *obj) -> bool {
+        StructuredData::UnsignedInteger *int_val = obj->GetAsUnsignedInteger();
+        if (int_val) {
+          uint32_t value = int_val->GetValue();
+          if (value == 0) {
+            error = Status::FromErrorStringWithFormatv(
+                "0 is not a valid group for element {0}", counter);
+            return false;
+          }
+          usage_mask |= (1 << (value - 1));
+          return true;
+        }
+        StructuredData::Array *arr_val = obj->GetAsArray();
+        if (!arr_val) {
+          error = Status::FromErrorStringWithFormatv(
+              "Group element not an int or array of integers for element {0}",
+              counter);
+          return false; 
+        }
+        size_t num_range_elem = arr_val->GetSize();
+        if (num_range_elem != 2) {
+          error = Status::FromErrorStringWithFormatv(
+              "Subranges of a group not a start and a stop for element {0}",
+              counter);
+          return false; 
+        }
+        int_val = arr_val->GetItemAtIndex(0)->GetAsUnsignedInteger();
+        if (!int_val) {
+          error = Status::FromErrorStringWithFormatv(
+              "Start element of a subrange of a "
+              "group not unsigned int for element {0}",
+              counter);
+          return false; 
+        }
+        uint32_t start = int_val->GetValue();
+        int_val = arr_val->GetItemAtIndex(1)->GetAsUnsignedInteger();
+        if (!int_val) {
+          error = Status::FromErrorStringWithFormatv(
+              "End element of a subrange of a group"
+              " not unsigned int for element {0}",
+              counter);
+          return false; 
+        }
+        uint32_t end = int_val->GetValue();
+        if (start == 0 || end == 0 || start > end) {
+          error = Status::FromErrorStringWithFormatv(
+              "Invalid subrange of a group: {0} - "
+              "{1} for element {2}",
+              start, end, counter);
+          return false;
+        }
+        for (uint32_t i = start; i <= end; i++) {
+          usage_mask |= (1 << (i - 1));
+        }
+        return true;
+      };
+      array_val->ForEach(groups_accumulator);
+      return error;
+    }
+    
+    
+    Status SetOptionsFromArray(StructuredData::Dictionary &options) {
+      Status error;
+      m_num_options = options.GetSize();
+      m_options_definition_up.reset(new OptionDefinition[m_num_options]);
+      // We need to hand out pointers to contents of these vectors; we reserve
+      // as much as we'll need up front so they don't get freed on resize...
+      m_usage_container.resize(m_num_options);
+      m_enum_storage.resize(m_num_options);
+      m_enum_vector.resize(m_num_options);
+      
+      size_t counter = 0;
+      size_t short_opt_counter = 0;
+      // This is the Array::ForEach function for adding option elements:
+      auto add_element = [this, &error, &counter, &short_opt_counter] 
+          (llvm::StringRef long_option, StructuredData::Object *object) -> bool {
+        StructuredData::Dictionary *opt_dict = object->GetAsDictionary();
+        if (!opt_dict) {
+          error = Status::FromErrorString(
+              "Value in options dictionary is not a dictionary");
+          return false;
+        }
+        OptionDefinition &option_def = m_options_definition_up.get()[counter];
+        
+        // We aren't exposing the validator yet, set it to null
+        option_def.validator = nullptr;
+        // We don't require usage masks, so set it to one group by default:
+        option_def.usage_mask = 1;
+        
+        // Now set the fields of the OptionDefinition Array from the dictionary:
+        //
+        // Note that I don't check for unknown fields in the option dictionaries
+        // so a scriptor can add extra elements that are helpful when they go to
+        // do "set_option_value"
+        
+        // Usage Mask:
+        StructuredData::ObjectSP obj_sp = opt_dict->GetValueForKey("groups");
+        if (obj_sp) {
+          error = ParseUsageMaskFromArray(obj_sp, counter, 
+                                          option_def.usage_mask);
+          if (error.Fail())
+            return false;
+        }
+
+        // Required:
+        option_def.required = false;
+        obj_sp = opt_dict->GetValueForKey("required");
+        if (obj_sp) {
+          StructuredData::Boolean *boolean_val = obj_sp->GetAsBoolean();
+          if (!boolean_val) {
+            error = Status::FromErrorStringWithFormatv(
+                "'required' field is not a boolean "
+                "for option {0}",
+                counter);
+            return false;
+          } 
+          option_def.required = boolean_val->GetValue();      
+        }
+        
+        // Short Option:
+        int short_option;
+        obj_sp = opt_dict->GetValueForKey("short_option");
+        if (obj_sp) {
+          // The value is a string, so pull the 
+          llvm::StringRef short_str = obj_sp->GetStringValue();
+          if (short_str.empty()) {
+            error = Status::FromErrorStringWithFormatv(
+                "short_option field empty for "
+                "option {0}",
+                counter);
+            return false;
+          } else if (short_str.size() != 1) {
+            error = Status::FromErrorStringWithFormatv(
+                "short_option field has extra "
+                "characters for option {0}",
+                counter);
+            return false;
+          }
+          short_option = (int) short_str[0];
+        } else {
+          // If the short option is not provided, then we need a unique value 
+          // less than the lowest printable ASCII character.
+          short_option = short_opt_counter++;
+        }
+        option_def.short_option = short_option;
+        
+        // Long Option is the key from the outer dict:
+        if (long_option.empty()) {
+          error = Status::FromErrorStringWithFormatv(
+              "empty long_option for option {0}", counter);
+          return false;
+        }
+        auto inserted = g_string_storer.insert(long_option.str());
+        option_def.long_option = ((*(inserted.first)).data());
+        
+        // Value Type:
+        obj_sp = opt_dict->GetValueForKey("value_type");
+        if (obj_sp) {
+          StructuredData::UnsignedInteger *uint_val 
+              = obj_sp->GetAsUnsignedInteger();
+          if (!uint_val) {
+            error = Status::FromErrorStringWithFormatv(
+                "Value type must be an unsigned "
+                "integer");
+            return false;
+          }
+          uint64_t val_type = uint_val->GetValue();
+          if (val_type >= eArgTypeLastArg) {
+            error =
+                Status::FromErrorStringWithFormatv("Value type {0} beyond the "
+                                                   "CommandArgumentType bounds",
+                                                   val_type);
+            return false;
+          }
+          option_def.argument_type = (CommandArgumentType) val_type;
+          option_def.option_has_arg = true;
+        } else {
+          option_def.argument_type = eArgTypeNone;
+          option_def.option_has_arg = false;
+        }
+        
+        // Completion Type:
+        obj_sp = opt_dict->GetValueForKey("completion_type");
+        if (obj_sp) {
+          StructuredData::UnsignedInteger *uint_val = obj_sp->GetAsUnsignedInteger();
+          if (!uint_val) {
+            error = Status::FromErrorStringWithFormatv(
+                "Completion type must be an "
+                "unsigned integer for option {0}",
+                counter);
+            return false;
+          }
+          uint64_t completion_type = uint_val->GetValue();
+          if (completion_type > eCustomCompletion) {
+            error = Status::FromErrorStringWithFormatv(
+                "Completion type for option {0} "
+                "beyond the CompletionType bounds",
+                completion_type);
+            return false;
+          }
+          option_def.completion_type = (CommandArgumentType) completion_type;
+        } else
+          option_def.completion_type = eNoCompletion;
+        
+        // Usage Text:
+        std::string usage_text;
+        obj_sp = opt_dict->GetValueForKey("help");
+        if (!obj_sp) {
+          error = Status::FromErrorStringWithFormatv(
+              "required usage missing from option "
+              "{0}",
+              counter);
+          return false;
+        }
+        llvm::StringRef usage_stref;
+        usage_stref = obj_sp->GetStringValue();
+        if (usage_stref.empty()) {
+          error = Status::FromErrorStringWithFormatv(
+              "empty usage text for option {0}", counter);
+          return false;
+        }
+        m_usage_container[counter] = usage_stref.str().c_str();
+        option_def.usage_text = m_usage_container[counter].data();
+
+        // Enum Values:
+        
+        obj_sp = opt_dict->GetValueForKey("enum_values");
+        if (obj_sp) {
+          StructuredData::Array *array = obj_sp->GetAsArray();
+          if (!array) {
+            error = Status::FromErrorStringWithFormatv(
+                "enum values must be an array for "
+                "option {0}",
+                counter);
+            return false;
+          }
+          size_t num_elem = array->GetSize();
+          size_t enum_ctr = 0;
+          m_enum_storage[counter] = std::vector<EnumValueStorage>(num_elem);
+          std::vector<EnumValueStorage> &curr_elem = m_enum_storage[counter];
+          
+          // This is the Array::ForEach function for adding enum elements:
+          // Since there are only two fields to specify the enum, use a simple
+          // two element array with value first, usage second.
+          // counter is only used for reporting so I pass it by value here.
+          auto add_enum = [&enum_ctr, &curr_elem, counter, &error] 
+              (StructuredData::Object *object) -> bool {
+            StructuredData::Array *enum_arr = object->GetAsArray();
+            if (!enum_arr) {
+              error = Status::FromErrorStringWithFormatv(
+                  "Enum values for option {0} not "
+                  "an array",
+                  counter);
+              return false;
+            }
+            size_t num_enum_elements = enum_arr->GetSize();
+            if (num_enum_elements != 2) {
+              error = Status::FromErrorStringWithFormatv(
+                  "Wrong number of elements: {0} "
+                  "for enum {1} in option {2}",
+                  num_enum_elements, enum_ctr, counter);
+              return false;
+            }
+            // Enum Value:
+            StructuredData::ObjectSP obj_sp = enum_arr->GetItemAtIndex(0);
+            llvm::StringRef val_stref = obj_sp->GetStringValue();
+            std::string value_cstr_str = val_stref.str().c_str();
+            
+            // Enum Usage:
+            obj_sp = enum_arr->GetItemAtIndex(1);
+            if (!obj_sp) {
+              error = Status::FromErrorStringWithFormatv(
+                  "No usage for enum {0} in option "
+                  "{1}",
+                  enum_ctr, counter);
+              return false;
+            }
+            llvm::StringRef usage_stref = obj_sp->GetStringValue();
+            std::string usage_cstr_str = usage_stref.str().c_str();
+            curr_elem[enum_ctr] = EnumValueStorage(value_cstr_str, 
+                usage_cstr_str, enum_ctr);
+            
+            enum_ctr++;
+            return true;
+          }; // end of add_enum
+          
+          array->ForEach(add_enum);
+          if (!error.Success())
+            return false;
+          // We have to have a vector of elements to set in the options, make 
+          // that here:
+          for (auto &elem : curr_elem)
+            m_enum_vector[counter].emplace_back(elem.element);
+
+          option_def.enum_values = llvm::ArrayRef(m_enum_vector[counter]);
+        }
+        counter++;
+        return true;
+      }; // end of add_element
+      
+      options.ForEach(add_element);
+      return error;
+    }
+
+    size_t GetNumOptions() { return m_num_options; }
+
+    void PrepareOptionsForCompletion(CompletionRequest &request,
+                                     OptionElementVector &option_vec,
+                                     ExecutionContext *exe_ctx) {
+      // I'm not sure if we'll get into trouble doing an option parsing start
+      // and end in this context.  If so, then I'll have to directly tell the
+      // scripter to do this.
+      OptionParsingStarting(exe_ctx);
+      auto opt_defs = GetDefinitions();
+
+      // Iterate through the options we found so far, and push them into
+      // the scripted side.
+      for (auto option_elem : option_vec) {
+        int cur_defs_index = option_elem.opt_defs_index;
+        // If we don't recognize this option we can't set it.
+        if (cur_defs_index == OptionArgElement::eUnrecognizedArg ||
+            cur_defs_index == OptionArgElement::eBareDash ||
+            cur_defs_index == OptionArgElement::eBareDoubleDash)
+          continue;
+        bool option_has_arg = opt_defs[cur_defs_index].option_has_arg;
+        llvm::StringRef cur_arg_value;
+        if (option_has_arg) {
+          int cur_arg_pos = option_elem.opt_arg_pos;
+          if (cur_arg_pos != OptionArgElement::eUnrecognizedArg &&
+              cur_arg_pos != OptionArgElement::eBareDash &&
+              cur_arg_pos != OptionArgElement::eBareDoubleDash) {
+            cur_arg_value =
+                request.GetParsedLine().GetArgumentAtIndex(cur_arg_pos);
+          }
+        }
+        SetOptionValue(cur_defs_index, cur_arg_value, exe_ctx);
+      }
+      OptionParsingFinished(exe_ctx);
+    }
+
+    void
+    ProcessCompletionDict(CompletionRequest &request,
+                          StructuredData::DictionarySP &completion_dict_sp) {
+      // We don't know how to process an empty completion dict, our callers have
+      // to do that.
+      assert(completion_dict_sp && "Must have valid completion dict");
+      // First handle the case of a single completion:
+      llvm::StringRef completion;
+      // If the dictionary has one element "no-completion" then we return here
+      if (completion_dict_sp->GetValueForKeyAsString("no-completion",
+                                                     completion))
+        return;
+
+      if (completion_dict_sp->GetValueForKeyAsString("completion",
+                                                     completion)) {
+        llvm::StringRef mode_str;
+        CompletionMode mode = CompletionMode::Normal;
+        if (completion_dict_sp->GetValueForKeyAsString("mode", mode_str)) {
+          if (mode_str == "complete")
+            mode = CompletionMode::Normal;
+          else if (mode_str == "partial")
+            mode = CompletionMode::Partial;
+          else {
+            // FIXME - how do I report errors here?
+            return;
+          }
+        }
+        request.AddCompletion(completion, "", mode);
+        return;
+      }
+      // The completions are required, the descriptions are not:
+      StructuredData::Array *completions;
+      StructuredData::Array *descriptions;
+      if (completion_dict_sp->GetValueForKeyAsArray("values", completions)) {
+        completion_dict_sp->GetValueForKeyAsArray("descriptions", descriptions);
+        size_t num_completions = completions->GetSize();
+        for (size_t idx = 0; idx < num_completions; idx++) {
+          auto val = completions->GetItemAtIndexAsString(idx);
+          if (!val)
+            // FIXME: How do I report this error?
+            return;
+
+          if (descriptions) {
+            auto desc = descriptions->GetItemAtIndexAsString(idx);
+            request.AddCompletion(*val, desc ? *desc : "");
+          } else
+            request.AddCompletion(*val);
+        }
+      }
+    }
+
+    void
+    HandleOptionArgumentCompletion(lldb_private::CompletionRequest &request,
+                                   OptionElementVector &option_vec,
+                                   int opt_element_index,
+                                   CommandInterpreter &interpreter) override {
+      ScriptInterpreter *scripter =
+          interpreter.GetDebugger().GetScriptInterpreter();
+
+      if (!scripter)
+        return;
+
+      ExecutionContext exe_ctx = interpreter.GetExecutionContext();
+      PrepareOptionsForCompletion(request, option_vec, &exe_ctx);
+
+      auto defs = GetDefinitions();
+
+      size_t defs_index = option_vec[opt_element_index].opt_defs_index;
+      llvm::StringRef option_name = defs[defs_index].long_option;
+      bool is_enum = defs[defs_index].enum_values.size() != 0;
+      if (option_name.empty())
+        return;
+      // If this is an enum, we don't call the custom completer, just let the
+      // regular option completer handle that:
+      StructuredData::DictionarySP completion_dict_sp;
+      if (!is_enum)
+        completion_dict_sp =
+            scripter->HandleOptionArgumentCompletionForScriptedCommand(
+                m_cmd_obj_sp, option_name, request.GetCursorCharPos());
+
+      if (!completion_dict_sp) {
+        Options::HandleOptionArgumentCompletion(request, option_vec,
+                                                opt_element_index, interpreter);
+        return;
+      }
+
+      ProcessCompletionDict(request, completion_dict_sp);
+    }
+
+  private:
+    struct EnumValueStorage {
+      EnumValueStorage() {
+        element.string_value = "value not set";
+        element.usage = "usage not set";
+        element.value = 0;
+      }
+      
+      EnumValueStorage(std::string in_str_val, std::string in_usage, 
+          size_t in_value) : value(std::move(in_str_val)), usage(std::move(in_usage)) {
+        SetElement(in_value);
+      }
+      
+      EnumValueStorage(const EnumValueStorage &in) : value(in.value), 
+          usage(in.usage) {
+        SetElement(in.element.value);
+      }
+      
+      EnumValueStorage &operator=(const EnumValueStorage &in) {
+        value = in.value;
+        usage = in.usage;
+        SetElement(in.element.value);
+        return *this;
+      }
+      
+      void SetElement(size_t in_value) {
+        element.value = in_value;
+        element.string_value = value.data();
+        element.usage = usage.data(); 
+      }
+      
+      std::string value;
+      std::string usage;
+      OptionEnumValueElement element;
+    };
+    // We have to provide char * values for the long option, usage and enum
+    // values, that's what the option definitions hold.
+    // The long option strings are quite likely to be reused in other added
+    // commands, so those are stored in a global set: g_string_storer.
+    // But the usages are much less likely to be reused, so those are stored in
+    // a vector in the command instance.  It gets resized to the correct size
+    // and then filled with null-terminated strings in the std::string, so the 
+    // are valid C-strings that won't move around.
+    // The enum values and descriptions are treated similarly - these aren't
+    // all that common so it's not worth the effort to dedup them.  
+    size_t m_num_options = 0;
+    std::unique_ptr<OptionDefinition> m_options_definition_up;
+    std::vector<std::vector<EnumValueStorage>> m_enum_storage;
+    std::vector<std::vector<OptionEnumValueElement>> m_enum_vector;
+    std::vector<std::string> m_usage_container;
+    CommandInterpreter &m_interpreter;
+    StructuredData::GenericSP m_cmd_obj_sp;
+    static std::unordered_set<std::string> g_string_storer;
+  };
+
+public:
+  static CommandObjectSP Create(CommandInterpreter &interpreter, 
+                std::string name,
+                StructuredData::GenericSP cmd_obj_sp,
+                ScriptedCommandSynchronicity synch, 
+                CommandReturnObject &result) {
+    CommandObjectSP new_cmd_sp(new CommandObjectScriptingObjectParsed(
+        interpreter, name, cmd_obj_sp, synch));
+
+    CommandObjectScriptingObjectParsed *parsed_cmd 
+        = static_cast<CommandObjectScriptingObjectParsed *>(new_cmd_sp.get());
+    // Now check all the failure modes, and report if found.
+    Status opt_error = parsed_cmd->GetOptionsError();
+    Status arg_error = parsed_cmd->GetArgsError();
+
+    if (opt_error.Fail())
+      result.AppendErrorWithFormat("failed to parse option definitions: %s",
+                                   opt_error.AsCString());
+    if (arg_error.Fail())
+      result.AppendErrorWithFormat("%sfailed to parse argument definitions: %s",
+                                   opt_error.Fail() ? ", also " : "", 
+                                   arg_error.AsCString());
+
+    if (!result.Succeeded())
+      return {};
+
+    return new_cmd_sp;
+  }
+
+  CommandObjectScriptingObjectParsed(CommandInterpreter &interpreter,
+                               std::string name,
+                               StructuredData::GenericSP cmd_obj_sp,
+                               ScriptedCommandSynchronicity synch)
+      : CommandObjectParsed(interpreter, name.c_str()), 
+        m_cmd_obj_sp(cmd_obj_sp), m_synchro(synch), 
+        m_options(interpreter, cmd_obj_sp), m_fetched_help_short(false), 
+        m_fetched_help_long(false) {
+    StreamString stream;
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter) {
+      m_options_error = Status::FromErrorString("No script interpreter");
+      return;
+    }
+
+    // Set the flags:
+    GetFlags().Set(scripter->GetFlagsForCommandObject(cmd_obj_sp));
+
+    // Now set up the options definitions from the options:
+    StructuredData::ObjectSP options_object_sp 
+        = scripter->GetOptionsForCommandObject(cmd_obj_sp);
+    // It's okay not to have an options dict.
+    if (options_object_sp) {
+      // The options come as a dictionary of dictionaries.  The key of the
+      // outer dict is the long option name (since that's required).  The
+      // value holds all the other option specification bits.
+      StructuredData::Dictionary *options_dict 
+          = options_object_sp->GetAsDictionary();
+      // but if it exists, it has to be an array.
+      if (options_dict) {
+        m_options_error = m_options.SetOptionsFromArray(*(options_dict));
+        // If we got an error don't bother with the arguments...
+        if (m_options_error.Fail())
+          return;
+      } else {
+        m_options_error = Status::FromErrorString("Options array not an array");
+        return;
+      }
+    }
+    // Then fetch the args.  Since the arguments can have usage masks you need
+    // an array of arrays.
+    StructuredData::ObjectSP args_object_sp 
+      = scripter->GetArgumentsForCommandObject(cmd_obj_sp);
+    if (args_object_sp) {
+      StructuredData::Array *args_array = args_object_sp->GetAsArray();        
+      if (!args_array) {
+        m_args_error =
+            Status::FromErrorString("Argument specification is not an array");
+        return;
+      }
+      size_t counter = 0;
+      
+      // This is the Array::ForEach function that handles the
+      // CommandArgumentEntry arrays one by one:
+      auto arg_array_adder = [this, &counter] (StructuredData::Object *object) 
+          -> bool {
+        // This is the Array::ForEach function to add argument entries:
+        CommandArgumentEntry this_entry;
+        size_t elem_counter = 0;
+        auto args_adder = [this, counter, &elem_counter, &this_entry] 
+            (StructuredData::Object *object) -> bool {
+          // The arguments definition has three fields, the argument type, the
+          // repeat and the usage mask. 
+          CommandArgumentType arg_type = eArgTypeNone;
+          ArgumentRepetitionType arg_repetition = eArgRepeatOptional;
+          uint32_t arg_opt_set_association;
+
+          auto report_error = [this, elem_counter,
+                               counter](const char *err_txt) -> bool {
+            m_args_error = Status::FromErrorStringWithFormatv(
+                "Element {0} of arguments "
+                "list element {1}: %s.",
+                elem_counter, counter, err_txt);
+            return false;
+          };
+
+          StructuredData::Dictionary *arg_dict = object->GetAsDictionary();
+          if (!arg_dict) {
+            report_error("is not a dictionary.");
+            return false;
+          }
+          // Argument Type:
+          StructuredData::ObjectSP obj_sp 
+              = arg_dict->GetValueForKey("arg_type");
+          if (obj_sp) {
+            StructuredData::UnsignedInteger *uint_val 
+                = obj_sp->GetAsUnsignedInteger();
+            if (!uint_val) {
+              report_error("value type must be an unsigned integer");
+              return false;
+            }
+            uint64_t arg_type_int = uint_val->GetValue();
+            if (arg_type_int >= eArgTypeLastArg) {
+              report_error("value type beyond ArgumentRepetitionType bounds");
+              return false;
+            }
+            arg_type = (CommandArgumentType) arg_type_int;
+          }
+          // Repeat Value:
+          obj_sp = arg_dict->GetValueForKey("repeat");
+          std::optional<ArgumentRepetitionType> repeat;
+          if (obj_sp) {
+            llvm::StringRef repeat_str = obj_sp->GetStringValue();
+            if (repeat_str.empty()) {
+              report_error("repeat value is empty");
+              return false;
+            }
+            repeat = ArgRepetitionFromString(repeat_str);
+            if (!repeat) {
+              report_error("invalid repeat value");
+              return false;
+            }
+            arg_repetition = *repeat;
+          } 
+          
+          // Usage Mask:
+          obj_sp = arg_dict->GetValueForKey("groups");
+          m_args_error = CommandOptions::ParseUsageMaskFromArray(obj_sp, 
+              counter, arg_opt_set_association);
+          this_entry.emplace_back(arg_type, arg_repetition, 
+              arg_opt_set_association);
+          elem_counter++;
+          return true;
+        };
+        StructuredData::Array *args_array = object->GetAsArray();
+        if (!args_array) {
+          m_args_error =
+              Status::FromErrorStringWithFormatv("Argument definition element "
+                                                 "{0} is not an array",
+                                                 counter);
+        }
+        
+        args_array->ForEach(args_adder);
+        if (m_args_error.Fail())
+          return false;
+        if (this_entry.empty()) {
+          m_args_error =
+              Status::FromErrorStringWithFormatv("Argument definition element "
+                                                 "{0} is empty",
+                                                 counter);
+          return false;
+        }
+        m_arguments.push_back(this_entry);
+        counter++;
+        return true;
+      }; // end of arg_array_adder
+      // Here we actually parse the args definition:
+      args_array->ForEach(arg_array_adder);
+    }
+  }
+
+  ~CommandObjectScriptingObjectParsed() override = default;
+
+  Status GetOptionsError() { return m_options_error.Clone(); }
+  Status GetArgsError() { return m_args_error.Clone(); }
+  bool WantsCompletion() override { return true; }
+
+private:
+  void PrepareOptionsForCompletion(CompletionRequest &request,
+                                   OptionElementVector &option_vec) {
+    // First, we have to tell the Scripted side to set the values in its
+    // option store, then we call into the handle_completion passing in
+    // an array of the args, the arg index and the cursor position in the arg.
+    // We want the script side to have a chance to clear its state, so tell
+    // it argument parsing has started:
+    Options *options = GetOptions();
+    // If there are not options, this will be nullptr, and in that case we
+    // can just skip setting the options on the scripted side:
+    if (options)
+      m_options.PrepareOptionsForCompletion(request, option_vec, &m_exe_ctx);
+  }
+
+public:
+  void HandleArgumentCompletion(CompletionRequest &request,
+                                OptionElementVector &option_vec) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+
+    if (!scripter)
+      return;
+
+    // Set up the options values on the scripted side:
+    PrepareOptionsForCompletion(request, option_vec);
+
+    // Now we have to make up the argument list.
+    // The ParseForCompletion only identifies tokens in the m_parsed_line
+    // it doesn't remove the options leaving only the args as it does for
+    // the regular Parse, so we have to filter out the option ones using the
+    // option_element_vector:
+
+    Options *options = GetOptions();
+    auto defs = options->GetDefinitions();
+
+    std::unordered_set<size_t> option_slots;
+    for (const auto &elem : option_vec) {
+      if (elem.opt_defs_index == -1)
+        continue;
+      option_slots.insert(elem.opt_pos);
+      if (defs[elem.opt_defs_index].option_has_arg)
+        option_slots.insert(elem.opt_arg_pos);
+    }
+
+    std::vector<llvm::StringRef> args_vec;
+    Args &args = request.GetParsedLine();
+    size_t num_args = args.GetArgumentCount();
+    size_t cursor_idx = request.GetCursorIndex();
+    size_t args_elem_pos = cursor_idx;
+
+    for (size_t idx = 0; idx < num_args; idx++) {
+      if (option_slots.count(idx) == 0)
+        args_vec.push_back(args[idx].ref());
+      else if (idx < cursor_idx)
+        args_elem_pos--;
+    }
+    StructuredData::DictionarySP completion_dict_sp =
+        scripter->HandleArgumentCompletionForScriptedCommand(
+            m_cmd_obj_sp, args_vec, args_elem_pos, request.GetCursorCharPos());
+
+    if (!completion_dict_sp) {
+      CommandObject::HandleArgumentCompletion(request, option_vec);
+      return;
+    }
+
+    m_options.ProcessCompletionDict(request, completion_dict_sp);
+  }
+
+  bool IsRemovable() const override { return true; }
+
+  ScriptedCommandSynchronicity GetSynchronicity() { return m_synchro; }
+
+  std::optional<std::string> GetRepeatCommand(Args &args,
+                                              uint32_t index) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return std::nullopt;
+
+    return scripter->GetRepeatCommandForScriptedCommand(m_cmd_obj_sp, args);
+  }
+
+  llvm::StringRef GetHelp() override {
+    if (m_fetched_help_short)
+      return CommandObjectParsed::GetHelp();
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return CommandObjectParsed::GetHelp();
+    std::string docstring;
+    m_fetched_help_short =
+        scripter->GetShortHelpForCommandObject(m_cmd_obj_sp, docstring);
+    if (!docstring.empty())
+      SetHelp(docstring);
+
+    return CommandObjectParsed::GetHelp();
+  }
+
+  llvm::StringRef GetHelpLong() override {
+    if (m_fetched_help_long)
+      return CommandObjectParsed::GetHelpLong();
+
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+    if (!scripter)
+      return CommandObjectParsed::GetHelpLong();
+
+    std::string docstring;
+    m_fetched_help_long =
+        scripter->GetLongHelpForCommandObject(m_cmd_obj_sp, docstring);
+    if (!docstring.empty())
+      SetHelpLong(docstring);
+    return CommandObjectParsed::GetHelpLong();
+  }
+
+  Options *GetOptions() override {
+    // CommandObjectParsed requires that a command with no options return
+    // nullptr.
+    if (m_options.GetNumOptions() == 0)
+      return nullptr;
+    return &m_options;
+  }
+
+protected:
+  void DoExecute(Args &args,
+                 CommandReturnObject &result) override {
+    ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
+
+    Status error;
+
+    result.SetStatus(eReturnStatusInvalid);
+    
+    if (!scripter ||
+        !scripter->RunScriptBasedParsedCommand(m_cmd_obj_sp, args,
+                                         m_synchro, result, error, m_exe_ctx)) {
+      result.AppendError(error.AsCString());
+    } else {
+      // Don't change the status if the command already set it...
+      if (result.GetStatus() == eReturnStatusInvalid) {
+        if (result.GetOutputString().empty())
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
+        else
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+      }
+    }
+  }
+
+private:
+  StructuredData::GenericSP m_cmd_obj_sp;
+  ScriptedCommandSynchronicity m_synchro;
+  CommandOptions m_options;
+  Status m_options_error;
+  Status m_args_error;
+  bool m_fetched_help_short : 1;
+  bool m_fetched_help_long : 1;
+};
+
+std::unordered_set<std::string>
+    CommandObjectScriptingObjectParsed::CommandOptions::g_string_storer;
+
 // CommandObjectCommandsScriptImport
 #define LLDB_OPTIONS_script_import
 #include "CommandOptions.inc"
@@ -1253,29 +2167,10 @@ public:
   CommandObjectCommandsScriptImport(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "command script import",
                             "Import a scripting module in LLDB.", nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // Define the first (and only) variant of this arg.
-    cmd_arg.arg_type = eArgTypeFilename;
-    cmd_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeFilename, eArgRepeatPlus);
   }
 
   ~CommandObjectCommandsScriptImport() override = default;
-
-  void
-  HandleArgumentCompletion(CompletionRequest &request,
-                           OptionElementVector &opt_element_vector) override {
-    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
-  }
 
   Options *GetOptions() override { return &m_options; }
 
@@ -1382,20 +2277,7 @@ public:
                             "command, and the last element will be the new "
                             "command name."),
         IOHandlerDelegateMultiline("DONE") {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // This is one or more command names, which form the path to the command
-    // you want to add.
-    cmd_arg.arg_type = eArgTypeCommand;
-    cmd_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeCommand, eArgRepeatPlus);
   }
 
   ~CommandObjectCommandsScriptAdd() override = default;
@@ -1437,12 +2319,15 @@ protected:
       case 'o':
         m_overwrite_lazy = eLazyBoolYes;
         break;
+      case 'p':
+        m_parsed_command = true;
+        break;
       case 's':
         m_synchronicity =
             (ScriptedCommandSynchronicity)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat(
+          return Status::FromErrorStringWithFormat(
               "unrecognized value for synchronicity '%s'",
               option_arg.str().c_str());
         break;
@@ -1453,7 +2338,7 @@ protected:
             static_cast<lldb::CompletionType>(OptionArgParser::ToOptionEnum(
                 option_arg, definition.enum_values, eNoCompletion, error));
         if (!error.Success())
-          error.SetErrorStringWithFormat(
+          return Status::FromErrorStringWithFormat(
               "unrecognized value for command completion type '%s'",
               option_arg.str().c_str());
         m_completion_type = completion_type;
@@ -1472,6 +2357,7 @@ protected:
       m_completion_type = eNoCompletion;
       m_overwrite_lazy = eLazyBoolCalculate;
       m_synchronicity = eScriptedCommandSynchronicitySynchronous;
+      m_parsed_command = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1487,6 +2373,7 @@ protected:
     ScriptedCommandSynchronicity m_synchronicity =
         eScriptedCommandSynchronicitySynchronous;
     CompletionType m_completion_type = eNoCompletion;
+    bool m_parsed_command = false;
   };
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
@@ -1626,10 +2513,16 @@ protected:
                                       "'{0}'", m_options.m_class_name);
         return;
       }
-
-      new_cmd_sp.reset(new CommandObjectScriptingObject(
-          m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
-          m_completion_type));
+      
+      if (m_options.m_parsed_command) {
+        new_cmd_sp = CommandObjectScriptingObjectParsed::Create(m_interpreter, 
+            m_cmd_name, cmd_obj_sp, m_synchronicity, result);
+        if (!result.Succeeded())
+          return;
+      } else
+        new_cmd_sp.reset(new CommandObjectScriptingObjectRaw(
+            m_interpreter, m_cmd_name, cmd_obj_sp, m_synchronicity,
+            m_completion_type));
     }
     
     // Assume we're going to succeed...
@@ -1644,8 +2537,9 @@ protected:
       llvm::Error llvm_error =
           m_container->LoadUserSubcommand(m_cmd_name, new_cmd_sp, m_overwrite);
       if (llvm_error)
-        result.AppendErrorWithFormat("cannot add command: %s", 
-                                     llvm::toString(std::move(llvm_error)).c_str());
+        result.AppendErrorWithFormat(
+            "cannot add command: %s",
+            llvm::toString(std::move(llvm_error)).c_str());
     }
   }
 
@@ -1704,20 +2598,7 @@ public:
             interpreter, "command script delete",
             "Delete a scripted command by specifying the path to the command.",
             nullptr) {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // This is a list of command names forming the path to the command
-    // to be deleted.
-    cmd_arg.arg_type = eArgTypeCommand;
-    cmd_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeCommand, eArgRepeatPlus);
   }
 
   ~CommandObjectCommandsScriptDelete() override = default;
@@ -1788,12 +2669,13 @@ protected:
       return;
     }
     const char *leaf_cmd = command[num_args - 1].c_str();
-    llvm::Error llvm_error = container->RemoveUserSubcommand(leaf_cmd,
-                                            /* multiword not okay */ false);
+    llvm::Error llvm_error =
+        container->RemoveUserSubcommand(leaf_cmd,
+                                        /* multiword not okay */ false);
     if (llvm_error) {
-      result.AppendErrorWithFormat("could not delete command '%s': %s",
-                                   leaf_cmd, 
-                                   llvm::toString(std::move(llvm_error)).c_str());
+      result.AppendErrorWithFormat(
+          "could not delete command '%s': %s", leaf_cmd,
+          llvm::toString(std::move(llvm_error)).c_str());
       return;
     }
 
@@ -1852,20 +2734,7 @@ public:
             "Add a container command to lldb.  Adding to built-"
             "in container commands is not allowed.",
             "command container add [[path1]...] container-name") {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // This is one or more command names, which form the path to the command
-    // you want to add.
-    cmd_arg.arg_type = eArgTypeCommand;
-    cmd_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeCommand, eArgRepeatPlus);
   }
 
   ~CommandObjectCommandsContainerAdd() override = default;
@@ -1993,20 +2862,7 @@ public:
             "Delete a container command previously added to "
             "lldb.",
             "command container delete [[path1] ...] container-cmd") {
-    CommandArgumentEntry arg1;
-    CommandArgumentData cmd_arg;
-
-    // This is one or more command names, which form the path to the command
-    // you want to add.
-    cmd_arg.arg_type = eArgTypeCommand;
-    cmd_arg.arg_repetition = eArgRepeatPlus;
-
-    // There is only one variant this argument could be; put it into the
-    // argument entry.
-    arg1.push_back(cmd_arg);
-
-    // Push the data for the first argument into the m_arguments vector.
-    m_arguments.push_back(arg1);
+    AddSimpleArgumentList(eArgTypeCommand, eArgRepeatPlus);
   }
 
   ~CommandObjectCommandsContainerDelete() override = default;

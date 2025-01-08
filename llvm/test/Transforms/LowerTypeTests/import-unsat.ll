@@ -10,6 +10,7 @@
 ; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      Local:               false
 ; SUMMARY-NEXT:      CanAutoHide:         false
+; SUMMARY-NEXT:      ImportType:          0
 ; SUMMARY-NEXT:      TypeTests: [ 123 ]
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:

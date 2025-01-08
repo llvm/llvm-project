@@ -73,3 +73,30 @@ f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
 
 # [libc++] Format the code base (#74334)
 9783f28cbb155e4a8d49c12e1c60ce14dcfaf0c7
+
+# [RFC] compiler-rt builtins cleanup and refactoring
+082b89b25faae3e45a023caf51b65ca0f02f377f
+0ba22f51d128bee9d69756c56c4678097270e10b
+84da0e1bb75f8666cf222d2f600f37bebb9ea389
+
+# [NFC] clang-format utils/TableGen (#80973)
+b9079baaddfed5e604fbfaa1d81a7a1c38e78c26
+
+# [libc++][NFC] Run clang-format on libcxx/include again (#95874)
+e2c2ffbe7a1b5d9e32a2ce64279475b50c4cba5b
+
+# [lldb][nfc] Deindent ProcessGDBRemote::SetThreadStopInfo by two levels
+b32931c5b32eb0d2cf37d688b34f8548c9674c19
+
+# [libc++] Various consistency fixes to the CSV files that we use for tracking Standards Conformance
+64946fdaf9864d8279da1c30e4d7214fe13d1427
+b6262880b34629e9d7a72b5a42f315a3c9ed8139
+39c7dc7207e76e72da21cf4fedda21b5311bf62d
+e80bc777749331e9519575f416c342f7626dd14d
+7e5cd8f1b6c5263ed5e2cc03d60c8779a8d3e9f7
+
+# NFC: clang-format test_demangle.pass.cpp but keep test "lines"
+d33bf2e9df578ff7e44fd22504d6ad5a122b7ee6
+
+# [lldb][NFC] clang-format MainLoopPosix.cpp
+66bdbfbaa08fa3d8e64a7fe136a8fb717f5cdbb7

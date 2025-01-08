@@ -307,7 +307,8 @@ enum NodeType : unsigned {
 
   // Strict variants of scalar floating-point comparisons.
   // Quiet and signaling versions.
-  STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  FIRST_STRICTFP_OPCODE,
+  STRICT_FCMP = FIRST_STRICTFP_OPCODE,
   STRICT_FCMPS,
 
   // Strict variants of vector floating-point comparisons.
@@ -322,6 +323,7 @@ enum NodeType : unsigned {
   // Strict variants of VEXTEND and VROUND.
   STRICT_VEXTEND,
   STRICT_VROUND,
+  LAST_STRICTFP_OPCODE = STRICT_VROUND,
 
   // Wrappers around the inner loop of an 8- or 16-bit ATOMIC_SWAP or
   // ATOMIC_LOAD_<op>.
@@ -333,7 +335,8 @@ enum NodeType : unsigned {
   //            operand into the high bits
   // Operand 3: the negative of operand 2, for rotating the other way
   // Operand 4: the width of the field in bits (8 or 16)
-  ATOMIC_SWAPW = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  FIRST_MEMORY_OPCODE,
+  ATOMIC_SWAPW = FIRST_MEMORY_OPCODE,
   ATOMIC_LOADW_ADD,
   ATOMIC_LOADW_SUB,
   ATOMIC_LOADW_AND,
@@ -378,10 +381,14 @@ enum NodeType : unsigned {
   // Element swapping load/store.  Same operands as regular load/store.
   VLER, VSTER,
 
+  // Use STORE CLOCK FAST to store current TOD clock value.
+  STCKF,
+
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
   // a store prefetch.
-  PREFETCH
+  PREFETCH,
+  LAST_MEMORY_OPCODE = PREFETCH,
 };
 
 // Return true if OPCODE is some kind of PC-relative address.
@@ -473,7 +480,15 @@ public:
     // LD, and having the full constant in memory enables reg/mem opcodes.
     return VT != MVT::f64;
   }
+  MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const;
+
+  MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) const;
+
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
@@ -501,6 +516,8 @@ public:
   }
 
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
+  bool shouldExpandCmpUsingSelects(EVT VT) const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
@@ -563,9 +580,7 @@ public:
   getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
   /// Override to support customized stack guard loading.
-  bool useLoadStackGuardNode() const override {
-    return true;
-  }
+  bool useLoadStackGuardNode(const Module &M) const override { return true; }
   void insertSSPDeclarations(Module &M) const override {
   }
 
@@ -691,9 +706,9 @@ private:
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
                               unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
@@ -716,6 +731,7 @@ private:
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
@@ -755,6 +771,8 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
+  MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,
+                                      MachineBasicBlock *BB) const;
   MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
@@ -794,6 +812,14 @@ private:
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
+
+  bool isFullyInternal(const Function *Fn) const;
+  void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                    const Function *F, SDValue Callee) const;
+  void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                   const Function *F) const;
+  bool verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
+                               bool IsInternal) const;
 };
 
 struct SystemZVectorConstantInfo {

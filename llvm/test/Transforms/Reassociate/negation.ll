@@ -31,16 +31,16 @@ define i32 @test2(i32 %a, i32 %b, i32 %z) {
   ret i32 %f
 }
 
-define <2 x i32> @negate_vec_undefs(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
-; CHECK-LABEL: @negate_vec_undefs(
-; CHECK-NEXT:    [[E:%.*]] = mul <2 x i32> [[A:%.*]], <i32 40, i32 40>
+define <2 x i32> @negate_vec_poisons(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
+; CHECK-LABEL: @negate_vec_poisons(
+; CHECK-NEXT:    [[E:%.*]] = mul <2 x i32> [[A:%.*]], splat (i32 40)
 ; CHECK-NEXT:    [[F:%.*]] = mul <2 x i32> [[E]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[F]]
 ;
   %d = mul <2 x i32> %z, <i32 40, i32 40>
-  %c = sub <2 x i32> <i32 0, i32 undef>, %d
+  %c = sub <2 x i32> <i32 0, i32 poison>, %d
   %e = mul <2 x i32> %a, %c
-  %f = sub <2 x i32> <i32 0, i32 undef>, %e
+  %f = sub <2 x i32> <i32 0, i32 poison>, %e
   ret <2 x i32> %f
 }
 
@@ -51,7 +51,7 @@ define <2 x i32> @PR57683(<2 x i32> %x) {
 ; CHECK-NEXT:    [[PARTIAL_NEG:%.*]] = sub <2 x i32> <i32 poison, i32 0>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[PARTIAL_NEG]], <2 x i32> [[X]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[X_NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[X_NEG]], <i32 1, i32 1>
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[X_NEG]], splat (i32 1)
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[SUB]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -67,7 +67,7 @@ define <2 x float> @PR57683_FP(<2 x float> %x) {
 ; CHECK-NEXT:    [[PARTIAL_NEG:%.*]] = fsub reassoc nsz <2 x float> <float poison, float 0.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[PARTIAL_NEG]], <2 x float> [[X]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[X_NEG:%.*]] = fneg reassoc nsz <2 x float> [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = fadd reassoc nsz <2 x float> [[X_NEG]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[SUB:%.*]] = fadd reassoc nsz <2 x float> [[X_NEG]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz <2 x float> [[SUB]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;

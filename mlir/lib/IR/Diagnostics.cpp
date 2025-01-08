@@ -146,7 +146,7 @@ Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {
   // multiple lines.
   if (str.find('\n') != std::string::npos)
     *this << '\n';
-  return *this << os.str();
+  return *this << str;
 }
 
 /// Stream in a Value.
@@ -154,7 +154,7 @@ Diagnostic &Diagnostic::operator<<(Value val) {
   std::string str;
   llvm::raw_string_ostream os(str);
   val.print(os, adjustPrintingFlags(OpPrintingFlags(), severity));
-  return *this << os.str();
+  return *this << str;
 }
 
 /// Outputs this diagnostic to a stream.
@@ -168,7 +168,7 @@ std::string Diagnostic::str() const {
   std::string str;
   llvm::raw_string_ostream os(str);
   print(os);
-  return os.str();
+  return str;
 }
 
 /// Attaches a note to this diagnostic. A new location may be optionally
@@ -451,7 +451,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
     if (!llvm::isa<UnknownLoc>(loc))
       strOS << loc << ": ";
     strOS << message;
-    return mgr.PrintMessage(os, SMLoc(), getDiagKind(kind), strOS.str());
+    return mgr.PrintMessage(os, SMLoc(), getDiagKind(kind), str);
   }
 
   // Otherwise if we are displaying the source line, try to convert the file
@@ -469,7 +469,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   llvm::raw_string_ostream locOS(locStr);
   locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
         << fileLoc.getColumn();
-  llvm::SMDiagnostic diag(locOS.str(), getDiagKind(kind), message.str());
+  llvm::SMDiagnostic diag(locStr, getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
 
@@ -637,7 +637,7 @@ struct ExpectedDiag {
       regexOS << '(' << regexStr << ')';
       strToProcess = strToProcess.drop_front(regexEndIt + 2);
     }
-    substringRegex = llvm::Regex(regexOS.str());
+    substringRegex = llvm::Regex(regexStr);
     return success();
   }
 

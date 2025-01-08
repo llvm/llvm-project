@@ -9,36 +9,31 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
 
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/generic/FMA.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
-
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-#include "x86_64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-#include "aarch64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-#include "riscv/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "gpu/FMA.h"
-#endif
-
-#else
-// FMA instructions are not available
-#include "generic/FMA.h"
-#include "src/__support/CPP/type_traits.h"
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
-  return generic::fma(x, y, z);
+template <typename OutType, typename InType>
+LIBC_INLINE OutType fma(InType x, InType y, InType z) {
+  return generic::fma<OutType>(x, y, z);
 }
 
-} // namespace fputil
-} // namespace LIBC_NAMESPACE
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+template <> LIBC_INLINE float fma(float x, float y, float z) {
+  return __builtin_fmaf(x, y, z);
+}
 
-#endif
+template <> LIBC_INLINE double fma(double x, double y, double z) {
+  return __builtin_fma(x, y, z);
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H

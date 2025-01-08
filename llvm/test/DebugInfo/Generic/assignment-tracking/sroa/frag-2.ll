@@ -1,4 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - | FileCheck %s
 
 ;; $ cat test.cpp
 ;; class a {
@@ -39,8 +40,8 @@
 
 ; CHECK: store <2 x float> %agg.tmp.sroa.0.0.copyload.i, ptr %4, align 4,{{.+}}!DIAssignID ![[id1:[0-9]+]]
 ; CHECK: store <2 x float> %agg.tmp.sroa.2.0.copyload.i, ptr %n.sroa.2.4..sroa_idx, align 4,{{.+}}!DIAssignID ![[id2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.0.0.copyload.i, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[id1]], metadata ptr %4, metadata !DIExpression()), !dbg
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %agg.tmp.sroa.2.0.copyload.i, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[id2]], metadata ptr %n.sroa.2.4..sroa_idx, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(<2 x float> %agg.tmp.sroa.0.0.copyload.i, ![[var:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[id1]], ptr %4, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(<2 x float> %agg.tmp.sroa.2.0.copyload.i, ![[var]], !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[id2]], ptr %n.sroa.2.4..sroa_idx, !DIExpression(),
 
 ; CHECK: ret
 
@@ -71,7 +72,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: nounwind uwtable
 define linkonce_odr dso_local void @_ZN1BC2E1a(ptr %this, <2 x float> %d.coerce0, <2 x float> %d.coerce1) unnamed_addr #2 comdat align 2 !dbg !48 {
@@ -125,7 +126,7 @@ entry:
   %5 = bitcast ptr %o to ptr, !dbg !91
   %e.i = getelementptr inbounds %class.B, ptr %n, i64 0, i32 1, !dbg !92
   %6 = bitcast ptr %e.i to ptr, !dbg !97
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 4 dereferenceable(16) %5, ptr nonnull align 4 dereferenceable(16) %6, i64 16, i1 false), !dbg !97, !DIAssignID !98
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(16) %5, ptr nonnull align 4 dereferenceable(16) %6, i64 16, i1 false), !dbg !97, !DIAssignID !98
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !98, metadata ptr %5, metadata !DIExpression()), !dbg !74
   call void @_ZN1a1cEv(ptr nonnull %o), !dbg !99
   ret void, !dbg !100

@@ -32,9 +32,17 @@ def Canonicalizer : Pass<"canonicalize"> {
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
            "Seed the worklist in general top-down order">,
-    Option<"enableRegionSimplification", "region-simplify", "bool",
-           /*default=*/"true",
-           "Perform control flow optimizations to the region tree">,
+    Option<"enableRegionSimplification", "region-simplify", "mlir::GreedySimplifyRegionLevel",
+           /*default=*/"mlir::GreedySimplifyRegionLevel::Normal",
+           "Perform control flow optimizations to the region tree",
+             [{::llvm::cl::values(
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Disabled, "disabled",
+                "Don't run any control-flow simplification."),
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Normal, "normal",
+                "Perform simple control-flow simplifications (e.g. dead args elimination)."),
+               clEnumValN(mlir::GreedySimplifyRegionLevel::Aggressive, "aggressive",
+                "Perform aggressive control-flow simplification (e.g. block merging).")
+              )}]>,
     Option<"maxIterations", "max-iterations", "int64_t",
            /*default=*/"10",
            "Max. iterations between applying patterns / simplifying regions">,
@@ -269,13 +277,22 @@ def Inliner : Pass<"inline"> {
   let constructor = "mlir::createInlinerPass()";
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
-           /*default=*/"\"canonicalize\"", "The default optimizer pipeline used for callables">,
+           /*default=*/"\"canonicalize\"",
+           "The optimizer pipeline used for callables that do not have "
+           "a dedicated optimizer pipeline in opPipelineList">,
     ListOption<"opPipelineList", "op-pipelines", "OpPassManager",
                "Callable operation specific optimizer pipelines (in the form "
                "of `dialect.op(pipeline)`)">,
     Option<"maxInliningIterations", "max-iterations", "unsigned",
            /*default=*/"4",
            "Maximum number of iterations when inlining within an SCC">,
+    Option<"inliningThreshold", "inlining-threshold", "unsigned",
+           /*default=*/"-1U",
+           "If the ratio between the number of the operations "
+           "in the callee and the number of the operations "
+           "in the caller exceeds this value (in percentage), "
+           "then the callee is not inlined even if it is legal "
+           "to inline it">,
   ];
 }
 
@@ -314,13 +331,21 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
     ... loc(fused["original_source.cpp":1:1, "snapshot"("snapshot_source.mlir":10:10)])
     ```
   }];
-  let constructor = "mlir::createLocationSnapshotPass()";
   let options = [
     Option<"fileName", "filename", "std::string", /*default=*/"",
            "The filename to print the generated IR">,
     Option<"tag", "tag", "std::string", /*default=*/"",
            "A tag to use when fusing the new locations with the "
            "original. If unset, the locations are replaced.">,
+    Option<"enableDebugInfo", "print-debuginfo", "bool", /*default=*/"false",
+           "Print debug info in MLIR output">,
+    Option<"printGenericOpForm", "print-op-generic", "bool", /*default=*/"false",
+           "Print the generic op form">,
+    Option<"useLocalScope", "print-local-scope", "bool", /*default=*/"false",
+           "Print with local scope and inline information (eliding "
+           "aliases for attributes, types, and locations">,
+    Option<"printPrettyDebugInfo", "pretty-debuginfo", "bool", /*default=*/"false",
+           "Print pretty debug info in MLIR output">,
   ];
 }
 
@@ -541,6 +566,23 @@ def TopologicalSort : Pass<"topological-sort"> {
   }];
 
   let constructor = "mlir::createTopologicalSortPass()";
+}
+
+def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
+  let summary = "Composite fixed point pass";
+  let description = [{
+    Composite pass runs provided set of passes until fixed point or maximum
+    number of iterations reached.
+  }];
+
+  let options = [
+    Option<"name", "name", "std::string", /*default=*/"\"CompositeFixedPointPass\"",
+      "Composite pass display name">,
+    Option<"pipelineStr", "pipeline", "std::string", /*default=*/"",
+      "Composite pass inner pipeline">,
+    Option<"maxIter", "max-iterations", "int", /*default=*/"10",
+      "Maximum number of iterations if inner pipeline">,
+  ];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

@@ -40,6 +40,7 @@ class LangOptions;
 class Sema;
 class Stmt;
 class TargetInfo;
+struct IdentifierLoc;
 
 /// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
@@ -68,12 +69,14 @@ struct AvailabilityData {
   AvailabilityChange Changes[NumAvailabilitySlots];
   SourceLocation StrictLoc;
   const Expr *Replacement;
+  const IdentifierLoc *EnvironmentLoc;
 
   AvailabilityData(const AvailabilityChange &Introduced,
                    const AvailabilityChange &Deprecated,
-                   const AvailabilityChange &Obsoleted,
-                   SourceLocation Strict, const Expr *ReplaceExpr)
-    : StrictLoc(Strict), Replacement(ReplaceExpr) {
+                   const AvailabilityChange &Obsoleted, SourceLocation Strict,
+                   const Expr *ReplaceExpr, const IdentifierLoc *EnvironmentLoc)
+      : StrictLoc(Strict), Replacement(ReplaceExpr),
+        EnvironmentLoc(EnvironmentLoc) {
     Changes[IntroducedSlot] = Introduced;
     Changes[DeprecatedSlot] = Deprecated;
     Changes[ObsoletedSlot] = Obsoleted;
@@ -82,7 +85,9 @@ struct AvailabilityData {
 
 struct TypeTagForDatatypeData {
   ParsedType MatchingCType;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned LayoutCompatible : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned MustBeNull : 1;
 };
 struct PropertyData {
@@ -92,7 +97,7 @@ struct PropertyData {
       : GetterId(getterId), SetterId(setterId) {}
 };
 
-} // namespace
+} // namespace detail
 
 /// Wraps an identifier and optional source location for the identifier.
 struct IdentifierLoc {
@@ -149,33 +154,41 @@ private:
   unsigned NumArgs : 16;
 
   /// True if already diagnosed as invalid.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned Invalid : 1;
 
   /// True if this attribute was used as a type attribute.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned UsedAsTypeAttr : 1;
 
   /// True if this has the extra information associated with an
   /// availability attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsAvailability : 1;
 
   /// True if this has extra information associated with a
   /// type_tag_for_datatype attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsTypeTagForDatatype : 1;
 
   /// True if this has extra information associated with a
   /// Microsoft __delcspec(property) attribute.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsProperty : 1;
 
   /// True if this has a ParsedType
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasParsedType : 1;
 
   /// True if the processing cache is valid.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned HasProcessingCache : 1;
 
   /// A cached value.
   mutable unsigned ProcessingCache : 8;
 
   /// True if the attribute is specified using '#pragma clang attribute'.
+  LLVM_PREFERRED_TYPE(bool)
   mutable unsigned IsPragmaClangAttribute : 1;
 
   /// The location of the 'unavailable' keyword in an
@@ -224,7 +237,7 @@ private:
              const AvailabilityChange &deprecated,
              const AvailabilityChange &obsoleted, SourceLocation unavailable,
              const Expr *messageExpr, Form formUsed, SourceLocation strict,
-             const Expr *replacementExpr)
+             const Expr *replacementExpr, const IdentifierLoc *environmentLoc)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc, formUsed),
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
@@ -233,8 +246,9 @@ private:
         Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    new (getAvailabilityData()) detail::AvailabilityData(
-        introduced, deprecated, obsoleted, strict, replacementExpr);
+    new (getAvailabilityData())
+        detail::AvailabilityData(introduced, deprecated, obsoleted, strict,
+                                 replacementExpr, environmentLoc);
   }
 
   /// Constructor for objc_bridge_related attributes.
@@ -378,19 +392,17 @@ public:
   }
 
   bool isArgExpr(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<Expr*>();
+    return Arg < NumArgs && isa<Expr *>(getArg(Arg));
   }
 
-  Expr *getArgAsExpr(unsigned Arg) const {
-    return getArg(Arg).get<Expr*>();
-  }
+  Expr *getArgAsExpr(unsigned Arg) const { return cast<Expr *>(getArg(Arg)); }
 
   bool isArgIdent(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<IdentifierLoc*>();
+    return Arg < NumArgs && isa<IdentifierLoc *>(getArg(Arg));
   }
 
   IdentifierLoc *getArgAsIdent(unsigned Arg) const {
-    return getArg(Arg).get<IdentifierLoc*>();
+    return cast<IdentifierLoc *>(getArg(Arg));
   }
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
@@ -433,6 +445,12 @@ public:
     assert(getParsedKind() == AT_Availability &&
            "Not an availability attribute");
     return getAvailabilityData()->Replacement;
+  }
+
+  const IdentifierLoc *getEnvironment() const {
+    assert(getParsedKind() == AT_Availability &&
+           "Not an availability attribute");
+    return getAvailabilityData()->EnvironmentLoc;
   }
 
   const ParsedType &getMatchingCType() const {
@@ -670,6 +688,7 @@ public:
   ~AttributeFactory();
 };
 
+class ParsedAttributesView;
 class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
@@ -724,15 +743,14 @@ public:
     pool.Attrs.clear();
   }
 
+  /// Removes the attributes from \c List, which are owned by \c Pool, and adds
+  /// them at the end of this \c AttributePool.
+  void takeFrom(ParsedAttributesView &List, AttributePool &Pool);
+
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
                      ArgsUnion *args, unsigned numArgs, ParsedAttr::Form form,
                      SourceLocation ellipsisLoc = SourceLocation()) {
-    size_t temp =
-        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
-                                     detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(numArgs, 0, 0, 0, 0);
-    (void)temp;
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
@@ -749,11 +767,13 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
-    return add(new (memory) ParsedAttr(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       Param, introduced, deprecated, obsoleted,
+                                       unavailable, MessageExpr, form, strict,
+                                       ReplacementExpr, EnvironmentLoc));
   }
 
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -806,6 +826,7 @@ public:
 };
 
 class ParsedAttributesView {
+  friend class AttributePool;
   using VecTy = llvm::SmallVector<ParsedAttr *>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
@@ -937,6 +958,7 @@ public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
   ParsedAttributes &operator=(const ParsedAttributes &) = delete;
+  ParsedAttributes(ParsedAttributes &&G) = default;
 
   AttributePool &getPool() const { return pool; }
 
@@ -982,10 +1004,12 @@ public:
                      const AvailabilityChange &obsoleted,
                      SourceLocation unavailable, const Expr *MessageExpr,
                      ParsedAttr::Form form, SourceLocation strict,
-                     const Expr *ReplacementExpr) {
-    ParsedAttr *attr = pool.create(
-        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
-        obsoleted, unavailable, MessageExpr, form, strict, ReplacementExpr);
+                     const Expr *ReplacementExpr,
+                     IdentifierLoc *EnvironmentLoc) {
+    ParsedAttr *attr =
+        pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
+                    deprecated, obsoleted, unavailable, MessageExpr, form,
+                    strict, ReplacementExpr, EnvironmentLoc);
     addAtEnd(attr);
     return attr;
   }

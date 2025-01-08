@@ -1,4 +1,7 @@
-; RUN: llc %s -mtriple=x86_64-unknown-fuchsia  -o - | FileCheck %s
+; REQUIRES: x86-registered-target && aarch64-registered-target && riscv-registered-target
+; RUN: llc %s -mtriple=x86_64 -o - | FileCheck %s
+; RUN: llc %s -mtriple=aarch64 -o - | FileCheck %s
+; RUN: llc %s -mtriple=riscv64 -o - | FileCheck %s
 
 @vtable = dso_local unnamed_addr constant i32 trunc (i64 sub (i64 ptrtoint (ptr @rtti.proxy to i64), i64 ptrtoint (ptr @vtable to i64)) to i32), align 4
 @vtable_with_offset = dso_local unnamed_addr constant [2 x i32] [i32 0, i32 trunc (i64 sub (i64 ptrtoint (ptr @rtti.proxy to i64), i64 ptrtoint (ptr @vtable_with_offset to i64)) to i32)], align 4

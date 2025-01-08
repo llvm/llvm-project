@@ -41,24 +41,24 @@
 ; CHECK-O23SZ-NEXT: PGOIndirectCallPromotion
 ; CHECK-O23SZ-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O23SZ-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
-; CHECK-O23SZ-NEXT: Running pass: IPSCCPPass
+; CHECK-O23SZ-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
+; CHECK-O23SZ-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O23SZ-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
+; CHECK-O23SZ-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph{{.*}}>
+; CHECK-O23SZ-NEXT: Running pass: PostOrderFunctionAttrsPass
+; CHECK-O23SZ-NEXT: Running analysis: AAManager
+; CHECK-O23SZ-NEXT: Running analysis: BasicAA
 ; CHECK-O23SZ-NEXT: Running analysis: AssumptionAnalysis on foo
+; CHECK-O23SZ-NEXT: Running analysis: ScopedNoAliasAA
+; CHECK-O23SZ-NEXT: Running analysis: TypeBasedAA
+; CHECK-O23SZ-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-O23SZ-NEXT: Running pass: ArgumentPromotionPass
+; CHECK-O23SZ-NEXT: Running pass: SROAPass
+; CHECK-O23SZ-NEXT: Running pass: IPSCCPPass
 ; CHECK-O23SZ-NEXT: Running pass: CalledValuePropagationPass
-; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC
-; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-O1-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph{{.*}}>
-; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
-; CHECK-O-NEXT: Running analysis: AAManager
-; CHECK-O-NEXT: Running analysis: BasicAA
-; CHECK-O1-NEXT: Running analysis: AssumptionAnalysis on foo
-; CHECK-O1-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-O1-NEXT: Running analysis: DominatorTreeAnalysis
-; CHECK-O-NEXT: Running analysis: ScopedNoAliasAA
-; CHECK-O-NEXT: Running analysis: TypeBasedAA
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
+; CHECK-O1-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-O1-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalSplitPass
 ; CHECK-O-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
@@ -67,8 +67,10 @@
 ; CHECK-O23SZ-NEXT: Running pass: ConstantMergePass
 ; CHECK-O23SZ-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O23SZ-NEXT: Running pass: InstCombinePass
+; CHECK-O23SZ-NEXT: Running analysis: LastRunTrackingAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-EP-Peephole-NEXT: Running pass: NoOpFunctionPass
+; CHECK-O23SZ-NEXT: Running pass: ExpandVariadicsPass
 ; CHECK-O23SZ-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O23SZ-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: InlinerPass

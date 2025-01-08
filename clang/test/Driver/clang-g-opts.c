@@ -42,8 +42,3 @@
 
 // CHECK-WITH-G-STANDALONE: "-debug-info-kind=standalone"
 // CHECK-WITH-G-STANDALONE: "-dwarf-version=2"
-
-/// TODO: Special case before R_RISCV_SET_ULEB128 linker support becomes more widely available.
-// RUN: %clang -### -S %s -g --target=riscv64-linux-gnu 2>&1 | FileCheck --check-prefix=VERSION4 %s
-// RUN: %clang -### -S %s -g --target=riscv64-unknown-elf 2>&1 | FileCheck --check-prefix=VERSION4 %s
-// VERSION4: "-dwarf-version=4"

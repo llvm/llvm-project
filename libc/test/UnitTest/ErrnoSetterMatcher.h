@@ -12,11 +12,12 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 namespace internal {
@@ -109,8 +110,8 @@ public:
 
   bool match(T got) {
     actual_return = got;
-    actual_errno = libc_errno;
-    libc_errno = 0;
+    actual_errno = LIBC_NAMESPACE::libc_errno;
+    LIBC_NAMESPACE::libc_errno = 0;
     if constexpr (ignore_errno())
       return return_cmp.compare(actual_return);
     else
@@ -161,15 +162,27 @@ static internal::ErrnoSetterMatcher<RetT> Fails(int ExpectedErrno,
                                             EQ(ExpectedErrno));
 }
 
+template <typename RetT = int> class ErrnoSetterMatcherBuilder {
+public:
+  template <typename T> using Cmp = internal::Comparator<T>;
+  ErrnoSetterMatcherBuilder(Cmp<RetT> cmp) : return_cmp(cmp) {}
+
+  internal::ErrnoSetterMatcher<RetT> with_errno(Cmp<int> cmp) {
+    return internal::ErrnoSetterMatcher<RetT>(return_cmp, cmp);
+  }
+
+private:
+  Cmp<RetT> return_cmp;
+};
+
 template <typename RetT>
-static internal::ErrnoSetterMatcher<RetT>
-returns(internal::Comparator<RetT> cmp) {
-  return internal::ErrnoSetterMatcher<RetT>(cmp);
+static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
+  return ErrnoSetterMatcherBuilder<RetT>(cmp);
 }
 
 } // namespace ErrnoSetterMatcher
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

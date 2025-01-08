@@ -9,23 +9,42 @@
 // RUN:     -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-C %s
-// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-none-unknown-eabi"
+// CHECK-V6M-C:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
 // CHECK-V6M-C-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-C-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECk-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
+// CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
 // CHECK-V6M-C-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-V6M-C-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-C-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
-// CHECK-V6M-C-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "{{.*}}.tmp.out"
+// CHECK-V6M-C-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-C-SAME: "-lc"
+// CHECK-V6M-C-SAME: "--target2=rel" "-o" "{{.*}}.tmp.out"
 
 // RUN: %clang %s -### --target=armv6m-none-eabi -nostdlibinc -nobuiltininc 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBINC %s
 // RUN: %clang %s -### --target=armv6m-none-eabi -nostdinc 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBINC %s
 // CHECK-V6M-LIBINC-NOT: "-internal-isystem"
+
+// RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_baremetal_tree/bin \
+// RUN:   | FileCheck --check-prefix=CHECK-V6M-TREE %s
+// CHECK-V6M-TREE:      InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK-V6M-TREE:      "-cc1" "-triple" "thumbv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-TREE-SAME: {{^}} "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-TREE-SAME: "-internal-isystem" "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}include{{[/\\]+}}armv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
+// CHECK-V6M-TREE-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-TREE-SAME: "[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}armv6m-unknown-none-eabi{{[/\\]+}}crt0.o"
+// CHECK-V6M-TREE-SAME: "-L[[INSTALLED_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}armv6m-unknown-none-eabi"
+// CHECK-V6M-TREE-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-TREE-SAME: "-lc"
+// CHECK-V6M-TREE-SAME: "--target2=rel" "-o" "{{.*}}.tmp.out"
 
 // RUN: %clang %s -### --target=armv7m-vendor-none-eabi -rtlib=compiler-rt 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
@@ -35,18 +54,23 @@
 // CHECK-ARMV7M-PER-TARGET: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-ARMV7M-PER-TARGET: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-ARMV7M-PER-TARGET: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-ARMV7M-PER_TARGET: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-ARMV7M-PER-TARGET: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
 // CHECK-ARMV7M-PER-TARGET: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}armv7m-vendor-none-eabi
-// CHECK-ARMV7M-PER-TARGET: "-lc" "-lm" "-lclang_rt.builtins"
+// CHECK-ARMV7M-PER-TARGET: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-ARMV7M-PER-TARGET: "-lc"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-DEFAULTCXX %s
 // CHECK-V6M-DEFAULTCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-DEFAULTCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
+// CHECK-V6M-DEFAULTCXX-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
 // CHECK-V6M-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
-// CHECK-V6M-DEFAULTCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
+// CHECK-V6M-DEFAULTCXX-SAME: "-lc++"
+// CHECK-V6M-DEFAULTCXX-SAME: "-lm"
+// CHECK-V6M-DEFAULTCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-DEFAULTCXX-SAME: "-lc"
+// CHECK-V6M-DEFAULTCXX-SAME: "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi -stdlib=libc++ 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm | FileCheck --check-prefix=CHECK-V6M-LIBCXX %s
@@ -55,9 +79,11 @@
 // CHECK-V6M-LIBCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-V6M-LIBCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
 // CHECK-V6M-LIBCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
-// CHECK-V6M-LIBCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-LIBCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
+// CHECK-V6M-LIBCXX-SAME: "-lc++"
+// CHECK-V6M-LIBCXX-SAME: "-lm"
+// CHECK-V6M-LIBCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-LIBCXX-SAME: "-lc"
+// CHECK-V6M-LIBCXX-SAME: "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
@@ -68,9 +94,10 @@
 // CHECK-V6M-LIBSTDCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}6.0.0"
 // CHECK-V6M-LIBSTDCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
 // CHECK-V6M-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
-// CHECK-V6M-LIBSTDCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-LIBSTDCXX-SAME: "-lstdc++" "-lsupc++" "-lunwind"
-// CHECK-V6M-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m" "--target2=rel" "-o" "a.out"
+// CHECK-V6M-LIBSTDCXX-SAME: "-lstdc++" "-lm"
+// CHECK-V6M-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-LIBSTDCXX-SAME: "-lc"
+// CHECK-V6M-LIBSTDCXX-SAME: "--target2=rel" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=armv6m-none-eabi 2>&1 \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
@@ -79,7 +106,6 @@
 // CHECK-V6M-NDL: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-NDL: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic" "-EL"
 // CHECK-V6M-NDL-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
-// CHECK-V6M-NDL-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 
 // RUN: rm -rf %T/baremetal_cxx_sysroot
 // RUN: mkdir -p %T/baremetal_cxx_sysroot/usr/include/c++/v1
@@ -93,9 +119,9 @@
 // CHECK-V6M-LIBCXX-USR-SAME: "-internal-isystem" "{{[^"]+}}baremetal_cxx_sysroot{{[/\\]+}}usr{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-V6M-LIBCXX-USR: "{{[^"]*}}-Bstatic"
 // CHECK-V6M-LIBCXX-USR-SAME: "-L{{[^"]*}}{{[/\\]+}}baremetal_cxx_sysroot{{[/\\]+}}lib"
-// CHECK-V6M-LIBCXX-USR-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-V6M-LIBCXX-USR-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-V6M-LIBCXX-USR-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
+// CHECK-V6M-LIBCXX-USR-SAME: "-lc++" "-lm"
+// CHECK-V6M-LIBCXX-USR-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-V6M-LIBCXX-USR-SAME: "-lc"
 
 // RUN: %clangxx --target=arm-none-eabi -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL
@@ -109,7 +135,11 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL-POSIX
 // CHECK-THREAD-MODEL-POSIX: Thread model: posix
 
-// RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc -v %s 2>&1 \
+// RUN: %clangxx -### --target=arm-none-eabi -nostartfiles -v %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-NOSTARTFILES
+// CHECK-NOSTARTFILES-NOT: "crt0.o"
+
+// RUN: %clang -### --target=arm-none-eabi -rtlib=libgcc --unwindlib=libgcc -v %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
@@ -178,8 +208,9 @@
 // CHECK-RV64-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-RV64-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
-// CHECK-RV64-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV64-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv64" "-X" "-o" "{{.*}}.tmp.out"
+// CHECK-RV64-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV64-SAME: "-lc"
+// CHECK-RV64-SAME: "-X" "-o" "{{.*}}.tmp.out"
 
 // RUN: %clangxx %s -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -187,9 +218,10 @@
 // CHECK-RV64-DEFAULTCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-RV64-DEFAULTCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv64_tree{{[/\\]+}}riscv64-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV64-DEFAULTCXX-SAME: "-L[[RESOURCE_DIR]]{{.*}}{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV64-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-RV64-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv64" "-X" "-o" "a.out"
+// CHECK-RV64-DEFAULTCXX-SAME: "-lc++" "-lm"
+// CHECK-RV64-DEFAULTCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV64-DEFAULTCXX-SAME: "-lc"
+// CHECK-RV64-DEFAULTCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clangxx %s -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -200,9 +232,10 @@
 // CHECK-RV64-LIBCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-RV64-LIBCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-LIBCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv64_tree{{[/\\]+}}riscv64-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV64-LIBCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV64-LIBCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-RV64-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv64" "-X" "-o" "a.out"
+// CHECK-RV64-LIBCXX-SAME: "-lc++" "-lm"
+// CHECK-RV64-LIBCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV64-LIBCXX-SAME: "-lc"
+// CHECK-RV64-LIBCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
@@ -213,9 +246,10 @@
 // CHECK-RV64-LIBSTDCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}8.0.1"
 // CHECK-RV64-LIBSTDCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv64_tree{{[/\\]+}}riscv64-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV64-LIBSTDCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV64-LIBSTDCXX-SAME: "-lstdc++" "-lsupc++" "-lunwind"
-// CHECK-RV64-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv64" "-X" "-o" "a.out"
+// CHECK-RV64-LIBSTDCXX-SAME: "-lstdc++" "-lm"
+// CHECK-RV64-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV64-LIBSTDCXX-SAME: "-lc"
+// CHECK-RV64-LIBSTDCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     -L some/directory/user/asked/for \
@@ -230,8 +264,9 @@
 // CHECK-RV32-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-RV32-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
-// CHECK-RV32-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV32-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv32" "-X" "-o" "a.out"
+// CHECK-RV32-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV32-SAME: "-lc"
+// CHECK-RV32-SAME: "-X" "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -239,9 +274,10 @@
 // CHECK-RV32-DEFAULTCXX: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-RV32-DEFAULTCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32-DEFAULTCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv32_tree{{[/\\]+}}riscv32-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV32-DEFAULTCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV32-DEFAULTCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-RV32-DEFAULTCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv32" "-X" "-o" "a.out"
+// CHECK-RV32-DEFAULTCXX-SAME: "-lc++" "-lm"
+// CHECK-RV32-DEFAULTCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV32-DEFAULTCXX-SAME: "-lc"
+// CHECK-RV32-DEFAULTCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -252,9 +288,9 @@
 // CHECK-RV32-LIBCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-RV32-LIBCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32-LIBCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv32_tree{{[/\\]+}}riscv32-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV32-LIBCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV32-LIBCXX-SAME: "-lc++" "-lc++abi" "-lunwind"
-// CHECK-RV32-LIBCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv32" "-X" "-o" "a.out"
+// CHECK-RV32-LIBCXX-SAME: "-lc++" "-lm"
+// CHECK-RV32-LIBCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV32-LIBCXX-SAME: "-X" "-o" "a.out"
 
 // RUN: %clangxx %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -265,9 +301,9 @@
 // CHECK-RV32-LIBSTDCXX-SAME: "-internal-isystem" "{{[^"]+}}{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}8.0.1"
 // CHECK-RV32-LIBSTDCXX: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32-LIBSTDCXX-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv32_tree{{[/\\]+}}riscv32-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV32-LIBSTDCXX-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-RV32-LIBSTDCXX-SAME: "-lstdc++" "-lsupc++" "-lunwind"
-// CHECK-RV32-LIBSTDCXX-SAME: "-lc" "-lm" "-lclang_rt.builtins-riscv32" "-X" "-o" "a.out"
+// CHECK-RV32-LIBSTDCXX-SAME: "-lstdc++" "-lm"
+// CHECK-RV32-LIBSTDCXX-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-RV32-LIBSTDCXX-SAME: "-lc" "-X" "-o" "a.out"
 
 // RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     -nostdlibinc -nobuiltininc \
@@ -286,7 +322,6 @@
 // CHECK-RV64-NDL: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-RV64-NDL: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64-NDL-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}basic_riscv64_tree{{[/\\]+}}riscv64-unknown-elf{{[/\\]+}}lib"
-// CHECK-RV64-NDL-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 
 // RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
 // RUN:     -march=rv64imafdc -mabi=lp64d \
@@ -306,7 +341,6 @@
 // CHECK-RV64FD-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV64FD-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV64FD-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d{{[/\\]+}}lib"
-// CHECK-RV64FD-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv64imafdc{{[/\\]+}}lp64d"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     -march=rv32i -mabi=ilp32 \
@@ -326,7 +360,6 @@
 // CHECK-RV32I-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV32I-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32I-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32i{{[/\\]+}}ilp32{{[/\\]+}}lib"
-// CHECK-RV32I-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32i{{[/\\]+}}ilp32"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     -march=rv32im -mabi=ilp32 \
@@ -346,7 +379,6 @@
 // CHECK-RV32IM-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV32IM-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32IM-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32im{{[/\\]+}}ilp32{{[/\\]+}}lib"
-// CHECK-RV32IM-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32im{{[/\\]+}}ilp32"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf \
 // RUN:     -march=rv32iac -mabi=ilp32 \
@@ -361,7 +393,6 @@
 // CHECK-RV32IAC-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV32IAC-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32IAC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32iac{{[/\\]+}}ilp32{{[/\\]+}}lib"
-// CHECK-RV32IAC-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32iac{{[/\\]+}}ilp32"
 
 // RUN: %clang %s -### 2>&1 --target=riscv32-unknown-elf -march=rv32imafc -mabi=ilp32f \
 // RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
@@ -383,7 +414,6 @@
 // CHECK-RV32IMAFC-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-RV32IMAFC-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
-// CHECK-RV32IMAFC-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=powerpc-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCEABI %s
@@ -395,8 +425,9 @@
 // CHECK-PPCEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 // CHECK-PPCEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-PPCEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
-// CHECK-PPCEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-PPCEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc" "-o" "a.out"
+// CHECK-PPCEABI-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PPCEABI-SAME: "-lc"
+// CHECK-PPCEABI-SAME: "-o" "a.out"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64EABI %s
@@ -408,8 +439,9 @@
 // CHECK-PPC64EABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 // CHECK-PPC64EABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-PPC64EABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
-// CHECK-PPC64EABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-PPC64EABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc64" "-o" "a.out"
+// CHECK-PPC64EABI-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PPC64EABI-SAME: "-lc"
+// CHECK-PPC64EABI-SAME: "-o" "a.out"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=powerpcle-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCLEEABI %s
@@ -421,8 +453,9 @@
 // CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 // CHECK-PPCLEEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-PPCLEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
-// CHECK-PPCLEEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-PPCLEEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpcle" "-o" "a.out"
+// CHECK-PPCLEEABI-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PPCLEEABI-SAME: "-lc"
+// CHECK-PPCLEEABI-SAME: "-o" "a.out"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64le-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LEEABI %s
@@ -434,8 +467,9 @@
 // CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 // CHECK-PPC64LEEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
 // CHECK-PPC64LEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
-// CHECK-PPC64LEEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
-// CHECK-PPC64LEEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc64le" "-o" "a.out"
+// CHECK-PPC64LEEABI-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PPC64LEEABI-SAME: "-lc"
+// CHECK-PPC64LEEABI-SAME: "-o" "a.out"
 
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
@@ -446,8 +480,8 @@
 // RUN:     --target=armv6m-none-eabi \
 // RUN:     --sysroot=%T/baremetal_clang_rt_noarch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-NOARCH %s
-// CHECK-CLANGRT-NOARCH: "-lclang_rt.builtins"
-// CHECK-CLANGRT-NOARCH-NOT: "-lclang_rt.builtins-armv6m"
+// CHECK-CLANGRT-NOARCH: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-CLANGRT-NOARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
 // Check that compiler-rt library with the arch filename suffix will be
 // used if present.
@@ -458,5 +492,17 @@
 // RUN:     --target=armv6m-none-eabi \
 // RUN:     --sysroot=%T/baremetal_clang_rt_arch \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARCH %s
-// CHECK-CLANGRT-ARCH: "-lclang_rt.builtins-armv6m"
-// CHECK-CLANGRT-ARCH-NOT: "-lclang_rt.builtins"
+// CHECK-CLANGRT-ARCH: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-CLANGRT-ARCH-NOT: "{{[^"]*}}libclang_rt.builtins.a"
+
+// Check that "--no-relax" is forwarded to the linker for RISC-V.
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf -nostdinc -mno-relax \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-NORELAX %s
+// CHECK-RV64-NORELAX: "--no-relax"
+
+// Check that "--no-relax" is not forwarded to the linker for RISC-V.
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf -nostdinc \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
+// CHECK-RV64-RELAX-NOT: "--no-relax"

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
-; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
+; RUN: llc < %s -mtriple=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
+; RUN: llc < %s -mtriple=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to
@@ -20,21 +20,21 @@ define void @intarg(i8  %a0,   ; %i0
                     i8  %a1,   ; %i1
                     i16 %a2,   ; %i2
                     i32 %a3,   ; %i3
-                    i8* %a4,   ; %i4
+                    ptr %a4,   ; %i4
                     i32 %a5,   ; %i5
                     i32 signext %a6,   ; [%fp+BIAS+176]
-                    i8* %a7) { ; [%fp+BIAS+184]
-  store volatile i8 %a0, i8* %a4
-  store volatile i8 %a1, i8* %a4
-  %p16 = bitcast i8* %a4 to i16*
-  store volatile i16 %a2, i16* %p16
-  %p32 = bitcast i8* %a4 to i32*
-  store volatile i32 %a3, i32* %p32
-  %pp = bitcast i8* %a4 to i8**
-  store volatile i8* %a4, i8** %pp
-  store volatile i32 %a5, i32* %p32
-  store volatile i32 %a6, i32* %p32
-  store volatile i8* %a7, i8** %pp
+                    ptr %a7) { ; [%fp+BIAS+184]
+  store volatile i8 %a0, ptr %a4
+  store volatile i8 %a1, ptr %a4
+  %p16 = bitcast ptr %a4 to ptr
+  store volatile i16 %a2, ptr %p16
+  %p32 = bitcast ptr %a4 to ptr
+  store volatile i32 %a3, ptr %p32
+  %pp = bitcast ptr %a4 to ptr
+  store volatile ptr %a4, ptr %pp
+  store volatile i32 %a5, ptr %p32
+  store volatile i32 %a6, ptr %p32
+  store volatile ptr %a7, ptr %pp
   ret void
 }
 
@@ -49,8 +49,8 @@ define void @intarg(i8  %a0,   ; %i0
 ; CHECK: call intarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
-define void @call_intarg(i32 %i0, i8* %i1) {
-  call void @intarg(i8 0, i8 1, i16 2, i32 3, i8* undef, i32 5, i32 signext %i0, i8* %i1)
+define void @call_intarg(i32 %i0, ptr %i1) {
+  call void @intarg(i8 0, i8 1, i16 2, i32 3, ptr undef, i32 5, i32 signext %i0, ptr %i1)
   ret void
 }
 
@@ -128,13 +128,13 @@ define double @floatarg(float %a0,    ; %f1
 ; CHECK-NOT: add %sp
 ; CHECK: restore
 
-define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
+define void @call_floatarg(float %f1, double %d2, float %f5, ptr %p) {
   %r = call double @floatarg(float %f5, double %d2, double %d2, double %d2,
                              float %f5, float %f5,  float %f5,  float %f5,
                              float %f5, float %f5,  float %f5,  float %f5,
                              float %f5, float %f5,  float %f5,  float %f5,
                              float %f1, double %d2)
-  store double %r, double* %p
+  store double %r, ptr %p
   ret void
 }
 
@@ -161,14 +161,14 @@ define void @mixedarg(i8 %a0,      ; %i0
                       i13 %a4,     ; %i4
                       float %a5,   ; %f11
                       i64 %a6,     ; [%fp+BIAS+176]
-                      double *%a7, ; [%fp+BIAS+184]
+                      ptr %a7, ; [%fp+BIAS+184]
                       double %a8,  ; %d16
-                      i16* %a9) {  ; [%fp+BIAS+200]
+                      ptr %a9) {  ; [%fp+BIAS+200]
   %d1 = fpext float %a1 to double
   %s3 = fadd double %a3, %d1
   %s8 = fadd double %a8, %s3
-  store double %s8, double* %a7
-  store i16 %a2, i16* %a9
+  store double %s8, ptr %a7
+  store i16 %a2, ptr %a9
   ret void
 }
 
@@ -183,7 +183,7 @@ define void @mixedarg(i8 %a0,      ; %i0
 ; CHECK-NOT: add %sp
 ; CHECK: restore
 
-define void @call_mixedarg(i64 %i0, double %f2, i16* %i2) {
+define void @call_mixedarg(i64 %i0, double %f2, ptr %i2) {
   call void @mixedarg(i8 undef,
                       float undef,
                       i16 undef,
@@ -191,9 +191,9 @@ define void @call_mixedarg(i64 %i0, double %f2, i16* %i2) {
                       i13 undef,
                       float undef,
                       i64 %i0,
-                      double* undef,
+                      ptr undef,
                       double %f2,
-                      i16* %i2)
+                      ptr %i2)
   ret void
 }
 
@@ -221,7 +221,7 @@ define i32 @inreg_fi(i32 inreg %a0,     ; high bits of %i0
 ; SOFT:  sllx %i1, 32, %i1
 ; SOFT:  or %i1, %i0, %o0
 ; CHECK: call inreg_fi
-define void @call_inreg_fi(i32* %p, i32 %i1, float %f5) {
+define void @call_inreg_fi(ptr %p, i32 %i1, float %f5) {
   %x = call i32 @inreg_fi(i32 inreg %i1, float inreg %f5)
   ret void
 }
@@ -244,7 +244,7 @@ define float @inreg_ff(float inreg %a0,   ; %f0
 ; SOFT: sllx %i1, 32, %i1
 ; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_ff
-define void @call_inreg_ff(i32* %p, float %f3, float %f5) {
+define void @call_inreg_ff(ptr %p, float %f3, float %f5) {
   %x = call float @inreg_ff(float inreg %f3, float inreg %f5)
   ret void
 }
@@ -268,7 +268,7 @@ define i32 @inreg_if(float inreg %a0, ; %f0
 ; SOFT: sllx %i1, 32, %i1
 ; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_if
-define void @call_inreg_if(i32* %p, float %f3, i32 %i2) {
+define void @call_inreg_if(ptr %p, float %f3, i32 %i2) {
   %x = call i32 @inreg_if(float inreg %f3, i32 inreg %i2)
   ret void
 }
@@ -288,7 +288,7 @@ define i32 @inreg_ii(i32 inreg %a0,   ; high bits of %i0
 ; CHECK: sllx %i1, 32, [[R1:%[gilo][0-7]]]
 ; CHECK: or [[R1]], [[R2]], %o0
 ; CHECK: call inreg_ii
-define void @call_inreg_ii(i32* %p, i32 %i1, i32 %i2) {
+define void @call_inreg_ii(ptr %p, i32 %i1, i32 %i2) {
   %x = call i32 @inreg_ii(i32 inreg %i1, i32 inreg %i2)
   ret void
 }
@@ -299,11 +299,11 @@ define void @call_inreg_ii(i32* %p, i32 %i1, i32 %i2) {
 ; HARD: ld [%i3], %f2
 ; SOFT: ld [%i3], %i1
 define { i32, float } @ret_i32_float_pair(i32 %a0, i32 %a1,
-                                          i32* %p, float* %q) {
-  %r1 = load i32, i32* %p
+                                          ptr %p, ptr %q) {
+  %r1 = load i32, ptr %p
   %rv1 = insertvalue { i32, float } undef, i32 %r1, 0
-  store i32 0, i32* %p
-  %r2 = load float, float* %q
+  store i32 0, ptr %p
+  %r2 = load float, ptr %q
   %rv2 = insertvalue { i32, float } %rv1, float %r2, 1
   ret { i32, float } %rv2
 }
@@ -313,13 +313,13 @@ define { i32, float } @ret_i32_float_pair(i32 %a0, i32 %a1,
 ; CHECK: st %o0, [%i0]
 ; HARD: st %f2, [%i1]
 ; SOFT: st %o1, [%i1]
-define void @call_ret_i32_float_pair(i32* %i0, float* %i1) {
+define void @call_ret_i32_float_pair(ptr %i0, ptr %i1) {
   %rv = call { i32, float } @ret_i32_float_pair(i32 undef, i32 undef,
-                                                i32* undef, float* undef)
+                                                ptr undef, ptr undef)
   %e0 = extractvalue { i32, float } %rv, 0
-  store i32 %e0, i32* %i0
+  store i32 %e0, ptr %i0
   %e1 = extractvalue { i32, float } %rv, 1
-  store float %e1, float* %i1
+  store float %e1, ptr %i1
   ret void
 }
 
@@ -330,11 +330,11 @@ define void @call_ret_i32_float_pair(i32* %i0, float* %i1) {
 ; SOFT: ld [%i3], %i1
 ; CHECK: sllx [[R]], 32, %i0
 define inreg { i32, float } @ret_i32_float_packed(i32 %a0, i32 %a1,
-                                                  i32* %p, float* %q) {
-  %r1 = load i32, i32* %p
+                                                  ptr %p, ptr %q) {
+  %r1 = load i32, ptr %p
   %rv1 = insertvalue { i32, float } undef, i32 %r1, 0
-  store i32 0, i32* %p
-  %r2 = load float, float* %q
+  store i32 0, ptr %p
+  %r2 = load float, ptr %q
   %rv2 = insertvalue { i32, float } %rv1, float %r2, 1
   ret { i32, float } %rv2
 }
@@ -345,13 +345,13 @@ define inreg { i32, float } @ret_i32_float_packed(i32 %a0, i32 %a1,
 ; CHECK: st [[R]], [%i0]
 ; HARD: st %f1, [%i1]
 ; SOFT: st %o0, [%i1]
-define void @call_ret_i32_float_packed(i32* %i0, float* %i1) {
+define void @call_ret_i32_float_packed(ptr %i0, ptr %i1) {
   %rv = call { i32, float } @ret_i32_float_packed(i32 undef, i32 undef,
-                                                  i32* undef, float* undef)
+                                                  ptr undef, ptr undef)
   %e0 = extractvalue { i32, float } %rv, 0
-  store i32 %e0, i32* %i0
+  store i32 %e0, ptr %i0
   %e1 = extractvalue { i32, float } %rv, 1
-  store float %e1, float* %i1
+  store float %e1, ptr %i1
   ret void
 }
 
@@ -363,11 +363,11 @@ define void @call_ret_i32_float_packed(i32* %i0, float* %i1) {
 ; CHECK: sllx [[R2]], 32, [[R3:%[gilo][0-7]]]
 ; CHECK: or [[R3]], [[R1]], %i0
 define inreg { i32, i32 } @ret_i32_packed(i32 %a0, i32 %a1,
-                                          i32* %p, i32* %q) {
-  %r1 = load i32, i32* %p
+                                          ptr %p, ptr %q) {
+  %r1 = load i32, ptr %p
   %rv1 = insertvalue { i32, i32 } undef, i32 %r1, 1
-  store i32 0, i32* %p
-  %r2 = load i32, i32* %q
+  store i32 0, ptr %p
+  %r2 = load i32, ptr %q
   %rv2 = insertvalue { i32, i32 } %rv1, i32 %r2, 0
   ret { i32, i32 } %rv2
 }
@@ -377,13 +377,13 @@ define inreg { i32, i32 } @ret_i32_packed(i32 %a0, i32 %a1,
 ; CHECK: srlx %o0, 32, [[R:%[gilo][0-7]]]
 ; CHECK: st [[R]], [%i0]
 ; CHECK: st %o0, [%i1]
-define void @call_ret_i32_packed(i32* %i0, i32* %i1) {
+define void @call_ret_i32_packed(ptr %i0, ptr %i1) {
   %rv = call { i32, i32 } @ret_i32_packed(i32 undef, i32 undef,
-                                          i32* undef, i32* undef)
+                                          ptr undef, ptr undef)
   %e0 = extractvalue { i32, i32 } %rv, 0
-  store i32 %e0, i32* %i0
+  store i32 %e0, ptr %i0
   %e1 = extractvalue { i32, i32 } %rv, 1
-  store i32 %e1, i32* %i1
+  store i32 %e1, ptr %i1
   ret void
 }
 
@@ -440,12 +440,12 @@ entry:
 define i32 @test_large_stack() {
 entry:
   %buffer1 = alloca [16384 x i8], align 8
-  %buffer1.sub = getelementptr inbounds [16384 x i8], [16384 x i8]* %buffer1, i32 0, i32 0
-  %0 = call i32 @use_buf(i32 16384, i8* %buffer1.sub)
+  %buffer1.sub = getelementptr inbounds [16384 x i8], ptr %buffer1, i32 0, i32 0
+  %0 = call i32 @use_buf(i32 16384, ptr %buffer1.sub)
   ret i32 %0
 }
 
-declare i32 @use_buf(i32, i8*)
+declare i32 @use_buf(i32, ptr)
 
 ; CHECK-LABEL: test_fp128_args:
 ; HARD-DAG:   std %f0, [%fp+{{.+}}]

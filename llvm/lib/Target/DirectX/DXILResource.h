@@ -18,6 +18,7 @@
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include <cstdint>
 
 namespace llvm {
@@ -40,19 +41,19 @@ protected:
   void write(LLVMContext &Ctx, MutableArrayRef<Metadata *> Entries) const;
 
   void print(raw_ostream &O, StringRef IDPrefix, StringRef BindingPrefix) const;
-  using Kinds = hlsl::ResourceKind;
-  static StringRef getKindName(Kinds Kind);
-  static void printKind(Kinds Kind, unsigned Alignment, raw_ostream &OS,
-                        bool SRV = false, bool HasCounter = false,
-                        uint32_t SampleCount = 0);
+  static StringRef getKindName(dxil::ResourceKind Kind);
+  static void printKind(dxil::ResourceKind Kind, unsigned Alignment,
+                        raw_ostream &OS, bool SRV = false,
+                        bool HasCounter = false, uint32_t SampleCount = 0);
 
-  static StringRef getElementTypeName(hlsl::ElementType CompType);
-  static void printElementType(Kinds Kind, hlsl::ElementType CompType,
-                               unsigned Alignment, raw_ostream &OS);
+  static StringRef getElementTypeName(dxil::ElementType CompType);
+  static void printElementType(dxil::ResourceKind Kind,
+                               dxil::ElementType CompType, unsigned Alignment,
+                               raw_ostream &OS);
 
 public:
   struct ExtendedProperties {
-    std::optional<hlsl::ElementType> ElementType;
+    std::optional<dxil::ElementType> ElementType;
 
     // The value ordering of this enumeration is part of the DXIL ABI. Elements
     // can only be added to the end, and not removed.
@@ -68,7 +69,7 @@ public:
 };
 
 class UAVResource : public ResourceBase {
-  ResourceBase::Kinds Shape;
+  dxil::ResourceKind Shape;
   bool GloballyCoherent;
   bool HasCounter;
   bool IsROV;
@@ -102,6 +103,7 @@ template <typename T> class ResourceTable {
 public:
   ResourceTable(StringRef Name) : MDName(Name) {}
   void collect(Module &M);
+  bool empty() const { return Data.empty(); }
   MDNode *write(Module &M) const;
   void print(raw_ostream &O) const;
 };
@@ -116,8 +118,12 @@ class Resources {
 
 public:
   void collect(Module &M);
-  void write(Module &M) const;
-  void print(raw_ostream &O) const;
+  bool hasUAVs() const { return !UAVs.empty(); }
+  Metadata *writeUAVs(Module &M) const;
+  void printUAVs(raw_ostream &OS) const;
+  bool hasCBuffers() const { return !CBuffers.empty(); }
+  Metadata *writeCBuffers(Module &M) const;
+  void printCBuffers(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 };
 

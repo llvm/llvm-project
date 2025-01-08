@@ -24,8 +24,11 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -165,6 +168,69 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   return Attribute(PA);
 }
 
+Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
+                         const ConstantRange &CR) {
+  assert(Attribute::isConstantRangeAttrKind(Kind) &&
+         "Not a ConstantRange attribute");
+  assert(!CR.isFullSet() && "ConstantRange attribute must not be full");
+  LLVMContextImpl *pImpl = Context.pImpl;
+  FoldingSetNodeID ID;
+  ID.AddInteger(Kind);
+  CR.getLower().Profile(ID);
+  CR.getUpper().Profile(ID);
+
+  void *InsertPoint;
+  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+
+  if (!PA) {
+    // If we didn't find any existing attributes of the same shape then create a
+    // new one and insert it.
+    PA = new (pImpl->ConstantRangeAttributeAlloc.Allocate())
+        ConstantRangeAttributeImpl(Kind, CR);
+    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+  }
+
+  // Return the Attribute that we found or created.
+  return Attribute(PA);
+}
+
+Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
+                         ArrayRef<ConstantRange> Val) {
+  assert(Attribute::isConstantRangeListAttrKind(Kind) &&
+         "Not a ConstantRangeList attribute");
+  LLVMContextImpl *pImpl = Context.pImpl;
+  FoldingSetNodeID ID;
+  ID.AddInteger(Kind);
+  ID.AddInteger(Val.size());
+  for (auto &CR : Val) {
+    CR.getLower().Profile(ID);
+    CR.getUpper().Profile(ID);
+  }
+
+  void *InsertPoint;
+  AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
+
+  if (!PA) {
+    // If we didn't find any existing attributes of the same shape then create a
+    // new one and insert it.
+    // ConstantRangeListAttributeImpl is a dynamically sized class and cannot
+    // use SpecificBumpPtrAllocator. Instead, we use normal Alloc for
+    // allocation and record the allocated pointer in
+    // `ConstantRangeListAttributes`. LLVMContext destructor will call the
+    // destructor of the allocated pointer explicitly.
+    void *Mem = pImpl->Alloc.Allocate(
+        ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
+        alignof(ConstantRangeListAttributeImpl));
+    PA = new (Mem) ConstantRangeListAttributeImpl(Kind, Val);
+    pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->ConstantRangeListAttributes.push_back(
+        reinterpret_cast<ConstantRangeListAttributeImpl *>(PA));
+  }
+
+  // Return the Attribute that we found or created.
+  return Attribute(PA);
+}
+
 Attribute Attribute::getWithAlignment(LLVMContext &Context, Align A) {
   assert(A <= llvm::Value::MaximumAlignment && "Alignment too large.");
   return get(Context, Alignment, A.value());
@@ -287,9 +353,17 @@ bool Attribute::isTypeAttribute() const {
   return pImpl && pImpl->isTypeAttribute();
 }
 
+bool Attribute::isConstantRangeAttribute() const {
+  return pImpl && pImpl->isConstantRangeAttribute();
+}
+
+bool Attribute::isConstantRangeListAttribute() const {
+  return pImpl && pImpl->isConstantRangeListAttribute();
+}
+
 Attribute::AttrKind Attribute::getKindAsEnum() const {
   if (!pImpl) return None;
-  assert((isEnumAttribute() || isIntAttribute() || isTypeAttribute()) &&
+  assert(hasKindAsEnum() &&
          "Invalid attribute type to get the kind as an enum!");
   return pImpl->getKindAsEnum();
 }
@@ -329,6 +403,17 @@ Type *Attribute::getValueAsType() const {
   return pImpl->getValueAsType();
 }
 
+const ConstantRange &Attribute::getValueAsConstantRange() const {
+  assert(isConstantRangeAttribute() &&
+         "Invalid attribute type to get the value as a ConstantRange!");
+  return pImpl->getValueAsConstantRange();
+}
+
+ArrayRef<ConstantRange> Attribute::getValueAsConstantRangeList() const {
+  assert(isConstantRangeListAttribute() &&
+         "Invalid attribute type to get the value as a ConstantRangeList!");
+  return pImpl->getValueAsConstantRangeList();
+}
 
 bool Attribute::hasAttribute(AttrKind Kind) const {
   return (pImpl && pImpl->hasAttribute(Kind)) || (!pImpl && Kind == None);
@@ -408,6 +493,18 @@ FPClassTest Attribute::getNoFPClass() const {
   return static_cast<FPClassTest>(pImpl->getValueAsInt());
 }
 
+const ConstantRange &Attribute::getRange() const {
+  assert(hasAttribute(Attribute::Range) &&
+         "Trying to get range args from non-range attribute");
+  return pImpl->getValueAsConstantRange();
+}
+
+ArrayRef<ConstantRange> Attribute::getInitializes() const {
+  assert(hasAttribute(Attribute::Initializes) &&
+         "Trying to get initializes attr from non-ConstantRangeList attribute");
+  return pImpl->getValueAsConstantRangeList();
+}
+
 static const char *getModRefStr(ModRefInfo MR) {
   switch (MR) {
   case ModRefInfo::NoModRef:
@@ -484,13 +581,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::UWTable)) {
     UWTableKind Kind = getUWTableKind();
-    if (Kind != UWTableKind::None) {
-      return Kind == UWTableKind::Default
-                 ? "uwtable"
-                 : ("uwtable(" +
-                    Twine(Kind == UWTableKind::Sync ? "sync" : "async") + ")")
-                       .str();
-    }
+    assert(Kind != UWTableKind::None && "uwtable attribute should not be none");
+    return Kind == UWTableKind::Default ? "uwtable" : "uwtable(sync)";
   }
 
   if (hasAttribute(Attribute::AllocKind)) {
@@ -562,6 +654,29 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
+  if (hasAttribute(Attribute::Range)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    const ConstantRange &CR = getValueAsConstantRange();
+    OS << "range(";
+    OS << "i" << CR.getBitWidth() << " ";
+    OS << CR.getLower() << ", " << CR.getUpper();
+    OS << ")";
+    OS.flush();
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::Initializes)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    ConstantRangeList CRL = getInitializes();
+    OS << "initializes(";
+    CRL.print(OS);
+    OS << ")";
+    OS.flush();
+    return Result;
+  }
+
   // Convert target-dependent attributes to strings of the form:
   //
   //   "kind"
@@ -597,6 +712,16 @@ bool Attribute::hasParentContext(LLVMContext &C) const {
   return C.pImpl->AttrsSet.FindNodeOrInsertPos(ID, Unused) == pImpl;
 }
 
+int Attribute::cmpKind(Attribute A) const {
+  if (!pImpl && !A.pImpl)
+    return 0;
+  if (!pImpl)
+    return 1;
+  if (!A.pImpl)
+    return -1;
+  return pImpl->cmp(*A.pImpl, /*KindOnly=*/true);
+}
+
 bool Attribute::operator<(Attribute A) const {
   if (!pImpl && !A.pImpl) return false;
   if (!pImpl) return true;
@@ -612,16 +737,25 @@ enum AttributeProperty {
   FnAttr = (1 << 0),
   ParamAttr = (1 << 1),
   RetAttr = (1 << 2),
+  IntersectPreserve = (0 << 3),
+  IntersectAnd = (1 << 3),
+  IntersectMin = (2 << 3),
+  IntersectCustom = (3 << 3),
+  IntersectPropertyMask = (3 << 3),
 };
 
 #define GET_ATTR_PROP_TABLE
 #include "llvm/IR/Attributes.inc"
 
-static bool hasAttributeProperty(Attribute::AttrKind Kind,
-                                 AttributeProperty Prop) {
+static unsigned getAttributeProperties(Attribute::AttrKind Kind) {
   unsigned Index = Kind - 1;
   assert(Index < std::size(AttrPropTable) && "Invalid attribute kind");
-  return AttrPropTable[Index] & Prop;
+  return AttrPropTable[Index];
+}
+
+static bool hasAttributeProperty(Attribute::AttrKind Kind,
+                                 AttributeProperty Prop) {
+  return getAttributeProperties(Kind) & Prop;
 }
 
 bool Attribute::canUseAsFnAttr(AttrKind Kind) {
@@ -634,6 +768,30 @@ bool Attribute::canUseAsParamAttr(AttrKind Kind) {
 
 bool Attribute::canUseAsRetAttr(AttrKind Kind) {
   return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
+}
+
+static bool hasIntersectProperty(Attribute::AttrKind Kind,
+                                 AttributeProperty Prop) {
+  assert((Prop == AttributeProperty::IntersectPreserve ||
+          Prop == AttributeProperty::IntersectAnd ||
+          Prop == AttributeProperty::IntersectMin ||
+          Prop == AttributeProperty::IntersectCustom) &&
+         "Unknown intersect property");
+  return (getAttributeProperties(Kind) &
+          AttributeProperty::IntersectPropertyMask) == Prop;
+}
+
+bool Attribute::intersectMustPreserve(AttrKind Kind) {
+  return hasIntersectProperty(Kind, AttributeProperty::IntersectPreserve);
+}
+bool Attribute::intersectWithAnd(AttrKind Kind) {
+  return hasIntersectProperty(Kind, AttributeProperty::IntersectAnd);
+}
+bool Attribute::intersectWithMin(AttrKind Kind) {
+  return hasIntersectProperty(Kind, AttributeProperty::IntersectMin);
+}
+bool Attribute::intersectWithCustom(AttrKind Kind) {
+  return hasIntersectProperty(Kind, AttributeProperty::IntersectCustom);
 }
 
 //===----------------------------------------------------------------------===//
@@ -651,7 +809,8 @@ bool AttributeImpl::hasAttribute(StringRef Kind) const {
 }
 
 Attribute::AttrKind AttributeImpl::getKindAsEnum() const {
-  assert(isEnumAttribute() || isIntAttribute() || isTypeAttribute());
+  assert(isEnumAttribute() || isIntAttribute() || isTypeAttribute() ||
+         isConstantRangeAttribute() || isConstantRangeListAttribute());
   return static_cast<const EnumAttributeImpl *>(this)->getEnumKind();
 }
 
@@ -680,29 +839,55 @@ Type *AttributeImpl::getValueAsType() const {
   return static_cast<const TypeAttributeImpl *>(this)->getTypeValue();
 }
 
-bool AttributeImpl::operator<(const AttributeImpl &AI) const {
+const ConstantRange &AttributeImpl::getValueAsConstantRange() const {
+  assert(isConstantRangeAttribute());
+  return static_cast<const ConstantRangeAttributeImpl *>(this)
+      ->getConstantRangeValue();
+}
+
+ArrayRef<ConstantRange> AttributeImpl::getValueAsConstantRangeList() const {
+  assert(isConstantRangeListAttribute());
+  return static_cast<const ConstantRangeListAttributeImpl *>(this)
+      ->getConstantRangeListValue();
+}
+
+int AttributeImpl::cmp(const AttributeImpl &AI, bool KindOnly) const {
   if (this == &AI)
-    return false;
+    return 0;
 
   // This sorts the attributes with Attribute::AttrKinds coming first (sorted
   // relative to their enum value) and then strings.
   if (!isStringAttribute()) {
     if (AI.isStringAttribute())
-      return true;
+      return -1;
+
     if (getKindAsEnum() != AI.getKindAsEnum())
-      return getKindAsEnum() < AI.getKindAsEnum();
+      return getKindAsEnum() < AI.getKindAsEnum() ? -1 : 1;
+    else if (KindOnly)
+      return 0;
+
     assert(!AI.isEnumAttribute() && "Non-unique attribute");
     assert(!AI.isTypeAttribute() && "Comparison of types would be unstable");
+    assert(!AI.isConstantRangeAttribute() && "Unclear how to compare ranges");
+    assert(!AI.isConstantRangeListAttribute() &&
+           "Unclear how to compare range list");
     // TODO: Is this actually needed?
     assert(AI.isIntAttribute() && "Only possibility left");
-    return getValueAsInt() < AI.getValueAsInt();
+    if (getValueAsInt() < AI.getValueAsInt())
+      return -1;
+    return getValueAsInt() == AI.getValueAsInt() ? 0 : 1;
   }
-
   if (!AI.isStringAttribute())
-    return false;
+    return 1;
+  if (KindOnly)
+    return getKindAsString().compare(AI.getKindAsString());
   if (getKindAsString() == AI.getKindAsString())
-    return getValueAsString() < AI.getValueAsString();
-  return getKindAsString() < AI.getKindAsString();
+    return getValueAsString().compare(AI.getValueAsString());
+  return getKindAsString().compare(AI.getKindAsString());
+}
+
+bool AttributeImpl::operator<(const AttributeImpl &AI) const {
+  return cmp(AI, /*KindOnly=*/false) < 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -770,6 +955,132 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
 
   B.remove(Attrs);
   return get(C, B);
+}
+
+std::optional<AttributeSet>
+AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
+  if (*this == Other)
+    return *this;
+
+  AttrBuilder Intersected(C);
+  // Iterate over both attr sets at once.
+  auto ItBegin0 = begin();
+  auto ItEnd0 = end();
+  auto ItBegin1 = Other.begin();
+  auto ItEnd1 = Other.end();
+
+  while (ItBegin0 != ItEnd0 || ItBegin1 != ItEnd1) {
+    // Loop through all attributes in both this and Other in sorted order. If
+    // the attribute is only present in one of the sets, it will be set in
+    // Attr0. If it is present in both sets both Attr0 and Attr1 will be set.
+    Attribute Attr0, Attr1;
+    if (ItBegin1 == ItEnd1)
+      Attr0 = *ItBegin0++;
+    else if (ItBegin0 == ItEnd0)
+      Attr0 = *ItBegin1++;
+    else {
+      int Cmp = ItBegin0->cmpKind(*ItBegin1);
+      if (Cmp == 0) {
+        Attr0 = *ItBegin0++;
+        Attr1 = *ItBegin1++;
+      } else if (Cmp < 0)
+        Attr0 = *ItBegin0++;
+      else
+        Attr0 = *ItBegin1++;
+    }
+    assert(Attr0.isValid() && "Iteration should always yield a valid attr");
+
+    auto IntersectEq = [&]() {
+      if (!Attr1.isValid())
+        return false;
+      if (Attr0 != Attr1)
+        return false;
+      Intersected.addAttribute(Attr0);
+      return true;
+    };
+
+    // Non-enum assume we must preserve. Handle early so we can unconditionally
+    // use Kind below.
+    if (!Attr0.hasKindAsEnum()) {
+      if (!IntersectEq())
+        return std::nullopt;
+      continue;
+    }
+
+    Attribute::AttrKind Kind = Attr0.getKindAsEnum();
+    // If we don't have both attributes, then fail if the attribute is
+    // must-preserve or drop it otherwise.
+    if (!Attr1.isValid()) {
+      if (Attribute::intersectMustPreserve(Kind))
+        return std::nullopt;
+      continue;
+    }
+
+    // We have both attributes so apply the intersection rule.
+    assert(Attr1.hasKindAsEnum() && Kind == Attr1.getKindAsEnum() &&
+           "Iterator picked up two different attributes in the same iteration");
+
+    // Attribute we can intersect with "and"
+    if (Attribute::intersectWithAnd(Kind)) {
+      assert(Attribute::isEnumAttrKind(Kind) &&
+             "Invalid attr type of intersectAnd");
+      Intersected.addAttribute(Kind);
+      continue;
+    }
+
+    // Attribute we can intersect with "min"
+    if (Attribute::intersectWithMin(Kind)) {
+      assert(Attribute::isIntAttrKind(Kind) &&
+             "Invalid attr type of intersectMin");
+      uint64_t NewVal = std::min(Attr0.getValueAsInt(), Attr1.getValueAsInt());
+      Intersected.addRawIntAttr(Kind, NewVal);
+      continue;
+    }
+    // Attribute we can intersect but need a custom rule for.
+    if (Attribute::intersectWithCustom(Kind)) {
+      switch (Kind) {
+      case Attribute::Alignment:
+        // If `byval` is present, alignment become must-preserve. This is
+        // handled below if we have `byval`.
+        Intersected.addAlignmentAttr(
+            std::min(Attr0.getAlignment().valueOrOne(),
+                     Attr1.getAlignment().valueOrOne()));
+        break;
+      case Attribute::Memory:
+        Intersected.addMemoryAttr(Attr0.getMemoryEffects() |
+                                  Attr1.getMemoryEffects());
+        break;
+      case Attribute::NoFPClass:
+        Intersected.addNoFPClassAttr(Attr0.getNoFPClass() &
+                                     Attr1.getNoFPClass());
+        break;
+      case Attribute::Range: {
+        ConstantRange Range0 = Attr0.getRange();
+        ConstantRange Range1 = Attr1.getRange();
+        ConstantRange NewRange = Range0.unionWith(Range1);
+        if (!NewRange.isFullSet())
+          Intersected.addRangeAttr(NewRange);
+      } break;
+      default:
+        llvm_unreachable("Unknown attribute with custom intersection rule");
+      }
+      continue;
+    }
+
+    // Attributes with no intersection rule. Only intersect if they are equal.
+    // Otherwise fail.
+    if (!IntersectEq())
+      return std::nullopt;
+
+    // Special handling of `byval`. `byval` essentially turns align attr into
+    // must-preserve
+    if (Kind == Attribute::ByVal &&
+        getAttribute(Attribute::Alignment) !=
+            Other.getAttribute(Attribute::Alignment))
+      return std::nullopt;
+  }
+
+  return get(C, Intersected);
 }
 
 unsigned AttributeSet::getNumAttributes() const {
@@ -910,7 +1221,7 @@ AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
 
 AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
                                         ArrayRef<Attribute> Attrs) {
-  SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
+  SmallVector<Attribute, 8> SortedAttrs(Attrs);
   llvm::sort(SortedAttrs);
   return getSorted(C, SortedAttrs);
 }
@@ -1468,12 +1779,43 @@ AttributeList::addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned Index,
   return addParamAttributes(C, Index, B);
 }
 
+AttributeList AttributeList::addRangeRetAttr(LLVMContext &C,
+                                             const ConstantRange &CR) const {
+  AttrBuilder B(C);
+  B.addRangeAttr(CR);
+  return addRetAttributes(C, B);
+}
+
 AttributeList AttributeList::addAllocSizeParamAttr(
     LLVMContext &C, unsigned Index, unsigned ElemSizeArg,
-    const std::optional<unsigned> &NumElemsArg) {
+    const std::optional<unsigned> &NumElemsArg) const {
   AttrBuilder B(C);
   B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
   return addParamAttributes(C, Index, B);
+}
+
+std::optional<AttributeList>
+AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
+  // Trivial case, the two lists are equal.
+  if (*this == Other)
+    return *this;
+
+  SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
+    auto IntersectedAS =
+        getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
+    // If any index fails to intersect, fail.
+    if (!IntersectedAS)
+      return std::nullopt;
+    if (!IntersectedAS->hasAttributes())
+      continue;
+    IntersectedAttrs.push_back(std::make_pair(Idx, *IntersectedAS));
+  }
+
+  llvm::sort(IntersectedAttrs, llvm::less_first());
+  return AttributeList::get(C, IntersectedAttrs);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1587,6 +1929,14 @@ uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
 uint64_t
 AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
   return getParamAttrs(Index).getDereferenceableOrNullBytes();
+}
+
+std::optional<ConstantRange>
+AttributeList::getParamRange(unsigned ArgNo) const {
+  auto RangeAttr = getParamAttrs(ArgNo).getAttribute(Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 FPClassTest AttributeList::getRetNoFPClass() const {
@@ -1881,6 +2231,28 @@ AttrBuilder &AttrBuilder::addInAllocaAttr(Type *Ty) {
   return addTypeAttr(Attribute::InAlloca, Ty);
 }
 
+AttrBuilder &AttrBuilder::addConstantRangeAttr(Attribute::AttrKind Kind,
+                                               const ConstantRange &CR) {
+  if (CR.isFullSet())
+    return *this;
+
+  return addAttribute(Attribute::get(Ctx, Kind, CR));
+}
+
+AttrBuilder &AttrBuilder::addRangeAttr(const ConstantRange &CR) {
+  return addConstantRangeAttr(Attribute::Range, CR);
+}
+
+AttrBuilder &
+AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
+                                      ArrayRef<ConstantRange> Val) {
+  return addAttribute(Attribute::get(Ctx, Kind, Val));
+}
+
+AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
+  return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
+}
+
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
   // TODO: Could make this O(n) as we're merging two sorted lists.
   for (const auto &I : B.attrs())
@@ -1913,6 +2285,13 @@ Attribute AttrBuilder::getAttribute(StringRef A) const {
   return {};
 }
 
+std::optional<ConstantRange> AttrBuilder::getRange() const {
+  const Attribute RangeAttr = getAttribute(Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
+}
+
 bool AttrBuilder::contains(Attribute::AttrKind A) const {
   return getAttribute(A).isValid();
 }
@@ -1931,16 +2310,12 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
 bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
+  return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
 
 /// Which attributes cannot be applied to a type.
-AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
+AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
                                                AttributeSafetyKind ASK) {
   AttributeMask Incompatible;
 
@@ -1950,6 +2325,17 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
       Incompatible.addAttribute(Attribute::AllocAlign);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::SExt).addAttribute(Attribute::ZExt);
+  }
+
+  if (!Ty->isIntOrIntVectorTy()) {
+    // Attributes that only apply to integers or vector of integers.
+    if (ASK & ASK_SAFE_TO_DROP)
+      Incompatible.addAttribute(Attribute::Range);
+  } else {
+    Attribute RangeAttr = AS.getAttribute(Attribute::Range);
+    if (RangeAttr.isValid() &&
+        RangeAttr.getRange().getBitWidth() != Ty->getScalarSizeInBits())
+      Incompatible.addAttribute(Attribute::Range);
   }
 
   if (!Ty->isPointerTy()) {
@@ -1963,7 +2349,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
           .addAttribute(Attribute::Dereferenceable)
           .addAttribute(Attribute::DereferenceableOrNull)
           .addAttribute(Attribute::Writable)
-          .addAttribute(Attribute::DeadOnUnwind);
+          .addAttribute(Attribute::DeadOnUnwind)
+          .addAttribute(Attribute::Initializes);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)
@@ -2039,10 +2426,22 @@ static bool checkDenormMode(const Function &Caller, const Function &Callee) {
   return false;
 }
 
+static bool checkStrictFP(const Function &Caller, const Function &Callee) {
+  // Do not inline strictfp function into non-strictfp one. It would require
+  // conversion of all FP operations in host function to constrained intrinsics.
+  return !Callee.getAttributes().hasFnAttr(Attribute::StrictFP) ||
+         Caller.getAttributes().hasFnAttr(Attribute::StrictFP);
+}
+
 template<typename AttrClass>
 static bool isEqual(const Function &Caller, const Function &Callee) {
   return Caller.getFnAttribute(AttrClass::getKind()) ==
          Callee.getFnAttribute(AttrClass::getKind());
+}
+
+static bool isEqual(const Function &Caller, const Function &Callee,
+                    const StringRef &AttrName) {
+  return Caller.getFnAttribute(AttrName) == Callee.getFnAttribute(AttrName);
 }
 
 /// Compute the logical AND of the attributes of the caller and the
@@ -2186,7 +2585,7 @@ struct StrBoolAttr {
   static bool isSet(const Function &Fn,
                     StringRef Kind) {
     auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString().equals("true");
+    return A.getValueAsString() == "true";
   }
 
   static void set(Function &Fn,

@@ -32,18 +32,6 @@ func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
 
 // -----
 
-func.func @loop_for_step_positive(%arg0: index) {
-  // expected-error@+2 {{constant step operand must be positive}}
-  %c0 = arith.constant 0 : index
-  "scf.for"(%arg0, %arg0, %c0) ({
-    ^bb0(%arg1: index):
-      scf.yield
-  }) : (index, index, index) -> ()
-  return
-}
-
-// -----
-
 func.func @loop_for_one_region(%arg0: index) {
   // expected-error@+1 {{requires one region}}
   "scf.for"(%arg0, %arg0, %arg0) (
@@ -259,7 +247,7 @@ func.func @parallel_more_results_than_reduces(
 
 func.func @parallel_more_results_than_initial_values(
     %arg0 : index, %arg1: index, %arg2: index) {
-  // expected-error@+1 {{'scf.parallel' 0 operands present, but expected 1}}
+  // expected-error@+1 {{'scf.parallel' number of operands and types do not match: got 0 operands and 1 types}}
   %res = scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) -> f32 {
     scf.reduce(%arg0 : index) {
       ^bb0(%lhs: index, %rhs: index):
@@ -621,7 +609,7 @@ func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  // expected-error @+1 {{1 operands present, but expected 2}}
+  // expected-error@+1 {{number of operands and types do not match: got 1 operands and 2 types}}
   %result:2 = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>, tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.forall.in_parallel {

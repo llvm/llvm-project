@@ -77,7 +77,7 @@ public:
     SmallString<128> Path(Filename);
     llvm::sys::path::replace_extension(Path,
       NewSuffix + llvm::sys::path::extension(Path));
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 
@@ -88,7 +88,7 @@ public:
     llvm::sys::fs::createTemporaryFile(llvm::sys::path::filename(Filename),
                                        llvm::sys::path::extension(Filename).drop_front(), fd,
                                        Path);
-    return std::string(Path.str());
+    return std::string(Path);
   }
 };
 } // end anonymous namespace
@@ -213,7 +213,7 @@ public:
 
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    auto File = CI.getFileManager().getFile(Filename);
+    auto File = CI.getFileManager().getOptionalFileRef(Filename);
     assert(File && "missing file for loaded module?");
 
     // Only rewrite each module file once.
@@ -247,6 +247,7 @@ public:
     Instance.setInvocation(
         std::make_shared<CompilerInvocation>(CI.getInvocation()));
     Instance.createDiagnostics(
+        CI.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
     Instance.getFrontendOpts().DisableFree = false;

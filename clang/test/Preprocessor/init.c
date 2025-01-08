@@ -1,3 +1,10 @@
+// RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix INTERFERENCE %s
+//
+// We purposefully do not test the values produced, only that the macros are
+// predefined to some value.
+// INTERFERENCE:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// INTERFERENCE:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
+
 // RUN: %clang_cc1 -E -dM -x assembler-with-cpp < /dev/null | FileCheck -match-full-lines -check-prefix ASM %s
 //
 // ASM:#define __ASSEMBLER__ 1
@@ -92,6 +99,70 @@
 // C99-NOT: __GXX_RTTI
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
+//
+// RUN: %clang_cc1 -std=c17 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C17-FMT %s
+// RUN: %clang_cc1 -std=c23 -triple=x86_64-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C23-FMT %s
+//
+// C17-FMT-NOT: __SIZE_FMTB__
+// C17-FMT-NOT: __SIZE_FMTb__
+// C17-FMT-NOT: __UINT8_FMTB__
+// C17-FMT-NOT: __UINT8_FMTb__
+// C17-FMT-NOT: __UINT16_FMTB__
+// C17-FMT-NOT: __UINT16_FMTb__
+// C17-FMT-NOT: __UINT32_FMTB__
+// C17-FMT-NOT: __UINT32_FMTb__
+// C17-FMT-NOT: __UINT64_FMTB__
+// C17-FMT-NOT: __UINT64_FMTb__
+// C17-FMT-NOT: __UINTMAX_FMTB__
+// C17-FMT-NOT: __UINTMAX_FMTb__
+// C17-FMT-NOT: __UINTPTR_FMTB__
+// C17-FMT-NOT: __UINTPTR_FMTb__
+// C17-FMT-NOT: __UINT_FAST16_FMTB__
+// C17-FMT-NOT: __UINT_FAST16_FMTb__
+// C17-FMT-NOT: __UINT_FAST32_FMTB__
+// C17-FMT-NOT: __UINT_FAST32_FMTb__
+// C17-FMT-NOT: __UINT_FAST64_FMTB__
+// C17-FMT-NOT: __UINT_FAST64_FMTb__
+// C17-FMT-NOT: __UINT_FAST8_FMTB__
+// C17-FMT-NOT: __UINT_FAST8_FMTb__
+// C17-FMT-NOT: __UINT_LEAST16_FMTB__
+// C17-FMT-NOT: __UINT_LEAST16_FMTb__
+// C17-FMT-NOT: __UINT_LEAST32_FMTB__
+// C17-FMT-NOT: __UINT_LEAST32_FMTb__
+// C17-FMT-NOT: __UINT_LEAST64_FMTB__
+// C17-FMT-NOT: __UINT_LEAST64_FMTb__
+// C17-FMT-NOT: __UINT_LEAST8_FMTB__
+// C17-FMT-NOT: __UINT_LEAST8_FMTb__
+// C23-FMT: #define __SIZE_FMTB__ "llB"
+// C23-FMT: #define __SIZE_FMTb__ "llb"
+// C23-FMT: #define __UINT16_FMTB__ "hB"
+// C23-FMT: #define __UINT16_FMTb__ "hb"
+// C23-FMT: #define __UINT32_FMTB__ "B"
+// C23-FMT: #define __UINT32_FMTb__ "b"
+// C23-FMT: #define __UINT64_FMTB__ "llB"
+// C23-FMT: #define __UINT64_FMTb__ "llb"
+// C23-FMT: #define __UINT8_FMTB__ "hhB"
+// C23-FMT: #define __UINT8_FMTb__ "hhb"
+// C23-FMT: #define __UINTMAX_FMTB__ "llB"
+// C23-FMT: #define __UINTMAX_FMTb__ "llb"
+// C23-FMT: #define __UINTPTR_FMTB__ "llB"
+// C23-FMT: #define __UINTPTR_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_FAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_FAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_FAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_FAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_FAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_FAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_FAST8_FMTb__ "hhb"
+// C23-FMT: #define __UINT_LEAST16_FMTB__ "hB"
+// C23-FMT: #define __UINT_LEAST16_FMTb__ "hb"
+// C23-FMT: #define __UINT_LEAST32_FMTB__ "B"
+// C23-FMT: #define __UINT_LEAST32_FMTb__ "b"
+// C23-FMT: #define __UINT_LEAST64_FMTB__ "llB"
+// C23-FMT: #define __UINT_LEAST64_FMTb__ "llb"
+// C23-FMT: #define __UINT_LEAST8_FMTB__ "hhB"
+// C23-FMT: #define __UINT_LEAST8_FMTb__ "hhb"
 //
 //
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
@@ -1546,7 +1617,7 @@
 // WEBASSEMBLY-NEXT:#define __ATOMIC_SEQ_CST 5
 // WEBASSEMBLY-NEXT:#define __BIGGEST_ALIGNMENT__ 16
 // WEBASSEMBLY-NEXT:#define __BITINT_MAXWIDTH__ 128
-// WEBASSEMBLY-NEXT:#define __BOOL_WIDTH__ 8
+// WEBASSEMBLY-NEXT:#define __BOOL_WIDTH__ 1
 // WEBASSEMBLY-NEXT:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // WEBASSEMBLY-NEXT:#define __CHAR16_TYPE__ unsigned short
 // WEBASSEMBLY-NEXT:#define __CHAR32_TYPE__ unsigned int
@@ -1577,6 +1648,7 @@
 // WEBASSEMBLY-NEXT:#define __DBL_MIN_10_EXP__ (-307)
 // WEBASSEMBLY-NEXT:#define __DBL_MIN_EXP__ (-1021)
 // WEBASSEMBLY-NEXT:#define __DBL_MIN__ 2.2250738585072014e-308
+// WEBASSEMBLY-NEXT:#define __DBL_NORM_MAX__ 1.7976931348623157e+308
 // WEBASSEMBLY-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY-NOT:#define __ELF__
 // EMSCRIPTEN-THREADS-NEXT:#define __EMSCRIPTEN_PTHREADS__ 1
@@ -1597,6 +1669,7 @@
 // WEBASSEMBLY-NOT:#define __FLT16_MIN_10_EXP__
 // WEBASSEMBLY-NOT:#define __FLT16_MIN_EXP__
 // WEBASSEMBLY-NOT:#define __FLT16_MIN__
+// WEBASSEMBLY-NOT:#define __FLT16_NORM_MAX__
 // WEBASSEMBLY-NEXT:#define __FLT_DECIMAL_DIG__ 9
 // WEBASSEMBLY-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY-NEXT:#define __FLT_DIG__ 6
@@ -1611,6 +1684,7 @@
 // WEBASSEMBLY-NEXT:#define __FLT_MIN_10_EXP__ (-37)
 // WEBASSEMBLY-NEXT:#define __FLT_MIN_EXP__ (-125)
 // WEBASSEMBLY-NEXT:#define __FLT_MIN__ 1.17549435e-38F
+// WEBASSEMBLY-NEXT:#define __FLT_NORM_MAX__ 3.40282347e+38F
 // WEBASSEMBLY-NEXT:#define __FLT_RADIX__ 2
 // WEBASSEMBLY-NEXT:#define __FPCLASS_NEGINF 0x0004
 // WEBASSEMBLY-NEXT:#define __FPCLASS_NEGNORMAL 0x0008
@@ -1633,6 +1707,8 @@
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// WEBASSEMBLY-NEXT:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
+// WEBASSEMBLY-NEXT:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
@@ -1733,6 +1809,7 @@
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN_10_EXP__ (-4931)
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN_EXP__ (-16381)
 // WEBASSEMBLY-NEXT:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
+// WEBASSEMBLY-NEXT:#define __LDBL_NORM_MAX__ 1.18973149535723176508575932662800702e+4932L
 // WEBASSEMBLY-NEXT:#define __LITTLE_ENDIAN__ 1
 // WEBASSEMBLY-NEXT:#define __LLONG_WIDTH__ 64
 // WEBASSEMBLY-NEXT:#define __LONG_LONG_MAX__ 9223372036854775807LL
@@ -1742,11 +1819,11 @@
 // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2 
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3 
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3
 // WEBASSEMBLY-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY-NEXT:#define __NO_MATH_ERRNO__ 1
 // WEBASSEMBLY-NEXT:#define __OBJC_BOOL_IS_BOOL 0
@@ -1802,6 +1879,9 @@
 // WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ long unsigned int
 // WEBASSEMBLY32-NEXT:#define __SIZE_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIZE_WIDTH__ 64
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_EMPTY__ 2
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_FOUND__ 1
+// WEBASSEMBLY-NEXT:#define __STDC_EMBED_NOT_FOUND__ 0
 // WEBASSEMBLY-NEXT:#define __STDC_HOSTED__ 0
 // WEBASSEMBLY-NOT:#define __STDC_MB_MIGHT_NEQ_WC__
 // WEBASSEMBLY-NOT:#define __STDC_NO_ATOMICS__
@@ -2062,11 +2142,11 @@
 // AVR:#define __LDBL_MIN__ 1.17549435e-38L
 // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // AVR:#define __LONG_MAX__ 2147483647L
-// AVR:#define __MEMORY_SCOPE_DEVICE 1 
-// AVR:#define __MEMORY_SCOPE_SINGLE 4 
-// AVR:#define __MEMORY_SCOPE_SYSTEM 0 
-// AVR:#define __MEMORY_SCOPE_WRKGRP 2 
-// AVR:#define __MEMORY_SCOPE_WVFRNT 3 
+// AVR:#define __MEMORY_SCOPE_DEVICE 1
+// AVR:#define __MEMORY_SCOPE_SINGLE 4
+// AVR:#define __MEMORY_SCOPE_SYSTEM 0
+// AVR:#define __MEMORY_SCOPE_WRKGRP 2
+// AVR:#define __MEMORY_SCOPE_WVFRNT 3
 // AVR:#define __NO_INLINE__ 1
 // AVR:#define __ORDER_BIG_ENDIAN__ 4321
 // AVR:#define __ORDER_LITTLE_ENDIAN__ 1234
@@ -2358,11 +2438,11 @@
 // RISCV32: #define __LITTLE_ENDIAN__ 1
 // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV32: #define __LONG_MAX__ 2147483647L
-// RISCV32: #define __MEMORY_SCOPE_DEVICE 1 
-// RISCV32: #define __MEMORY_SCOPE_SINGLE 4 
-// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0 
-// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2 
-// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3 
+// RISCV32: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV32: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV32: #define __NO_INLINE__ 1
 // RISCV32: #define __POINTER_WIDTH__ 32
 // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -2454,6 +2534,8 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV64 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-linux < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64,RISCV64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv64-unknown-fuchsia < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=RISCV64 %s
 // RISCV64: #define _LP64 1
 // RISCV64: #define __ATOMIC_ACQUIRE 2
 // RISCV64: #define __ATOMIC_ACQ_REL 4
@@ -2570,11 +2652,11 @@
 // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV64: #define __LONG_MAX__ 9223372036854775807L
 // RISCV64: #define __LP64__ 1
-// RISCV64: #define __MEMORY_SCOPE_DEVICE 1 
-// RISCV64: #define __MEMORY_SCOPE_SINGLE 4 
-// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0 
-// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2 
-// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3 
+// RISCV64: #define __MEMORY_SCOPE_DEVICE 1
+// RISCV64: #define __MEMORY_SCOPE_SINGLE 4
+// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
+// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2
+// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3
 // RISCV64: #define __NO_INLINE__ 1
 // RISCV64: #define __POINTER_WIDTH__ 64
 // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -2660,3 +2742,256 @@
 // RISCV64-LINUX: #define __unix__ 1
 // RISCV64-LINUX: #define linux 1
 // RISCV64-LINUX: #define unix 1
+
+// RUN: %clang_cc1 -dM -triple=x86_64-uefi -E /dev/null | FileCheck -match-full-lines -check-prefix UEFI %s
+
+// UEFI: #define __UEFI__ 1
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=xtensa  < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix=XTENSA %s
+// XTENSA: #define _ILP32 1
+// XTENSA: #define __ATOMIC_ACQUIRE 2
+// XTENSA: #define __ATOMIC_ACQ_REL 4
+// XTENSA: #define __ATOMIC_CONSUME 1
+// XTENSA: #define __ATOMIC_RELAXED 0
+// XTENSA: #define __ATOMIC_RELEASE 3
+// XTENSA: #define __ATOMIC_SEQ_CST 5
+// XTENSA: #define __BIGGEST_ALIGNMENT__ 4
+// XTENSA: #define __BITINT_MAXWIDTH__ 128
+// XTENSA: #define __BOOL_WIDTH__ 1
+// XTENSA: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+// XTENSA: #define __CHAR16_TYPE__ unsigned short
+// XTENSA: #define __CHAR32_TYPE__ unsigned int
+// XTENSA: #define __CHAR_BIT__ 8
+// XTENSA: #define __CLANG_ATOMIC_BOOL_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_CHAR16_T_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_CHAR32_T_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_CHAR_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_INT_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_LLONG_LOCK_FREE 1
+// XTENSA: #define __CLANG_ATOMIC_LONG_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_POINTER_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_SHORT_LOCK_FREE 2
+// XTENSA: #define __CLANG_ATOMIC_WCHAR_T_LOCK_FREE 2
+// XTENSA: #define __CONSTANT_CFSTRINGS__ 1
+// XTENSA: #define __DBL_DECIMAL_DIG__ 17
+// XTENSA: #define __DBL_DENORM_MIN__ 4.9406564584124654e-324
+// XTENSA: #define __DBL_DIG__ 15
+// XTENSA: #define __DBL_EPSILON__ 2.2204460492503131e-16
+// XTENSA: #define __DBL_HAS_DENORM__ 1
+// XTENSA: #define __DBL_HAS_INFINITY__ 1
+// XTENSA: #define __DBL_HAS_QUIET_NAN__ 1
+// XTENSA: #define __DBL_MANT_DIG__ 53
+// XTENSA: #define __DBL_MAX_10_EXP__ 308
+// XTENSA: #define __DBL_MAX_EXP__ 1024
+// XTENSA: #define __DBL_MAX__ 1.7976931348623157e+308
+// XTENSA: #define __DBL_MIN_10_EXP__ (-307)
+// XTENSA: #define __DBL_MIN_EXP__ (-1021)
+// XTENSA: #define __DBL_MIN__ 2.2250738585072014e-308
+// XTENSA: #define __DBL_NORM_MAX__ 1.7976931348623157e+308
+// XTENSA: #define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
+// XTENSA: #define __ELF__ 1
+// XTENSA: #define __FINITE_MATH_ONLY__ 0
+// XTENSA: #define __FLT_DECIMAL_DIG__ 9
+// XTENSA: #define __FLT_DENORM_MIN__ 1.40129846e-45F
+// XTENSA: #define __FLT_DIG__ 6
+// XTENSA: #define __FLT_EPSILON__ 1.19209290e-7F
+// XTENSA: #define __FLT_HAS_DENORM__ 1
+// XTENSA: #define __FLT_HAS_INFINITY__ 1
+// XTENSA: #define __FLT_HAS_QUIET_NAN__ 1
+// XTENSA: #define __FLT_MANT_DIG__ 24
+// XTENSA: #define __FLT_MAX_10_EXP__ 38
+// XTENSA: #define __FLT_MAX_EXP__ 128
+// XTENSA: #define __FLT_MAX__ 3.40282347e+38F
+// XTENSA: #define __FLT_MIN_10_EXP__ (-37)
+// XTENSA: #define __FLT_MIN_EXP__ (-125)
+// XTENSA: #define __FLT_MIN__ 1.17549435e-38F
+// XTENSA: #define __FLT_NORM_MAX__ 3.40282347e+38F
+// XTENSA: #define __FLT_RADIX__ 2
+// XTENSA: #define __FPCLASS_NEGINF 0x0004
+// XTENSA: #define __FPCLASS_NEGNORMAL 0x0008
+// XTENSA: #define __FPCLASS_NEGSUBNORMAL 0x0010
+// XTENSA: #define __FPCLASS_NEGZERO 0x0020
+// XTENSA: #define __FPCLASS_POSINF 0x0200
+// XTENSA: #define __FPCLASS_POSNORMAL 0x0100
+// XTENSA: #define __FPCLASS_POSSUBNORMAL 0x0080
+// XTENSA: #define __FPCLASS_POSZERO 0x0040
+// XTENSA: #define __FPCLASS_QNAN 0x0002
+// XTENSA: #define __FPCLASS_SNAN 0x0001
+// XTENSA: #define __GCC_ATOMIC_BOOL_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_CHAR32_T_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_CHAR_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_INT_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_LLONG_LOCK_FREE 1
+// XTENSA: #define __GCC_ATOMIC_LONG_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_POINTER_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+// XTENSA: #define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+// XTENSA: #define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// XTENSA: #define __GCC_CONSTRUCTIVE_SIZE 64
+// XTENSA: #define __GCC_DESTRUCTIVE_SIZE 64
+// XTENSA: #define __GNUC_MINOR__ {{.*}}
+// XTENSA: #define __GNUC_PATCHLEVEL__ {{.*}}
+// XTENSA: #define __GNUC_STDC_INLINE__ 1
+// XTENSA: #define __GNUC__ {{.*}}
+// XTENSA: #define __GXX_ABI_VERSION {{.*}}
+// XTENSA: #define __ILP32__ 1
+// XTENSA: #define __INT16_C_SUFFIX__ 
+// XTENSA: #define __INT16_MAX__ 32767
+// XTENSA: #define __INT16_TYPE__ short
+// XTENSA: #define __INT32_C_SUFFIX__ 
+// XTENSA: #define __INT32_MAX__ 2147483647
+// XTENSA: #define __INT32_TYPE__ int
+// XTENSA: #define __INT64_C_SUFFIX__ LL
+// XTENSA: #define __INT64_MAX__ 9223372036854775807LL
+// XTENSA: #define __INT64_TYPE__ long long int
+// XTENSA: #define __INT8_C_SUFFIX__ 
+// XTENSA: #define __INT8_MAX__ 127
+// XTENSA: #define __INT8_TYPE__ signed char
+// XTENSA: #define __INTMAX_C_SUFFIX__ LL
+// XTENSA: #define __INTMAX_MAX__ 9223372036854775807LL
+// XTENSA: #define __INTMAX_TYPE__ long long int
+// XTENSA: #define __INTMAX_WIDTH__ 64
+// XTENSA: #define __INTPTR_MAX__ 2147483647
+// XTENSA: #define __INTPTR_TYPE__ int
+// XTENSA: #define __INTPTR_WIDTH__ 32
+// TODO: Xtensa GCC defines INT_FAST16 as int
+// XTENSA: #define __INT_FAST16_MAX__ 32767
+// XTENSA: #define __INT_FAST16_TYPE__ short
+// XTENSA: #define __INT_FAST16_WIDTH__ 16
+// XTENSA: #define __INT_FAST32_MAX__ 2147483647
+// XTENSA: #define __INT_FAST32_TYPE__ int
+// XTENSA: #define __INT_FAST32_WIDTH__ 32
+// XTENSA: #define __INT_FAST64_MAX__ 9223372036854775807LL
+// XTENSA: #define __INT_FAST64_TYPE__ long long int
+// XTENSA: #define __INT_FAST64_WIDTH__ 64
+// TODO: Xtensa GCC defines INT_FAST8 as int
+// XTENSA: #define __INT_FAST8_MAX__ 127
+// XTENSA: #define __INT_FAST8_TYPE__ signed char
+// XTENSA: #define __INT_FAST8_WIDTH__ 8
+// XTENSA: #define __INT_LEAST16_MAX__ 32767
+// XTENSA: #define __INT_LEAST16_TYPE__ short
+// XTENSA: #define __INT_LEAST16_WIDTH__ 16
+// XTENSA: #define __INT_LEAST32_MAX__ 2147483647
+// XTENSA: #define __INT_LEAST32_TYPE__ int
+// XTENSA: #define __INT_LEAST32_WIDTH__ 32
+// XTENSA: #define __INT_LEAST64_MAX__ 9223372036854775807LL
+// XTENSA: #define __INT_LEAST64_TYPE__ long long int
+// XTENSA: #define __INT_LEAST64_WIDTH__ 64
+// XTENSA: #define __INT_LEAST8_MAX__ 127
+// XTENSA: #define __INT_LEAST8_TYPE__ signed char
+// XTENSA: #define __INT_LEAST8_WIDTH__ 8
+// XTENSA: #define __INT_MAX__ 2147483647
+// XTENSA: #define __INT_WIDTH__ 32
+// XTENSA: #define __LDBL_DECIMAL_DIG__ 17
+// XTENSA: #define __LDBL_DENORM_MIN__ 4.9406564584124654e-324L
+// XTENSA: #define __LDBL_DIG__ 15
+// XTENSA: #define __LDBL_EPSILON__ 2.2204460492503131e-16L
+// XTENSA: #define __LDBL_HAS_DENORM__ 1
+// XTENSA: #define __LDBL_HAS_INFINITY__ 1
+// XTENSA: #define __LDBL_HAS_QUIET_NAN__ 1
+// XTENSA: #define __LDBL_MANT_DIG__ 53
+// XTENSA: #define __LDBL_MAX_10_EXP__ 308
+// XTENSA: #define __LDBL_MAX_EXP__ 1024
+// XTENSA: #define __LDBL_MAX__ 1.7976931348623157e+308L
+// XTENSA: #define __LDBL_MIN_10_EXP__ (-307)
+// XTENSA: #define __LDBL_MIN_EXP__ (-1021)
+// XTENSA: #define __LDBL_MIN__ 2.2250738585072014e-308L
+// XTENSA: #define __LDBL_NORM_MAX__ 1.7976931348623157e+308L
+// XTENSA: #define __LITTLE_ENDIAN__ 1
+// XTENSA: #define __LLONG_WIDTH__ 64
+// XTENSA: #define __LONG_LONG_MAX__ 9223372036854775807LL
+// XTENSA: #define __LONG_MAX__ 2147483647L
+// XTENSA: #define __LONG_WIDTH__ 32
+// XTENSA: #define __MEMORY_SCOPE_DEVICE 1
+// XTENSA: #define __MEMORY_SCOPE_SINGLE 4
+// XTENSA: #define __MEMORY_SCOPE_SYSTEM 0
+// XTENSA: #define __MEMORY_SCOPE_WRKGRP 2
+// XTENSA: #define __MEMORY_SCOPE_WVFRNT 3
+// XTENSA: #define __NO_INLINE__ 1
+// XTENSA: #define __NO_MATH_ERRNO__ 1
+// XTENSA: #define __OBJC_BOOL_IS_BOOL 0
+// XTENSA: #define __POINTER_WIDTH__ 32
+// XTENSA: #define __PRAGMA_REDEFINE_EXTNAME 1
+// XTENSA: #define __PTRDIFF_MAX__ 2147483647
+// XTENSA: #define __PTRDIFF_TYPE__ int
+// XTENSA: #define __PTRDIFF_WIDTH__ 32
+// XTENSA: #define __SCHAR_MAX__ 127
+// XTENSA: #define __SHRT_MAX__ 32767
+// XTENSA: #define __SHRT_WIDTH__ 16
+// XTENSA: #define __SIG_ATOMIC_MAX__ 2147483647
+// XTENSA: #define __SIG_ATOMIC_WIDTH__ 32
+// XTENSA: #define __SIZEOF_DOUBLE__ 8
+// XTENSA: #define __SIZEOF_FLOAT__ 4
+// XTENSA: #define __SIZEOF_INT__ 4
+// XTENSA: #define __SIZEOF_LONG_DOUBLE__ 8
+// XTENSA: #define __SIZEOF_LONG_LONG__ 8
+// XTENSA: #define __SIZEOF_LONG__ 4
+// XTENSA: #define __SIZEOF_POINTER__ 4
+// XTENSA: #define __SIZEOF_PTRDIFF_T__ 4
+// XTENSA: #define __SIZEOF_SHORT__ 2
+// XTENSA: #define __SIZEOF_SIZE_T__ 4
+// XTENSA: #define __SIZEOF_WCHAR_T__ 4
+// XTENSA: #define __SIZEOF_WINT_T__ 4
+// XTENSA: #define __SIZE_MAX__ 4294967295U
+// XTENSA: #define __SIZE_TYPE__ unsigned int
+// XTENSA: #define __SIZE_WIDTH__ 32
+// XTENSA: #define __STDC_EMBED_EMPTY__ 2
+// XTENSA: #define __STDC_EMBED_FOUND__ 1
+// XTENSA: #define __STDC_EMBED_NOT_FOUND__ 0
+// XTENSA: #define __STDC_HOSTED__ 0
+// XTENSA: #define __STDC_UTF_16__ 1
+// XTENSA: #define __STDC_UTF_32__ 1
+// XTENSA: #define __STDC_VERSION__ 201710L
+// XTENSA: #define __STDC__ 1
+// XTENSA: #define __UINT16_C_SUFFIX__ 
+// XTENSA: #define __UINT16_MAX__ 65535
+// XTENSA: #define __UINT16_TYPE__ unsigned short
+// XTENSA: #define __UINT32_C_SUFFIX__ U
+// XTENSA: #define __UINT32_MAX__ 4294967295U
+// XTENSA: #define __UINT32_TYPE__ unsigned int
+// XTENSA: #define __UINT64_C_SUFFIX__ ULL
+// XTENSA: #define __UINT64_MAX__ 18446744073709551615ULL
+// XTENSA: #define __UINT64_TYPE__ long long unsigned int
+// XTENSA: #define __UINT8_C_SUFFIX__ 
+// XTENSA: #define __UINT8_MAX__ 255
+// XTENSA: #define __UINT8_TYPE__ unsigned char
+// XTENSA: #define __UINTMAX_C_SUFFIX__ ULL
+// XTENSA: #define __UINTMAX_MAX__ 18446744073709551615ULL
+// XTENSA: #define __UINTMAX_TYPE__ long long unsigned int
+// XTENSA: #define __UINTMAX_WIDTH__ 64
+// XTENSA: #define __UINTPTR_MAX__ 4294967295U
+// XTENSA: #define __UINTPTR_TYPE__ unsigned int
+// XTENSA: #define __UINTPTR_WIDTH__ 32
+// XTENSA: #define __UINT_FAST16_MAX__ 65535
+// XTENSA: #define __UINT_FAST16_TYPE__ unsigned short
+// XTENSA: #define __UINT_FAST32_MAX__ 4294967295U
+// XTENSA: #define __UINT_FAST32_TYPE__ unsigned int
+// XTENSA: #define __UINT_FAST64_MAX__ 18446744073709551615ULL
+// XTENSA: #define __UINT_FAST64_TYPE__ long long unsigned int
+// XTENSA: #define __UINT_FAST8_MAX__ 255
+// XTENSA: #define __UINT_FAST8_TYPE__ unsigned char
+// XTENSA: #define __UINT_LEAST16_MAX__ 65535
+// XTENSA: #define __UINT_LEAST16_TYPE__ unsigned short
+// XTENSA: #define __UINT_LEAST32_MAX__ 4294967295U
+// XTENSA: #define __UINT_LEAST32_TYPE__ unsigned int
+// XTENSA: #define __UINT_LEAST64_MAX__ 18446744073709551615ULL
+// XTENSA: #define __UINT_LEAST64_TYPE__ long long unsigned int
+// XTENSA: #define __UINT_LEAST8_MAX__ 255
+// XTENSA: #define __UINT_LEAST8_TYPE__ unsigned char
+// XTENSA: #define __USER_LABEL_PREFIX__ 
+// XTENSA: #define __WCHAR_MAX__ 2147483647
+// XTENSA: #define __WCHAR_TYPE__ int
+// XTENSA: #define __WCHAR_WIDTH__ 32
+// XTENSA: #define __WINT_MAX__ 4294967295U
+// XTENSA: #define __WINT_TYPE__ unsigned int
+// XTENSA: #define __WINT_UNSIGNED__ 1
+// XTENSA: #define __WINT_WIDTH__ 32
+// XTENSA: #define __XCHAL_HAVE_ABS 1
+// XTENSA: #define __XCHAL_HAVE_ADDX 1
+// XTENSA: #define __XCHAL_HAVE_BE 0
+// XTENSA: #define __XCHAL_HAVE_L32R 1
+// XTENSA: #define __XTENSA_EL__ 1
+// XTENSA: #define __XTENSA__ 1
+// XTENSA: #define __xtensa__ 1

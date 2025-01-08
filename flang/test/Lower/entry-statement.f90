@@ -182,16 +182,16 @@ end
 
 ! CHECK-LABEL: func @_QPashapec(
 subroutine ashapec(asc)
-  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>
+  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
   ! CHECK: %[[asi:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK: %[[zeroi:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
   ! CHECK: %[[shapei:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK: %[[boxi:[0-9]*]] = fir.embox %[[zeroi]](%[[shapei]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK: fir.store %[[boxi]] to %[[asi]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.complex<4>>>
+  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
   ! CHECK: %[[shapex:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>
-  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
   character asc(:)
   integer asi(:)
   complex asx(:)
@@ -199,16 +199,16 @@ subroutine ashapec(asc)
   return
 ! CHECK-LABEL: func @_QPashapei(
 entry ashapei(asi)
-  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>
+  ! CHECK: %[[asx:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
   ! CHECK: %[[asc:[0-9]*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
   ! CHECK: %[[zeroc:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1>>>
   ! CHECK: %[[shapec:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
   ! CHECK: %[[boxc:[0-9]*]] = fir.embox %[[zeroc]](%[[shapec]]) : (!fir.heap<!fir.array<?x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>
   ! CHECK: fir.store %[[boxc]] to %[[asc]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1>>>>>
-  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.complex<4>>>
+  ! CHECK: %[[zerox:[0-9]*]] = fir.zero_bits !fir.heap<!fir.array<?xcomplex<f32>>>
   ! CHECK: %[[shapex:[0-9]*]] = fir.shape %c0{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?x!fir.complex<4>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>
-  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK: %[[boxx:[0-9].*]] = fir.embox %[[zerox]](%[[shapex]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  ! CHECK: fir.store %[[boxx]] to %[[asx]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
   asi = 3
   return
 ! CHECK-LABEL: func @_QPashapex(

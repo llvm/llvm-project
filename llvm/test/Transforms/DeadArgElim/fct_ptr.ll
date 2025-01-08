@@ -28,7 +28,7 @@ define i32 @call_indirect(ptr readnone %fct_ptr, i32 %arg1, i32 %arg2, i32 %arg3
 ; CHECK-NEXT:    [[FINAL_RES:%.*]] = phi i32 [ [[RES1]], [[CALL_EXT]] ], [ [[RES2]], [[CALL_INT]] ], [ [[RES3]], [[CALL_OTHER]] ]
 ; CHECK-NEXT:    ret i32 [[FINAL_RES]]
 ;
-  %cmp0 = icmp eq i32 (i32, i32, i32)* %fct_ptr, @external_fct
+  %cmp0 = icmp eq ptr %fct_ptr, @external_fct
   br i1 %cmp0, label %call_ext, label %chk2
 
 call_ext:

@@ -67,6 +67,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +77,11 @@
 #include <string>
 
 using namespace llvm;
+
+static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
+static cl::opt<bool>
+    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
+                     cl::desc("In the Lint pass, abort on errors."));
 
 namespace {
 namespace MemRef {
@@ -97,6 +103,8 @@ class Lint : public InstVisitor<Lint> {
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
   void visitStoreInst(StoreInst &I);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  void visitAtomicRMWInst(AtomicRMWInst &I);
   void visitXor(BinaryOperator &I);
   void visitSub(BinaryOperator &I);
   void visitLShr(BinaryOperator &I);
@@ -119,6 +127,7 @@ class Lint : public InstVisitor<Lint> {
 
 public:
   Module *Mod;
+  Triple TT;
   const DataLayout *DL;
   AliasAnalysis *AA;
   AssumptionCache *AC;
@@ -130,8 +139,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), DL(DL), AA(AA), AC(AC), DT(DT), TLI(TLI),
-        MessagesStr(Messages) {}
+      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
+        AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
@@ -239,7 +248,8 @@ void Lint::visitCallBase(CallBase &I) {
             // dereferenced anyway.
             if (I.doesNotAccessMemory(ArgNo))
               continue;
-            if (AI != BI && (*BI)->getType()->isPointerTy()) {
+            if (AI != BI && (*BI)->getType()->isPointerTy() &&
+                !isa<ConstantPointerNull>(*BI)) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&
                         Result != AliasResult::PartialAlias,
@@ -255,6 +265,30 @@ void Lint::visitCallBase(CallBase &I) {
               Actual, LocationSize::precise(DL->getTypeStoreSize(Ty)));
           visitMemoryReference(I, Loc, DL->getABITypeAlign(Ty), Ty,
                                MemRef::Read | MemRef::Write);
+        }
+
+        // Check that ABI attributes for the function and call-site match.
+        unsigned ArgNo = AI->getOperandNo();
+        Attribute::AttrKind ABIAttributes[] = {
+            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
+            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
+            Attribute::Preallocated, Attribute::StructRet};
+        AttributeList CallAttrs = I.getAttributes();
+        for (Attribute::AttrKind Attr : ABIAttributes) {
+          Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
+          Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+          Check(CallAttr.isValid() == FnAttr.isValid(),
+                Twine("Undefined behavior: ABI attribute ") +
+                    Attribute::getNameFromAttrKind(Attr) +
+                    " not present on both function and call-site",
+                &I);
+          if (CallAttr.isValid() && FnAttr.isValid()) {
+            Check(CallAttr == FnAttr,
+                  Twine("Undefined behavior: ABI attribute ") +
+                      Attribute::getNameFromAttrKind(Attr) +
+                      " does not have same argument for function and call-site",
+                  &I);
+          }
         }
       }
     }
@@ -285,7 +319,8 @@ void Lint::visitCallBase(CallBase &I) {
 
       // TODO: Check more intrinsics
 
-    case Intrinsic::memcpy: {
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline: {
       MemCpyInst *MCI = cast<MemCpyInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MCI),
                            MCI->getDestAlign(), nullptr, MemRef::Write);
@@ -302,23 +337,6 @@ void Lint::visitCallBase(CallBase &I) {
         if (Len->getValue().isIntN(32))
           Size = LocationSize::precise(Len->getValue().getZExtValue());
       Check(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
-                AliasResult::MustAlias,
-            "Undefined behavior: memcpy source and destination overlap", &I);
-      break;
-    }
-    case Intrinsic::memcpy_inline: {
-      MemCpyInlineInst *MCII = cast<MemCpyInlineInst>(&I);
-      const uint64_t Size = MCII->getLength()->getValue().getLimitedValue();
-      visitMemoryReference(I, MemoryLocation::getForDest(MCII),
-                           MCII->getDestAlign(), nullptr, MemRef::Write);
-      visitMemoryReference(I, MemoryLocation::getForSource(MCII),
-                           MCII->getSourceAlign(), nullptr, MemRef::Read);
-
-      // Check that the memcpy arguments don't overlap. The AliasAnalysis API
-      // isn't expressive enough for what we really want to do. Known partial
-      // overlap is not distinguished from the case where nothing is known.
-      const LocationSize LS = LocationSize::precise(Size);
-      Check(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) !=
                 AliasResult::MustAlias,
             "Undefined behavior: memcpy source and destination overlap", &I);
       break;
@@ -345,10 +363,7 @@ void Lint::visitCallBase(CallBase &I) {
     }
 
     case Intrinsic::vastart:
-      Check(I.getParent()->getParent()->isVarArg(),
-            "Undefined behavior: va_start called in a non-varargs function",
-            &I);
-
+      // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
@@ -414,6 +429,11 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
         "Unusual: Address one pointer dereference", &I);
 
   if (Flags & MemRef::Write) {
+    if (TT.isAMDGPU())
+      Check(!AMDGPU::isConstantAddressSpace(
+                UnderlyingObject->getType()->getPointerAddressSpace()),
+            "Undefined behavior: Write to memory in const addrspace", &I);
+
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
       Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
             &I);
@@ -450,8 +470,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
       Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized())
-        BaseSize = DL->getTypeAllocSize(ATy);
+      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
+        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -468,7 +488,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Check(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+    Check(!Loc.Size.hasValue() || Loc.Size.isScalable() ||
+              BaseSize == MemoryLocation::UnknownSize ||
               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
           "Undefined behavior: Buffer overflow", &I);
 
@@ -488,6 +509,16 @@ void Lint::visitLoadInst(LoadInst &I) {
 }
 
 void Lint::visitStoreInst(StoreInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicRMWInst(AtomicRMWInst &I) {
   visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
                        I.getOperand(0)->getType(), MemRef::Write);
 }
@@ -561,22 +592,22 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
@@ -604,19 +635,20 @@ void Lint::visitIndirectBrInst(IndirectBrInst &I) {
 
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
-                                                        /*OffsetOk=*/false)))
-    Check(
-        CI->getValue().ult(
-            cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
-        "Undefined result: extractelement index out of range", &I);
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getVectorOperandType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
+          "Undefined result: extractelement index out of range", &I);
+  }
 }
 
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
-                                                        /*OffsetOk=*/false)))
-    Check(CI->getValue().ult(
-              cast<FixedVectorType>(I.getType())->getNumElements()),
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
           "Undefined result: insertelement index out of range", &I);
+  }
 }
 
 void Lint::visitUnreachableInst(UnreachableInst &I) {
@@ -645,7 +677,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                            SmallPtrSetImpl<Value *> &Visited) const {
   // Detect self-referential values.
   if (!Visited.insert(V).second)
-    return UndefValue::get(V->getType());
+    return PoisonValue::get(V->getType());
 
   // TODO: Look through sext or zext cast, when the result is known to
   // be interpreted as signed or unsigned, respectively.
@@ -657,11 +689,12 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     BasicBlock::iterator BBI = L->getIterator();
     BasicBlock *BB = L->getParent();
     SmallPtrSet<BasicBlock *, 4> VisitedBlocks;
+    BatchAAResults BatchAA(*AA);
     for (;;) {
       if (!VisitedBlocks.insert(BB).second)
         break;
       if (Value *U =
-              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, AA))
+              FindAvailableLoadedValue(L, BB, BBI, DefMaxInstsToScan, &BatchAA))
         return findValueImpl(U, OffsetOk, Visited);
       if (BBI != BB->begin())
         break;
@@ -706,7 +739,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
 PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -714,6 +747,10 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
+  if (LintAbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
+                           LintAbortOnErrorArgName + ")",
+                       false);
   return PreservedAnalyses::all();
 }
 

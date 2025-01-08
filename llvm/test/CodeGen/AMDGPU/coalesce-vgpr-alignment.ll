@@ -9,7 +9,7 @@
 ; GCN-NEXT: v_mov_b32_e32 v{{[0-9]*}}[[LO:[02468]]], v{{[0-9]+}}
 ; GCN-NEXT: global_store_dwordx2 v{{[0-9]+}}, v[[[LO]]:{{[0-9]+\]}}, s[{{[0-9:]+}}]
 
-define amdgpu_kernel void @test_odd_int4(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) {
+define amdgpu_kernel void @test_odd_int4(ptr addrspace(1) %arg, ptr addrspace(1) %arg1) #0 {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep1 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %arg, i32 %lid
@@ -24,7 +24,7 @@ bb:
 ; GCN:     global_load_dwordx2 v[{{[0-9]*[02468]}}:{{[0-9]+}}],
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]*}}[[LO:[02468]]], v{{[0-9]+}}
 ; GCN:     global_store_dwordx4 v[{{[0-9]*[02468]:[0-9]*[13579]}}], v[{{[0-9]*[02468]:[0-9]*[13579]}}]
-define amdgpu_kernel void @test_vector_creation() {
+define amdgpu_kernel void @test_vector_creation() #0 {
 entry:
   %tmp231 = load <4 x i16>, ptr addrspace(1) undef, align 2
   %vext466 = shufflevector <4 x i16> %tmp231, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -35,3 +35,5 @@ entry:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

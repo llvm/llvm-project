@@ -37,7 +37,7 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ; NORVC-NEXT:    jalr zero, 0(ra)
 ; RVC-COUNT-5:   c.nop
 ; RVC-NEXT:      c.jr ra
-; CHECK:       .section __patchable_function_entries,"aGwo",@progbits,f5,comdat,f5{{$}}
+; CHECK:       .section __patchable_function_entries,"awoG",@progbits,f5,f5,comdat{{$}}
 ; RV32:        .p2align 2
 ; RV32-NEXT:   .word .Lfunc_begin2
 ; RV64:        .p2align 3

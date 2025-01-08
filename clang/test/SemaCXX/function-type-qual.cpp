@@ -37,3 +37,21 @@ void instantiateArrayDecay() {
   int a[1];
   arrayDecay(a);
 }
+
+namespace GH79748 {
+typedef decltype(sizeof(0)) size_t;
+struct A {
+  void* operator new(size_t bytes) const; //expected-error {{static member function cannot have 'const' qualifier}}
+  void* operator new[](size_t bytes) const; //expected-error {{static member function cannot have 'const' qualifier}}
+
+  void operator delete(void*) const; //expected-error {{static member function cannot have 'const' qualifier}}
+  void operator delete[](void*) const; //expected-error {{static member function cannot have 'const' qualifier}}
+};
+struct B {
+  void* operator new(size_t bytes) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
+  void* operator new[](size_t bytes) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
+
+  void operator delete(void*) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
+  void operator delete[](void*) volatile; //expected-error {{static member function cannot have 'volatile' qualifier}}
+};
+}

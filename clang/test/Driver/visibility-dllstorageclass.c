@@ -1,4 +1,4 @@
-// Check behaviour of -fvisibility-from-dllstorageclass options
+//// Check behaviour of -fvisibility-from-dllstorageclass options
 
 // RUN: %clang -target x86_64-unknown-windows-itanium -fdeclspec \
 // RUN:     -Werror -S -### %s 2>&1 | \
@@ -85,3 +85,35 @@
 // ALL-SAME: "-fvisibility-nodllstorageclass=protected"
 // ALL-SAME: "-fvisibility-externs-dllimport=hidden"
 // ALL-SAME: "-fvisibility-externs-nodllstorageclass=protected"
+
+//// Test that "keep" can be specified, which means that the visibility of
+//// the matching globals will not be adjusted.
+
+// RUN: %clang -target x86_64-unknown-windows-itanium -fdeclspec \
+// RUN:     -fvisibility-from-dllstorageclass \
+// RUN:     -fvisibility-dllexport=keep \
+// RUN:     -fvisibility-nodllstorageclass=keep \
+// RUN:     -fvisibility-externs-dllimport=keep \
+// RUN:     -fvisibility-externs-nodllstorageclass=keep \
+// RUN:     -Werror -S -### %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefixes=KEEP
+
+// KEEP:        "-fvisibility-from-dllstorageclass"
+// KEEP-SAME:   "-fvisibility-dllexport=keep"
+// KEEP-SAME:   "-fvisibility-nodllstorageclass=keep"
+// KEEP-SAME:   "-fvisibility-externs-dllimport=keep"
+// KEEP-SAME:   "-fvisibility-externs-nodllstorageclass=keep"
+
+// RUN: %clang -target x86_64-unknown-windows-itanium -fdeclspec \
+// RUN:     -fvisibility-from-dllstorageclass \
+// RUN:     -fvisibility-dllexport=default \
+// RUN:     -fvisibility-dllexport=keep \
+// RUN:     -fvisibility-nodllstorageclass=default \
+// RUN:     -fvisibility-nodllstorageclass=keep \
+// RUN:     -fvisibility-externs-dllimport=default \
+// RUN:     -fvisibility-externs-dllimport=keep \
+// RUN:     -fvisibility-externs-nodllstorageclass=default \
+// RUN:     -fvisibility-externs-nodllstorageclass=keep \
+// RUN:     -Werror -S -### %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefixes=KEEP
+

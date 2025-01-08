@@ -10,6 +10,7 @@ add_object_library(
     time_utils.h
   DEPENDS
     libc.include.time
+    libc.src.__support.CPP.limits
     libc.src.errno.errno
 )
 
@@ -32,6 +33,30 @@ add_entrypoint_object(
     asctime_r.h
   DEPENDS
     .time_utils
+    libc.include.time
+)
+
+add_entrypoint_object(
+  ctime
+  SRCS
+    ctime.cpp
+  HDRS
+    ctime.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.include.time
+)
+
+add_entrypoint_object(
+  ctime_r
+  SRCS
+    ctime_r.cpp
+  HDRS
+    ctime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
     libc.include.time
 )
 
@@ -81,9 +106,22 @@ add_entrypoint_object(
 
 add_entrypoint_object(
   time
+  SRCS
+    time.cpp
+  HDRS
+    time_func.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.time_t
+    libc.src.__support.time.clock_gettime
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timespec_get
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.time
+    .${LIBC_TARGET_OS}.timespec_get
 )
 
 add_entrypoint_object(
@@ -112,4 +150,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.gettimeofday
+)
+
+add_entrypoint_object(
+  clock_getres
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_getres
 )

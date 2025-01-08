@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_NEXTAFTERF_H
 #define LLVM_LIBC_SRC_MATH_NEXTAFTERF_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 float nextafterf(float x, float y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_NEXTAFTERF_H

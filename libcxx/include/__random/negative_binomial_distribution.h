@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
 
+#include <__assert>
 #include <__config>
 #include <__random/bernoulli_distribution.h>
 #include <__random/gamma_distribution.h>
@@ -113,10 +114,9 @@ _IntType negative_binomial_distribution<_IntType>::operator()(_URNG& __urng, con
       else
         ++__f;
     }
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __f >= 0,
-        "std::negative_binomial_distribution should never produce negative values. "
-        "This is almost certainly a signed integer overflow issue on __f.");
+    _LIBCPP_ASSERT_INTERNAL(__f >= 0,
+                            "std::negative_binomial_distribution should never produce negative values. "
+                            "This is almost certainly a signed integer overflow issue on __f.");
     return __f;
   }
   return poisson_distribution<result_type>(gamma_distribution<double>(__k, (1 - __p) / __p)(__urng))(__urng);

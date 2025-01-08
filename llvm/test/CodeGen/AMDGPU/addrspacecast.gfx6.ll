@@ -208,4 +208,4 @@ define ptr addrspace(6) @addrspacecast_flat_null_to_constant32bit() {
 attributes #0 = { "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

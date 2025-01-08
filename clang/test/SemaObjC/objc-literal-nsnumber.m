@@ -64,7 +64,7 @@ int main(void) {
   @-five; // expected-error{{@- must be followed by a number to form an NSNumber object}}
   @+five; // expected-error{{@+ must be followed by a number to form an NSNumber object}}
   NSNumber *av = @(1391126400000);
-  NSNumber *bv = @(1391126400 * 1000); // expected-warning {{overflow in expression; result is -443003904 with type 'int'}}
+  NSNumber *bv = @(1391126400 * 1000); // expected-warning {{overflow in expression; result is -443'003'904 with type 'int'}}
   NSNumber *cv = @(big * thousand);
 }
 

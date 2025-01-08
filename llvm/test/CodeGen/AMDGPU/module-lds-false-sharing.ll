@@ -24,122 +24,6 @@ store i32 0, ptr addrspace(3) @used_by_kernel
 }
 ; CHECK: ; LDSByteSize: 4 bytes
 
-; Needs to allocate both variables, store to used_by_both is at sizeof(double)
-define amdgpu_kernel void @withcall() {
-; GFX9-LABEL: withcall:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GFX9-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GFX9-NEXT:    s_mov_b32 s14, -1
-; GFX9-NEXT:    s_mov_b32 s15, 0xe00000
-; GFX9-NEXT:    s_add_u32 s12, s12, s3
-; GFX9-NEXT:    s_addc_u32 s13, s13, 0
-; GFX9-NEXT:    s_add_u32 s8, s0, 36
-; GFX9-NEXT:    s_addc_u32 s9, s1, 0
-; GFX9-NEXT:    s_getpc_b64 s[0:1]
-; GFX9-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX9-NEXT:    s_mov_b64 s[0:1], s[12:13]
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_mov_b64 s[2:3], s[14:15]
-; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    ds_write_b32 v0, v0 offset:8
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    s_endpgm
-;
-; GFX10-LABEL: withcall:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GFX10-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GFX10-NEXT:    s_mov_b32 s14, -1
-; GFX10-NEXT:    s_mov_b32 s15, 0x31c16000
-; GFX10-NEXT:    s_add_u32 s12, s12, s3
-; GFX10-NEXT:    s_addc_u32 s13, s13, 0
-; GFX10-NEXT:    s_add_u32 s8, s0, 36
-; GFX10-NEXT:    s_addc_u32 s9, s1, 0
-; GFX10-NEXT:    s_getpc_b64 s[0:1]
-; GFX10-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
-; GFX10-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GFX10-NEXT:    s_mov_b64 s[0:1], s[12:13]
-; GFX10-NEXT:    s_mov_b64 s[2:3], s[14:15]
-; GFX10-NEXT:    s_mov_b32 s32, 0
-; GFX10-NEXT:    ds_write_b32 v0, v0 offset:8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX10-NEXT:    s_endpgm
-;
-; G_GFX9-LABEL: withcall:
-; G_GFX9:       ; %bb.0:
-; G_GFX9-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; G_GFX9-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; G_GFX9-NEXT:    s_mov_b32 s14, -1
-; G_GFX9-NEXT:    s_mov_b32 s15, 0xe00000
-; G_GFX9-NEXT:    s_add_u32 s12, s12, s3
-; G_GFX9-NEXT:    s_addc_u32 s13, s13, 0
-; G_GFX9-NEXT:    s_add_u32 s8, s0, 36
-; G_GFX9-NEXT:    s_addc_u32 s9, s1, 0
-; G_GFX9-NEXT:    s_getpc_b64 s[0:1]
-; G_GFX9-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
-; G_GFX9-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
-; G_GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; G_GFX9-NEXT:    s_mov_b64 s[0:1], s[12:13]
-; G_GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; G_GFX9-NEXT:    v_mov_b32_e32 v1, 8
-; G_GFX9-NEXT:    s_mov_b64 s[2:3], s[14:15]
-; G_GFX9-NEXT:    s_mov_b32 s32, 0
-; G_GFX9-NEXT:    ds_write_b32 v1, v0
-; G_GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; G_GFX9-NEXT:    s_endpgm
-;
-; G_GFX10-LABEL: withcall:
-; G_GFX10:       ; %bb.0:
-; G_GFX10-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; G_GFX10-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; G_GFX10-NEXT:    s_mov_b32 s14, -1
-; G_GFX10-NEXT:    s_mov_b32 s15, 0x31c16000
-; G_GFX10-NEXT:    s_add_u32 s12, s12, s3
-; G_GFX10-NEXT:    s_addc_u32 s13, s13, 0
-; G_GFX10-NEXT:    s_add_u32 s8, s0, 36
-; G_GFX10-NEXT:    s_addc_u32 s9, s1, 0
-; G_GFX10-NEXT:    s_getpc_b64 s[0:1]
-; G_GFX10-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
-; G_GFX10-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
-; G_GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; G_GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
-; G_GFX10-NEXT:    v_mov_b32_e32 v1, 8
-; G_GFX10-NEXT:    s_mov_b64 s[0:1], s[12:13]
-; G_GFX10-NEXT:    s_mov_b64 s[2:3], s[14:15]
-; G_GFX10-NEXT:    s_mov_b32 s32, 0
-; G_GFX10-NEXT:    ds_write_b32 v1, v0
-; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; G_GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; G_GFX10-NEXT:    s_endpgm
-  store i32 0, ptr addrspace(3) @used_by_both
-  call void @nonkernel()
-  ret void
-}
-; CHECK: ; LDSByteSize: 16 bytes
-
-; Previous lowering was less efficient here than necessary as the i32 used
-; by the kernel is also used by an unrelated non-kernel function. Codegen
-; is now the same as nocall_ideal.
-define amdgpu_kernel void @nocall_false_sharing() {
-; CHECK-LABEL: nocall_false_sharing:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    ds_write_b32 v0, v0
-; CHECK-NEXT:    s_endpgm
-  store i32 0, ptr addrspace(3) @used_by_both
-  ret void
-}
-; CHECK: ; LDSByteSize: 4 bytes
-
-
 define void @nonkernel() {
 ; GFX9-LABEL: nonkernel:
 ; GFX9:       ; %bb.0:
@@ -189,5 +73,162 @@ define void @nonkernel() {
   ret void
 }
 
+; Needs to allocate both variables, store to used_by_both is at sizeof(double)
+define amdgpu_kernel void @withcall() {
+; GFX9-LABEL: withcall:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; GFX9-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; GFX9-NEXT:    s_mov_b32 s22, -1
+; GFX9-NEXT:    s_mov_b32 s23, 0xe00000
+; GFX9-NEXT:    s_add_u32 s20, s20, s11
+; GFX9-NEXT:    s_addc_u32 s21, s21, 0
+; GFX9-NEXT:    s_mov_b32 s12, s8
+; GFX9-NEXT:    s_add_u32 s8, s4, 36
+; GFX9-NEXT:    s_mov_b32 s13, s9
+; GFX9-NEXT:    s_addc_u32 s9, s5, 0
+; GFX9-NEXT:    s_getpc_b64 s[4:5]
+; GFX9-NEXT:    s_add_u32 s4, s4, nonkernel@gotpcrel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s5, s5, nonkernel@gotpcrel32@hi+12
+; GFX9-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; GFX9-NEXT:    s_mov_b32 s14, s10
+; GFX9-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX9-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX9-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX9-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX9-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GFX9-NEXT:    s_mov_b32 s32, 0
+; GFX9-NEXT:    ds_write_b32 v3, v3 offset:8
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: withcall:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; GFX10-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; GFX10-NEXT:    s_mov_b32 s22, -1
+; GFX10-NEXT:    s_mov_b32 s23, 0x31c16000
+; GFX10-NEXT:    s_add_u32 s20, s20, s11
+; GFX10-NEXT:    s_addc_u32 s21, s21, 0
+; GFX10-NEXT:    s_mov_b32 s12, s8
+; GFX10-NEXT:    s_add_u32 s8, s4, 36
+; GFX10-NEXT:    s_mov_b32 s13, s9
+; GFX10-NEXT:    s_addc_u32 s9, s5, 0
+; GFX10-NEXT:    s_getpc_b64 s[4:5]
+; GFX10-NEXT:    s_add_u32 s4, s4, nonkernel@gotpcrel32@lo+4
+; GFX10-NEXT:    s_addc_u32 s5, s5, nonkernel@gotpcrel32@hi+12
+; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GFX10-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-NEXT:    s_mov_b32 s14, s10
+; GFX10-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX10-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX10-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX10-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX10-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; GFX10-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GFX10-NEXT:    s_mov_b32 s32, 0
+; GFX10-NEXT:    ds_write_b32 v3, v3 offset:8
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GFX10-NEXT:    s_endpgm
+;
+; G_GFX9-LABEL: withcall:
+; G_GFX9:       ; %bb.0:
+; G_GFX9-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; G_GFX9-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; G_GFX9-NEXT:    s_mov_b32 s22, -1
+; G_GFX9-NEXT:    s_mov_b32 s23, 0xe00000
+; G_GFX9-NEXT:    s_add_u32 s20, s20, s11
+; G_GFX9-NEXT:    s_addc_u32 s21, s21, 0
+; G_GFX9-NEXT:    s_mov_b32 s16, s8
+; G_GFX9-NEXT:    s_add_u32 s8, s4, 36
+; G_GFX9-NEXT:    s_mov_b32 s15, s9
+; G_GFX9-NEXT:    s_addc_u32 s9, s5, 0
+; G_GFX9-NEXT:    s_mov_b64 s[12:13], s[0:1]
+; G_GFX9-NEXT:    s_getpc_b64 s[0:1]
+; G_GFX9-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
+; G_GFX9-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
+; G_GFX9-NEXT:    s_load_dwordx2 s[18:19], s[0:1], 0x0
+; G_GFX9-NEXT:    s_mov_b32 s14, s10
+; G_GFX9-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; G_GFX9-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; G_GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; G_GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; G_GFX9-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; G_GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; G_GFX9-NEXT:    v_mov_b32_e32 v4, 8
+; G_GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
+; G_GFX9-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; G_GFX9-NEXT:    s_mov_b64 s[4:5], s[12:13]
+; G_GFX9-NEXT:    s_mov_b32 s12, s16
+; G_GFX9-NEXT:    s_mov_b32 s13, s15
+; G_GFX9-NEXT:    s_mov_b32 s32, 0
+; G_GFX9-NEXT:    ds_write_b32 v4, v3
+; G_GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; G_GFX9-NEXT:    s_endpgm
+;
+; G_GFX10-LABEL: withcall:
+; G_GFX10:       ; %bb.0:
+; G_GFX10-NEXT:    s_mov_b32 s20, SCRATCH_RSRC_DWORD0
+; G_GFX10-NEXT:    s_mov_b32 s21, SCRATCH_RSRC_DWORD1
+; G_GFX10-NEXT:    s_mov_b32 s22, -1
+; G_GFX10-NEXT:    s_mov_b32 s23, 0x31c16000
+; G_GFX10-NEXT:    s_add_u32 s20, s20, s11
+; G_GFX10-NEXT:    s_addc_u32 s21, s21, 0
+; G_GFX10-NEXT:    s_mov_b32 s16, s8
+; G_GFX10-NEXT:    s_add_u32 s8, s4, 36
+; G_GFX10-NEXT:    s_mov_b32 s15, s9
+; G_GFX10-NEXT:    s_addc_u32 s9, s5, 0
+; G_GFX10-NEXT:    s_mov_b64 s[12:13], s[0:1]
+; G_GFX10-NEXT:    s_getpc_b64 s[0:1]
+; G_GFX10-NEXT:    s_add_u32 s0, s0, nonkernel@gotpcrel32@lo+4
+; G_GFX10-NEXT:    s_addc_u32 s1, s1, nonkernel@gotpcrel32@hi+12
+; G_GFX10-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; G_GFX10-NEXT:    s_load_dwordx2 s[18:19], s[0:1], 0x0
+; G_GFX10-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; G_GFX10-NEXT:    v_mov_b32_e32 v3, 0
+; G_GFX10-NEXT:    v_mov_b32_e32 v4, 8
+; G_GFX10-NEXT:    s_mov_b32 s14, s10
+; G_GFX10-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; G_GFX10-NEXT:    v_or3_b32 v31, v0, v1, v2
+; G_GFX10-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; G_GFX10-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; G_GFX10-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; G_GFX10-NEXT:    s_mov_b64 s[4:5], s[12:13]
+; G_GFX10-NEXT:    s_mov_b32 s12, s16
+; G_GFX10-NEXT:    s_mov_b32 s13, s15
+; G_GFX10-NEXT:    s_mov_b32 s32, 0
+; G_GFX10-NEXT:    ds_write_b32 v4, v3
+; G_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; G_GFX10-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; G_GFX10-NEXT:    s_endpgm
+  store i32 0, ptr addrspace(3) @used_by_both
+  call void @nonkernel()
+  ret void
+}
+; CHECK: ; LDSByteSize: 16 bytes
+
+; Previous lowering was less efficient here than necessary as the i32 used
+; by the kernel is also used by an unrelated non-kernel function. Codegen
+; is now the same as nocall_ideal.
+define amdgpu_kernel void @nocall_false_sharing() {
+; CHECK-LABEL: nocall_false_sharing:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    ds_write_b32 v0, v0
+; CHECK-NEXT:    s_endpgm
+  store i32 0, ptr addrspace(3) @used_by_both
+  ret void
+}
+; CHECK: ; LDSByteSize: 4 bytes
+
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

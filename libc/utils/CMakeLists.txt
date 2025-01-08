@@ -1,6 +1,5 @@
+add_subdirectory(hdrgen)
+
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(MPFRWrapper)
-endif()
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(gpu)
 endif()

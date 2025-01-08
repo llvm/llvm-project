@@ -9,7 +9,7 @@
 
 ; Check that we do not crash in object mode
 ; OBJ64:       Exception section {
-; OBJ64-NEXT:    Symbol: .test__tdw_annotation (6)
+; OBJ64-NEXT:    Symbol: .test__tdw_annotation
 
 !1 = !{!"ppc-trap-reason", !"1", !"2"}
 declare void @llvm.ppc.trapd(i64 %a)

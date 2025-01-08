@@ -14,7 +14,6 @@
 #include "clang/Lex/Pragma.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -36,8 +35,6 @@
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -47,7 +44,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1444,7 +1440,8 @@ struct PragmaWarningHandler : public PragmaHandler {
                                  .Case("once", PPCallbacks::PWS_Once)
                                  .Case("suppress", PPCallbacks::PWS_Suppress)
                                  .Default(-1);
-          if ((SpecifierValid = SpecifierInt != -1))
+          SpecifierValid = SpecifierInt != -1;
+          if (SpecifierValid)
             Specifier =
                 static_cast<PPCallbacks::PragmaWarningSpecifier>(SpecifierInt);
 
@@ -1751,6 +1748,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     // Find the module we're entering. We require that a module map for it
     // be loaded or implicitly loadable.
     auto &HSI = PP.getHeaderSearchInfo();
+    auto &MM = HSI.getModuleMap();
     Module *M = HSI.lookupModule(Current, ModuleName.front().second);
     if (!M) {
       PP.Diag(ModuleName.front().second,
@@ -1758,7 +1756,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
       return;
     }
     for (unsigned I = 1; I != ModuleName.size(); ++I) {
-      auto *NewM = M->findOrInferSubmodule(ModuleName[I].first->getName());
+      auto *NewM = MM.findOrInferSubmodule(M, ModuleName[I].first->getName());
       if (!NewM) {
         PP.Diag(ModuleName[I].second, diag::err_pp_module_begin_no_submodule)
           << M->getFullModuleName() << ModuleName[I].first;

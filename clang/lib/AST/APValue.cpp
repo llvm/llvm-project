@@ -90,7 +90,7 @@ QualType APValue::LValueBase::getType() const {
   // For a materialized temporary, the type of the temporary we materialized
   // may not be the type of the expression.
   if (const MaterializeTemporaryExpr *MTE =
-          clang::dyn_cast<MaterializeTemporaryExpr>(Base)) {
+          llvm::dyn_cast<MaterializeTemporaryExpr>(Base)) {
     SmallVector<const Expr *, 2> CommaLHSs;
     SmallVector<SubobjectAdjustment, 2> Adjustments;
     const Expr *Temp = MTE->getSubExpr();
@@ -704,6 +704,9 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     return;
   }
 
+  if (const auto *AT = Ty->getAs<AtomicType>())
+    Ty = AT->getValueType();
+
   switch (getKind()) {
   case APValue::None:
     Out << "<out of lifetime>";
@@ -905,7 +908,8 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     for (const auto *FI : RD->fields()) {
       if (!First)
         Out << ", ";
-      if (FI->isUnnamedBitfield()) continue;
+      if (FI->isUnnamedBitField())
+        continue;
       getStructField(FI->getFieldIndex()).
         printPretty(Out, Policy, FI->getType(), Ctx);
       First = false;
@@ -943,7 +947,6 @@ std::string APValue::getAsString(const ASTContext &Ctx, QualType Ty) const {
   std::string Result;
   llvm::raw_string_ostream Out(Result);
   printPretty(Out, Ctx, Ty);
-  Out.flush();
   return Result;
 }
 
@@ -1083,10 +1086,6 @@ void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   new ((void *)(char *)&Data) Arr(InitElts, Size);
   Kind = Array;
 }
-
-MutableArrayRef<APValue::LValuePathEntry>
-setLValueUninit(APValue::LValueBase B, const CharUnits &O, unsigned Size,
-                bool OnePastTheEnd, bool IsNullPtr);
 
 MutableArrayRef<const CXXRecordDecl *>
 APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,

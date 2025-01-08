@@ -59,7 +59,7 @@ define void @test5(ptr %dest) {
 define void @test6(ptr %dest) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    store i16 42, ptr [[P2]], align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DEST:%.*]], ptr noundef nonnull align 1 dereferenceable(7) [[P2]], i64 7, i1 false)
 ; CHECK-NEXT:    ret void

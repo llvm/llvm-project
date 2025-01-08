@@ -18,9 +18,9 @@
 define dso_local void @merge(ptr nocapture readonly %params) local_unnamed_addr align 2 {
 ; CHECK-LABEL: @merge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SAVEPAIRLISTS3:%.*]] = getelementptr inbounds [[STRUCT_NONBONDED:%.*]], ptr [[PARAMS:%.*]], i64 0, i32 11
+; CHECK-NEXT:    [[SAVEPAIRLISTS3:%.*]] = getelementptr inbounds nuw i8, ptr [[PARAMS:%.*]], i64 144
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SAVEPAIRLISTS3]], align 8
-; CHECK-NEXT:    [[USEPAIRLISTS4:%.*]] = getelementptr inbounds [[STRUCT_NONBONDED]], ptr [[PARAMS]], i64 0, i32 12
+; CHECK-NEXT:    [[USEPAIRLISTS4:%.*]] = getelementptr inbounds nuw i8, ptr [[PARAMS]], i64 148
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[USEPAIRLISTS4]], align 4
 ; CHECK-NEXT:    [[TOBOOL54_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL54_NOT]], label [[LOR_LHS_FALSE55:%.*]], label [[IF_END109:%.*]]
@@ -37,7 +37,7 @@ define dso_local void @merge(ptr nocapture readonly %params) local_unnamed_addr 
 ; CHECK:       if.then117:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.then138:
-; CHECK-NEXT:    [[DOTIN:%.*]] = getelementptr inbounds [[STRUCT_NONBONDED]], ptr [[PARAMS]], i64 0, i32 16
+; CHECK-NEXT:    [[DOTIN:%.*]] = getelementptr inbounds nuw i8, ptr [[PARAMS]], i64 172
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTIN]], align 4
 ; CHECK-NEXT:    [[TOBOOL139_NOT:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL139_NOT]], label [[IF_ELSE147:%.*]], label [[IF_THEN140:%.*]]
@@ -89,9 +89,9 @@ if.else147:                                       ; preds = %if.then138
 ;; Check the last store is deleted.
 define i32 @load(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @load(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[B:%.*]], i64 4
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
 ; CHECK-NEXT:    ret i32 [[TMP2]]

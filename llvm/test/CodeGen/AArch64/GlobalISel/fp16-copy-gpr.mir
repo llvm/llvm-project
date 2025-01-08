@@ -7,7 +7,7 @@
   target triple = "aarch64"
 
   ; Function Attrs: noinline nounwind optnone
-  define void @fp16_to_gpr([2 x half], [2 x half]* %addr) {
+  define void @fp16_to_gpr([2 x half], ptr %addr) {
     ret void
   }
 

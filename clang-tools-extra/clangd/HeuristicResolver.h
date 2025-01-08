@@ -26,13 +26,14 @@ class UnresolvedUsingValueDecl;
 
 namespace clangd {
 
-// This class heuristic resolution of declarations and types in template code.
+// This class handles heuristic resolution of declarations and types in template
+// code.
 //
 // As a compiler, clang only needs to perform certain types of processing on
 // template code (such as resolving dependent names to declarations, or
 // resolving the type of a dependent expression) after instantiation. Indeed,
 // C++ language features such as template specialization mean such resolution
-// cannot be done accurately before instantiation
+// cannot be done accurately before instantiation.
 //
 // However, template code is written and read in uninstantiated form, and clangd
 // would like to provide editor features like go-to-definition in template code
@@ -77,43 +78,6 @@ public:
 
 private:
   ASTContext &Ctx;
-
-  // Given a tag-decl type and a member name, heuristically resolve the
-  // name to one or more declarations.
-  // The current heuristic is simply to look up the name in the primary
-  // template. This is a heuristic because the template could potentially
-  // have specializations that declare different members.
-  // Multiple declarations could be returned if the name is overloaded
-  // (e.g. an overloaded method in the primary template).
-  // This heuristic will give the desired answer in many cases, e.g.
-  // for a call to vector<T>::size().
-  std::vector<const NamedDecl *> resolveDependentMember(
-      const Type *T, DeclarationName Name,
-      llvm::function_ref<bool(const NamedDecl *ND)> Filter) const;
-
-  // Try to heuristically resolve the type of a possibly-dependent expression
-  // `E`.
-  const Type *resolveExprToType(const Expr *E) const;
-  std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) const;
-
-  // Helper function for HeuristicResolver::resolveDependentMember()
-  // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a CXXRecordDecl in which we can try name lookup.
-  CXXRecordDecl *resolveTypeToRecordDecl(const Type *T) const;
-
-  // This is a reimplementation of CXXRecordDecl::lookupDependentName()
-  // so that the implementation can call into other HeuristicResolver helpers.
-  // FIXME: Once HeuristicResolver is upstreamed to the clang libraries
-  // (https://github.com/clangd/clangd/discussions/1662),
-  // CXXRecordDecl::lookupDepenedentName() can be removed, and its call sites
-  // can be modified to benefit from the more comprehensive heuristics offered
-  // by HeuristicResolver instead.
-  std::vector<const NamedDecl *> lookupDependentName(
-      CXXRecordDecl *RD, DeclarationName Name,
-      llvm::function_ref<bool(const NamedDecl *ND)> Filter) const;
-  bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
-                                            CXXBasePath &Path,
-                                            DeclarationName Name) const;
 };
 
 } // namespace clangd

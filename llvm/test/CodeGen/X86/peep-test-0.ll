@@ -7,8 +7,8 @@ define void @loop(i64 %n, ptr nocapture %d) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shlq $4, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero

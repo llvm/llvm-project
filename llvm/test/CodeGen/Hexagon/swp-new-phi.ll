@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that the generatePhi code doesn't rename a a Phi instruction that's defined
 ; in the same block.  The bug causes a Phi to incorrectly depend on another Phi.
@@ -10,26 +10,26 @@
 ; CHECK: endloop0
 
 ; Function Attrs: argmemonly nounwind
-declare i8* @llvm.hexagon.circ.sthhi(i8*, i32, i32, i32) #1
+declare ptr @llvm.hexagon.circ.sthhi(ptr, i32, i32, i32) #1
 
 ; Function Attrs: nounwind optsize
-define signext i16 @f0(i16* %a0, i16* %a1, i16 signext %a2, i16 signext %a3) #0 {
+define signext i16 @f0(ptr %a0, ptr %a1, i16 signext %a2, i16 signext %a3) #0 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
-  %v0 = phi i16* [ %v10, %b1 ], [ %a1, %b0 ]
+  %v0 = phi ptr [ %v10, %b1 ], [ %a1, %b0 ]
   %v1 = phi i32 [ %v13, %b1 ], [ 1, %b0 ]
   %v2 = phi i16 [ %v12, %b1 ], [ 0, %b0 ]
-  %v3 = bitcast i16* %v0 to i8*
+  %v3 = bitcast ptr %v0 to ptr
   %v4 = add nsw i32 %v1, 10
-  %v5 = getelementptr inbounds i16, i16* %a0, i32 %v4
-  %v6 = load i16, i16* %v5, align 2, !tbaa !0
+  %v5 = getelementptr inbounds i16, ptr %a0, i32 %v4
+  %v6 = load i16, ptr %v5, align 2, !tbaa !0
   %v7 = sext i16 %v6 to i32
   %v8 = add nsw i32 %v7, 40000
-  %v9 = tail call i8* @llvm.hexagon.circ.sthhi(i8* %v3, i32 %v8, i32 117441022, i32 2)
-  %v10 = bitcast i8* %v9 to i16*
-  %v11 = load i16, i16* %v10, align 2, !tbaa !0
+  %v9 = tail call ptr @llvm.hexagon.circ.sthhi(ptr %v3, i32 %v8, i32 117441022, i32 2)
+  %v10 = bitcast ptr %v9 to ptr
+  %v11 = load i16, ptr %v10, align 2, !tbaa !0
   %v12 = add i16 %v11, %v2
   %v13 = add i32 %v1, 1
   %v14 = icmp eq i32 %v13, 1000

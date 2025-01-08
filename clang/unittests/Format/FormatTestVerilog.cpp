@@ -19,7 +19,7 @@ protected:
   FormatStyle getDefaultStyle() const override {
     return getLLVMStyle(FormatStyle::LK_Verilog);
   }
-  std::string messUp(llvm::StringRef Code) const override {
+  std::string messUp(StringRef Code) const override {
     return test::messUp(Code, /*HandleHash=*/false);
   }
 };
@@ -391,6 +391,15 @@ TEST_F(FormatTestVerilog, Declaration) {
   verifyFormat("wire mynet, mynet1;");
   verifyFormat("wire mynet, //\n"
                "     mynet1;");
+  verifyFormat("wire #0 mynet, mynet1;");
+  verifyFormat("wire logic #0 mynet, mynet1;");
+  verifyFormat("wire #(1, 2, 3) mynet, mynet1;");
+  verifyFormat("wire #0 mynet, //\n"
+               "        mynet1;");
+  verifyFormat("wire logic #0 mynet, //\n"
+               "              mynet1;");
+  verifyFormat("wire #(1, 2, 3) mynet, //\n"
+               "                mynet1;");
   verifyFormat("wire mynet = enable;");
   verifyFormat("wire mynet = enable, mynet1;");
   verifyFormat("wire mynet = enable, //\n"
@@ -613,6 +622,17 @@ TEST_F(FormatTestVerilog, Headers) {
                "      (input var x aaaaaaaaaaaaaaa``x, \\\n"
                "                   b);",
                Style);
+  // When the ports line is not to be formatted, following lines should not take
+  // on its indentation.
+  verifyFormat("module x\n"
+               "    (output x);\n"
+               "  assign x = 0;\n"
+               "endmodule",
+               "module x\n"
+               "    (output x);\n"
+               "    assign x = 0;\n"
+               "endmodule",
+               getDefaultStyle(), {tooling::Range(25, 18)});
 }
 
 TEST_F(FormatTestVerilog, Hierarchy) {
@@ -682,6 +702,18 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  generate\n"
                "  endgenerate\n"
                "endfunction : x");
+  // Type names with '::' should be recognized.
+  verifyFormat("function automatic x::x x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  // Names having to do macros should be recognized.
+  verifyFormat("function automatic x::x x``x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyFormat("function automatic x::x `x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyNoCrash("x x(x x, x x);");
 }
 
 TEST_F(FormatTestVerilog, Identifiers) {
@@ -944,6 +976,7 @@ TEST_F(FormatTestVerilog, Instantiation) {
                "        .qbar(out1),\n"
                "        .clear(in1),\n"
                "        .preset(in2));");
+  verifyNoCrash(", ff1();");
   // With breaking between instance ports disabled.
   auto Style = getDefaultStyle();
   Style.VerilogBreakBetweenInstancePorts = false;

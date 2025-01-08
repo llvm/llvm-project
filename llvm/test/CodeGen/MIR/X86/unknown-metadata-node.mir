@@ -1,13 +1,13 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 
   define i32 @test(i32 %x) #0 !dbg !4 {
   entry:
     %x.addr = alloca i32, align 4
-    store i32 %x, i32* %x.addr, align 4
-    call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
-    %0 = load i32, i32* %x.addr, align 4, !dbg !15
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !12, metadata !13), !dbg !14
+    %0 = load i32, ptr %x.addr, align 4, !dbg !15
     ret i32 %0, !dbg !15
   }
 

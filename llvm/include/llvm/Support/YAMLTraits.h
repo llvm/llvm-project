@@ -23,6 +23,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <map>
 #include <memory>
@@ -567,10 +568,10 @@ inline bool isNumeric(StringRef S) {
 
   // Make S.front() and S.drop_front().front() (if S.front() is [+-]) calls
   // safe.
-  if (S.empty() || S.equals("+") || S.equals("-"))
+  if (S.empty() || S == "+" || S == "-")
     return false;
 
-  if (S.equals(".nan") || S.equals(".NaN") || S.equals(".NAN"))
+  if (S == ".nan" || S == ".NaN" || S == ".NAN")
     return true;
 
   // Infinity and decimal numbers can be prefixed with sign.
@@ -578,7 +579,7 @@ inline bool isNumeric(StringRef S) {
 
   // Check for infinity first, because checking for hex and oct numbers is more
   // expensive.
-  if (Tail.equals(".inf") || Tail.equals(".Inf") || Tail.equals(".INF"))
+  if (Tail == ".inf" || Tail == ".Inf" || Tail == ".INF")
     return true;
 
   // Section 10.3.2 Tag Resolution
@@ -599,7 +600,7 @@ inline bool isNumeric(StringRef S) {
   // digit after dot (as opposed by number which has digits before the dot), but
   // doesn't have one.
   if (S.starts_with(".") &&
-      (S.equals(".") ||
+      (S == "." ||
        (S.size() > 1 && std::strchr("0123456789", S[1]) == nullptr)))
     return false;
 
@@ -656,14 +657,13 @@ inline bool isNumeric(StringRef S) {
 }
 
 inline bool isNull(StringRef S) {
-  return S.equals("null") || S.equals("Null") || S.equals("NULL") ||
-         S.equals("~");
+  return S == "null" || S == "Null" || S == "NULL" || S == "~";
 }
 
 inline bool isBool(StringRef S) {
   // FIXME: using parseBool is causing multiple tests to fail.
-  return S.equals("true") || S.equals("True") || S.equals("TRUE") ||
-         S.equals("false") || S.equals("False") || S.equals("FALSE");
+  return S == "true" || S == "True" || S == "TRUE" || S == "false" ||
+         S == "False" || S == "FALSE";
 }
 
 // 5.1. Character Set
@@ -671,7 +671,11 @@ inline bool isBool(StringRef S) {
 // (except for TAB #x9, LF #xA, and CR #xD which are allowed), DEL #x7F, the C1
 // control block #x80-#x9F (except for NEL #x85 which is allowed), the surrogate
 // block #xD800-#xDFFF, #xFFFE, and #xFFFF.
-inline QuotingType needsQuotes(StringRef S) {
+//
+// Some strings are valid YAML values even unquoted, but without quotes are
+// interpreted as non-string type, for instance null, boolean or numeric values.
+// If ForcePreserveAsString is set, such strings are quoted.
+inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
   if (S.empty())
     return QuotingType::Single;
 
@@ -679,12 +683,14 @@ inline QuotingType needsQuotes(StringRef S) {
   if (isSpace(static_cast<unsigned char>(S.front())) ||
       isSpace(static_cast<unsigned char>(S.back())))
     MaxQuotingNeeded = QuotingType::Single;
-  if (isNull(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isBool(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isNumeric(S))
-    MaxQuotingNeeded = QuotingType::Single;
+  if (ForcePreserveAsString) {
+    if (isNull(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isBool(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isNumeric(S))
+      MaxQuotingNeeded = QuotingType::Single;
+  }
 
   // 7.3.3 Plain Style
   // Plain scalars must not begin with most indicators, as this would cause
@@ -1021,7 +1027,7 @@ yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
     std::string Storage;
     raw_string_ostream Buffer(Storage);
     BlockScalarTraits<T>::output(Val, YamlIO.getContext(), Buffer);
-    StringRef Str = Buffer.str();
+    StringRef Str(Storage);
     YamlIO.blockScalarString(Str);
   } else {
     StringRef Str;
@@ -1041,8 +1047,8 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
     raw_string_ostream ScalarBuffer(ScalarStorage), TagBuffer(TagStorage);
     TaggedScalarTraits<T>::output(Val, io.getContext(), ScalarBuffer,
                                   TagBuffer);
-    io.scalarTag(TagBuffer.str());
-    StringRef ScalarStr = ScalarBuffer.str();
+    io.scalarTag(TagStorage);
+    StringRef ScalarStr(ScalarStorage);
     io.scalarString(ScalarStr,
                     TaggedScalarTraits<T>::mustQuote(Val, ScalarStr));
   } else {
@@ -1636,6 +1642,7 @@ public:
 
 private:
   void output(StringRef s);
+  void output(StringRef, QuotingType);
   void outputUpToEndOfLine(StringRef s);
   void newLineCheck(bool EmptySequence = false);
   void outputNewLine();
@@ -1999,6 +2006,11 @@ struct SequenceTraits<
     std::vector<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<std::vector<T>, SequenceElementTraits<T>::flow> {};
+template <typename T, size_t N>
+struct SequenceTraits<
+    std::array<T, N>,
+    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
+    : SequenceTraitsImpl<std::array<T, N>, SequenceElementTraits<T>::flow> {};
 template <typename T, unsigned N>
 struct SequenceTraits<
     SmallVector<T, N>,
@@ -2075,6 +2087,15 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_MAPPING_TRAITS(Type)                                 \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
+  template <> struct LLVM_ABI MappingTraits<Type> {                            \
+    static void mapping(IO &IO, Type &Obj);                                    \
+  };                                                                           \
+  }                                                                            \
+  }
+
+#define LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(Type)                         \
+  namespace llvm {                                                             \
+  namespace yaml {                                                             \
   template <> struct MappingTraits<Type> {                                     \
     static void mapping(IO &IO, Type &Obj);                                    \
   };                                                                           \
@@ -2084,7 +2105,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_ENUM_TRAITS(Type)                                    \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarEnumerationTraits<Type> {                           \
+  template <> struct LLVM_ABI ScalarEnumerationTraits<Type> {                  \
     static void enumeration(IO &io, Type &Value);                              \
   };                                                                           \
   }                                                                            \
@@ -2093,7 +2114,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_BITSET_TRAITS(Type)                                  \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarBitSetTraits<Type> {                                \
+  template <> struct LLVM_ABI ScalarBitSetTraits<Type> {                       \
     static void bitset(IO &IO, Type &Options);                                 \
   };                                                                           \
   }                                                                            \
@@ -2102,7 +2123,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
 #define LLVM_YAML_DECLARE_SCALAR_TRAITS(Type, MustQuote)                       \
   namespace llvm {                                                             \
   namespace yaml {                                                             \
-  template <> struct ScalarTraits<Type> {                                      \
+  template <> struct LLVM_ABI ScalarTraits<Type> {                             \
     static void output(const Type &Value, void *ctx, raw_ostream &Out);        \
     static StringRef input(StringRef Scalar, void *ctxt, Type &Value);         \
     static QuotingType mustQuote(StringRef) { return MustQuote; }              \

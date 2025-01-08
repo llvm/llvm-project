@@ -1427,8 +1427,357 @@ TEST_F(CommentParserTest, Deprecated) {
   }
 }
 
+TEST_F(CommentParserTest, ThrowsCommandHasArg1) {
+  const char *Sources[] = {
+      "/// @throws int This function throws an integer",
+      ("/// @throws\n"
+       "/// int This function throws an integer"),
+      ("/// @throws \n"
+       "/// int This function throws an integer"),
+      ("/// @throws\n"
+       "/// int\n"
+       "/// This function throws an integer"),
+      ("/// @throws \n"
+       "/// int \n"
+       "/// This function throws an integer"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "int");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg2) {
+  const char *Sources[] = {
+      "/// @throws int** This function throws a double pointer to an integer",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "int**");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg3) {
+  const char *Sources[] = {
+      "/// @throws Error<T> error of type Error<T>",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 3)); // Extra children because <T> is parsed
+                                         // as a series of TextComments
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<T>");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg4) {
+  const char *Sources[] = {
+      "/// @throws Error<Container<T>> nested templates",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<Container<T>>");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg5) {
+  const char *Sources[] = {
+      "/// @throws Error<Ts...> variadic templates",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Error<Ts...>");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ThrowsCommandHasArg6) {
+  const char *Sources[] = {
+      "/// @throws Foo<(1 > 0)> typo1",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Foo<(1 >");
+    }
+  }
+}
+
+// No matter the number of (unmatched) opening brackets, no type is parsed.
+TEST_F(CommentParserTest, ThrowsCommandHasArg7) {
+  const char *Sources[] = {
+    "/// @throws Foo<",
+    "/// @throws Foo<<<",
+    "/// @throws Foo<<<<<<<",
+    "/// @throws Foo<\n",
+    "/// @throws Foo<<<\n",
+    "/// @throws Foo<<<<<<<\n",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 0);
+    }
+  }
+}
+
+// Types with a non-matching closing bracket are parsed as if they are a type
+TEST_F(CommentParserTest, ThrowsCommandHasArg8) {
+  const char *Sources[] = {
+    "/// @throws Foo>",
+    "/// @throws Foo>\n",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Foo>");
+    }
+  }
+}
+
+// Everying up until the end of the paragraph comment will be
+// eaten up if the template sequence is unterminated (i.e. number of
+// opening and closing brackets is not equal).
+TEST_F(CommentParserTest, ThrowsCommandHasArg9) {
+  const char *Sources[] = {
+    "/// @throws Foo<Bar<t>\n"
+    "/// Aaa\n"
+    "///\n"
+    "/// Bbb\n"
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 3));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "throws", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 0);
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg1) {
+  const char *Sources[] = {
+      "/// @par Paragraph header:",     "/// @par Paragraph header:\n",
+      "/// @par Paragraph header:\r\n", "/// @par Paragraph header:\n\r",
+      "/** @par Paragraph header:*/",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg2) {
+  const char *Sources[] = {
+      "/// @par Paragraph header: ",     "/// @par Paragraph header: \n",
+      "/// @par Paragraph header: \r\n", "/// @par Paragraph header: \n\r",
+      "/** @par Paragraph header: */",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header: ");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg3) {
+  const char *Sources[] = {
+      ("/// @par Paragraph header:\n"
+       "/// Paragraph body"),
+      ("/// @par Paragraph header:\r\n"
+       "/// Paragraph body"),
+      ("/// @par Paragraph header:\n\r"
+       "/// Paragraph body"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg4) {
+  const char *Sources[] = {
+      ("/// @par Paragraph header:\n"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+      ("/// @par Paragraph header:\r\n"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+      ("/// @par Paragraph header:\n\r"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 2));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body1");
+      ASSERT_TRUE(GetChildAt(PC, 1, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body2");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg5) {
+  const char *Sources[] = {
+      ("/// @par \n"
+       "/// Paragraphs with no text before newline have no heading"),
+      ("/// @par \r\n"
+       "/// Paragraphs with no text before newline have no heading"),
+      ("/// @par \n\r"
+       "/// Paragraphs with no text before newline have no heading"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 0);
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() ==
+                  "Paragraphs with no text before newline have no heading");
+    }
+  }
+}
+
 } // unnamed namespace
 
 } // end namespace comments
 } // end namespace clang
-

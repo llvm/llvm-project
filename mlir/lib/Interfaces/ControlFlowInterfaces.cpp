@@ -177,9 +177,10 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
 
     SmallVector<RegionBranchTerminatorOpInterface> regionReturnOps;
     for (Block &block : region)
-      if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(
-              block.getTerminator()))
-        regionReturnOps.push_back(terminator);
+      if (!block.empty())
+        if (auto terminator =
+                dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+          regionReturnOps.push_back(terminator);
 
     // If there is no return-like terminator, the op itself should verify
     // type consistency.
@@ -218,11 +219,18 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   return success();
 }
 
-/// Return `true` if region `r` is reachable from region `begin` according to
-/// the RegionBranchOpInterface (by taking a branch).
-static bool isRegionReachable(Region *begin, Region *r) {
-  assert(begin->getParentOp() == r->getParentOp() &&
-         "expected that both regions belong to the same op");
+/// Stop condition for `traverseRegionGraph`. The traversal is interrupted if
+/// this function returns "true" for a successor region. The first parameter is
+/// the successor region. The second parameter indicates all already visited
+/// regions.
+using StopConditionFn = function_ref<bool(Region *, ArrayRef<bool> visited)>;
+
+/// Traverse the region graph starting at `begin`. The traversal is interrupted
+/// if `stopCondition` evaluates to "true" for a successor region. In that case,
+/// this function returns "true". Otherwise, if the traversal was not
+/// interrupted, this function returns "false".
+static bool traverseRegionGraph(Region *begin,
+                                StopConditionFn stopConditionFn) {
   auto op = cast<RegionBranchOpInterface>(begin->getParentOp());
   SmallVector<bool> visited(op->getNumRegions(), false);
   visited[begin->getRegionNumber()] = true;
@@ -241,7 +249,7 @@ static bool isRegionReachable(Region *begin, Region *r) {
   // Process all regions in the worklist via DFS.
   while (!worklist.empty()) {
     Region *nextRegion = worklist.pop_back_val();
-    if (nextRegion == r)
+    if (stopConditionFn(nextRegion, visited))
       return true;
     if (visited[nextRegion->getRegionNumber()])
       continue;
@@ -250,6 +258,18 @@ static bool isRegionReachable(Region *begin, Region *r) {
   }
 
   return false;
+}
+
+/// Return `true` if region `r` is reachable from region `begin` according to
+/// the RegionBranchOpInterface (by taking a branch).
+static bool isRegionReachable(Region *begin, Region *r) {
+  assert(begin->getParentOp() == r->getParentOp() &&
+         "expected that both regions belong to the same op");
+  return traverseRegionGraph(begin,
+                             [&](Region *nextRegion, ArrayRef<bool> visited) {
+                               // Interrupt traversal if `r` was reached.
+                               return nextRegion == r;
+                             });
 }
 
 /// Return `true` if `a` and `b` are in mutually exclusive regions.
@@ -303,6 +323,21 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
 bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   Region *region = &getOperation()->getRegion(index);
   return isRegionReachable(region, region);
+}
+
+bool RegionBranchOpInterface::hasLoop() {
+  SmallVector<RegionSuccessor> entryRegions;
+  getSuccessorRegions(RegionBranchPoint::parent(), entryRegions);
+  for (RegionSuccessor successor : entryRegions)
+    if (!successor.isParent() &&
+        traverseRegionGraph(successor.getSuccessor(),
+                            [](Region *nextRegion, ArrayRef<bool> visited) {
+                              // Interrupt traversal if the region was already
+                              // visited.
+                              return visited[nextRegion->getRegionNumber()];
+                            }))
+      return true;
+  return false;
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {

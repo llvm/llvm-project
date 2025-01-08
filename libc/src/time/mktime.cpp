@@ -8,11 +8,10 @@
 
 #include "src/time/mktime.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
-#include <limits.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
@@ -43,12 +42,18 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
       return time_utils::out_of_range();
     if (tm_out->tm_mday > 19)
       return time_utils::out_of_range();
-    if (tm_out->tm_hour > 3)
-      return time_utils::out_of_range();
-    if (tm_out->tm_min > 14)
-      return time_utils::out_of_range();
-    if (tm_out->tm_sec > 7)
-      return time_utils::out_of_range();
+    else if (tm_out->tm_mday == 19) {
+      if (tm_out->tm_hour > 3)
+        return time_utils::out_of_range();
+      else if (tm_out->tm_hour == 3) {
+        if (tm_out->tm_min > 14)
+          return time_utils::out_of_range();
+        else if (tm_out->tm_min == 14) {
+          if (tm_out->tm_sec > 7)
+            return time_utils::out_of_range();
+        }
+      }
+    }
   }
 
   // Years are ints.  A 32-bit year will fit into a 64-bit time_t.
@@ -101,7 +106,8 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
     }
   }
 
-  // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
+  // TODO: https://github.com/llvm/llvm-project/issues/121962
+  // Need to handle timezone and update of tm_isdst.
   int64_t seconds = tm_out->tm_sec +
                     tm_out->tm_min * TimeConstants::SECONDS_PER_MIN +
                     tm_out->tm_hour * TimeConstants::SECONDS_PER_HOUR +
@@ -114,4 +120,4 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   return static_cast<time_t>(seconds);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

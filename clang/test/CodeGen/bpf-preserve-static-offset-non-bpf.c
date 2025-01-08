@@ -1,6 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -cc1 -triple x86_64 -disable-llvm-passes -S -emit-llvm  -o - %s \
-// RUN: | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 // Verify that __attribute__((preserve_static_offset))
 // has no effect for non-BPF target.

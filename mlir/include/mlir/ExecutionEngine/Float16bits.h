@@ -48,6 +48,9 @@ MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const f16 &f);
 // Outputs a bfloat value.
 MLIR_FLOAT16_EXPORT std::ostream &operator<<(std::ostream &os, const bf16 &d);
 
+MLIR_FLOAT16_EXPORT bool operator==(const f16 &f1, const f16 &f2);
+MLIR_FLOAT16_EXPORT bool operator==(const bf16 &bf1, const bf16 &bf2);
+
 extern "C" MLIR_FLOAT16_EXPORT void printF16(uint16_t bits);
 extern "C" MLIR_FLOAT16_EXPORT void printBF16(uint16_t bits);
 

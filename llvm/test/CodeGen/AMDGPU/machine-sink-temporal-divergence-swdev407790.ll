@@ -38,80 +38,86 @@ declare hidden i64 @_Z14get_local_sizej(i32 noundef) local_unnamed_addr #0
 define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture noundef readonly align 1 %0, ptr addrspace(1) nocapture noundef writeonly align 1 %1, ptr addrspace(1) nocapture noundef readonly align 4 %2, ptr addrspace(1) noundef align 4 %3, ptr addrspace(1) nocapture noundef readnone align 4 %4) local_unnamed_addr #2 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
 ; CHECK-LABEL: kernel_round1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_add_u32 s10, s10, s15
+; CHECK-NEXT:    s_add_u32 s12, s12, s17
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s11, s11, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
-; CHECK-NEXT:    s_load_dwordx8 s[44:51], s[6:7], 0x0
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
+; CHECK-NEXT:    s_addc_u32 s13, s13, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
+; CHECK-NEXT:    s_load_dwordx8 s[48:55], s[8:9], 0x0
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
-; CHECK-NEXT:    s_add_u32 s42, s34, 40
+; CHECK-NEXT:    s_add_u32 s44, s34, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; CHECK-NEXT:    s_addc_u32 s43, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
-; CHECK-NEXT:    s_mov_b32 s33, s14
-; CHECK-NEXT:    s_mov_b32 s40, s13
-; CHECK-NEXT:    s_mov_b32 s41, s12
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z13get_global_idj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z13get_global_idj@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s33, s16
+; CHECK-NEXT:    s_addc_u32 s45, s35, 0
+; CHECK-NEXT:    s_mov_b32 s43, s14
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
+; CHECK-NEXT:    s_mov_b32 s12, s14
+; CHECK-NEXT:    s_mov_b32 s13, s15
+; CHECK-NEXT:    s_mov_b32 s14, s33
+; CHECK-NEXT:    s_mov_b32 s42, s15
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[40:41], s[4:5]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z13get_global_idj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z13get_global_idj@rel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v45, 0
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v43, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z12get_local_idj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z12get_local_idj@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z12get_local_idj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z12get_local_idj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    ds_write_b32 v45, v45 offset:15360
-; CHECK-NEXT:    s_getpc_b64 s[52:53]
-; CHECK-NEXT:    s_add_u32 s52, s52, _Z7barrierj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s53, s53, _Z7barrierj@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[52:53]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v43
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v43
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffffc, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
-; CHECK-NEXT:    global_load_dword v0, v0, s[48:49]
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    global_load_dword v0, v0, s[52:53]
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z3minjj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z3minjj@rel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z3minjj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3minjj@rel32@hi+12
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, v1, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v0
-; CHECK-NEXT:    s_mov_b32 s48, exec_lo
+; CHECK-NEXT:    s_mov_b32 s44, exec_lo
 ; CHECK-NEXT:    v_cmpx_ne_u32_e32 0, v42
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_25
 ; CHECK-NEXT:  ; %bb.1: ; %.preheader5
@@ -130,7 +136,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:    v_add_nc_u32_e32 v45, -1, v42
-; CHECK-NEXT:    s_mov_b32 s49, 0
+; CHECK-NEXT:    s_mov_b32 s45, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v45
 ; CHECK-NEXT:    s_and_b32 exec_lo, exec_lo, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_25
@@ -138,208 +144,228 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v43, 10, v43
 ; CHECK-NEXT:    v_add_nc_u32_e32 v46, 0x3c05, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v47, 0
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, _Z10atomic_incPU3AS3Vj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, _Z10atomic_incPU3AS3Vj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s55, 0
+; CHECK-NEXT:    s_mov_b32 s47, 0
 ; CHECK-NEXT:  .LBB0_5: ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_8 Depth 2
 ; CHECK-NEXT:    ; Child Loop BB0_20 Depth 2
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, s55, v44
-; CHECK-NEXT:    s_lshl_b32 s4, s55, 5
-; CHECK-NEXT:    s_add_i32 s54, s55, 1
-; CHECK-NEXT:    s_add_i32 s5, s55, 5
-; CHECK-NEXT:    v_or3_b32 v57, s4, v43, s54
-; CHECK-NEXT:    ds_read_u8 v0, v0
-; CHECK-NEXT:    v_mov_b32_e32 v58, s54
-; CHECK-NEXT:    s_mov_b32 s56, exec_lo
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, s47, v44
+; CHECK-NEXT:    s_lshl_b32 s4, s47, 5
+; CHECK-NEXT:    s_add_i32 s46, s47, 1
+; CHECK-NEXT:    s_add_i32 s5, s47, 5
+; CHECK-NEXT:    v_or3_b32 v57, s4, v43, s46
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v56, 0xff, v0
+; CHECK-NEXT:    ds_read_u8 v56, v0
+; CHECK-NEXT:    v_mov_b32_e32 v58, s46
+; CHECK-NEXT:    s_mov_b32 s52, exec_lo
 ; CHECK-NEXT:    v_cmpx_lt_u32_e64 s5, v42
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_17
 ; CHECK-NEXT:  ; %bb.6: ; %.preheader2
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    s_mov_b32 s57, 0
-; CHECK-NEXT:    s_mov_b32 s58, 0
+; CHECK-NEXT:    s_mov_b32 s53, 0
+; CHECK-NEXT:    s_mov_b32 s56, 0
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: ; in Loop: Header=BB0_8 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s59
-; CHECK-NEXT:    s_add_i32 s58, s58, 4
-; CHECK-NEXT:    s_add_i32 s4, s55, s58
-; CHECK-NEXT:    v_add_nc_u32_e32 v0, s58, v57
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
+; CHECK-NEXT:    s_add_i32 s56, s56, 4
+; CHECK-NEXT:    s_add_i32 s4, s47, s56
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, s56, v57
 ; CHECK-NEXT:    s_add_i32 s5, s4, 5
 ; CHECK-NEXT:    s_add_i32 s4, s4, 1
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s5, v42
 ; CHECK-NEXT:    v_mov_b32_e32 v58, s4
-; CHECK-NEXT:    s_or_b32 s57, vcc_lo, s57
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s57
+; CHECK-NEXT:    s_or_b32 s53, vcc_lo, s53
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s53
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_16
 ; CHECK-NEXT:  .LBB0_8: ; Parent Loop BB0_5 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    v_add_nc_u32_e32 v59, s58, v46
-; CHECK-NEXT:    v_add_nc_u32_e32 v58, s58, v57
-; CHECK-NEXT:    s_mov_b32 s59, exec_lo
+; CHECK-NEXT:    v_add_nc_u32_e32 v59, s56, v46
+; CHECK-NEXT:    v_add_nc_u32_e32 v58, s56, v57
 ; CHECK-NEXT:    ds_read_u8 v0, v59
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_eq_u16_e64 v56, v0
+; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v56, v0 src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s57, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; in Loop: Header=BB0_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v58
 ; CHECK-NEXT:  .LBB0_10: ; in Loop: Header=BB0_8 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s59
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
 ; CHECK-NEXT:    ds_read_u8 v0, v59 offset:1
-; CHECK-NEXT:    s_mov_b32 s59, exec_lo
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_eq_u16_e64 v56, v0
+; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v56, v0 src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s57, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_12
 ; CHECK-NEXT:  ; %bb.11: ; in Loop: Header=BB0_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v60, 1, v58
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v60
 ; CHECK-NEXT:  .LBB0_12: ; in Loop: Header=BB0_8 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s59
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
 ; CHECK-NEXT:    ds_read_u8 v0, v59 offset:2
-; CHECK-NEXT:    s_mov_b32 s59, exec_lo
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_eq_u16_e64 v56, v0
+; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v56, v0 src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s57, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_14
 ; CHECK-NEXT:  ; %bb.13: ; in Loop: Header=BB0_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v60, 2, v58
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v60
 ; CHECK-NEXT:  .LBB0_14: ; in Loop: Header=BB0_8 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s59
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
 ; CHECK-NEXT:    ds_read_u8 v0, v59 offset:3
-; CHECK-NEXT:    s_mov_b32 s59, exec_lo
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_eq_u16_e64 v56, v0
+; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v56, v0 src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s57, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_7
 ; CHECK-NEXT:  ; %bb.15: ; in Loop: Header=BB0_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v58, 3, v58
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v58
 ; CHECK-NEXT:    s_branch .LBB0_7
-; CHECK-NEXT:  .LBB0_16: ; %Flow43
+; CHECK-NEXT:  .LBB0_16: ; %Flow45
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s53
 ; CHECK-NEXT:    v_mov_b32_e32 v57, v0
-; CHECK-NEXT:  .LBB0_17: ; %Flow44
+; CHECK-NEXT:  .LBB0_17: ; %Flow46
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s56
-; CHECK-NEXT:    s_mov_b32 s55, exec_lo
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s52
+; CHECK-NEXT:    s_mov_b32 s47, exec_lo
 ; CHECK-NEXT:    v_cmpx_lt_u32_e64 v58, v42
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_23
 ; CHECK-NEXT:  ; %bb.18: ; %.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    s_mov_b32 s56, 0
+; CHECK-NEXT:    s_mov_b32 s52, 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    s_branch .LBB0_20
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_19: ; in Loop: Header=BB0_20 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s57
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s53
 ; CHECK-NEXT:    v_add_nc_u32_e32 v58, 1, v58
 ; CHECK-NEXT:    v_add_nc_u32_e32 v57, 1, v57
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v58, v42
-; CHECK-NEXT:    s_or_b32 s56, vcc_lo, s56
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s56
+; CHECK-NEXT:    s_or_b32 s52, vcc_lo, s52
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s52
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_22
 ; CHECK-NEXT:  .LBB0_20: ; Parent Loop BB0_5 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v44, v58
-; CHECK-NEXT:    s_mov_b32 s57, exec_lo
 ; CHECK-NEXT:    ds_read_u8 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_eq_u16_e64 v56, v0
+; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v56, v0 src0_sel:BYTE_0 src1_sel:DWORD
+; CHECK-NEXT:    s_and_saveexec_b32 s53, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_19
 ; CHECK-NEXT:  ; %bb.21: ; in Loop: Header=BB0_20 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v57
 ; CHECK-NEXT:    s_branch .LBB0_19
-; CHECK-NEXT:  .LBB0_22: ; %Flow41
+; CHECK-NEXT:  .LBB0_22: ; %Flow43
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_inst_prefetch 0x2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s56
-; CHECK-NEXT:  .LBB0_23: ; %Flow42
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s52
+; CHECK-NEXT:  .LBB0_23: ; %Flow44
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s47
 ; CHECK-NEXT:  ; %bb.24: ; in Loop: Header=BB0_5 Depth=1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s54, v45
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s46, v45
 ; CHECK-NEXT:    v_cmp_lt_u32_e64 s4, 59, v47
 ; CHECK-NEXT:    v_add_nc_u32_e32 v46, 1, v46
-; CHECK-NEXT:    s_mov_b32 s55, s54
+; CHECK-NEXT:    s_mov_b32 s47, s46
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; CHECK-NEXT:    s_and_b32 s4, exec_lo, s4
-; CHECK-NEXT:    s_or_b32 s49, s4, s49
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s49
+; CHECK-NEXT:    s_or_b32 s45, s4, s45
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s45
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_5
-; CHECK-NEXT:  .LBB0_25: ; %Flow49
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s48
+; CHECK-NEXT:  .LBB0_25: ; %Flow51
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s44
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[52:53]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    ds_read_b32 v47, v0 offset:15360
@@ -347,39 +373,32 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_cmpx_gt_u32_e64 v47, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_33
 ; CHECK-NEXT:  ; %bb.26:
-; CHECK-NEXT:    s_add_u32 s52, s44, 8
-; CHECK-NEXT:    s_addc_u32 s53, s45, 0
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, _Z10atomic_addPU3AS1Vjj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, _Z10atomic_addPU3AS1Vjj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s54, 0
-; CHECK-NEXT:    s_getpc_b64 s[44:45]
-; CHECK-NEXT:    s_add_u32 s44, s44, _Z10atomic_subPU3AS1Vjj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s45, s45, _Z10atomic_subPU3AS1Vjj@rel32@hi+12
-; CHECK-NEXT:    s_getpc_b64 s[48:49]
-; CHECK-NEXT:    s_add_u32 s48, s48, _Z14get_local_sizej@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s49, s49, _Z14get_local_sizej@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s44, 0
 ; CHECK-NEXT:    s_branch .LBB0_28
 ; CHECK-NEXT:  .LBB0_27: ; in Loop: Header=BB0_28 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s45
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[48:49]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z14get_local_sizej@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z14get_local_sizej@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_add_co_u32 v41, vcc_lo, v0, v41
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v47, v41
-; CHECK-NEXT:    s_or_b32 s54, vcc_lo, s54
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s54
+; CHECK-NEXT:    s_or_b32 s44, vcc_lo, s44
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s44
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_33
 ; CHECK-NEXT:  .LBB0_28: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v41
-; CHECK-NEXT:    s_mov_b32 s55, exec_lo
+; CHECK-NEXT:    s_mov_b32 s45, exec_lo
 ; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v63, 10, v0
@@ -388,15 +407,15 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 0x180, v63
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 5, v62
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v4, 5, v72
-; CHECK-NEXT:    v_add_co_u32 v2, s4, s52, v1
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, s53, 0, s4
+; CHECK-NEXT:    v_add_co_u32 v2, s4, s48, v1
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v3, null, s49, 0, s4
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v3, vcc_lo
 ; CHECK-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; CHECK-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:8
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:8
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_xor_b32_e32 v46, v9, v5
 ; CHECK-NEXT:    v_xor_b32_e32 v45, v8, v4
@@ -408,8 +427,8 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_27
 ; CHECK-NEXT:  ; %bb.29: ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    global_load_dwordx2 v[58:59], v[2:3], off offset:16
-; CHECK-NEXT:    global_load_dwordx2 v[60:61], v[0:1], off offset:16
+; CHECK-NEXT:    global_load_dwordx2 v[58:59], v[2:3], off offset:24
+; CHECK-NEXT:    global_load_dwordx2 v[60:61], v[0:1], off offset:24
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v45
 ; CHECK-NEXT:    v_alignbit_b32 v1, v46, v45, 12
 ; CHECK-NEXT:    v_and_b32_e32 v2, 0xf0000, v45
@@ -420,24 +439,28 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0xf0, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 15, v1
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    v_or3_b32 v2, v3, v2, v4
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_or3_b32 v73, v2, v0, v1
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_addPU3AS1Vjj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_addPU3AS1Vjj@rel32@hi+12
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v73
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v73
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7fffc, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e64 v44, v1, 1
 ; CHECK-NEXT:    v_and_b32_e32 v74, 28, v1
-; CHECK-NEXT:    v_add_co_u32 v42, s4, s50, v0
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v43, null, s51, 0, s4
+; CHECK-NEXT:    v_add_co_u32 v42, s4, s54, v0
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v43, null, s55, 0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v44
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v42
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v43
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, v74, 4
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_cmpx_gt_u32_e32 12, v0
@@ -446,7 +469,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:  ; %bb.30: ; in Loop: Header=BB0_28 Depth=1
 ; CHECK-NEXT:    v_xor_b32_e32 v4, v60, v58
 ; CHECK-NEXT:    v_lshrrev_b64 v[2:3], 16, v[56:57]
-; CHECK-NEXT:    v_mad_u64_u32 v[6:7], null, 0x180, v73, s[46:47]
+; CHECK-NEXT:    v_mad_u64_u32 v[6:7], null, 0x180, v73, s[50:51]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v10, 5, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v8, 6, v72
@@ -477,12 +500,16 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v44
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[44:45]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_subPU3AS1Vjj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_subPU3AS1Vjj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_branch .LBB0_27
 ; CHECK-NEXT:  .LBB0_33:
 ; CHECK-NEXT:    s_endpgm
@@ -732,7 +759,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
   %192 = and i64 %191, 4294967168
   %193 = getelementptr inbounds i8, ptr addrspace(1) %1, i64 %192
   %194 = shl nuw nsw i32 %178, 5
-  %195 = or i32 %194, 8
+  %195 = or disjoint i32 %194, 8
   %196 = zext i32 %195 to i64
   %197 = getelementptr inbounds i8, ptr addrspace(1) %193, i64 %196
   %198 = getelementptr inbounds i8, ptr addrspace(1) %197, i64 -4
@@ -760,100 +787,103 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapture noundef readonly align 1 %.0, ptr addrspace(1) nocapture noundef writeonly align 1 %.1, ptr addrspace(1) nocapture noundef readonly align 4 %.2, ptr addrspace(1) noundef align 4 %.3, ptr addrspace(1) nocapture noundef readnone align 4 %.4) local_unnamed_addr #2 !kernel_arg_addr_space !5 !kernel_arg_access_qual !6 !kernel_arg_type !7 !kernel_arg_base_type !7 !kernel_arg_type_qual !8 !kernel_arg_name !9 !reqd_work_group_size !10 {
 ; CHECK-LABEL: kernel_round1_short:
 ; CHECK:       ; %bb.0: ; %.5
-; CHECK-NEXT:    s_add_u32 s10, s10, s15
+; CHECK-NEXT:    s_add_u32 s12, s12, s17
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_addc_u32 s11, s11, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
-; CHECK-NEXT:    s_load_dwordx2 s[46:47], s[6:7], 0x10
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; CHECK-NEXT:    s_addc_u32 s13, s13, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
+; CHECK-NEXT:    s_load_dwordx2 s[46:47], s[8:9], 0x10
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
+; CHECK-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
-; CHECK-NEXT:    s_add_u32 s42, s36, 40
+; CHECK-NEXT:    s_add_u32 s44, s38, 40
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
-; CHECK-NEXT:    s_addc_u32 s43, s37, 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
-; CHECK-NEXT:    s_mov_b32 s33, s14
-; CHECK-NEXT:    s_mov_b32 s40, s13
-; CHECK-NEXT:    s_mov_b32 s41, s12
-; CHECK-NEXT:    s_mov_b64 s[38:39], s[4:5]
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z13get_global_idj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z13get_global_idj@rel32@hi+12
+; CHECK-NEXT:    s_mov_b32 s33, s16
+; CHECK-NEXT:    s_addc_u32 s45, s39, 0
+; CHECK-NEXT:    s_mov_b32 s43, s14
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
+; CHECK-NEXT:    s_mov_b32 s12, s14
+; CHECK-NEXT:    s_mov_b32 s13, s15
+; CHECK-NEXT:    s_mov_b32 s14, s33
+; CHECK-NEXT:    s_mov_b32 s42, s15
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[36:37], s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[40:41], s[4:5]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z13get_global_idj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z13get_global_idj@rel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v43, 0
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v42, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z12get_local_idj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z12get_local_idj@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z12get_local_idj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z12get_local_idj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mul_lo_u32 v46, v0, 14
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    ds_write_b32 v43, v43 offset:15360
-; CHECK-NEXT:    s_getpc_b64 s[44:45]
-; CHECK-NEXT:    s_add_u32 s44, s44, _Z7barrierj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s45, s45, _Z7barrierj@rel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
 ; CHECK-NEXT:    v_add_nc_u32_e32 v44, 0x3c04, v46
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[44:45]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v42
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v42
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[42:43]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffffc, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[44:45]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
 ; CHECK-NEXT:    global_load_dword v0, v0, s[46:47]
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_getpc_b64 s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s6, _Z3minjj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, _Z3minjj@rel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z3minjj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3minjj@rel32@hi+12
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, v1, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v42, 10, v42
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, _Z10atomic_incPU3AS3Vj@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, _Z10atomic_incPU3AS3Vj@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s46, 0
+; CHECK-NEXT:    s_mov_b32 s44, 0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_add_nc_u32_e32 v45, -1, v41
 ; CHECK-NEXT:    ds_write_b8 v46, v43 offset:15364
+; CHECK-NEXT:    v_add_nc_u32_e32 v45, -1, v41
 ; CHECK-NEXT:  .LBB1_1: ; %.37
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB1_3 Depth 2
 ; CHECK-NEXT:    ; Child Loop BB1_8 Depth 2
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, s4, v44
 ; CHECK-NEXT:    s_lshl_b32 s5, s4, 5
-; CHECK-NEXT:    s_add_i32 s47, s4, 1
+; CHECK-NEXT:    s_add_i32 s45, s4, 1
 ; CHECK-NEXT:    s_add_i32 s6, s4, 5
-; CHECK-NEXT:    v_or3_b32 v47, s5, v42, s47
+; CHECK-NEXT:    v_or3_b32 v47, s5, v42, s45
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ds_read_u8 v46, v0
-; CHECK-NEXT:    v_mov_b32_e32 v56, s47
+; CHECK-NEXT:    v_mov_b32_e32 v56, s45
 ; CHECK-NEXT:    s_mov_b32 s5, exec_lo
 ; CHECK-NEXT:    v_cmpx_lt_u32_e64 s6, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_5
@@ -882,23 +912,23 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:  .LBB1_5: ; %Flow4
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; CHECK-NEXT:    s_mov_b32 s48, exec_lo
+; CHECK-NEXT:    s_mov_b32 s46, exec_lo
 ; CHECK-NEXT:    v_cmpx_lt_u32_e64 v56, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_11
 ; CHECK-NEXT:  ; %bb.6: ; %.103.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    s_mov_b32 s49, 0
+; CHECK-NEXT:    s_mov_b32 s47, 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    s_branch .LBB1_8
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB1_7: ; %.114
 ; CHECK-NEXT:    ; in Loop: Header=BB1_8 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s50
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s48
 ; CHECK-NEXT:    v_add_nc_u32_e32 v56, 1, v56
 ; CHECK-NEXT:    v_add_nc_u32_e32 v47, 1, v47
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v56, v41
-; CHECK-NEXT:    s_or_b32 s49, vcc_lo, s49
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s49
+; CHECK-NEXT:    s_or_b32 s47, vcc_lo, s47
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s47
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_10
 ; CHECK-NEXT:  .LBB1_8: ; %.103
 ; CHECK-NEXT:    ; Parent Loop BB1_1 Depth=1
@@ -907,53 +937,61 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    ds_read_u8 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u16_sdwa s4, v46, v0 src0_sel:BYTE_0 src1_sel:DWORD
-; CHECK-NEXT:    s_and_saveexec_b32 s50, s4
+; CHECK-NEXT:    s_and_saveexec_b32 s48, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_7
 ; CHECK-NEXT:  ; %bb.9: ; %.110
 ; CHECK-NEXT:    ; in Loop: Header=BB1_8 Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; CHECK-NEXT:    s_add_u32 s8, s36, 40
-; CHECK-NEXT:    s_addc_u32 s9, s37, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_add_u32 s8, s38, 40
+; CHECK-NEXT:    s_addc_u32 s9, s39, 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_add_nc_u32_e32 v43, 1, v43
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10atomic_incPU3AS3Vj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10atomic_incPU3AS3Vj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    ds_write_b32 v0, v47
 ; CHECK-NEXT:    s_branch .LBB1_7
 ; CHECK-NEXT:  .LBB1_10: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    s_inst_prefetch 0x2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s49
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s47
 ; CHECK-NEXT:  .LBB1_11: ; %Flow2
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s48
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s46
 ; CHECK-NEXT:  ; %bb.12: ; %.32
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s47, v45
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s45, v45
 ; CHECK-NEXT:    v_cmp_lt_u32_e64 s4, 59, v43
 ; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
 ; CHECK-NEXT:    s_and_b32 s4, exec_lo, s4
-; CHECK-NEXT:    s_or_b32 s46, s4, s46
-; CHECK-NEXT:    s_mov_b32 s4, s47
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s46
+; CHECK-NEXT:    s_or_b32 s44, s4, s44
+; CHECK-NEXT:    s_mov_b32 s4, s45
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s44
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
 ; CHECK-NEXT:  ; %bb.13: ; %.119
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s46
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s44
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    s_add_u32 s8, s36, 40
-; CHECK-NEXT:    s_addc_u32 s9, s37, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[38:39]
+; CHECK-NEXT:    s_add_u32 s8, s38, 40
+; CHECK-NEXT:    s_addc_u32 s9, s39, 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    s_mov_b32 s12, s41
-; CHECK-NEXT:    s_mov_b32 s13, s40
+; CHECK-NEXT:    s_mov_b32 s12, s43
+; CHECK-NEXT:    s_mov_b32 s13, s42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[44:45]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z7barrierj@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z7barrierj@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_endpgm
 .5:
   %.6 = tail call i64 @_Z13get_global_idj(i32 noundef 0) #4
@@ -1071,7 +1109,7 @@ attributes #5 = { convergent nounwind }
 !opencl.ocl.version = !{!3}
 !llvm.ident = !{!4}
 
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 8, !"PIC Level", i32 2}
 !3 = !{i32 1, i32 2}

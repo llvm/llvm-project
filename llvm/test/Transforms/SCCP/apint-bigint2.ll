@@ -23,7 +23,7 @@ define i101 @large_aggregate() {
 ; CHECK-LABEL: @large_aggregate(
 ; CHECK-NEXT:    [[D:%.*]] = and i101 undef, 1
 ; CHECK-NEXT:    [[DD:%.*]] = or i101 [[D]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds ([6 x i101], ptr @Y, i64 0, i64 5), i101 [[DD]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds nuw (i8, ptr @Y, i64 80), i101 [[DD]]
 ; CHECK-NEXT:    [[L3:%.*]] = load i101, ptr [[G]], align 4
 ; CHECK-NEXT:    ret i101 [[L3]]
 ;
@@ -40,7 +40,7 @@ define i101 @large_aggregate_2() {
 ; CHECK-LABEL: @large_aggregate_2(
 ; CHECK-NEXT:    [[D:%.*]] = and i101 undef, 1
 ; CHECK-NEXT:    [[DD:%.*]] = or i101 [[D]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds ([6 x i101], ptr @Y, i64 0, i64 5), i101 [[DD]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i101, ptr getelementptr inbounds nuw (i8, ptr @Y, i64 80), i101 [[DD]]
 ; CHECK-NEXT:    [[L3:%.*]] = load i101, ptr [[G]], align 4
 ; CHECK-NEXT:    ret i101 [[L3]]
 ;
@@ -54,7 +54,7 @@ define i101 @large_aggregate_2() {
 
 define void @index_too_large() {
 ; CHECK-LABEL: @index_too_large(
-; CHECK-NEXT:    store ptr getelementptr ([6 x i101], ptr @Y, i64 187649984473770, i64 2), ptr undef, align 8
+; CHECK-NEXT:    store ptr getelementptr (i8, ptr @Y, i64 18014398509481952), ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr [6 x i101], ptr @Y, i32 0, i32 -1

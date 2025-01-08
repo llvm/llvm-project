@@ -1,12 +1,12 @@
 // Test without serialization:
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -ast-dump %s \
-// RUN: | FileCheck -strict-whitespace %s --check-prefix=DIRECT
+// RUN: | FileCheck -strict-whitespace %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -x c++ -std=c++17 -triple x86_64-unknown-unknown -include-pch %t -ast-dump-all /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
-// RUN: | FileCheck --strict-whitespace %s --check-prefix=SERIALIZED
+// RUN: | FileCheck --strict-whitespace %s
 
 template <typename Ty>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} <{{.*}}:1, line:[[@LINE+2]]:10> col:6 a
@@ -116,12 +116,13 @@ template <class T> struct C {
 using type2 = typename C<int>::type1<void>;
 // CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:42> col:7 type2 'typename C<int>::type1<void>':'void (int)'
 // CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'typename C<int>::type1<void>' sugar
-// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias type1
+// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias
+// CHECK-NEXT: name: 'C<int>::type1':'PR55886::C<int>::type1' qualified
+// CHECK-NEXT: NestedNameSpecifier TypeSpec 'C<int>':'PR55886::C<int>'
+// CHECK-NEXT: TypeAliasTemplateDecl {{.+}} type1
 // CHECK-NEXT: TemplateArgument type 'void'
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
 // CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'void (int)' cdecl
-// CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'void' sugar class depth 0 index 0 U
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'type1'
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
 // CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 0 T
 // CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'C'
@@ -129,38 +130,24 @@ using type2 = typename C<int>::type1<void>;
 } // namespace PR55886
 
 namespace PR56099 {
-template <typename... As> struct Y;
-template <typename... Bs> using Z = Y<Bs...>;
-template <typename... Cs> struct foo {
-  template <typename... Ds> using bind = Z<Ds..., Cs...>;
-};
-using t1 = foo<int, short>::bind<char, float>;
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'Y<char, float, int, short>' sugar Y
-// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'char' sugar typename depth 0 index 0 ... Bs pack_index 3
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'Z'
-// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar typename depth 0 index 0 ... Bs pack_index 2
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'Z'
-// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar typename depth 0 index 0 ... Bs pack_index 1
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'Z'
-// CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'short' sugar typename depth 0 index 0 ... Bs pack_index 0
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'Z'
-
 template <typename... T> struct D {
-  template <typename... U> using B = int(int (*...p)(T, U));
+  template <typename... U> struct bind {
+    using bound_type = int(int (*...p)(T, U));
+  };
 };
-using t2 = D<float, char>::B<int, short>;
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'B<int, short>' sugar alias B
+template struct D<float, char>::bind<int, short>;
+// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:5, col:45> col:11 bound_type 'int (int (*)(float, int), int (*)(char, short))'
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (int (*)(float, int), int (*)(char, short))' cdecl
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (float, int)' cdecl
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar typename depth 0 index 0 ... T pack_index 1
 // CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'D'
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar typename depth 0 index 0 ... U pack_index 1
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'B'
+// CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'bind'
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (char, short)' cdecl
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'char' sugar typename depth 0 index 0 ... T pack_index 0
 // CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'D'
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'short' sugar typename depth 0 index 0 ... U pack_index 0
-// CHECK-NEXT: TypeAliasTemplate 0x{{[^ ]*}} 'B'
+// CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'bind'
 } // namespace PR56099
 
 namespace subst_default_argument {
@@ -169,12 +156,12 @@ template<template<class C1, class C2 = A<C1>> class D1, class D2> using D = D1<D
 
 template<class E1, class E2> class E {};
 using test1 = D<E, int>;
-// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<subst_default_argument::E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
-// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar A
+// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
+// CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar
+// CHECK-NEXT: |-name: 'A':'subst_default_argument::A' qualified
+// CHECK-NEXT: | `-ClassTemplateDecl {{.+}} A
 // CHECK-NEXT: |-TemplateArgument type 'int'
-// CHECK-NEXT: | `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 1 D2
-// CHECK-NEXT: |   |-TypeAliasTemplate 0x{{[^ ]*}} 'D'
-// CHECK-NEXT: |   `-BuiltinType 0x{{[^ ]*}} 'int'
+// CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'int'
 // CHECK-NEXT: `-RecordType 0x{{[^ ]*}} 'subst_default_argument::A<int>'
 // CHECK-NEXT:   `-ClassTemplateSpecialization 0x{{[^ ]*}} 'A'
 } // namespace subst_default_argument
@@ -189,15 +176,13 @@ T unTempl = 1;
 
 template<>
 int unTempl<int>;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:16> col:5 unTempl 'int'
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:5> col:5 unTempl 'int'
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:16> col:5 unTempl 'int'
 // CHECK-NEXT: `-TemplateArgument type 'int'
 // CHECK-NEXT: `-BuiltinType 0x{{[^ ]*}} 'int'
 
 template<>
 float unTempl<float> = 1;
-// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float' cinit
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: `-ImplicitCastExpr 0x{{[^ ]*}} <col:24> 'float' <IntegralToFloating>
@@ -222,7 +207,7 @@ int binTempl<int, U>;
 
 template<class U>
 float binTempl<float, U> = 1;
-// CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 binTempl 'float' cinit
+// CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:28> col:7 binTempl 'float'
 // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:10, col:16> col:16 referenced class depth 0 index 0 U
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
@@ -233,9 +218,7 @@ float binTempl<float, U> = 1;
 
 template<>
 int binTempl<int, int>;
-// FIXME (#61680) - serializing and loading AST should not affect reported source range
-// DIRECT:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:22> col:5 binTempl 'int'
-// SERIALIZED: VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:5> col:5 binTempl 'int'
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:22> col:5 binTempl 'int'
 // CHECK-NEXT: |-TemplateArgument type 'int'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'int'
 // CHECK-NEXT: `-TemplateArgument type 'int'
@@ -243,7 +226,7 @@ int binTempl<int, int>;
 
 template<>
 float binTempl<float, float> = 1;
-// CHECK:     VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float' cinit
+// CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'

@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX940 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX950 %s
 
 # GCN-LABEL: name: valu_write_vgpr_sgemm_mfma_read
 # GCN:      V_MOV_B32
@@ -144,7 +145,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 2
+# GFX950-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -164,7 +166,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_agpr_smfmac_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 2
+# GFX950-NEXT: S_NOP 3
 # GCN-NEXT: V_SMFMAC
 name:            sgemm4x4_mfma_write_agpr_smfmac_read_overlap
 body:             |
@@ -174,8 +177,11 @@ body:             |
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -185,8 +191,11 @@ body:             |
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -215,8 +224,11 @@ body:             |
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_smfmac_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_SMFMAC
 name:            xdl_sgemm16x16_mfma_write_agpr_smfmac_read_overlap
 body:             |
@@ -228,7 +240,8 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm32x32_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -240,7 +253,8 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm32x32_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -272,7 +286,8 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_SMFMAC
 name:            xdl_sgemm32x32_mfma_write_agpr_smfmac_read_overlap
 body:             |
@@ -282,8 +297,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -303,8 +322,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_sgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_read_overlap
 body:             |
@@ -335,7 +358,8 @@ body:             |
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_vgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_vgpr_dgemm_mfma_read_overlap
 body:             |
@@ -347,7 +371,8 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm32x32_mfma_write_vgpr_dgemm_mfma_read_overlap
 body:             |
@@ -358,7 +383,8 @@ body:             |
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_mfma_read_partial
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_agpr_mfma_read_partial
 body:             |
@@ -369,7 +395,8 @@ body:             |
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_vgpr_mfma_read_partial
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_vgpr_mfma_read_partial
 body:             |
@@ -507,8 +534,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 body:             |
@@ -528,8 +559,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -599,8 +634,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 body:             |
@@ -610,8 +649,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_smfmac_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_SMFMAC
 name:            dgemm16x16_mfma_write_vgpr_smfmac_srcb_read_overlap
 body:             |
@@ -621,8 +664,13 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_SMFMAC
 name:            dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 body:             |
@@ -803,8 +851,12 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_read
 body:             |
@@ -867,8 +919,13 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_dot_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_DOT
 name:            dmfma16x16_write_vgpr_dot_read
 body:             |
@@ -1014,7 +1071,7 @@ name:            xdl_smfma4x4_write_vgpr_dot_write
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_smfma4x4_read_srcc_vgpr_valu_write
 # GCN:      V_MFMA
@@ -1208,7 +1265,7 @@ name:            dot_write_vgpr_different_dot_read_srcc
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_dot_write
 # GCN:      V_DOT
@@ -1218,7 +1275,7 @@ name:            dot_write_vgpr_different_dot_write
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_valu_read
 # GCN:      V_DOT
@@ -1303,8 +1360,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1324,8 +1385,13 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 0
+
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_read_overlap
 body:             |
@@ -1346,7 +1412,8 @@ body:             |
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 body:             |
@@ -1358,7 +1425,8 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
 body:             |
@@ -1398,8 +1466,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
@@ -1419,8 +1491,13 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
+
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -1450,8 +1527,12 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
@@ -1505,8 +1586,12 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GFX940-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 2
+
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 7
+# GFX950-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma16x16_write_agpr_valu_read
 body:             |
@@ -1575,7 +1660,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16X16X16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            sgemm16X16X16_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1585,7 +1671,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16X16X32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            sgemm16X16X32_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1595,7 +1682,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16X16X16_mfma_write_agpr_dgemm_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            sgemm16X16X16_mfma_write_agpr_dgemm_read_overlap
 body:             |
@@ -1605,7 +1693,8 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16X16X16_mfma_write_agpr_smfmac_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_SMFMAC
 name:            sgemm16X16X16_mfma_write_agpr_smfmac_read_overlap
 body:             |
@@ -1615,7 +1704,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfmac16x16_write_agpr_smfmac_read_overlap
 # GCN:      V_SMFMAC
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_SMFMAC
 name:            smfmac16x16_write_agpr_smfmac_read_overlap
 body:             |
@@ -1713,7 +1803,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfmac16x16x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_SMFMAC
 name:            smfmac16x16x32_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1724,7 +1815,8 @@ body:             |
 # GCN-LABEL: name: smfmac32x32x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
 # GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
 # GCN-NEXT: V_SMFMAC
 name:            smfmac32x32x32_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1909,7 +2001,8 @@ body:             |
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_4pass_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            xdl_sgemm16x16_4pass_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1919,7 +2012,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfmac16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
-# GCN-NEXT: S_NOP 4
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            smfmac16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -2027,4 +2121,469 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
     BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_vgpr3, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GFX940-NEXT: S_NOP 2
+# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr2_vgpr3_vgpr4_vgpr5, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srca
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr0_vgpr1, $vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_xdl_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr6_vgpr7, $vgpr2_vgpr3, $vgpr8_vgpr9_vgpr10_vgpr11, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr2_vgpr3_vgpr4_vgpr5, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 6
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr2_vgpr3, $vgpr10_vgpr11, $vgpr6_vgpr7_vgpr8_vgpr9, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 6
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_xdl_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr10_vgpr11, $vgpr2_vgpr3, $vgpr6_vgpr7_vgpr8_vgpr9, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr6, $vgpr8, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srca
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr8, $vgpr6_vgpr7_vgpr8_vgpr9, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 4
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_2pass_write_vgpr_sgemm_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr1, $vgpr6_vgpr7_vgpr8_vgpr9, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr9, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 6
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr8, $vgpr6_vgpr7_vgpr8_vgpr9, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 4 pass source
+# GCN-LABEL: name: xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 6
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_4pass_write_vgpr_sgemm_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_16X16X16F16_vgprcd_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr0, $vgpr33, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name: xdl_mfma_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr33, $vgpr1, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 killed $vgpr32, killed $vgpr33, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 killed $vgpr0, killed $vgpr33, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 killed $vgpr33, killed $vgpr0, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 1, 2, 3, implicit $mode, implicit $exec
+
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: V_MFMA
+name:            nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name:            nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr3, $vgpr19, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name:            nonxdl_8pass_write_vgpr_nonxdl_sgemm_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr19, $vgpr3, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+...
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr18_vgpr19, killed $vgpr20_vgpr21, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr2_vgpr3, killed $vgpr36_vgpr37, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 8 pass source
+# GCN-LABEL: name: xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_mfma_8pass_write_vgpr_xdl_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr36_vgpr37, killed $vgpr2_vgpr3, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srcc
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srca
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srca
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr2_vgpr3, $vgpr128_vgpr129, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, implicit $mode, implicit $exec
+
+
+...
+
+...
+# 16 pass source
+# GCN-LABEL: name: xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srcb
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 2
+# GCN-NEXT: V_MFMA
+name:            xdl_16pass_write_vgpr_xdl_mfma_read_overlap_srcb
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $vgpr128_vgpr129, $vgpr2_vgpr3, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, 0, 0, 0, implicit $mode, implicit $exec
+
+...
+
+...
+# 2 pass source
+# GCN-LABEL: name: xdl_mfma_2pass_write_agpr_smfmac_read_overlap_srcc
+# GCN:      V_MFMA
+# GFX940-NEXT: S_NOP 2
+# GFX950-NEXT: S_NOP 3
+# GCN-NEXT: V_SMFMAC_
+name:            xdl_mfma_2pass_write_agpr_smfmac_read_overlap_srcc
+body:             |
+  bb.0:
+
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X4F16_e64 $vgpr4_vgpr5, $vgpr6_vgpr7, $agpr0_agpr1_agpr2_agpr3, 1, 2, 3, implicit $mode, implicit $exec
+    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+
+...
+
+...
+# GCN-LABEL: name: xdl_4pass_mfma_write_agpr_smfmac_read_overlap_srcc
+# GCN:      V_MFMA
+# GFX940-NEXT: S_NOP 4
+# GFX950-NEXT: S_NOP 5
+# GCN-NEXT: V_SMFMAC_
+name:            xdl_4pass_mfma_write_agpr_smfmac_read_overlap_srcc
+body:             |
+  bb.0:
+    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+
+...
+
+...
+# GCN-LABEL: name: xdl_8pass_mfma_write_agpr_smfmac_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_SMFMAC_
+name:            xdl_8pass_mfma_write_agpr_smfmac_read_overlap_srcc
+body:             |
+  bb.0:
+    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_vgpr1, killed $vgpr2_vgpr3, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+...
+
+...
+# GCN-LABEL: name: xdl_16pass_mfma_write_agpr_smfmac_read_overlap_srcc
+# GCN:      V_MFMA
+# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 7
+# GFX940-NEXT: S_NOP 0
+# GFX950-NEXT: S_NOP 1
+# GCN-NEXT: V_SMFMAC_
+name:            xdl_16pass_mfma_write_agpr_smfmac_read_overlap_srcc
+body:             |
+  bb.0:
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X4F16_e64 $vgpr126_vgpr127, $vgpr128_vgpr129, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
 ...

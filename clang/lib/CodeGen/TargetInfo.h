@@ -15,11 +15,12 @@
 #define LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 
 #include "CGBuilder.h"
-#include "CodeGenModule.h"
 #include "CGValue.h"
+#include "CodeGenModule.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SyncScope.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -84,12 +85,36 @@ public:
   /// Provides a convenient hook to handle extra target-specific globals.
   virtual void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const {}
 
+  /// Any further codegen related checks that need to be done on a function
+  /// signature in a target specific manner.
+  virtual void checkFunctionABI(CodeGenModule &CGM,
+                                const FunctionDecl *Decl) const {}
+
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                                     const FunctionDecl *Caller,
                                     const FunctionDecl *Callee,
-                                    const CallArgList &Args) const {}
+                                    const CallArgList &Args,
+                                    QualType ReturnType) const {}
+
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
 
   /// Determines the size of struct _Unwind_Exception on this platform,
   /// in 8-bit units.  The Itanium ABI defines this as:
@@ -290,6 +315,11 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
+  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
+                               LangAS SrcAddr, LangAS DestAddr,
+                               llvm::Type *DestTy,
+                               bool IsNonNull = false) const;
+
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.
   /// \param SrcAddr is the language address space of \p V.
@@ -321,6 +351,12 @@ public:
                                                  SyncScope Scope,
                                                  llvm::AtomicOrdering Ordering,
                                                  llvm::LLVMContext &Ctx) const;
+
+  /// Allow the target to apply other metadata to an atomic instruction
+  virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                                       llvm::Instruction &AtomicInst,
+                                       const AtomicExpr *Expr = nullptr) const {
+  }
 
   /// Interface class for filling custom fields of a block literal for OpenCL.
   class TargetOpenCLBlockHelper {
@@ -402,6 +438,22 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
+  // Set the Branch Protection Attributes of the Function accordingly to the
+  // BPI. Remove attributes that contradict with current BPI.
+  static void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::Function &F);
+
+  // Add the Branch Protection Attributes of the FuncAttrs.
+  static void
+  initBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                   llvm::AttrBuilder &FuncAttrs);
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 
@@ -416,6 +468,8 @@ enum class AArch64ABIKind {
   AAPCS = 0,
   DarwinPCS,
   Win64,
+  AAPCSSoft,
+  PAuthTest,
 };
 
 std::unique_ptr<TargetCodeGenInfo>
@@ -496,7 +550,8 @@ createPPC64_SVR4_TargetCodeGenInfo(CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind,
                                    bool SoftFloatABI);
 
 std::unique_ptr<TargetCodeGenInfo>
-createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen);
+createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen,
+                             bool EABI);
 
 std::unique_ptr<TargetCodeGenInfo>
 createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);
@@ -519,6 +574,9 @@ createTCETargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
 createVETargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
+createDirectXTargetCodeGenInfo(CodeGenModule &CGM);
 
 enum class WebAssemblyABIKind {
   MVP = 0,

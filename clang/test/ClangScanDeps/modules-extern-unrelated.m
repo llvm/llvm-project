@@ -1,3 +1,6 @@
+// This test checks that only module map files defining affecting modules are
+// affecting.
+
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
@@ -22,15 +25,8 @@ module second { header "second.h" }
 //--- second/second.h
 #include "first_other.h"
 
-//--- cdb.json.template
-[{
-  "directory": "DIR",
-  "file": "DIR/tu.m",
-  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR/zeroth -I DIR/first -I DIR/second -c DIR/tu.m -o DIR/tu.o"
-}]
-
-// RUN: sed -e "s|DIR|%/t|g" -e "s|INPUTS|%/S/Inputs|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
+// RUN: clang-scan-deps -format experimental-full -o %t/result.json \
+// RUN:   -- %clang -fmodules -fmodules-cache-path=%t/cache -I %t/zeroth -I %t/first -I %t/second -c %t/tu.m -o %t/tu.o
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      {
@@ -44,6 +40,7 @@ module second { header "second.h" }
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -53,9 +50,10 @@ module second { header "second.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h",
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first_other.h"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first_other"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -67,13 +65,15 @@ module second { header "second.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:       "command-line": [
+// CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/second/module.modulemap"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/second/second.h",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "second"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -89,15 +89,16 @@ module second { header "second.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/zeroth/module.modulemap",
 // CHECK-NEXT:       "command-line": [
+// CHECK-NOT:          "-fmodule-map-file=[[PREFIX]]/second/module.modulemap"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/zeroth/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h"
+// CHECK-NEXT:         "[[PREFIX]]/zeroth/zeroth.h",
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/second/second.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "zeroth"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -114,7 +115,7 @@ module second { header "second.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "command-line": [
 // CHECK:                ],
-// CHECK-NEXT:           "executable": "clang",
+// CHECK-NEXT:           "executable": "{{.*}}",
 // CHECK-NEXT:           "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m"
 // CHECK-NEXT:           ],

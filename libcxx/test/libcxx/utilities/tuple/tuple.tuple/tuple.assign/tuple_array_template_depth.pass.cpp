@@ -12,7 +12,7 @@
 
 // template <class... Types> class tuple;
 
-// template <class Tuple, __tuple_assignable<Tuple, tuple> >
+// template <tuple-like Tuple>
 //   tuple & operator=(Tuple &&);
 
 // This test checks that we do not evaluate __make_tuple_types

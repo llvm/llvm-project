@@ -1,7 +1,7 @@
-/* RUN: %clang_cc1 -std=c89 -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -verify=expected -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -verify=expected -pedantic %s
-   RUN: %clang_cc1 -std=c17 -verify=expected -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -verify=expected,c89only,pre-c23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c99 -verify=expected,pre-c23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -verify=expected,pre-c23 -pedantic %s
+   RUN: %clang_cc1 -std=c17 -verify=expected,pre-c23 -pedantic %s
    RUN: %clang_cc1 -std=c2x -verify=expected -pedantic %s
  */
 
@@ -343,10 +343,13 @@ void dr496(void) {
                                              */
 
   /* The DR asked a question about whether defining a new type within offsetof
-   * is allowed. C2x N2350 made this explicitly undefined behavior, but GCC and
-   * Clang both support it as an extension.
+   * is allowed. C23 N2350 had made this explicitly undefined behavior, but this
+   * was later overturned when C23 DE-137 was accepted, making it well-formed.
+   *
+   * Additionally, GCC and Clang both support it as an extension in pre-C23
+   * mode.
    */
-   (void)__builtin_offsetof(struct S { int a; }, a); /* expected-warning{{defining a type within '__builtin_offsetof' is a Clang extension}} */
+   (void)__builtin_offsetof(struct S { int a; }, a); /* pre-c23-warning{{defining a type within '__builtin_offsetof' is a C23 extension}} */
 }
 
 /* WG14 DR499: yes

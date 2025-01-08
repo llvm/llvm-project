@@ -302,11 +302,8 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   } else
     Result = Value->getRawValue();
 
-  if (Result.front() == '\'')
-    Result = Result.drop_front();
-
-  if (Result.back() == '\'')
-    Result = Result.drop_back();
+  Result.consume_front("\'");
+  Result.consume_back("\'");
 
   return Result;
 }
@@ -456,11 +453,8 @@ Expected<StringRef> YAMLStrTabRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   else
     return Str.takeError();
 
-  if (Result.front() == '\'')
-    Result = Result.drop_front();
-
-  if (Result.back() == '\'')
-    Result = Result.drop_back();
+  Result.consume_front("\'");
+  Result.consume_back("\'");
 
   return Result;
 }

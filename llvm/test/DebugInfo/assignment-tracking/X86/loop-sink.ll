@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG
+
 ;; Tiny loop with a store sunk out of it:
 ;; void e();
 ;; void es(int*);

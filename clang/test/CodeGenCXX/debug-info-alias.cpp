@@ -1,4 +1,4 @@
-// RUN: %clang -g -std=c++11 -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -g -gno-template-alias -std=c++11 -S -emit-llvm %s -o - | FileCheck %s
 
 template<typename T>
 struct foo {
@@ -24,7 +24,7 @@ x::bar<int> bi;
 // CHECK: [[BFLOAT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<float>"
 x::bar<float> bf;
 // CHECK: !DIGlobalVariable(name: "bz",{{.*}} type: [[BBAZ:![0-9]+]]
-// CHECK: [[BBAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<baz<int> >"
+// CHECK: [[BBAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<baz<int,{{ *}}int> >"
 x::bar<baz<int>> bz;
 
 using

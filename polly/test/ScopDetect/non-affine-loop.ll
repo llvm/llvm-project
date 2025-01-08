@@ -1,8 +1,8 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINEREGIONSANDACCESSES
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
-; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false -polly-allow-nonaffine                                   '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINEREGIONSANDACCESSES
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ; This function/region does contain a loop, however it is non-affine, hence the access
 ; A[i] is also. Furthermore, it is the only loop, thus when we over approximate

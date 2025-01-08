@@ -13,9 +13,9 @@
 #ifndef FORTRAN_FRONTEND_COMPILERINVOCATION_H
 #define FORTRAN_FRONTEND_COMPILERINVOCATION_H
 
+#include "flang/Common/LangOptions.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Frontend/LangOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/LoweringOptions.h"
@@ -84,7 +84,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   Fortran::frontend::CodeGenOptions codeGenOpts;
 
   /// Options controlling language dialect.
-  Fortran::frontend::LangOptions langOpts;
+  Fortran::common::LangOptions langOpts;
 
   // The original invocation of the compiler driver.
   // This string will be set as the return value from the COMPILER_OPTIONS
@@ -99,6 +99,7 @@ class CompilerInvocation : public CompilerInvocationBase {
   std::string moduleFileSuffix = ".mod";
 
   bool debugModuleDir = false;
+  bool hermeticModuleFileOutput = false;
 
   bool warnAsErr = false;
 
@@ -114,8 +115,10 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
+  // Fortran Warning options
   bool enableConformanceChecks = false;
   bool enableUsageChecks = false;
+  bool disableWarnings = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -155,8 +158,8 @@ public:
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
 
-  LangOptions &getLangOpts() { return langOpts; }
-  const LangOptions &getLangOpts() const { return langOpts; }
+  Fortran::common::LangOptions &getLangOpts() { return langOpts; }
+  const Fortran::common::LangOptions &getLangOpts() const { return langOpts; }
 
   Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
   const Fortran::lower::LoweringOptions &getLoweringOpts() const {
@@ -177,6 +180,11 @@ public:
   bool &getDebugModuleDir() { return debugModuleDir; }
   const bool &getDebugModuleDir() const { return debugModuleDir; }
 
+  bool &getHermeticModuleFileOutput() { return hermeticModuleFileOutput; }
+  const bool &getHermeticModuleFileOutput() const {
+    return hermeticModuleFileOutput;
+  }
+
   bool &getWarnAsErr() { return warnAsErr; }
   const bool &getWarnAsErr() const { return warnAsErr; }
 
@@ -196,6 +204,9 @@ public:
 
   bool &getEnableUsageChecks() { return enableUsageChecks; }
   const bool &getEnableUsageChecks() const { return enableUsageChecks; }
+
+  bool &getDisableWarnings() { return disableWarnings; }
+  const bool &getDisableWarnings() const { return disableWarnings; }
 
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
@@ -226,6 +237,9 @@ public:
   // Enables the usage checks
   void setEnableUsageChecks() { enableUsageChecks = true; }
 
+  // Disables all Warnings
+  void setDisableWarnings() { disableWarnings = true; }
+
   /// Useful setters
   void setArgv0(const char *dir) { argv0 = dir; }
 
@@ -236,6 +250,9 @@ public:
   }
 
   void setDebugModuleDir(bool flag) { debugModuleDir = flag; }
+  void setHermeticModuleFileOutput(bool flag) {
+    hermeticModuleFileOutput = flag;
+  }
 
   void setWarnAsErr(bool flag) { warnAsErr = flag; }
 

@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpExtension "SPV_KHR_no_integer_wrap_decoration"
 

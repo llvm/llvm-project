@@ -119,7 +119,8 @@ static ValueAsMetadata *getAsMetadata(Value *V) {
 }
 
 void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
-                                                     Value *NewValue) {
+                                                     Value *NewValue,
+                                                     bool AllowEmpty) {
   // If OldValue is used as the address part of a dbg.assign intrinsic replace
   // it with NewValue and return true.
   auto ReplaceDbgAssignAddress = [this, OldValue, NewValue]() -> bool {
@@ -136,6 +137,8 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   auto Locations = location_ops();
   auto OldIt = find(Locations, OldValue);
   if (OldIt == Locations.end()) {
+    if (AllowEmpty || DbgAssignAddrReplaced)
+      return;
     assert(DbgAssignAddrReplaced &&
            "OldValue must be dbg.assign addr if unused in DIArgList");
     return;
@@ -220,7 +223,7 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
 void DbgAssignIntrinsic::setKillAddress() {
   if (isKillAddress())
     return;
-  setAddress(UndefValue::get(getAddress()->getType()));
+  setAddress(PoisonValue::get(getAddress()->getType()));
 }
 
 bool DbgAssignIntrinsic::isKillAddress() const {
@@ -231,43 +234,6 @@ bool DbgAssignIntrinsic::isKillAddress() const {
 void DbgAssignIntrinsic::setValue(Value *V) {
   setOperand(OpValue,
              MetadataAsValue::get(getContext(), ValueAsMetadata::get(V)));
-}
-
-int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                               StringRef Name) {
-  assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
-
-  // Do successive binary searches of the dotted name components. For
-  // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
-  // intrinsics starting with "llvm.gc", then "llvm.gc.experimental", then
-  // "llvm.gc.experimental.statepoint", and then we will stop as the range is
-  // size 1. During the search, we can skip the prefix that we already know is
-  // identical. By using strncmp we consider names with differing suffixes to
-  // be part of the equal range.
-  size_t CmpEnd = 4; // Skip the "llvm" component.
-  const char *const *Low = NameTable.begin();
-  const char *const *High = NameTable.end();
-  const char *const *LastLow = Low;
-  while (CmpEnd < Name.size() && High - Low > 0) {
-    size_t CmpStart = CmpEnd;
-    CmpEnd = Name.find('.', CmpStart + 1);
-    CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
-    auto Cmp = [CmpStart, CmpEnd](const char *LHS, const char *RHS) {
-      return strncmp(LHS + CmpStart, RHS + CmpStart, CmpEnd - CmpStart) < 0;
-    };
-    LastLow = Low;
-    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
-  }
-  if (High - Low > 0)
-    LastLow = Low;
-
-  if (LastLow == NameTable.end())
-    return -1;
-  StringRef NameFound = *LastLow;
-  if (Name == NameFound ||
-      (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
-    return LastLow - NameTable.begin();
-  return -1;
 }
 
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
@@ -282,6 +248,11 @@ ConstantInt *InstrProfCntrInstBase::getIndex() const {
   return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
 }
 
+void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
+  assert(isa<InstrProfCntrInstBase>(this));
+  setArgOperand(3, ConstantInt::get(Type::getInt32Ty(getContext()), Idx));
+}
+
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
     return const_cast<Value *>(getArgOperand(4));
@@ -289,6 +260,17 @@ Value *InstrProfIncrementInst::getStep() const {
   const Module *M = getModule();
   LLVMContext &Context = M->getContext();
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
+}
+
+Value *InstrProfCallsite::getCallee() const {
+  if (isa<InstrProfCallsite>(this))
+    return getArgOperand(4);
+  return nullptr;
+}
+
+void InstrProfCallsite::setCallee(Value *Callee) {
+  assert(isa<InstrProfCallsite>(this));
+  setArgOperand(4, Callee);
 }
 
 std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
@@ -356,37 +338,23 @@ FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
   return getFPPredicateFromMD(getArgOperand(2));
 }
 
-bool ConstrainedFPIntrinsic::isUnaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 1;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-}
+unsigned ConstrainedFPIntrinsic::getNonMetadataArgCount() const {
+  // All constrained fp intrinsics have "fpexcept" metadata.
+  unsigned NumArgs = arg_size() - 1;
 
-bool ConstrainedFPIntrinsic::isTernaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 3;
-#include "llvm/IR/ConstrainedOps.def"
-  }
+  // Some intrinsics have "round" metadata.
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(getIntrinsicID()))
+    NumArgs -= 1;
+
+  // Compare intrinsics take their predicate as metadata.
+  if (isa<ConstrainedFPCmpIntrinsic>(this))
+    NumArgs -= 1;
+
+  return NumArgs;
 }
 
 bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
-  switch (I->getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return true;
-  default:
-    return false;
-  }
+  return Intrinsic::isConstrainedFPIntrinsic(I->getIntrinsicID());
 }
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
@@ -474,13 +442,16 @@ std::optional<unsigned>
 VPIntrinsic::getMemoryPointerParamPos(Intrinsic::ID VPID) {
   switch (VPID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_MEMOP(POINTERPOS, ...) return POINTERPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return std::nullopt;
+  case Intrinsic::vp_store:
+  case Intrinsic::vp_scatter:
+  case Intrinsic::experimental_vp_strided_store:
+    return 1;
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_gather:
+  case Intrinsic::experimental_vp_strided_load:
+    return 0;
   }
-  return std::nullopt;
 }
 
 /// \return The data (payload) operand of this store or scatter.
@@ -494,13 +465,12 @@ Value *VPIntrinsic::getMemoryDataParam() const {
 std::optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {
   switch (VPID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_MEMOP(POINTERPOS, DATAPOS) return DATAPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return std::nullopt;
+  case Intrinsic::vp_store:
+  case Intrinsic::vp_scatter:
+  case Intrinsic::experimental_vp_strided_store:
+    return 0;
   }
-  return std::nullopt;
 }
 
 constexpr bool isVPIntrinsic(Intrinsic::ID ID) {
@@ -584,7 +554,7 @@ VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
   default:
     break;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CONSTRAINEDFP(HASRND, HASEXCEPT, CID) return Intrinsic::CID;
+#define VP_PROPERTY_CONSTRAINEDFP(CID) return Intrinsic::CID;
 #define END_REGISTER_VP_INTRINSIC(VPID) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
@@ -602,6 +572,25 @@ Intrinsic::ID VPIntrinsic::getForOpcode(unsigned IROPC) {
 #include "llvm/IR/VPIntrinsics.def"
   }
   return Intrinsic::not_intrinsic;
+}
+
+constexpr static Intrinsic::ID getForIntrinsic(Intrinsic::ID Id) {
+  if (::isVPIntrinsic(Id))
+    return Id;
+
+  switch (Id) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) break;
+#define VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN) case Intrinsic::INTRIN:
+#define END_REGISTER_VP_INTRINSIC(VPID) return Intrinsic::VPID;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+Intrinsic::ID VPIntrinsic::getForIntrinsic(Intrinsic::ID Id) {
+  return ::getForIntrinsic(Id);
 }
 
 bool VPIntrinsic::canIgnoreVectorLengthParam() const {
@@ -623,7 +612,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   if (EC.isScalable()) {
     // Compare vscale patterns
     uint64_t VScaleFactor;
-    if (match(VLParam, m_c_Mul(m_ConstantInt(VScaleFactor), m_VScale())))
+    if (match(VLParam, m_Mul(m_VScale(), m_ConstantInt(VScaleFactor))))
       return VScaleFactor >= EC.getKnownMinValue();
     return (EC.getKnownMinValue() == 1) && match(VLParam, m_VScale());
   }
@@ -640,9 +629,8 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   return false;
 }
 
-Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
-                                               Type *ReturnType,
-                                               ArrayRef<Value *> Params) {
+Function *VPIntrinsic::getOrInsertDeclarationForParams(
+    Module *M, Intrinsic::ID VPID, Type *ReturnType, ArrayRef<Value *> Params) {
   assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
   Function *VPFunc;
   switch (VPID) {
@@ -652,7 +640,7 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
       OverloadTy =
           Params[*VPReductionIntrinsic::getVectorParamPos(VPID)]->getType();
 
-    VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, OverloadTy);
     break;
   }
   case Intrinsic::vp_trunc:
@@ -666,40 +654,46 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
   case Intrinsic::vp_fpext:
   case Intrinsic::vp_ptrtoint:
   case Intrinsic::vp_inttoptr:
-    VPFunc =
-        Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
+  case Intrinsic::vp_lrint:
+  case Intrinsic::vp_llrint:
+  case Intrinsic::vp_cttz_elts:
+    VPFunc = Intrinsic::getOrInsertDeclaration(
+        M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_is_fpclass:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[0]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[0]->getType()});
     break;
   case Intrinsic::vp_merge:
   case Intrinsic::vp_select:
-    VPFunc = Intrinsic::getDeclaration(M, VPID, {Params[1]->getType()});
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, {Params[1]->getType()});
     break;
   case Intrinsic::vp_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_load:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::vp_gather:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::vp_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_store:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID,
         {Params[0]->getType(), Params[1]->getType(), Params[2]->getType()});
     break;
   case Intrinsic::vp_scatter:
-    VPFunc = Intrinsic::getDeclaration(
+    VPFunc = Intrinsic::getOrInsertDeclaration(
         M, VPID, {Params[0]->getType(), Params[1]->getType()});
+    break;
+  case Intrinsic::experimental_vp_splat:
+    VPFunc = Intrinsic::getOrInsertDeclaration(M, VPID, ReturnType);
     break;
   }
   assert(VPFunc && "Could not declare VP intrinsic");
@@ -708,38 +702,42 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
 
 bool VPReductionIntrinsic::isVPReduction(Intrinsic::ID ID) {
   switch (ID) {
+  case Intrinsic::vp_reduce_add:
+  case Intrinsic::vp_reduce_mul:
+  case Intrinsic::vp_reduce_and:
+  case Intrinsic::vp_reduce_or:
+  case Intrinsic::vp_reduce_xor:
+  case Intrinsic::vp_reduce_smax:
+  case Intrinsic::vp_reduce_smin:
+  case Intrinsic::vp_reduce_umax:
+  case Intrinsic::vp_reduce_umin:
+  case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fmaximum:
+  case Intrinsic::vp_reduce_fminimum:
+  case Intrinsic::vp_reduce_fadd:
+  case Intrinsic::vp_reduce_fmul:
+    return true;
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, ...) return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
   }
-  return false;
 }
 
 bool VPCastIntrinsic::isVPCast(Intrinsic::ID ID) {
-  switch (ID) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CASTOP return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
+  // All of the vp.casts correspond to instructions
+  if (std::optional<unsigned> Opc = getFunctionalOpcodeForVP(ID))
+    return Instruction::isCast(*Opc);
   return false;
 }
 
 bool VPCmpIntrinsic::isVPCmp(Intrinsic::ID ID) {
   switch (ID) {
   default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CMP(CCPOS, ...) return true;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
+    return false;
+  case Intrinsic::vp_fcmp:
+  case Intrinsic::vp_icmp:
+    return true;
   }
-  return false;
 }
 
 bool VPBinOpIntrinsic::isVPBinOp(Intrinsic::ID ID) {
@@ -773,22 +771,10 @@ static ICmpInst::Predicate getIntPredicateFromMD(const Value *Op) {
 }
 
 CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
-  bool IsFP = true;
-  std::optional<unsigned> CCArgIdx;
-  switch (getIntrinsicID()) {
-  default:
-    break;
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_CMP(CCPOS, ISFP)                                           \
-  CCArgIdx = CCPOS;                                                            \
-  IsFP = ISFP;                                                                 \
-  break;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  }
-  assert(CCArgIdx && "Unexpected vector-predicated comparison");
-  return IsFP ? getFPPredicateFromMD(getArgOperand(*CCArgIdx))
-              : getIntPredicateFromMD(getArgOperand(*CCArgIdx));
+  assert(isVPCmp(getIntrinsicID()));
+  return getIntrinsicID() == Intrinsic::vp_fcmp
+             ? getFPPredicateFromMD(getArgOperand(2))
+             : getIntPredicateFromMD(getArgOperand(2));
 }
 
 unsigned VPReductionIntrinsic::getVectorParamPos() const {
@@ -801,27 +787,15 @@ unsigned VPReductionIntrinsic::getStartParamPos() const {
 
 std::optional<unsigned>
 VPReductionIntrinsic::getVectorParamPos(Intrinsic::ID ID) {
-  switch (ID) {
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, VECTORPOS) return VECTORPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  default:
-    break;
-  }
+  if (isVPReduction(ID))
+    return 1;
   return std::nullopt;
 }
 
 std::optional<unsigned>
 VPReductionIntrinsic::getStartParamPos(Intrinsic::ID ID) {
-  switch (ID) {
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
-#define VP_PROPERTY_REDUCTION(STARTPOS, VECTORPOS) return STARTPOS;
-#define END_REGISTER_VP_INTRINSIC(VPID) break;
-#include "llvm/IR/VPIntrinsics.def"
-  default:
-    break;
-  }
+  if (isVPReduction(ID))
+    return 0;
   return std::nullopt;
 }
 

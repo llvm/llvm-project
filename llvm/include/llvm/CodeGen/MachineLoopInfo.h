@@ -31,6 +31,7 @@
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/GenericLoopInfo.h"
@@ -79,12 +80,18 @@ public:
   /// I.e., all virtual register operands are defined outside of the loop,
   /// physical registers aren't accessed explicitly, and there are no side
   /// effects that aren't captured by the operands or other flags.
-  bool isLoopInvariant(MachineInstr &I) const;
+  /// ExcludeReg can be used to exclude the given register from the check
+  /// i.e. when we're considering hoisting it's definition but not hoisted it
+  /// yet
+  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
 
   void dump() const;
 
 private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
+
+  /// Returns true if the given physreg has no defs inside the loop.
+  bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}
@@ -95,23 +102,20 @@ private:
 // Implementation in LoopInfoImpl.h
 extern template class LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
-class MachineLoopInfo : public MachineFunctionPass {
+class MachineLoopInfo : public LoopInfoBase<MachineBasicBlock, MachineLoop> {
   friend class LoopBase<MachineBasicBlock, MachineLoop>;
-
-  LoopInfoBase<MachineBasicBlock, MachineLoop> LI;
+  friend class MachineLoopInfoWrapperPass;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
-
-  MachineLoopInfo();
-  explicit MachineLoopInfo(MachineDominatorTree &MDT)
-      : MachineFunctionPass(ID) {
-    calculate(MDT);
-  }
+  MachineLoopInfo() = default;
+  explicit MachineLoopInfo(MachineDominatorTree &MDT) { calculate(MDT); }
+  MachineLoopInfo(MachineLoopInfo &&) = default;
   MachineLoopInfo(const MachineLoopInfo &) = delete;
   MachineLoopInfo &operator=(const MachineLoopInfo &) = delete;
 
-  LoopInfoBase<MachineBasicBlock, MachineLoop>& getBase() { return LI; }
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
   /// Find the block that either is the loop preheader, or could
   /// speculatively be used as the preheader. This is e.g. useful to place
@@ -124,69 +128,46 @@ public:
   findLoopPreheader(MachineLoop *L, bool SpeculativePreheader = false,
                     bool FindMultiLoopPreheader = false) const;
 
-  /// The iterator interface to the top-level loops in the current function.
-  using iterator = LoopInfoBase<MachineBasicBlock, MachineLoop>::iterator;
-  inline iterator begin() const { return LI.begin(); }
-  inline iterator end() const { return LI.end(); }
-  bool empty() const { return LI.empty(); }
-
-  /// Return the innermost loop that BB lives in. If a basic block is in no loop
-  /// (for example the entry node), null is returned.
-  inline MachineLoop *getLoopFor(const MachineBasicBlock *BB) const {
-    return LI.getLoopFor(BB);
-  }
-
-  /// Same as getLoopFor.
-  inline const MachineLoop *operator[](const MachineBasicBlock *BB) const {
-    return LI.getLoopFor(BB);
-  }
-
-  /// Return the loop nesting level of the specified block.
-  inline unsigned getLoopDepth(const MachineBasicBlock *BB) const {
-    return LI.getLoopDepth(BB);
-  }
-
-  /// True if the block is a loop header node.
-  inline bool isLoopHeader(const MachineBasicBlock *BB) const {
-    return LI.isLoopHeader(BB);
-  }
-
   /// Calculate the natural loop information.
-  bool runOnMachineFunction(MachineFunction &F) override;
   void calculate(MachineDominatorTree &MDT);
+};
+
+/// Analysis pass that exposes the \c MachineLoopInfo for a machine function.
+class MachineLoopAnalysis : public AnalysisInfoMixin<MachineLoopAnalysis> {
+  friend AnalysisInfoMixin<MachineLoopAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineLoopInfo;
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c LoopAnalysis results.
+class MachineLoopPrinterPass : public PassInfoMixin<MachineLoopPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineLoopPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class MachineLoopInfoWrapperPass : public MachineFunctionPass {
+  MachineLoopInfo LI;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  MachineLoopInfoWrapperPass();
+
+  bool runOnMachineFunction(MachineFunction &F) override;
 
   void releaseMemory() override { LI.releaseMemory(); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// This removes the specified top-level loop from this loop info object. The
-  /// loop is not deleted, as it will presumably be inserted into another loop.
-  inline MachineLoop *removeLoop(iterator I) { return LI.removeLoop(I); }
-
-  /// Change the top-level loop that contains BB to the specified loop. This
-  /// should be used by transformations that restructure the loop hierarchy
-  /// tree.
-  inline void changeLoopFor(MachineBasicBlock *BB, MachineLoop *L) {
-    LI.changeLoopFor(BB, L);
-  }
-
-  /// Replace the specified loop in the top-level loops list with the indicated
-  /// loop.
-  inline void changeTopLevelLoop(MachineLoop *OldLoop, MachineLoop *NewLoop) {
-    LI.changeTopLevelLoop(OldLoop, NewLoop);
-  }
-
-  /// This adds the specified loop to the collection of top-level loops.
-  inline void addTopLevelLoop(MachineLoop *New) {
-    LI.addTopLevelLoop(New);
-  }
-
-  /// This method completely removes BB from all data structures, including all
-  /// of the Loop objects it is nested in and our mapping from
-  /// MachineBasicBlocks to loops.
-  void removeBlock(MachineBasicBlock *BB) {
-    LI.removeBlock(BB);
-  }
+  MachineLoopInfo &getLI() { return LI; }
 };
 
 // Allow clients to walk the list of nested loops...

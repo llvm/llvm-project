@@ -29,6 +29,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -36,9 +37,9 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <memory>
@@ -60,7 +61,7 @@ enum : uint32_t {
 };
 
 static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
-                                               cl::init("408*"), cl::Hidden,
+                                               cl::init("0000"), cl::Hidden,
                                                cl::ValueRequired);
 
 static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
@@ -121,7 +122,10 @@ private:
 
   Function *createInternalFunction(FunctionType *FTy, StringRef Name,
                                    StringRef MangledType = "");
+
   void emitGlobalConstructor(
+      SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
+  void emitModuleInitFunctionPtrs(
       SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP);
 
   bool isFunctionInstrumented(const Function &F);
@@ -150,6 +154,7 @@ private:
   GCOVOptions Options;
   llvm::endianness Endian;
   raw_ostream *os;
+  int Version = 0;
 
   // Checksum, produced by hash of EdgeDestinations
   SmallVector<uint32_t, 4> FileChecksums;
@@ -330,17 +335,13 @@ namespace {
         : GCOVRecord(P), SP(SP), EndLine(EndLine), Ident(Ident),
           Version(Version), EntryBlock(P, 0), ReturnBlock(P, 1) {
       LLVM_DEBUG(dbgs() << "Function: " << getFunctionName(SP) << "\n");
-      bool ExitBlockBeforeBody = Version >= 48;
-      uint32_t i = ExitBlockBeforeBody ? 2 : 1;
+      uint32_t i = 2;
       for (BasicBlock &BB : *F)
         Blocks.insert(std::make_pair(&BB, GCOVBlock(P, i++)));
-      if (!ExitBlockBeforeBody)
-        ReturnBlock.Number = i;
 
       std::string FunctionNameAndLine;
       raw_string_ostream FNLOS(FunctionNameAndLine);
       FNLOS << getFunctionName(SP) << SP->getLine();
-      FNLOS.flush();
       FuncChecksum = hash_value(FunctionNameAndLine);
     }
 
@@ -360,44 +361,28 @@ namespace {
     void writeOut(uint32_t CfgChecksum) {
       write(GCOV_TAG_FUNCTION);
       SmallString<128> Filename = getFilename(SP);
-      uint32_t BlockLen =
-          2 + (Version >= 47) + wordsOfString(getFunctionName(SP));
-      if (Version < 80)
-        BlockLen += wordsOfString(Filename) + 1;
-      else
-        BlockLen += 1 + wordsOfString(Filename) + 3 + (Version >= 90);
+      uint32_t BlockLen = 3 + wordsOfString(getFunctionName(SP));
+      BlockLen += 1 + wordsOfString(Filename) + 4;
 
       write(BlockLen);
       write(Ident);
       write(FuncChecksum);
-      if (Version >= 47)
-        write(CfgChecksum);
+      write(CfgChecksum);
       writeString(getFunctionName(SP));
-      if (Version < 80) {
-        writeString(Filename);
-        write(SP->getLine());
-      } else {
-        write(SP->isArtificial()); // artificial
-        writeString(Filename);
-        write(SP->getLine()); // start_line
-        write(0);             // start_column
-        // EndLine is the last line with !dbg. It is not the } line as in GCC,
-        // but good enough.
-        write(EndLine);
-        if (Version >= 90)
-          write(0); // end_column
-      }
+
+      write(SP->isArtificial()); // artificial
+      writeString(Filename);
+      write(SP->getLine()); // start_line
+      write(0);             // start_column
+      // EndLine is the last line with !dbg. It is not the } line as in GCC,
+      // but good enough.
+      write(EndLine);
+      write(0); // end_column
 
       // Emit count of blocks.
       write(GCOV_TAG_BLOCKS);
-      if (Version < 80) {
-        write(Blocks.size() + 2);
-        for (int i = Blocks.size() + 2; i; --i)
-          write(0);
-      } else {
-        write(1);
-        write(Blocks.size() + 2);
-      }
+      write(1);
+      write(Blocks.size() + 2);
       LLVM_DEBUG(dbgs() << (Blocks.size() + 1) << " blocks\n");
 
       // Emit edges between blocks.
@@ -535,7 +520,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 
       SmallString<128> Filename = GCovFile->getString();
       sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
-      return std::string(Filename.str());
+      return std::string(Filename);
     }
   }
 
@@ -546,7 +531,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   if (sys::fs::current_path(CurPath))
     return std::string(FName);
   sys::path::append(CurPath, FName);
-  return std::string(CurPath.str());
+  return std::string(CurPath);
 }
 
 bool GCOVProfiler::runOnModule(
@@ -764,13 +749,17 @@ bool GCOVProfiler::emitProfileNotes(
     function_ref<BlockFrequencyInfo *(Function &F)> GetBFI,
     function_ref<BranchProbabilityInfo *(Function &F)> GetBPI,
     function_ref<const TargetLibraryInfo &(Function &F)> GetTLI) {
-  int Version;
   {
     uint8_t c3 = Options.Version[0];
     uint8_t c2 = Options.Version[1];
     uint8_t c1 = Options.Version[2];
     Version = c3 >= 'A' ? (c3 - 'A') * 100 + (c2 - '0') * 10 + c1 - '0'
                         : (c3 - '0') * 10 + c1 - '0';
+  }
+  // Emit .gcno files that are compatible with GCC 11.1.
+  if (Version < 111) {
+    Version = 111;
+    memcpy(Options.Version, "B11*", 4);
   }
 
   bool EmitGCDA = Options.EmitData;
@@ -817,7 +806,8 @@ bool GCOVProfiler::emitProfileNotes(
       SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI,
                                    BFI);
 
-      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry_=*/false, BPI, BFI);
+      CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry=*/false,
+                               /*InstrumentLoopEntries=*/false, BPI, BFI);
 
       // getInstrBB can split basic blocks and push elements to AllEdges.
       for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
@@ -914,6 +904,9 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+          Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {
@@ -966,10 +959,8 @@ bool GCOVProfiler::emitProfileNotes(
         out.write(Tmp, 4);
       }
       write(Stamp);
-      if (Version >= 90)
-        writeString(""); // unuseful current_working_directory
-      if (Version >= 80)
-        write(0); // unuseful has_unexecuted_blocks
+      writeString("."); // unuseful current_working_directory
+      write(0);         // unuseful has_unexecuted_blocks
 
       for (auto &Func : Funcs)
         Func->writeOut(Stamp);
@@ -980,7 +971,11 @@ bool GCOVProfiler::emitProfileNotes(
     }
 
     if (EmitGCDA) {
-      emitGlobalConstructor(CountersBySP);
+      const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+      if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+        emitModuleInitFunctionPtrs(CountersBySP);
+      else
+        emitGlobalConstructor(CountersBySP);
       EmitGCDA = false;
     }
   }
@@ -1027,6 +1022,40 @@ void GCOVProfiler::emitGlobalConstructor(
   Builder.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);
+}
+
+void GCOVProfiler::emitModuleInitFunctionPtrs(
+    SmallVectorImpl<std::pair<GlobalVariable *, MDNode *>> &CountersBySP) {
+  Function *WriteoutF = insertCounterWriteout(CountersBySP);
+  Function *ResetF = insertReset(CountersBySP);
+
+  // Instead of creating a function call and add it to the constructors list,
+  // create a global variable in the __llvm_covinit section so the functions
+  // can be registered by a constructor in the runtime.
+
+  auto &Ctx = M->getContext();
+
+  Type *InitFuncDataTy[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto STy = StructType::get(Ctx, ArrayRef(InitFuncDataTy));
+
+  Constant *InitFuncPtrs[] = {
+#define COVINIT_FUNC(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto *CovInitGV =
+      new GlobalVariable(*M, STy, false, GlobalValue::PrivateLinkage, nullptr,
+                         "__llvm_covinit_functions");
+  CovInitGV->setInitializer(ConstantStruct::get(STy, InitFuncPtrs));
+  CovInitGV->setVisibility(GlobalValue::VisibilityTypes::DefaultVisibility);
+  CovInitGV->setSection(getInstrProfSectionName(
+      IPSK_covinit, Triple(M->getTargetTriple()).getObjectFormat()));
+  CovInitGV->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
+  CovInitGV->setConstant(true);
 }
 
 FunctionCallee GCOVProfiler::getStartFileFunc(const TargetLibraryInfo *TLI) {
@@ -1127,7 +1156,7 @@ Function *GCOVProfiler::insertCounterWriteout(
     uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
     auto *StartFileCallArgs = ConstantStruct::get(
         StartFileCallArgsTy,
-        {Builder.CreateGlobalStringPtr(FilenameGcda),
+        {Builder.CreateGlobalString(FilenameGcda),
          Builder.getInt32(endian::read32be(Options.Version)),
          Builder.getInt32(CfgChecksum)});
 

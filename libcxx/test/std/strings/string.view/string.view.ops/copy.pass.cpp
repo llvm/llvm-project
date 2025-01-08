@@ -18,10 +18,11 @@
 // Effects: Equivalent to std::copy_n(begin() + pos, rlen, s).
 // Returns: rlen.
 
-#include <string_view>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <stdexcept>
+#include <string_view>
 
 #include "test_macros.h"
 

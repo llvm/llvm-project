@@ -1,0 +1,108 @@
+//===- AMDGPUPassRegistry.def - Registry of AMDGPU passes -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the
+// AMDGPU backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
+MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
+            AMDGPULowerBufferFatPointersPass(*this))
+MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
+MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
+MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
+MODULE_PASS("amdgpu-perf-hint",
+            AMDGPUPerfHintAnalysisPass(
+              *static_cast<const GCNTargetMachine *>(this)))
+MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
+MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
+#undef MODULE_PASS
+
+#ifndef MODULE_PASS_WITH_PARAMS
+#define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+MODULE_PASS_WITH_PARAMS(
+    "amdgpu-attributor", "AMDGPUAttributorPass",
+    [=](AMDGPUAttributorOptions Options) {
+      return AMDGPUAttributorPass(*this, Options);
+    },
+    parseAMDGPUAttributorPassOptions, "closed-world")
+#undef MODULE_PASS_WITH_PARAMS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("amdgpu-annotate-uniform", AMDGPUAnnotateUniformValuesPass())
+FUNCTION_PASS("amdgpu-codegenprepare", AMDGPUCodeGenPreparePass(*this))
+FUNCTION_PASS("amdgpu-image-intrinsic-opt",
+              AMDGPUImageIntrinsicOptimizerPass(*this))
+FUNCTION_PASS("amdgpu-late-codegenprepare",
+              AMDGPULateCodeGenPreparePass(
+                *static_cast<const GCNTargetMachine *>(this)))
+FUNCTION_PASS("amdgpu-lower-kernel-arguments",
+              AMDGPULowerKernelArgumentsPass(*this))
+FUNCTION_PASS("amdgpu-lower-kernel-attributes",
+              AMDGPULowerKernelAttributesPass())
+FUNCTION_PASS("amdgpu-simplifylib", AMDGPUSimplifyLibCallsPass())
+FUNCTION_PASS("amdgpu-promote-alloca", AMDGPUPromoteAllocaPass(*this))
+FUNCTION_PASS("amdgpu-promote-alloca-to-vector",
+              AMDGPUPromoteAllocaToVectorPass(*this))
+FUNCTION_PASS("amdgpu-promote-kernel-arguments",
+              AMDGPUPromoteKernelArgumentsPass())
+FUNCTION_PASS("amdgpu-rewrite-undef-for-phi", AMDGPURewriteUndefForPHIPass())
+FUNCTION_PASS("amdgpu-unify-divergent-exit-nodes",
+              AMDGPUUnifyDivergentExitNodesPass())
+FUNCTION_PASS("amdgpu-usenative", AMDGPUUseNativeCallsPass())
+FUNCTION_PASS("si-annotate-control-flow", SIAnnotateControlFlowPass(*static_cast<const GCNTargetMachine *>(this)))
+#undef FUNCTION_PASS
+
+#ifndef FUNCTION_ANALYSIS
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+
+#ifndef FUNCTION_ALIAS_ANALYSIS
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
+  FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+FUNCTION_ALIAS_ANALYSIS("amdgpu-aa", AMDGPUAA())
+#undef FUNCTION_ALIAS_ANALYSIS
+#undef FUNCTION_ANALYSIS
+
+#ifndef FUNCTION_PASS_WITH_PARAMS
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
+#endif
+FUNCTION_PASS_WITH_PARAMS(
+    "amdgpu-atomic-optimizer",
+    "AMDGPUAtomicOptimizerPass",
+    [=](ScanOptions Strategy) {
+      return AMDGPUAtomicOptimizerPass(*this, Strategy);
+    },
+    parseAMDGPUAtomicOptimizerStrategy, "strategy=dpp|iterative|none")
+#undef FUNCTION_PASS_WITH_PARAMS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())
+MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
+MACHINE_FUNCTION_PASS("si-fold-operands", SIFoldOperandsPass());
+MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
+MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
+MACHINE_FUNCTION_PASS("si-lower-sgpr-spills", SILowerSGPRSpillsPass())
+MACHINE_FUNCTION_PASS("si-opt-vgpr-liverange", SIOptimizeVGPRLiveRangePass())
+MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
+MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
+MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
+#undef MACHINE_FUNCTION_PASS

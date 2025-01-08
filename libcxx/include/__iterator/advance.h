@@ -61,12 +61,13 @@ __advance(_RandIter& __i, typename iterator_traits<_RandIter>::difference_type _
 template < class _InputIter,
            class _Distance,
            class _IntegralDistance = decltype(std::__convert_to_integral(std::declval<_Distance>())),
-           class                   = __enable_if_t<is_integral<_IntegralDistance>::value> >
+           __enable_if_t<is_integral<_IntegralDistance>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(std::__convert_to_integral(__orig_n));
-  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
-                               "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
+  // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
+  _LIBCPP_ASSERT_PEDANTIC(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
+                          "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   std::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -75,9 +76,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 void advance(_InputIter& __i
 // [range.iter.op.advance]
 
 namespace ranges {
-namespace __advance {
-
-struct __fn {
+struct __advance {
 private:
   template <class _Ip>
   _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_forward(_Ip& __i, iter_difference_t<_Ip> __n) {
@@ -99,7 +98,8 @@ public:
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
+    _LIBCPP_ASSERT_PEDANTIC(
         __n >= 0 || bidirectional_iterator<_Ip>, "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
 
     // If `I` models `random_access_iterator`, equivalent to `i += n`.
@@ -149,8 +149,9 @@ public:
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip>
   operator()(_Ip& __i, iter_difference_t<_Ip> __n, _Sp __bound_sentinel) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
-                                 "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
+    // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
+    _LIBCPP_ASSERT_PEDANTIC((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
+                            "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound_sentinel - i|, equivalent to `ranges::advance(i, bound_sentinel)`.
@@ -167,14 +168,14 @@ public:
     } else {
       // Otherwise, if `n` is non-negative, while `bool(i != bound_sentinel)` is true, increments `i` but at
       // most `n` times.
-      while (__i != __bound_sentinel && __n > 0) {
+      while (__n > 0 && __i != __bound_sentinel) {
         ++__i;
         --__n;
       }
 
       // Otherwise, while `bool(i != bound_sentinel)` is true, decrements `i` but at most `-n` times.
       if constexpr (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>) {
-        while (__i != __bound_sentinel && __n < 0) {
+        while (__n < 0 && __i != __bound_sentinel) {
           --__i;
           ++__n;
         }
@@ -186,10 +187,8 @@ public:
   }
 };
 
-} // namespace __advance
-
 inline namespace __cpo {
-inline constexpr auto advance = __advance::__fn{};
+inline constexpr auto advance = __advance{};
 } // namespace __cpo
 } // namespace ranges
 

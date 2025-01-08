@@ -11,28 +11,36 @@ define half @test_v4f16_reassoc(<4 x half> %a) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    mov r4, #255
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    orr r4, r4, #65280
+; CHECK-NEXT:    mov r8, #255
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    orr r8, r8, #65280
 ; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    and r0, r3, r4
+; CHECK-NEXT:    and r0, r0, r8
 ; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    and r0, r5, r4
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    and r0, r7, r4
-; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    and r0, r6, r4
+; CHECK-NEXT:    and r0, r6, r8
 ; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    bl __aeabi_fadd
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    and r0, r5, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    and r0, r6, r8
+; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_fadd
-; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    and r0, r4, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    and r0, r5, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl __aeabi_fadd
 ; CHECK-NEXT:    bl __aeabi_f2h
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}
@@ -46,28 +54,36 @@ define half @test_v4f16_seq(<4 x half> %a) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    mov r4, #255
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    orr r4, r4, #65280
+; CHECK-NEXT:    mov r8, #255
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    orr r8, r8, #65280
 ; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    and r0, r3, r4
+; CHECK-NEXT:    and r0, r0, r8
 ; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    and r0, r5, r4
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    and r0, r7, r4
-; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    and r0, r6, r4
+; CHECK-NEXT:    and r0, r6, r8
 ; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    bl __aeabi_fadd
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    and r0, r5, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    and r0, r6, r8
+; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r1, r5
 ; CHECK-NEXT:    bl __aeabi_fadd
-; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __aeabi_f2h
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    and r0, r4, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    and r0, r5, r8
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    bl __aeabi_fadd
 ; CHECK-NEXT:    bl __aeabi_f2h
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}

@@ -10,6 +10,7 @@
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -36,9 +37,8 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup,
+                            uint64_t Value) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -69,9 +69,7 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
 }
 
 bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                            uint64_t Value,
-                                            const MCRelaxableFragment *DF,
-                                            const MCAsmLayout &Layout) const {
+                                            uint64_t Value) const {
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010
@@ -165,12 +163,17 @@ void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
 std::optional<MCFixupKind>
 AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
-  return StringSwitch<std::optional<MCFixupKind>>(Name)
-#define ELF_RELOC(Name, Value)                                                 \
-  .Case(#Name, MCFixupKind(FirstLiteralRelocationKind + Value))
+  auto Type = StringSwitch<unsigned>(Name)
+#define ELF_RELOC(Name, Value) .Case(#Name, Value)
 #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
 #undef ELF_RELOC
-      .Default(std::nullopt);
+                  .Case("BFD_RELOC_NONE", ELF::R_AMDGPU_NONE)
+                  .Case("BFD_RELOC_32", ELF::R_AMDGPU_ABS32)
+                  .Case("BFD_RELOC_64", ELF::R_AMDGPU_ABS64)
+                  .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+  return std::nullopt;
 }
 
 const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
@@ -232,13 +235,11 @@ class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
   bool Is64Bit;
   bool HasRelocationAddend;
   uint8_t OSABI = ELF::ELFOSABI_NONE;
-  uint8_t ABIVersion = 0;
 
 public:
-  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT, uint8_t ABIVersion) :
-      AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
-      HasRelocationAddend(TT.getOS() == Triple::AMDHSA),
-      ABIVersion(ABIVersion) {
+  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT)
+      : AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
+        HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
     switch (TT.getOS()) {
     case Triple::AMDHSA:
       OSABI = ELF::ELFOSABI_AMDGPU_HSA;
@@ -256,8 +257,7 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend,
-                                       ABIVersion);
+    return createAMDGPUELFObjectWriter(Is64Bit, OSABI, HasRelocationAddend);
   }
 };
 
@@ -267,6 +267,5 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCSubtargetInfo &STI,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
-  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(),
-                                 getHsaAbiVersion(&STI).value_or(0));
+  return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple());
 }

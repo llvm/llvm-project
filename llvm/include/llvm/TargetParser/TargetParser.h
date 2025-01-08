@@ -86,18 +86,19 @@ enum GPUKind : uint32_t {
   GK_GFX940 = 68,
   GK_GFX941 = 69,
   GK_GFX942 = 70,
+  GK_GFX950 = 71,
 
-  GK_GFX1010 = 71,
-  GK_GFX1011 = 72,
-  GK_GFX1012 = 73,
-  GK_GFX1013 = 74,
-  GK_GFX1030 = 75,
-  GK_GFX1031 = 76,
-  GK_GFX1032 = 77,
-  GK_GFX1033 = 78,
-  GK_GFX1034 = 79,
-  GK_GFX1035 = 80,
-  GK_GFX1036 = 81,
+  GK_GFX1010 = 72,
+  GK_GFX1011 = 73,
+  GK_GFX1012 = 74,
+  GK_GFX1013 = 75,
+  GK_GFX1030 = 76,
+  GK_GFX1031 = 77,
+  GK_GFX1032 = 78,
+  GK_GFX1033 = 79,
+  GK_GFX1034 = 80,
+  GK_GFX1035 = 81,
+  GK_GFX1036 = 82,
 
   GK_GFX1100 = 90,
   GK_GFX1101 = 91,
@@ -105,12 +106,24 @@ enum GPUKind : uint32_t {
   GK_GFX1103 = 93,
   GK_GFX1150 = 94,
   GK_GFX1151 = 95,
+  GK_GFX1152 = 96,
+  GK_GFX1153 = 97,
 
   GK_GFX1200 = 100,
   GK_GFX1201 = 101,
 
   GK_AMDGCN_FIRST = GK_GFX600,
   GK_AMDGCN_LAST = GK_GFX1201,
+
+  GK_GFX9_GENERIC = 192,
+  GK_GFX10_1_GENERIC = 193,
+  GK_GFX10_3_GENERIC = 194,
+  GK_GFX11_GENERIC = 195,
+  GK_GFX12_GENERIC = 196,
+  GK_GFX9_4_GENERIC = 197,
+
+  GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
+  GK_AMDGCN_GENERIC_LAST = GK_GFX9_4_GENERIC,
 };
 
 /// Instruction set architecture version.
@@ -147,6 +160,14 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_WGP = 1 << 9,
 };
 
+enum FeatureError : uint32_t {
+  NO_ERROR = 0,
+  INVALID_FEATURE_COMBINATION,
+  UNSUPPORTED_TARGET_FEATURE
+};
+
+StringRef getArchFamilyNameAMDGCN(GPUKind AK);
+
 StringRef getArchNameAMDGCN(GPUKind AK);
 StringRef getArchNameR600(GPUKind AK);
 StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
@@ -165,8 +186,9 @@ void fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
                           StringMap<bool> &Features);
 
 /// Inserts wave size feature for given GPU into features map
-bool insertWaveSizeFeature(StringRef GPU, const Triple &T,
-                           StringMap<bool> &Features, std::string &ErrorMsg);
+std::pair<FeatureError, StringRef>
+insertWaveSizeFeature(StringRef GPU, const Triple &T,
+                      StringMap<bool> &Features);
 
 } // namespace AMDGPU
 } // namespace llvm

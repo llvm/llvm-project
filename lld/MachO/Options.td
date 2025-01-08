@@ -85,6 +85,9 @@ def icf_eq: Joined<["--"], "icf=">,
     HelpText<"Set level for identical code folding (default: none)">,
     MetaVarName<"[none,safe,all]">,
     Group<grp_lld>;
+def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
+    HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
+    Group<grp_lld>;
 def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
@@ -108,6 +111,12 @@ def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
 def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
     HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
+def warn_duplicate_rpath: Flag<["--"], "warn-duplicate-rpath">,
+    HelpText<"Warn if the same -rpath is specified multiple times (default)">,
+    Group<grp_lld>;
+def no_warn_duplicate_rpath: Flag<["--"], "no-warn-duplicate-rpath">,
+    HelpText<"Do not warn if the same -rpath is specified multiple times">,
+    Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,
     Group<grp_lld>;
@@ -116,6 +125,39 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
     Group<grp_lld>;
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
+    Group<grp_lld>;
+def irpgo_profile: Separate<["--"], "irpgo-profile">, Group<grp_lld>;
+def irpgo_profile_eq: Joined<["--"], "irpgo-profile=">,
+    Alias<!cast<Separate>(irpgo_profile)>, MetaVarName<"<profile>">,
+    HelpText<"Read the IRPGO <profile> for use with -bp-startup-sort and other profile-guided optimizations">,
+    Group<grp_lld>;
+def bp_startup_sort: Joined<["--"], "bp-startup-sort=">,
+    MetaVarName<"[none,function]">,
+    HelpText<"Order sections based on profile data to improve startup time">,
+    Group<grp_lld>;
+def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-startup-functions">,
+    HelpText<"Order startup functions to improve compressed size in addition to startup time">,
+    Group<grp_lld>;
+def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
+    HelpText<"Do not order startup function for compression">, Group<grp_lld>;
+def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
+def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
+    Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
+    HelpText<"Deprecated. Please use --irpgo-profile and --bp-startup-sort=function">,
+    Group<grp_lld>;
+def compression_sort_startup_functions: Flag<["--"], "compression-sort-startup-functions">,
+    Alias<!cast<Flag>(bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --bp-compression-sort-startup-functions">, Group<grp_lld>;
+def no_compression_sort_startup_functions: Flag<["--"], "no-compression-sort-startup-functions">,
+    Alias<!cast<Flag>(no_bp_compression_sort_startup_functions)>, HelpText<"Deprecated. Please use --no-bp-compression-sort-startup-functions">, Group<grp_lld>;
+def compression_sort: Joined<["--"], "compression-sort=">,
+    MetaVarName<"[none,function,data,both]">,
+    Alias<!cast<Joined>(bp_compression_sort)>,
+    HelpText<"Deprecated. Please use --bp-compression-sort=">, Group<grp_lld>;
+def verbose_bp_section_orderer: Flag<["--"], "verbose-bp-section-orderer">,
+    HelpText<"Print information on how many sections were ordered by balanced partitioning and a measure of the expected number of page faults">,
     Group<grp_lld>;
 def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
     Group<grp_lld>;
@@ -129,8 +171,24 @@ def strict_auto_link : Flag<["--"], "strict-auto-link">,
 def check_category_conflicts : Flag<["--"], "check-category-conflicts">,
     HelpText<"Check for conflicts between category & class methods">,
     Group<grp_lld>;
+def objc_category_merging : Flag<["-"], "objc_category_merging">,
+    HelpText<"Merge Objective-C categories that share the same base class">,
+    Group<grp_lld>;
+def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
+    HelpText<"Do not merge Objective-C categories">,
+    Group<grp_lld>;
 def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
+def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
+    HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
+def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
+    Alias<!cast<Separate>(load_pass_plugins)>,
+    HelpText<"Load passes from plugin library">, Group<grp_lld>;
+def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
+def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
+    Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
+    HelpText<"Write the CG data to the specified path <cgdata>.">, Group<grp_lld>;
 def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
@@ -138,6 +196,9 @@ def cs_profile_path: Joined<["--"], "cs-profile-path=">,
 defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
+defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
+  "Warn on missing object files referenced by thin archives (default)",
+  "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -377,7 +438,7 @@ def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;
 
 def platform_version : MultiArg<["-"], "platform_version", 3>,
     MetaVarName<"<platform> <min_version> <sdk_version>">,
-    HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
+    HelpText<"Platform (e.g., macos, ios, tvos, watchos, xros, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, xros-sim, driverkit) and version numbers">,
     Group<grp_version>;
 def sdk_version : Separate<["-"], "sdk_version">,
     HelpText<"This option is undocumented in ld64">,
@@ -832,13 +893,11 @@ def sub_umbrella : Separate<["-"], "sub_umbrella">,
     Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
     MetaVarName<"<name>">,
-    HelpText<"Specify <name> of a dylib or framework that is allowed to link to this dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specify <name> of a dylib, framework, or executable that is allowed to link to this dylib">,
     Group<grp_rare>;
 def client_name : Separate<["-"], "client_name">,
     MetaVarName<"<name>">,
-    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in a dependent dylib">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specifies a <name> this client should match with the -allowable_client <name> in an explicitly linked dylib">,
     Group<grp_rare>;
 def umbrella : Separate<["-"], "umbrella">,
     MetaVarName<"<name>">,
@@ -965,10 +1024,6 @@ def interposable_list : Separate<["-"], "interposable_list">,
     Group<grp_rare>;
 def no_function_starts : Flag<["-"], "no_function_starts">,
     HelpText<"Do not create table of function start addresses">,
-    Group<grp_rare>;
-def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
-    HelpText<"Do not merge Objective-C categories into their classes">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def object_path_lto : Separate<["-"], "object_path_lto">,
     MetaVarName<"<path>">,
@@ -1282,6 +1337,12 @@ def fixup_chains_section : Flag<["-"], "fixup_chains_section">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
+def objc_relative_method_lists : Flag<["-"], "objc_relative_method_lists">,
+    HelpText<"Emit relative method lists (more compact representation)">,
+    Group<grp_undocumented>;
+def no_objc_relative_method_lists : Flag<["-"], "no_objc_relative_method_lists">,
+    HelpText<"Don't emit relative method lists (use traditional representation)">,
+    Group<grp_undocumented>;
 def flto_codegen_only : Flag<["-"], "flto-codegen-only">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
@@ -1403,5 +1464,11 @@ def objc_abi_version : Separate<["-"], "objc_abi_version">,
     Group<grp_ignored_silently>;
 def debug_variant : Flag<["-"], "debug_variant">,
     HelpText<"Do not warn about issues that are only problems for binaries shipping to customers.">,
+    Flags<[HelpHidden]>,
+    Group<grp_ignored_silently>;
+
+// NOTE: This flag should be respected if -warn_duplicate_libraries is ever implemented.
+def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
+    HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;

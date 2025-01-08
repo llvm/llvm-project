@@ -13,7 +13,9 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
@@ -31,9 +33,110 @@ private:
   const GCNSubtarget &ST;
   unsigned NumFreeUserSGPRs;
 
-public:
-  SmallVector<llvm::Metadata *, 8> KernelArgMetadata;
+  enum HiddenArg : unsigned {
+    HIDDEN_BLOCK_COUNT_X,
+    HIDDEN_BLOCK_COUNT_Y,
+    HIDDEN_BLOCK_COUNT_Z,
+    HIDDEN_GROUP_SIZE_X,
+    HIDDEN_GROUP_SIZE_Y,
+    HIDDEN_GROUP_SIZE_Z,
+    HIDDEN_REMAINDER_X,
+    HIDDEN_REMAINDER_Y,
+    HIDDEN_REMAINDER_Z,
+    END_HIDDEN_ARGS
+  };
 
+  // Stores information about a specific hidden argument.
+  struct HiddenArgInfo {
+    // Offset in bytes from the location in the kernearg segment pointed to by
+    // the implicitarg pointer.
+    uint8_t Offset;
+    // The size of the hidden argument in bytes.
+    uint8_t Size;
+    // The name of the hidden argument in the kernel signature.
+    const char *Name;
+  };
+
+  static constexpr HiddenArgInfo HiddenArgs[END_HIDDEN_ARGS] = {
+      {0, 4, "_hidden_block_count_x"}, {4, 4, "_hidden_block_count_y"},
+      {8, 4, "_hidden_block_count_z"}, {12, 2, "_hidden_group_size_x"},
+      {14, 2, "_hidden_group_size_y"}, {16, 2, "_hidden_group_size_z"},
+      {18, 2, "_hidden_remainder_x"},  {20, 2, "_hidden_remainder_y"},
+      {22, 2, "_hidden_remainder_z"}};
+
+  static HiddenArg getHiddenArgFromOffset(unsigned Offset) {
+    for (unsigned I = 0; I < END_HIDDEN_ARGS; ++I)
+      if (HiddenArgs[I].Offset == Offset)
+        return static_cast<HiddenArg>(I);
+
+    return END_HIDDEN_ARGS;
+  }
+
+  static Type *getHiddenArgType(LLVMContext &Ctx, HiddenArg HA) {
+    if (HA < END_HIDDEN_ARGS)
+      return Type::getIntNTy(Ctx, HiddenArgs[HA].Size * 8);
+
+    llvm_unreachable("Unexpected hidden argument.");
+  }
+
+  static const char *getHiddenArgName(HiddenArg HA) {
+    if (HA < END_HIDDEN_ARGS) {
+      return HiddenArgs[HA].Name;
+    }
+    llvm_unreachable("Unexpected hidden argument.");
+  }
+
+  // Clones the function after adding implicit arguments to the argument list
+  // and returns the new updated function. Preloaded implicit arguments are
+  // added up to and including the last one that will be preloaded, indicated by
+  // LastPreloadIndex. Currently preloading is only performed on the totality of
+  // sequential data from the kernarg segment including implicit (hidden)
+  // arguments. This means that all arguments up to the last preloaded argument
+  // will also be preloaded even if that data is unused.
+  Function *cloneFunctionWithPreloadImplicitArgs(unsigned LastPreloadIndex) {
+    FunctionType *FT = F.getFunctionType();
+    LLVMContext &Ctx = F.getParent()->getContext();
+    SmallVector<Type *, 16> FTypes(FT->param_begin(), FT->param_end());
+    for (unsigned I = 0; I <= LastPreloadIndex; ++I)
+      FTypes.push_back(getHiddenArgType(Ctx, HiddenArg(I)));
+
+    FunctionType *NFT =
+        FunctionType::get(FT->getReturnType(), FTypes, FT->isVarArg());
+    Function *NF =
+        Function::Create(NFT, F.getLinkage(), F.getAddressSpace(), F.getName());
+
+    NF->copyAttributesFrom(&F);
+    NF->copyMetadata(&F, 0);
+    NF->setIsNewDbgInfoFormat(F.IsNewDbgInfoFormat);
+
+    F.getParent()->getFunctionList().insert(F.getIterator(), NF);
+    NF->takeName(&F);
+    NF->splice(NF->begin(), &F);
+
+    Function::arg_iterator NFArg = NF->arg_begin();
+    for (Argument &Arg : F.args()) {
+      Arg.replaceAllUsesWith(&*NFArg);
+      NFArg->takeName(&Arg);
+      ++NFArg;
+    }
+
+    AttrBuilder AB(Ctx);
+    AB.addAttribute(Attribute::InReg);
+    AB.addAttribute("amdgpu-hidden-argument");
+    AttributeList AL = NF->getAttributes();
+    for (unsigned I = 0; I <= LastPreloadIndex; ++I) {
+      AL = AL.addParamAttributes(Ctx, NFArg->getArgNo(), AB);
+      NFArg++->setName(getHiddenArgName(HiddenArg(I)));
+    }
+
+    NF->setAttributes(AL);
+    F.replaceAllUsesWith(NF);
+    F.setCallingConv(CallingConv::C);
+
+    return NF;
+  }
+
+public:
   PreloadKernelArgInfo(Function &F, const GCNSubtarget &ST) : F(F), ST(ST) {
     setInitialFreeUserSGPRsCount();
   }
@@ -41,20 +144,20 @@ public:
   // Returns the maximum number of user SGPRs that we have available to preload
   // arguments.
   void setInitialFreeUserSGPRsCount() {
-    const unsigned MaxUserSGPRs = ST.getMaxNumUserSGPRs();
     GCNUserSGPRUsageInfo UserSGPRInfo(F, ST);
-
-    NumFreeUserSGPRs = MaxUserSGPRs - UserSGPRInfo.getNumUsedUserSGPRs();
+    NumFreeUserSGPRs = UserSGPRInfo.getNumFreeUserSGPRs();
   }
 
   bool tryAllocPreloadSGPRs(unsigned AllocSize, uint64_t ArgOffset,
                             uint64_t LastExplicitArgOffset) {
     //  Check if this argument may be loaded into the same register as the
     //  previous argument.
-    if (!isAligned(Align(4), ArgOffset) && AllocSize < 4)
+    if (ArgOffset - LastExplicitArgOffset < 4 &&
+        !isAligned(Align(4), ArgOffset))
       return true;
 
     // Pad SGPRs for kernarg alignment.
+    ArgOffset = alignDown(ArgOffset, 4);
     unsigned Padding = ArgOffset - LastExplicitArgOffset;
     unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
     unsigned NumPreloadSGPRs = alignTo(AllocSize, 4) / 4;
@@ -63,6 +166,88 @@ public:
 
     NumFreeUserSGPRs -= (NumPreloadSGPRs + PaddingSGPRs);
     return true;
+  }
+
+  // Try to allocate SGPRs to preload implicit kernel arguments.
+  void tryAllocImplicitArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
+                                       uint64_t LastExplicitArgOffset,
+                                       IRBuilder<> &Builder) {
+    Function *ImplicitArgPtr = Intrinsic::getDeclarationIfExists(
+        F.getParent(), Intrinsic::amdgcn_implicitarg_ptr);
+    if (!ImplicitArgPtr)
+      return;
+
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    // Pair is the load and the load offset.
+    SmallVector<std::pair<LoadInst *, unsigned>, 4> ImplicitArgLoads;
+    for (auto *U : ImplicitArgPtr->users()) {
+      Instruction *CI = dyn_cast<Instruction>(U);
+      if (!CI || CI->getParent()->getParent() != &F)
+        continue;
+
+      for (auto *U : CI->users()) {
+        int64_t Offset = 0;
+        auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr?
+        if (!Load) {
+          if (GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
+            continue;
+
+          Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?
+        }
+
+        if (!Load || !Load->isSimple())
+          continue;
+
+        // FIXME: Expand to handle 64-bit implicit args and large merged loads.
+        LLVMContext &Ctx = F.getParent()->getContext();
+        Type *LoadTy = Load->getType();
+        HiddenArg HA = getHiddenArgFromOffset(Offset);
+        if (HA == END_HIDDEN_ARGS || LoadTy != getHiddenArgType(Ctx, HA))
+          continue;
+
+        ImplicitArgLoads.push_back(std::make_pair(Load, Offset));
+      }
+    }
+
+    if (ImplicitArgLoads.empty())
+      return;
+
+    // Allocate loads in order of offset. We need to be sure that the implicit
+    // argument can actually be preloaded.
+    std::sort(ImplicitArgLoads.begin(), ImplicitArgLoads.end(), less_second());
+
+    // If we fail to preload any implicit argument we know we don't have SGPRs
+    // to preload any subsequent ones with larger offsets. Find the first
+    // argument that we cannot preload.
+    auto *PreloadEnd = std::find_if(
+        ImplicitArgLoads.begin(), ImplicitArgLoads.end(),
+        [&](const std::pair<LoadInst *, unsigned> &Load) {
+          unsigned LoadSize = DL.getTypeStoreSize(Load.first->getType());
+          unsigned LoadOffset = Load.second;
+          if (!tryAllocPreloadSGPRs(LoadSize,
+                                    LoadOffset + ImplicitArgsBaseOffset,
+                                    LastExplicitArgOffset))
+            return true;
+
+          LastExplicitArgOffset =
+              ImplicitArgsBaseOffset + LoadOffset + LoadSize;
+          return false;
+        });
+
+    if (PreloadEnd == ImplicitArgLoads.begin())
+      return;
+
+    unsigned LastHiddenArgIndex = getHiddenArgFromOffset(PreloadEnd[-1].second);
+    Function *NF = cloneFunctionWithPreloadImplicitArgs(LastHiddenArgIndex);
+    assert(NF);
+    for (const auto *I = ImplicitArgLoads.begin(); I != PreloadEnd; ++I) {
+      LoadInst *LoadInst = I->first;
+      unsigned LoadOffset = I->second;
+      unsigned HiddenArgIndex = getHiddenArgFromOffset(LoadOffset);
+      unsigned Index = NF->arg_size() - LastHiddenArgIndex + HiddenArgIndex - 1;
+      Argument *Arg = NF->getArg(Index);
+      LoadInst->replaceAllUsesWith(Arg);
+    }
   }
 };
 
@@ -104,9 +289,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&*getInsertPt(EntryBlock));
+  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -120,7 +305,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
   CallInst *KernArgSegment =
       Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
                               nullptr, F.getName() + ".kernarg.segment");
-
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
@@ -143,9 +327,14 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     uint64_t LastExplicitArgOffset = ExplicitArgOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
 
+    // Guard against the situation where hidden arguments have already been
+    // lowered and added to the kernel function signiture, i.e. in a situation
+    // where this pass has run twice.
+    if (Arg.hasAttribute("amdgpu-hidden-argument"))
+      break;
+
     // Try to preload this argument into user SGPRs.
     if (Arg.hasInRegAttr() && InPreloadSequence && ST.hasKernargPreload() &&
-        !ST.needsKernargPreloadBackwardsCompatibility() &&
         !Arg.getType()->isAggregateType())
       if (PreloadInfo.tryAllocPreloadSGPRs(AllocSize, EltOffset,
                                            LastExplicitArgOffset))
@@ -202,6 +391,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
+      // TODO: Update this for GFX12 which does have scalar sub-dword loads.
       //
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
@@ -227,6 +417,16 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);
+
+    if (Arg.hasAttribute(Attribute::NoUndef))
+      Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
+
+    if (Arg.hasAttribute(Attribute::Range)) {
+      const ConstantRange &Range =
+          Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
+      Load->setMetadata(LLVMContext::MD_range,
+                        MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
 
     if (isa<PointerType>(ArgTy)) {
       if (Arg.hasNonNullAttr())
@@ -281,6 +481,14 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   KernArgSegment->addRetAttr(
       Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
+
+  if (InPreloadSequence) {
+    uint64_t ImplicitArgsBaseOffset =
+        alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
+        BaseOffset;
+    PreloadInfo.tryAllocImplicitArgPreloadSGPRs(ImplicitArgsBaseOffset,
+                                                ExplicitArgOffset, Builder);
+  }
 
   return true;
 }

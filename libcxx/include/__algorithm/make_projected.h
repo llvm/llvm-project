@@ -9,15 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
 #define _LIBCPP___ALGORITHM_MAKE_PROJECTED_H
 
-#include <__concepts/same_as.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_member_pointer.h>
-#include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 
@@ -36,8 +34,8 @@ struct _ProjectedPred {
       : __pred(__pred_arg), __proj(__proj_arg) {}
 
   template <class _Tp>
-  typename __invoke_of<_Pred&, decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_Tp>())) >::
-      type _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
+  typename __invoke_of<_Pred&, decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_Tp>()))>::type
+      _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
       operator()(_Tp&& __v) const {
     return std::__invoke(__pred, std::__invoke(__proj, std::forward<_Tp>(__v)));
   }
@@ -45,8 +43,8 @@ struct _ProjectedPred {
   template <class _T1, class _T2>
   typename __invoke_of<_Pred&,
                        decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T1>())),
-                       decltype(std::__invoke(std::declval<_Proj&>(),
-                                              std::declval<_T2>())) >::type _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI
+                       decltype(std::__invoke(std::declval<_Proj&>(), std::declval<_T2>()))>::type _LIBCPP_CONSTEXPR
+  _LIBCPP_HIDE_FROM_ABI
   operator()(_T1&& __lhs, _T2&& __rhs) const {
     return std::__invoke(
         __pred, std::__invoke(__proj, std::forward<_T1>(__lhs)), std::__invoke(__proj, std::forward<_T2>(__rhs)));

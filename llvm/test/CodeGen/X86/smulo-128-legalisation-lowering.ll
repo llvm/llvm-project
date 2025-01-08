@@ -101,11 +101,10 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    addl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %esi
-; X86-NEXT:    movl %esi, %ebp
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    addl %ebx, %esi
@@ -1201,7 +1200,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    addl %edx, %ebx
 ; X86-NEXT:    adcl $0, %ebp
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    movl %ecx, %esi

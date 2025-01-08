@@ -39,14 +39,6 @@ class SBDirCheckerCase(TestBase):
             self.getBuildArtifact(self.source), "// Set breakpoint here."
         )
 
-        env_cmd = "settings set target.env-vars %s=%s" % (
-            self.dylibPath,
-            self.getLLDBLibraryEnvVal(),
-        )
-        if self.TraceOn():
-            print("Set environment to: ", env_cmd)
-        self.runCmd(env_cmd)
-
         lldbutil.run_break_set_by_file_and_line(
             self, self.source, self.line_to_break, num_expected_locations=-1
         )

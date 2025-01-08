@@ -1035,7 +1035,7 @@ class ConstantOp(_ods_ir.OpView):
     ...
 ```
 
-expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`). 
+expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`).
 Thus, a natural extension is a builder that accepts a MLIR type and a Python value and instantiates the appropriate `TypedAttr`:
 
 ```python
@@ -1138,12 +1138,14 @@ attributes and types must connect to the relevant C APIs for building and
 inspection, which must be provided first. Bindings for `Attribute` and `Type`
 subclasses can be defined using
 [`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
-utilities that mimic pybind11 API for defining functions and properties. These
-bindings are to be included in a separate pybind11 module. The utilities also
-provide automatic casting between C API handles `MlirAttribute` and `MlirType`
-and their Python counterparts so that the C API handles can be used directly in
-binding implementations. The methods and properties provided by the bindings
-should follow the principles discussed above.
+or
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
+utilities that mimic pybind11/nanobind API for defining functions and
+properties. These bindings are to be included in a separate module. The
+utilities also provide automatic casting between C API handles `MlirAttribute`
+and `MlirType` and their Python counterparts so that the C API handles can be
+used directly in binding implementations. The methods and properties provided by
+the bindings should follow the principles discussed above.
 
 The attribute and type bindings for a dialect can be located in
 `lib/Bindings/Python/Dialect<Name>.cpp` and should be compiled into a separate
@@ -1179,7 +1181,9 @@ make the passes available along with the dialect.
 Dialect functionality other than IR objects or passes, such as helper functions,
 can be exposed to Python similarly to attributes and types. C API is expected to
 exist for this functionality, which can then be wrapped using pybind11 and
-`[include/mlir/Bindings/Python/PybindAdaptors.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)`
+[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
+or nanobind and
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
 utilities to connect to the rest of Python API. The bindings can be located in a
-separate pybind11 module or in the same module as attributes and types, and
+separate module or in the same module as attributes and types, and
 loaded along with the dialect.

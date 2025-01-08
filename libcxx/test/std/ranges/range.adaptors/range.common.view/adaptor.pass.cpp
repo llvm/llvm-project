@@ -18,12 +18,8 @@
 #include <utility>
 
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
-
-template <class View, class T>
-concept CanBePiped = requires (View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
 
 constexpr bool test() {
   int buf[] = {1, 2, 3};

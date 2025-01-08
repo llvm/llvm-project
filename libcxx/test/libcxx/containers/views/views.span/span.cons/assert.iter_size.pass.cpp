@@ -17,7 +17,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>
@@ -25,13 +25,48 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::array<int, 3> array{0, 1, 2};
+  std::array<int, 3> array{0, 1, 2};
 
-    auto too_large = [&] { std::span<int, 3> const s(array.data(), 4); (void)s; };
-    TEST_LIBCPP_ASSERT_FAILURE(too_large(), "size mismatch in span's constructor (iterator, len)");
+  // Input range too large (exceeds the span extent)
+  {
+    auto f = [&] {
+      std::span<int, 3> const s(array.data(), 4);
+      (void)s;
+    };
+    TEST_LIBCPP_ASSERT_FAILURE(f(), "size mismatch in span's constructor (iterator, len)");
+  }
 
-    auto too_small = [&] { std::span<int, 3> const s(array.data(), 2); (void)s; };
-    TEST_LIBCPP_ASSERT_FAILURE(too_small(), "size mismatch in span's constructor (iterator, len)");
+  // Input range too small (doesn't fill the span)
+  {
+    auto f = [&] {
+      std::span<int, 3> const s(array.data(), 2);
+      (void)s;
+    };
+    TEST_LIBCPP_ASSERT_FAILURE(f(), "size mismatch in span's constructor (iterator, len)");
+  }
 
-    return 0;
+  // Input range is non-empty but starts with a null pointer
+  {
+    // static extent
+    {
+      auto f = [&] {
+        int* p = nullptr;
+        std::span<int, 3> const s(p, 3);
+        (void)s;
+      };
+      TEST_LIBCPP_ASSERT_FAILURE(f(), "passed nullptr with non-zero length in span's constructor (iterator, len)");
+    }
+
+    // dynamic extent
+    {
+      auto f = [&] {
+        int* p = nullptr;
+        std::span<int, std::dynamic_extent> const s(p, 1);
+        (void)s;
+      };
+      TEST_LIBCPP_ASSERT_FAILURE(f(), "passed nullptr with non-zero length in span's constructor (iterator, len)");
+    }
+  }
+
+  return 0;
 }

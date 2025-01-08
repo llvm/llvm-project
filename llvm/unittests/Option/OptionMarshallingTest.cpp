@@ -1,4 +1,4 @@
-//===- unittest/Support/OptionMarshallingTest.cpp - OptParserEmitter tests ===//
+//===- OptionMarshallingTest.cpp - OptionParserEmitter tests -================//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,29 +9,37 @@
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 struct OptionWithMarshallingInfo {
-  llvm::StringLiteral PrefixedName;
+  int PrefixedNameOffset;
   const char *KeyPath;
   const char *ImpliedCheck;
   const char *ImpliedValue;
+
+  llvm::StringRef getPrefixedName() const {
+    return &OptionStrTable[PrefixedNameOffset];
+  }
 };
 
 static const OptionWithMarshallingInfo MarshallingTable[] = {
 #define OPTION_WITH_MARSHALLING(                                               \
-    PREFIX_TYPE, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,      \
-    VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES, SHOULD_PARSE, ALWAYS_EMIT,   \
-    KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,          \
-    DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)                              \
-  {PREFIXED_NAME, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
+    PREFIX_TYPE, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,      \
+    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
+    SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,          \
+    IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, TABLE_INDEX)   \
+  {PREFIXED_NAME_OFFSET, #KEYPATH, #IMPLIED_CHECK, #IMPLIED_VALUE},
 #include "Opts.inc"
 #undef OPTION_WITH_MARSHALLING
 };
 
 TEST(OptionMarshalling, EmittedOrderSameAsDefinitionOrder) {
-  ASSERT_EQ(MarshallingTable[0].PrefixedName, "-marshalled-flag-d");
-  ASSERT_EQ(MarshallingTable[1].PrefixedName, "-marshalled-flag-c");
-  ASSERT_EQ(MarshallingTable[2].PrefixedName, "-marshalled-flag-b");
-  ASSERT_EQ(MarshallingTable[3].PrefixedName, "-marshalled-flag-a");
+  ASSERT_EQ(MarshallingTable[0].getPrefixedName(), "-marshalled-flag-d");
+  ASSERT_EQ(MarshallingTable[1].getPrefixedName(), "-marshalled-flag-c");
+  ASSERT_EQ(MarshallingTable[2].getPrefixedName(), "-marshalled-flag-b");
+  ASSERT_EQ(MarshallingTable[3].getPrefixedName(), "-marshalled-flag-a");
 }
 
 TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {

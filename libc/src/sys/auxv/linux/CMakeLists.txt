@@ -1,0 +1,19 @@
+add_entrypoint_object(
+  getauxval
+  SRCS
+  getauxval.cpp
+  HDRS
+    ../getauxval.h
+  DEPENDS
+    libc.src.sys.prctl.prctl
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.__support.threads.callonce
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.config.app_h
+    libc.src.fcntl.open
+    libc.src.unistd.read
+    libc.src.unistd.close
+    libc.include.sys_auxv
+)

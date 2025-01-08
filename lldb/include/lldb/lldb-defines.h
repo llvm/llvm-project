@@ -127,6 +127,11 @@
 #define MAX_PATH 260
 #endif
 
+/// Address Mask
+/// Bits not used for addressing are set to 1 in the mask;
+/// all mask bits set is an invalid value.
+#define LLDB_INVALID_ADDRESS_MASK UINT64_MAX
+
 // ignore GCC function attributes
 #if defined(_MSC_VER) && !defined(__clang__)
 #define __attribute__(X)

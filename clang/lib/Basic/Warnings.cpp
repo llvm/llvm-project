@@ -23,10 +23,12 @@
 // simpler because a remark can't be promoted to an error.
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include <algorithm>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstring>
-#include <utility>
 using namespace clang;
 
 // EmitUnknownDiagWarning - Emit a warning and typo hint for unknown warning
@@ -43,6 +45,7 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
 
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
                                   const DiagnosticOptions &Opts,
+                                  llvm::vfs::FileSystem &VFS,
                                   bool ReportDiags) {
   Diags.setSuppressSystemWarnings(true);  // Default to -Wno-system-headers
   Diags.setIgnoreAllWarnings(Opts.IgnoreWarnings);
@@ -70,6 +73,16 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
   else
     Diags.setExtensionHandlingBehavior(diag::Severity::Ignored);
 
+  if (!Opts.DiagnosticSuppressionMappingsFile.empty()) {
+    if (auto FileContents =
+            VFS.getBufferForFile(Opts.DiagnosticSuppressionMappingsFile)) {
+      Diags.setDiagSuppressionMapping(**FileContents);
+    } else if (ReportDiags) {
+      Diags.Report(diag::err_drv_no_such_file)
+          << Opts.DiagnosticSuppressionMappingsFile;
+    }
+  }
+
   SmallVector<diag::kind, 10> _Diags;
   const IntrusiveRefCntPtr< DiagnosticIDs > DiagIDs =
     Diags.getDiagnosticIDs();
@@ -96,11 +109,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
 
       // Check to see if this warning starts with "no-", if so, this is a
       // negative form of the option.
-      bool isPositive = true;
-      if (Opt.starts_with("no-")) {
-        isPositive = false;
-        Opt = Opt.substr(3);
-      }
+      bool isPositive = !Opt.consume_front("no-");
 
       // Figure out how this option affects the warning.  If -Wfoo, map the
       // diagnostic to a warning, if -Wno-foo, map it to ignore.
@@ -203,8 +212,7 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
 
       // Check to see if this warning starts with "no-", if so, this is a
       // negative form of the option.
-      bool IsPositive = !Opt.starts_with("no-");
-      if (!IsPositive) Opt = Opt.substr(3);
+      bool IsPositive = !Opt.consume_front("no-");
 
       auto Severity = IsPositive ? diag::Severity::Remark
                                  : diag::Severity::Ignored;

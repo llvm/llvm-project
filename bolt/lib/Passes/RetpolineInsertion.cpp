@@ -181,7 +181,6 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
   if (BrInfo.isReg()) {
     BC.InstPrinter->printRegName(TagOS, BrInfo.BranchReg);
     TagOS << "_";
-    TagOS.flush();
     return Tag;
   }
 
@@ -212,7 +211,6 @@ std::string createRetpolineFunctionTag(BinaryContext &BC,
     BC.InstPrinter->printRegName(TagOS, MemRef.SegRegNum);
   }
 
-  TagOS.flush();
   return Tag;
 }
 
@@ -271,9 +269,9 @@ IndirectBranchInfo::IndirectBranchInfo(MCInst &Inst, MCPlusBuilder &MIB) {
   }
 }
 
-void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
+Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
-    return;
+    return Error::success();
 
   assert(BC.isX86() &&
          "retpoline insertion not supported for target architecture");
@@ -327,10 +325,11 @@ void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
       }
     }
   }
-  outs() << "BOLT-INFO: The number of created retpoline functions is : "
-         << CreatedRetpolines.size()
-         << "\nBOLT-INFO: The number of retpolined branches is : "
-         << RetpolinedBranches << "\n";
+  BC.outs() << "BOLT-INFO: The number of created retpoline functions is : "
+            << CreatedRetpolines.size()
+            << "\nBOLT-INFO: The number of retpolined branches is : "
+            << RetpolinedBranches << "\n";
+  return Error::success();
 }
 
 } // namespace bolt

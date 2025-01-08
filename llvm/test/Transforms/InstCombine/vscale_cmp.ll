@@ -3,7 +3,7 @@
 
 define <vscale x 2 x i1> @sge(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sge(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge <vscale x 2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <vscale x 2 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %cmp = icmp sge <vscale x 2 x i8> %x, zeroinitializer

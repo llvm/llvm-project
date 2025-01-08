@@ -1,11 +1,11 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses null register operands correctly.
 
 --- |
 
-  define i32 @deref(i32* %p) {
+  define i32 @deref(ptr %p) {
   entry:
-    %a = load i32, i32* %p
+    %a = load i32, ptr %p
     ret i32 %a
   }
 

@@ -21,7 +21,7 @@ define protected amdgpu_kernel void @load_v3i32_align8(ptr addrspace(1) %arg) #0
 ; GCN-LABEL: load_v3i32_align8:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dwordx4 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x0
+; GCN-NEXT:    s_load_dwordx4 s{{\[[0-9]:[0-9]+\]}}, s[4:5], 0x0
   %vec = load <3 x i32>, ptr addrspace(1) %arg, align 8
   store <3 x i32> %vec, ptr addrspace(1) undef, align 8
   ret void
@@ -52,7 +52,7 @@ define protected amdgpu_kernel void @load_v3f32_align8(ptr addrspace(1) %arg) #0
 ; GCN-LABEL: load_v3f32_align8:
 ; GCN:       ; %bb.0:
 ; GCN:         s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dwordx4 s{{\[[0-9]:[0-9]+\]}}, s[0:1], 0x0
+; GCN-NEXT:    s_load_dwordx4 s{{\[[0-9]:[0-9]+\]}}, s[4:5], 0x0
   %vec = load <3 x float>, ptr addrspace(1) %arg, align 8
   store <3 x float> %vec, ptr addrspace(1) undef, align 8
   ret void

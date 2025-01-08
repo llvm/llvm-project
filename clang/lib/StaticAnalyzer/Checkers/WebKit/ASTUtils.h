@@ -13,6 +13,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
 
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -48,10 +49,12 @@ class Expr;
 /// represents ref-counted object during the traversal we return relevant
 /// sub-expression and true.
 ///
-/// \returns subexpression that we traversed to and if \p
-/// StopAtFirstRefCountedObj is true we also return whether we stopped early.
-std::pair<const clang::Expr *, bool>
-tryToFindPtrOrigin(const clang::Expr *E, bool StopAtFirstRefCountedObj);
+/// Calls \p callback with the subexpression that we traversed to and if \p
+/// StopAtFirstRefCountedObj is true we also specify whether we stopped early.
+/// Returns false if any of calls to callbacks returned false. Otherwise true.
+bool tryToFindPtrOrigin(
+    const clang::Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::Expr *, bool)> callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return
 /// whether it's a safe call argument. Examples: function parameter or
@@ -60,6 +63,19 @@ tryToFindPtrOrigin(const clang::Expr *E, bool StopAtFirstRefCountedObj);
 ///
 /// \returns Whether \p E is a safe call arugment.
 bool isASafeCallArg(const clang::Expr *E);
+
+/// \returns true if E is a MemberExpr accessing a const smart pointer type.
+bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
+
+/// \returns true if E is a CXXMemberCallExpr which returns a const smart
+/// pointer type.
+class EnsureFunctionAnalysis {
+  using CacheTy = llvm::DenseMap<const FunctionDecl *, bool>;
+  mutable CacheTy Cache{};
+
+public:
+  bool isACallToEnsureFn(const Expr *E) const;
+};
 
 /// \returns name of AST node or empty string.
 template <typename T> std::string safeGetName(const T *ASTNode) {

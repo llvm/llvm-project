@@ -147,7 +147,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return __ptr_ != nullptr; }
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const { return __ptr_ == nullptr; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return __ptr_ == nullptr; }
 
   _LIBCPP_HIDE_FROM_ABI void swap(__basic_node_handle& __other) noexcept(
       __alloc_traits::propagate_on_container_swap::value || __alloc_traits::is_always_equal::value) {
@@ -188,10 +188,10 @@ struct __map_node_handle_specifics {
 };
 
 template <class _NodeType, class _Alloc>
-using __set_node_handle = __basic_node_handle< _NodeType, _Alloc, __set_node_handle_specifics>;
+using __set_node_handle _LIBCPP_NODEBUG = __basic_node_handle< _NodeType, _Alloc, __set_node_handle_specifics>;
 
 template <class _NodeType, class _Alloc>
-using __map_node_handle = __basic_node_handle< _NodeType, _Alloc, __map_node_handle_specifics>;
+using __map_node_handle _LIBCPP_NODEBUG = __basic_node_handle< _NodeType, _Alloc, __map_node_handle_specifics>;
 
 template <class _Iterator, class _NodeType>
 struct _LIBCPP_TEMPLATE_VIS __insert_return_type {

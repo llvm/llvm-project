@@ -19,11 +19,11 @@ define void @vdiv(ptr %a, float %b) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fdiv fast <4 x float> splat (float 1.000000e+00), [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[TMP0]]
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[TBAA3]]

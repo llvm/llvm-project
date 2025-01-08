@@ -5,15 +5,15 @@
 
 define i32 @main() nounwind {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0)) nounwind
-  tail call void bitcast (void (...)* @SomeOtherFunction to void ()*)() nounwind
+  %call = tail call i32 @puts(ptr @.str) nounwind
+  tail call void @SomeOtherFunction() nounwind
   ret i32 0
 }
 
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind
 
 declare void @SomeOtherFunction(...)
 
 @var = global i32 0
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32* @var to i8*)], section "llvm.metadata"
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* null, i8* null }]
+@llvm.used = appending global [1 x ptr] [ptr @var], section "llvm.metadata"
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr null, ptr null }]

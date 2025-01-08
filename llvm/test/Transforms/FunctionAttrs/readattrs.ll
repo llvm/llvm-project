@@ -107,7 +107,7 @@ define void @test4_2(ptr %p) {
 define void @test5(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test5
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    ret void
 ;
@@ -132,7 +132,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(ptr %p, ptr %q) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test6_2
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr [[Q:%.*]]) {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    call void @test6_1()
 ; FNATTRS-NEXT:    ret void
@@ -251,7 +251,7 @@ entry:
 declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>%val, <4 x ptr>, i32, <4 x i1>)
 
 define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test9
 ; FNATTRS-SAME: (<4 x ptr> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[VAL]], <4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
@@ -275,7 +275,7 @@ define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
 
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x ptr> %ptrs) {
-; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(read)
 ; FNATTRS-LABEL: define {{[^@]+}}@test10
 ; FNATTRS-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef)

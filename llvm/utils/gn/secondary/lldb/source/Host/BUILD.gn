@@ -16,6 +16,8 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "aix/HostInfoAIX.cpp",
+    "common/Alarm.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",

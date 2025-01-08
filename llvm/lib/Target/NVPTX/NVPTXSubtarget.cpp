@@ -11,7 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXSubtarget.h"
+#include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -31,19 +34,18 @@ void NVPTXSubtarget::anchor() {}
 
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
-    // Provide the default CPU if we don't have one.
-    TargetName = std::string(CPU.empty() ? "sm_30" : CPU);
+  TargetName = std::string(CPU);
 
-    ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
+  ParseSubtargetFeatures(getTargetName(), /*TuneCPU=*/getTargetName(), FS);
 
-    // Re-map SM version numbers, SmVersion carries the regular SMs which do
-    // have relative order, while FullSmVersion allows distinguishing sm_90 from
-    // sm_90a, which would *not* be a subset of sm_91.
-    SmVersion = getSmVersion();
+  // Re-map SM version numbers, SmVersion carries the regular SMs which do
+  // have relative order, while FullSmVersion allows distinguishing sm_90 from
+  // sm_90a, which would *not* be a subset of sm_91.
+  SmVersion = getSmVersion();
 
-    // Set default to PTX 6.0 (CUDA 9.0)
-    if (PTXVersion == 0) {
-      PTXVersion = 60;
+  // Set default to PTX 6.0 (CUDA 9.0)
+  if (PTXVersion == 0) {
+    PTXVersion = 60;
   }
 
   return *this;
@@ -53,19 +55,28 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      FullSmVersion(200), SmVersion(getSmVersion()), TM(TM),
-      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
+      FullSmVersion(200), SmVersion(getSmVersion()),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {
+  TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
+}
 
-bool NVPTXSubtarget::hasImageHandles() const {
-  // Enable handles for Kepler+, where CUDA supports indirect surfaces and
-  // textures
-  if (TM.getDrvInterface() == NVPTX::CUDA)
-    return (SmVersion >= 30);
+NVPTXSubtarget::~NVPTXSubtarget() = default;
 
-  // Disabled, otherwise
-  return false;
+const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+void NVPTXSubtarget::failIfClustersUnsupported(
+    std::string const &FailureMessage) const {
+  if (hasClusters())
+    return;
+
+  report_fatal_error(formatv(
+      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
+      "Requires SM >= 90 and PTX >= 78.",
+      getFullSmVersion(), PTXVersion, FailureMessage));
 }

@@ -27,12 +27,13 @@
 #include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <string_view>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
-#  include <locale>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <__locale>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -90,10 +91,8 @@ _LIBCPP_HIDE_FROM_ABI inline _Iterator __insert_sign(_Iterator __buf, bool __neg
  * regardless whether the @c std::numpunct's type is @c char or @c wchar_t.
  */
 _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const string& __grouping) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(
-      !__grouping.empty() && __size > __grouping[0],
-      "The slow grouping formatting is used while there will be no "
-      "separators written");
+  _LIBCPP_ASSERT_INTERNAL(!__grouping.empty() && __size > __grouping[0],
+                          "The slow grouping formatting is used while there will be no separators written");
   string __r;
   auto __end = __grouping.end() - 1;
   auto __ptr = __grouping.begin();
@@ -161,7 +160,7 @@ _LIBCPP_HIDE_FROM_ABI _Iterator __to_buffer(_Iterator __first, _Iterator __last,
   // TODO FMT Evaluate code overhead due to not calling the internal function
   // directly. (Should be zero overhead.)
   to_chars_result __r = std::to_chars(std::to_address(__first), std::to_address(__last), __value, __base);
-  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
   auto __diff = __r.ptr - std::to_address(__first);
   return __first + __diff;
 }
@@ -248,10 +247,8 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(
 
   auto __r = __grouping.rbegin();
   auto __e = __grouping.rend() - 1;
-  _LIBCPP_ASSERT_UNCATEGORIZED(
-      __r != __e,
-      "The slow grouping formatting is used while "
-      "there will be no separators written.");
+  _LIBCPP_ASSERT_INTERNAL(
+      __r != __e, "The slow grouping formatting is used while there will be no separators written.");
   // The output is divided in small groups of numbers to write:
   // - A group before the first separator.
   // - A separator and a group, repeated for the number of separators.
@@ -301,7 +298,7 @@ _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
 
   _Iterator __last = __formatter::__to_buffer(__first, __end, __value, __base);
 
-#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
     const auto& __np  = std::use_facet<numpunct<_CharT>>(__ctx.locale());
     string __grouping = __np.grouping();
@@ -380,7 +377,7 @@ __format_integer(_Tp __value,
     return __formatter::__format_integer(__value, __ctx, __specs, __negative, __array.begin(), __array.end(), "0X", 16);
   }
   default:
-    _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parse function should have validated the type");
+    _LIBCPP_ASSERT_INTERNAL(false, "The parse function should have validated the type");
     __libcpp_unreachable();
   }
 }
@@ -415,7 +412,7 @@ struct _LIBCPP_TEMPLATE_VIS __bool_strings<char> {
   static constexpr string_view __false{"false"};
 };
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS __bool_strings<wchar_t> {
   static constexpr wstring_view __true{L"true"};
@@ -426,7 +423,7 @@ struct _LIBCPP_TEMPLATE_VIS __bool_strings<wchar_t> {
 template <class _CharT, class _FormatContext>
 _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
 __format_bool(bool __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
-#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
     const auto& __np           = std::use_facet<numpunct<_CharT>>(__ctx.locale());
     basic_string<_CharT> __str = __value ? __np.truename() : __np.falsename();
@@ -440,7 +437,7 @@ __format_bool(bool __value, _FormatContext& __ctx, __format_spec::__parsed_speci
 
 } // namespace __formatter
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

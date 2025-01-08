@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wconversion -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++2c -Wconversion -verify %s
 
 struct Test {
     int a = 0;
@@ -102,3 +102,24 @@ void bar() {
 }
 
 }
+
+namespace GH84052 {
+
+template <class... T>
+concept C = sizeof(T...[1]) == 1; // #C
+
+struct A {};
+
+template <class T, C<T> auto = A{}> struct Set {}; // #Set
+
+template <class T> void foo() {
+  Set<T> unrelated;
+}
+
+Set<bool> sb;
+Set<float> sf;
+// expected-error@-1 {{constraints not satisfied for class template 'Set'}}
+// expected-note@#Set {{because 'C<decltype(GH84052::A{}), float>' evaluated to false}}
+// expected-note@#C {{evaluated to false}}
+
+} // namespace GH84052

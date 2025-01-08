@@ -1,0 +1,36 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran procedures available in cudadevice module
+
+attributes(global) subroutine devsub()
+  implicit none
+  integer :: ret
+
+  call syncthreads()
+  call syncwarp(1)
+  call threadfence()
+  call threadfence_block()
+  call threadfence_system()
+  ret = syncthreads_and(1)
+  ret = syncthreads_count(1)
+  ret = syncthreads_or(1)
+end
+
+! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: fir.call @__syncwarp(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1_i32_0) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1_i32_1) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1_i32_2) fastmath<contract> : (i32) -> i32
+
+! CHECK: func.func private @llvm.nvvm.barrier0()
+! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @llvm.nvvm.membar.gl()
+! CHECK: func.func private @llvm.nvvm.membar.cta()
+! CHECK: func.func private @llvm.nvvm.membar.sys()
+! CHECK: func.func private @llvm.nvvm.barrier0.and(i32) -> i32
+! CHECK: func.func private @llvm.nvvm.barrier0.popc(i32) -> i32
+! CHECK: func.func private @llvm.nvvm.barrier0.or(i32) -> i32

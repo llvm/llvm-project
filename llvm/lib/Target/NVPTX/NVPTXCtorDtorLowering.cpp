@@ -14,6 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -48,39 +50,34 @@ static std::string getHash(StringRef Str) {
   return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
 }
 
-static void addKernelMetadata(Module &M, GlobalValue *GV) {
+static void addKernelMetadata(Module &M, Function *F) {
   llvm::LLVMContext &Ctx = M.getContext();
 
   // Get "nvvm.annotations" metadata node.
   llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
 
-  llvm::Metadata *KernelMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "kernel"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
   // This kernel is only to be called single-threaded.
   llvm::Metadata *ThreadXMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidx"),
+      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidx"),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
   llvm::Metadata *ThreadYMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidy"),
+      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidy"),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
   llvm::Metadata *ThreadZMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidz"),
+      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, "maxntidz"),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
 
   llvm::Metadata *BlockMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV),
+      llvm::ConstantAsMetadata::get(F),
       llvm::MDString::get(Ctx, "maxclusterrank"),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
 
   // Append metadata to nvvm.annotations.
-  MD->addOperand(llvm::MDNode::get(Ctx, KernelMDVals));
+  F->setCallingConv(CallingConv::PTX_Kernel);
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadXMDVals));
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadYMDVals));
   MD->addOperand(llvm::MDNode::get(Ctx, ThreadZMDVals));

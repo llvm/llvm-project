@@ -12,7 +12,7 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; SSE-LINUX-LABEL: share_v4i32_v4f32:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
-; SSE-LINUX-NEXT:    .p2align 4, 0x90
+; SSE-LINUX-NEXT:    .p2align 4
 ; SSE-LINUX-NEXT:  .LBB0_1: # %loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    movaps %xmm0, (%rdi)
@@ -25,7 +25,7 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; SSE-MSVC-LABEL: share_v4i32_v4f32:
 ; SSE-MSVC:       # %bb.0: # %entry
 ; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
-; SSE-MSVC-NEXT:    .p2align 4, 0x90
+; SSE-MSVC-NEXT:    .p2align 4
 ; SSE-MSVC-NEXT:  .LBB0_1: # %loop
 ; SSE-MSVC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-MSVC-NEXT:    movaps %xmm0, (%rcx)
@@ -39,7 +39,7 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; AVX-LINUX:       # %bb.0: # %entry
 ; AVX-LINUX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
 ; AVX-LINUX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1073741824,1073741824,1073741824,1073741824]
-; AVX-LINUX-NEXT:    .p2align 4, 0x90
+; AVX-LINUX-NEXT:    .p2align 4
 ; AVX-LINUX-NEXT:  .LBB0_1: # %loop
 ; AVX-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-LINUX-NEXT:    vmovaps %xmm0, (%rdi)
@@ -53,7 +53,7 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 ; AVX-MSVC:       # %bb.0: # %entry
 ; AVX-MSVC-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1073741824,1073741824,1073741824,1073741824]
 ; AVX-MSVC-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1073741824,1073741824,1073741824,1073741824]
-; AVX-MSVC-NEXT:    .p2align 4, 0x90
+; AVX-MSVC-NEXT:    .p2align 4
 ; AVX-MSVC-NEXT:  .LBB0_1: # %loop
 ; AVX-MSVC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-MSVC-NEXT:    vmovaps %xmm0, (%rcx)
@@ -77,7 +77,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-LINUX:       # %bb.0:
 ; SSE-LINUX-NEXT:    xorps %xmm0, %xmm0
 ; SSE-LINUX-NEXT:    movaps %xmm0, 48(%rdi)
-; SSE-LINUX-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-LINUX-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-LINUX-NEXT:    movaps %xmm1, 32(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, 16(%rdi)
 ; SSE-LINUX-NEXT:    movaps %xmm1, (%rdi)
@@ -92,7 +92,7 @@ define void @store_repeated_constants(ptr %lo, ptr %hi) {
 ; SSE-MSVC:       # %bb.0:
 ; SSE-MSVC-NEXT:    xorps %xmm0, %xmm0
 ; SSE-MSVC-NEXT:    movaps %xmm0, 48(%rcx)
-; SSE-MSVC-NEXT:    movaps {{.*#+}} xmm1 = [18446744073709551615,0]
+; SSE-MSVC-NEXT:    movsd {{.*#+}} xmm1 = [18446744073709551615,0]
 ; SSE-MSVC-NEXT:    movaps %xmm1, 32(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, 16(%rcx)
 ; SSE-MSVC-NEXT:    movaps %xmm1, (%rcx)

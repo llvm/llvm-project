@@ -415,7 +415,7 @@ define <2 x i4097> @ashr_zero_vec(<2 x i4097> %shiftval) {
 
 define <2 x i64> @ashr_minus1_vec(<2 x i64> %shiftval) {
 ; CHECK-LABEL: @ashr_minus1_vec(
-; CHECK-NEXT:    ret <2 x i64> <i64 -1, i64 -1>
+; CHECK-NEXT:    ret <2 x i64> splat (i64 -1)
 ;
   %shr = ashr <2 x i64> <i64 -1, i64 -1>, %shiftval
   ret <2 x i64> %shr
