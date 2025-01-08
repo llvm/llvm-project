@@ -17386,8 +17386,7 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue NarrowOp = LHS.getOperand(0);
-  EVT NarrowVT = NarrowOp.getValueType();
-  uint64_t NarrowBits = NarrowVT.getScalarSizeInBits();
+  uint64_t NarrowBits = NarrowOp.getSimpleValueType().getScalarSizeInBits();
   if (ShAmtInt >= NarrowBits)
     return SDValue();
   EVT VT = N->getValueType(0);
@@ -17413,9 +17412,10 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   default:
     llvm_unreachable("Expected SHL");
   }
-  return DAG.getNode(Opcode, DL, VT, NarrowOp,
-                     DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowVT),
-                     Passthru, Mask, VL);
+  return DAG.getNode(
+      Opcode, DL, VT, NarrowOp,
+      DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowOp.getValueType()),
+      Passthru, Mask, VL);
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
