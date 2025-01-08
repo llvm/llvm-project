@@ -1159,30 +1159,29 @@
 // * Test -fno-sanitize-top-hot *
 
 // -fno-sanitize-top-hot=undefined=0.5
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT1
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT1
 // CHECK-TOP-HOT1: "-fno-sanitize-top-hot={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){19}"}}
 
 // No-op: no sanitizers are specified
-// RUN: %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT2
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fno-sanitize-top-hot=undefined=0.5 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT2
 // CHECK-TOP-HOT2-NOT: "-fsanitize"
 // CHECK-TOP-HOT2-NOT: "-fno-sanitize-top-hot"
 
 // Enable undefined, then cancel out integer using a cutoff of 0.0
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT3
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT3
 // CHECK-TOP-HOT3: "-fno-sanitize-top-hot={{((unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.5(0*),?){15}"}}
 
 // Enable undefined, then cancel out integer using a cutoff of 0.0, then re-enable signed-integer-overflow
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT4
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT4
 // CHECK-TOP-HOT4: "-fno-sanitize-top-hot={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=(0.5|0.49|0.7|0.69)([0-9]*),?){16}"}}
 
 // Check that -fno-sanitize-top-hot=undefined=0.4 does not widen the set of -fsanitize=integer checks.
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fno-sanitize-top-hot=undefined=0.4 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT5
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=integer -fno-sanitize-top-hot=undefined=0.4 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT5
 // CHECK-TOP-HOT5: "-fno-sanitize-top-hot={{((integer-divide-by-zero|shift-base|shift-exponent|signed-integer-overflow)=(0.4|0.39)([0-9]*),?){4}"}}
 
 // No-op: it's allowed for the user to specify a cutoff of 0.0, though the argument is not passed along by the driver.
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT6
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT6
 // CHECK-TOP-HOT6: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr),?){19}"}}
-// CHECK-TOP-HOT6-NOT: unsupported argument
 // CHECK-TOP-HOT6-NOT: "-fno-sanitize-top-hot"
 
 // Invalid: bad sanitizer
@@ -1206,6 +1205,5 @@
 // CHECK-TOP-HOT11: unsupported argument 'undefined=' to option '-fno-sanitize-top-hot='
 
 // No-op: -fno-sanitize-top= without parameters is unusual but valid
-// RUN: %clang --target=x86_64-linux-gnu -fno-sanitize-top-hot= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT12
-// CHECK-TOP-HOT12-NOT: unsupported argument
+// RUN: %clang -Werror --target=x86_64-linux-gnu -fno-sanitize-top-hot= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT12
 // CHECK-TOP-HOT12-NOT: "-fno-sanitize-top-hot"
