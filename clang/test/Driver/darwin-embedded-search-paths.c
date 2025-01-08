@@ -33,8 +33,8 @@
 // the cc1 arguments.
 
 // CC1: "-cc1"
-// NO-CXX-NOT: "-internal-isystem" "[[SDKROOT]]/usr/include/c++/v1"
-// CXX-SAME: "-internal-isystem" "[[SDKROOT]]/usr/include/c++/v1"
+// NO-CXX-NOT: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CXX-SAME: "-internal-isystem" "{{.*}}/include/c++/v1"
 // ULI-SAME: "-internal-isystem" "[[SDKROOT]]/usr/local/include"
 // EULI-SAME: "-isystem" "[[SDKROOT]]/embedded/usr/local/include"
 // CI-SAME: "-internal-isystem" "{{.*}}/clang/{{[[:digit:].]*}}/include"
