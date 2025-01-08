@@ -247,11 +247,11 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
                                LIBC_NAMESPACE::testing::mpc::MPCRoundingMode{  \
                                    Rrounding, Irounding}))
 
-#define EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(                                  \
-    i, op, input, match_value, ulp_tolerance, Rrounding)         \
+#define EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,        \
+                                             ulp_tolerance, Rrounding)         \
   {                                                                            \
-    MPCRND::ForceRoundingMode __r##i(Rrounding);                            \
-    if (__r##i.success) {                              \
+    MPCRND::ForceRoundingMode __r##i(Rrounding);                               \
+    if (__r##i.success) {                                                      \
       EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
                                 Rrounding, Rrounding);                         \
     }                                                                          \
@@ -261,9 +261,9 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
   {                                                                            \
     namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
     for (int i = 0; i < 4; i++) {                                              \
-        MPCRND::RoundingMode r_mode = static_cast<MPCRND::RoundingMode>(i);    \
-        EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,     \
-                                             ulp_tolerance, r_mode);   \
+      MPCRND::RoundingMode r_mode = static_cast<MPCRND::RoundingMode>(i);      \
+      EXPECT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,          \
+                                           ulp_tolerance, r_mode);             \
     }                                                                          \
   }
 
@@ -290,11 +290,11 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
                                LIBC_NAMESPACE::testing::mpc::MPCRoundingMode{  \
                                    Rrounding, Irounding}))
 
-#define ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(                                  \
-    i, op, input, match_value, ulp_tolerance, Rrounding)         \
+#define ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,        \
+                                             ulp_tolerance, Rrounding)         \
   {                                                                            \
-    MPCRND::ForceRoundingMode __r##i(Rrounding);                            \
-    if (__r##i.success) {                              \
+    MPCRND::ForceRoundingMode __r##i(Rrounding);                               \
+    if (__r##i.success) {                                                      \
       ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
                                 Rrounding, Rrounding);                         \
     }                                                                          \
@@ -304,9 +304,9 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
   {                                                                            \
     namespace MPCRND = LIBC_NAMESPACE::fputil::testing;                        \
     for (int i = 0; i < 4; i++) {                                              \
-        MPCRND::RoundingMode r_mode = static_cast<MPCRND::RoundingMode>(i);    \
-        ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,     \
-                                             ulp_tolerance, r_mode);   \
+      MPCRND::RoundingMode r_mode = static_cast<MPCRND::RoundingMode>(i);      \
+      ASSERT_MPC_MATCH_ALL_ROUNDING_HELPER(i, op, input, match_value,          \
+                                           ulp_tolerance, r_mode);             \
     }                                                                          \
   }
 
