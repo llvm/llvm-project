@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
@@ -54,6 +55,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
@@ -330,20 +332,20 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
   }
 }
 
-void CompilerInstance::createDiagnostics(DiagnosticConsumer *Client,
+void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
+                                         DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(&getDiagnosticOpts(), Client,
+  Diagnostics = createDiagnostics(VFS, &getDiagnosticOpts(), Client,
                                   ShouldOwnClient, &getCodeGenOpts());
 }
 
-IntrusiveRefCntPtr<DiagnosticsEngine>
-CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
-                                    DiagnosticConsumer *Client,
-                                    bool ShouldOwnClient,
-                                    const CodeGenOptions *CodeGenOpts) {
+IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
+    llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+    DiagnosticConsumer *Client, bool ShouldOwnClient,
+    const CodeGenOptions *CodeGenOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-      Diags(new DiagnosticsEngine(DiagID, Opts));
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      new DiagnosticsEngine(DiagID, Opts));
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.
@@ -367,7 +369,7 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
                                Opts->DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
-  ProcessWarningOptions(*Diags, *Opts);
+  ProcessWarningOptions(*Diags, *Opts, VFS);
 
   return Diags;
 }
@@ -1235,9 +1237,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
-  Instance.createDiagnostics(new ForwardingDiagnosticConsumer(
-                                   ImportingInstance.getDiagnosticClient()),
-                             /*ShouldOwnClient=*/true);
+  Instance.createDiagnostics(
+      ImportingInstance.getVirtualFileSystem(),
+      new ForwardingDiagnosticConsumer(ImportingInstance.getDiagnosticClient()),
+      /*ShouldOwnClient=*/true);
 
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);

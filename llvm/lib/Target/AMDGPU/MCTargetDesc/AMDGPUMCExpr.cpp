@@ -16,7 +16,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -304,6 +303,14 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                  CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
                  CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
                 Ctx);
+}
+
+bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
+  for (const MCExpr *E : getArgs()) {
+    if (E->isSymbolUsedInExpression(Sym))
+      return true;
+  }
+  return false;
 }
 
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {

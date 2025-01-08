@@ -18,7 +18,6 @@
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -30,7 +29,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
@@ -694,21 +692,23 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
         InflateGPRC++;
     }
 
-    for (const auto *I = RC->getSuperClasses(); *I; ++I) {
-      if (getRegSizeInBits(**I) != getRegSizeInBits(*RC))
+    for (unsigned SuperID : RC->superclasses()) {
+      if (getRegSizeInBits(*getRegClass(SuperID)) != getRegSizeInBits(*RC))
         continue;
 
-      switch ((*I)->getID()) {
+      switch (SuperID) {
       case PPC::VSSRCRegClassID:
-        return Subtarget.hasP8Vector() ? *I : DefaultSuperclass;
+        return Subtarget.hasP8Vector() ? getRegClass(SuperID)
+                                       : DefaultSuperclass;
       case PPC::VSFRCRegClassID:
       case PPC::VSRCRegClassID:
-        return *I;
+        return getRegClass(SuperID);
       case PPC::VSRpRCRegClassID:
-        return Subtarget.pairedVectorMemops() ? *I : DefaultSuperclass;
+        return Subtarget.pairedVectorMemops() ? getRegClass(SuperID)
+                                              : DefaultSuperclass;
       case PPC::ACCRCRegClassID:
       case PPC::UACCRCRegClassID:
-        return Subtarget.hasMMA() ? *I : DefaultSuperclass;
+        return Subtarget.hasMMA() ? getRegClass(SuperID) : DefaultSuperclass;
       }
     }
   }

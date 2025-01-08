@@ -5437,7 +5437,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(allocated, MDField, );                                              \
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
-  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));
+  OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
+  OPTIONAL(specification, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5453,10 +5454,10 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
     if (auto *CT = DICompositeType::buildODRType(
             Context, *identifier.Val, tag.Val, name.Val, file.Val, line.Val,
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val,
-            num_extra_inhabitants.Val, flags.Val, elements.Val, runtimeLang.Val,
-            vtableHolder.Val, templateParams.Val, discriminator.Val,
-            dataLocation.Val, associated.Val, allocated.Val, Rank,
-            annotations.Val)) {
+            specification.Val, num_extra_inhabitants.Val, flags.Val,
+            elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
+            discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
+            Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -5469,7 +5470,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
        discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
-       annotations.Val, num_extra_inhabitants.Val));
+       annotations.Val, specification.Val, num_extra_inhabitants.Val));
   return false;
 }
 
@@ -6184,7 +6185,7 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
   case ValID::t_EmptyArray:
     if (!Ty->isArrayTy() || cast<ArrayType>(Ty)->getNumElements() != 0)
       return error(ID.Loc, "invalid empty array initializer");
-    V = UndefValue::get(Ty);
+    V = PoisonValue::get(Ty);
     return false;
   case ValID::t_Zero:
     // FIXME: LabelTy should not be a first-class type.
@@ -6260,6 +6261,8 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
   case ValID::t_APSInt:
   case ValID::t_APFloat:
   case ValID::t_Undef:
+  case ValID::t_Poison:
+  case ValID::t_Zero:
   case ValID::t_Constant:
   case ValID::t_ConstantSplat:
   case ValID::t_ConstantStruct:
@@ -7001,8 +7004,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return false;
   }
   case lltok::kw_sext:
-  case lltok::kw_fptrunc:
-  case lltok::kw_fpext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
   case lltok::kw_sitofp:
@@ -7011,6 +7012,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_inttoptr:
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
+  case lltok::kw_fptrunc:
+  case lltok::kw_fpext: {
+    FastMathFlags FMF = EatFastMathFlagsIfPresent();
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (FMF.any())
+      Inst->setFastMathFlags(FMF);
+    return false;
+  }
+
   // Other.
   case lltok::kw_select: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
@@ -7785,12 +7796,10 @@ bool LLParser::parseCast(Instruction *&Inst, PerFunctionState &PFS,
       parseType(DestTy))
     return true;
 
-  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy)) {
-    CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy);
+  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy))
     return error(Loc, "invalid cast opcode for cast from '" +
                           getTypeString(Op->getType()) + "' to '" +
                           getTypeString(DestTy) + "'");
-  }
   Inst = CastInst::Create((Instruction::CastOps)Opc, Op, DestTy);
   return false;
 }

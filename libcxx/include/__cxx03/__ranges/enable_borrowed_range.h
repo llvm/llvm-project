@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_ENABLE_BORROWED_RANGE_H
-#define _LIBCPP___RANGES_ENABLE_BORROWED_RANGE_H
+#ifndef _LIBCPP___CXX03___RANGES_ENABLE_BORROWED_RANGE_H
+#define _LIBCPP___CXX03___RANGES_ENABLE_BORROWED_RANGE_H
 
 // These customization variables are used in <span> and <string_view>. The
 // separate header is used to avoid including the entire <ranges> header in
@@ -37,4 +37,4 @@ inline constexpr bool enable_borrowed_range = false;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_ENABLE_BORROWED_RANGE_H
+#endif // _LIBCPP___CXX03___RANGES_ENABLE_BORROWED_RANGE_H

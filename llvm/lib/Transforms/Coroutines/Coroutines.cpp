@@ -69,7 +69,6 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.context.dealloc",
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
-    "llvm.coro.async.store_resume",
     "llvm.coro.await.suspend.bool",
     "llvm.coro.await.suspend.handle",
     "llvm.coro.await.suspend.void",
@@ -100,8 +99,7 @@ static const char *const CoroIntrinsics[] = {
 
 #ifndef NDEBUG
 static bool isCoroutineIntrinsicName(StringRef Name) {
-  return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name, "coro") !=
-         -1;
+  return llvm::binary_search(CoroIntrinsics, Name);
 }
 #endif
 
@@ -111,7 +109,6 @@ bool coro::isSuspendBlock(BasicBlock *BB) {
 
 bool coro::declaresAnyIntrinsic(const Module &M) {
   for (StringRef Name : CoroIntrinsics) {
-    assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
     if (M.getNamedValue(Name))
       return true;
   }

@@ -104,19 +104,14 @@ bool ExecuteCommand(const Command &Cmd, std::string *CmdOutput) {
 }
 
 void SetTimer(int Seconds) {
-  timer_t TimerId;
-  struct itimerspec T {
+  struct itimerval T {
     {Seconds, 0}, { Seconds, 0 }
   };
+  if (setitimer(ITIMER_REAL, &T, nullptr)) {
+    Printf("libFuzzer: setitimer failed with %d\n", errno);
+    exit(1);
+  }
   SetSigaction(SIGALRM, AlarmHandler);
-  if (timer_create(CLOCK_REALTIME, nullptr, &TimerId) == -1) {
-    Printf("libFuzzer: timer_create failed with %d\n", errno);
-    exit(1);
-  }
-  if (timer_settime(TimerId, 0, &T, nullptr) == -1) {
-    Printf("libFuzzer: timer_settime failed with %d\n", errno);
-    exit(1);
-  }
 }
 
 void SetSignalHandler(const FuzzingOptions& Options) {

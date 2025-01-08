@@ -2820,7 +2820,7 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
   SDValue AlignedPtr =
       IsOveraligned
           ? DAG.getNode(ISD::AND, dl, VT, AllocatedPtr,
-                        DAG.getConstant(-MaybeAlignment->value(), dl, VT))
+                        DAG.getSignedConstant(-MaybeAlignment->value(), dl, VT))
           : AllocatedPtr;
 
   // Now that we are done, restore the bias and reserved spill area.
@@ -3367,8 +3367,8 @@ void SparcTargetLowering::LowerAsmOperandForConstraint(
   case 'I':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       if (isInt<13>(C->getSExtValue())) {
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                       Op.getValueType());
+        Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
+                                             Op.getValueType());
         break;
       }
       return;

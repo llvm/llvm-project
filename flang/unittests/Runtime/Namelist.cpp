@@ -10,7 +10,7 @@
 #include "CrashHandlerFixture.h"
 #include "tools.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include <algorithm>
 #include <cinttypes>
 #include <complex>

@@ -104,19 +104,19 @@ struct TestTensorTransforms
 static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void applyBubbleUpExpandShapePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateBubbleUpExpandShapePatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
@@ -132,26 +132,26 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
       };
 
   tensor::populateFoldConstantExtractSlicePatterns(patterns, controlFn);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void applyFoldConsecutiveInsertExtractSlicePatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void
 applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 static void applySimplifyPackUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateSimplifyPackAndUnpackPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 namespace {
@@ -293,7 +293,7 @@ applyRewriteExtractFromCollapseShapePatterns(Operation *rootOp,
   else
     patterns.add<RewriteExtractSliceFromCollapseShapeUsingScfFor>(
         rootOp->getContext());
-  return applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+  return applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
 namespace {

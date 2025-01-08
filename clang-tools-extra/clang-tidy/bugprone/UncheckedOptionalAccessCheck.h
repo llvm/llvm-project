@@ -28,9 +28,9 @@ class UncheckedOptionalAccessCheck : public ClangTidyCheck {
 public:
   UncheckedOptionalAccessCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        ModelOptions{
-            Options.getLocalOrGlobal("IgnoreSmartPointerDereference", false)},
-        ignore_test_tus_(Options.getLocalOrGlobal("IgnoreTestTUs", false)) {}
+        ModelOptions{Options.get("IgnoreSmartPointerDereference", false)},
+        ignore_test_tus_(Options.get("IgnoreTestTUs", false)) {}
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onStartOfTranslationUnit() override;

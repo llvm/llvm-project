@@ -383,6 +383,33 @@ define float @invariant_load(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @invariant_group_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define float @invariant_group_load(ptr %ptr) {
+  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = load float, ptr %ptr, align 4, !invariant.group !0
+  ; CHECK:  llvm.return %[[VAL]]
+  ret float %1
+}
+
+!0 = !{}
+
+; // -----
+
+; CHECK-LABEL: @invariant_group_store
+; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define void @invariant_group_store(float %val, ptr %ptr) {
+  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group {alignment = 4 : i64} : f32, !llvm.ptr
+  store float %val, ptr %ptr, align 4, !invariant.group !0
+  ; CHECK:  llvm.return
+  ret void
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {
@@ -504,6 +531,17 @@ define void @indirect_vararg_call(ptr addrspace(42) %fn) {
   ; CHECK:  llvm.call %[[PTR]](%[[C0]]) vararg(!llvm.func<void (...)>) : !llvm.ptr<42>, (i16) -> ()
   call addrspace(42) void (...) %fn(i16 0)
   ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @inlineasm
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define i32 @inlineasm(i32 %arg1) {
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm has_side_effects "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
+  ; CHECK: return %[[RES]]
+  ret i32 %1
 }
 
 ; // -----

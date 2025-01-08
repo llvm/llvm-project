@@ -38,19 +38,15 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-std::string lld::toString(RelType type) {
-  StringRef s = getELFRelocationTypeName(elf::ctx.arg.emachine, type);
+std::string elf::toStr(Ctx &ctx, RelType type) {
+  StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
 }
 
 const ELFSyncStream &elf::operator<<(const ELFSyncStream &s, RelType type) {
-  StringRef buf = getELFRelocationTypeName(s.ctx.arg.emachine, type);
-  if (buf == "Unknown")
-    s << "Unknown (" << type << ')';
-  else
-    s << buf;
+  s << toStr(s.ctx, type);
   return s;
 }
 
@@ -88,7 +84,7 @@ void elf::setTarget(Ctx &ctx) {
   case EM_X86_64:
     return setX86_64TargetInfo(ctx);
   default:
-    Fatal(ctx) << "unsupported e_machine value: " << Twine(ctx.arg.emachine);
+    Fatal(ctx) << "unsupported e_machine value: " << ctx.arg.emachine;
   }
 }
 
@@ -110,10 +106,11 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
       std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
-      // TODO: Refactor getSrcMsg not to take a variable.
       Undefined dummy(ctx.internalFile, "", STB_LOCAL, 0, 0);
-      return {isec, objLoc + ": ",
-              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+      ELFSyncStream msg(ctx, DiagLevel::None);
+      if (isec->file)
+        msg << isec->getSrcMsg(dummy, loc - isecLoc);
+      return {isec, objLoc + ": ", std::string(msg.str())};
     }
   }
   return {};
@@ -122,8 +119,7 @@ ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
 TargetInfo::~TargetInfo() {}
 
 int64_t TargetInfo::getImplicitAddend(const uint8_t *buf, RelType type) const {
-  internalLinkerError(getErrorLoc(ctx, buf),
-                      "cannot read addend for relocation " + toString(type));
+  InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
   return 0;
 }
 

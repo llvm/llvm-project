@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FENV_H
-#define _LIBCPP_FENV_H
+#ifndef _LIBCPP___CXX03_FENV_H
+#define _LIBCPP___CXX03_FENV_H
 
 /*
     fenv.h synopsis
@@ -111,4 +111,4 @@ extern "C++" {
 
 #endif // defined(__cplusplus)
 
-#endif // _LIBCPP_FENV_H
+#endif // _LIBCPP___CXX03_FENV_H

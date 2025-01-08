@@ -1530,6 +1530,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
           L->getLoopPreheader()->getTerminator()->getIterator());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
+      // Samesign flag cannot be preserved after narrowing the compare.
+      ICmp->setSameSign(false);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };

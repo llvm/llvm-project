@@ -133,6 +133,7 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
 ;
 ; VLS-LABEL: insert_nxv8i32_v4i32_0:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; VLS-NEXT:    vmv1r.v v8, v9
 ; VLS-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> %vec, <4 x i32> %subvec, i64 0)
@@ -143,6 +144,7 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
 define <4 x i32> @insert_v4i32_v4i32_0(<4 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: insert_v4i32_v4i32_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x i32> @llvm.vector.insert.v4i32.v4i32(<4 x i32> %vec, <4 x i32> %subvec, i64 0)
@@ -756,15 +758,15 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32VLA-NEXT:    vle64.v v8, (a0)
 ; RV32VLA-NEXT:    addi a0, sp, 128
+; RV32VLA-NEXT:    csrr a2, vlenb
+; RV32VLA-NEXT:    addi a3, sp, 64
+; RV32VLA-NEXT:    slli a2, a2, 3
 ; RV32VLA-NEXT:    vse64.v v8, (a0)
-; RV32VLA-NEXT:    csrr a0, vlenb
-; RV32VLA-NEXT:    slli a0, a0, 3
-; RV32VLA-NEXT:    addi a2, sp, 64
-; RV32VLA-NEXT:    add a3, a2, a0
-; RV32VLA-NEXT:    vl8re64.v v8, (a3)
-; RV32VLA-NEXT:    vl8re64.v v16, (a2)
-; RV32VLA-NEXT:    add a0, a1, a0
-; RV32VLA-NEXT:    vs8r.v v8, (a0)
+; RV32VLA-NEXT:    add a0, a3, a2
+; RV32VLA-NEXT:    vl8re64.v v8, (a0)
+; RV32VLA-NEXT:    vl8re64.v v16, (a3)
+; RV32VLA-NEXT:    add a2, a1, a2
+; RV32VLA-NEXT:    vs8r.v v8, (a2)
 ; RV32VLA-NEXT:    vs8r.v v16, (a1)
 ; RV32VLA-NEXT:    addi sp, s0, -80
 ; RV32VLA-NEXT:    .cfi_def_cfa sp, 80
@@ -793,15 +795,15 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64VLA-NEXT:    vle64.v v8, (a0)
 ; RV64VLA-NEXT:    addi a0, sp, 128
+; RV64VLA-NEXT:    csrr a2, vlenb
+; RV64VLA-NEXT:    addi a3, sp, 64
+; RV64VLA-NEXT:    slli a2, a2, 3
 ; RV64VLA-NEXT:    vse64.v v8, (a0)
-; RV64VLA-NEXT:    csrr a0, vlenb
-; RV64VLA-NEXT:    slli a0, a0, 3
-; RV64VLA-NEXT:    addi a2, sp, 64
-; RV64VLA-NEXT:    add a3, a2, a0
-; RV64VLA-NEXT:    vl8re64.v v8, (a3)
-; RV64VLA-NEXT:    vl8re64.v v16, (a2)
-; RV64VLA-NEXT:    add a0, a1, a0
-; RV64VLA-NEXT:    vs8r.v v8, (a0)
+; RV64VLA-NEXT:    add a0, a3, a2
+; RV64VLA-NEXT:    vl8re64.v v8, (a0)
+; RV64VLA-NEXT:    vl8re64.v v16, (a3)
+; RV64VLA-NEXT:    add a2, a1, a2
+; RV64VLA-NEXT:    vs8r.v v8, (a2)
 ; RV64VLA-NEXT:    vs8r.v v16, (a1)
 ; RV64VLA-NEXT:    addi sp, s0, -80
 ; RV64VLA-NEXT:    .cfi_def_cfa sp, 80
@@ -828,9 +830,9 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 128
 ; RV32VLS-NEXT:    vs1r.v v8, (a0)
+; RV32VLS-NEXT:    addi a0, sp, 192
+; RV32VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 64
-; RV32VLS-NEXT:    addi a2, sp, 192
-; RV32VLS-NEXT:    vl8re64.v v8, (a2)
 ; RV32VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV32VLS-NEXT:    addi a0, a1, 128
 ; RV32VLS-NEXT:    vs8r.v v8, (a0)
@@ -860,9 +862,9 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 128
 ; RV64VLS-NEXT:    vs1r.v v8, (a0)
+; RV64VLS-NEXT:    addi a0, sp, 192
+; RV64VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 64
-; RV64VLS-NEXT:    addi a2, sp, 192
-; RV64VLS-NEXT:    vl8re64.v v8, (a2)
 ; RV64VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV64VLS-NEXT:    addi a0, a1, 128
 ; RV64VLS-NEXT:    vs8r.v v8, (a0)

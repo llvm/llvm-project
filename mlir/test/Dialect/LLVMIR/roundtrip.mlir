@@ -59,6 +59,10 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %ashr_flag = llvm.ashr exact %arg0, %arg0 : i32
   %lshr_flag = llvm.lshr exact %arg0, %arg0 : i32
 
+// Integer disjoint flag.
+// CHECK: {{.*}} = llvm.or disjoint %[[I32]], %[[I32]] : i32
+  %or_flag = llvm.or disjoint %arg0, %arg0 : i32
+
 // Floating point binary operations.
 //
 // CHECK: {{.*}} = llvm.fadd %[[FLOAT]], %[[FLOAT]] : f32
@@ -486,6 +490,20 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
   func.return %0 : i32
 }
 
+// CHECK-LABEL: @invariant_group_load
+func.func @invariant_group_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  %0 = llvm.load %ptr invariant_group {alignment = 4 : i64} : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
+// CHECK-LABEL: @invariant_group_store
+func.func @invariant_group_store(%val: i32, %ptr : !llvm.ptr) {
+  // CHECK: llvm.store %{{.+}}, %{{.+}} invariant_group : i32, !llvm.ptr
+  llvm.store %val, %ptr invariant_group : i32, !llvm.ptr
+  func.return
+}
+
 llvm.mlir.global external constant @_ZTIi() : !llvm.ptr
 llvm.func @bar(!llvm.ptr, !llvm.ptr, !llvm.ptr)
 llvm.func @__gxx_personality_v0(...) -> i32
@@ -672,6 +690,16 @@ llvm.func @invariant(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @invariant_group_intrinsics
+// CHECK-SAME: %[[P:.+]]: !llvm.ptr
+llvm.func @invariant_group_intrinsics(%p: !llvm.ptr) {
+  // CHECK: %{{.+}} = llvm.intr.launder.invariant.group %[[P]] : !llvm.ptr
+  %1 = llvm.intr.launder.invariant.group %p : !llvm.ptr
+  // CHECK: %{{.+}} = llvm.intr.strip.invariant.group %[[P]] : !llvm.ptr
+  %2 = llvm.intr.strip.invariant.group %p : !llvm.ptr
+  llvm.return
+}
+
 // CHECK-LABEL: @vararg_func
 llvm.func @vararg_func(%arg0: i32, ...) {
   // CHECK: %[[C:.*]] = llvm.mlir.constant(1 : i32)
@@ -719,6 +747,16 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
 llvm.func @experimental_noalias_scope_decl() {
   // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
   llvm.intr.experimental.noalias.scope.decl #alias_scope
+  llvm.return
+}
+
+#alias_scope_domain2 = #llvm.alias_scope_domain<id = "domainid", description = "The domain">
+#alias_scope2 = #llvm.alias_scope<id = "stringid", domain = #alias_scope_domain2, description = "The domain">
+
+// CHECK-LABEL: @experimental_noalias_scope_with_string_id
+llvm.func @experimental_noalias_scope_with_string_id() {
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  llvm.intr.experimental.noalias.scope.decl #alias_scope2
   llvm.return
 }
 

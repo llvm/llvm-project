@@ -94,7 +94,7 @@ declare i32 @a()
 ; This gets into a state that could cause instruction simplify
 ; to hang - an insertelement instruction has itself as an operand.
 
-define void @PR48362() {
+define void @PR48362(i1 %arg) {
 ;
 ; CHECK-LABEL: @PR48362(
 ; CHECK-NEXT:  cleanup.cont1500:
@@ -142,7 +142,7 @@ for.body1911:                                     ; preds = %if.else1904
   br label %land.end2173
 
 land.end2173:                                     ; preds = %for.body1911
-  br i1 undef, label %if.end2178, label %cleanup2297
+  br i1 %arg, label %if.end2178, label %cleanup2297
 
 if.end2178:                                       ; preds = %land.end2173
   %l_580.sroa.0.2.vec.insert = insertelement <4 x i32> %l_580.sroa.0.0, i32 undef, i32 1
@@ -165,7 +165,7 @@ cleanup.cont2339:                                 ; preds = %cleanup2329
   br label %for.inc2340
 
 for.inc2340:                                      ; preds = %cleanup.cont2339
-  br i1 undef, label %for.body1509, label %crit_edge115
+  br i1 %arg, label %for.body1509, label %crit_edge115
 
 crit_edge114:                                     ; preds = %cleanup2329
   unreachable

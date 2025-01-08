@@ -147,10 +147,15 @@ set(x86_files
   adxintrin.h
   ammintrin.h
   amxavx512intrin.h
+  amxbf16transposeintrin.h
   amxcomplexintrin.h
+  amxcomplextransposeintrin.h
   amxfp16intrin.h
+  amxfp16transposeintrin.h
   amxfp8intrin.h
   amxintrin.h
+  amxmovrsintrin.h
+  amxmovrstransposeintrin.h
   amxtf32intrin.h
   amxtf32transposeintrin.h
   amxtransposeintrin.h
@@ -228,6 +233,7 @@ set(x86_files
   movdirintrin.h
   movrs_avx10_2_512intrin.h
   movrs_avx10_2intrin.h
+  movrsintrin.h
   mwaitxintrin.h
   nmmintrin.h
   pconfigintrin.h

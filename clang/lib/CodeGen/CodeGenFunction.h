@@ -315,7 +315,7 @@ public:
   SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
 
   /// Stack to track the controlled convergence tokens.
-  SmallVector<llvm::IntrinsicInst *, 4> ConvergenceTokenStack;
+  SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
   /// Number of nested loop to be consumed by the last surrounding
   /// loop-associated directive.
@@ -4087,6 +4087,62 @@ public:
     EmitStmt(S.getLoop());
   }
 
+  void EmitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its loop, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getLoop());
+  }
+
+  void EmitOpenACCDataConstruct(const OpenACCDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
+
+  void EmitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its structured block, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getStructuredBlock());
+  }
+
+  void EmitOpenACCWaitConstruct(const OpenACCWaitConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCInitConstruct(const OpenACCInitConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCSetConstruct(const OpenACCSetConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
+  void EmitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
@@ -4710,6 +4766,7 @@ public:
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitHLSLBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                    ReturnValueSlot ReturnValue);
+  llvm::Value *EmitSPIRVBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
                                            const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
@@ -4723,6 +4780,8 @@ public:
   llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
   llvm::Value *EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs);
   llvm::Value *EmitRISCVCpuInit();
+  llvm::Value *EmitRISCVCpuIs(const CallExpr *E);
+  llvm::Value *EmitRISCVCpuIs(StringRef CPUStr);
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
@@ -5133,7 +5192,8 @@ public:
 
   /// Create a basic block that will call the trap intrinsic, and emit a
   /// conditional branch to it, for the -ftrapv checks.
-  void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID);
+  void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
+                     bool NoMerge = false);
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.
@@ -5185,29 +5245,20 @@ public:
   llvm::Value *emitBoolVecConversion(llvm::Value *SrcVec,
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
-  // Adds a convergence_ctrl token to |Input| and emits the required parent
-  // convergence instructions.
-  template <typename CallType>
-  CallType *addControlledConvergenceToken(CallType *Input) {
-    return cast<CallType>(
-        addConvergenceControlToken(Input, ConvergenceTokenStack.back()));
-  }
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
-  llvm::IntrinsicInst *emitConvergenceLoopToken(llvm::BasicBlock *BB,
-                                                llvm::Value *ParentToken);
+  llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
+
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
-  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input,
-                                             llvm::Value *ParentToken);
+  llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
+
   // Find the convergence_entry instruction |F|, or emits ones if none exists.
   // Returns the convergence instruction.
-  llvm::IntrinsicInst *getOrEmitConvergenceEntryToken(llvm::Function *F);
-  // Find the convergence_loop instruction for the loop defined by |LI|, or
-  // emits one if none exists. Returns the convergence instruction.
-  llvm::IntrinsicInst *getOrEmitConvergenceLoopToken(const LoopInfo *LI);
+  llvm::ConvergenceControlInst *
+  getOrEmitConvergenceEntryToken(llvm::Function *F);
 
 private:
   llvm::MDNode *getRangeForLoadFromType(QualType Ty);
@@ -5325,35 +5376,27 @@ public:
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 
-  struct MultiVersionResolverOption {
+  struct FMVResolverOption {
     llvm::Function *Function;
-    struct Conds {
-      StringRef Architecture;
-      llvm::SmallVector<StringRef, 8> Features;
+    llvm::SmallVector<StringRef, 8> Features;
+    std::optional<StringRef> Architecture;
 
-      Conds(StringRef Arch, ArrayRef<StringRef> Feats)
-          : Architecture(Arch), Features(Feats) {}
-    } Conditions;
-
-    MultiVersionResolverOption(llvm::Function *F, StringRef Arch,
-                               ArrayRef<StringRef> Feats)
-        : Function(F), Conditions(Arch, Feats) {}
+    FMVResolverOption(llvm::Function *F, ArrayRef<StringRef> Feats,
+                      std::optional<StringRef> Arch = std::nullopt)
+        : Function(F), Features(Feats), Architecture(Arch) {}
   };
 
   // Emits the body of a multiversion function's resolver. Assumes that the
   // options are already sorted in the proper order, with the 'default' option
   // last (if it exists).
   void EmitMultiVersionResolver(llvm::Function *Resolver,
-                                ArrayRef<MultiVersionResolverOption> Options);
-  void
-  EmitX86MultiVersionResolver(llvm::Function *Resolver,
-                              ArrayRef<MultiVersionResolverOption> Options);
-  void
-  EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
-                                  ArrayRef<MultiVersionResolverOption> Options);
-  void
-  EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
-                                ArrayRef<MultiVersionResolverOption> Options);
+                                ArrayRef<FMVResolverOption> Options);
+  void EmitX86MultiVersionResolver(llvm::Function *Resolver,
+                                   ArrayRef<FMVResolverOption> Options);
+  void EmitAArch64MultiVersionResolver(llvm::Function *Resolver,
+                                       ArrayRef<FMVResolverOption> Options);
+  void EmitRISCVMultiVersionResolver(llvm::Function *Resolver,
+                                     ArrayRef<FMVResolverOption> Options);
 
 private:
   QualType getVarArgType(const Expr *Arg);
@@ -5372,10 +5415,9 @@ private:
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuSupports(std::array<uint32_t, 4> FeatureMask);
   llvm::Value *EmitX86CpuInit();
-  llvm::Value *FormX86ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *FormX86ResolverCondition(const FMVResolverOption &RO);
   llvm::Value *EmitAArch64CpuInit();
-  llvm::Value *
-  FormAArch64ResolverCondition(const MultiVersionResolverOption &RO);
+  llvm::Value *FormAArch64ResolverCondition(const FMVResolverOption &RO);
   llvm::Value *EmitAArch64CpuSupports(const CallExpr *E);
   llvm::Value *EmitAArch64CpuSupports(ArrayRef<StringRef> FeatureStrs);
 };

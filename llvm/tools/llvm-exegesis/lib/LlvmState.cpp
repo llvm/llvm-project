@@ -56,9 +56,8 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
                                    inconvertibleErrorCode());
   }
   const TargetOptions Options;
-  std::unique_ptr<const TargetMachine> TM(
-      static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
-          TripleName, CpuName, Features, Options, Reloc::Model::Static)));
+  std::unique_ptr<const TargetMachine> TM(TheTarget->createTargetMachine(
+      TripleName, CpuName, Features, Options, Reloc::Model::Static));
   if (!TM) {
     return make_error<StringError>("unable to create target machine",
                                    inconvertibleErrorCode());
@@ -91,13 +90,13 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
   IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
 }
 
-std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+std::unique_ptr<TargetMachine> LLVMState::createTargetMachine() const {
+  return std::unique_ptr<TargetMachine>(
       TheTargetMachine->getTarget().createTargetMachine(
           TheTargetMachine->getTargetTriple().normalize(),
           TheTargetMachine->getTargetCPU(),
           TheTargetMachine->getTargetFeatureString(), TheTargetMachine->Options,
-          Reloc::Model::Static)));
+          Reloc::Model::Static));
 }
 
 std::optional<MCRegister>

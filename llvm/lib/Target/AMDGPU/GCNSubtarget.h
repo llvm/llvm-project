@@ -21,7 +21,6 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -49,6 +48,9 @@ public:
   };
 
 private:
+  /// SelectionDAGISel related APIs.
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
+
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
@@ -106,6 +108,7 @@ protected:
   bool GFX9Insts = false;
   bool GFX90AInsts = false;
   bool GFX940Insts = false;
+  bool GFX950Insts = false;
   bool GFX10Insts = false;
   bool GFX11Insts = false;
   bool GFX12Insts = false;
@@ -155,6 +158,8 @@ protected:
   bool HasDot9Insts = false;
   bool HasDot10Insts = false;
   bool HasDot11Insts = false;
+  bool HasDot12Insts = false;
+  bool HasDot13Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
@@ -219,7 +224,10 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
-
+  bool HasBitOp3Insts = false;
+  bool HasPrngInst = false;
+  bool HasPermlane16Swap = false;
+  bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
@@ -241,13 +249,16 @@ protected:
   bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
+  bool HasAshrPkInsts = false;
+  bool HasMinimum3Maximum3F32 = false;
+  bool HasMinimum3Maximum3F16 = false;
+  bool HasMinimum3Maximum3PKF16 = false;
 
   bool RequiresCOV6 = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
-  SelectionDAGTargetInfo TSInfo;
 private:
   SIInstrInfo InstrInfo;
   SITargetLowering TLInfo;
@@ -281,6 +292,8 @@ public:
     return &InstrInfo.getRegisterInfo();
   }
 
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
@@ -303,11 +316,6 @@ public:
 
   const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
     return TargetID;
-  }
-
-  // Nothing implemented, just prevent crashes on use.
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
   }
 
   const InstrItineraryData *getInstrItineraryData() const override {
@@ -818,6 +826,14 @@ public:
     return HasDot11Insts;
   }
 
+  bool hasDot12Insts() const {
+    return HasDot12Insts;
+  }
+
+  bool hasDot13Insts() const {
+    return HasDot13Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -1246,6 +1262,8 @@ public:
 
   bool hasVALUTransUseHazard() const { return HasVALUTransUseHazard; }
 
+  bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
+
   bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
@@ -1283,6 +1301,17 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // hasGFX940Insts and hasGFX90AInsts are also true.
+  bool hasGFX950Insts() const { return GFX950Insts; }
+
+  /// Returns true if the target supports
+  /// global_load_lds_dwordx3/global_load_lds_dwordx4 or
+  /// buffer_load_dwordx3/buffer_load_dwordx4 with the lds bit.
+  bool hasLDSLoadB96_B128() const {
+    return hasGFX950Insts();
+  }
+
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
   bool hasPseudoScalarTrans() const { return HasPseudoScalarTrans; }
@@ -1306,10 +1335,30 @@ public:
   /// \returns true if the target has instructions with xf32 format support.
   bool hasXF32Insts() const { return HasXF32Insts; }
 
+  bool hasBitOp3Insts() const { return HasBitOp3Insts; }
+
+  bool hasPermlane16Swap() const { return HasPermlane16Swap; }
+  bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
+
+  bool hasMinimum3Maximum3F32() const {
+    return HasMinimum3Maximum3F32;
+  }
+
+  bool hasMinimum3Maximum3F16() const {
+    return HasMinimum3Maximum3F16;
+  }
+
+  bool hasMinimum3Maximum3PKF16() const {
+    return HasMinimum3Maximum3PKF16;
+  }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1539,6 +1588,14 @@ public:
 
   bool isWave64() const {
     return getWavefrontSize() == 64;
+  }
+
+  /// Returns if the wavesize of this subtarget is known reliable. This is false
+  /// only for the a default target-cpu that does not have an explicit
+  /// +wavefrontsize target feature.
+  bool isWaveSizeKnown() const {
+    return hasFeature(AMDGPU::FeatureWavefrontSize32) ||
+           hasFeature(AMDGPU::FeatureWavefrontSize64);
   }
 
   const TargetRegisterClass *getBoolRC() const {

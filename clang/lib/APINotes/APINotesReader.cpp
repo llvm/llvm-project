@@ -373,6 +373,13 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
       endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
@@ -589,10 +596,12 @@ public:
 
     uint8_t Copyable =
         endian::readNext<uint8_t, llvm::endianness::little>(Data);
-    if (Copyable == kSwiftNonCopyable)
-      Info.setSwiftCopyable(std::optional(false));
-    else if (Copyable == kSwiftCopyable)
-      Info.setSwiftCopyable(std::optional(true));
+    if (Copyable == kSwiftConforms || Copyable == kSwiftDoesNotConform)
+      Info.setSwiftCopyable(std::optional(Copyable == kSwiftConforms));
+    uint8_t Escapable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Escapable == kSwiftConforms || Escapable == kSwiftDoesNotConform)
+      Info.setSwiftEscapable(std::optional(Escapable == kSwiftConforms));
 
     unsigned ImportAsLength =
         endian::readNext<uint16_t, llvm::endianness::little>(Data);
@@ -2036,7 +2045,12 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
       Results.begin(), Results.end(),
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 

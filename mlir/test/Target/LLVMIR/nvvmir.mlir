@@ -556,9 +556,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK: ptx_kernel void @kernel_func
 
 // -----
 
@@ -566,9 +564,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
@@ -578,21 +575,39 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
+  llvm.return
+}
+
+// CHECK: define ptx_kernel void @kernel_func
+// CHECK:     !nvvm.annotations =
+// CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
+// CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
+// -----
+
+llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
+  llvm.return
+}
+
+// CHECK: define ptx_kernel void @kernel_func
+// CHECK:     !nvvm.annotations =
+// CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 // -----
 
@@ -600,9 +615,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
@@ -611,9 +625,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
@@ -621,52 +634,19 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
-
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.minctasm = "foo"} {
-  llvm.return
-}
-
-
-// -----
-// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.maxnreg = "boo"} {
-  llvm.return
-}
-// -----
-// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
-// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
 // -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1, i32 3}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -707,11 +687,47 @@ llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
   nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
   llvm.return
 }
+// -----
+
+// CHECK-LABEL: @nvvm_exit
+llvm.func @nvvm_exit() {
+  // CHECK: call void @llvm.nvvm.exit()
+  nvvm.exit
+  llvm.return
+}
+
+
 
 // -----
 // CHECK-LABEL: @nvvm_breakpoint
 llvm.func @nvvm_breakpoint() {
   // CHECK: call void @llvm.debugtrap()
   nvvm.breakpoint
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_fence_aligned
+llvm.func @nvvm_wgmma_fence_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.fence.sync.aligned()
+  nvvm.wgmma.fence.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_commit_group_aligned
+llvm.func @nvvm_wgmma_commit_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+  nvvm.wgmma.commit.group.sync.aligned
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @nvvm_wgmma_wait_group_aligned
+llvm.func @nvvm_wgmma_wait_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 0)
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
+  nvvm.wgmma.wait.group.sync.aligned 20
   llvm.return
 }

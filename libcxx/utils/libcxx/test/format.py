@@ -345,10 +345,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                     ),
                 )
             steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} %{benchmark_flags} -o %t.exe",
+                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
-                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe"]
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%T/benchmark-result.json --benchmark_out_format=json"]
             return self._executeShTest(test, litConfig, steps)
         else:
             return lit.Test.Result(

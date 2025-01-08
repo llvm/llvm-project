@@ -111,14 +111,14 @@ template <class _Container, input_range _Range, class... _Args>
 
       for (auto&& __ref : __range) {
         using _Ref = decltype(__ref);
-        if constexpr (requires { __result.emplace_back(declval<_Ref>()); }) {
+        if constexpr (requires { __result.emplace_back(std::declval<_Ref>()); }) {
           __result.emplace_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.push_back(declval<_Ref>()); }) {
+        } else if constexpr (requires { __result.push_back(std::declval<_Ref>()); }) {
           __result.push_back(std::forward<_Ref>(__ref));
-        } else if constexpr (requires { __result.emplace(__result.end(), declval<_Ref>()); }) {
+        } else if constexpr (requires { __result.emplace(__result.end(), std::declval<_Ref>()); }) {
           __result.emplace(__result.end(), std::forward<_Ref>(__ref));
         } else {
-          static_assert(requires { __result.insert(__result.end(), declval<_Ref>()); });
+          static_assert(requires { __result.insert(__result.end(), std::declval<_Ref>()); });
           __result.insert(__result.end(), std::forward<_Ref>(__ref));
         }
       }

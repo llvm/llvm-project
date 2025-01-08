@@ -53,12 +53,10 @@
 
 #include "ARM.h"
 #include "ARMBaseInstrInfo.h"
-#include "ARMBaseRegisterInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"

@@ -2590,14 +2590,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
-    case ARM::MOVsrl_glue:
-    case ARM::MOVsra_glue: {
+    case ARM::LSRs1:
+    case ARM::ASRs1: {
       // These are just fancy MOVs instructions.
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVsi),
               MI.getOperand(0).getReg())
           .add(MI.getOperand(1))
           .addImm(ARM_AM::getSORegOpc(
-              (Opcode == ARM::MOVsrl_glue ? ARM_AM::lsr : ARM_AM::asr), 1))
+              (Opcode == ARM::LSRs1 ? ARM_AM::lsr : ARM_AM::asr), 1))
           .add(predOps(ARMCC::AL))
           .addReg(ARM::CPSR, RegState::Define);
       MI.eraseFromParent();

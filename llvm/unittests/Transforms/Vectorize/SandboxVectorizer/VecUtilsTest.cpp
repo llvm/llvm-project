@@ -439,3 +439,36 @@ bb0:
   SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
 }
+
+TEST_F(VecUtilsTest, GetCommonScalarType) {
+  parseIR(R"IR(
+define void @foo(i8 %v, ptr %ptr) {
+bb0:
+  %add0 = add i8 %v, %v
+  store i8 %v, ptr %ptr
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Store = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+  {
+    SmallVector<sandboxir::Value *> Vec = {Add0, Store};
+    EXPECT_EQ(sandboxir::VecUtils::tryGetCommonScalarType(Vec),
+              Add0->getType());
+    EXPECT_EQ(sandboxir::VecUtils::getCommonScalarType(Vec), Add0->getType());
+  }
+  {
+    SmallVector<sandboxir::Value *> Vec = {Add0, Ret};
+    EXPECT_EQ(sandboxir::VecUtils::tryGetCommonScalarType(Vec), nullptr);
+#ifndef NDEBUG
+    EXPECT_DEATH(sandboxir::VecUtils::getCommonScalarType(Vec), ".*common.*");
+#endif // NDEBUG
+  }
+}

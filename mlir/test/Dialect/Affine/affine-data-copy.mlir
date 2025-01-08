@@ -333,3 +333,23 @@ func.func @index_elt_type(%arg0: memref<1x2x4x8xindex>) {
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 8
   return
 }
+
+#map = affine_map<(d0) -> (d0 + 1)>
+
+// CHECK-LABEL: func @arbitrary_memory_space
+func.func @arbitrary_memory_space() {
+  %alloc = memref.alloc() : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+  affine.for %arg0 = 0 to 32 step 4 {
+    %0 = affine.apply #map(%arg0)
+    affine.for %arg1 = 0 to 8 step 2 {
+      %1 = affine.apply #map(%arg1)
+      affine.for %arg2 = 0 to 8 step 2 {
+        // CHECK: memref.alloc() : memref<1x7xi8>
+        %2 = affine.apply #map(%arg2)
+        %3 = affine.load %alloc[%0, %1] : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+        affine.store %3, %alloc[%0, %2] : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
+      }
+    }
+  }
+  return
+}

@@ -488,6 +488,8 @@ namespace llvm {
     /// \param Elements     Struct elements.
     /// \param RunTimeLang  Optional parameter, Objective-C runtime version.
     /// \param UniqueIdentifier A unique identifier for the struct.
+    /// \param Specification The type that this type completes. This is used by
+    /// Swift to represent generic types.
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
@@ -496,7 +498,7 @@ namespace llvm {
         uint64_t SizeInBits, uint32_t AlignInBits, DINode::DIFlags Flags,
         DIType *DerivedFrom, DINodeArray Elements, unsigned RunTimeLang = 0,
         DIType *VTableHolder = nullptr, StringRef UniqueIdentifier = "",
-        uint32_t NumExtraInhabitants = 0);
+        DIType *Specification = nullptr, uint32_t NumExtraInhabitants = 0);
 
     /// Create debugging information entry for an union.
     /// \param Scope        Scope in which this union is defined.

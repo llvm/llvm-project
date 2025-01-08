@@ -23,17 +23,26 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
                    (int sockfd, void *buf, size_t len, int flags,
-                    struct sockaddr *__restrict dest_addr,
+                    sockaddr *__restrict src_addr,
                     socklen_t *__restrict addrlen)) {
+  // addrlen is a value-result argument. If it's not null, it passes the max
+  // size of the buffer src_addr to the syscall. After the syscall, it's updated
+  // to the actual size of the source address. This may be larger than the
+  // buffer, in which case the buffer contains a truncated result.
+  size_t srcaddr_sz;
+  if (src_addr)
+    srcaddr_sz = *addrlen;
+  (void)srcaddr_sz; // prevent "set but not used" warning
+
 #ifdef SYS_recvfrom
   ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_recvfrom, sockfd, buf, len, flags, dest_addr, addrlen);
+      SYS_recvfrom, sockfd, buf, len, flags, src_addr, addrlen);
 #elif defined(SYS_socketcall)
   unsigned long sockcall_args[6] = {static_cast<unsigned long>(sockfd),
                                     reinterpret_cast<unsigned long>(buf),
                                     static_cast<unsigned long>(len),
                                     static_cast<unsigned long>(flags),
-                                    reinterpret_cast<unsigned long>(dest_addr),
+                                    reinterpret_cast<unsigned long>(src_addr),
                                     static_cast<unsigned long>(addrlen)};
   ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
       SYS_socketcall, SYS_RECVFROM, sockcall_args);
@@ -46,8 +55,13 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
   }
 
   MSAN_UNPOISON(buf, ret);
-  MSAN_UNPOISON(addrlen, sizeof(socklen_t));
 
+  if (src_addr) {
+    size_t min_src_addr_size = (*addrlen < srcaddr_sz) ? *addrlen : srcaddr_sz;
+    (void)min_src_addr_size; // prevent "set but not used" warning
+
+    MSAN_UNPOISON(src_addr, min_src_addr_size);
+  }
   return ret;
 }
 

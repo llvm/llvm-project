@@ -53,7 +53,7 @@ void TestExpandMathPass::runOnOperation() {
   populateExpandRoundFPattern(patterns);
   populateExpandRoundEvenPattern(patterns);
   populateExpandRsqrtPattern(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

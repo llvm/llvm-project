@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblySubtarget.h"

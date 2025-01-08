@@ -245,16 +245,6 @@ func.func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
 
 // -----
 
-func.func @memref_reinterpret_cast_non_strided_layout(%in: memref<?x?xf32>) {
-  // expected-error @+1 {{expected result type to have strided layout but found 'memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>}}
-  %out = memref.reinterpret_cast %in to
-           offset: [0], sizes: [9, 10], strides: [42, 1]
-         : memref<?x?xf32> to memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>
-  return
-}
-
-// -----
-
 func.func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}

@@ -23,6 +23,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <map>
 #include <memory>
@@ -2005,6 +2006,11 @@ struct SequenceTraits<
     std::vector<T>,
     std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
     : SequenceTraitsImpl<std::vector<T>, SequenceElementTraits<T>::flow> {};
+template <typename T, size_t N>
+struct SequenceTraits<
+    std::array<T, N>,
+    std::enable_if_t<CheckIsBool<SequenceElementTraits<T>::flow>::value>>
+    : SequenceTraitsImpl<std::array<T, N>, SequenceElementTraits<T>::flow> {};
 template <typename T, unsigned N>
 struct SequenceTraits<
     SmallVector<T, N>,

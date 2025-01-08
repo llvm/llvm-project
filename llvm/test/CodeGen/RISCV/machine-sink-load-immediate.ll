@@ -184,13 +184,13 @@ declare i32 @toupper()
 define signext i32 @overlap_live_ranges(ptr %arg, i32 signext %arg1) {
 ; CHECK-LABEL: overlap_live_ranges:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    li a2, 13
-; CHECK-NEXT:    bne a1, a3, .LBB1_2
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    bne a1, a2, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    lw a2, 4(a0)
-; CHECK-NEXT:  .LBB1_2: # %bb5
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    li a0, 13
 ; CHECK-NEXT:    ret
 bb:
   %i = icmp eq i32 %arg1, 1
@@ -205,3 +205,181 @@ bb5:                                              ; preds = %bb2, %bb
   %i6 = phi i32 [ %i4, %bb2 ], [ 13, %bb ]
   ret i32 %i6
 }
+
+
+; For switches, the values feeding the phi are always sunk into the
+; target blocks as the IR syntax requires the intermediate block and
+; DAG lowers it in the immediate predecessor of the phi.
+define signext i32 @switch_dispatch(i8 %a) {
+; CHECK-LABEL: switch_dispatch:
+; CHECK:       # %bb.0: # %bb
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    li a1, 31
+; CHECK-NEXT:    blt a1, a0, .LBB2_5
+; CHECK-NEXT:  # %bb.1: # %bb
+; CHECK-NEXT:    beqz a0, .LBB2_10
+; CHECK-NEXT:  # %bb.2: # %bb
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    beq a0, a1, .LBB2_11
+; CHECK-NEXT:  # %bb.3: # %bb
+; CHECK-NEXT:    li a1, 13
+; CHECK-NEXT:    bne a0, a1, .LBB2_9
+; CHECK-NEXT:  # %bb.4: # %case.4
+; CHECK-NEXT:    li s0, 644
+; CHECK-NEXT:    j .LBB2_13
+; CHECK-NEXT:  .LBB2_5: # %bb
+; CHECK-NEXT:    li a1, 234
+; CHECK-NEXT:    beq a0, a1, .LBB2_9
+; CHECK-NEXT:  # %bb.6: # %bb
+; CHECK-NEXT:    li a1, 70
+; CHECK-NEXT:    beq a0, a1, .LBB2_12
+; CHECK-NEXT:  # %bb.7: # %bb
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    bne a0, a1, .LBB2_9
+; CHECK-NEXT:  # %bb.8: # %case.0
+; CHECK-NEXT:    li s0, 13
+; CHECK-NEXT:    j .LBB2_13
+; CHECK-NEXT:  .LBB2_9: # %case.default
+; CHECK-NEXT:    li s0, 23
+; CHECK-NEXT:    j .LBB2_13
+; CHECK-NEXT:  .LBB2_10: # %case.5
+; CHECK-NEXT:    li s0, 54
+; CHECK-NEXT:    j .LBB2_13
+; CHECK-NEXT:  .LBB2_11: # %case.1
+; CHECK-NEXT:    li s0, 53
+; CHECK-NEXT:    j .LBB2_13
+; CHECK-NEXT:  .LBB2_12: # %case.2
+; CHECK-NEXT:    li s0, 33
+; CHECK-NEXT:  .LBB2_13: # %merge
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+bb:
+  switch i8 %a, label %case.default [
+    i8 32, label %case.0
+    i8 12, label %case.1
+    i8 70, label %case.2
+    i8 -22, label %case.3
+    i8 13, label %case.4
+    i8 0, label %case.5
+  ]
+
+case.0:
+  br label %merge
+case.1:
+  br label %merge
+case.2:
+  br label %merge
+case.3:
+  br label %merge
+case.4:
+  br label %merge
+case.5:
+  br label %merge
+case.default:
+  br label %merge
+
+merge:
+  %res = phi i32 [ 23, %case.default ], [ 13, %case.0 ], [ 53, %case.1 ], [ 33, %case.2 ], [ 23, %case.3 ], [ 644, %case.4 ], [ 54, %case.5 ]
+  call void @use(i32 %res)
+  ret i32 %res
+}
+
+; Same as for the switch, but written via manual branching.
+define signext i32 @branch_dispatch(i8 %a) {
+; CHECK-LABEL: branch_dispatch:
+; CHECK:       # %bb.0: # %case.0
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    beq a0, a1, .LBB3_7
+; CHECK-NEXT:  # %bb.1: # %case.1
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    beq a0, a1, .LBB3_8
+; CHECK-NEXT:  # %bb.2: # %case.2
+; CHECK-NEXT:    li a1, 70
+; CHECK-NEXT:    beq a0, a1, .LBB3_9
+; CHECK-NEXT:  # %bb.3: # %case.3
+; CHECK-NEXT:    li a1, 234
+; CHECK-NEXT:    li s0, 23
+; CHECK-NEXT:    beq a0, a1, .LBB3_10
+; CHECK-NEXT:  # %bb.4: # %case.4
+; CHECK-NEXT:    beqz a0, .LBB3_11
+; CHECK-NEXT:  # %bb.5: # %case.5
+; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    bne a0, a1, .LBB3_10
+; CHECK-NEXT:  # %bb.6:
+; CHECK-NEXT:    li s0, 54
+; CHECK-NEXT:    j .LBB3_10
+; CHECK-NEXT:  .LBB3_7:
+; CHECK-NEXT:    li s0, 13
+; CHECK-NEXT:    j .LBB3_10
+; CHECK-NEXT:  .LBB3_8:
+; CHECK-NEXT:    li s0, 53
+; CHECK-NEXT:    j .LBB3_10
+; CHECK-NEXT:  .LBB3_9:
+; CHECK-NEXT:    li s0, 33
+; CHECK-NEXT:  .LBB3_10: # %merge
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_11:
+; CHECK-NEXT:    .cfi_restore_state
+; CHECK-NEXT:    li s0, 644
+; CHECK-NEXT:    j .LBB3_10
+case.0:
+  %c0 = icmp ne i8 %a, 32
+  br i1 %c0, label %case.1, label %merge
+case.1:
+  %c1 = icmp ne i8 %a, 12
+  br i1 %c1, label %case.2, label %merge
+case.2:
+  %c2 = icmp ne i8 %a, 70
+  br i1 %c2, label %case.3, label %merge
+case.3:
+  %c3 = icmp ne i8 %a, -22
+  br i1 %c3, label %case.4, label %merge
+case.4:
+  %c4 = icmp ne i8 %a, 0
+  br i1 %c4, label %case.5, label %merge
+case.5:
+  %c5 = icmp ne i8 %a, 5
+  br i1 %c5, label %case.default, label %merge
+case.default:
+  br label %merge
+
+merge:
+  %res = phi i32 [ 23, %case.default ], [ 13, %case.0 ], [ 53, %case.1 ], [ 33, %case.2 ], [ 23, %case.3 ], [ 644, %case.4 ], [ 54, %case.5 ]
+  call void @use(i32 %res)
+  ret i32 %res
+}
+
+
+declare void @use(i32)
+

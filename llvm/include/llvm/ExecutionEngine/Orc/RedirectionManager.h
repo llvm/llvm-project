@@ -23,6 +23,7 @@ namespace orc {
 class RedirectionManager {
 public:
   virtual ~RedirectionManager() = default;
+
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
   virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
@@ -31,7 +32,7 @@ public:
   /// symbol.
   Error redirect(JITDylib &JD, SymbolStringPtr Symbol,
                  ExecutorSymbolDef NewDest) {
-    return redirect(JD, {{Symbol, NewDest}});
+    return redirect(JD, {{std::move(Symbol), NewDest}});
   }
 
 private:
@@ -50,7 +51,7 @@ public:
   /// desitnation symbol address.
   Error createRedirectableSymbol(ResourceTrackerSP RT, SymbolStringPtr Symbol,
                                  ExecutorSymbolDef InitialDest) {
-    return createRedirectableSymbols(RT, {{Symbol, InitialDest}});
+    return createRedirectableSymbols(RT, {{std::move(Symbol), InitialDest}});
   }
 
   /// Emit redirectable symbol

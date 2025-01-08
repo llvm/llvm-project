@@ -273,6 +273,9 @@ def FeatureAMXCOMPLEX : SubtargetFeature<"amx-complex", "HasAMXCOMPLEX", "true",
 def FeatureAMXFP8 : SubtargetFeature<"amx-fp8", "HasAMXFP8", "true",
                                      "Support AMX-FP8 instructions",
                                      [FeatureAMXTILE]>;
+def FeatureAMXMOVRS : SubtargetFeature<"amx-movrs", "HasAMXMOVRS", "true",
+                                       "Support AMX-MOVRS instructions",
+                                       [FeatureAMXTILE]>;
 def FeatureAMXTRANSPOSE : SubtargetFeature<"amx-transpose", "HasAMXTRANSPOSE", "true",
                                            "Support AMX amx-transpose instructions",
                                            [FeatureAMXTILE]>;
@@ -1152,6 +1155,34 @@ def ProcessorFeatures {
   list<SubtargetFeature> GNRDFeatures =
     !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
+  // Diamond Rapids
+  list<SubtargetFeature> DMRAdditionalFeatures = [FeatureAVX10_2_512,
+                                                  FeatureSM4,
+                                                  FeatureCMPCCXADD,
+                                                  FeatureAVXIFMA,
+                                                  FeatureAVXNECONVERT,
+                                                  FeatureAVXVNNIINT8,
+                                                  FeatureAVXVNNIINT16,
+                                                  FeatureUSERMSR,
+                                                  FeatureSHA512,
+                                                  FeatureSM3,
+                                                  FeatureEGPR,
+                                                  FeatureZU,
+                                                  FeatureCCMP,
+                                                  FeaturePush2Pop2,
+                                                  FeaturePPX,
+                                                  FeatureNDD,
+                                                  FeatureNF,
+                                                  FeatureCF,
+                                                  FeatureMOVRS,
+                                                  FeatureAMXMOVRS,
+                                                  FeatureAMXAVX512,
+                                                  FeatureAMXFP8,
+                                                  FeatureAMXTF32,
+                                                  FeatureAMXTRANSPOSE];
+  list<SubtargetFeature> DMRFeatures =
+    !listconcat(GNRDFeatures, DMRAdditionalFeatures);
+
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
                                          FeatureCX8,
@@ -1853,6 +1884,8 @@ foreach P = ["graniterapids-d", "graniterapids_d"] in {
 def : ProcModel<P, SapphireRapidsModel,
                 ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
 }
+def : ProcModel<"diamondrapids", SapphireRapidsModel,
+                ProcessorFeatures.DMRFeatures, ProcessorFeatures.GNRTuning>;
 
 // AMD CPUs.
 
@@ -1909,11 +1942,13 @@ def : ProcModel<"bdver1", BdVer2Model, ProcessorFeatures.BdVer1Features,
 def : ProcModel<"bdver2", BdVer2Model, ProcessorFeatures.BdVer2Features,
                 ProcessorFeatures.BdVer2Tuning>;
 // Steamroller
-def : Proc<"bdver3", ProcessorFeatures.BdVer3Features,
-           ProcessorFeatures.BdVer3Tuning>;
+// NOTE: BdVer2Model is only an approx model for Steamroller.
+def : ProcModel<"bdver3", BdVer2Model, ProcessorFeatures.BdVer3Features,
+                ProcessorFeatures.BdVer3Tuning>;
 // Excavator
-def : Proc<"bdver4", ProcessorFeatures.BdVer4Features,
-           ProcessorFeatures.BdVer4Tuning>;
+// NOTE: Znver1Model is only an approx model for Excavator (with AVX2).
+def : ProcModel<"bdver4", Znver1Model, ProcessorFeatures.BdVer4Features,
+                ProcessorFeatures.BdVer4Tuning>;
 
 def : ProcModel<"znver1", Znver1Model, ProcessorFeatures.ZNFeatures,
                 ProcessorFeatures.ZNTuning>;

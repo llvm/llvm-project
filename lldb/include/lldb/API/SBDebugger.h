@@ -382,6 +382,10 @@ public:
 
   void SetTerminalWidth(uint32_t term_width);
 
+  uint32_t GetTerminalHeight() const;
+
+  void SetTerminalHeight(uint32_t term_height);
+
   lldb::user_id_t GetID();
 
   const char *GetPrompt() const;
@@ -425,6 +429,11 @@ public:
   SBTypeFilter GetFilterForType(SBTypeNameSpecifier);
 
   SBTypeSynthetic GetSyntheticForType(SBTypeNameSpecifier);
+
+  /// Clear collected statistics for targets belonging to this debugger. This
+  /// includes clearing symbol table and debug info parsing/index time for all
+  /// modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
 
 #ifndef SWIG
   /// Run the command interpreter.

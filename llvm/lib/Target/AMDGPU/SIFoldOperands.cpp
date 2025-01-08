@@ -199,7 +199,7 @@ static unsigned macToMad(unsigned Opc) {
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9_e64;
   case AMDGPU::V_FMAC_F16_fake16_e64:
-    return AMDGPU::V_FMA_F16_gfx9_e64;
+    return AMDGPU::V_FMA_F16_gfx9_fake16_e64;
   case AMDGPU::V_FMAC_LEGACY_F32_e64:
     return AMDGPU::V_FMA_LEGACY_F32_e64;
   case AMDGPU::V_FMAC_F64_e64:
@@ -1096,21 +1096,8 @@ void SIFoldOperandsImpl::foldOperand(
           B.addImm(Defs[I].second);
         }
         LLVM_DEBUG(dbgs() << "Folded " << *UseMI);
-        return;
       }
 
-      if (Size != 4)
-        return;
-
-      Register Reg0 = UseMI->getOperand(0).getReg();
-      Register Reg1 = UseMI->getOperand(1).getReg();
-      if (TRI->isAGPR(*MRI, Reg0) && TRI->isVGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
-      else if (TRI->isVGPR(*MRI, Reg0) && TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64));
-      else if (ST->hasGFX90AInsts() && TRI->isAGPR(*MRI, Reg0) &&
-               TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_MOV_B32));
       return;
     }
 
@@ -1599,10 +1586,6 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
     return false;
 
-  if (OpToFold.isReg() &&
-      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
-    return true;
-
   // Prevent folding operands backwards in the function. For example,
   // the COPY opcode must not be replaced by 1 in this example:
   //
@@ -1611,6 +1594,10 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
   if (!DstReg.isVirtual())
     return false;
+
+  if (OpToFold.isReg() &&
+      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
+    return true;
 
   bool Changed = foldInstOperand(MI, OpToFold);
 

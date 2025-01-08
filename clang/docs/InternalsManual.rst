@@ -160,6 +160,10 @@ wording a diagnostic.
   named in a diagnostic message. e.g., prefer wording like ``'this' pointer
   cannot be null in well-defined C++ code`` over wording like ``this pointer
   cannot be null in well-defined C++ code``.
+* Prefer diagnostic wording without contractions whenever possible. The single
+  quote in a contraction can be visually distracting due to its use with
+  syntactic constructs and contractions can be harder to understand for non-
+  native English speakers.
 
 The Format String
 ^^^^^^^^^^^^^^^^^
@@ -314,6 +318,17 @@ Description:
   value ``1`` becomes ``1st``, ``3`` becomes ``3rd``, and so on.  Values less
   than ``1`` are not supported.  This formatter is currently hard-coded to use
   English ordinals.
+
+**"human" format**
+
+Example:
+  ``"total size is %human0 bytes"``
+Class:
+  Integers
+Description:
+  This is a formatter which represents the argument number in a human readable
+  format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
+  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
 
 **"objcclass" format**
 

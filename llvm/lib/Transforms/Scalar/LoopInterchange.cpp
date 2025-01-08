@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -71,7 +72,7 @@ static const unsigned MaxMemInstrCount = 100;
 // Maximum loop depth supported.
 static const unsigned MaxLoopNestDepth = 10;
 
-#ifdef DUMP_DEP_MATRICIES
+#ifndef NDEBUG
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
     for (auto D : Row)
@@ -110,6 +111,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                     << " Loads and Stores to analyze\n");
 
   ValueVector::iterator I, IE, J, JE;
+  StringSet<> Seen;
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -156,7 +158,10 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.push_back('I');
         }
 
-        DepMatrix.push_back(Dep);
+        // Make sure we only add unique entries to the dependency matrix.
+        if (Seen.insert(StringRef(Dep.data(), Dep.size())).second)
+          DepMatrix.push_back(Dep);
+
         if (DepMatrix.size() > MaxMemInstrCount) {
           LLVM_DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
                             << " dependencies inside loop\n");
@@ -234,6 +239,14 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
+static bool hasMinimumLoopDepth(SmallVectorImpl<Loop *> &LoopList) {
+  unsigned LoopNestDepth = LoopList.size();
+  if (LoopNestDepth < 2) {
+    LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
+    return false;
+  }
+  return true;
+}
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -416,11 +429,11 @@ struct LoopInterchange {
 
   bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
+
+    // Ensure minimum loop nest depth.
+    assert(hasMinimumLoopDepth(LoopList) && "Loop nest does not meet minimum depth.");
+
     unsigned LoopNestDepth = LoopList.size();
-    if (LoopNestDepth < 2) {
-      LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
-      return false;
-    }
     if (LoopNestDepth > MaxLoopNestDepth) {
       LLVM_DEBUG(dbgs() << "Cannot handle loops of depth greater than "
                         << MaxLoopNestDepth << "\n");
@@ -441,10 +454,9 @@ struct LoopInterchange {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
-#ifdef DUMP_DEP_MATRICIES
-    LLVM_DEBUG(dbgs() << "Dependence before interchange\n");
-    printDepMatrix(DependencyMatrix);
-#endif
+
+    LLVM_DEBUG(dbgs() << "Dependency matrix before interchange:\n";
+               printDepMatrix(DependencyMatrix));
 
     // Get the Outermost loop exit.
     BasicBlock *LoopNestExit = OuterMostLoop->getExitBlock();
@@ -484,10 +496,10 @@ struct LoopInterchange {
         std::swap(LoopList[i - 1], LoopList[i]);
         // Update the DependencyMatrix
         interChangeDependencies(DependencyMatrix, i, i - 1);
-#ifdef DUMP_DEP_MATRICIES
-        LLVM_DEBUG(dbgs() << "Dependence after interchange\n");
-        printDepMatrix(DependencyMatrix);
-#endif
+
+        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
+                   printDepMatrix(DependencyMatrix));
+
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -1712,6 +1724,10 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
+  SmallVector<Loop *, 8> LoopList(LN.getLoops());
+  // Ensure minimum depth of the loop nest to do the interchange.
+  if (!hasMinimumLoopDepth(LoopList))
+    return PreservedAnalyses::all();
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
