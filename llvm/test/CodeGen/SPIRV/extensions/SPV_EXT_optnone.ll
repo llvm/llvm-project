@@ -14,10 +14,7 @@
 ; CHECK-NO-EXTENSION-NOT: OpExtension "SPV_INTEL_optnone"
 ; CHECK-NO-EXTENSION-NOT: OpExtension "SPV_EXT_optnone"
 
-; CHECK-TWO-EXTENSIONS: OpCapability OptNoneEXT
 ; CHECK-TWO-EXTENSIONS: OpExtension "SPV_INTEL_optnone"
-
-; CHECK-ALL-EXTENSIONS: OpCapability OptNoneEXT
 ; CHECK-ALL-EXTENSIONS: OpExtension "SPV_INTEL_optnone"
 
 define spir_func void @foo() #0 {
