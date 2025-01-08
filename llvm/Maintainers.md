@@ -45,8 +45,12 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 
 #### Inlining
 
-Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+Arthur Eubanks \
+aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub) \
+Mircea Trofin (esp. ML inliner) \
+mtrofin@google.com (email), [mtrofin](https://github.com/mtrofin) (GitHub) \
+Kazu Hirata (esp. module inliner and inline order) \
+kazu@google.com (email), [kazutakahirata](https://github.com/kazutakahirata) (GitHub)
 
 #### InstCombine, InstSimplify, ValueTracking, ConstantFold
 
@@ -64,6 +68,11 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 Diego Novillo \
 dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
+
+#### New pass manager, CGSCC, LazyCallGraph
+
+Arthur Eubanks \
+aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
 
 #### LoopStrengthReduce
 
@@ -462,7 +471,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
-Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support \
+Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \

@@ -3710,18 +3710,25 @@ def : IntMinMaxPat<V_MAXMIN_U32_e64, umin, umax_oneuse>;
 def : IntMinMaxPat<V_MINMAX_U32_e64, umax, umin_oneuse>;
 def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MINMAX_F16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
-def : FPMinCanonMaxPat<V_MAXMIN_F16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+}
+
+let True16Predicate = UseFakeTrue16Insts in {
+def : FPMinMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
+def : FPMinCanonMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 }
 
 let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in {
   defm : Int16Med3Pat<V_MED3_I16_e64, smin, smax, VSrc_b16>;
   defm : Int16Med3Pat<V_MED3_U16_e64, umin, umax, VSrc_b16>;
+}
+let True16Predicate = UseRealTrue16Insts in {
+  defm : Int16Med3Pat<V_MED3_I16_t16_e64, smin, smax, VSrcT_b16>;
+  defm : Int16Med3Pat<V_MED3_U16_t16_e64, umin, umax, VSrcT_b16>;
 }
 let True16Predicate = UseFakeTrue16Insts in {
   defm : Int16Med3Pat<V_MED3_I16_fake16_e64, smin, smax, VSrc_b16>;
