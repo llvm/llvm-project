@@ -127,14 +127,14 @@ static cl::opt<bool> AllowRecursiveCallsites(
     "memprof-allow-recursive-callsites", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of callsites involved in recursive cycles"));
 
-// When enabled, try to detect and prevent cloning of recursive contexts.
+// When disabled, try to detect and prevent cloning of recursive contexts.
 // This is only necessary until we support cloning through recursive cycles.
-// Leave off by default for now, as it requires a little bit of compile time
-// overhead and doesn't affect correctness, it will just inflate the cold hinted
-// bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
-static cl::opt<bool> SkipRecursiveContexts(
-    "memprof-skip-recursive-contexts", cl::init(false), cl::Hidden,
-    cl::desc("Prevent cloning of contexts through recursive cycles"));
+// Leave on by default for now, as disabling requires a little bit of compile
+// time overhead and doesn't affect correctness, it will just inflate the cold
+// hinted bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
+static cl::opt<bool> AllowRecursiveContexts(
+    "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
+    cl::desc("Allow cloning of contexts through recursive cycles"));
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
@@ -1394,9 +1394,9 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
     }
     // Node can have more context ids than callers if some contexts terminate at
     // node and some are longer. If we are allowing recursive callsites but
-    // haven't enabled skipping of recursive contexts, this will be violated for
+    // haven't disabled recursive contexts, this will be violated for
     // incompletely cloned recursive cycles, so skip the checking in that case.
-    assert((AllowRecursiveCallsites && !SkipRecursiveContexts) ||
+    assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
            NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
   }
@@ -3392,10 +3392,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
   DenseSet<uint32_t> RecursiveContextIds;
-  // If we are allowing recursive callsites, and have also enabled
-  // skipping of recursive contexts, look for context ids that show up in
-  // multiple caller edges.
-  if (AllowRecursiveCallsites && SkipRecursiveContexts) {
+  // If we are allowing recursive callsites, but have also disabled recursive
+  // contexts, look for context ids that show up in multiple caller edges.
+  if (AllowRecursiveCallsites && !AllowRecursiveContexts) {
     DenseSet<uint32_t> AllCallerContextIds;
     for (auto &CE : Node->CallerEdges) {
       // Resize to the largest set of caller context ids, since we know the

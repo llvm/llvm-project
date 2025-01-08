@@ -20,7 +20,7 @@
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
-; RUN:  --check-prefix=NOSKIP-RECUR-CALLSITES --check-prefix=NOSKIP-RECUR-CONTEXTS
+; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
 
 ;; Skipping recursive callsites should result in no cloning.
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
@@ -50,23 +50,23 @@
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
-; RUN:	-memprof-skip-recursive-contexts \
+; RUN:	-memprof-allow-recursive-contexts=false \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
-; RUN:  --check-prefix=NOSKIP-RECUR-CALLSITES --check-prefix=SKIP-RECUR-CONTEXTS
+; RUN:  --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=SKIP-RECUR-CONTEXTS
 
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:4:0: created clone _Z1Dv.memprof.1
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv marked with memprof allocation attribute notcold
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:8:0: created clone _Z1Ci.memprof.1
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:10:12: call in clone _Z1Ci.memprof.1 assigned to call function clone _Z1Dv.memprof.1
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:14:0: created clone _Z1Bi.memprof.1
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:15:10: call in clone _Z1Bi.memprof.1 assigned to call function clone _Z1Ci.memprof.1
-;; We should only call the cold clone for the recursive context if we haven't
-;; enabled skipping of recursive contexts via -memprof-skip-recursive-contexts.
-; NOSKIP-RECUR-CONTEXTS: memprof_recursive.cc:19:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:4:0: created clone _Z1Dv.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv marked with memprof allocation attribute notcold
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:5:10: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:8:0: created clone _Z1Ci.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:10:12: call in clone _Z1Ci.memprof.1 assigned to call function clone _Z1Dv.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:14:0: created clone _Z1Bi.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:15:10: call in clone _Z1Bi.memprof.1 assigned to call function clone _Z1Ci.memprof.1
+;; We should only call the cold clone for the recursive context if we enabled
+;; recursive contexts via -memprof-allow-recursive-contexts=true (default).
+; ALLOW-RECUR-CONTEXTS: memprof_recursive.cc:19:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
 ; SKIP-RECUR-CONTEXTS-NOT: memprof_recursive.cc:19:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
-; NOSKIP-RECUR-CALLSITES: memprof_recursive.cc:20:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
+; ALLOW-RECUR-CALLSITES: memprof_recursive.cc:20:13: call in clone main assigned to call function clone _Z1Bi.memprof.1
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
