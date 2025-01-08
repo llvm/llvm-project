@@ -38,7 +38,7 @@ std::optional<double> SanitizerMaskCutoffs::operator[](unsigned Kind) const {
   if (Cutoffs.empty() || Cutoffs[Kind] < SanitizerMaskCutoffsEps)
     return std::nullopt;
 
-return Cutoffs[Kind];
+  return Cutoffs[Kind];
 }
 
 void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
