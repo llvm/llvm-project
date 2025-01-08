@@ -267,7 +267,7 @@ struct ValueIsPresent<PointerUnion<PTs...>,
                       std::enable_if_t<IsNullable<PointerUnion<PTs...>>>> {
   using Union = PointerUnion<PTs...>;
   static bool isPresent(const Union &V) { return static_cast<bool>(V); }
-  static decltype(auto) unwrapValue(Union &V) { return V; }
+  static Union &unwrapValue(Union &V) { return V; }
 };
 
 // Teach SmallPtrSet that PointerUnion is "basically a pointer", that has
