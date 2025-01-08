@@ -1,4 +1,5 @@
-header: sys-wait.h
+header: sys/wait.h
+header_template: wait.h.def
 macros: []
 types:
   - type_name: siginfo_t

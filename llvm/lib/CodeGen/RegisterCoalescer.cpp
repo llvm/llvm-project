@@ -1396,27 +1396,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   NewMI.setDebugLoc(DL);
 
   // In a situation like the following:
-  //
-  //    undef %2.subreg:reg = INST %1:reg         ; DefMI (rematerializable),
-  //                                              ; DefSubIdx = subreg
-  //    %3:reg = COPY %2                          ; SrcIdx = DstIdx = 0
-  //    .... = SOMEINSTR %3:reg
-  //
-  // there are no subranges for %3 so after rematerialization we need
-  // to explicitly create them. Undefined subranges are removed later on.
-  if (DstReg.isVirtual() && DefSubIdx && !CP.getSrcIdx() && !CP.getDstIdx() &&
-      MRI->shouldTrackSubRegLiveness(DstReg)) {
-    LiveInterval &DstInt = LIS->getInterval(DstReg);
-    if (!DstInt.hasSubRanges()) {
-      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(DstReg);
-      LaneBitmask UsedLanes = TRI->getSubRegIndexLaneMask(DefSubIdx);
-      LaneBitmask UnusedLanes = FullMask & ~UsedLanes;
-      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UsedLanes, DstInt);
-      DstInt.createSubRangeFrom(LIS->getVNInfoAllocator(), UnusedLanes, DstInt);
-    }
-  }
-
-  // In a situation like the following:
   //     %0:subreg = instr              ; DefMI, subreg = DstIdx
   //     %1        = copy %0:subreg ; CopyMI, SrcIdx = 0
   // instead of widening %1 to the register class of %0 simply do:
@@ -1544,6 +1523,27 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // sure that "undef" is not set.
     if (NewIdx == 0)
       NewMI.getOperand(0).setIsUndef(false);
+
+    // In a situation like the following:
+    //
+    //    undef %2.subreg:reg = INST %1:reg    ; DefMI (rematerializable),
+    //                                         ; Defines only some of lanes,
+    //                                         ; so DefSubIdx = NewIdx = subreg
+    //    %3:reg = COPY %2                     ; Copy full reg
+    //    .... = SOMEINSTR %3:reg              ; Use full reg
+    //
+    // there are no subranges for %3 so after rematerialization we need
+    // to explicitly create them. Undefined subranges are removed later on.
+    if (NewIdx && !DstInt.hasSubRanges() &&
+        MRI->shouldTrackSubRegLiveness(DstReg)) {
+      LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(DstReg);
+      LaneBitmask UsedLanes = TRI->getSubRegIndexLaneMask(NewIdx);
+      LaneBitmask UnusedLanes = FullMask & ~UsedLanes;
+      VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
+      DstInt.createSubRangeFrom(Alloc, UsedLanes, DstInt);
+      DstInt.createSubRangeFrom(Alloc, UnusedLanes, DstInt);
+    }
+
     // Add dead subregister definitions if we are defining the whole register
     // but only part of it is live.
     // This could happen if the rematerialization instruction is rematerializing
