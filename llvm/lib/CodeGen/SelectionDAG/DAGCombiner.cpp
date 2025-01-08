@@ -20455,10 +20455,8 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
       Value.hasOneUse()) {
     LoadSDNode *LD = cast<LoadSDNode>(Value);
     EVT VT = LD->getMemoryVT();
-    if (!VT.isFloatingPoint() ||
-        VT != ST->getMemoryVT() ||
-        LD->isNonTemporal() ||
-        ST->isNonTemporal() ||
+    if (!VT.isSimple() || !VT.isFloatingPoint() || VT != ST->getMemoryVT() ||
+        LD->isNonTemporal() || ST->isNonTemporal() ||
         LD->getPointerInfo().getAddrSpace() != 0 ||
         ST->getPointerInfo().getAddrSpace() != 0)
       return SDValue();

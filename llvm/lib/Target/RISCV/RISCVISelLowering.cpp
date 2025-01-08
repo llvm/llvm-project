@@ -18385,7 +18385,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
     // Bail if we might break a sh{1,2,3}add pattern.
-    if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
+    if (Subtarget.hasStdExtZba() && C2 && C2->getZExtValue() >= 1 &&
         C2->getZExtValue() <= 3 && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
