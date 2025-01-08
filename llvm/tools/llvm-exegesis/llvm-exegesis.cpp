@@ -479,7 +479,7 @@ static void runBenchmarkConfigurations(
 }
 
 void benchmarkMain() {
-  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+  if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure &&
       !UseDummyPerfCounters) {
 #ifndef HAVE_LIBPFM
     ExitWithError(
@@ -504,7 +504,7 @@ void benchmarkMain() {
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
-  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
+  if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
   if (ExecutionMode == BenchmarkRunner::ExecutionModeE::SubProcess &&
