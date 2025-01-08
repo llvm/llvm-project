@@ -33,11 +33,12 @@
 // the cc1 arguments.
 
 // CC1: "-cc1"
+// CC1: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
 // NO-CXX-NOT: "-internal-isystem" "{{.*}}/include/c++/v1"
 // CXX-SAME: "-internal-isystem" "{{.*}}/include/c++/v1"
 // ULI-SAME: "-internal-isystem" "[[SDKROOT]]/usr/local/include"
 // EULI-SAME: "-isystem" "[[SDKROOT]]/embedded/usr/local/include"
-// CI-SAME: "-internal-isystem" "{{.*}}/clang/{{[[:digit:].]*}}/include"
+// CI-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // UI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/usr/include"
 // EUI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/embedded/usr/include"
 // NO-FW-NOT: "-internal-iframework"
