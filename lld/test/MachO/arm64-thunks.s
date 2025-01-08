@@ -8,13 +8,45 @@
 ## (4) early calls to a dylib stub use a thunk, and later calls the stub
 ##     directly
 ## (5) Thunks are created for all sections in the text segment with branches.
+## (6) Thunks are in the linker map file.
 ## Notes:
 ## 0x4000000 = 64 Mi = half the magnitude of the forward-branch range
 
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
-# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -o %t/thunk %t/input.o
+# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
+
+## Check that the thunks appear in the map file and that everything is sorted by address
+# Because of the `.space` instructions, there will end up being a lot of dead symbols in the 
+# linker map (linker map will be ~2.7GB). So to avoid the test trying to (slowly) match regex
+# across all the ~2.7GB of the linker map - generate a version of the linker map without dead symbols.
+# RUN: awk '/# Dead Stripped Symbols:/ {exit} {print}' %t/thunk.map > %t/thunk_no_dead_syms.map
+
+# RUN: FileCheck %s --input-file %t/thunk_no_dead_syms.map --check-prefix=MAP
+ 
+# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _b
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} ___nan.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _main
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
+
 
 # CHECK: Disassembly of section __TEXT,__text:
 
