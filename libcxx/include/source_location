@@ -55,7 +55,7 @@ class source_location {
   // in constant evaluation, so we don't want to use `void*` as the argument
   // type unless the builtin returned that, anyhow, and the invalid cast is
   // unavoidable.
-  using __bsl_ty = decltype(__builtin_source_location());
+  using __bsl_ty _LIBCPP_NODEBUG = decltype(__builtin_source_location());
 
 public:
   // The defaulted __ptr argument is necessary so that the builtin is evaluated
