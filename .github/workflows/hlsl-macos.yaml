@@ -9,10 +9,16 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - llvm/**/DirectX/**
+      - .github/workflows/hlsl*
+      - clang/*HLSL*/**/*
+      - clang/**/*HLSL*
+      - llvm/**/Frontend/HLSL/**/*
 
 jobs:
   HLSL-macOS:
-    uses: ./.github/workflows/hlsl/hlsl-all.yaml
+    uses: ./.github/workflows/hlsl-all.yaml
     with:
       OS: macOS
       SKU: hlsl-metal
