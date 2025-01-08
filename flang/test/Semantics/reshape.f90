@@ -53,10 +53,9 @@ program reshaper
   !ERROR: 'shape=' argument has too many elements
   integer :: array23(I64_MAX, I64_MAX) = RESHAPE([1, 2, 3], huge_shape)
 
-  !ERROR: Size of 'shape=' argument must not be greater than 15
   CALL ext_sub(RESHAPE([(n, n=1,20)], &
+  !ERROR: 'shape=' argument must be a vector of at most 15 elements (has 16)
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
-  !ERROR: Reference to the procedure 'ext_sub' has an implicit interface that is distinct from another reference: incompatible dummy argument #1: incompatible dummy data object shapes
   !ERROR: 'shape=' argument must not have a negative extent
   CALL ext_sub(RESHAPE([(n, n=1,20)], [1, -5, 3]))
   !ERROR: 'order=' argument has unacceptable rank 2
