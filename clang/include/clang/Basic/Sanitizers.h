@@ -155,10 +155,10 @@ struct SanitizerKind {
 }; // SanitizerKind
 
 class SanitizerMaskCutoffs {
-  std::array<float, SanitizerKind::SO_Count> cutoffs = {0};
+  std::vector<double> Cutoffs;
 
 public:
-  float operator[](int index) const { return cutoffs[index]; }
+  std::optional<double> operator[](unsigned Kind) const;
 
   void set(SanitizerMask K, float V);
   void clear(SanitizerMask K = SanitizerKind::All);

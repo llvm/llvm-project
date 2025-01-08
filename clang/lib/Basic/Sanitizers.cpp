@@ -16,13 +16,27 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <optional>
 
 using namespace clang;
 
+static const double SanitizerMaskCutoffsEps = 0.000000001f;
+
 void SanitizerMaskCutoffs::set(SanitizerMask K, float V) {
+  if (V < SanitizerMaskCutoffsEps && Cutoffs.empty())
+    return;
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
-    if (K & SanitizerMask::bitPosToMask(i))
-      cutoffs[i] = V;
+    if (K & SanitizerMask::bitPosToMask(i)) {
+      Cutoffs.resize(SanitizerKind::SO_Count);
+      Cutoffs[i] = V;
+    }
+}
+
+std::optional<double> SanitizerMaskCutoffs::operator[](unsigned Kind) const {
+  if (Cutoffs.empty() || Cutoffs[Kind] < SanitizerMaskCutoffsEps)
+    return std::nullopt;
+
+  return Cutoffs[Kind];
 }
 
 void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
@@ -79,9 +93,9 @@ void clang::serializeSanitizerSet(SanitizerSet Set,
 void clang::serializeSanitizerMaskCutoffs(
     const SanitizerMaskCutoffs &Cutoffs, SmallVectorImpl<std::string> &Values) {
 #define SANITIZER(NAME, ID)                                                    \
-  if (Cutoffs[SanitizerKind::SO_##ID])                                         \
-    Values.push_back(std::string(NAME "=") +                                   \
-                     std::to_string(Cutoffs[SanitizerKind::SO_##ID]));
+  if (auto C = Cutoffs[SanitizerKind::SO_##ID]) {                              \
+    Values.push_back(std::string(NAME "=") + std::to_string(*C));              \
+  }
 #include "clang/Basic/Sanitizers.def"
 }
 

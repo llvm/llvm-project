@@ -1169,16 +1169,9 @@ static std::string toString(const clang::SanitizerSet &Sanitizers) {
 }
 
 static std::string toString(const clang::SanitizerMaskCutoffs &Cutoffs) {
-  std::string Res;
-#define SANITIZER(NAME, ID)                                                    \
-  if (Cutoffs[SanitizerKind::SO_##ID]) {                                       \
-    if (!Res.empty())                                                          \
-      Res += ",";                                                              \
-    Res += std::string(NAME) + "=" +                                           \
-           std::to_string(Cutoffs[SanitizerKind::SO_##ID]);                    \
-  }
-#include "clang/Basic/Sanitizers.def"
-  return Res;
+  llvm::SmallVector<std::string, 4> Res;
+  serializeSanitizerMaskCutoffs(Cutoffs, Res);
+  return llvm::join(Res, ",");
 }
 
 static void addSpecialCaseListOpt(const llvm::opt::ArgList &Args,
