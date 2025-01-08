@@ -3841,7 +3841,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_assume_dereferenceable: {
     const Expr *Ptr = E->getArg(0);
-    const Expr *Size= E->getArg(1);
+    const Expr *Size = E->getArg(1);
     Value *PtrValue = EmitScalarExpr(Ptr);
     Value *SizeValue = EmitScalarExpr(Size);
     if (SizeValue->getType() != IntPtrTy)
