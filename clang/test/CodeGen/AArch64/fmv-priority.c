@@ -10,7 +10,8 @@
 // sme2 |      | sme | bf16 | rcpc2 | rcpc | fp16 | simd | fp
 //
 // Dependencies should not affect priorities, since a
-// feature can only depend on lower priority features.
+// feature can only depend on lower priority features:
+// https://github.com/ARM-software/acle/pull/376
 
 __attribute__((target_version("sme2+ls64"))) int fn(void);
 __attribute__((target_version("sme2+rcpc2"))) int fn(void);
