@@ -942,16 +942,9 @@ struct CounterCoverageMappingBuilder
     Counter Skipped;
   };
 
-  BranchCounterPair
-  getBranchCounterPair(const Stmt *S, Counter ParentCnt,
-                       std::optional<Counter> SkipCntForOld = std::nullopt) {
+  BranchCounterPair getBranchCounterPair(const Stmt *S, Counter ParentCnt) {
     auto &TheMap = CounterMap[S];
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
-
-    // The old behavior of SingleByte shouldn't emit Branches.
-    if (llvm::EnableSingleByteCoverage && SkipCntForOld)
-      return {ExecCnt, *SkipCntForOld};
-
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
 
