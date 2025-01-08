@@ -106,7 +106,8 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
     }
   }
 
-  // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
+  // TODO: https://github.com/llvm/llvm-project/issues/121962
+  // Need to handle timezone and update of tm_isdst.
   int64_t seconds = tm_out->tm_sec +
                     tm_out->tm_min * TimeConstants::SECONDS_PER_MIN +
                     tm_out->tm_hour * TimeConstants::SECONDS_PER_HOUR +
