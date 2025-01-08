@@ -644,3 +644,27 @@ if.end:                                           ; preds = %entry
   store i8 0, ptr %arrayidx8, align 1
   ret void
 }
+
+define void @pr119429() {
+; CHECK-LABEL: define void @pr119429() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 0, 0
+; CHECK-NEXT:    [[SUNKADDR:%.*]] = inttoptr i64 [[AND]] to ptr
+; CHECK-NEXT:    [[SUNKADDR1:%.*]] = mul i64 [[AND]], 2
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR]], i64 [[SUNKADDR1]]
+; CHECK-NEXT:    store i64 0, ptr [[SUNKADDR2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %and = and i32 0, 0
+  %conv1 = zext i32 %and to i64
+  %sub = add i64 %conv1, 0
+  br label %if.end
+
+if.end:
+  %mul = shl i64 %sub, 1
+  %add = add i64 %mul, %conv1
+  %ptr = inttoptr i64 %add to ptr
+  store i64 0, ptr %ptr, align 8
+  ret void
+}
