@@ -224,10 +224,17 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciac` (Load-Store Address Calculation)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------

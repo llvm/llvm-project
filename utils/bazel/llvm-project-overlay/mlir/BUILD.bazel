@@ -8391,6 +8391,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":IR",
         ":SCFDialect",
         ":TransformUtils",
