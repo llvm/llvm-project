@@ -2453,9 +2453,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (U.isNaN())
         return ConstantInt::get(Ty, 0);
 
-      APFloat::roundingMode RMode = nvvm::IntrinsicGetRoundingMode(IntrinsicID);
+      APFloat::roundingMode RMode =
+          nvvm::GetFloatToIntRoundingMode(IntrinsicID);
       bool IsFTZ = nvvm::FloatToIntIntrinsicShouldFTZ(IntrinsicID);
-      bool IsSigned = nvvm::IntrinsicConvertsToSignedInteger(IntrinsicID);
+      bool IsSigned = nvvm::FloatToIntIntrinsicConvertsToSignedInt(IntrinsicID);
 
       APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
       auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
