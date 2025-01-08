@@ -2663,6 +2663,8 @@ private:
       ActualArguments &, FoldingContext &) const;
   std::optional<SpecificCall> HandleC_Loc(
       ActualArguments &, FoldingContext &) const;
+  std::optional<SpecificCall> HandleC_Devloc(
+      ActualArguments &, FoldingContext &) const;
   const std::string &ResolveAlias(const std::string &name) const {
     auto iter{aliases_.find(name)};
     return iter == aliases_.end() ? name : iter->second;
@@ -2690,7 +2692,8 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
     return true;
   }
   // special cases
-  return name == "__builtin_c_loc" || name == "null";
+  return name == "__builtin_c_loc" || name == "__builtin_c_devloc" ||
+      name == "null";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
     const std::string &name0) const {
@@ -3080,6 +3083,73 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
   return std::nullopt;
 }
 
+// CUDA Fortran C_DEVLOC(x)
+std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Devloc(
+    ActualArguments &arguments, FoldingContext &context) const {
+  static const char *const keywords[]{"cptr", nullptr};
+
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords)) {
+    CHECK(arguments.size() == 1);
+    const auto *expr{arguments[0].value().UnwrapExpr()};
+    if (auto typeAndShape{characteristics::TypeAndShape::Characterize(
+            arguments[0], context)}) {
+      if (expr && !IsContiguous(*expr, context).value_or(true)) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_DEVLOC() argument must be contiguous"_err_en_US);
+      }
+      if (auto constExtents{AsConstantExtents(context, typeAndShape->shape())};
+          constExtents && GetSize(*constExtents) == 0) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_DEVLOC() argument may not be a zero-sized array"_err_en_US);
+      }
+      if (!(typeAndShape->type().category() != TypeCategory::Derived ||
+              typeAndShape->type().IsAssumedType() ||
+              (!typeAndShape->type().IsPolymorphic() &&
+                  CountNonConstantLenParameters(
+                      typeAndShape->type().GetDerivedTypeSpec()) == 0))) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_DEVLOC() argument must have an intrinsic type, assumed type, or non-polymorphic derived type with no non-constant length parameter"_err_en_US);
+      } else if (typeAndShape->type().knownLength().value_or(1) == 0) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "C_DEVLOC() argument may not be zero-length character"_err_en_US);
+      } else if (typeAndShape->type().category() != TypeCategory::Derived &&
+          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true)) {
+        if (typeAndShape->type().category() == TypeCategory::Character &&
+            typeAndShape->type().kind() == 1) {
+          // Default character kind, but length is not known to be 1
+          if (context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::CharacterInteroperability)) {
+            context.messages().Say(
+                common::UsageWarning::CharacterInteroperability,
+                arguments[0]->sourceLocation(),
+                "C_DEVLOC() argument has non-interoperable character length"_warn_en_US);
+          }
+        } else if (context.languageFeatures().ShouldWarn(
+                       common::UsageWarning::Interoperability)) {
+          context.messages().Say(common::UsageWarning::Interoperability,
+              arguments[0]->sourceLocation(),
+              "C_DEVLOC() argument has non-interoperable intrinsic type or kind"_warn_en_US);
+        }
+      }
+
+      characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
+      ddo.intent = common::Intent::In;
+      return SpecificCall{
+          SpecificIntrinsic{"__builtin_c_devloc"s,
+              characteristics::Procedure{
+                  characteristics::FunctionResult{
+                      DynamicType{GetBuiltinDerivedType(
+                          builtinsScope_, "__builtin_c_devptr")}},
+                  characteristics::DummyArguments{
+                      characteristics::DummyArgument{"cptr"s, std::move(ddo)}},
+                  characteristics::Procedure::Attrs{
+                      characteristics::Procedure::Attr::Pure}}},
+          std::move(arguments)};
+    }
+  }
+  return std::nullopt;
+}
+
 static bool CheckForNonPositiveValues(FoldingContext &context,
     const ActualArgument &arg, const std::string &procName,
     const std::string &argName) {
@@ -3270,6 +3340,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   } else { // function
     if (call.name == "__builtin_c_loc") {
       return HandleC_Loc(arguments, context);
+    } else if (call.name == "__builtin_c_devloc") {
+      return HandleC_Devloc(arguments, context);
     } else if (call.name == "null") {
       return HandleNull(arguments, context);
     }
