@@ -75,13 +75,15 @@ public:
           loc, resultTy, input, reverse2, bias,
           rewriter.getDenseI64ArrayAttr(convPad),
           rewriter.getDenseI64ArrayAttr(stride),
-          rewriter.getDenseI64ArrayAttr({1, 1}), *op.getQuantizationInfo());
+          rewriter.getDenseI64ArrayAttr({1, 1}),
+          /* acc_type = */ op.getAccType(), *op.getQuantizationInfo());
     } else {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getDenseI64ArrayAttr(convPad),
           rewriter.getDenseI64ArrayAttr(stride),
-          rewriter.getDenseI64ArrayAttr({1, 1}));
+          rewriter.getDenseI64ArrayAttr({1, 1}),
+          /* acc_type = */ op.getAccTypeAttr());
     }
 
     rewriter.replaceOp(op, conv2d);
@@ -238,7 +240,7 @@ public:
                    /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
                    /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
                    /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
-                   *op.getQuantizationInfo())
+                   /* acc_type = */ op.getAccType(), *op.getQuantizationInfo())
                    .getResult();
     } else {
       conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
@@ -246,7 +248,8 @@ public:
                    weight, zeroBias,
                    /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
                    /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
-                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}))
+                   /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
+                   /* acc_type = */ op.getAccTypeAttr())
                    .getResult();
     }
 
