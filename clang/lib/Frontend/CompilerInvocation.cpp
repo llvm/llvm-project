@@ -4210,19 +4210,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             Args, OPT_fopenmp_version_EQ,
             (IsSimdSpecified || IsTargetSpecified) ? 51 : Opts.OpenMP, Diags))
       Opts.OpenMP = Version;
-    // Provide diagnostic when a given target is not expected to be an OpenMP
-    // device or host.
-    if (!Opts.OpenMPIsTargetDevice) {
-      switch (T.getArch()) {
-      default:
-        break;
-      // Add unsupported host targets here:
-      case llvm::Triple::nvptx:
-      case llvm::Triple::nvptx64:
-        Diags.Report(diag::err_drv_omp_host_target_not_supported) << T.str();
-        break;
-      }
-    }
   }
 
   // Set the flag to prevent the implementation from emitting device exception

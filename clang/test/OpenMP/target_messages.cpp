@@ -6,9 +6,6 @@
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 -std=c++11 -o - %s
 // RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -std=c++11 -o - %s
 // CHECK: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
-// RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx64-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
-// RUN: not %clang_cc1 -fopenmp -std=c++11 -triple nvptx-nvidia-cuda -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-HOST-TARGET %s
-// CHECK-UNSUPPORTED-HOST-TARGET: error: target '{{nvptx64-nvidia-cuda|nvptx-nvidia-cuda}}' is not a supported OpenMP host target
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -fopenmp-targets=hexagon-linux-gnu -o - %s 2>&1 | FileCheck --check-prefix CHECK-UNSUPPORTED-DEVICE-TARGET %s
 // CHECK-UNSUPPORTED-DEVICE-TARGET: OpenMP target is invalid: 'hexagon-linux-gnu'
 
