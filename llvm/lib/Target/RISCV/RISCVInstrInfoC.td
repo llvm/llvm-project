@@ -151,7 +151,6 @@ def simm9_lsb0 : Operand<OtherVT>,
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<8, 1>(Imm);
     return MCOp.isBareSymbolRef();
-
   }];
   let OperandType = "OPERAND_PCREL";
 }
@@ -227,10 +226,8 @@ def InsnCDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm2_opcode : RISCVOp {
+def uimm2_opcode : RISCVUImmOp<2> {
   let ParserMatchClass = InsnCDirectiveOpcode;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_UIMM2";
 }
 
 //===----------------------------------------------------------------------===//

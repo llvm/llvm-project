@@ -736,9 +736,10 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
-The integer reduction intrinsics, including ``__builtin_reduce_add``,
-``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
-and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
+The integer reduction intrinsics, including ``__builtin_reduce_max``,
+``__builtin_reduce_min``, ``__builtin_reduce_add``, ``__builtin_reduce_mul``,
+``__builtin_reduce_and``, ``__builtin_reduce_or``, and ``__builtin_reduce_xor``,
+can be called in a ``constexpr`` context.
 
 Example:
 
@@ -3640,7 +3641,7 @@ program location should be executed. It is expected to be used to implement
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
 intrinsic.
 
-The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+The ``__builtin_allow_runtime_check()`` can be used within control structures
 like ``if`` to guard expensive runtime checks. The return value is determined
 by the following compiler options and may differ per call site:
 
@@ -4526,8 +4527,12 @@ default member initializer, the invocation point is the location of the
 constructor or aggregate initialization used to create the object. Otherwise
 the invocation point is the same as the location of the builtin.
 
-When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
+When the invocation point of ``__builtin_FUNCTION`` is not a function scope, the
 empty string is returned.
+
+The builtin ``__builtin_COLUMN`` returns the offset from the start of the line,
+beginning from column 1. `This may differ from other implementations.
+<https://eel.is/c++draft/support.srcloc#tab:support.srcloc.current-row-3-column-2-sentence-2>`_
 
 The builtin ``__builtin_source_location`` returns a pointer to constant static
 data of type ``std::source_location::__impl``. This type must have already been
@@ -5551,7 +5556,7 @@ The ``#pragma clang section`` directive obeys the following rules:
 * Global variables that are initialized to zero will be placed in the named
   bss section, if one is present.
 
-* The ``#pragma clang section`` directive does not does try to infer section-kind
+* The ``#pragma clang section`` directive does not try to infer section-kind
   from the name. For example, naming a section "``.bss.mySec``" does NOT mean
   it will be a bss section name.
 

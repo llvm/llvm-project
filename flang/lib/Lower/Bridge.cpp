@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Bridge.h"
-#include "DirectivesCommon.h"
+
 #include "flang/Common/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -22,6 +22,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Cuda.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/IterationSpace.h"
@@ -33,6 +34,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
@@ -556,8 +558,8 @@ public:
     return lookupSymbol(sym).getAddr();
   }
 
-  fir::ExtendedValue
-  symBoxToExtendedValue(const Fortran::lower::SymbolBox &symBox) {
+  fir::ExtendedValue symBoxToExtendedValue(
+      const Fortran::lower::SymbolBox &symBox) override final {
     return symBox.match(
         [](const Fortran::lower::SymbolBox::Intrinsic &box)
             -> fir::ExtendedValue { return box.getAddr(); },
@@ -831,7 +833,11 @@ public:
           if_builder.end();
         },
         [&](const auto &) -> void {
-          if (skipDefaultInit)
+          // Always initialize allocatable component descriptor, even when the
+          // value is later copied from the host (e.g. firstprivate) because the
+          // assignment from the host to the copy will fail if the component
+          // descriptors are not initialized.
+          if (skipDefaultInit && !hlfir::mayHaveAllocatableComponent(hSymType))
             return;
           // Initialize local/private derived types with default
           // initialization (Fortran 2023 section 11.1.7.5 and OpenMP 5.2
@@ -1027,7 +1033,7 @@ public:
 
   fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
 
-  mlir::ModuleOp &getModuleOp() override final { return bridge.getModule(); }
+  mlir::ModuleOp getModuleOp() override final { return bridge.getModule(); }
 
   mlir::MLIRContext &getMLIRContext() override final {
     return bridge.getMLIRContext();
@@ -2330,7 +2336,7 @@ private:
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     mlir::arith::IntegerOverflowFlags flags{};
-    if (getLoweringOptions().getNSWOnLoopVarInc())
+    if (!getLoweringOptions().getIntegerWrapAround())
       flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
     auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(
         builder->getContext(), flags);
@@ -3037,8 +3043,10 @@ private:
           fir::getBase(genExprValue(*Fortran::semantics::GetExpr(bounds->upper),
                                     stmtCtx))));
       if (bounds->step)
-        steps.push_back(fir::getBase(
-            genExprValue(*Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
+        steps.push_back(builder->createConvert(
+            crtLoc, idxTy,
+            fir::getBase(genExprValue(
+                *Fortran::semantics::GetExpr(bounds->step), stmtCtx))));
       else // If `step` is not present, assume it is `1`.
         steps.push_back(builder->createIntegerConstant(loc, idxTy, 1));
 
@@ -3111,7 +3119,7 @@ private:
   }
 
   /// Generate FIR for a SELECT CASE statement.
-  /// The selector may have CHARACTER, INTEGER, or LOGICAL type.
+  /// The selector may have CHARACTER, INTEGER, UNSIGNED, or LOGICAL type.
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::pft::Evaluation *parentConstruct = eval.parentConstruct;
@@ -3147,6 +3155,10 @@ private:
         selector = builder->createConvert(loc, builder->getI1Type(), selector);
     }
     mlir::Type selectType = selector.getType();
+    if (selectType.isUnsignedInteger())
+      selectType = mlir::IntegerType::get(
+          builder->getContext(), selectType.getIntOrFloatBitWidth(),
+          mlir::IntegerType::SignednessSemantics::Signless);
     llvm::SmallVector<mlir::Attribute> attrList;
     llvm::SmallVector<mlir::Value> valueList;
     llvm::SmallVector<mlir::Block *> blockList;
@@ -3160,9 +3172,10 @@ private:
       else if (isLogicalSelector)
         valueList.push_back(builder->createConvert(
             loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
-      else
+      else {
         valueList.push_back(builder->createIntegerConstant(
             loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
+      }
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -3944,6 +3957,7 @@ private:
       } else {
         fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
         fir::factory::disassociateMutableBox(*builder, loc, box);
+        cuf::genPointerSync(box.getAddr(), *builder);
       }
     }
   }
@@ -4459,7 +4473,8 @@ private:
     // lowered.
     const bool isWholeAllocatableAssignment =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
-        Fortran::lower::isWholeAllocatable(assign.lhs);
+        Fortran::lower::isWholeAllocatable(assign.lhs) &&
+        bridge.getLoweringOptions().getReallocateLHS();
     const bool isUserDefAssignToPointerOrAllocatable =
         userDefinedAssignment &&
         firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
@@ -6128,10 +6143,7 @@ void Fortran::lower::LoweringBridge::lower(
 }
 
 void Fortran::lower::LoweringBridge::parseSourceFile(llvm::SourceMgr &srcMgr) {
-  mlir::OwningOpRef<mlir::ModuleOp> owningRef =
-      mlir::parseSourceFile<mlir::ModuleOp>(srcMgr, &context);
-  module.reset(new mlir::ModuleOp(owningRef.get().getOperation()));
-  owningRef.release();
+  module = mlir::parseSourceFile<mlir::ModuleOp>(srcMgr, &context);
 }
 
 Fortran::lower::LoweringBridge::LoweringBridge(
@@ -6198,19 +6210,18 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   };
 
   // Create the module and attach the attributes.
-  module = std::make_unique<mlir::ModuleOp>(
+  module = mlir::OwningOpRef<mlir::ModuleOp>(
       mlir::ModuleOp::create(getPathLocation()));
-  assert(module.get() && "module was not created");
-  fir::setTargetTriple(*module.get(), triple);
-  fir::setKindMapping(*module.get(), kindMap);
-  fir::setTargetCPU(*module.get(), targetMachine.getTargetCPU());
-  fir::setTuneCPU(*module.get(), targetOpts.cpuToTuneFor);
-  fir::setTargetFeatures(*module.get(), targetMachine.getTargetFeatureString());
-  fir::support::setMLIRDataLayout(*module.get(),
-                                  targetMachine.createDataLayout());
-  fir::setIdent(*module.get(), Fortran::common::getFlangFullVersion());
+  assert(*module && "module was not created");
+  fir::setTargetTriple(*module, triple);
+  fir::setKindMapping(*module, kindMap);
+  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
+  fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   if (cgOpts.RecordCommandLine)
-    fir::setCommandline(*module.get(), *cgOpts.RecordCommandLine);
+    fir::setCommandline(*module, *cgOpts.RecordCommandLine);
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(

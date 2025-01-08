@@ -57,8 +57,8 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806528
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806528
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806784
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806784
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -77,8 +77,8 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806528
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806528
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 9007199254806784
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 9007199254806784
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
@@ -173,16 +173,16 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36591746972385280
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36591746972385280
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36596145153180416
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36596145153180416
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIssE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777216
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777472
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777472
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label %[[RESOLVER_RETURN1:.*]], label %[[RESOLVER_ELSE2:.*]]
 // CHECK:       [[RESOLVER_RETURN1]]:
@@ -222,16 +222,16 @@ void run_foo_tml() {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36591746972385280
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36591746972385280
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36596145153180416
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36596145153180416
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label %[[RESOLVER_RETURN:.*]], label %[[RESOLVER_ELSE:.*]]
 // CHECK:       [[RESOLVER_RETURN]]:
 // CHECK-NEXT:    ret ptr @_ZN7MyClassIisE7foo_tmlEv._Msme-f64f64Mssbs
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777216
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777216
+// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 16777472
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 16777472
 // CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
 // CHECK-NEXT:    br i1 [[TMP7]], label %[[RESOLVER_RETURN1:.*]], label %[[RESOLVER_ELSE2:.*]]
 // CHECK:       [[RESOLVER_RETURN1]]:

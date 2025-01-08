@@ -220,6 +220,14 @@ class MemDGNode final : public DGNode {
   void setNextNode(MemDGNode *N) { NextMemN = N; }
   void setPrevNode(MemDGNode *N) { PrevMemN = N; }
   friend class DependencyGraph; // For setNextNode(), setPrevNode().
+  void detachFromChain() {
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+    PrevMemN = nullptr;
+    NextMemN = nullptr;
+  }
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
@@ -293,6 +301,7 @@ private:
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
   std::optional<Context::CallbackID> EraseInstrCB;
+  std::optional<Context::CallbackID> MoveInstrCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -342,11 +351,10 @@ private:
   void notifyCreateInstr(Instruction *I);
   /// Called by the callbacks when instruction \p I is about to get
   /// deleted.
-  void notifyEraseInstr(Instruction *I) {
-    InstrToNodeMap.erase(I);
-    // TODO: Update the dependencies.
-    // TODO: Update the MemDGNode chain to remove the node if needed.
-  }
+  void notifyEraseInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to be moved to
+  /// \p To.
+  void notifyMoveInstr(Instruction *I, const BBIterator &To);
 
 public:
   /// This constructor also registers callbacks.
@@ -356,12 +364,18 @@ public:
         [this](Instruction *I) { notifyCreateInstr(I); });
     EraseInstrCB = Ctx.registerEraseInstrCallback(
         [this](Instruction *I) { notifyEraseInstr(I); });
+    MoveInstrCB = Ctx.registerMoveInstrCallback(
+        [this](Instruction *I, const BBIterator &To) {
+          notifyMoveInstr(I, To);
+        });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
       Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
     if (EraseInstrCB)
       Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
+    if (MoveInstrCB)
+      Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
   }
 
   DGNode *getNode(Instruction *I) const {

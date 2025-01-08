@@ -159,6 +159,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
      - Allows cache control information to be applied to memory access instructions.
+   * - ``SPV_INTEL_float_controls2``
+     - Adds execution modes and decorations to control floating-point computations.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
    * - ``SPV_INTEL_inline_assembly``
@@ -393,7 +395,7 @@ SPIR-V backend, along with their descriptions and argument details.
      - Pointer
      - `[8-bit Integer]`
      - Creates a resource handle for graphics or compute resources. Facilitates the management and use of resources in shaders.
-   * - `int_spv_handle_fromBinding`
+   * - `int_spv_resource_handlefrombinding`
      - spirv.Image
      - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, bool isUniformIndex]`
      - Returns the handle for the resource at the given set and binding.\
@@ -408,7 +410,7 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is \
        returned. If the return type is an n-element vector, then the first \
        n-elements of the 4-element vector are returned.
-   * - `int_spv_typedBufferStore`
+   * - `int_spv_resource_store_typedbuffer`
      - void
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`
      - Stores the data to the image buffer at the given coordinate. The \

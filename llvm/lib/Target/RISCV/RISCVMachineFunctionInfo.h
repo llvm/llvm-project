@@ -76,8 +76,10 @@ private:
   unsigned RVPushRegs = 0;
   int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
 
+  int64_t StackProbeSize = 0;
+
 public:
-  RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
+  RISCVMachineFunctionInfo(const Function &F, const RISCVSubtarget *STI);
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

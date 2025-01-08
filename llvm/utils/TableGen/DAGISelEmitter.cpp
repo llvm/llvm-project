@@ -42,7 +42,7 @@ public:
 /// Compute the number of instructions for this pattern.
 /// This is a temporary hack.  We should really include the instruction
 /// latencies in this calculation.
-static unsigned getResultPatternCost(TreePatternNode &P,
+static unsigned getResultPatternCost(const TreePatternNode &P,
                                      const CodeGenDAGPatterns &CGP) {
   if (P.isLeaf())
     return 0;
@@ -55,14 +55,14 @@ static unsigned getResultPatternCost(TreePatternNode &P,
     if (II.usesCustomInserter)
       Cost += 10;
   }
-  for (unsigned I = 0, E = P.getNumChildren(); I != E; ++I)
-    Cost += getResultPatternCost(P.getChild(I), CGP);
+  for (const TreePatternNode &Child : P.children())
+    Cost += getResultPatternCost(Child, CGP);
   return Cost;
 }
 
 /// getResultPatternCodeSize - Compute the code size of instructions for this
 /// pattern.
-static unsigned getResultPatternSize(TreePatternNode &P,
+static unsigned getResultPatternSize(const TreePatternNode &P,
                                      const CodeGenDAGPatterns &CGP) {
   if (P.isLeaf())
     return 0;
@@ -72,8 +72,8 @@ static unsigned getResultPatternSize(TreePatternNode &P,
   if (Op->isSubClassOf("Instruction")) {
     Cost += Op->getValueAsInt("CodeSize");
   }
-  for (unsigned I = 0, E = P.getNumChildren(); I != E; ++I)
-    Cost += getResultPatternSize(P.getChild(I), CGP);
+  for (const TreePatternNode &Child : P.children())
+    Cost += getResultPatternSize(Child, CGP);
   return Cost;
 }
 

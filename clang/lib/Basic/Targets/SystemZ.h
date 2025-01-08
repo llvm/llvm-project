@@ -99,8 +99,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -247,6 +246,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
   }
+
+  bool hasSjLjLowering() const override { return true; }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(256, 256);

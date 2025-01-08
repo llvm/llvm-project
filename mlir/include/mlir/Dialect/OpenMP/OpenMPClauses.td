@@ -85,6 +85,32 @@ class OpenMP_AllocateClauseSkip<
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// LLVM OpenMP extension `ompx_bare` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_BareClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    UnitAttr:$bare
+  );
+
+  let optAssemblyFormat = [{
+    `ompx_bare` $bare
+  }];
+
+  let description = [{
+    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
+    explicit number of teams and threads. This clause also allows the teams and
+    threads sizes to have up to 3 dimensions.
+  }];
+}
+
+def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
 //===----------------------------------------------------------------------===//
 

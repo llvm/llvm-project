@@ -127,18 +127,6 @@ llvm.func @sections_private(%x : !llvm.ptr) {
   llvm.return
 }
 
-// -----
-
-llvm.func @simd_aligned(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause aligned in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd aligned(%x : !llvm.ptr -> 32) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
 
 // -----
 
@@ -337,24 +325,6 @@ omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
 }
 llvm.func @target_firstprivate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} dealloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield
-}
-llvm.func @target_struct_privatization(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: privatization of structures in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.terminator

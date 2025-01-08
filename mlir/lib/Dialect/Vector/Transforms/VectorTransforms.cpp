@@ -598,9 +598,9 @@ struct BubbleDownVectorBitCastForExtract
 
     // Get the first element of the mixed position as integer.
     auto mixedPos = extractOp.getMixedPosition();
-    if (mixedPos.size() > 0 && !mixedPos[0].is<Attribute>())
+    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
       return failure();
-    uint64_t index = cast<IntegerAttr>(mixedPos[0].get<Attribute>()).getInt();
+    uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>

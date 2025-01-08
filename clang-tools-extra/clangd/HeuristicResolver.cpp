@@ -118,6 +118,16 @@ const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls,
   return nullptr;
 }
 
+TemplateName getReferencedTemplateName(const Type *T) {
+  if (const auto *TST = T->getAs<TemplateSpecializationType>()) {
+    return TST->getTemplateName();
+  }
+  if (const auto *DTST = T->getAs<DeducedTemplateSpecializationType>()) {
+    return DTST->getTemplateName();
+  }
+  return TemplateName();
+}
+
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
@@ -142,12 +152,12 @@ CXXRecordDecl *HeuristicResolverImpl::resolveTypeToRecordDecl(const Type *T) {
   if (!T)
     return nullptr;
 
-  const auto *TST = T->getAs<TemplateSpecializationType>();
-  if (!TST)
+  TemplateName TN = getReferencedTemplateName(T);
+  if (TN.isNull())
     return nullptr;
 
-  const ClassTemplateDecl *TD = dyn_cast_or_null<ClassTemplateDecl>(
-      TST->getTemplateName().getAsTemplateDecl());
+  const ClassTemplateDecl *TD =
+      dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
   if (!TD)
     return nullptr;
 

@@ -429,12 +429,12 @@ private:
   Value *foldBooleanAndOr(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
                           bool IsLogical);
 
+  Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
+                                 bool IsAnd, bool RHSIsLogical);
+
   Instruction *
   canonicalizeConditionalNegationViaMathToSelect(BinaryOperator &i);
 
-  Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
-                                       Instruction *CxtI, bool IsAnd,
-                                       bool IsLogical = false);
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
@@ -600,7 +600,8 @@ public:
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
   /// only possible if all operands to the PHI are constants).
-  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
+  Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN,
+                             bool AllowMultipleUses = false);
 
   /// For a binary operator with 2 phi operands, try to hoist the binary
   /// operation before the phi. This can result in fewer instructions in

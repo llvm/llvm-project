@@ -18,10 +18,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
@@ -129,7 +130,7 @@ class BasicValueFactory {
 
   // This is private because external clients should use the factory
   // method that takes a QualType.
-  const llvm::APSInt& getValue(uint64_t X, unsigned BitWidth, bool isUnsigned);
+  APSIntPtr getValue(uint64_t X, unsigned BitWidth, bool isUnsigned);
 
 public:
   BasicValueFactory(ASTContext &ctx, llvm::BumpPtrAllocator &Alloc)
@@ -140,9 +141,9 @@ public:
 
   ASTContext &getContext() const { return Ctx; }
 
-  const llvm::APSInt& getValue(const llvm::APSInt& X);
-  const llvm::APSInt& getValue(const llvm::APInt& X, bool isUnsigned);
-  const llvm::APSInt& getValue(uint64_t X, QualType T);
+  APSIntPtr getValue(const llvm::APSInt &X);
+  APSIntPtr getValue(const llvm::APInt &X, bool isUnsigned);
+  APSIntPtr getValue(uint64_t X, QualType T);
 
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {
@@ -165,79 +166,70 @@ public:
 
   /// Convert - Create a new persistent APSInt with the same value as 'From'
   ///  but with the bitwidth and signedness of 'To'.
-  const llvm::APSInt &Convert(const llvm::APSInt& To,
-                              const llvm::APSInt& From) {
+  APSIntPtr Convert(const llvm::APSInt &To, const llvm::APSInt &From) {
     APSIntType TargetType(To);
     if (TargetType == APSIntType(From))
-      return From;
+      return getValue(From);
 
     return getValue(TargetType.convert(From));
   }
 
-  const llvm::APSInt &Convert(QualType T, const llvm::APSInt &From) {
+  APSIntPtr Convert(QualType T, const llvm::APSInt &From) {
     APSIntType TargetType = getAPSIntType(T);
     return Convert(TargetType, From);
   }
 
-  const llvm::APSInt &Convert(APSIntType TargetType, const llvm::APSInt &From) {
+  APSIntPtr Convert(APSIntType TargetType, const llvm::APSInt &From) {
     if (TargetType == APSIntType(From))
-      return From;
+      return getValue(From);
 
     return getValue(TargetType.convert(From));
   }
 
-  const llvm::APSInt &getIntValue(uint64_t X, bool isUnsigned) {
+  APSIntPtr getIntValue(uint64_t X, bool isUnsigned) {
     QualType T = isUnsigned ? Ctx.UnsignedIntTy : Ctx.IntTy;
     return getValue(X, T);
   }
 
-  const llvm::APSInt &getMaxValue(const llvm::APSInt &v) {
+  APSIntPtr getMaxValue(const llvm::APSInt &v) {
     return getValue(APSIntType(v).getMaxValue());
   }
 
-  const llvm::APSInt &getMinValue(const llvm::APSInt &v) {
+  APSIntPtr getMinValue(const llvm::APSInt &v) {
     return getValue(APSIntType(v).getMinValue());
   }
 
-  const llvm::APSInt &getMaxValue(QualType T) {
-    return getMaxValue(getAPSIntType(T));
-  }
+  APSIntPtr getMaxValue(QualType T) { return getMaxValue(getAPSIntType(T)); }
 
-  const llvm::APSInt &getMinValue(QualType T) {
-    return getMinValue(getAPSIntType(T));
-  }
+  APSIntPtr getMinValue(QualType T) { return getMinValue(getAPSIntType(T)); }
 
-  const llvm::APSInt &getMaxValue(APSIntType T) {
-    return getValue(T.getMaxValue());
-  }
+  APSIntPtr getMaxValue(APSIntType T) { return getValue(T.getMaxValue()); }
 
-  const llvm::APSInt &getMinValue(APSIntType T) {
-    return getValue(T.getMinValue());
-  }
+  APSIntPtr getMinValue(APSIntType T) { return getValue(T.getMinValue()); }
 
-  const llvm::APSInt &Add1(const llvm::APSInt &V) {
+  APSIntPtr Add1(const llvm::APSInt &V) {
     llvm::APSInt X = V;
     ++X;
     return getValue(X);
   }
 
-  const llvm::APSInt &Sub1(const llvm::APSInt &V) {
+  APSIntPtr Sub1(const llvm::APSInt &V) {
     llvm::APSInt X = V;
     --X;
     return getValue(X);
   }
 
-  const llvm::APSInt &getZeroWithTypeSize(QualType T) {
+  APSIntPtr getZeroWithTypeSize(QualType T) {
     assert(T->isScalarType());
     return getValue(0, Ctx.getTypeSize(T), true);
   }
 
-  const llvm::APSInt &getTruthValue(bool b, QualType T) {
+  APSIntPtr getTruthValue(bool b, QualType T) {
     return getValue(b ? 1 : 0, Ctx.getIntWidth(T),
                     T->isUnsignedIntegerOrEnumerationType());
   }
 
-  const llvm::APSInt &getTruthValue(bool b) {
+  APSIntPtr getTruthValue(bool b) {
     return getTruthValue(b, Ctx.getLogicalOperationType());
   }
 
@@ -273,9 +265,9 @@ public:
   accumCXXBase(llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
                const nonloc::PointerToMember &PTM, const clang::CastKind &kind);
 
-  const llvm::APSInt* evalAPSInt(BinaryOperator::Opcode Op,
-                                     const llvm::APSInt& V1,
-                                     const llvm::APSInt& V2);
+  std::optional<APSIntPtr> evalAPSInt(BinaryOperator::Opcode Op,
+                                      const llvm::APSInt &V1,
+                                      const llvm::APSInt &V2);
 
   const std::pair<SVal, uintptr_t>&
   getPersistentSValWithData(const SVal& V, uintptr_t Data);

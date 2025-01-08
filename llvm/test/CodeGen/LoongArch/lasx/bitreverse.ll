@@ -7,19 +7,19 @@ declare <32 x i8> @llvm.bitreverse.v32i8(<32 x i8>)
 define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvslli.b $xr1, $xr0, 4
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 4
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvandi.b $xr1, $xr0, 51
-; CHECK-NEXT:    xvslli.b $xr1, $xr1, 2
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 2
-; CHECK-NEXT:    xvandi.b $xr0, $xr0, 51
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvandi.b $xr1, $xr0, 85
-; CHECK-NEXT:    xvslli.b $xr1, $xr1, 1
-; CHECK-NEXT:    xvsrli.b $xr0, $xr0, 1
-; CHECK-NEXT:    xvandi.b $xr0, $xr0, 85
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
 ; CHECK-NEXT:    ret
   %b = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
   ret <32 x i8> %b
@@ -30,25 +30,19 @@ declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 define <16 x i16> @test_bitreverse_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 177
-; CHECK-NEXT:    xvsrli.h $xr1, $xr0, 4
-; CHECK-NEXT:    xvrepli.b $xr2, 15
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.h $xr0, $xr0, 4
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvsrli.h $xr1, $xr0, 2
-; CHECK-NEXT:    xvrepli.b $xr2, 51
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.h $xr0, $xr0, 2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvsrli.h $xr1, $xr0, 1
-; CHECK-NEXT:    xvrepli.b $xr2, 85
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.h $xr0, $xr0, 1
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    xvshuf4i.h $xr0, $xr1, 27
 ; CHECK-NEXT:    ret
   %b = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %b
@@ -59,25 +53,19 @@ declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 define <8 x i32> @test_bitreverse_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 27
-; CHECK-NEXT:    xvsrli.w $xr1, $xr0, 4
-; CHECK-NEXT:    xvrepli.b $xr2, 15
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.w $xr0, $xr0, 4
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvsrli.w $xr1, $xr0, 2
-; CHECK-NEXT:    xvrepli.b $xr2, 51
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.w $xr0, $xr0, 2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvsrli.w $xr1, $xr0, 1
-; CHECK-NEXT:    xvrepli.b $xr2, 85
-; CHECK-NEXT:    xvand.v $xr1, $xr1, $xr2
-; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvslli.w $xr0, $xr0, 1
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 0
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 1
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 2
+; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    xvinsgr2vr.d $xr1, $a0, 3
+; CHECK-NEXT:    xvshuf4i.w $xr0, $xr1, 177
 ; CHECK-NEXT:    ret
   %b = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %b
