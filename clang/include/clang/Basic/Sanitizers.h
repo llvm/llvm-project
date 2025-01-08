@@ -160,7 +160,9 @@ class SanitizerMaskCutoffs {
 public:
   float &operator[](int index) { return cutoffs[index]; }
   const float &operator[](int index) const { return cutoffs[index]; }
-}; // SanitizerMaskCutoffs;
+
+  void clear(SanitizerMask K = SanitizerKind::All);
+};
 
 struct SanitizerSet {
   /// Check if a certain (single) sanitizer is enabled.

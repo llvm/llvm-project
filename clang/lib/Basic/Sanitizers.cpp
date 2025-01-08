@@ -19,6 +19,12 @@
 
 using namespace clang;
 
+void SanitizerMaskCutoffs::clear(SanitizerMask K) {
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
+    if (!(K & SanitizerMask::bitPosToMask(i)))
+      cutoffs[i] = 0;
+}
+
 // Once LLVM switches to C++17, the constexpr variables can be inline and we
 // won't need this.
 #define SANITIZER(NAME, ID) constexpr SanitizerMask SanitizerKind::ID;
