@@ -194,8 +194,6 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
       });
   uint64_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
 
-  // Estimate the address after which call sites can safely call stubs
-  // directly rather than through intermediary thunks.
   uint64_t forwardBranchRange = target->forwardBranchRange;
   assert(isecEnd > forwardBranchRange &&
          "should not run thunk insertion if all code fits in jump range");
@@ -219,8 +217,8 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   // Estimated maximum VA of last stub.
   uint64_t maxVAOfLastStub = maxTextSize + in.stubs->getSize();
 
-  // Calculaate the first address that is gueranteed to not need a thunk to
-  // reach any stub.
+  // Estimate the address after which call sites can safely call stubs
+  // directly rather than through intermediary thunks.
   uint64_t stubsInRangeVA = maxVAOfLastStub - forwardBranchRange;
 
   log("thunks = " + std::to_string(thunkMap.size()) +
