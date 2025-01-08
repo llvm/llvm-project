@@ -736,14 +736,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
   // isn't really much to do here.
 
   // If the 'if' clause is true, it makes the 'self' clause have no effect,
-  // diagnose that here.
-  // TODO OpenACC: When we add these two to other constructs, we might not
-  // want to warn on this (for example, 'update').
-  const auto *Itr =
-      llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
-  if (Itr != ExistingClauses.end()) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
-    SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+  // diagnose that here.  This only applies on compute/combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Update) {
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
   }
 
   return OpenACCIfClause::Create(Ctx, Clause.getBeginLoc(),
@@ -753,16 +753,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
-  // TODO OpenACC: When we implement this for 'update', this takes a
-  // 'var-list' instead of a condition expression, so semantics/handling has
-  // to happen differently here.
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -770,9 +760,12 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
     return nullptr;
 
   // If the 'if' clause is true, it makes the 'self' clause have no effect,
-  // diagnose that here.
-  // TODO OpenACC: When we add these two to other constructs, we might not
-  // want to warn on this (for example, 'update').
+  // diagnose that here.  This only applies on compute/combined constructs.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Update)
+    return OpenACCSelfClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
+
   const auto *Itr =
       llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCIfClause>);
   if (Itr != ExistingClauses.end()) {
