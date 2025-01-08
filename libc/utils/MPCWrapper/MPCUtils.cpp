@@ -141,7 +141,8 @@ public:
     mpc_arg(res, value, MPC_RND_RE(mpc_rounding));
     mpc_set_fr(res_mpc, res, mpc_rounding);
 
-    MPCNumber result(res_mpc, mpc_real_precision,mpc_imag_precision, mpc_rounding);
+    MPCNumber result(res_mpc, mpc_real_precision, mpc_imag_precision,
+                     mpc_rounding);
 
     mpfr_clear(res);
     mpc_clear(res_mpc);
@@ -328,8 +329,12 @@ void explain_unary_operation_single_output_same_type_error(
 
   mpfr::MPFRNumber mpfr_real(real, precision, rounding.Rrnd);
   mpfr::MPFRNumber mpfr_imag(imag, precision, rounding.Irnd);
-  mpfr::MPFRNumber mpfrLibcResultReal(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real, precision, rounding.Rrnd);
-  mpfr::MPFRNumber mpfrLibcResultImag(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag, precision, rounding.Irnd);
+  mpfr::MPFRNumber mpfrLibcResultReal(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real,
+      precision, rounding.Rrnd);
+  mpfr::MPFRNumber mpfrLibcResultImag(
+      cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag,
+      precision, rounding.Irnd);
   mpfr::MPFRNumber mpfrInputReal(
       cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(input).real, precision,
       rounding.Rrnd);
@@ -344,10 +349,24 @@ void explain_unary_operation_single_output_same_type_error(
       << "i" << '\n';
   msg << "  Rounding mode: " << str(rounding.Rrnd) << " , "
       << str(rounding.Irnd) << '\n';
-  msg << "    Libc: " << mpfrLibcResultReal.str() << " + " << mpfrLibcResultImag.str() << "i" << '\n';
-  msg << "    MPC: " << mpfr_real.str() << " + " << mpfr_imag.str() << "i" << '\n';
+  msg << "    Libc: " << mpfrLibcResultReal.str() << " + "
+      << mpfrLibcResultImag.str() << "i" << '\n';
+  msg << "    MPC: " << mpfr_real.str() << " + " << mpfr_imag.str() << "i"
+      << '\n';
   msg << '\n';
-  msg << "  ULP error: " << mpfr_real.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).real).str() << " , " << mpfr_imag.ulp_as_mpfr_number(cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result).imag).str() << '\n';
+  msg << "  ULP error: "
+      << mpfr_real
+             .ulp_as_mpfr_number(
+                 cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)
+                     .real)
+             .str()
+      << " , "
+      << mpfr_imag
+             .ulp_as_mpfr_number(
+                 cpp::bit_cast<MPCComplex<get_real_t<InputType>>>(libc_result)
+                     .imag)
+             .str()
+      << '\n';
   tlog << msg.str();
   mpc_clear(mpc_result_val);
   mpfr_clear(real);
