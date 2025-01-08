@@ -36,16 +36,14 @@ struct DlSymAllocator {
   static void *Allocate(uptr size_in_bytes, uptr align = kWordSize) {
     void *ptr = InternalAlloc(size_in_bytes, nullptr, align);
     CHECK(internal_allocator()->FromPrimary(ptr));
-    Details::OnAllocate(ptr,
-                        Size(ptr));
+    Details::OnAllocate(ptr, Size(ptr));
     return ptr;
   }
 
   static void *Callocate(usize nmemb, usize size) {
     void *ptr = InternalCalloc(nmemb, size);
     CHECK(internal_allocator()->FromPrimary(ptr));
-    Details::OnAllocate(ptr,
-                        Size(ptr));
+    Details::OnAllocate(ptr, Size(ptr));
     return ptr;
   }
 
