@@ -139,7 +139,7 @@ public:
     weightPadding[5] =
         (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
     DenseElementsAttr weightPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({4, 2}, rewriter.getI32Type()), weightPadding);
+        RankedTensorType::get({8}, rewriter.getI32Type()), weightPadding);
     Value weightPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
         rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
 
@@ -202,7 +202,7 @@ public:
     inputPadding[5] += restridedWeightTy.getDimSize(2) - 1;
 
     DenseElementsAttr inputPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({4, 2}, rewriter.getI32Type()), inputPadding);
+        RankedTensorType::get({8}, rewriter.getI32Type()), inputPadding);
 
     Value inputPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
         rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
@@ -314,7 +314,7 @@ public:
     resultPadding[5] = resultTy.getDimSize(2) - resultPadLeft - sliceSize[2];
 
     DenseElementsAttr resultPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({4, 2}, rewriter.getI32Type()), resultPadding);
+        RankedTensorType::get({8}, rewriter.getI32Type()), resultPadding);
 
     Value resultPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
         rewriter, loc, resultPaddingAttr.getType(), resultPaddingAttr);
