@@ -980,6 +980,11 @@ struct CounterCoverageMappingBuilder
   std::pair<Counter, Counter>
   getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
                                       Counter CaseCountSum) {
+    if (llvm::EnableSingleByteCoverage)
+      // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
+      return {Counter::getZero(), // Folded
+              Counter::getCounter(CounterMap[Cond].Skipped = NextCounterNum++)};
+
     // Simplify is skipped while building the counters above: it can get
     // really slow on top of switches with thousands of cases. Instead,
     // trigger simplification by adding zero to the last counter.
