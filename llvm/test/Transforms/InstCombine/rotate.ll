@@ -981,3 +981,33 @@ define i16 @check_rotate_masked_16bit(i8 %shamt, i32 %cond) {
   %trunc = trunc i32 %or to i16
   ret i16 %trunc
 }
+
+define i32 @rotl_i32_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotl_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotr_i32_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotr_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %y
+  %shl = lshr i32 %x, %y
+  %shr = shl i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
