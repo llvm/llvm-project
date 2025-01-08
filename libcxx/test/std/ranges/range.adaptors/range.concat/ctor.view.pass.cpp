@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// constexpr filter_view(View, Pred); // explicit since C++23
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 #include <cassert>
 #include <ranges>

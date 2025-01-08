@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// constexpr iterator& operator++();
-// constexpr void operator++(int);
-// constexpr iterator operator++(int) requires forward_range<V>;
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 #include <ranges>
 

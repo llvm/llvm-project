@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// friend constexpr range_rvalue_reference_t<V> iter_move(iterator const& i)
-//  noexcept(noexcept(ranges::iter_move(i.current_)));
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 #include <ranges>
 

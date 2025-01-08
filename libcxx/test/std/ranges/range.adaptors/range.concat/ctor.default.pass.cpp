@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// filter_view() requires std::default_initializable<View> &&
-//                        std::default_initializable<Pred> = default;
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 #include <ranges>
 
