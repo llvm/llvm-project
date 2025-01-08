@@ -12,6 +12,7 @@ on:
     paths:
       - 'llvm/**/DirectX/**'
       - '.github/workflows/hlsl*'
+      - '.github/workflows/hlsl/*'
       - clang/*HLSL*/**/*
       - clang/**/*HLSL*
       - llvm/**/Frontend/HLSL/**/*
