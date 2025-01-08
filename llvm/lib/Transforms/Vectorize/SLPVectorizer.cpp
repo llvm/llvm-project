@@ -3692,9 +3692,13 @@ private:
   }
 #endif
 
-  TreeEntry *getTreeEntry(Value *V) { return ScalarToTreeEntry.lookup(V); }
+  TreeEntry *getTreeEntry(Value *V) {
+    assert(V && "V cannot be nullptr.");
+    return ScalarToTreeEntry.lookup(V);
+  }
 
   const TreeEntry *getTreeEntry(Value *V) const {
+    assert(V && "V cannot be nullptr.");
     return ScalarToTreeEntry.lookup(V);
   }
 
