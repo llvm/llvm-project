@@ -3415,7 +3415,11 @@ private:
 
     unsigned getAltOpcode() const { return S.getAltOpcode(); }
 
-    bool isInstructionsStateValid() const { return S.valid(); }
+    bool isInstructionsStateValid() const {
+      assert((S.valid() || isGather()) &&
+             "Invalid InstructionsState must be gathered.");
+      return S.valid();
+    }
 
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
