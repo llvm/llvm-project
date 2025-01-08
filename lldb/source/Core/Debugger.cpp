@@ -1952,7 +1952,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
   listener_sp->StartListeningForEvents(
       &m_broadcaster, lldb::eBroadcastBitProgress | lldb::eBroadcastBitWarning |
                           lldb::eBroadcastBitError |
-                          lldb::eBroadcastSymbolChange);
+                          lldb::eBroadcastSymbolChange |
+                          lldb::eBroadcastBitExternalProgress);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed

@@ -5,7 +5,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class SBProgressTestCase(TestBase):
-
     def test_with_external_bit_set(self):
         """Test SBProgress events are listened to when the external bit is set."""
 
