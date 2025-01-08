@@ -2663,7 +2663,11 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  if (D->hasTypeConstraint()) {
+  bool TypeConstraintInitialized = false;
+  if (D->hasTypeConstraint())
+    TypeConstraintInitialized = Record.readBool();
+
+  if (D->hasTypeConstraint() && TypeConstraintInitialized) {
     ConceptReference *CR = nullptr;
     if (Record.readBool())
       CR = Record.readConceptReference();
