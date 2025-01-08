@@ -369,9 +369,15 @@ void ento::registerNullDereferenceChecker(CheckerManager &Mgr) {
   Chk->CheckNullDereference = true;
   Chk->SuppressAddressSpaces = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
       Mgr.getCurrentCheckerName(), "SuppressAddressSpaces");
-  Chk->BT_Null.reset(new BugType(Mgr.getCurrentCheckerName(), "Dereference of null pointer", categories::LogicError));
-  Chk->BT_Undef.reset(new BugType(Mgr.getCurrentCheckerName(), "Dereference of undefined pointer value", categories::LogicError));
-  Chk->BT_Label.reset(new BugType(Mgr.getCurrentCheckerName(), "Dereference of the address of a label", categories::LogicError));
+  Chk->BT_Null.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                 "Dereference of null pointer",
+                                 categories::LogicError));
+  Chk->BT_Undef.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                  "Dereference of undefined pointer value",
+                                  categories::LogicError));
+  Chk->BT_Label.reset(new BugType(Mgr.getCurrentCheckerName(),
+                                  "Dereference of the address of a label",
+                                  categories::LogicError));
 }
 
 bool ento::shouldRegisterNullDereferenceChecker(const CheckerManager &Mgr) {
