@@ -1332,7 +1332,7 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
         Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
   std::string TopHotCutoffsStr = toString(TopHotCutoffs);
-  if (TopHotCutoffsStr != "")
+  if (!TopHotCutoffsStr.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotCutoffsStr));
 
