@@ -719,7 +719,6 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 namespace AArch64SysReg {
   struct SysReg {
     const char Name[32];
-    const char AltName[32];
     unsigned Encoding;
     bool Readable;
     bool Writeable;
@@ -734,9 +733,6 @@ namespace AArch64SysReg {
 #define GET_SysRegsList_DECL
 #define GET_SysRegValues_DECL
 #include "AArch64GenSystemOperands.inc"
-
-  const SysReg *lookupSysRegByName(StringRef);
-  const SysReg *lookupSysRegByEncoding(uint16_t);
 
   uint32_t parseGenericRegister(StringRef Name);
   std::string genericRegisterString(uint32_t Bits);
