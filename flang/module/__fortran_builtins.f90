@@ -43,15 +43,15 @@ module __fortran_builtins
   end type
 
   type, public :: __builtin_event_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_notify_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_lock_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_ieee_flag_type
@@ -91,7 +91,7 @@ module __fortran_builtins
       __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
   type, public :: __builtin_team_type
-    integer(kind=int64), private :: __id
+    integer(kind=int64), private :: __id = -1
   end type
 
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
