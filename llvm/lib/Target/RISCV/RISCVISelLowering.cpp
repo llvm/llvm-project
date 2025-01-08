@@ -17399,7 +17399,7 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   switch (N->getOpcode()) {
   case ISD::SHL:
     if (!VT.isScalableVector())
-      return SDValue();
+      return SDValue(); // TODO: handle fixed length vectors
     Passthru = DAG.getUNDEF(VT);
     std::tie(Mask, VL) =
         getDefaultScalableVLOps(VT.getSimpleVT(), DL, DAG, Subtarget);
