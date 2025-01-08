@@ -46,6 +46,12 @@ entry:
   ret void
 }
 
+; Function Attrs: nounwind
+declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32 immarg, i64 immarg) #1
+
+attributes #0 = { sanitize_hwaddress }
+attributes #1 = { nounwind }
+
 declare void @__hwasan_init()
 
 ; Function Attrs: nounwind
@@ -65,64 +71,6 @@ declare i32 @__hwasan_personality_wrapper(i32, i32, i64, ptr, ptr, ptr, ptr, ptr
 declare void @_Unwind_GetGR()
 
 declare void @_Unwind_GetCFA()
-
-define linkonce_odr hidden i32 @__hwasan_personality_thunk(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4) comdat {
-; CHECK-LABEL: __hwasan_personality_thunk:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x6, :got:_Unwind_GetGR
-; CHECK-NEXT:    adrp x7, :got:_Unwind_GetCFA
-; CHECK-NEXT:    mov x5, xzr
-; CHECK-NEXT:    ldr x6, [x6, :got_lo12:_Unwind_GetGR]
-; CHECK-NEXT:    ldr x7, [x7, :got_lo12:_Unwind_GetCFA]
-; CHECK-NEXT:    b __hwasan_personality_wrapper
-entry:
-  %5 = tail call i32 @__hwasan_personality_wrapper(i32 %0, i32 %1, i64 %2, ptr %3, ptr %4, ptr null, ptr @_Unwind_GetGR, ptr @_Unwind_GetCFA)
-  ret i32 %5
-}
-
-declare void @__hwasan_loadN(i64, i64)
-
-declare void @__hwasan_load1(i64)
-
-declare void @__hwasan_load2(i64)
-
-declare void @__hwasan_load4(i64)
-
-declare void @__hwasan_load8(i64)
-
-declare void @__hwasan_load16(i64)
-
-declare void @__hwasan_storeN(i64, i64)
-
-declare void @__hwasan_store1(i64)
-
-declare void @__hwasan_store2(i64)
-
-declare void @__hwasan_store4(i64)
-
-declare void @__hwasan_store8(i64)
-
-declare void @__hwasan_store16(i64)
-
-declare ptr @__hwasan_memmove(ptr, ptr, i64)
-
-declare ptr @__hwasan_memcpy(ptr, ptr, i64)
-
-declare ptr @__hwasan_memset(ptr, i32, i64)
-
-declare void @__hwasan_tag_memory(ptr, i8, i64)
-
-declare i8 @__hwasan_generate_tag()
-
-declare void @__hwasan_add_frame_record(i64)
-
-declare void @__hwasan_handle_vfork(i64)
-
-; Function Attrs: nounwind
-declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32 immarg, i64 immarg) #1
-
-attributes #0 = { sanitize_hwaddress }
-attributes #1 = { nounwind }
 
 !llvm.module.flags = !{!1}
 
