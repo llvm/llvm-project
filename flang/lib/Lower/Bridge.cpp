@@ -34,6 +34,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
@@ -832,7 +833,11 @@ public:
           if_builder.end();
         },
         [&](const auto &) -> void {
-          if (skipDefaultInit)
+          // Always initialize allocatable component descriptor, even when the
+          // value is later copied from the host (e.g. firstprivate) because the
+          // assignment from the host to the copy will fail if the component
+          // descriptors are not initialized.
+          if (skipDefaultInit && !hlfir::mayHaveAllocatableComponent(hSymType))
             return;
           // Initialize local/private derived types with default
           // initialization (Fortran 2023 section 11.1.7.5 and OpenMP 5.2
@@ -3952,6 +3957,7 @@ private:
       } else {
         fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
         fir::factory::disassociateMutableBox(*builder, loc, box);
+        cuf::genPointerSync(box.getAddr(), *builder);
       }
     }
   }
