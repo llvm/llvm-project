@@ -307,8 +307,8 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       Annotate(MD);
     return;
   }
-  static const llvm::StringSet<> CapturingMethods{"insert", "push",
-                                                  "push_front", "push_back"};
+  static const llvm::StringSet<> CapturingMethods{
+      "insert", "insert_or_assign", "push", "push_front", "push_back"};
   if (!CapturingMethods.contains(MD->getName()))
     return;
   Annotate(MD);

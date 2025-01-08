@@ -161,7 +161,7 @@ class NamespaceTestCase(TestBase):
         # On Mac OS X, gcc 4.2 emits the wrong debug info with respect to
         # types.
         slist = ["(int) a = 12", "anon_uint", "a_uint", "b_uint", "y_uint"]
-        if self.platformIsDarwin() and self.getCompiler() in ["clang", "llvm-gcc"]:
+        if self.platformIsDarwin() and self.getCompiler() in ["clang"]:
             slist = [
                 "(int) a = 12",
                 "::my_uint_t",

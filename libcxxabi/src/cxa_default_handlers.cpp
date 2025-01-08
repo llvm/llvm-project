@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <exception>
+#include <new>
 #include "abort_message.h"
 #include "cxxabi.h"
 #include "cxa_handlers.h"

@@ -114,6 +114,7 @@ Clang-Tidy Checks
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
+   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
    :doc:`bugprone-no-escape <bugprone/no-escape>`,
    :doc:`bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion>`,
    :doc:`bugprone-nondeterministic-pointer-iteration-order <bugprone/nondeterministic-pointer-iteration-order>`,
@@ -190,7 +191,6 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage>`,
    :doc:`cppcoreguidelines-misleading-capture-default-by-value <cppcoreguidelines/misleading-capture-default-by-value>`, "Yes"
    :doc:`cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward>`,
-   :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
    :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
    :doc:`cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock>`,
    :doc:`cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory>`,
@@ -411,7 +411,6 @@ Check aliases
 .. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
 
-   :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
    :doc:`cert-arr39-c <cert/arr39-c>`, :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
    :doc:`cert-con36-c <cert/con36-c>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`cert-con54-cpp <cert/con54-cpp>`, :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
@@ -541,6 +540,7 @@ Check aliases
    :doc:`cppcoreguidelines-c-copy-assignment-signature <cppcoreguidelines/c-copy-assignment-signature>`, :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
    :doc:`cppcoreguidelines-explicit-virtual-functions <cppcoreguidelines/explicit-virtual-functions>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`cppcoreguidelines-macro-to-enum <cppcoreguidelines/macro-to-enum>`, :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
+   :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`, :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
    :doc:`cppcoreguidelines-noexcept-destructor <cppcoreguidelines/noexcept-destructor>`, :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`cppcoreguidelines-noexcept-move-operations <cppcoreguidelines/noexcept-move-operations>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`cppcoreguidelines-noexcept-swap <cppcoreguidelines/noexcept-swap>`, :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"

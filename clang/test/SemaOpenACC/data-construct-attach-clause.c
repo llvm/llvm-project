@@ -58,7 +58,6 @@ void uses() {
 
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'exit data' directive}}
 #pragma acc exit data copyout(LocalInt) attach(PtrArray[0])
-  // expected-warning@+2{{OpenACC clause 'use_device' not yet implemented}}
   // expected-error@+1{{OpenACC 'attach' clause is not valid on 'host_data' directive}}
 #pragma acc host_data use_device(LocalInt) attach(PtrArray[0])
   ;

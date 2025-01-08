@@ -166,10 +166,10 @@ bool Undefined::resolveWeakAlias() {
 MemoryBufferRef LazyArchive::getMemberBuffer() {
   Archive::Child c =
       CHECK(sym.getMember(), "could not get the member for symbol " +
-                                 toCOFFString(file->ctx, sym));
+                                 toCOFFString(file->symtab.ctx, sym));
   return CHECK(c.getMemoryBufferRef(),
                "could not get the buffer for the member defining symbol " +
-                   toCOFFString(file->ctx, sym));
+                   toCOFFString(file->symtab.ctx, sym));
 }
 } // namespace coff
 } // namespace lld

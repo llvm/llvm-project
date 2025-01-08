@@ -573,6 +573,9 @@ bool doesDirectiveHaveAssociatedStmt(OpenACCDirectiveKind DirKind) {
   default:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
+  case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     return false;
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
@@ -604,6 +607,9 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
   case OpenACCDirectiveKind::HostData:
+  case OpenACCDirectiveKind::Wait:
+  case OpenACCDirectiveKind::Init:
+  case OpenACCDirectiveKind::Shutdown:
     return 0;
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
@@ -997,18 +1003,20 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // the 'update' clause, so we have to handle it here.  U se an assert to
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
-      [[fallthrough]];
-    case OpenACCClauseKind::Delete:
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+      break;
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList(ClauseKind);
       break;
     case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::UseDevice:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
@@ -1076,12 +1084,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         return OpenACCCanContinue();
       }
 
-      // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
-      // be removed leaving just the 'setIntExprDetails'.
-      if (ClauseKind == OpenACCClauseKind::NumWorkers ||
-          ClauseKind == OpenACCClauseKind::VectorLength)
-        ParsedClause.setIntExprDetails(IntExpr.get());
-
+      ParsedClause.setIntExprDetails(IntExpr.get());
       break;
     }
     case OpenACCClauseKind::DType:
@@ -1288,7 +1291,8 @@ Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
       return Result;
     }
 
-    Result.QueueIdExprs.push_back(Res.first.get());
+    if (Res.first.isUsable())
+      Result.QueueIdExprs.push_back(Res.first.get());
   }
 
   return Result;
@@ -1422,6 +1426,7 @@ Parser::ParseOpenACCDirective() {
   SourceLocation StartLoc = ConsumeAnnotationToken();
   SourceLocation DirLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
+  Parser::OpenACCWaitParseInfo WaitInfo;
 
   getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
@@ -1462,7 +1467,8 @@ Parser::ParseOpenACCDirective() {
       break;
     case OpenACCDirectiveKind::Wait:
       // OpenACC has an optional paren-wrapped 'wait-argument'.
-      if (ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true).Failed)
+      WaitInfo = ParseOpenACCWaitArgument(DirLoc, /*IsDirective=*/true);
+      if (WaitInfo.Failed)
         T.skipToEnd();
       else
         T.consumeClose();
@@ -1476,8 +1482,14 @@ Parser::ParseOpenACCDirective() {
   }
 
   // Parses the list of clauses, if present, plus set up return value.
-  OpenACCDirectiveParseInfo ParseInfo{DirKind, StartLoc, DirLoc,
-                                      SourceLocation{},
+  OpenACCDirectiveParseInfo ParseInfo{DirKind,
+                                      StartLoc,
+                                      DirLoc,
+                                      T.getOpenLocation(),
+                                      T.getCloseLocation(),
+                                      /*EndLoc=*/SourceLocation{},
+                                      WaitInfo.QueuesLoc,
+                                      WaitInfo.getAllExprs(),
                                       ParseOpenACCClauseList(DirKind)};
 
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
@@ -1512,8 +1524,8 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ParsingOpenACCDirectiveRAII DirScope(*this);
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
-  if (getActions().OpenACC().ActOnStartStmtDirective(DirInfo.DirKind,
-                                                     DirInfo.StartLoc))
+  if (getActions().OpenACC().ActOnStartStmtDirective(
+          DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return StmtError();
 
   StmtResult AssocStmt;
@@ -1529,6 +1541,7 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   }
 
   return getActions().OpenACC().ActOnEndStmtDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.EndLoc,
+      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
+      DirInfo.MiscLoc, DirInfo.Exprs, DirInfo.RParenLoc, DirInfo.EndLoc,
       DirInfo.Clauses, AssocStmt);
 }

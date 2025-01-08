@@ -100,6 +100,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
+  AMDGPUSelectionDAGInfo.cpp
   AMDGPUSetWavePriority.cpp
   AMDGPUSplitModule.cpp
   AMDGPUSubtarget.cpp

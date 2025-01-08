@@ -72,6 +72,8 @@ void TemplFunc() {
 #pragma acc host_data use_device(Global) if(T::BC)
   ;
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
@@ -116,6 +118,8 @@ void TemplFunc() {
   // CHECK-NEXT: NullStmt
 
   // CHECK-NEXT: OpenACCHostDataConstruct{{.*}}host_data
+  // CHECK-NEXT: use_device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
   // CHECK-NEXT: if clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'bool' <UserDefinedConversion>
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'bool'
