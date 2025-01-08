@@ -25,7 +25,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -331,6 +330,7 @@ static void translateBranchMetadata(Module &M) {
 
       BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
       BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
+
     }
   }
 }
