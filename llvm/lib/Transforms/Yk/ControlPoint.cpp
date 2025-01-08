@@ -193,7 +193,8 @@ public:
 
       // Get live variables.
       LivenessAnalysis LA(Caller);
-      auto Lives = LA.getLiveVarsBefore(OldCtrlPointCall);
+      auto Lives =
+          LA.getLiveVarsBefore(OldCtrlPointCall->getNextNonDebugInstruction());
 
       Value *SMID = ConstantInt::get(Type::getInt64Ty(Context), CPStackMapID);
       Value *Shadow = ConstantInt::get(Type::getInt32Ty(Context), CPShadow);
