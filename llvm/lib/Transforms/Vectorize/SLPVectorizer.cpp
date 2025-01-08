@@ -5355,11 +5355,10 @@ static bool clusterSortPtrAccesses(ArrayRef<Value *> VL,
     SmallPtrSet<Value *, 13> SecondPointers;
     Value *P1 = Ptr1;
     Value *P2 = Ptr2;
-    if (P1 == P2)
-      return false;
     unsigned Depth = 0;
-    while (!FirstPointers.contains(P2) && !SecondPointers.contains(P1) &&
-           Depth <= RecursionMaxDepth) {
+    while (!FirstPointers.contains(P2) && !SecondPointers.contains(P1)) {
+      if (P1 == P2 || Depth > RecursionMaxDepth)
+        return false;
       FirstPointers.insert(P1);
       SecondPointers.insert(P2);
       P1 = getUnderlyingObject(P1, /*MaxLookup=*/1);

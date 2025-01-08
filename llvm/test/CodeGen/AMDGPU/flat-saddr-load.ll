@@ -123,10 +123,9 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_0xFFFFFFFF(ptr inreg %sbase) {
 define amdgpu_ps float @flat_load_saddr_i8_offset_0x100000000(ptr inreg %sbase) {
 ; GFX1250-SDAG-LABEL: flat_load_saddr_i8_offset_0x100000000:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, 1, s3, s0
-; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-NEXT:    s_add_co_i32 s3, s3, 1
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3]
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -253,10 +252,9 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_neg0xFFFFFFFF(ptr inreg %sbase
 define amdgpu_ps float @flat_load_saddr_i8_offset_neg0x100000000(ptr inreg %sbase) {
 ; GFX1250-SDAG-LABEL: flat_load_saddr_i8_offset_neg0x100000000:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    v_add_co_u32 v0, s0, 0, s2
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s3, s0
-; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-NEXT:    s_add_co_i32 s3, s3, -1
+; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v0, s[2:3]
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
