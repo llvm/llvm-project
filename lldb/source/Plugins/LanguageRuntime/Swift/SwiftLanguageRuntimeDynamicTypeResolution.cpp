@@ -3075,6 +3075,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
   if (!tr_ts)
     return llvm::createStringError("could not get typesystem");
 
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(alias.GetMangledTypeName());
   // Extract the mangling of the alias type's parent type and its
   // generic substitutions if any.
   auto mangled = alias.GetMangledTypeName().GetStringRef();
@@ -3151,7 +3152,7 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
       swift::reflection::GenericArgumentMap substitutions;
       unsigned idx = 0;
       for (auto &child : *subst_node) {
-        auto mangling = swift_demangle::GetMangledName(dem, child);
+        auto mangling = swift_demangle::GetMangledName(dem, child, flavor);
         if (!mangling.isSuccess())
           continue;
         const auto *type_ref = reflection_ctx->GetTypeRefOrNull(

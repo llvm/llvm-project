@@ -123,10 +123,9 @@ CreateNominal(swift::Demangle::Demangler &dem, swift::Demangle::Node::Kind kind,
 }
 
 /// Produce a type mangling for a class.
-inline ManglingErrorOr<std::string> MangleClass(swift::Demangle::Demangler &dem,
-                                                llvm::StringRef module_name,
-                                                llvm::StringRef class_name,
-                                                swift::Mangle::ManglingFlavor flavor) {
+inline ManglingErrorOr<std::string>
+MangleClass(swift::Demangle::Demangler &dem, llvm::StringRef module_name,
+            llvm::StringRef class_name, swift::Mangle::ManglingFlavor flavor) {
   auto *node = CreateNominal(dem, Node::Kind::Class, module_name, class_name);
   return mangleNode(MangleType(dem, node), flavor);
 }
