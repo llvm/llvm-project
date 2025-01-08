@@ -160,7 +160,7 @@ class SanitizerMaskCutoffs {
 public:
   std::optional<double> operator[](unsigned Kind) const;
 
-  void set(SanitizerMask K, float V);
+  void set(SanitizerMask K, double V);
   void clear(SanitizerMask K = SanitizerKind::All);
 };
 

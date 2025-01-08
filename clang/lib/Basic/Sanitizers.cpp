@@ -24,7 +24,7 @@ using namespace clang;
 
 static const double SanitizerMaskCutoffsEps = 0.000000001f;
 
-void SanitizerMaskCutoffs::set(SanitizerMask K, float V) {
+void SanitizerMaskCutoffs::set(SanitizerMask K, double V) {
   if (V < SanitizerMaskCutoffsEps && Cutoffs.empty())
     return;
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
@@ -38,7 +38,7 @@ std::optional<double> SanitizerMaskCutoffs::operator[](unsigned Kind) const {
   if (Cutoffs.empty() || Cutoffs[Kind] < SanitizerMaskCutoffsEps)
     return std::nullopt;
 
-  return Cutoffs[Kind];
+return Cutoffs[Kind];
 }
 
 void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }

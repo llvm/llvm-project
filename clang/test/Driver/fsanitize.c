@@ -1173,11 +1173,11 @@
 
 // Enable undefined, then cancel out integer using a cutoff of 0.0, then re-enable signed-integer-overflow
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.5,integer=0.0,signed-integer-overflow=0.7 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT4
-// CHECK-TOP-HOT4: "-fno-sanitize-top-hot={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=(0.5|0.49|0.7|0.69)([0-9]*),?){16}"}}
+// CHECK-TOP-HOT4: "-fno-sanitize-top-hot={{((signed-integer-overflow|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function|vptr)=0.[57]0*,?){16}"}}
 
 // Check that -fno-sanitize-top-hot=undefined=0.4 does not widen the set of -fsanitize=integer checks.
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=integer -fno-sanitize-top-hot=undefined=0.4 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT5
-// CHECK-TOP-HOT5: "-fno-sanitize-top-hot={{((integer-divide-by-zero|shift-base|shift-exponent|signed-integer-overflow)=(0.4|0.39)([0-9]*),?){4}"}}
+// CHECK-TOP-HOT5: "-fno-sanitize-top-hot={{((integer-divide-by-zero|shift-base|shift-exponent|signed-integer-overflow)=0.40*,?){4}"}}
 
 // No-op: it's allowed for the user to specify a cutoff of 0.0, though the argument is not passed along by the driver.
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize=undefined -fno-sanitize-top-hot=undefined=0.0 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TOP-HOT6
