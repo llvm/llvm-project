@@ -12,25 +12,37 @@
 #include "gtest/gtest.h"
 
 // When IgnoreTestTUs is set, all of the warnings in a test TU are suppressed,
-// even the unchecked_value_access case.
+// even the `unchecked_value_access` and `assert_true_incorrect` cases.
 
-// CHECK-MESSAGES-IGNORE-TESTS: 1 warning generated
-// CHECK-MESSAGES-DEFAULT: 2 warnings generated
+// CHECK-MESSAGES-IGNORE-TESTS: 2 warnings generated
+// CHECK-MESSAGES-DEFAULT: 6 warnings generated
 
-void unchecked_value_access(const absl::optional<int> &opt) {
+// False negative from suppressing in test TU.
+void unchecked_value_access(const absl::optional<int> opt) {
   opt.value();
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
 
-void assert_true_check_operator_access(const absl::optional<int> &opt) {
+// False negative from suppressing in test TU.
+void assert_true_incorrect(const absl::optional<int> opt) {
+  ASSERT_TRUE(!opt.has_value());
+  opt.value();
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:3: warning: unchecked access to optional value
+}
+
+// False positive, unless we suppress in test TU.
+void assert_true_check_has_value(const absl::optional<int> opt) {
   ASSERT_TRUE(opt.has_value());
   *opt;
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:4: warning: unchecked access to optional value
 }
 
-void assert_true_check_value_access(const absl::optional<int> &opt) {
-  ASSERT_TRUE(opt.has_value());
+// False positive, unless we suppress (one of many other ways to check)
+void assert_true_check_operator_bool_not_false(const absl::optional<int> opt) {
+  ASSERT_FALSE(!opt);
   opt.value();
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
 
-// CHECK-MESSAGES-IGNORE-TESTS: Suppressed 1 warnings
-// CHECK-MESSAGES-DEFAULT: Suppressed 1 warnings
+// CHECK-MESSAGES-IGNORE-TESTS: Suppressed 2 warnings
+// CHECK-MESSAGES-DEFAULT: Suppressed 2 warnings
