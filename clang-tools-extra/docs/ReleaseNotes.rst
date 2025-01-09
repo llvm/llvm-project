@@ -233,8 +233,9 @@ Changes in existing checks
   `bsl::optional` and `bdlb::NullableValue` from
   <https://github.com/bloomberg/bde>_.
   Fixed false positives from smart pointer accessors repeated in checking
-  ``has_value`` and accessing ``value`` are now fixed by now caching.
-  So the option `IgnoreSmartPointerDereference` should no longer be needed.
+  ``has_value`` and accessing ``value``, by caching the locations returned
+  by the accessors. The option `IgnoreSmartPointerDereference` should no
+  longer be needed.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
