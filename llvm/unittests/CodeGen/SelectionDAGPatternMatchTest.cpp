@@ -140,6 +140,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
   auto SmallVInt32VT = EVT::getVectorVT(Context, Int32VT, 2);
   auto Idx0 = DAG->getVectorIdxConstant(0, DL);
+  auto Idx3 = DAG->getVectorIdxConstant(3, DL);
   SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 6, VInt32VT);
   SDValue V2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 7, VInt32VT);
   SDValue V3 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 8, SmallVInt32VT);
@@ -193,6 +194,16 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   EXPECT_TRUE(sd_match(
       InsertSubvector,
       m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_Specific(Idx0))));
+  EXPECT_TRUE(sd_match(
+      InsertSubvector,
+      m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_SpecificInt(0))));
+  EXPECT_FALSE(sd_match(
+      InsertSubvector,
+      m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_Specific(Idx3))));
+  EXPECT_FALSE(sd_match(
+      InsertSubvector,
+      m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_SpecificInt(3))));
+
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
@@ -204,6 +215,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   SDValue V1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 6, VInt32VT);
   auto Idx0 = DAG->getVectorIdxConstant(0, DL);
+  auto Idx1 = DAG->getVectorIdxConstant(1, DL);
 
   SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
@@ -312,11 +324,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
 
   EXPECT_TRUE(sd_match(SubVec, m_ExtractSubvector(m_Value(), m_Value())));
   EXPECT_TRUE(
-      sd_match(SubVec, m_BinOp(ISD::EXTRACT_SUBVECTOR, m_Value(), m_Value())));
-  EXPECT_TRUE(
       sd_match(SubVec, m_ExtractSubvector(m_Specific(Vec), m_Specific(Idx0))));
-  EXPECT_TRUE(sd_match(SubVec, m_BinOp(ISD::EXTRACT_SUBVECTOR, m_Specific(Vec),
-                                       m_Specific(Idx0))));
+  EXPECT_TRUE(
+      sd_match(SubVec, m_ExtractSubvector(m_Specific(Vec), m_SpecificInt(0))));
+  EXPECT_FALSE(
+      sd_match(SubVec, m_ExtractSubvector(m_Specific(Vec), m_Specific(Idx1))));
+  EXPECT_FALSE(
+      sd_match(SubVec, m_ExtractSubvector(m_Specific(Vec), m_SpecificInt(1))));
 
   EXPECT_TRUE(
       sd_match(InsertELT, m_InsertElt(m_Value(), m_Value(), m_Value())));

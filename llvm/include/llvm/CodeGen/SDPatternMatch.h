@@ -516,8 +516,8 @@ m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
 
 template <typename LHS, typename RHS, typename IDX>
 inline TernaryOpc_match<LHS, RHS, IDX>
-m_InsertSubvector(const LHS &L, const RHS &R, const IDX &I) {
-  return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, L, R, I);
+m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
+  return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
 }
 
 // === Binary operations ===
@@ -809,9 +809,9 @@ inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &L,
-                                                    const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_SUBVECTOR, L, R);
+inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
+                                                    const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_SUBVECTOR, Vec, Idx);
 }
 
 // === Unary operations ===
