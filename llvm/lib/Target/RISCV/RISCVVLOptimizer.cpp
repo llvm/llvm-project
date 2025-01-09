@@ -488,6 +488,10 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFCVT_F_X_V:
   // Vector Floating-Point Merge Instruction
   case RISCV::VFMERGE_VFM:
+  // Vector count population in mask vcpop.m
+  // vfirst find-first-set mask bit
+  case RISCV::VCPOP_M:
+  case RISCV::VFIRST_M:
     return MILog2SEW;
 
   // Vector Widening Integer Add/Subtract
