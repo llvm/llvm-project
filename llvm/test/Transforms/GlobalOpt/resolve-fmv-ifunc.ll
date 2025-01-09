@@ -21,9 +21,7 @@ $test_priority.resolver = comdat any
 declare void @__init_cpu_features_resolver() local_unnamed_addr
 
 declare i32 @test_single_bb_resolver.default() #0
-
 declare i32 @test_single_bb_resolver._Msve() #1
-
 declare i32 @test_single_bb_resolver._Msve2() #2
 
 define weak_odr ptr @test_single_bb_resolver.resolver() comdat {
@@ -40,8 +38,8 @@ resolver_entry:
   ret ptr %common.ret.op
 }
 
-define i32 @foo._Msve() #1 {
-; CHECK-LABEL: define i32 @foo._Msve(
+define i32 @caller1._Msve() #1 {
+; CHECK-LABEL: define i32 @caller1._Msve(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver._Msve()
 ;
@@ -50,8 +48,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @foo._Msve2() #2 {
-; CHECK-LABEL: define i32 @foo._Msve2(
+define i32 @caller1._Msve2() #2 {
+; CHECK-LABEL: define i32 @caller1._Msve2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver._Msve2()
 ;
@@ -60,8 +58,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @foo.default() #0 {
-; CHECK-LABEL: define i32 @foo.default(
+define i32 @caller1.default() #0 {
+; CHECK-LABEL: define i32 @caller1.default(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_single_bb_resolver.default()
 ;
@@ -71,11 +69,8 @@ entry:
 }
 
 declare i32 @test_multi_bb_resolver._Mmops() #3
-
 declare i32 @test_multi_bb_resolver._Msve2() #2
-
 declare i32 @test_multi_bb_resolver._Msve() #1
-
 declare i32 @test_multi_bb_resolver.default() #0
 
 define weak_odr ptr @test_multi_bb_resolver.resolver() comdat {
@@ -103,8 +98,8 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @bar._MmopsMsve2() #4 {
-; CHECK-LABEL: define i32 @bar._MmopsMsve2(
+define i32 @caller2._MmopsMsve2() #4 {
+; CHECK-LABEL: define i32 @caller2._MmopsMsve2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver._Mmops()
 ;
@@ -113,8 +108,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @bar._Mmops() #3 {
-; CHECK-LABEL: define i32 @bar._Mmops(
+define i32 @caller2._Mmops() #3 {
+; CHECK-LABEL: define i32 @caller2._Mmops(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver._Mmops()
 ;
@@ -123,8 +118,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @bar._Msve() #1 {
-; CHECK-LABEL: define i32 @bar._Msve(
+define i32 @caller2._Msve() #1 {
+; CHECK-LABEL: define i32 @caller2._Msve(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver()
 ;
@@ -133,8 +128,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @bar.default() #0 {
-; CHECK-LABEL: define i32 @bar.default(
+define i32 @caller2.default() #0 {
+; CHECK-LABEL: define i32 @caller2.default(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_multi_bb_resolver.default()
 ;
@@ -144,11 +139,8 @@ entry:
 }
 
 declare i32 @test_caller_feats_not_implied._Mmops() #3
-
 declare i32 @test_caller_feats_not_implied._Msme() #5
-
 declare i32 @test_caller_feats_not_implied._Msve() #1
-
 declare i32 @test_caller_feats_not_implied.default() #0
 
 define weak_odr ptr @test_caller_feats_not_implied.resolver() comdat {
@@ -176,8 +168,8 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @goo._Mmops() #3 {
-; CHECK-LABEL: define i32 @goo._Mmops(
+define i32 @caller3._Mmops() #3 {
+; CHECK-LABEL: define i32 @caller3._Mmops(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied._Mmops()
 ;
@@ -186,8 +178,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @goo._Msve() #1 {
-; CHECK-LABEL: define i32 @goo._Msve(
+define i32 @caller3._Msve() #1 {
+; CHECK-LABEL: define i32 @caller3._Msve(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR1]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied()
 ;
@@ -196,8 +188,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @goo.default() #0 {
-; CHECK-LABEL: define i32 @goo.default(
+define i32 @caller3.default() #0 {
+; CHECK-LABEL: define i32 @caller3.default(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_caller_feats_not_implied()
 ;
@@ -207,7 +199,6 @@ entry:
 }
 
 declare i32 @test_non_fmv_caller._Maes() #6
-
 declare i32 @test_non_fmv_caller.default() #0
 
 define weak_odr ptr @test_non_fmv_caller.resolver() comdat {
@@ -221,8 +212,8 @@ resolver_entry:
   ret ptr %test_non_fmv_caller._Maes.test_non_fmv_caller.default
 }
 
-define i32 @baz() #7 {
-; CHECK-LABEL: define i32 @baz(
+define i32 @caller4() #7 {
+; CHECK-LABEL: define i32 @caller4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_non_fmv_caller._Maes()
 ;
@@ -232,11 +223,8 @@ entry:
 }
 
 declare i32 @test_priority._Msve2-sha3() #8
-
 declare i32 @test_priority._Mls64Mssbs() #9
-
 declare i32 @test_priority._MflagmMlseMrng() #10
-
 declare i32 @test_priority.default() #0
 
 define weak_odr ptr @test_priority.resolver() comdat {
@@ -264,8 +252,8 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @hoo._MflagmMls64MlseMrngMssbsMsve2-sha3() #11 {
-; CHECK-LABEL: define i32 @hoo._MflagmMls64MlseMrngMssbsMsve2-sha3(
+define i32 @caller5._MflagmMls64MlseMrngMssbsMsve2-sha3() #11 {
+; CHECK-LABEL: define i32 @caller5._MflagmMls64MlseMrngMssbsMsve2-sha3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR11:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_priority._Mls64Mssbs()
 ;
