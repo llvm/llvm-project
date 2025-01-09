@@ -348,7 +348,7 @@ public:
 #  define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #  ifdef __APPLE__
-  typedef __uint32_t mask;
+  typedef uint32_t mask;
 #  elif defined(__FreeBSD__)
   typedef unsigned long mask;
 #  elif defined(__NetBSD__)
