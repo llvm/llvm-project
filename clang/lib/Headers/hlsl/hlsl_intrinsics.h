@@ -1297,16 +1297,27 @@ float4 lerp(float4, float4, float4);
 ///
 /// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
-const inline half length(half X) { return __detail::length_impl(X); }
-const inline float length(float X) { return __detail::length_impl(X); }
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+half length(half4);
 
-template <int N> const inline half length(vector<half, N> X) {
-  return __detail::length_vec_impl(X);
-}
-
-template <int N> const inline float length(vector<float, N> X) {
-  return __detail::length_vec_impl(X);
-}
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
+float length(float4);
 
 //===----------------------------------------------------------------------===//
 // log builtins
