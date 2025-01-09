@@ -163,18 +163,16 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  "LLVM IR generation of declaration");
 
   // Recurse.
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount += 1;
-    if (LLVMIRGenerationRefCount == 1)
-      LLVMIRGeneration.startTimer();
+  if (TimerIsEnabled && !LLVMIRGenerationRefCount++) {
+    CI.getFrontendTimer().stopTimer();
+    LLVMIRGeneration.startTimer();
   }
 
   Gen->HandleTopLevelDecl(D);
 
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount -= 1;
-    if (LLVMIRGenerationRefCount == 0)
-      LLVMIRGeneration.stopTimer();
+  if (TimerIsEnabled && !--LLVMIRGenerationRefCount) {
+    LLVMIRGeneration.stopTimer();
+    CI.getFrontendTimer().startTimer();
   }
 
   return true;
@@ -184,13 +182,17 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
   PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                  Context->getSourceManager(),
                                  "LLVM IR generation of inline function");
-  if (TimerIsEnabled)
+  if (TimerIsEnabled) {
+    CI.getFrontendTimer().stopTimer();
     LLVMIRGeneration.startTimer();
+  }
 
   Gen->HandleInlineFunctionDefinition(D);
 
-  if (TimerIsEnabled)
+  if (TimerIsEnabled) {
     LLVMIRGeneration.stopTimer();
+    CI.getFrontendTimer().startTimer();
+  }
 }
 
 void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
@@ -240,18 +242,16 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount += 1;
-      if (LLVMIRGenerationRefCount == 1)
-        LLVMIRGeneration.startTimer();
+    if (TimerIsEnabled && !LLVMIRGenerationRefCount++) {
+      CI.getFrontendTimer().stopTimer();
+      LLVMIRGeneration.startTimer();
     }
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount -= 1;
-      if (LLVMIRGenerationRefCount == 0)
-        LLVMIRGeneration.stopTimer();
+    if (TimerIsEnabled && !--LLVMIRGenerationRefCount) {
+      LLVMIRGeneration.stopTimer();
+      CI.getFrontendTimer().startTimer();
     }
 
     IRGenFinished = true;
