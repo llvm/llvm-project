@@ -871,14 +871,11 @@ const char *
 WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
   case WebAssemblyISD::FIRST_NUMBER:
-  case WebAssemblyISD::FIRST_MEM_OPCODE:
     break;
 #define HANDLE_NODETYPE(NODE)                                                  \
   case WebAssemblyISD::NODE:                                                   \
     return "WebAssemblyISD::" #NODE;
-#define HANDLE_MEM_NODETYPE(NODE) HANDLE_NODETYPE(NODE)
 #include "WebAssemblyISD.def"
-#undef HANDLE_MEM_NODETYPE
 #undef HANDLE_NODETYPE
   }
   return nullptr;

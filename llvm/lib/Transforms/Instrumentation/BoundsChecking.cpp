@@ -37,14 +37,15 @@ using namespace llvm;
 static cl::opt<bool> SingleTrapBB("bounds-checking-single-trap",
                                   cl::desc("Use one trap block per function"));
 
-static cl::opt<bool> DebugTrapBB("bounds-checking-unique-traps",
-                                 cl::desc("Always use one trap per check"));
-
 STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
 using BuilderTy = IRBuilder<TargetFolder>;
+
+BoundsCheckingPass::BoundsCheckingOptions::BoundsCheckingOptions(
+    ReportingMode Mode, bool Merge)
+    : Mode(Mode), Merge(Merge) {}
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///
@@ -105,7 +106,7 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   return Or;
 }
 
-static CallInst *InsertTrap(BuilderTy &IRB) {
+static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB) {
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
   // FIXME: Ideally we would use the SanitizerHandler::OutOfBounds constant.
@@ -169,9 +170,10 @@ struct ReportingOpts {
   bool MayReturn = false;
   bool UseTrap = false;
   bool MinRuntime = false;
+  bool MayMerge = true;
   StringRef Name;
 
-  ReportingOpts(BoundsCheckingPass::ReportingMode Mode) {
+  ReportingOpts(BoundsCheckingPass::ReportingMode Mode, bool Merge) {
     switch (Mode) {
     case BoundsCheckingPass::ReportingMode::Trap:
       UseTrap = true;
@@ -193,6 +195,8 @@ struct ReportingOpts {
       Name = "__ubsan_handle_local_out_of_bounds_abort";
       break;
     }
+
+    MayMerge = Merge;
   }
 };
 
@@ -253,13 +257,12 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     BasicBlock *TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
+    bool DebugTrapBB = !Opts.MayMerge;
     CallInst *TrapCall = Opts.UseTrap
-                             ? InsertTrap(IRB)
+                             ? InsertTrap(IRB, DebugTrapBB)
                              : InsertCall(IRB, Opts.MayReturn, Opts.Name);
-    if (DebugTrapBB) {
-      // FIXME: Pass option form clang.
+    if (DebugTrapBB)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-    }
 
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
@@ -289,7 +292,8 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, ReportingOpts(Mode)))
+  if (!addBoundsChecking(F, TLI, SE,
+                         ReportingOpts(Options.Mode, Options.Merge)))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -299,21 +303,24 @@ void BoundsCheckingPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  switch (Mode) {
+  switch (Options.Mode) {
   case ReportingMode::Trap:
-    OS << "<trap>";
+    OS << "<trap";
     break;
   case ReportingMode::MinRuntime:
-    OS << "<min-rt>";
+    OS << "<min-rt";
     break;
   case ReportingMode::MinRuntimeAbort:
-    OS << "<min-rt-abort>";
+    OS << "<min-rt-abort";
     break;
   case ReportingMode::FullRuntime:
-    OS << "<rt>";
+    OS << "<rt";
     break;
   case ReportingMode::FullRuntimeAbort:
-    OS << "<rt-abort>";
+    OS << "<rt-abort";
     break;
   }
+  if (Options.Merge)
+    OS << ";merge";
+  OS << ">";
 }

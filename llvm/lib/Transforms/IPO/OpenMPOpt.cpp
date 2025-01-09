@@ -129,7 +129,7 @@ static cl::opt<bool> PrintModuleBeforeOptimizations(
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
     "openmp-opt-inline-device",
-    cl::desc("Inline all applicible functions on the device."), cl::Hidden,
+    cl::desc("Inline all applicable functions on the device."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>

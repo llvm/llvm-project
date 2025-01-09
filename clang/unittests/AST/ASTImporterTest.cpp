@@ -763,10 +763,6 @@ TEST_P(ImportType, ImportPackExpansion) {
                                    implicitCastExpr(has(declRefExpr()))))))));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Type,
-                                            DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
-
 TEST_P(ImportType, ImportDependentTemplateSpecialization) {
   MatchVerifier<Decl> Verifier;
   testImport("template<typename T>"
@@ -3172,9 +3168,6 @@ TEST_P(ImportDecl, ImportFieldOrder) {
              recordDecl(hasFieldOrder({"b", "a"})));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Expr, DependentScopeDeclRefExpr>
-    dependentScopeDeclRefExpr;
-
 TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> struct S { static T foo; };"
@@ -3198,9 +3191,6 @@ TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
              functionTemplateDecl(has(functionDecl(has(compoundStmt(
                  has(callExpr(has(dependentScopeDeclRefExpr())))))))));
 }
-
-const internal::VariadicDynCastAllOfMatcher<Type, DependentNameType>
-    dependentNameType;
 
 TEST_P(ImportExpr, DependentNameType) {
   MatchVerifier<Decl> Verifier;

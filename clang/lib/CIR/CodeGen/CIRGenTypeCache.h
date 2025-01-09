@@ -23,6 +23,9 @@ namespace clang::CIRGen {
 struct CIRGenTypeCache {
   CIRGenTypeCache() = default;
 
+  // ClangIR void type
+  cir::VoidType VoidTy;
+
   // ClangIR signed integral types of common sizes
   cir::IntType SInt8Ty;
   cir::IntType SInt16Ty;
@@ -36,6 +39,14 @@ struct CIRGenTypeCache {
   cir::IntType UInt32Ty;
   cir::IntType UInt64Ty;
   cir::IntType UInt128Ty;
+
+  // ClangIR floating-point types with fixed formats
+  cir::FP16Type FP16Ty;
+  cir::BF16Type BFloat16Ty;
+  cir::SingleType FloatTy;
+  cir::DoubleType DoubleTy;
+  cir::FP80Type FP80Ty;
+  cir::FP128Type FP128Ty;
 };
 
 } // namespace clang::CIRGen

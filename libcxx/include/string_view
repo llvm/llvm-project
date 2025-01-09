@@ -205,8 +205,9 @@ namespace std {
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/string_view>
+#else
 #  include <__algorithm/min.h>
 #  include <__assert>
 #  include <__config>
@@ -949,6 +950,6 @@ _LIBCPP_POP_MACROS
 #    include <iterator>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STRING_VIEW
