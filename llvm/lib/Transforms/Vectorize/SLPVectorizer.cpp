@@ -3263,12 +3263,7 @@ private:
     };
 
     /// Checks if the current node is a gather node.
-    bool isGather() const {
-      assert(
-          (State == NeedToGather || S.valid()) &&
-          "InstructionsState must be valid if the TreeEntry is not gathered.");
-      return State == NeedToGather;
-    }
+    bool isGather() const { return State == NeedToGather; }
 
     /// A vector of scalars.
     ValueList Scalars;
@@ -3420,11 +3415,7 @@ private:
 
     unsigned getAltOpcode() const { return S.getAltOpcode(); }
 
-    bool hasState() const {
-      assert((S.valid() || isGather()) &&
-             "Invalid InstructionsState must be gathered.");
-      return S.valid();
-    }
+    bool hasState() const { return S.valid(); }
 
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
