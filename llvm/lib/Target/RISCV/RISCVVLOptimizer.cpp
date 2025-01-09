@@ -706,7 +706,12 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VREDMINU_VS:
   case RISCV::VREDOR_VS:
   case RISCV::VREDSUM_VS:
-  case RISCV::VREDXOR_VS: {
+  case RISCV::VREDXOR_VS:
+  // Vector Single-Width Floating-Point Reduction Instructions
+  case RISCV::VFREDMAX_VS:
+  case RISCV::VFREDMIN_VS:
+  case RISCV::VFREDOSUM_VS:
+  case RISCV::VFREDUSUM_VS: {
     return MILog2SEW;
   }
 
