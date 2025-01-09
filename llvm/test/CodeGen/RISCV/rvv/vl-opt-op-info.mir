@@ -1459,10 +1459,10 @@ body: |
     %y:gpr = PseudoVFIRST_M_B8 %x, 1, 0
 ...
 ---
-name: vfirst_v_incompaitble_emul
+name: vfirst_v_incompatible_emul
 body: |
   bb.0:
-    ; CHECK-LABEL: name: vfirst_v_incompaitble_emul
+    ; CHECK-LABEL: name: vfirst_v_incompatible_emul
     ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
     ; CHECK-NEXT: %y:gpr = PseudoVFIRST_M_B16 %x, 1, 0 /* e8 */
     %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
