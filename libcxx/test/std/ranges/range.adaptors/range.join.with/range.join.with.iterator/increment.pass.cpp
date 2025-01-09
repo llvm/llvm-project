@@ -103,8 +103,6 @@ constexpr void test_pre_increment() {
     }
   }
 
-#if !defined(TEST_COMPILER_GCC) // GCC c++/101777
-
   { // `Pattern` is empty, `V` is not.
     using V       = VRange<RefIsGlvalue, std::vector<int>>;
     using Pattern = std::vector<int>;
@@ -216,8 +214,6 @@ constexpr void test_pre_increment() {
       assert(cit == std::as_const(jwv).end());
     }
   }
-
-#endif // !defined(TEST_COMPILER_GCC)
 
   { // Only last element of `V` is not empty. `Pattern` is empty. `V` models input range.
     using V       = BasicView<VRange<RefIsGlvalue, std::string>, ViewProperties{}, DefaultCtorInputIter>;
