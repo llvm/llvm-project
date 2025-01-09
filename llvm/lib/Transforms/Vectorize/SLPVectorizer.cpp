@@ -10973,7 +10973,19 @@ public:
       }
     }
 
-    ::addMask(CommonMask, ExtMask, /*ExtendingManyInputs=*/true);
+    if (!ExtMask.empty()) {
+      if (CommonMask.empty()) {
+        CommonMask.assign(ExtMask.begin(), ExtMask.end());
+      } else {
+        SmallVector<int> NewMask(ExtMask.size(), PoisonMaskElem);
+        for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
+          if (ExtMask[I] == PoisonMaskElem)
+            continue;
+          NewMask[I] = CommonMask[ExtMask[I]];
+        }
+        CommonMask.swap(NewMask);
+      }
+    }
     if (CommonMask.empty()) {
       assert(InVectors.size() == 1 && "Expected only one vector with no mask");
       return Cost;
