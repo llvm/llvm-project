@@ -13216,8 +13216,8 @@ an extra level of indentation. As an example:
 
 .. code-block:: llvm
 
-      %inst1 = op1 %a, %b
-      #dbg_value(%inst1, !10, !DIExpression(), !11)
+  %inst1 = op1 %a, %b
+    #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
 These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
