@@ -9870,10 +9870,13 @@ void ASTReader::finishPendingActions() {
       if (!InfoTy.isNull()) {
         TInfo = getContext().CreateTypeSourceInfo(InfoTy);
         // TODO - this piece doesn't work yet
-        ElaboratedTypeLoc &Loc = (ElaboratedTypeLoc)TInfo->getTypeLoc();
-        Loc.setElaboratedKeywordLoc(PendingPreferredNameAttributes[I].ElaboratedTypedefSourceLocation);
-        Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NNS);
-        Loc.setNameLoc(PendingPreferredNameAttributes[I].TypedefSourceLocation);
+        if (auto Loc = TInfo->getTypeLoc().getAs<ElaboratedTypeLoc>()) {
+          Loc.setElaboratedKeywordLoc(PendingPreferredNameAttributes[I].ElaboratedTypedefSourceLocation);
+          Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NNS);
+          if (auto TypedefLoc = Loc.getNextTypeLoc().getAs<TypedefTypeLoc>()) {
+            TypedefLoc.setNameLoc(PendingPreferredNameAttributes[I].TypedefSourceLocation);
+          }
+        }
       }
 
       AttrVec &Attrs = getContext().getDeclAttrs(D);

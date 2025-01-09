@@ -3200,8 +3200,6 @@ Attr *ASTRecordReader::readAttr(Decl *D) {
     bool isInherited = Record.readInt();
     bool isImplicit = Record.readInt();
     bool isPackExpansion = Record.readInt();
-
-
     serialization::TypeID TypeID = getGlobalTypeID(Record.readInt());
     SourceLocation SL = Record.readSourceLocation();
     NestedNameSpecifierLoc NNL = readNestedNameSpecifierLoc();
