@@ -39,6 +39,7 @@ constexpr bool test() {
 
     using Iter  = std::ranges::iterator_t<JWV>;
     using CIter = std::ranges::iterator_t<const JWV>;
+    static_assert(!std::same_as<Iter, CIter>);
     static_assert(CanEq<Iter>);
     static_assert(CanEq<CIter>);
     static_assert(CanEq<Iter, CIter>);
@@ -128,6 +129,7 @@ constexpr bool test() {
 
     using Iter  = std::ranges::iterator_t<JWV>;
     using CIter = std::ranges::iterator_t<const JWV>;
+    static_assert(!std::same_as<Iter, CIter>);
     static_assert(CanEq<Iter>);
     static_assert(CanEq<CIter>);
     static_assert(!CanEq<CIter, Iter>);
@@ -169,6 +171,7 @@ constexpr bool test() {
 
     using Iter  = std::ranges::iterator_t<JWV>;
     using CIter = std::ranges::iterator_t<const JWV>;
+    static_assert(!std::same_as<Iter, CIter>);
     static_assert(CanEq<Iter>);
     static_assert(CanEq<CIter>);
     static_assert(!CanEq<CIter, Iter>);
