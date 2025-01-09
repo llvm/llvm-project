@@ -183,10 +183,9 @@ static bool isDereferenceableAndAlignedPointer(
                 AlignRK = std::max(AlignRK, RK);
               if (RK.AttrKind == Attribute::Dereferenceable)
                 DerefRK = std::max(DerefRK, RK);
-              if (!IsAligned && AlignRK &&
-                  AlignRK.ArgValue >= Alignment.value())
-                return false;
-              if (DerefRK && DerefRK.ArgValue >= Size.getZExtValue())
+              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
+              if (IsAligned && DerefRK &&
+                  DerefRK.ArgValue >= Size.getZExtValue())
                 return true; // We have found what we needed so we stop looking
               return false;  // Other assumes may have better information. so
                              // keep looking
