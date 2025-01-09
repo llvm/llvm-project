@@ -363,7 +363,7 @@ define float @test_fabs_select_multiuse_both_constant(i1 %cond, float %x) {
 ; CHECK-LABEL: @test_fabs_select_multiuse_both_constant(
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float -2.000000e+00
 ; CHECK-NEXT:    call void @usef32(float [[SELECT]])
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[COND]], float 1.000000e+00, float 2.000000e+00
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %select = select i1 %cond, float -1.0, float -2.0
