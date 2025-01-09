@@ -1794,7 +1794,6 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
   case ISD::ADD:
     if (ST->hasMVEIntegerOps() && ValVT.isSimple() && ResVT.isSimple()) {
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
-
       // The legal cases are:
       //   VADDV u/s 8/16/32
       //   VADDLV u/s 32
