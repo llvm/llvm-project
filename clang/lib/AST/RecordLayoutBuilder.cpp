@@ -3677,7 +3677,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     if (Field->isBitField()) {
       uint64_t LocalFieldByteOffsetInBits = C.toBits(FieldOffset - Offset);
       unsigned Begin = LocalFieldOffsetInBits - LocalFieldByteOffsetInBits;
-      unsigned Width = Field.getBitWidthValue();
+      unsigned Width = Field->getBitWidthValue();
       PrintBitFieldOffset(OS, FieldOffset, Begin, Width, IndentLevel);
     } else {
       PrintOffset(OS, FieldOffset, IndentLevel);
