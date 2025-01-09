@@ -3794,7 +3794,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       if (!PointeeRD->hasIrrelevantDestructor()) {
         if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-          if (Dtor->isDestructorCalled(OperatorDelete)) {
+          if (Dtor->isCalledByDelete(OperatorDelete)) {
             MarkFunctionReferenced(StartLoc,
                                    const_cast<CXXDestructorDecl *>(Dtor));
             if (DiagnoseUseOfDecl(Dtor, StartLoc))
@@ -3836,7 +3836,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
     bool IsVirtualDelete = false;
     if (PointeeRD) {
       if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
-        if (Dtor->isDestructorCalled(OperatorDelete))
+        if (Dtor->isCalledByDelete(OperatorDelete))
           CheckDestructorAccess(Ex.get()->getExprLoc(), Dtor,
                                 PDiag(diag::err_access_dtor) << PointeeElem);
         IsVirtualDelete = Dtor->isVirtual();

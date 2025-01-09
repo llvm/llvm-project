@@ -2858,7 +2858,7 @@ public:
   /// Will this destructor ever be called when considering which deallocation
   /// function is associated with the destructor? Can optionally be passed an
   /// 'operator delete' function declaration to test against specifically.
-  bool isDestructorCalled(const FunctionDecl *OpDel = nullptr) const;
+  bool isCalledByDelete(const FunctionDecl *OpDel = nullptr) const;
 
   CXXDestructorDecl *getCanonicalDecl() override {
     return cast<CXXDestructorDecl>(FunctionDecl::getCanonicalDecl());

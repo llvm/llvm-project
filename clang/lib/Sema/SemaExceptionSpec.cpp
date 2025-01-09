@@ -1213,7 +1213,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
       const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
       if (const auto *RD = DTy->getAsCXXRecordDecl()) {
         if (const CXXDestructorDecl *DD = RD->getDestructor();
-            DD && DD->isDestructorCalled(OperatorDelete))
+            DD && DD->isCalledByDelete(OperatorDelete))
           CT = canCalleeThrow(*this, DE, DD);
       }
 

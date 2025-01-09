@@ -2969,7 +2969,7 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
-bool CXXDestructorDecl::isDestructorCalled(const FunctionDecl *OpDel) const {
+bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
   // C++20 [expr.delete]p6: If the value of the operand of the delete-
   // expression is not a null pointer value and the selected deallocation
   // function (see below) is not a destroying operator delete, the delete-
