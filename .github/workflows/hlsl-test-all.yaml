@@ -17,11 +17,6 @@ on:
         required: false
         default: 'main'
         type: string
-      LLVM-fork:
-        description: 'LLVM fork'
-        required: false
-        default: 'llvm'
-        type: string
       DXC-branch:
         description: 'DXC Branch'
         required: false
@@ -46,12 +41,6 @@ on:
         options:
         - On
         - Off
-      OS:
-        required: true
-        type: choice
-        options:
-        - macOS
-        - windows
       SKU:
         required: true
         type: choice
@@ -74,18 +63,10 @@ on:
         required: false
         default: 'main'
         type: string
-      LLVM-fork:
-        description: 'LLVM Fork'
-        required: false
-        default: 'llvm'
-        type: string
       DXC-branch:
         description: 'DXC Branch'
         required: false
         default: 'main'
-        type: string
-      OS:
-        required: true
         type: string
       SKU:
         required: true
@@ -124,7 +105,7 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.LLVM-fork }}/llvm-project
+          repository: llvm/llvm-project
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
           fetch-depth: 1
@@ -143,7 +124,7 @@ jobs:
           path: golden-images
           fetch-depth: 1
       - name: Setup Windows
-        if: inputs.OS == 'windows'
+        if: runner.os == 'windows'
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
@@ -171,7 +152,7 @@ jobs:
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@v2
-        if: always() && inputs.OS == 'macOS'
+        if: always() && runner.os == 'macOS'
         with:
           comment_mode: off
           files: llvm-project/build/**/testresults.xunit.xml

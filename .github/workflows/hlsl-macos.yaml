@@ -2,7 +2,6 @@ name: HLSL Tests - macOS
 
 permissions:
   contents: read
-  checks: write
 
 on:
   workflow_dispatch:
@@ -20,7 +19,6 @@ jobs:
   HLSL-macOS:
     uses: ./.github/workflows/hlsl-test-all.yaml
     with:
-      OS: macOS
       SKU: hlsl-macos
       TestTarget: check-hlsl-clang-mtl
       LLVM-branch: ${{ github.ref }}
