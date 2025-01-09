@@ -12,7 +12,7 @@ class LoongArch64LinuxRegisters(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def make_lsx_value(self, n):
-        return "{" + " ".join(["0x{:02x}".format(n)] * 16) + "}" 
+        return "{" + " ".join(["0x{:02x}".format(n)] * 16) + "}"
 
     def check_lsx_values(self, value_offset):
         for i in range(32):

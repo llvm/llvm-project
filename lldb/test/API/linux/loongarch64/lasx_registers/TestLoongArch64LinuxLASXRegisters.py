@@ -12,7 +12,7 @@ class LoongArch64LinuxRegisters(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def make_lasx_value(self, n):
-        return "{" + " ".join(["0x{:02x}".format(n)] * 32) + "}" 
+        return "{" + " ".join(["0x{:02x}".format(n)] * 32) + "}"
 
     def check_lasx_values(self, value_offset):
         for i in range(32):
