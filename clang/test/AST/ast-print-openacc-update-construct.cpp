@@ -38,4 +38,10 @@ void uses(bool cond) {
 
 // CHECK: #pragma acc update self(I, iPtr, array, array[1], array[1:2])
 #pragma acc update self(I, iPtr, array, array[1], array[1:2])
+
+// CHECK: #pragma acc update host(I, iPtr, array, array[1], array[1:2])
+#pragma acc update host (I, iPtr, array, array[1], array[1:2])
+
+// CHECK: #pragma acc update device(I, iPtr, array, array[1], array[1:2])
+#pragma acc update device(I, iPtr, array, array[1], array[1:2])
 }
