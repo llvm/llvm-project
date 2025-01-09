@@ -1283,6 +1283,12 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
+- Changed ``-fsanitize=pointer-overflow`` to no longer report ``NULL + 0`` as
+  undefined behavior in C, in line with
+  `N3322 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3322.pdf>`_,
+  and matching the previous behavior for C++.
+  ``NULL + non_zero`` continues to be reported as undefined behavior.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.

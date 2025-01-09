@@ -5841,9 +5841,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, and we are using C++ semantics,
-  // where nullptr+0 is defined, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero && CGM.getLangOpts().CPlusPlus)
+  // Common case: if the total offset is zero, don't emit a check.
+  if (EvaluatedGEP.TotalOffset == Zero)
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
@@ -5854,23 +5853,16 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   llvm::SmallVector<std::pair<llvm::Value *, SanitizerMask>, 2> Checks;
 
   if (PerformNullCheck) {
-    // In C++, if the base pointer evaluates to a null pointer value,
+    // If the base pointer evaluates to a null pointer value,
     // the only valid  pointer this inbounds GEP can produce is also
     // a null pointer, so the offset must also evaluate to zero.
     // Likewise, if we have non-zero base pointer, we can not get null pointer
     // as a result, so the offset can not be -intptr_t(BasePtr).
     // In other words, both pointers are either null, or both are non-null,
     // or the behaviour is undefined.
-    //
-    // C, however, is more strict in this regard, and gives more
-    // optimization opportunities: in C, additionally, nullptr+0 is undefined.
-    // So both the input to the 'gep inbounds' AND the output must not be null.
     auto *BaseIsNotNullptr = Builder.CreateIsNotNull(Ptr);
     auto *ResultIsNotNullptr = Builder.CreateIsNotNull(ComputedGEP);
-    auto *Valid =
-        CGM.getLangOpts().CPlusPlus
-            ? Builder.CreateICmpEQ(BaseIsNotNullptr, ResultIsNotNullptr)
-            : Builder.CreateAnd(BaseIsNotNullptr, ResultIsNotNullptr);
+    auto *Valid = Builder.CreateICmpEQ(BaseIsNotNullptr, ResultIsNotNullptr);
     Checks.emplace_back(Valid, SanitizerKind::PointerOverflow);
   }
 
