@@ -132,9 +132,23 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
   if (NextUseMap.contains(MBBNum) &&
-      NextUseMap[MBBNum].InstrDist.contains(&*I) &&
-      NextUseMap[MBBNum].InstrDist[&*I].contains(VMP))
-    Dist = NextUseMap[MBBNum].InstrDist[&*I][VMP];
+      NextUseMap[MBBNum].InstrDist.contains(&*I)) {
+    VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP)) {
+      Dist = Dists[VMP];
+    } else {
+      for (auto P : Dists) {
+        if (P.first.VReg == VMP.VReg) {
+          LaneBitmask UseMask = P.first.LaneMask;
+          LaneBitmask Mask = VMP.LaneMask;
+          if ((UseMask & Mask) == UseMask)
+            if (P.second < Dist)
+              Dist = P.second;
+        } 
+      }
+    }
+  }
+
   return Dist;
 }
 
@@ -142,8 +156,22 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
                                            const VRegMaskPair VMP) {
   unsigned Dist = Infinity;
   unsigned MBBNum = MBB.getNumber();
-  if (NextUseMap.contains(MBBNum))
-    Dist = NextUseMap[MBBNum].Bottom[VMP];
+  if (NextUseMap.contains(MBBNum)) {
+    if (NextUseMap[MBBNum].Bottom.contains(VMP))
+      Dist = NextUseMap[MBBNum].Bottom[VMP];
+    else {
+      VRegDistances Dists = NextUseMap[MBBNum].Bottom;
+      for (auto P : Dists) {
+        if (P.first.VReg == VMP.VReg) {
+          LaneBitmask UseMask = P.first.LaneMask;
+          LaneBitmask Mask = VMP.LaneMask;
+          if ((UseMask & Mask) == UseMask)
+            if (P.second < Dist)
+              Dist = P.second;
+        }
+      }
+    }
+  }
   return Dist;
 }
 
