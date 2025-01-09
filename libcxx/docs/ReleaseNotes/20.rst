@@ -125,9 +125,10 @@ Deprecations and Removals
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
-- Non-conforming member typedefs ``base``, ``iterator`` and ``const_iterator`` of ``std::bitset``, and member typedef
-  ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, they were private but could cause
-  ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in LLVM 20.
+- Non-conforming member typedefs ``base``, ``iterator``, ``const_iterator``, and ``const_reference`` of ``std::bitset``, 
+  and member typedef ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, these member typedefs
+  (except ``const_reference``) were private but could cause ambiguity in name lookup. Code that expects such ambiguity  
+  will possibly not compile in LLVM 20.
 
 - The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
   ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.) For backwards compatibility,
