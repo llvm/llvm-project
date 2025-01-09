@@ -961,6 +961,7 @@ struct CounterCoverageMappingBuilder
     Counter ExecCnt = getRegionCounter(S);
 
     // The old behavior of SingleByte is unaware of Branches.
+    // Will be pruned after the migration of SingleByte.
     if (llvm::EnableSingleByteCoverage) {
       assert(SkipCntForOld &&
              "SingleByte must provide SkipCntForOld as a fake Skipped count.");
