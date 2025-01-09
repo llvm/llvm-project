@@ -239,12 +239,12 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
-* The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
 and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
 and [Non-trapping float-to-int Conversions] language features, which are
 [widely implemented in engines].
 
-* A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
+A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
 the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
 -mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
 and -mextended-const.
