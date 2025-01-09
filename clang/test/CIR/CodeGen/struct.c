@@ -38,8 +38,9 @@ void shouldConstInitStructs(void) {
 // CHECK: cir.func @shouldConstInitStructs
   struct Foo f = {1, 2, {3, 4}};
   // CHECK: %[[#V0:]] = cir.alloca !ty_Foo, !cir.ptr<!ty_Foo>, ["f"] {alignment = 4 : i64}
-  // CHECK: %[[#V1:]] = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i, #cir.const_struct<{#cir.int<3> : !s32i, #cir.int<4> : !s8i}> : !ty_Bar}> : !ty_Foo
-  // CHECK: cir.store %[[#V1]], %[[#V0]] : !ty_Foo, !cir.ptr<!ty_Foo>
+  // CHECK: %[[#V1:]] = cir.cast(bitcast, %[[#V0]] : !cir.ptr<!ty_Foo>), !cir.ptr<!ty_anon_struct> l
+  // CHECK: %[[#V2:]] = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 3>, #cir.const_struct<{#cir.int<3> : !s32i, #cir.int<4> : !s8i}> : !ty_Bar}> : !ty_anon_struct
+  // CHECK: cir.store %[[#V2]], %[[#V1]] : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 }
 
 // Should zero-initialize uninitialized global structs.

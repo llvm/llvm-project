@@ -59,12 +59,12 @@ typedef struct {
 // CHECK: !ty_G = !cir.struct<struct "G" {!u16i, !s32i} #cir.record.decl.ast>
 // CHECK: !ty_T = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
 // CHECK: !ty_anon2E0_ = !cir.struct<struct "anon.0" {!u32i} #cir.record.decl.ast>
-// CHECK: !ty_anon_struct = !cir.struct<struct  {!u8i, !u8i, !s32i}>
 // CHECK: #bfi_a = #cir.bitfield_info<name = "a", storage_type = !u8i, size = 3, offset = 0, is_signed = true>
 // CHECK: #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15, offset = 0, is_signed = true>
 // CHECK: !ty_S = !cir.struct<struct "S" {!u32i, !cir.array<!u8i x 3>, !u16i, !u32i}>
 // CHECK: !ty_U = !cir.struct<struct "U" {!s8i, !s8i, !s8i, !cir.array<!u8i x 9>}>
 // CHECK: !ty___long = !cir.struct<struct "__long" {!ty_anon2E0_, !u32i, !cir.ptr<!u32i>}>
+// CHECK: !ty_anon_struct = !cir.struct<struct  {!u8i, !u8i, !cir.array<!u8i x 2>, !s32i}>
 // CHECK: #bfi_d = #cir.bitfield_info<name = "d", storage_type = !cir.array<!u8i x 3>, size = 2, offset = 17, is_signed = true>
 
 // CHECK: cir.func {{.*@store_field}}
@@ -127,7 +127,7 @@ void createU() {
 // CHECK: cir.func {{.*@createD}}
 // CHECK:   %0 = cir.alloca !ty_D, !cir.ptr<!ty_D>, ["d"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.cast(bitcast, %0 : !cir.ptr<!ty_D>), !cir.ptr<!ty_anon_struct>
-// CHECK:   %2 = cir.const #cir.const_struct<{#cir.int<33> : !u8i, #cir.int<0> : !u8i, #cir.int<3> : !s32i}> : !ty_anon_struct
+// CHECK:   %2 = cir.const #cir.const_struct<{#cir.int<33> : !u8i, #cir.int<0> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>, #cir.int<3> : !s32i}> : !ty_anon_struct
 // CHECK:   cir.store %2, %1 : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 void createD() {
   D d = {1,2,3};
@@ -148,7 +148,7 @@ typedef struct {
   int y ;
 } G;
 
-// CHECK: cir.global external @g = #cir.const_struct<{#cir.int<133> : !u8i, #cir.int<127> : !u8i, #cir.int<254> : !s32i}> : !ty_anon_struct 
+// CHECK: cir.global external @g = #cir.const_struct<{#cir.int<133> : !u8i, #cir.int<127> : !u8i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 2>, #cir.int<254> : !s32i}> : !ty_anon_struct
 G g = { -123, 254UL};
 
 // CHECK: cir.func {{.*@get_y}}
