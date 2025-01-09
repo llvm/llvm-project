@@ -8090,11 +8090,6 @@ public:
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) {
-    if (!Info.getLangOpts().CPlusPlus) {
-      Info.FFDiag(E, diag::note_constexpr_atomic_ops_only_in_cpp);
-      return false;
-    }
-
     if (!EvaluateAtomicOrder(E, Info))
       return false;
 
@@ -16359,11 +16354,6 @@ public:
   }
 
   bool VisitAtomicExpr(const AtomicExpr *E) {
-    if (!Info.getLangOpts().CPlusPlus) {
-      Info.FFDiag(E, diag::note_constexpr_atomic_ops_only_in_cpp);
-      return false;
-    }
-
     if (!EvaluateAtomicOrder(E, Info))
       return false;
 
@@ -18032,7 +18022,7 @@ static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
     // once here
     if (!AtomicExpr::isValidOrderingForOp(AtomicOrderValue.getSExtValue(),
                                           E->getOp())) {
-      Info.FFDiag(E->getOrder(), diag::warn_atomic_op_has_invalid_memory_order)
+      Info.FFDiag(E->getOrder(), diag::note_atomic_op_with_invalid_memory_order)
           << /*success=*/(E->isCmpXChg()) << E->getOrder()->getExprLoc();
       return false;
     }
@@ -18046,7 +18036,7 @@ static bool EvaluateAtomicOrder(const AtomicExpr *E, EvalInfo &Info) {
     if (!AtomicExpr::isValidOrderingForOp(AtomicOrderValue.getSExtValue(),
                                           E->getOp())) {
       Info.FFDiag(E->getOrderFail(),
-                  diag::warn_atomic_op_has_invalid_memory_order)
+                  diag::note_atomic_op_with_invalid_memory_order)
           << 2 << E->getOrderFail()->getExprLoc();
       return false;
     }
@@ -18283,11 +18273,6 @@ static bool EvaluateAtomicFetchOp(const AtomicExpr *E, APValue &Result,
     AtomicPtr.setFrom(Info.Ctx, CurrentValue);
 
     APSInt ArgumentInt = ArgumentVal.getInt();
-
-    // if (AtomicValueTy->getPointeeType()->isVoidType()) {
-    //   Info.FFDiag(E, diag::err_typecheck_pointer_arith_void_type) << 0;
-    //   return false;
-    // }
 
     auto PointeeTy = AtomicValueTy->getPointeeType();
 

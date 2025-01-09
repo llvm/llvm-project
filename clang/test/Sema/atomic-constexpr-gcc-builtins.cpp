@@ -68,7 +68,6 @@ static_assert(load_n(0xFFFFFFFFu) == 0xFFFFFFFFu);
 static_assert(load_n(&array[0]) == &array[0]);
 static_assert(load_n(&small_array[1]) == &small_array[1]);
 
-
 // -- STORE --
 
 template <typename T> consteval T store(T value) {

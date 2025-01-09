@@ -100,3 +100,23 @@ static_assert(test_long_long_sub_fetch(11)); // expected-error {{static assertio
 
 
 static_assert(test_long_long_sub_fetch(sizeof(long long) * 4));
+
+
+// behave nicely with cosntexpr variables
+constexpr int val = 42;
+
+// we can't modify other constexpr variable
+constexpr int oldval = __atomic_exchange_n(const_cast<int *>(&val), 10, __ATOMIC_RELAXED); // #exchange_n
+// expected-error@#exchange_n {{constexpr variable 'oldval' must be initialized by a constant expression}}
+// expected-note@#exchange_n {{a constant expression cannot modify an object that is visible outside that expression}}
+
+// we can load from constexpr variable
+constexpr int cvar = 42;
+static_assert(__atomic_load_n(&cvar, __ATOMIC_RELAXED) == 42);
+
+
+// we can't store into constexpr variable
+constexpr int out = 10;
+constexpr int tmp = (__atomic_load(&cvar, const_cast<int *>(&val), __ATOMIC_RELAXED), out); // #load
+// expected-error@#load {{constexpr variable 'tmp' must be initialized by a constant expression}}
+// expected-note@#load {{a constant expression cannot modify an object that is visible outside that expression}}

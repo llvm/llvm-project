@@ -393,6 +393,8 @@ def note_unaligned_atomic_pointer_op : Note<
   "atomic pointer operation with argument %0 not aligned to size of pointee type (sizeof %1 is %2)">;
 def note_constexpr_atomic_ops_only_in_cpp : Note<
   "constant evaluated atomic operations are supported only in C++ mode">;
+def note_atomic_op_with_invalid_memory_order : Note<
+  "evaluated %select{|success |failure }0memory order argument to atomic operation is not allowed">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
