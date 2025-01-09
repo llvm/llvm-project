@@ -420,15 +420,17 @@ Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
                             PHINode *OrigPhi);
 
 /// Create a reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::IFindLastIV or RecurKind::FFindLastIV. The reduction
-/// operation is described by \p Desc.
-Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
+/// kind RecurKind::IFindLastIV or RecurKind::FFindLastIV. The scalar \p
+/// StartVal is the incoming value of reduction phi from outside the loop. The
+/// reduction operation is described by \p Desc.
+Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src, Value *StartVal,
                                  const RecurrenceDescriptor &Desc);
 
 /// Create a generic reduction using a recurrence descriptor \p Desc
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
 Value *createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                       Value *Src, PHINode *OrigPhi = nullptr);
+                       Value *Src, Value *StartVal = nullptr,
+                       PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
