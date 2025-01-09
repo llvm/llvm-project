@@ -40,7 +40,7 @@ namespace llvm {
 template <unsigned N>
 class SmallString;
 class StringRef;
-class StringLiteral;
+class StringRef;
 class Twine;
 
 // Containers.
@@ -109,7 +109,6 @@ using llvm::isa_and_present;
 
 // String types
 using llvm::SmallString;
-using llvm::StringLiteral;
 using llvm::StringRef;
 using llvm::Twine;
 

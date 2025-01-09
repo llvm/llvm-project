@@ -29,7 +29,7 @@ floating_literal *double_ptr = &floating;
 // ImaginaryLiteral
 imaginary_literal *cdouble_ptr = &floating_complex;
 
-// StringLiteral
+// StringRef
 const char* printHello(void) {
   return hello;
 }

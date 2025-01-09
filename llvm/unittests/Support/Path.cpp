@@ -2007,7 +2007,7 @@ TEST_F(FileSystemTest, readNativeFile) {
 }
 
 TEST_F(FileSystemTest, readNativeFileToEOF) {
-  constexpr StringLiteral Content = "0123456789";
+  constexpr StringRef Content = "0123456789";
   createFileWithData(NonExistantFile, false, fs::CD_CreateNew, Content);
   FileRemover Cleanup(NonExistantFile);
   const auto &Read = [&](SmallVectorImpl<char> &V,
@@ -2037,7 +2037,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
 
     // Check appending.
     {
-      constexpr StringLiteral Prefix = "prefix-";
+      constexpr StringRef Prefix = "prefix-";
       for (SmallVectorImpl<char> *V : Vectors) {
         V->assign(Prefix.begin(), Prefix.end());
         ASSERT_THAT_ERROR(Read(*V, std::nullopt), Succeeded());

@@ -14,8 +14,8 @@ using namespace llvm;
 
 TEST(DJBTest, caseFolding) {
   struct TestCase {
-    StringLiteral One;
-    StringLiteral Two;
+    StringRef One;
+    StringRef Two;
   };
 
   static constexpr TestCase Tests[] = {
@@ -57,7 +57,7 @@ TEST(DJBTest, caseFolding) {
 
 TEST(DJBTest, knownValuesLowerCase) {
   struct TestCase {
-    StringLiteral Text;
+    StringRef Text;
     uint32_t Hash;
   };
   static constexpr TestCase Tests[] = {

@@ -490,7 +490,7 @@ public:
   getSValFromInitListExpr(const InitListExpr *ILE,
                           const SmallVector<uint64_t, 2> &ConcreteOffsets,
                           QualType ElemT);
-  SVal getSValFromStringLiteral(const StringLiteral *SL, uint64_t Offset,
+  SVal getSValFromStringLiteral(const StringRef *SL, uint64_t Offset,
                                 QualType ElemT);
 
 public: // Part of public interface to class.
@@ -1825,10 +1825,10 @@ std::optional<SVal> RegionStoreManager::getConstantValFromConstArrayInitializer(
   if (const auto *ILE = dyn_cast<InitListExpr>(Init))
     return getSValFromInitListExpr(ILE, ConcreteOffsets, R->getElementType());
 
-  // Handle StringLiteral.
+  // Handle StringRef.
   // Example:
   //   const char arr[] = "abc";
-  if (const auto *SL = dyn_cast<StringLiteral>(Init))
+  if (const auto *SL = dyn_cast<StringRef>(Init))
     return getSValFromStringLiteral(SL, ConcreteOffsets.front(),
                                     R->getElementType());
 
@@ -1866,7 +1866,7 @@ std::optional<SVal> RegionStoreManager::getSValFromInitListExpr(
     // Example:
     //   const char arr[] = { "abc" };
     if (ILE->isStringLiteralInit())
-      if (const auto *SL = dyn_cast<StringLiteral>(ILE->getInit(0)))
+      if (const auto *SL = dyn_cast<StringRef>(ILE->getInit(0)))
         return getSValFromStringLiteral(SL, Offset, ElemT);
 
     // C++20 [expr.add] 9.4.17.5 (excerpt):
@@ -1918,10 +1918,10 @@ std::optional<SVal> RegionStoreManager::getSValFromInitListExpr(
 /// because in case of array we can get the Decl from VarRegion, but in case
 /// of pointer the region is a StringRegion, which doesn't contain a Decl.
 /// Possible solution could be passing an array extent along with the offset.
-SVal RegionStoreManager::getSValFromStringLiteral(const StringLiteral *SL,
+SVal RegionStoreManager::getSValFromStringLiteral(const StringRef *SL,
                                                   uint64_t Offset,
                                                   QualType ElemT) {
-  assert(SL && "StringLiteral should not be null");
+  assert(SL && "StringRef should not be null");
   // C++20 [dcl.init.string] 9.4.2.3:
   //   If there are fewer initializers than there are array elements, each
   //   element not explicitly initialized shall be zero-initialized [dcl.init].
@@ -1974,7 +1974,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       const llvm::APSInt &Idx = CI->getValue();
       if (Idx < 0)
         return UndefinedVal();
-      const StringLiteral *SL = StrR->getStringLiteral();
+      const StringRef *SL = StrR->getStringLiteral();
       return getSValFromStringLiteral(SL, Idx.getZExtValue(), T);
     }
   } else if (isa<ElementRegion, VarRegion>(superR)) {

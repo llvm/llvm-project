@@ -282,7 +282,7 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const ObjCStringLiteral *E1,
                         const ObjCStringLiteral *E2) {
-    // Just wraps a StringLiteral child.
+    // Just wraps a StringRef child.
     return true;
   }
 
@@ -307,7 +307,7 @@ class StmtComparer {
     return E1->getTemplateDepth() == E2->getTemplateDepth();
   }
 
-  bool IsStmtEquivalent(const StringLiteral *E1, const StringLiteral *E2) {
+  bool IsStmtEquivalent(const StringRef *E1, const StringRef *E2) {
     return E1->getBytes() == E2->getBytes();
   }
 

@@ -145,9 +145,7 @@ public:
     return llvm::formatv("Swap operands to {0}",
                          Op ? Op->getOpcodeStr() : "binary operator");
   }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
   bool hidden() const override { return false; }
 
 private:

@@ -130,8 +130,8 @@ TEST(TraceTest, SmokeTest) {
 
 TEST(MetricsTracer, LatencyTest) {
   trace::TestTracer Tracer;
-  constexpr llvm::StringLiteral MetricName = "span_latency";
-  constexpr llvm::StringLiteral OpName = "op_name";
+  constexpr llvm::StringRef MetricName = "span_latency";
+  constexpr llvm::StringRef OpName = "op_name";
   {
     // A span should record latencies to span_latency by default.
     trace::Span SpanWithLat(OpName);

@@ -223,7 +223,7 @@ void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
   OS << R"(// Target mapping.
 #ifdef GET_INTRINSIC_TARGET_DATA
 struct IntrinsicTargetInfo {
-  StringLiteral Name;
+  StringRef Name;
   size_t Offset;
   size_t Count;
 };
@@ -240,7 +240,7 @@ static constexpr IntrinsicTargetInfo TargetInfos[] = {
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   // Built up a table of the intrinsic names.
-  constexpr StringLiteral NotIntrinsic = "not_intrinsic";
+  constexpr StringRef NotIntrinsic = "not_intrinsic";
   StringToOffsetTable Table;
   Table.GetOrAddStringOffset(NotIntrinsic);
   for (const auto &Int : Ints)
@@ -803,9 +803,9 @@ Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix,
   // names to lookup into this table.
   OS << R"(
   struct TargetEntry {
-    StringLiteral TargetPrefix;
+    StringRef TargetPrefix;
     ArrayRef<BuiltinEntry> Names;
-    StringLiteral CommonPrefix;
+    StringRef CommonPrefix;
     bool operator<(StringRef RHS) const {
       return TargetPrefix < RHS;
     };

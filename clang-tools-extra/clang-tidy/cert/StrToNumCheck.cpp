@@ -200,7 +200,7 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     if (const Expr *Arg = Call->getArg(Idx)->IgnoreParenImpCasts()) {
-      if (const auto *SL = dyn_cast<StringLiteral>(Arg)) {
+      if (const auto *SL = dyn_cast<StringRef>(Arg)) {
         FmtStr = SL->getString();
       }
     }

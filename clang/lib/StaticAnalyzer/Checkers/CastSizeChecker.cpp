@@ -131,7 +131,7 @@ void CastSizeChecker::checkPreStmt(const CastExpr *CE,CheckerContext &C) const {
     return;
 
   if (ExplodedNode *errorNode = C.generateErrorNode()) {
-    constexpr llvm::StringLiteral Msg =
+    constexpr llvm::StringRef Msg =
         "Cast a region whose size is not a multiple of the destination type "
         "size.";
     auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, errorNode);

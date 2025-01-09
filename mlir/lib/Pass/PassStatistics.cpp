@@ -14,8 +14,7 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-constexpr StringLiteral kPassStatsDescription =
-    "... Pass statistics report ...";
+constexpr StringRef kPassStatsDescription = "... Pass statistics report ...";
 
 namespace {
 /// Information pertaining to a specific statistic.

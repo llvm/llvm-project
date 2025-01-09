@@ -411,7 +411,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
 }
 
 llvm::StringRef Process::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.process");
+  static constexpr llvm::StringRef class_name("lldb.process");
   return class_name;
 }
 

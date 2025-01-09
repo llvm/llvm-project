@@ -31,7 +31,7 @@ std::unique_ptr<Pass> createTestTransformDialectInterpreterPass();
 } // namespace test
 } // namespace mlir
 
-const static llvm::StringLiteral library = R"MLIR(
+const static llvm::StringRef library = R"MLIR(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence private @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     transform.debug.emit_remark_at %arg0, "from external symbol" : !transform.any_op
@@ -39,7 +39,7 @@ module attributes {transform.with_named_sequence} {
   }
 })MLIR";
 
-const static llvm::StringLiteral input = R"MLIR(
+const static llvm::StringRef input = R"MLIR(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence private @__transform_main(%arg0: !transform.any_op {transform.readonly})
 

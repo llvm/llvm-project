@@ -40,8 +40,8 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
   // Most ObjC strings are formed out of a single piece.  However, we *can*
   // have strings formed out of multiple @ strings with multiple pptokens in
   // each one, e.g. @"foo" "bar" @"baz" "qux"   which need to be turned into one
-  // StringLiteral for ObjCStringLiteral to hold onto.
-  StringLiteral *S = cast<StringLiteral>(Strings[0]);
+  // StringRef for ObjCStringLiteral to hold onto.
+  StringRef *S = cast<StringRef>(Strings[0]);
 
   // If we have a multi-part string, merge it all together.
   if (Strings.size() != 1) {
@@ -50,7 +50,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
     SmallVector<SourceLocation, 8> StrLocs;
 
     for (Expr *E : Strings) {
-      S = cast<StringLiteral>(E);
+      S = cast<StringRef>(E);
 
       // ObjC strings can't be wide or UTF.
       if (!S->isOrdinary()) {
@@ -73,16 +73,15 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
     QualType StrTy = Context.getConstantArrayType(
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
-    S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+    S = StringRef::Create(Context, StrBuf, StringLiteralKind::Ordinary,
+                          /*Pascal=*/false, StrTy, &StrLocs[0], StrLocs.size());
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
 }
 
 ExprResult SemaObjC::BuildObjCStringLiteral(SourceLocation AtLoc,
-                                            StringLiteral *S) {
+                                            StringRef *S) {
   ASTContext &Context = getASTContext();
   // Verify that this composite string is acceptable for ObjC strings.
   if (CheckObjCString(S))
@@ -454,7 +453,7 @@ static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
       }
     }
     // If this is potentially an Objective-C string literal, add the '@'.
-    else if (StringLiteral *String = dyn_cast<StringLiteral>(OrigElement)) {
+    else if (StringRef *String = dyn_cast<StringRef>(OrigElement)) {
       if (String->isOrdinary()) {
         S.Diag(OrigElement->getBeginLoc(), diag::err_box_literal_collection)
             << 0 << OrigElement->getSourceRange()
@@ -479,7 +478,7 @@ static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,
   if (ArrayLiteral)
     if (ObjCStringLiteral *getString =
           dyn_cast<ObjCStringLiteral>(OrigElement)) {
-      if (StringLiteral *SL = getString->getString()) {
+      if (StringRef *SL = getString->getString()) {
         unsigned numConcat = SL->getNumConcatenated();
         if (numConcat > 1) {
           // Only warn if the concatenated string doesn't come from a macro.
@@ -541,7 +540,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       if (auto *CE = dyn_cast<ImplicitCastExpr>(ValueExpr))
         if (CE->getCastKind() == CK_ArrayToPointerDecay)
           if (auto *SL =
-                  dyn_cast<StringLiteral>(CE->getSubExpr()->IgnoreParens())) {
+                  dyn_cast<StringRef>(CE->getSubExpr()->IgnoreParens())) {
             assert((SL->isOrdinary() || SL->isUTF8()) &&
                    "unexpected character encoding");
             StringRef Str = SL->getString();
@@ -939,7 +938,7 @@ CheckObjCDictionaryLiteralDuplicateKeys(Sema &S,
       SourceLocation Loc = BE->getExprLoc();
 
       // Check for @("foo").
-      if (auto *Str = dyn_cast<StringLiteral>(Boxed->IgnoreParenImpCasts())) {
+      if (auto *Str = dyn_cast<StringRef>(Boxed->IgnoreParenImpCasts())) {
         checkOneKey(StringKeys, Str->getBytes(), Loc);
         continue;
       }
@@ -2564,7 +2563,7 @@ DiagnoseCStringFormatDirectiveInObjCAPI(Sema &S,
   Expr *FormatExpr = Args[Idx];
   if (ObjCStringLiteral *OSL =
       dyn_cast<ObjCStringLiteral>(FormatExpr->IgnoreParenImpCasts())) {
-    StringLiteral *FormatString = OSL->getString();
+    StringRef *FormatString = OSL->getString();
     if (S.FormatStringHasSArg(FormatString)) {
       S.Diag(FormatExpr->getExprLoc(), diag::warn_objc_cdirective_format_string)
         << "%s" << 0 << 0;
@@ -5085,7 +5084,7 @@ bool SemaObjC::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,
     if (OV->getSourceExpr())
       SrcExpr = OV->getSourceExpr()->IgnoreParenImpCasts();
 
-  if (auto *SL = dyn_cast<StringLiteral>(SrcExpr)) {
+  if (auto *SL = dyn_cast<StringRef>(SrcExpr)) {
     if (!PT->isObjCIdType() && !(ID && ID->getIdentifier()->isStr("NSString")))
       return false;
     if (!SL->isOrdinary())

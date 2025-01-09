@@ -29,7 +29,7 @@ std::string buildFixMsgForStringFlag(const Expr *Arg, const SourceManager &SM,
             " \"" + Twine(Mode) + "\"")
         .str();
 
-  StringRef SR = cast<StringLiteral>(Arg->IgnoreParenCasts())->getString();
+  StringRef SR = cast<StringRef>(Arg->IgnoreParenCasts())->getString();
   return ("\"" + SR + Twine(Mode) + "\"").str();
 }
 } // namespace
@@ -84,7 +84,7 @@ void CloexecCheck::insertStringFlag(
   const auto *ModeArg = MatchedCall->getArg(ArgPos);
 
   // Check if the <Mode> may be in the mode string.
-  const auto *ModeStr = dyn_cast<StringLiteral>(ModeArg->IgnoreParenCasts());
+  const auto *ModeStr = dyn_cast<StringRef>(ModeArg->IgnoreParenCasts());
   if (!ModeStr || ModeStr->getString().contains(Mode))
     return;
 

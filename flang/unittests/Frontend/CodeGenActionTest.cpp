@@ -34,8 +34,8 @@ class DummyDialect : public ::mlir::Dialect {
 
 public:
   ~DummyDialect() override = default;
-  static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("dummy");
+  static constexpr ::llvm::StringRef getDialectNamespace() {
+    return ::llvm::StringRef("dummy");
   }
 };
 

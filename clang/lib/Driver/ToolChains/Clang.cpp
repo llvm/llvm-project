@@ -2891,8 +2891,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        ArgStringList &CmdArgs,
                                        const JobAction &JA) {
   // List of veclibs which when used with -fveclib imply -fno-math-errno.
-  constexpr std::array VecLibImpliesNoMathErrno{llvm::StringLiteral("ArmPL"),
-                                                llvm::StringLiteral("SLEEF")};
+  constexpr std::array VecLibImpliesNoMathErrno{llvm::StringRef("ArmPL"),
+                                                llvm::StringRef("SLEEF")};
   bool NoMathErrnoWasImpliedByVecLib = false;
   const Arg *VecLibArg = nullptr;
   // Track the arg (if any) that enabled errno after -fveclib for diagnostics.

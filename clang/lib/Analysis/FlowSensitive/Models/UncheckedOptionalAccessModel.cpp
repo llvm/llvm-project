@@ -298,7 +298,7 @@ auto isStdForwardCall() {
                   hasArgument(0, hasOptionalOrDerivedType()));
 }
 
-constexpr llvm::StringLiteral ValueOrCallID = "ValueOrCall";
+constexpr llvm::StringRef ValueOrCallID = "ValueOrCall";
 
 auto isValueOrStringEmptyCall() {
   // `opt.value_or("").empty()`

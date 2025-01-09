@@ -73,9 +73,9 @@ std::optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
   return std::nullopt;
 }
 
-const llvm::StringLiteral ApplyFixCommand = "clangd.applyFix";
-const llvm::StringLiteral ApplyTweakCommand = "clangd.applyTweak";
-const llvm::StringLiteral ApplyRenameCommand = "clangd.applyRename";
+const llvm::StringRef ApplyFixCommand = "clangd.applyFix";
+const llvm::StringRef ApplyTweakCommand = "clangd.applyTweak";
+const llvm::StringRef ApplyRenameCommand = "clangd.applyRename";
 
 CodeAction toCodeAction(const ClangdServer::CodeActionResult::Rename &R,
                         const URIForFile &File) {

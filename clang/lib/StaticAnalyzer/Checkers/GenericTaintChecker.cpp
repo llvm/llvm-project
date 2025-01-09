@@ -49,19 +49,19 @@ namespace {
 class GenericTaintChecker;
 
 /// Check for CWE-134: Uncontrolled Format String.
-constexpr llvm::StringLiteral MsgUncontrolledFormatString =
+constexpr llvm::StringRef MsgUncontrolledFormatString =
     "Untrusted data is used as a format string "
     "(CWE-134: Uncontrolled Format String)";
 
 /// Check for:
 /// CERT/STR02-C. "Sanitize data passed to complex subsystems"
 /// CWE-78, "Failure to Sanitize Data into an OS Command"
-constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
+constexpr llvm::StringRef MsgSanitizeSystemArgs =
     "Untrusted data is passed to a system call "
     "(CERT/STR02-C. Sanitize data passed to complex subsystems)";
 
 /// Check if tainted data is used as a custom sink's parameter.
-constexpr llvm::StringLiteral MsgCustomSink =
+constexpr llvm::StringRef MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
 
 using ArgIdxTy = int;

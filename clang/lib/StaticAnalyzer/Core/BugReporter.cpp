@@ -1118,11 +1118,11 @@ static const Stmt *getTerminatorCondition(const CFGBlock *B) {
   return S;
 }
 
-constexpr llvm::StringLiteral StrEnteringLoop = "Entering loop body";
-constexpr llvm::StringLiteral StrLoopBodyZero = "Loop body executed 0 times";
-constexpr llvm::StringLiteral StrLoopRangeEmpty =
+constexpr llvm::StringRef StrEnteringLoop = "Entering loop body";
+constexpr llvm::StringRef StrLoopBodyZero = "Loop body executed 0 times";
+constexpr llvm::StringRef StrLoopRangeEmpty =
     "Loop body skipped when range is empty";
-constexpr llvm::StringLiteral StrLoopCollectionEmpty =
+constexpr llvm::StringRef StrLoopCollectionEmpty =
     "Loop body skipped when collection is empty";
 
 static std::unique_ptr<FilesToLineNumsMap>

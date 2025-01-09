@@ -53,7 +53,7 @@ enum class DebugSectionKind : uint8_t {
 static constexpr size_t SectionKindsNum =
     static_cast<size_t>(DebugSectionKind::NumberOfEnumEntries);
 
-static constexpr StringLiteral SectionNames[SectionKindsNum] = {
+static constexpr StringRef SectionNames[SectionKindsNum] = {
     "debug_info",     "debug_line",     "debug_frame",       "debug_ranges",
     "debug_rnglists", "debug_loc",      "debug_loclists",    "debug_aranges",
     "debug_abbrev",   "debug_macinfo",  "debug_macro",       "debug_addr",
@@ -62,8 +62,7 @@ static constexpr StringLiteral SectionNames[SectionKindsNum] = {
     "apple_objc",     "apple_types"};
 
 /// Return the name of the section.
-static constexpr const StringLiteral &
-getSectionName(DebugSectionKind SectionKind) {
+static constexpr const StringRef &getSectionName(DebugSectionKind SectionKind) {
   return SectionNames[static_cast<uint8_t>(SectionKind)];
 }
 

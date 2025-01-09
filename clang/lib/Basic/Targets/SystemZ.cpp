@@ -94,7 +94,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
 }
 
 struct ISANameRevision {
-  llvm::StringLiteral Name;
+  llvm::StringRef Name;
   int ISARevisionID;
 };
 static constexpr ISANameRevision ISARevisions[] = {

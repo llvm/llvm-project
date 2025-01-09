@@ -705,7 +705,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
 
-  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  StringRef *DeletedMessage = Function->getDeletedMessage();
   AddBoolean(DeletedMessage);
 
   if (DeletedMessage)

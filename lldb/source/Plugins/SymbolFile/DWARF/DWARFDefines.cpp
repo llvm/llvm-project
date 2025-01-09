@@ -16,7 +16,7 @@ namespace lldb_private::plugin {
 namespace dwarf {
 
 llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag) {
-  static constexpr llvm::StringLiteral s_unknown_tag_name("<unknown DW_TAG>");
+  static constexpr llvm::StringRef s_unknown_tag_name("<unknown DW_TAG>");
   if (llvm::StringRef tag_name = llvm::dwarf::TagString(tag); !tag_name.empty())
     return tag_name;
 

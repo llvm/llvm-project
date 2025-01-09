@@ -101,7 +101,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(TrackedRegionMap, const MemRegion *, SVal)
 
 // Checks if RD has name in Names and is in std namespace
 static bool hasStdClassWithName(const CXXRecordDecl *RD,
-                                ArrayRef<llvm::StringLiteral> Names) {
+                                ArrayRef<llvm::StringRef> Names) {
   if (!RD || !RD->getDeclContext()->isStdNamespace())
     return false;
   if (RD->getDeclName().isIdentifier())
@@ -109,8 +109,8 @@ static bool hasStdClassWithName(const CXXRecordDecl *RD,
   return false;
 }
 
-constexpr llvm::StringLiteral STD_PTR_NAMES[] = {"shared_ptr", "unique_ptr",
-                                                 "weak_ptr"};
+constexpr llvm::StringRef STD_PTR_NAMES[] = {"shared_ptr", "unique_ptr",
+                                             "weak_ptr"};
 
 static bool isStdSmartPtr(const CXXRecordDecl *RD) {
   return hasStdClassWithName(RD, STD_PTR_NAMES);
@@ -239,7 +239,7 @@ bool SmartPtrModeling::isBoolConversionMethod(const CallEvent &Call) const {
   return CD && CD->getConversionType()->isBooleanType();
 }
 
-constexpr llvm::StringLiteral BASIC_OSTREAM_NAMES[] = {"basic_ostream"};
+constexpr llvm::StringRef BASIC_OSTREAM_NAMES[] = {"basic_ostream"};
 
 static bool isStdBasicOstream(const Expr *E) {
   const auto *RD = E->getType()->getAsCXXRecordDecl();

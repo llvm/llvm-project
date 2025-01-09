@@ -14490,7 +14490,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     // is passed further and it eventually ends up compared to number of
     // function candidate parameters which never includes the object parameter,
     // so slice ArgsArray to make sure apples are compared to apples.
-    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    StringRef *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
@@ -15020,7 +15020,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         return ExprError();
       }
 
-      StringLiteral *Msg = Best->Function->getDeletedMessage();
+      StringRef *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
               OpLoc,
@@ -15347,7 +15347,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       return ExprError();
 
     case OR_Deleted: {
-      StringLiteral *Msg = Best->Function->getDeletedMessage();
+      StringRef *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(LLoc,
                               PDiag(diag::err_ovl_deleted_oper)
@@ -15830,7 +15830,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     // FIXME: Is this diagnostic here really necessary? It seems that
     //   1. we don't have any tests for this diagnostic, and
     //   2. we already issue err_deleted_function_use for this later on anyway.
-    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    StringRef *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(Object.get()->getBeginLoc(),
                             PDiag(diag::err_ovl_deleted_object_call)
@@ -16035,7 +16035,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     return ExprError();
 
   case OR_Deleted: {
-    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    StringRef *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << "->" << (Msg != nullptr)
@@ -16451,7 +16451,7 @@ void Sema::DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
                                         OverloadCandidateSet &CandidateSet,
                                         FunctionDecl *Fn, MultiExprArg Args,
                                         bool IsMember) {
-  StringLiteral *Msg = Fn->getDeletedMessage();
+  StringRef *Msg = Fn->getDeletedMessage();
   CandidateSet.NoteCandidates(
       PartialDiagnosticAt(Loc, PDiag(diag::err_ovl_deleted_call)
                                    << IsMember << Name << (Msg != nullptr)

@@ -21,7 +21,7 @@ using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
 
-static constexpr llvm::StringLiteral FuncID("fun");
+static constexpr llvm::StringRef FuncID("fun");
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;

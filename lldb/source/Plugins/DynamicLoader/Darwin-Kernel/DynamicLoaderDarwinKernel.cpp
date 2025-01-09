@@ -100,7 +100,7 @@ enum {
 class DynamicLoaderDarwinKernelProperties : public Properties {
 public:
   static llvm::StringRef GetSettingName() {
-    static constexpr llvm::StringLiteral g_setting_name("darwin-kernel");
+    static constexpr llvm::StringRef g_setting_name("darwin-kernel");
     return g_setting_name;
   }
 

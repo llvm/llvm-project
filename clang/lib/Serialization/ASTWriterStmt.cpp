@@ -753,10 +753,10 @@ void ASTStmtWriter::VisitImaginaryLiteral(ImaginaryLiteral *E) {
   Code = serialization::EXPR_IMAGINARY_LITERAL;
 }
 
-void ASTStmtWriter::VisitStringLiteral(StringLiteral *E) {
+void ASTStmtWriter::VisitStringLiteral(StringRef *E) {
   VisitExpr(E);
 
-  // Store the various bits of data of StringLiteral.
+  // Store the various bits of data of StringRef.
   Record.push_back(E->getNumConcatenated());
   Record.push_back(E->getLength());
   Record.push_back(E->getCharByteWidth());

@@ -62,7 +62,7 @@ namespace LLVM {
   class ClassName : public Type::TypeBase<ClassName, Type, TypeStorage> {      \
   public:                                                                      \
     using Base::Base;                                                          \
-    static constexpr StringLiteral name = TypeName;                            \
+    static constexpr StringRef name = TypeName;                                \
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");

@@ -52,7 +52,7 @@ using namespace mlir;
 using namespace mlir::arm_sme;
 namespace {
 
-constexpr StringLiteral
+constexpr StringRef
     kEnableArmStreamingIgnoreAttr("enable_arm_streaming_ignore");
 
 template <typename... Ops>

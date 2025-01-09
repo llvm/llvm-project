@@ -14,7 +14,7 @@ void foo() {
 // CHECK: Match DeclRefExpr: :foo{{.*}} to DeclRefExpr: :inner::foo
 void main() { inner::foo(); }
 
-// CHECK: Match StringLiteral: foo{{.*}} to StringLiteral: foo
+// CHECK: Match StringRef: foo{{.*}} to StringRef: foo
 const char *b = "f" "o" "o";
 
 // unsigned is canonicalized to unsigned int

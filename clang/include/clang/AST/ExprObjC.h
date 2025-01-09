@@ -53,7 +53,7 @@ class ObjCStringLiteral : public Expr {
   SourceLocation AtLoc;
 
 public:
-  ObjCStringLiteral(StringLiteral *SL, QualType T, SourceLocation L)
+  ObjCStringLiteral(StringRef *SL, QualType T, SourceLocation L)
       : Expr(ObjCStringLiteralClass, T, VK_PRValue, OK_Ordinary), String(SL),
         AtLoc(L) {
     setDependence(ExprDependence::None);
@@ -61,9 +61,9 @@ public:
   explicit ObjCStringLiteral(EmptyShell Empty)
       : Expr(ObjCStringLiteralClass, Empty) {}
 
-  StringLiteral *getString() { return cast<StringLiteral>(String); }
-  const StringLiteral *getString() const { return cast<StringLiteral>(String); }
-  void setString(StringLiteral *S) { String = S; }
+  StringRef *getString() { return cast<StringRef>(String); }
+  const StringRef *getString() const { return cast<StringRef>(String); }
+  void setString(StringRef *S) { String = S; }
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }
@@ -405,7 +405,7 @@ public:
 };
 
 /// ObjCEncodeExpr, used for \@encode in Objective-C.  \@encode has the same
-/// type and behavior as StringLiteral except that the string initializer is
+/// type and behavior as StringRef except that the string initializer is
 /// obtained from ASTContext with the encoding type as an argument.
 class ObjCEncodeExpr : public Expr {
   TypeSourceInfo *EncodedType;

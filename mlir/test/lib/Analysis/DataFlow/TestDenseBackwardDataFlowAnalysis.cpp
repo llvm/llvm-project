@@ -216,9 +216,9 @@ struct TestNextAccessPass
       llvm::cl::desc(
           "assume external functions have read effect on all arguments")};
 
-  static constexpr llvm::StringLiteral kTagAttrName = "name";
-  static constexpr llvm::StringLiteral kNextAccessAttrName = "next_access";
-  static constexpr llvm::StringLiteral kAtEntryPointAttrName =
+  static constexpr llvm::StringRef kTagAttrName = "name";
+  static constexpr llvm::StringRef kNextAccessAttrName = "next_access";
+  static constexpr llvm::StringRef kAtEntryPointAttrName =
       "next_at_entry_point";
 
   static Attribute makeNextAccessAttribute(Operation *op,

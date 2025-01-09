@@ -2324,7 +2324,7 @@ TEST_F(StructuralEquivalenceStmtTest, ObjCStringLiteralDifferentContent) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
-TEST_F(StructuralEquivalenceStmtTest, StringLiteral) {
+TEST_F(StructuralEquivalenceStmtTest, StringRef) {
   auto t = makeWrappedStmts("\"a\"", "\"a\"", Lang_CXX03, stringLiteral());
   EXPECT_TRUE(testStructuralMatch(t));
 }

@@ -380,7 +380,7 @@ void ASTStmtReader::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
   S->NumLabels = Record.readInt();
   S->setRParenLoc(readSourceLocation());
-  S->setAsmString(cast_or_null<StringLiteral>(Record.readSubStmt()));
+  S->setAsmString(cast_or_null<StringRef>(Record.readSubStmt()));
 
   unsigned NumOutputs = S->getNumOutputs();
   unsigned NumInputs = S->getNumInputs();
@@ -389,18 +389,18 @@ void ASTStmtReader::VisitGCCAsmStmt(GCCAsmStmt *S) {
 
   // Outputs and inputs
   SmallVector<IdentifierInfo *, 16> Names;
-  SmallVector<StringLiteral*, 16> Constraints;
+  SmallVector<StringRef *, 16> Constraints;
   SmallVector<Stmt*, 16> Exprs;
   for (unsigned I = 0, N = NumOutputs + NumInputs; I != N; ++I) {
     Names.push_back(Record.readIdentifier());
-    Constraints.push_back(cast_or_null<StringLiteral>(Record.readSubStmt()));
+    Constraints.push_back(cast_or_null<StringRef>(Record.readSubStmt()));
     Exprs.push_back(Record.readSubStmt());
   }
 
   // Constraints
-  SmallVector<StringLiteral*, 16> Clobbers;
+  SmallVector<StringRef *, 16> Clobbers;
   for (unsigned I = 0; I != NumClobbers; ++I)
-    Clobbers.push_back(cast_or_null<StringLiteral>(Record.readSubStmt()));
+    Clobbers.push_back(cast_or_null<StringRef>(Record.readSubStmt()));
 
   // Labels
   for (unsigned I = 0, N = NumLabels; I != N; ++I) {
@@ -598,7 +598,7 @@ void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
   E->PredefinedExprBits.IsTransparent = Record.readInt();
   E->setLocation(readSourceLocation());
   if (HasFunctionName)
-    E->setFunctionName(cast<StringLiteral>(Record.readSubExpr()));
+    E->setFunctionName(cast<StringRef>(Record.readSubExpr()));
 }
 
 void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
@@ -664,7 +664,7 @@ void ASTStmtReader::VisitImaginaryLiteral(ImaginaryLiteral *E) {
   E->setSubExpr(Record.readSubExpr());
 }
 
-void ASTStmtReader::VisitStringLiteral(StringLiteral *E) {
+void ASTStmtReader::VisitStringLiteral(StringRef *E) {
   VisitExpr(E);
 
   // NumConcatenated, Length and CharByteWidth are set by the empty
@@ -683,8 +683,8 @@ void ASTStmtReader::VisitStringLiteral(StringLiteral *E) {
   // Check that the deserialized character width is consistant with the result
   // of calling mapCharByteWidth.
   assert((CharByteWidth ==
-          StringLiteral::mapCharByteWidth(Record.getContext().getTargetInfo(),
-                                          E->getKind())) &&
+          StringRef::mapCharByteWidth(Record.getContext().getTargetInfo(),
+                                      E->getKind())) &&
          "Wrong character width!");
 
   // Deserialize the trailing array of SourceLocation.
@@ -1331,7 +1331,7 @@ void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   E->EmbedKeywordLoc = readSourceLocation();
   EmbedDataStorage *Data = new (Record.getContext()) EmbedDataStorage;
-  Data->BinaryData = cast<StringLiteral>(Record.readSubStmt());
+  Data->BinaryData = cast<StringRef>(Record.readSubStmt());
   E->Data = Data;
   E->Begin = Record.readInt();
   E->NumOfElements = Record.readInt();
@@ -1445,7 +1445,7 @@ void ASTStmtReader::VisitAtomicExpr(AtomicExpr *E) {
 
 void ASTStmtReader::VisitObjCStringLiteral(ObjCStringLiteral *E) {
   VisitExpr(E);
-  E->setString(cast<StringLiteral>(Record.readSubStmt()));
+  E->setString(cast<StringRef>(Record.readSubStmt()));
   E->setAtLoc(readSourceLocation());
 }
 
@@ -3163,7 +3163,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_STRING_LITERAL:
-      S = StringLiteral::CreateEmpty(
+      S = StringRef::CreateEmpty(
           Context,
           /* NumConcatenated=*/Record[ASTStmtReader::NumExprFields],
           /* Length=*/Record[ASTStmtReader::NumExprFields + 1],

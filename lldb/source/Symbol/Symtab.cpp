@@ -1196,7 +1196,7 @@ void Symtab::SaveToCache() {
       SetWasSavedToCache();
 }
 
-constexpr llvm::StringLiteral kIdentifierCStrMap("CMAP");
+constexpr llvm::StringRef kIdentifierCStrMap("CMAP");
 
 static void EncodeCStrMap(DataEncoder &encoder, ConstStringTable &strtab,
                           const UniqueCStringMap<uint32_t> &cstr_map) {
@@ -1240,7 +1240,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
   return true;
 }
 
-constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
+constexpr llvm::StringRef kIdentifierSymbolTable("SYMB");
 constexpr uint32_t CURRENT_CACHE_VERSION = 1;
 
 /// The encoding format for the symbol table is as follows:

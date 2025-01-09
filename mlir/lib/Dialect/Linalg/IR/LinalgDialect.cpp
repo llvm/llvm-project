@@ -67,8 +67,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 /// Attribute name used to memoize indexing maps for named ops.
-constexpr const ::llvm::StringLiteral
-    LinalgDialect::kMemoizedIndexingMapsAttrName;
+constexpr const ::llvm::StringRef LinalgDialect::kMemoizedIndexingMapsAttrName;
 
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>

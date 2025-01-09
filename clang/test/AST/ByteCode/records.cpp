@@ -1537,12 +1537,12 @@ namespace BitSet {
 }
 
 namespace ArrayInitChain {
-  struct StringLiteral {
+  struct StringRef {
     const char *S;
   };
 
   struct CustomOperandVal {
-    StringLiteral Str;
+    StringRef Str;
     unsigned Width;
     unsigned Mask = Width + 1;
   };

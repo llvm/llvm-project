@@ -360,7 +360,7 @@ define void @Foo1() {
                                                    Err, Context);
   ASSERT_TRUE(M1.get());
 
-  StringLiteral M2Str = R"(
+  StringRef M2Str = R"(
 ; ModuleID = '<string>'
 source_filename = "<string2>"
 

@@ -214,7 +214,7 @@ public:
   /// Returns diag locations for Modified contents.
   llvm::ArrayRef<Diag> patchedDiags() const { return PatchedDiags; }
 
-  static constexpr llvm::StringLiteral HeaderName = "__preamble_patch__.h";
+  static constexpr llvm::StringRef HeaderName = "__preamble_patch__.h";
 
   llvm::ArrayRef<PragmaMark> marks() const;
   const MainFileMacros &mainFileMacros() const;

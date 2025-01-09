@@ -19,7 +19,7 @@ enum {
 };
 
 llvm::StringRef DynamicLoaderDarwinProperties::GetSettingName() {
-  static constexpr llvm::StringLiteral g_setting_name("darwin");
+  static constexpr llvm::StringRef g_setting_name("darwin");
   return g_setting_name;
 }
 

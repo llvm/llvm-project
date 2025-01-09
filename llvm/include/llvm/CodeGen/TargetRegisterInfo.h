@@ -1230,7 +1230,7 @@ public:
     return {};
   }
 
-  virtual SmallVector<StringLiteral>
+  virtual SmallVector<StringRef>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }

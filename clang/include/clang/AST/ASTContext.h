@@ -323,11 +323,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Mapping from APValues to the corresponding TemplateParamObjects.
   mutable llvm::FoldingSet<TemplateParamObjectDecl> TemplateParamObjectDecls;
 
-  /// A cache mapping a string value to a StringLiteral object with the same
+  /// A cache mapping a string value to a StringRef object with the same
   /// value.
   ///
   /// This is lazily created.  This is intentionally not serialized.
-  mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
+  mutable llvm::StringMap<StringRef *> StringLiteralCache;
 
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
@@ -3323,7 +3323,7 @@ public:
   /// Return a string representing the human readable name for the specified
   /// function declaration or file name. Used by SourceLocExpr and
   /// PredefinedExpr to cache evaluated results.
-  StringLiteral *getPredefinedStringLiteralFromCache(StringRef Key) const;
+  StringRef *getPredefinedStringLiteralFromCache(StringRef Key) const;
 
   /// Return the next version number to be used for a string literal evaluated
   /// as part of constant evaluation.

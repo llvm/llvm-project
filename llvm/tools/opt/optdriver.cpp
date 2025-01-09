@@ -318,7 +318,7 @@ struct TimeTracerRAII {
 // TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
 // it exists.
 static bool shouldPinPassToLegacyPM(StringRef Pass) {
-  static constexpr StringLiteral PassNameExactToIgnore[] = {
+  static constexpr StringRef PassNameExactToIgnore[] = {
       "nvvm-reflect",
       "nvvm-intr-range",
       "amdgpu-simplifylib",
@@ -335,13 +335,13 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   if (llvm::is_contained(PassNameExactToIgnore, Pass))
     return false;
 
-  static constexpr StringLiteral PassNamePrefix[] = {
+  static constexpr StringRef PassNamePrefix[] = {
       "x86-",    "xcore-", "wasm-",  "systemz-", "ppc-",    "nvvm-",
       "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
       "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-",
       "amdgcn-", "polly-", "riscv-", "dxil-"};
-  static constexpr StringLiteral PassNameContain[] = {"-eh-prepare"};
-  static constexpr StringLiteral PassNameExact[] = {
+  static constexpr StringRef PassNameContain[] = {"-eh-prepare"};
+  static constexpr StringRef PassNameExact[] = {
       "safe-stack",
       "cost-model",
       "codegenprepare",

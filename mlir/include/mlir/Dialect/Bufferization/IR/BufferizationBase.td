@@ -44,7 +44,7 @@ def Bufferization_Dialect : Dialect {
 
     /// An attribute that can override writability of buffers of tensor function
     /// arguments during One-Shot Module Bufferize.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kWritableAttrName = "bufferization.writable";
 
     /// An attribute for function arguments that describes how the function
@@ -53,12 +53,12 @@ def Bufferization_Dialect : Dialect {
     /// When no attribute is specified, the analysis tries to infer the access
     /// behavior from its body. In case of external functions, for which no
     /// function body is available, "read-write" is assumed by default.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kBufferAccessAttrName = "bufferization.access";
 
     /// Attribute name used to mark the bufferization layout for region
     /// arguments during One-Shot Module Bufferize.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kBufferLayoutAttrName = "bufferization.buffer_layout";
 
     /// An attribute that can be attached to ops with an allocation and/or
@@ -69,7 +69,7 @@ def Bufferization_Dialect : Dialect {
     /// guaranteed to deallocate a buffer under "manual deallocation" are
     /// allowed to have this attribute. (Deallocation ops without this
     /// attribute are rejected by the ownership-based buffer deallocation pass.)
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kManualDeallocation = "bufferization.manual_deallocation";
   }];
   let hasOperationAttrVerify = 1;

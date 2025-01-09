@@ -468,7 +468,7 @@ public:
                              : std::optional<uint8_t>{};
   }
 
-  SmallVector<StringLiteral>
+  SmallVector<StringRef>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
 };
 

@@ -7474,7 +7474,7 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 
 // SYNCTHREADS
 void IntrinsicLibrary::genSyncThreads(llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.barrier0";
   mlir::FunctionType funcType =
       mlir::FunctionType::get(builder.getContext(), {}, {});
   auto funcOp = builder.createFunction(loc, funcName, funcType);
@@ -7486,7 +7486,7 @@ void IntrinsicLibrary::genSyncThreads(llvm::ArrayRef<fir::ExtendedValue> args) {
 mlir::Value
 IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.barrier0.and";
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
@@ -7498,7 +7498,7 @@ IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
 mlir::Value
 IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.barrier0.popc";
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
@@ -7510,7 +7510,7 @@ IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
 mlir::Value
 IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.barrier0.or";
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
@@ -7650,7 +7650,7 @@ IntrinsicLibrary::genTranspose(mlir::Type resultType,
 
 // THREADFENCE
 void IntrinsicLibrary::genThreadFence(llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.gl";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.membar.gl";
   mlir::FunctionType funcType =
       mlir::FunctionType::get(builder.getContext(), {}, {});
   auto funcOp = builder.createFunction(loc, funcName, funcType);
@@ -7661,7 +7661,7 @@ void IntrinsicLibrary::genThreadFence(llvm::ArrayRef<fir::ExtendedValue> args) {
 // THREADFENCE_BLOCK
 void IntrinsicLibrary::genThreadFenceBlock(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.cta";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.membar.cta";
   mlir::FunctionType funcType =
       mlir::FunctionType::get(builder.getContext(), {}, {});
   auto funcOp = builder.createFunction(loc, funcName, funcType);
@@ -7672,7 +7672,7 @@ void IntrinsicLibrary::genThreadFenceBlock(
 // THREADFENCE_SYSTEM
 void IntrinsicLibrary::genThreadFenceSystem(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.membar.sys";
+  constexpr llvm::StringRef funcName = "llvm.nvvm.membar.sys";
   mlir::FunctionType funcType =
       mlir::FunctionType::get(builder.getContext(), {}, {});
   auto funcOp = builder.createFunction(loc, funcName, funcType);

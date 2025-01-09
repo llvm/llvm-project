@@ -24,7 +24,7 @@ namespace omp {
 /// Helper to describe assume clauses.
 struct AssumptionClauseMappingInfo {
   /// The identifier describing the (beginning of the) clause.
-  llvm::StringLiteral Identifier;
+  llvm::StringRef Identifier;
   /// Flag to determine if the identifier is a full name or the start of a name.
   bool StartsWith;
   /// Flag to determine if a directive lists follows.

@@ -47,13 +47,13 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   // 1) to add the data passed to abort_with_payload to the
   //    ExtraCrashInformation dictionary.
   // 2) To make up faux arguments for this frame.
-  static constexpr llvm::StringLiteral namespace_key("namespace");
-  static constexpr llvm::StringLiteral code_key("code");
-  static constexpr llvm::StringLiteral payload_addr_key("payload_addr");
-  static constexpr llvm::StringLiteral payload_size_key("payload_size");
-  static constexpr llvm::StringLiteral reason_key("reason");
-  static constexpr llvm::StringLiteral flags_key("flags");
-  static constexpr llvm::StringLiteral info_key("abort_with_payload");
+  static constexpr llvm::StringRef namespace_key("namespace");
+  static constexpr llvm::StringRef code_key("code");
+  static constexpr llvm::StringRef payload_addr_key("payload_addr");
+  static constexpr llvm::StringRef payload_size_key("payload_size");
+  static constexpr llvm::StringRef reason_key("reason");
+  static constexpr llvm::StringRef flags_key("flags");
+  static constexpr llvm::StringRef info_key("abort_with_payload");
 
   Log *log = GetLog(LLDBLog::SystemRuntime);
   

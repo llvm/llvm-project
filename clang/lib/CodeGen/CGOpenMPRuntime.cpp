@@ -2375,7 +2375,7 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
 void CGOpenMPRuntime::emitErrorCall(CodeGenFunction &CGF, SourceLocation Loc,
                                     Expr *ME, bool IsFatal) {
   llvm::Value *MVL =
-      ME ? CGF.EmitStringLiteralLValue(cast<StringLiteral>(ME)).getPointer(CGF)
+      ME ? CGF.EmitStringLiteralLValue(cast<StringRef>(ME)).getPointer(CGF)
          : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   // Build call void __kmpc_error(ident_t *loc, int severity, const char
   // *message)

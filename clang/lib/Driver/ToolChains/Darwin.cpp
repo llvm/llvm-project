@@ -1216,8 +1216,7 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 /// `XCODE/Contents/Developer` path if it is an Xcode path, or an empty path
 /// otherwise.
 static StringRef getXcodeDeveloperPath(StringRef PathIntoXcode) {
-  static constexpr llvm::StringLiteral XcodeAppSuffix(
-      ".app/Contents/Developer");
+  static constexpr llvm::StringRef XcodeAppSuffix(".app/Contents/Developer");
   size_t Index = PathIntoXcode.find(XcodeAppSuffix);
   if (Index == StringRef::npos)
     return "";

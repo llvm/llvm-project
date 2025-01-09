@@ -35,7 +35,7 @@ namespace {
 enum Lang { C, CXX };
 
 Lang langFromOpts(const LangOptions &LO) { return LO.CPlusPlus ? CXX : C; }
-llvm::StringLiteral mandatoryHeader(Lang L) {
+llvm::StringRef mandatoryHeader(Lang L) {
   switch (L) {
   case C:
     return "stdio.h";
@@ -67,7 +67,7 @@ LangStandard::Kind standardFromOpts(const LangOptions &LO) {
   return LangStandard::lang_c99;
 }
 
-std::string buildUmbrella(llvm::StringLiteral Mandatory,
+std::string buildUmbrella(llvm::StringRef Mandatory,
                           llvm::ArrayRef<tooling::stdlib::Header> Headers) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
@@ -301,7 +301,7 @@ std::optional<StdLibLocation> StdLibSet::add(const LangOptions &LO,
   // Check for the existence of <vector> on the search path.
   // We could cache this, but we only get here repeatedly when there's no
   // stdlib, and even then only once per preamble build.
-  llvm::StringLiteral ProbeHeader = mandatoryHeader(L);
+  llvm::StringRef ProbeHeader = mandatoryHeader(L);
   llvm::SmallString<256> Path; // Scratch space.
   llvm::SmallVector<std::string> SearchPaths;
   auto RecordHeaderPath = [&](llvm::StringRef HeaderPath) {

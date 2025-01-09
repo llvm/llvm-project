@@ -1217,7 +1217,7 @@ void SemaObjC::checkRetainCycles(VarDecl *Var, Expr *Init) {
 /// simplify the backend).
 bool SemaObjC::CheckObjCString(Expr *Arg) {
   Arg = Arg->IgnoreParenCasts();
-  StringLiteral *Literal = dyn_cast<StringLiteral>(Arg);
+  StringRef *Literal = dyn_cast<StringRef>(Arg);
 
   if (!Literal || !Literal->isOrdinary()) {
     Diag(Arg->getBeginLoc(), diag::err_cfstring_literal_not_string_constant)
@@ -1392,7 +1392,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
   if (!getLangOpts().CPlusPlus || !RecordTy || RecordTy->isIncompleteType()) {
     // No indexing can be done. Issue diagnostics and quit.
     const Expr *IndexExpr = FromE->IgnoreParenImpCasts();
-    if (isa<StringLiteral>(IndexExpr))
+    if (isa<StringRef>(IndexExpr))
       Diag(FromE->getExprLoc(), diag::err_objc_subscript_pointer)
           << T << FixItHint::CreateInsertion(FromE->getExprLoc(), "@");
     else
@@ -2289,12 +2289,12 @@ void SemaObjC::DiagnoseCStringFormatDirectiveInCFAPI(const NamedDecl *FDecl,
   const Expr *FormatExpr = Args[Idx];
   if (const CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(FormatExpr))
     FormatExpr = CSCE->getSubExpr();
-  const StringLiteral *FormatString;
+  const StringRef *FormatString;
   if (const ObjCStringLiteral *OSL =
           dyn_cast<ObjCStringLiteral>(FormatExpr->IgnoreParenImpCasts()))
     FormatString = OSL->getString();
   else
-    FormatString = dyn_cast<StringLiteral>(FormatExpr->IgnoreParenImpCasts());
+    FormatString = dyn_cast<StringRef>(FormatExpr->IgnoreParenImpCasts());
   if (!FormatString)
     return;
   if (SemaRef.FormatStringHasSArg(FormatString)) {

@@ -287,7 +287,7 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
 
   // For zip .so file, src_file_spec will be "zip_path!/so_path".
   // Extract "zip_path" from the source_file.
-  static constexpr llvm::StringLiteral k_zip_separator("!/");
+  static constexpr llvm::StringRef k_zip_separator("!/");
   size_t pos = source_file.find(k_zip_separator);
   if (pos != std::string::npos)
     source_file.resize(pos);

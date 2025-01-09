@@ -29,7 +29,7 @@
 namespace clang::include_cleaner {
 namespace {
 
-constexpr llvm::StringLiteral CSS = R"css(
+constexpr llvm::StringRef CSS = R"css(
   body { margin: 0; }
   pre { line-height: 1.5em; counter-reset: line; margin: 0; }
   pre .line:not(.added) { counter-increment: line; }
@@ -68,7 +68,7 @@ constexpr llvm::StringLiteral CSS = R"css(
   .ref:not(.missing) #hover .insert { font-style: italic; }
 )css";
 
-constexpr llvm::StringLiteral JS = R"js(
+constexpr llvm::StringRef JS = R"js(
   // Recreate the #hover div inside whichever target .sel element was clicked.
   function select(event) {
     var target = event.target.closest('.sel');

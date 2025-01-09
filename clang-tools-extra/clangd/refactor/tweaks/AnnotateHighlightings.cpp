@@ -29,9 +29,7 @@ public:
   Expected<Effect> apply(const Selection &Inputs) override;
 
   std::string title() const override { return "Annotate highlighting tokens"; }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
   bool hidden() const override { return true; }
 };
 REGISTER_TWEAK(AnnotateHighlightings)

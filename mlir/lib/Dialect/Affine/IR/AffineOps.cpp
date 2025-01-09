@@ -4113,7 +4113,7 @@ static ParseResult parseAffineMapWithMinMax(OpAsmParser &parser,
                                             MinMaxKind kind) {
   // Using `const` not `constexpr` below to workaround a MSVC optimizer bug,
   // see: https://reviews.llvm.org/D134227#3821753
-  const llvm::StringLiteral tmpAttrStrName = "__pseudo_bound_map";
+  const llvm::StringRef tmpAttrStrName = "__pseudo_bound_map";
 
   StringRef mapName = kind == MinMaxKind::Min
                           ? AffineParallelOp::getUpperBoundsMapAttrStrName()

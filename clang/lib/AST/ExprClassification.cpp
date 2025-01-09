@@ -158,7 +158,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // when they are transparent.
   case Expr::PredefinedExprClass: {
     auto *PE = cast<PredefinedExpr>(E);
-    const StringLiteral *SL = PE->getFunctionName();
+    const StringRef *SL = PE->getFunctionName();
     if (PE->isTransparent())
       return SL ? ClassifyInternal(Ctx, SL) : Cl::CL_LValue;
     assert(!SL || SL->isLValue());

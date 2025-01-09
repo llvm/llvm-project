@@ -21,18 +21,16 @@
 using namespace mlir;
 
 namespace {
-constexpr static llvm::StringLiteral kAttrName = "dltest.layout";
-constexpr static llvm::StringLiteral kEndiannesKeyName = "dltest.endianness";
-constexpr static llvm::StringLiteral kAllocaKeyName =
-    "dltest.alloca_memory_space";
-constexpr static llvm::StringLiteral kProgramKeyName =
+constexpr static llvm::StringRef kAttrName = "dltest.layout";
+constexpr static llvm::StringRef kEndiannesKeyName = "dltest.endianness";
+constexpr static llvm::StringRef kAllocaKeyName = "dltest.alloca_memory_space";
+constexpr static llvm::StringRef kProgramKeyName =
     "dltest.program_memory_space";
-constexpr static llvm::StringLiteral kGlobalKeyName =
-    "dltest.global_memory_space";
-constexpr static llvm::StringLiteral kStackAlignmentKeyName =
+constexpr static llvm::StringRef kGlobalKeyName = "dltest.global_memory_space";
+constexpr static llvm::StringRef kStackAlignmentKeyName =
     "dltest.stack_alignment";
 
-constexpr static llvm::StringLiteral kTargetSystemDescAttrName =
+constexpr static llvm::StringRef kTargetSystemDescAttrName =
     "dl_target_sys_desc_test.target_system_spec";
 
 /// Trivial array storage for the custom data layout spec attribute, just a list
@@ -65,7 +63,7 @@ struct CustomDataLayoutSpec
 
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.custom_data_layout_spec";
+  static constexpr StringRef name = "test.custom_data_layout_spec";
 
   static CustomDataLayoutSpec get(MLIRContext *ctx,
                                   ArrayRef<DataLayoutEntryInterface> entries) {
@@ -123,7 +121,7 @@ struct CustomTargetSystemSpec
 
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.custom_target_system_spec";
+  static constexpr StringRef name = "test.custom_target_system_spec";
 
   static CustomTargetSystemSpec
   get(MLIRContext *ctx, ArrayRef<DataLayoutEntryInterface> entries) {
@@ -157,7 +155,7 @@ struct SingleQueryType
 
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.single_query";
+  static constexpr StringRef name = "test.single_query";
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
 
@@ -234,7 +232,7 @@ struct TypeNoLayout : public Type::TypeBase<TypeNoLayout, Type, TypeStorage> {
 
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.no_layout";
+  static constexpr StringRef name = "test.no_layout";
 
   static TypeNoLayout get(MLIRContext *ctx) { return Base::get(ctx); }
 };

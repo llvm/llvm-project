@@ -14,7 +14,6 @@
 
 using ::llvm::ScopedHashTable;
 using ::llvm::ScopedHashTableScope;
-using ::llvm::StringLiteral;
 using ::llvm::StringRef;
 
 using ::testing::Test;
@@ -26,11 +25,11 @@ protected:
   ScopedHashTable<StringRef, StringRef> symbolTable{};
   ScopedHashTableScope<StringRef, StringRef> globalScope{symbolTable};
 
-  static constexpr StringLiteral kGlobalName = "global";
-  static constexpr StringLiteral kGlobalValue = "gvalue";
-  static constexpr StringLiteral kLocalName = "local";
-  static constexpr StringLiteral kLocalValue = "lvalue";
-  static constexpr StringLiteral kLocalValue2 = "lvalue2";
+  static constexpr StringRef kGlobalName = "global";
+  static constexpr StringRef kGlobalValue = "gvalue";
+  static constexpr StringRef kLocalName = "local";
+  static constexpr StringRef kLocalValue = "lvalue";
+  static constexpr StringRef kLocalValue2 = "lvalue2";
 };
 
 TEST_F(ScopedHashTableTest, AccessWithNoActiveScope) {

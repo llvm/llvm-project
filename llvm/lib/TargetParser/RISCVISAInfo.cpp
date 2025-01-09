@@ -35,8 +35,8 @@ struct RISCVSupportedExtension {
 };
 
 struct RISCVProfile {
-  StringLiteral Name;
-  StringLiteral MArch;
+  StringRef Name;
+  StringRef MArch;
 
   bool operator<(const RISCVProfile &RHS) const {
     return StringRef(Name) < StringRef(RHS.Name);
@@ -741,9 +741,9 @@ Error RISCVISAInfo::checkDependency() {
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
   bool HasZcmt = Exts.count("zcmt") != 0;
-  static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},  {"xqciac"},  {"xqcicli"}, {"xqcicm"},
-      {"xqcics"}, {"xqcicsr"}, {"xqcilsm"}, {"xqcisls"}};
+  static constexpr StringRef XqciExts[] = {{"xqcia"},   {"xqciac"}, {"xqcicli"},
+                                           {"xqcicm"},  {"xqcics"}, {"xqcicsr"},
+                                           {"xqcilsm"}, {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -782,7 +782,7 @@ Error RISCVISAInfo::checkDependency() {
 }
 
 struct ImpliedExtsEntry {
-  StringLiteral Name;
+  StringRef Name;
   const char *ImpliedExt;
 
   bool operator<(const ImpliedExtsEntry &Other) const {
@@ -846,7 +846,7 @@ void RISCVISAInfo::updateImplication() {
   }
 }
 
-static constexpr StringLiteral CombineIntoExts[] = {
+static constexpr StringRef CombineIntoExts[] = {
     {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},  {"zvknc"},
     {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
@@ -1012,7 +1012,7 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
 }
 
 struct RISCVExtBit {
-  const StringLiteral ext;
+  const StringRef ext;
   uint8_t groupid;
   uint8_t bitpos;
 };

@@ -1088,8 +1088,8 @@ public:
     return ObjCABI == 2;
   }
 
-  ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
-  ConstantAddress GenerateConstantNSString(const StringLiteral *SL);
+  ConstantAddress GenerateConstantString(const StringRef *SL) override;
+  ConstantAddress GenerateConstantNSString(const StringRef *SL);
 
   llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                  const ObjCContainerDecl *CD=nullptr) override;
@@ -1937,8 +1937,7 @@ llvm::Constant *CGObjCMac::GetEHType(QualType T) {
    };
 */
 
-ConstantAddress
-CGObjCCommonMac::GenerateConstantString(const StringLiteral *SL) {
+ConstantAddress CGObjCCommonMac::GenerateConstantString(const StringRef *SL) {
   return (!CGM.getLangOpts().NoConstantCFStrings
             ? CGM.GetAddrOfConstantCFString(SL)
             : GenerateConstantNSString(SL));
@@ -1946,7 +1945,7 @@ CGObjCCommonMac::GenerateConstantString(const StringLiteral *SL) {
 
 static llvm::StringMapEntry<llvm::GlobalVariable *> &
 GetConstantStringEntry(llvm::StringMap<llvm::GlobalVariable *> &Map,
-                       const StringLiteral *Literal, unsigned &StringLength) {
+                       const StringRef *Literal, unsigned &StringLength) {
   StringRef String = Literal->getString();
   StringLength = String.size();
   return *Map.insert(std::make_pair(String, nullptr)).first;
@@ -1981,7 +1980,7 @@ llvm::Constant *CGObjCNonFragileABIMac::getNSConstantStringClassRef() {
 }
 
 ConstantAddress
-CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
+CGObjCCommonMac::GenerateConstantNSString(const StringRef *Literal) {
   unsigned StringLength = 0;
   llvm::StringMapEntry<llvm::GlobalVariable *> &Entry =
     GetConstantStringEntry(NSConstantStringMap, Literal, StringLength);

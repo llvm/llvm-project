@@ -158,7 +158,7 @@ bool llvm::MachO::isPrivateLibrary(StringRef Path, bool IsSymLink) {
   return false;
 }
 
-static StringLiteral RegexMetachars = "()^$|+.[]\\{}";
+static StringRef RegexMetachars = "()^$|+.[]\\{}";
 
 llvm::Expected<Regex> llvm::MachO::createRegexFromGlob(StringRef Glob) {
   SmallString<128> RegexString("^");

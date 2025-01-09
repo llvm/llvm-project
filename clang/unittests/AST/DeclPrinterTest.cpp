@@ -1374,8 +1374,8 @@ TEST(DeclPrinter, TestTemplateArgumentList15) {
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList16) {
-  llvm::StringLiteral Code = "template<typename T1, int NT1, typename T2 = "
-                             "bool, int NT2 = 5> struct Z {};";
+  llvm::StringRef Code = "template<typename T1, int NT1, typename T2 = "
+                         "bool, int NT2 = 5> struct Z {};";
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T1", "typename T1"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
@@ -1456,7 +1456,7 @@ TEST(DeclPrinter, TestCXXRecordDecl21) {
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     class __c;
     void _A(__c *__param);
   )cpp";
@@ -1471,7 +1471,7 @@ TEST(DeclPrinter, TestFunctionParamUglified) {
 }
 
 TEST(DeclPrinter, TestTemplateParamUglified) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     template <typename _Tp, int __n, template <typename> class _Container>
     struct _A{};
   )cpp";

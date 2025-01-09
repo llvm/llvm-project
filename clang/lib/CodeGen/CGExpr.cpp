@@ -1594,7 +1594,7 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
   case Expr::PredefinedExprClass:
     return EmitPredefinedLValue(cast<PredefinedExpr>(E));
   case Expr::StringLiteralClass:
-    return EmitStringLiteralLValue(cast<StringLiteral>(E));
+    return EmitStringLiteralLValue(cast<StringRef>(E));
   case Expr::ObjCEncodeExprClass:
     return EmitObjCEncodeExprLValue(cast<ObjCEncodeExpr>(E));
   case Expr::PseudoObjectExprClass:
@@ -3290,7 +3290,7 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
   }
 }
 
-LValue CodeGenFunction::EmitStringLiteralLValue(const StringLiteral *E) {
+LValue CodeGenFunction::EmitStringLiteralLValue(const StringRef *E) {
   return MakeAddrLValue(CGM.GetAddrOfConstantStringFromLiteral(E),
                         E->getType(), AlignmentSource::Decl);
 }
@@ -3302,7 +3302,7 @@ LValue CodeGenFunction::EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E) {
 
 LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
   auto SL = E->getFunctionName();
-  assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
+  assert(SL != nullptr && "No StringRef name in PredefinedExpr");
   StringRef FnName = CurFn->getName();
   if (FnName.starts_with("\01"))
     FnName = FnName.substr(1);

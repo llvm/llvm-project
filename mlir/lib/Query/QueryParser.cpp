@@ -67,7 +67,7 @@ struct QueryParser::LexOrCompleteWord {
     }
   }
 
-  LexOrCompleteWord &Case(llvm::StringLiteral caseStr, const T &value,
+  LexOrCompleteWord &Case(llvm::StringRef caseStr, const T &value,
                           bool isCompletion = true) {
 
     if (wordCompletionPos == llvm::StringRef::npos)

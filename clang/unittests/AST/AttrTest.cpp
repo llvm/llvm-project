@@ -103,7 +103,7 @@ TEST(Attr, AnnotateType) {
                       &Annotate);
 
     EXPECT_EQ(Annotate->args_size(), 2u);
-    const auto *StringLit = selectFirst<StringLiteral>(
+    const auto *StringLit = selectFirst<StringRef>(
         "str", match(constantExpr(hasDescendant(stringLiteral().bind("str"))),
                      *Annotate->args_begin()[0], AST->getASTContext()));
     ASSERT_NE(StringLit, nullptr);

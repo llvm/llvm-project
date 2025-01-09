@@ -137,7 +137,7 @@ ParsedAST TestTU::build() const {
   // error-ok is awfully primitive - using clang -verify would be nicer.
   // Ownership and layering makes it pretty hard.
   bool ErrorOk = [&, this] {
-    llvm::StringLiteral Marker = "error-ok";
+    llvm::StringRef Marker = "error-ok";
     if (llvm::StringRef(Code).contains(Marker) ||
         llvm::StringRef(HeaderCode).contains(Marker))
       return true;

@@ -177,7 +177,7 @@ bool SetgidSetuidOrderChecker::isFunctionCalledInArg(
 void SetgidSetuidOrderChecker::emitReport(ProgramStateRef State,
                                           CheckerContext &C) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
-    llvm::StringLiteral Msg =
+    llvm::StringRef Msg =
         "A 'setgid(getgid())' call following a 'setuid(getuid())' "
         "call is likely to fail; probably the order of these "
         "statements is wrong";

@@ -54,7 +54,7 @@ namespace clang {
   class ObjCPropertyRefExpr;
   class OpaqueValueExpr;
   class ParmVarDecl;
-  class StringLiteral;
+  class StringRef;
   class TargetInfo;
   class ValueDecl;
 
@@ -1755,7 +1755,7 @@ enum class StringLiteralKind {
   Unevaluated
 };
 
-/// StringLiteral - This represents a string literal expression, e.g. "foo"
+/// StringRef - This represents a string literal expression, e.g. "foo"
 /// or L"bar" (wide strings). The actual string data can be obtained with
 /// getBytes() and is NOT null-terminated. The length of the string data is
 /// determined by calling getByteLength().
@@ -1772,21 +1772,20 @@ enum class StringLiteralKind {
 ///   char X[2] = "foobar";
 /// In this case, getByteLength() will return 6, but the string literal will
 /// have type "char[2]".
-class StringLiteral final
+class StringRef final
     : public Expr,
-      private llvm::TrailingObjects<StringLiteral, unsigned, SourceLocation,
-                                    char> {
+      private llvm::TrailingObjects<StringRef, unsigned, SourceLocation, char> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  /// StringLiteral is followed by several trailing objects. They are in order:
+  /// StringRef is followed by several trailing objects. They are in order:
   ///
   /// * A single unsigned storing the length in characters of this string. The
   ///   length in bytes is this length times the width of a single character.
   ///   Always present and stored as a trailing objects because storing it in
-  ///   StringLiteral would increase the size of StringLiteral by sizeof(void *)
-  ///   due to alignment requirements. If you add some data to StringLiteral,
-  ///   consider moving it inside StringLiteral.
+  ///   StringRef would increase the size of StringRef by sizeof(void *)
+  ///   due to alignment requirements. If you add some data to StringRef,
+  ///   consider moving it inside StringRef.
   ///
   /// * An array of getNumConcatenated() SourceLocation, one for each of the
   ///   token this string is made of.
@@ -1814,13 +1813,13 @@ class StringLiteral final
   }
 
   /// Build a string literal.
-  StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
-                bool Pascal, QualType Ty, const SourceLocation *Loc,
-                unsigned NumConcatenated);
+  StringRef(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
+            bool Pascal, QualType Ty, const SourceLocation *Loc,
+            unsigned NumConcatenated);
 
   /// Build an empty string literal.
-  StringLiteral(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
-                unsigned CharByteWidth);
+  StringRef(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
+            unsigned CharByteWidth);
 
   /// Map a target and string kind to the appropriate character width.
   static unsigned mapCharByteWidth(TargetInfo const &Target,
@@ -1835,22 +1834,20 @@ class StringLiteral final
 public:
   /// This is the "fully general" constructor that allows representation of
   /// strings formed from multiple concatenated tokens.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               const SourceLocation *Loc,
-                               unsigned NumConcatenated);
+  static StringRef *Create(const ASTContext &Ctx, StringRef Str,
+                           StringLiteralKind Kind, bool Pascal, QualType Ty,
+                           const SourceLocation *Loc, unsigned NumConcatenated);
 
   /// Simple constructor for string literals made from one token.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               SourceLocation Loc) {
+  static StringRef *Create(const ASTContext &Ctx, StringRef Str,
+                           StringLiteralKind Kind, bool Pascal, QualType Ty,
+                           SourceLocation Loc) {
     return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
   }
 
   /// Construct an empty string literal.
-  static StringLiteral *CreateEmpty(const ASTContext &Ctx,
-                                    unsigned NumConcatenated, unsigned Length,
-                                    unsigned CharByteWidth);
+  static StringRef *CreateEmpty(const ASTContext &Ctx, unsigned NumConcatenated,
+                                unsigned Length, unsigned CharByteWidth);
 
   StringRef getString() const {
     assert((isUnevaluated() || getCharByteWidth() == 1) &&
@@ -1994,17 +1991,17 @@ class PredefinedExpr final
 
   // PredefinedExpr is optionally followed by a single trailing
   // "Stmt *" for the predefined identifier. It is present if and only if
-  // hasFunctionName() is true and is always a "StringLiteral *".
+  // hasFunctionName() is true and is always a "StringRef *".
 
   PredefinedExpr(SourceLocation L, QualType FNTy, PredefinedIdentKind IK,
-                 bool IsTransparent, StringLiteral *SL);
+                 bool IsTransparent, StringRef *SL);
 
   explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
 
   /// True if this PredefinedExpr has storage for a function name.
   bool hasFunctionName() const { return PredefinedExprBits.HasFunctionName; }
 
-  void setFunctionName(StringLiteral *SL) {
+  void setFunctionName(StringRef *SL) {
     assert(hasFunctionName() &&
            "This PredefinedExpr has no storage for a function name!");
     *getTrailingObjects<Stmt *>() = SL;
@@ -2014,10 +2011,10 @@ public:
   /// Create a PredefinedExpr.
   ///
   /// If IsTransparent, the PredefinedExpr is transparently handled as a
-  /// StringLiteral.
+  /// StringRef.
   static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
                                 QualType FNTy, PredefinedIdentKind IK,
-                                bool IsTransparent, StringLiteral *SL);
+                                bool IsTransparent, StringRef *SL);
 
   /// Create an empty PredefinedExpr.
   static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
@@ -2032,15 +2029,15 @@ public:
   SourceLocation getLocation() const { return PredefinedExprBits.Loc; }
   void setLocation(SourceLocation L) { PredefinedExprBits.Loc = L; }
 
-  StringLiteral *getFunctionName() {
+  StringRef *getFunctionName() {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringRef *>(*getTrailingObjects<Stmt *>())
                : nullptr;
   }
 
-  const StringLiteral *getFunctionName() const {
+  const StringRef *getFunctionName() const {
     return hasFunctionName()
-               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               ? static_cast<StringRef *>(*getTrailingObjects<Stmt *>())
                : nullptr;
   }
 
@@ -4884,7 +4881,7 @@ private:
 
 /// Stores data related to a single #embed directive.
 struct EmbedDataStorage {
-  StringLiteral *BinaryData;
+  StringRef *BinaryData;
   size_t getDataElementCount() const { return BinaryData->getByteLength(); }
 };
 
@@ -4930,7 +4927,7 @@ public:
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
   SourceLocation getEndLoc() const { return EmbedKeywordLoc; }
 
-  StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
+  StringRef *getDataStringLiteral() const { return Data->BinaryData; }
   EmbedDataStorage *getData() const { return Data; }
 
   unsigned getStartingElementPos() const { return Begin; }

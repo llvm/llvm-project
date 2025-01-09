@@ -36,7 +36,7 @@ namespace clang::tidy::misc {
 namespace {
 using llvm::APSInt;
 
-static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
+static constexpr llvm::StringRef KnownBannedMacroNames[] = {
     "EAGAIN",
     "EWOULDBLOCK",
     "SIGCLD",
@@ -99,8 +99,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     return cast<FloatingLiteral>(Left)->getValue().bitwiseIsEqual(
         cast<FloatingLiteral>(Right)->getValue());
   case Stmt::StringLiteralClass:
-    return cast<StringLiteral>(Left)->getBytes() ==
-           cast<StringLiteral>(Right)->getBytes();
+    return cast<StringRef>(Left)->getBytes() ==
+           cast<StringRef>(Right)->getBytes();
   case Stmt::CXXOperatorCallExprClass:
     return cast<CXXOperatorCallExpr>(Left)->getOperator() ==
            cast<CXXOperatorCallExpr>(Right)->getOperator();
@@ -472,7 +472,7 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
 
 AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
 
-AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
+AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringRef>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
   SourceLocation Loc = Node.getExprLoc();

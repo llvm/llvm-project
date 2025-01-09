@@ -275,7 +275,7 @@ class TidyDiagnosticGroups {
 
 public:
   TidyDiagnosticGroups(llvm::StringRef Checks) {
-    constexpr llvm::StringLiteral CDPrefix = "clang-diagnostic-";
+    constexpr llvm::StringRef CDPrefix = "clang-diagnostic-";
 
     llvm::StringRef Check;
     while (!Checks.empty()) {

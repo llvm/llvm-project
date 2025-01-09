@@ -549,9 +549,8 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
   // Store the position of the legacy operand_segment_sizes /
   // result_segment_sizes so we can emit a backward compatible property readers
   // and writers.
-  StringRef legacyOperandSegmentSizeName =
-      StringLiteral("operand_segment_sizes");
-  StringRef legacyResultSegmentSizeName = StringLiteral("result_segment_sizes");
+  StringRef legacyOperandSegmentSizeName = StringRef("operand_segment_sizes");
+  StringRef legacyResultSegmentSizeName = StringRef("result_segment_sizes");
   operandSegmentSizesLegacyIndex = 0;
   resultSegmentSizesLegacyIndex = 0;
   for (auto item : sortedAttrMetadata) {
@@ -4068,10 +4067,10 @@ void OpEmitter::genTraits() {
 }
 
 void OpEmitter::genOpNameGetter() {
-  auto *method = opClass.addStaticMethod<Method::Constexpr>(
-      "::llvm::StringLiteral", "getOperationName");
+  auto *method = opClass.addStaticMethod<Method::Constexpr>("::llvm::StringRef",
+                                                            "getOperationName");
   ERROR_IF_PRUNED(method, "getOperationName", op);
-  method->body() << "  return ::llvm::StringLiteral(\"" << op.getOperationName()
+  method->body() << "  return ::llvm::StringRef(\"" << op.getOperationName()
                  << "\");";
 }
 

@@ -298,7 +298,7 @@ TEST(StmtPrinter, TerseOutputWithLambdas) {
 }
 
 TEST(StmtPrinter, ParamsUglified) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     template <typename _T, int _I, template <typename> class _C>
     auto foo(int __j) {
       return typename _C<_T>::_F(_I, __j);

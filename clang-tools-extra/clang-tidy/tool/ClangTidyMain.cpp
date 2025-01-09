@@ -483,7 +483,7 @@ static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   return Closest;
 }
 
-static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
+static constexpr StringRef VerifyConfigWarningEnd = " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {

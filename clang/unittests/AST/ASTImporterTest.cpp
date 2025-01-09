@@ -509,7 +509,7 @@ TEST_P(ImportExpr, ImportDesignatedInitExpr) {
 
 TEST_P(ImportExpr, ImportPredefinedExpr) {
   MatchVerifier<Decl> Verifier;
-  // __func__ expands as StringLiteral("declToImport")
+  // __func__ expands as StringRef("declToImport")
   testImport("void declToImport() { (void)__func__; }", Lang_CXX03, "",
              Lang_CXX03, Verifier,
              functionDecl(hasDescendant(predefinedExpr(

@@ -31,20 +31,20 @@ void fn3() { template_fn<5>(); }
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "example"
 // CHECK: -AttributedStmt 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}}
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "abc"
+// CHECK: -StringRef 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "abc"
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 3
 // CHECK: -FloatingLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'double' 4.000000e+00
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "somestring"
+// CHECK: -StringRef 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "somestring"
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 1
 // CHECK: -FloatingLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'double' 2.000000e+00
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} Implicit "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "def"
+// CHECK: -StringRef 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "def"
 // CHECK: -BinaryOperator 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' '+'
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} 'int' 5
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 1
 // CHECK: -AnnotateAttr 0x{{[0-9a-z]+}} {{<line:[0-9]+:[0-9]+(, col:[0-9]+)?>}} "example"
-// CHECK: -StringLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "template"
+// CHECK: -StringRef 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'const char[{{[0-9]+}}]' lvalue "template"
 // CHECK: -IntegerLiteral 0x{{[0-9a-z]+}} {{<col:[0-9]+(, col:[0-9]+)?>}} 'int' 5
 
 //--- bad_attr.cpp

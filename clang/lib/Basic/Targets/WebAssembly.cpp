@@ -30,7 +30,7 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 #include "clang/Basic/BuiltinsWebAssembly.def"
 };
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {
+static constexpr llvm::StringRef ValidCPUNames[] = {
     {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }

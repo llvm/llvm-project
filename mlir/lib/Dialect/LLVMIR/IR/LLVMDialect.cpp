@@ -2753,13 +2753,13 @@ LogicalResult LLVMFuncOp::verify() {
          };
          return TypeSwitch<Operation *, WalkResult>(op)
              .Case<LandingpadOp>([&](auto landingpad) {
-               constexpr StringLiteral errorMessage =
+               constexpr StringRef errorMessage =
                    "'llvm.landingpad' should have a consistent result type "
                    "inside a function";
                return checkType(landingpad.getType(), errorMessage);
              })
              .Case<ResumeOp>([&](auto resume) {
-               constexpr StringLiteral errorMessage =
+               constexpr StringRef errorMessage =
                    "'llvm.resume' should have a consistent input type inside a "
                    "function";
                return checkType(resume.getValue().getType(), errorMessage);

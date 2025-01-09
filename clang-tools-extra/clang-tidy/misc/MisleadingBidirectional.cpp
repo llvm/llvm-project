@@ -124,7 +124,7 @@ void MisleadingBidirectionalCheck::registerPPCallbacks(
 
 void MisleadingBidirectionalCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
-  if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("strlit")) {
+  if (const auto *SL = Result.Nodes.getNodeAs<StringRef>("strlit")) {
     StringRef Literal = SL->getBytes();
     if (containsMisleadingBidi(Literal, false))
       diag(SL->getBeginLoc(), "string literal contains misleading "

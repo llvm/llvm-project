@@ -68,7 +68,7 @@ class CharUnits;
 class Decl;
 class Expr;
 class Stmt;
-class StringLiteral;
+class StringRef;
 class NamedDecl;
 class PointerAuthSchema;
 class ValueDecl;
@@ -1151,15 +1151,14 @@ public:
   void setAddrOfGlobalBlock(const BlockExpr *BE, llvm::Constant *Addr);
 
   /// Return a pointer to a constant CFString object for the given string.
-  ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);
+  ConstantAddress GetAddrOfConstantCFString(const StringRef *Literal);
 
   /// Return a constant array for the given string.
-  llvm::Constant *GetConstantArrayFromStringLiteral(const StringLiteral *E);
+  llvm::Constant *GetConstantArrayFromStringLiteral(const StringRef *E);
 
   /// Return a pointer to a constant array for the given string literal.
-  ConstantAddress
-  GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
-                                     StringRef Name = ".str");
+  ConstantAddress GetAddrOfConstantStringFromLiteral(const StringRef *S,
+                                                     StringRef Name = ".str");
 
   /// Return a pointer to a constant array for the given ObjCEncodeExpr node.
   ConstantAddress

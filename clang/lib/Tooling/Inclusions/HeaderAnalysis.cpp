@@ -100,7 +100,7 @@ std::optional<StringRef> parseIWYUPragma(const char *Text) {
   Text += 2;
 
   // Per spec, direcitves are whitespace- and case-sensitive.
-  constexpr llvm::StringLiteral IWYUPragma = " IWYU pragma: ";
+  constexpr llvm::StringRef IWYUPragma = " IWYU pragma: ";
   if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
     return std::nullopt;
   Text += IWYUPragma.size();

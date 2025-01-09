@@ -85,7 +85,7 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CondStmt = Result.Nodes.getNodeAs<Stmt>("condStmt");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *IsAlwaysFalse = Result.Nodes.getNodeAs<Expr>("isAlwaysFalse");
-  const auto *AssertMSG = Result.Nodes.getNodeAs<StringLiteral>("assertMSG");
+  const auto *AssertMSG = Result.Nodes.getNodeAs<StringRef>("assertMSG");
   const auto *AssertExprRoot =
       Result.Nodes.getNodeAs<BinaryOperator>("assertExprRoot");
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("castExpr");

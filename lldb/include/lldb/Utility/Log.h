@@ -145,13 +145,13 @@ public:
 
   // Description of a log channel category.
   struct Category {
-    llvm::StringLiteral name;
-    llvm::StringLiteral description;
+    llvm::StringRef name;
+    llvm::StringRef description;
     MaskType flag;
 
     template <typename Cat>
-    constexpr Category(llvm::StringLiteral name,
-                       llvm::StringLiteral description, Cat mask)
+    constexpr Category(llvm::StringRef name, llvm::StringRef description,
+                       Cat mask)
         : name(name), description(description), flag(MaskType(mask)) {
       static_assert(
           std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);

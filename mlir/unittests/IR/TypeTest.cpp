@@ -20,7 +20,7 @@ struct LeafType;
 struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.middle";
+  static constexpr StringRef name = "test.middle";
 
   static bool classof(Type ty) {
     return ty.getTypeID() == TypeID::get<LeafType>() || Base::classof(ty);
@@ -30,7 +30,7 @@ struct MiddleType : Type::TypeBase<MiddleType, Type, TypeStorage> {
 struct LeafType : Type::TypeBase<LeafType, MiddleType, TypeStorage> {
   using Base::Base;
 
-  static constexpr StringLiteral name = "test.leaf";
+  static constexpr StringRef name = "test.leaf";
 };
 
 struct FakeDialect : Dialect {
@@ -38,8 +38,8 @@ struct FakeDialect : Dialect {
       : Dialect(getDialectNamespace(), context, TypeID::get<FakeDialect>()) {
     addTypes<MiddleType, LeafType>();
   }
-  static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("fake");
+  static constexpr ::llvm::StringRef getDialectNamespace() {
+    return ::llvm::StringRef("fake");
   }
 };
 

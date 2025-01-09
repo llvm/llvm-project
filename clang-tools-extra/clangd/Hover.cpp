@@ -683,7 +683,7 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
   HI.Name = PE.getIdentKindName();
   HI.Kind = index::SymbolKind::Variable;
   HI.Documentation = "Name of the current function (predefined variable)";
-  if (const StringLiteral *Name = PE.getFunctionName()) {
+  if (const StringRef *Name = PE.getFunctionName()) {
     HI.Value.emplace();
     llvm::raw_string_ostream OS(*HI.Value);
     Name->outputString(OS);
@@ -864,7 +864,7 @@ HoverInfo getDeducedTypeHoverContents(QualType QT, const syntax::Token &Tok,
   return HI;
 }
 
-HoverInfo getStringLiteralContents(const StringLiteral *SL,
+HoverInfo getStringLiteralContents(const StringRef *SL,
                                    const PrintingPolicy &PP) {
   HoverInfo HI;
 
@@ -883,10 +883,10 @@ bool isLiteral(const Expr *E) {
          llvm::isa<CXXNullPtrLiteralExpr>(E) ||
          llvm::isa<FixedPointLiteral>(E) || llvm::isa<FloatingLiteral>(E) ||
          llvm::isa<ImaginaryLiteral>(E) || llvm::isa<IntegerLiteral>(E) ||
-         llvm::isa<StringLiteral>(E) || llvm::isa<UserDefinedLiteral>(E);
+         llvm::isa<StringRef>(E) || llvm::isa<UserDefinedLiteral>(E);
 }
 
-llvm::StringLiteral getNameForExpr(const Expr *E) {
+llvm::StringRef getNameForExpr(const Expr *E) {
   // FIXME: Come up with names for `special` expressions.
   //
   // It's an known issue for GCC5, https://godbolt.org/z/Z_tbgi. Work around
@@ -894,7 +894,7 @@ llvm::StringLiteral getNameForExpr(const Expr *E) {
   //
   // TODO: Once GCC5 is fully retired and not the minimal requirement as stated
   // in `GettingStarted`, please remove the explicit conversion constructor.
-  return llvm::StringLiteral("expression");
+  return llvm::StringRef("expression");
 }
 
 void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
@@ -908,7 +908,7 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
                                           const SymbolIndex *Index) {
   std::optional<HoverInfo> HI;
 
-  if (const StringLiteral *SL = dyn_cast<StringLiteral>(E)) {
+  if (const StringRef *SL = dyn_cast<StringRef>(E)) {
     // Print the type and the size for string literals
     HI = getStringLiteralContents(SL, PP);
   } else if (isLiteral(E)) {
@@ -965,7 +965,7 @@ bool isParagraphBreak(llvm::StringRef Rest) {
 }
 
 bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
-  constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
+  constexpr llvm::StringRef Punctuation = R"txt(.:,;!?)txt";
 
   Line = Line.rtrim();
   return !Line.empty() && Punctuation.contains(Line.back());
@@ -974,7 +974,7 @@ bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
 bool isHardLineBreakIndicator(llvm::StringRef Rest) {
   // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
   // '#' headings, '`' code blocks
-  constexpr llvm::StringLiteral LinebreakIndicators = R"txt(-*@\>#`)txt";
+  constexpr llvm::StringRef LinebreakIndicators = R"txt(-*@\>#`)txt";
 
   Rest = Rest.ltrim(" \t");
   if (Rest.empty())
@@ -1578,7 +1578,7 @@ std::optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
 
   // The open-quote is usually preceded by whitespace.
   llvm::StringRef Prefix = Line.substr(0, Offset);
-  constexpr llvm::StringLiteral BeforeStartChars = " \t(=";
+  constexpr llvm::StringRef BeforeStartChars = " \t(=";
   if (!Prefix.empty() && !BeforeStartChars.contains(Prefix.back()))
     return std::nullopt;
 
@@ -1593,7 +1593,7 @@ std::optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
 
   // The close-quote is usually followed by whitespace or punctuation.
   llvm::StringRef Suffix = Line.substr(Next + 1);
-  constexpr llvm::StringLiteral AfterEndChars = " \t)=.,;:";
+  constexpr llvm::StringRef AfterEndChars = " \t)=.,;:";
   if (!Suffix.empty() && !AfterEndChars.contains(Suffix.front()))
     return std::nullopt;
 

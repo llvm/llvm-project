@@ -1000,13 +1000,13 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::Expr">
-    <DisplayString Condition="StmtBits.sClass==clang::Stmt::StmtClass::StringLiteralClass" IncludeView="poly">{*(clang::StringLiteral *)this}</DisplayString>
+    <DisplayString Condition="StmtBits.sClass==clang::Stmt::StmtClass::StringLiteralClass" IncludeView="poly">{*(clang::StringRef *)this}</DisplayString>
     <DisplayString>Expression of class {(clang::Stmt::StmtClass)StmtBits.sClass,en} and type {TR,view(cpp)}</DisplayString>
   </Type>
-  <Type Name="clang::StringLiteral">
+  <Type Name="clang::StringRef">
     <Expand>
-      <Item Name="Length">*(unsigned *)(((clang::StringLiteral *)this)+1)</Item>
-      <Item Name="Data" Condition="StringLiteralBits.NumConcatenated==1">(const char *)(((clang::StringLiteral *)this)+1)+4+4,[*(unsigned *)(((clang::StringLiteral *)this)+1)]s8</Item>
+      <Item Name="Length">*(unsigned *)(((clang::StringRef *)this)+1)</Item>
+      <Item Name="Data" Condition="StringLiteralBits.NumConcatenated==1">(const char *)(((clang::StringRef *)this)+1)+4+4,[*(unsigned *)(((clang::StringRef *)this)+1)]s8</Item>
     </Expand>
   </Type>
   <Type Name="clang::DeclAccessPair">

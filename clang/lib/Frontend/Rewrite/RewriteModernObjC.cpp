@@ -595,12 +595,12 @@ namespace {
       return OD->getClassMethod(LoadSel) != nullptr;
     }
 
-    StringLiteral *getStringLiteral(StringRef Str) {
+    StringRef *getStringLiteral(StringRef Str) {
       QualType StrType = Context->getConstantArrayType(
           Context->CharTy, llvm::APInt(32, Str.size() + 1), nullptr,
           ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(*Context, Str, StringLiteralKind::Ordinary,
-                                   /*Pascal=*/false, StrType, SourceLocation());
+      return StringRef::Create(*Context, Str, StringLiteralKind::Ordinary,
+                               /*Pascal=*/false, StrType, SourceLocation());
     }
   };
 } // end anonymous namespace
@@ -2575,7 +2575,7 @@ Stmt *RewriteModernObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   Preamble += "static __NSConstantStringImpl " + S;
   Preamble += " __attribute__ ((section (\"__DATA, __cfstring\"))) = {__CFConstantStringClassReference,";
   Preamble += "0x000007c8,"; // utf8_str
-  // The pretty printer for StringLiteral handles escape characters properly.
+  // The pretty printer for StringRef handles escape characters properly.
   std::string prettyBufS;
   llvm::raw_string_ostream prettyBuf(prettyBufS);
   Exp->getString()->printPretty(prettyBuf, nullptr, PrintingPolicy(LangOpts));

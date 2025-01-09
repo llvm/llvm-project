@@ -52,9 +52,7 @@ public:
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override;
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
 private:
   // All of the following are set by prepare().

@@ -190,16 +190,16 @@ public:
   ~{0}Base() = default;
 
   /// Returns the command-line argument attached to this pass.
-  static constexpr ::llvm::StringLiteral getArgumentName() {
-    return ::llvm::StringLiteral("{2}");
+  static constexpr ::llvm::StringRef getArgumentName() {
+    return ::llvm::StringRef("{2}");
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
   ::llvm::StringRef getDescription() const override { return "{3}"; }
 
   /// Returns the derived pass name.
-  static constexpr ::llvm::StringLiteral getPassName() {
-    return ::llvm::StringLiteral("{0}");
+  static constexpr ::llvm::StringRef getPassName() {
+    return ::llvm::StringRef("{0}");
   }
   ::llvm::StringRef getName() const override { return "{0}"; }
 
@@ -388,16 +388,16 @@ public:
   ~{0}Base() = default;
 
   /// Returns the command-line argument attached to this pass.
-  static constexpr ::llvm::StringLiteral getArgumentName() {
-    return ::llvm::StringLiteral("{2}");
+  static constexpr ::llvm::StringRef getArgumentName() {
+    return ::llvm::StringRef("{2}");
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
   ::llvm::StringRef getDescription() const override { return "{3}"; }
 
   /// Returns the derived pass name.
-  static constexpr ::llvm::StringLiteral getPassName() {
-    return ::llvm::StringLiteral("{0}");
+  static constexpr ::llvm::StringRef getPassName() {
+    return ::llvm::StringRef("{0}");
   }
   ::llvm::StringRef getName() const override { return "{0}"; }
 

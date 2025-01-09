@@ -116,7 +116,7 @@ struct FragmentCompiler {
   }
 
   std::optional<std::string> makeAbsolute(Located<std::string> Path,
-                                          llvm::StringLiteral Description,
+                                          llvm::StringRef Description,
                                           llvm::sys::path::Style Style) {
     if (llvm::sys::path::is_absolute(*Path))
       return *Path;
@@ -142,14 +142,14 @@ struct FragmentCompiler {
     llvm::StringRef EnumName;
     const Located<std::string> &Input;
     std::optional<T> Result;
-    llvm::SmallVector<llvm::StringLiteral> ValidValues;
+    llvm::SmallVector<llvm::StringRef> ValidValues;
 
   public:
     EnumSwitch(llvm::StringRef EnumName, const Located<std::string> &In,
                FragmentCompiler &Outer)
         : Outer(Outer), EnumName(EnumName), Input(In) {}
 
-    EnumSwitch &map(llvm::StringLiteral Name, T Value) {
+    EnumSwitch &map(llvm::StringRef Name, T Value) {
       assert(!llvm::is_contained(ValidValues, Name) && "Duplicate value!");
       ValidValues.push_back(Name);
       if (!Result && *Input == Name)

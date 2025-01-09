@@ -17,7 +17,7 @@ namespace {
 
 struct CounterAction : public ActionImpl<CounterAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CounterAction)
-  static constexpr StringLiteral tag = "counter-action";
+  static constexpr StringRef tag = "counter-action";
 };
 
 TEST(DebugCounterTest, CounterTest) {

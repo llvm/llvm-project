@@ -30,7 +30,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 llvm::StringRef TargetList::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.targetList");
+  static constexpr llvm::StringRef class_name("lldb.targetList");
   return class_name;
 }
 

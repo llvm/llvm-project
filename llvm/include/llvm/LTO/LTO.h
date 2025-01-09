@@ -80,7 +80,7 @@ std::string recomputeLTOCacheKey(const std::string &Key, StringRef ExtraID);
 
 namespace lto {
 
-StringLiteral getThinLTODefaultCPU(const Triple &TheTriple);
+StringRef getThinLTODefaultCPU(const Triple &TheTriple);
 
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the

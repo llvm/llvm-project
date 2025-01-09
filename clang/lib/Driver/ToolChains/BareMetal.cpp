@@ -202,7 +202,7 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   Result.SelectedMultilibs.clear();
 }
 
-static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
+static constexpr llvm::StringRef MultilibFilename = "multilib.yaml";
 
 static std::optional<llvm::SmallString<128>>
 getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,

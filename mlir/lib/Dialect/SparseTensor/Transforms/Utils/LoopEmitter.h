@@ -240,8 +240,8 @@ public:
   };
   const std::vector<Value> &getValBuffer() const { return valBuffer; };
 
-  constexpr static llvm::StringLiteral getLoopEmitterLoopAttrName() {
-    return llvm::StringLiteral("Emitted from");
+  constexpr static llvm::StringRef getLoopEmitterLoopAttrName() {
+    return llvm::StringRef("Emitted from");
   }
 
 private:

@@ -56,7 +56,7 @@ public:
 
   // We directly handle string literals with a templated converting constructor
   // because we *don't* want to do `strlen` on them -- we fully expect null
-  // bytes in this input. This is somewhat the opposite of how `StringLiteral`
+  // bytes in this input. This is somewhat the opposite of how `StringRef`
   // works.
   template <size_t N>
   constexpr StringTable(const char (&RawTable)[N]) : Table(RawTable, N) {

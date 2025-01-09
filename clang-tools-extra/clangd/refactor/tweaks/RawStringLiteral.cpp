@@ -34,12 +34,10 @@ public:
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override { return "Convert to raw string"; }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
 private:
-  const clang::StringLiteral *Str = nullptr;
+  const clang::StringRef *Str = nullptr;
 };
 
 REGISTER_TWEAK(RawStringLiteral)
@@ -50,8 +48,8 @@ static bool isFeatureAvailable(const ASTContext &Context) {
   return Context.getLangOpts().CPlusPlus11;
 }
 
-static bool isNormalString(const StringLiteral &Str, SourceLocation Cursor,
-                          SourceManager &SM) {
+static bool isNormalString(const StringRef &Str, SourceLocation Cursor,
+                           SourceManager &SM) {
   // All chunks must be normal ASCII strings, not u8"..." etc.
   if (!Str.isOrdinary())
     return false;
@@ -85,7 +83,7 @@ bool RawStringLiteral::prepare(const Selection &Inputs) {
   const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
   if (!N)
     return false;
-  Str = dyn_cast_or_null<StringLiteral>(N->ASTNode.get<Stmt>());
+  Str = dyn_cast_or_null<StringRef>(N->ASTNode.get<Stmt>());
   return Str &&
          isNormalString(*Str, Inputs.Cursor, Inputs.AST->getSourceManager()) &&
          needsRaw(Str->getBytes()) && canBeRaw(Str->getBytes());

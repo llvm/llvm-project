@@ -23,7 +23,7 @@ namespace {
 using FeatureBitset = Bitset<X86::CPU_FEATURE_MAX>;
 
 struct ProcInfo {
-  StringLiteral Name;
+  StringRef Name;
   X86::CPUKind Kind;
   unsigned KeyFeature;
   FeatureBitset Features;
@@ -32,7 +32,7 @@ struct ProcInfo {
 };
 
 struct FeatureInfo {
-  StringLiteral NameWithPlus;
+  StringRef NameWithPlus;
   FeatureBitset ImpliedFeatures;
 
   StringRef getName(bool WithPlus = false) const {

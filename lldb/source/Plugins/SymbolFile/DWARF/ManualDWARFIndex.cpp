@@ -555,7 +555,7 @@ void ManualDWARFIndex::Dump(Stream &s) {
   m_set.namespaces.Dump(&s);
 }
 
-constexpr llvm::StringLiteral kIdentifierManualDWARFIndex("DIDX");
+constexpr llvm::StringRef kIdentifierManualDWARFIndex("DIDX");
 // Define IDs for the different tables when encoding and decoding the
 // ManualDWARFIndex NameToDIE objects so we can avoid saving any empty maps.
 enum DataID {

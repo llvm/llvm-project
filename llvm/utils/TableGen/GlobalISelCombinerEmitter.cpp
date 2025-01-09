@@ -78,9 +78,9 @@ cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
                              cl::desc("Print type inference debug logs"),
                              cl::cat(GICombinerEmitterCat));
 
-constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
-constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
-constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
+constexpr StringRef CXXCustomActionPrefix = "GICXXCustomAction_";
+constexpr StringRef CXXPredPrefix = "GICXXPred_MI_Predicate_";
+constexpr StringRef MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 

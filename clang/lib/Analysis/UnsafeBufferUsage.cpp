@@ -446,8 +446,8 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
                                           ->getType()
                                           ->getUnqualifiedDesugaredType())) {
     limit = CATy->getLimitedSize();
-  } else if (const auto *SLiteral = dyn_cast<StringLiteral>(
-                 Node.getBase()->IgnoreParenImpCasts())) {
+  } else if (const auto *SLiteral =
+                 dyn_cast<StringRef>(Node.getBase()->IgnoreParenImpCasts())) {
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
@@ -513,7 +513,7 @@ struct LibcFunNamePrefixSuffixParser {
 // A pointer type expression is known to be null-terminated, if it has the
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr) {
-  if (isa<StringLiteral>(Ptr->IgnoreParenImpCasts()))
+  if (isa<StringRef>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
     return true;
@@ -571,7 +571,7 @@ static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
 
   const Expr *Fmt = Call->getArg(FmtArgIdx);
 
-  if (auto *SL = dyn_cast<StringLiteral>(Fmt->IgnoreParenImpCasts())) {
+  if (auto *SL = dyn_cast<StringRef>(Fmt->IgnoreParenImpCasts())) {
     StringRef FmtStr;
 
     if (SL->getCharByteWidth() == 1)

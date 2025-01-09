@@ -154,12 +154,12 @@ TEST(PreamblePatchTest, IncludeParsing) {
 }
 
 TEST(PreamblePatchTest, ContainsNewIncludes) {
-  constexpr llvm::StringLiteral BaselineContents = R"cpp(
+  constexpr llvm::StringRef BaselineContents = R"cpp(
     #include <a.h>
     #include <b.h> // This will be removed
     #include <c.h>
   )cpp";
-  constexpr llvm::StringLiteral ModifiedContents = R"cpp(
+  constexpr llvm::StringRef ModifiedContents = R"cpp(
     #include <a.h>
     #include <c.h> // This has changed a line.
     #include <c.h> // This is a duplicate.
@@ -256,11 +256,11 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
 }
 
 TEST(PreamblePatchTest, IncludesArePreserved) {
-  llvm::StringLiteral Baseline = R"(//error-ok
+  llvm::StringRef Baseline = R"(//error-ok
 #include <foo>
 #include <bar>
 )";
-  llvm::StringLiteral Modified = R"(//error-ok
+  llvm::StringRef Modified = R"(//error-ok
 #include <foo>
 #include <bar>
 #define FOO)";
@@ -335,14 +335,14 @@ TEST(PreamblePatchTest, Define) {
 }
 
 TEST(PreamblePatchTest, OrderingPreserved) {
-  llvm::StringLiteral Baseline = "#define BAR(X) X";
+  llvm::StringRef Baseline = "#define BAR(X) X";
   Annotations Modified(R"cpp(
     #define BAR(X, Y) X Y
     #define BAR(X) X
     [[BAR]](int y);
   )cpp");
 
-  llvm::StringLiteral ExpectedPatch(R"cpp(#line 0 ".*main.cpp"
+  llvm::StringRef ExpectedPatch(R"cpp(#line 0 ".*main.cpp"
 #undef BAR
 #line 2
 #define     BAR\(X, Y\) X Y
@@ -434,7 +434,7 @@ TEST(PreamblePatchTest, LocateMacroAtWorks) {
 TEST(PreamblePatchTest, LocateMacroAtDeletion) {
   {
     // We don't patch deleted define directives, make sure we don't crash.
-    llvm::StringLiteral Baseline = "#define FOO";
+    llvm::StringRef Baseline = "#define FOO";
     llvm::Annotations Modified("^FOO");
 
     auto AST = createPatchedAST(Baseline, Modified.code());
@@ -457,7 +457,7 @@ TEST(PreamblePatchTest, LocateMacroAtDeletion) {
 
   {
     // Offset is valid, but underlying text is different.
-    llvm::StringLiteral Baseline = "#define FOO";
+    llvm::StringRef Baseline = "#define FOO";
     Annotations Modified(R"cpp(#define BAR
     ^FOO")cpp");
 
@@ -593,15 +593,15 @@ TEST(PreamblePatch, ModifiedBounds) {
 }
 
 TEST(PreamblePatch, MacroLoc) {
-  llvm::StringLiteral Baseline = "\n#define MACRO 12\nint num = MACRO;";
-  llvm::StringLiteral Modified = " \n#define MACRO 12\nint num = MACRO;";
+  llvm::StringRef Baseline = "\n#define MACRO 12\nint num = MACRO;";
+  llvm::StringRef Modified = " \n#define MACRO 12\nint num = MACRO;";
   auto AST = createPatchedAST(Baseline, Modified);
   ASSERT_TRUE(AST);
 }
 
 TEST(PreamblePatch, NoopWhenNotRequested) {
-  llvm::StringLiteral Baseline = "#define M\nint num = M;";
-  llvm::StringLiteral Modified = "#define M\n#include <foo.h>\nint num = M;";
+  llvm::StringRef Baseline = "#define M\nint num = M;";
+  llvm::StringRef Modified = "#define M\n#include <foo.h>\nint num = M;";
   auto TU = TestTU::withCode(Baseline);
   auto BaselinePreamble = TU.preamble();
   ASSERT_TRUE(BaselinePreamble);

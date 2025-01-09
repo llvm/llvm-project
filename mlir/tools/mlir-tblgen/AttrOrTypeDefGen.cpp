@@ -297,13 +297,13 @@ void DefGen::emitName() {
     name = typeDef->getTypeName();
   }
   std::string nameDecl =
-      strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n", name);
+      strfmt("static constexpr ::llvm::StringRef name = \"{0}\";\n", name);
   defCls.declare<ExtraClassDeclaration>(std::move(nameDecl));
 }
 
 void DefGen::emitDialectName() {
   std::string decl =
-      strfmt("static constexpr ::llvm::StringLiteral dialectName = \"{0}\";\n",
+      strfmt("static constexpr ::llvm::StringRef dialectName = \"{0}\";\n",
              def.getDialect().getName());
   defCls.declare<ExtraClassDeclaration>(std::move(decl));
 }
@@ -395,7 +395,7 @@ void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
 
 void DefGen::emitParserPrinter() {
   auto *mnemonic = defCls.addStaticMethod<Method::Constexpr>(
-      "::llvm::StringLiteral", "getMnemonic");
+      "::llvm::StringRef", "getMnemonic");
   mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
 
   // Declare the parser and printer, if needed.

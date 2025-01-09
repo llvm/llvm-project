@@ -59,11 +59,11 @@ enum class EncodeKind : uint8_t {
   ObjectiveCInstanceVariable,
 };
 
-constexpr StringLiteral ObjC1ClassNamePrefix = ".objc_class_name_";
-constexpr StringLiteral ObjC2ClassNamePrefix = "_OBJC_CLASS_$_";
-constexpr StringLiteral ObjC2MetaClassNamePrefix = "_OBJC_METACLASS_$_";
-constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
-constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
+constexpr StringRef ObjC1ClassNamePrefix = ".objc_class_name_";
+constexpr StringRef ObjC2ClassNamePrefix = "_OBJC_CLASS_$_";
+constexpr StringRef ObjC2MetaClassNamePrefix = "_OBJC_METACLASS_$_";
+constexpr StringRef ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
+constexpr StringRef ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
 /// ObjC Interface symbol mappings.
 enum class ObjCIFSymbolKind : uint8_t {

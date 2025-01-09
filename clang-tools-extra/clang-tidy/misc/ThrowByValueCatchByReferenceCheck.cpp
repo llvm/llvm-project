@@ -74,7 +74,7 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
     // The code is throwing a pointer.
     // In case it is string literal, it is safe and we return.
     auto *Inner = SubExpr->IgnoreParenImpCasts();
-    if (isa<StringLiteral>(Inner))
+    if (isa<StringRef>(Inner))
       return;
     // If it's a variable from a catch statement, we return as well.
     auto *DeclRef = dyn_cast<DeclRefExpr>(Inner);

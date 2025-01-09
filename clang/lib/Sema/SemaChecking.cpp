@@ -115,7 +115,7 @@
 using namespace clang;
 using namespace sema;
 
-SourceLocation Sema::getLocationOfStringLiteralByte(const StringLiteral *SL,
+SourceLocation Sema::getLocationOfStringLiteralByte(const StringRef *SL,
                                                     unsigned ByteNo) const {
   return SL->getLocationOfByte(ByteNo, getSourceManager(), LangOpts,
                                Context.getTargetInfo());
@@ -227,7 +227,7 @@ static bool BuiltinAnnotation(Sema &S, CallExpr *TheCall) {
 
   // Second argument should be a constant string.
   Expr *StrArg = TheCall->getArg(1)->IgnoreParenCasts();
-  StringLiteral *Literal = dyn_cast<StringLiteral>(StrArg);
+  StringRef *Literal = dyn_cast<StringRef>(StrArg);
   if (!Literal || !Literal->isOrdinary()) {
     S.Diag(StrArg->getBeginLoc(), diag::err_builtin_annotation_second_arg)
         << StrArg->getSourceRange();
@@ -249,7 +249,7 @@ static bool BuiltinMSVCAnnotation(Sema &S, CallExpr *TheCall) {
 
   // All arguments should be wide string literals.
   for (Expr *Arg : TheCall->arguments()) {
-    auto *Literal = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
+    auto *Literal = dyn_cast<StringRef>(Arg->IgnoreParenCasts());
     if (!Literal || !Literal->isWide()) {
       S.Diag(Arg->getBeginLoc(), diag::err_msvc_annotation_wide_str)
           << Arg->getSourceRange();
@@ -1116,7 +1116,7 @@ private:
 static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
                                        StringRef &FormatStrRef, size_t &StrLen,
                                        ASTContext &Context) {
-  if (const auto *Format = dyn_cast<StringLiteral>(FormatExpr);
+  if (const auto *Format = dyn_cast<StringRef>(FormatExpr);
       Format && (Format->isOrdinary() || Format->isUTF8())) {
     FormatStrRef = Format->getString();
     const ConstantArrayType *T =
@@ -1769,7 +1769,7 @@ static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
   const Expr *Arg = Call->getArg(0)->IgnoreParenImpCasts();
 
   // Operand must be an ordinary or UTF-8 string literal.
-  const auto *Literal = dyn_cast<StringLiteral>(Arg);
+  const auto *Literal = dyn_cast<StringRef>(Arg);
   if (!Literal || Literal->getCharByteWidth() != 1) {
     S.Diag(Arg->getExprLoc(), diag::err_ptrauth_string_not_literal)
         << (Literal ? 1 : 0) << Arg->getSourceRange();
@@ -2021,12 +2021,12 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
 
   Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
   // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg))
+  if (!isa<StringRef>(Arg))
     return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
            << Arg->getSourceRange();
 
   // Check the contents of the string.
-  StringRef Feature = cast<StringLiteral>(Arg)->getString();
+  StringRef Feature = cast<StringRef>(Arg)->getString();
   if (IsCPUSupports && !TheTI->validateCpuSupports(Feature)) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_invalid_cpu_supports)
         << Arg->getSourceRange();
@@ -2963,7 +2963,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_allow_runtime_check: {
     Expr *Arg = TheCall->getArg(0);
     // Check if the argument is a string literal.
-    if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+    if (!isa<StringRef>(Arg->IgnoreParenImpCasts())) {
       Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
           << Arg->getSourceRange();
       return ExprError();
@@ -4688,7 +4688,7 @@ ExprResult Sema::BuiltinNontemporalOverloaded(ExprResult TheCallResult) {
 /// and os_trace() functions is correct, and converts it to const char *.
 ExprResult Sema::CheckOSLogFormatStringArg(Expr *Arg) {
   Arg = Arg->IgnoreParenCasts();
-  auto *Literal = dyn_cast<StringLiteral>(Arg);
+  auto *Literal = dyn_cast<StringRef>(Arg);
   if (!Literal) {
     if (auto *ObjcLiteral = dyn_cast<ObjCStringLiteral>(Arg)) {
       Literal = ObjcLiteral->getString();
@@ -5813,23 +5813,21 @@ static void sumOffsets(llvm::APSInt &Offset, llvm::APSInt Addend,
 
 namespace {
 
-// This is a wrapper class around StringLiteral to support offsetted string
+// This is a wrapper class around StringRef to support offsetted string
 // literals as format strings. It takes the offset into account when returning
 // the string and its length or the source locations to display notes correctly.
 class FormatStringLiteral {
-  const StringLiteral *FExpr;
+  const StringRef *FExpr;
   int64_t Offset;
 
  public:
-  FormatStringLiteral(const StringLiteral *fexpr, int64_t Offset = 0)
-      : FExpr(fexpr), Offset(Offset) {}
+   FormatStringLiteral(const StringRef *fexpr, int64_t Offset = 0)
+       : FExpr(fexpr), Offset(Offset) {}
 
-  StringRef getString() const {
-    return FExpr->getString().drop_front(Offset);
-  }
+   StringRef getString() const { return FExpr->getString().drop_front(Offset); }
 
-  unsigned getByteLength() const {
-    return FExpr->getByteLength() - getCharByteWidth() * Offset;
+   unsigned getByteLength() const {
+     return FExpr->getByteLength() - getCharByteWidth() * Offset;
   }
 
   unsigned getLength() const { return FExpr->getLength() - Offset; }
@@ -6161,12 +6159,12 @@ tryAgain:
   }
   case Stmt::ObjCStringLiteralClass:
   case Stmt::StringLiteralClass: {
-    const StringLiteral *StrE = nullptr;
+    const StringRef *StrE = nullptr;
 
     if (const ObjCStringLiteral *ObjCFExpr = dyn_cast<ObjCStringLiteral>(E))
       StrE = ObjCFExpr->getString();
     else
-      StrE = cast<StringLiteral>(E);
+      StrE = cast<StringRef>(E);
 
     if (StrE) {
       if (Offset.isNegative() || Offset > StrE->getLength()) {
@@ -6240,14 +6238,14 @@ tryAgain:
 }
 
 // If this expression can be evaluated at compile-time,
-// check if the result is a StringLiteral and return it
+// check if the result is a StringRef and return it
 // otherwise return nullptr
 static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
                                                const Expr *E) {
   Expr::EvalResult Result;
   if (E->EvaluateAsRValue(Result, Context) && Result.Val.isLValue()) {
     const auto *LVE = Result.Val.getLValueBase().dyn_cast<const Expr *>();
-    if (isa_and_nonnull<StringLiteral>(LVE))
+    if (isa_and_nonnull<StringRef>(LVE))
       return LVE;
   }
   return nullptr;
@@ -8115,7 +8113,7 @@ static void CheckFormatString(
   } // TODO: handle other formats
 }
 
-bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
+bool Sema::FormatStringHasSArg(const StringRef *FExpr) {
   // Str - The format string.  NOTE: this is NOT null-terminated!
   StringRef StrRef = FExpr->getString();
   const char *Str = StrRef.data();
@@ -11077,7 +11075,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   // Diagnose implicit casts to bool.
   if (Target->isSpecificBuiltinType(BuiltinType::Bool)) {
-    if (isa<StringLiteral>(E))
+    if (isa<StringRef>(E))
       // Warn on string literal to bool.  Checks for string literals in logical
       // and expressions, for instance, assert(0 && "error here"), are
       // prevented by a check in AnalyzeImplicitConversions().
@@ -11764,7 +11762,7 @@ static void AnalyzeImplicitConversions(
         continue;
 
     if (IsLogicalAndOperator &&
-        isa<StringLiteral>(ChildExpr->IgnoreParenImpCasts()))
+        isa<StringRef>(ChildExpr->IgnoreParenImpCasts()))
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
@@ -11773,11 +11771,11 @@ static void AnalyzeImplicitConversions(
 
   if (BO && BO->isLogicalOp()) {
     Expr *SubExpr = BO->getLHS()->IgnoreParenImpCasts();
-    if (!IsLogicalAndOperator || !isa<StringLiteral>(SubExpr))
+    if (!IsLogicalAndOperator || !isa<StringRef>(SubExpr))
       ::CheckBoolLikeConversion(S, SubExpr, BO->getExprLoc());
 
     SubExpr = BO->getRHS()->IgnoreParenImpCasts();
-    if (!IsLogicalAndOperator || !isa<StringLiteral>(SubExpr))
+    if (!IsLogicalAndOperator || !isa<StringRef>(SubExpr))
       ::CheckBoolLikeConversion(S, SubExpr, BO->getExprLoc());
   }
 

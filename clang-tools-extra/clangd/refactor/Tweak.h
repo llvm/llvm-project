@@ -120,7 +120,7 @@ public:
   virtual std::string title() const = 0;
   /// Describes what kind of action this is.
   /// EXPECTS: prepare() was called and returned true.
-  virtual llvm::StringLiteral kind() const = 0;
+  virtual llvm::StringRef kind() const = 0;
   /// Is this a 'hidden' tweak, which are off by default.
   virtual bool hidden() const { return false; }
 };

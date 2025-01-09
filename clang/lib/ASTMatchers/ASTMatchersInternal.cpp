@@ -955,7 +955,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
     cxxBoolLiteral;
-const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral> stringLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, StringRef> stringLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCStringLiteral> objcStringLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
     characterLiteral;

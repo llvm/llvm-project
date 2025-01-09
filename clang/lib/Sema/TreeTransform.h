@@ -12722,9 +12722,8 @@ TreeTransform<Derived>::TransformImaginaryLiteral(ImaginaryLiteral *E) {
   return E;
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformStringLiteral(StringLiteral *E) {
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformStringLiteral(StringRef *E) {
   return E;
 }
 

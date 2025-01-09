@@ -2478,7 +2478,7 @@ CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
 /// asm call instruction.  The !srcloc MDNode contains a list of constant
 /// integers which are the source locations of the start of each line in the
 /// asm.
-static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
+static llvm::MDNode *getAsmSrcLocInfo(const StringRef *Str,
                                       CodeGenFunction &CGF) {
   SmallVector<llvm::Metadata *, 8> Locs;
   // Add the location of the first line to the MDNode.

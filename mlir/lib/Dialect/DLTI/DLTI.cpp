@@ -562,10 +562,10 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
   return currentAttr;
 }
 
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessLittle;
+constexpr const StringRef mlir::DLTIDialect::kDataLayoutAttrName;
+constexpr const StringRef mlir::DLTIDialect::kDataLayoutEndiannessKey;
+constexpr const StringRef mlir::DLTIDialect::kDataLayoutEndiannessBig;
+constexpr const StringRef mlir::DLTIDialect::kDataLayoutEndiannessLittle;
 
 namespace {
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {

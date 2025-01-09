@@ -1119,7 +1119,7 @@ static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
 static void ExpandBasePaths(StringRef BasePath, StringSaver &Saver,
                             const char *&Arg) {
   assert(sys::path::is_absolute(BasePath));
-  constexpr StringLiteral Token("<CFGDIR>");
+  constexpr StringRef Token("<CFGDIR>");
   const StringRef ArgString(Arg);
 
   SmallString<128> ResponseFile;

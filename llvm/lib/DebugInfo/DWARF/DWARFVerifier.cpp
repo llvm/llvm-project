@@ -1455,7 +1455,7 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
   struct FormClassTable {
     dwarf::Index Index;
     DWARFFormValue::FormClass Class;
-    StringLiteral ClassName;
+    StringRef ClassName;
   };
   static constexpr FormClassTable Table[] = {
       {dwarf::DW_IDX_compile_unit, DWARFFormValue::FC_Constant, {"constant"}},

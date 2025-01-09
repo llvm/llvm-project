@@ -30,7 +30,7 @@ struct WalkAndApplyPatternsAction final
     : tracing::ActionImpl<WalkAndApplyPatternsAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WalkAndApplyPatternsAction)
   using ActionImpl::ActionImpl;
-  static constexpr StringLiteral tag = "walk-and-apply-patterns";
+  static constexpr StringRef tag = "walk-and-apply-patterns";
   void print(raw_ostream &os) const override { os << tag; }
 };
 

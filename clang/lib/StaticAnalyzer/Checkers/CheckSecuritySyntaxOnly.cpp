@@ -608,9 +608,8 @@ void WalkAST::checkCall_mkstemp(const CallExpr *CE, const FunctionDecl *FD) {
   if ((signed) numArgs <= ArgSuffix.first)
     return;
 
-  const StringLiteral *strArg =
-    dyn_cast<StringLiteral>(CE->getArg((unsigned)ArgSuffix.first)
-                              ->IgnoreParenImpCasts());
+  const StringRef *strArg = dyn_cast<StringRef>(
+      CE->getArg((unsigned)ArgSuffix.first)->IgnoreParenImpCasts());
 
   // Currently we only handle string literals.  It is possible to do better,
   // either by looking at references to const variables, or by doing real
@@ -685,7 +684,7 @@ void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
 
   if (const auto *Array = dyn_cast<ConstantArrayType>(Target->getType())) {
     uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
-    if (const auto *String = dyn_cast<StringLiteral>(Source)) {
+    if (const auto *String = dyn_cast<StringRef>(Source)) {
       if (ArraySize >= String->getLength() + 1)
         return;
     }
@@ -782,7 +781,7 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
     // better, either by looking at references to const variables, or by doing
     // real flow analysis.
     auto FormatString =
-        dyn_cast<StringLiteral>(CE->getArg(ArgIndex)->IgnoreParenImpCasts());
+        dyn_cast<StringRef>(CE->getArg(ArgIndex)->IgnoreParenImpCasts());
     if (FormatString && !FormatString->getString().contains("%s") &&
         !FormatString->getString().contains("%["))
       BoundsProvided = true;

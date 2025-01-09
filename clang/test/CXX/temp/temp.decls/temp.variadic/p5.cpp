@@ -139,7 +139,7 @@ void test_unexpanded_in_exprs() {
   // IntegerLiteral is uninteresting
   // FloatingLiteral is uninteresting
   // ImaginaryLiteral is uninteresting
-  // StringLiteral is uninteresting
+  // StringRef is uninteresting
   // CharacterLiteral is uninteresting
   (Values); // expected-error{{expression contains unexpanded parameter pack 'Values'}}
   // UnaryOperator

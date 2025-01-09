@@ -546,15 +546,10 @@ StringRef GCCAsmStmt::getInputConstraint(unsigned i) const {
   return getInputConstraintLiteral(i)->getString();
 }
 
-void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
-                                                IdentifierInfo **Names,
-                                                StringLiteral **Constraints,
-                                                Stmt **Exprs,
-                                                unsigned NumOutputs,
-                                                unsigned NumInputs,
-                                                unsigned NumLabels,
-                                                StringLiteral **Clobbers,
-                                                unsigned NumClobbers) {
+void GCCAsmStmt::setOutputsAndInputsAndClobbers(
+    const ASTContext &C, IdentifierInfo **Names, StringRef **Constraints,
+    Stmt **Exprs, unsigned NumOutputs, unsigned NumInputs, unsigned NumLabels,
+    StringRef **Clobbers, unsigned NumClobbers) {
   this->NumOutputs = NumOutputs;
   this->NumInputs = NumInputs;
   this->NumClobbers = NumClobbers;
@@ -572,11 +567,11 @@ void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
 
   unsigned NumConstraints = NumOutputs + NumInputs;
   C.Deallocate(this->Constraints);
-  this->Constraints = new (C) StringLiteral*[NumConstraints];
+  this->Constraints = new (C) StringRef *[NumConstraints];
   std::copy(Constraints, Constraints + NumConstraints, this->Constraints);
 
   C.Deallocate(this->Clobbers);
-  this->Clobbers = new (C) StringLiteral*[NumClobbers];
+  this->Clobbers = new (C) StringRef *[NumClobbers];
   std::copy(Clobbers, Clobbers + NumClobbers, this->Clobbers);
 }
 
@@ -855,13 +850,12 @@ void MSAsmStmt::setInputExpr(unsigned i, Expr *E) {
 GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
                        bool issimple, bool isvolatile, unsigned numoutputs,
                        unsigned numinputs, IdentifierInfo **names,
-                       StringLiteral **constraints, Expr **exprs,
-                       StringLiteral *asmstr, unsigned numclobbers,
-                       StringLiteral **clobbers, unsigned numlabels,
-                       SourceLocation rparenloc)
+                       StringRef **constraints, Expr **exprs, StringRef *asmstr,
+                       unsigned numclobbers, StringRef **clobbers,
+                       unsigned numlabels, SourceLocation rparenloc)
     : AsmStmt(GCCAsmStmtClass, asmloc, issimple, isvolatile, numoutputs,
               numinputs, numclobbers),
-              RParenLoc(rparenloc), AsmStr(asmstr), NumLabels(numlabels) {
+      RParenLoc(rparenloc), AsmStr(asmstr), NumLabels(numlabels) {
   unsigned NumExprs = NumOutputs + NumInputs + NumLabels;
 
   Names = new (C) IdentifierInfo*[NumExprs];
@@ -871,10 +865,10 @@ GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
   std::copy(exprs, exprs + NumExprs, Exprs);
 
   unsigned NumConstraints = NumOutputs + NumInputs;
-  Constraints = new (C) StringLiteral*[NumConstraints];
+  Constraints = new (C) StringRef *[NumConstraints];
   std::copy(constraints, constraints + NumConstraints, Constraints);
 
-  Clobbers = new (C) StringLiteral*[NumClobbers];
+  Clobbers = new (C) StringRef *[NumClobbers];
   std::copy(clobbers, clobbers + NumClobbers, Clobbers);
 }
 

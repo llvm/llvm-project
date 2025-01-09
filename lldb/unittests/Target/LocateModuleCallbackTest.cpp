@@ -28,17 +28,17 @@ using namespace testing;
 
 namespace {
 
-constexpr llvm::StringLiteral k_process_plugin("mock-process-plugin");
-constexpr llvm::StringLiteral k_platform_dir("remote-android");
-constexpr llvm::StringLiteral k_cache_dir(".cache");
-constexpr llvm::StringLiteral k_module_file("AndroidModule.so");
-constexpr llvm::StringLiteral k_symbol_file("AndroidModule.unstripped.so");
-constexpr llvm::StringLiteral k_breakpad_symbol_file("AndroidModule.so.sym");
-constexpr llvm::StringLiteral k_arch("aarch64-none-linux");
-constexpr llvm::StringLiteral
+constexpr llvm::StringRef k_process_plugin("mock-process-plugin");
+constexpr llvm::StringRef k_platform_dir("remote-android");
+constexpr llvm::StringRef k_cache_dir(".cache");
+constexpr llvm::StringRef k_module_file("AndroidModule.so");
+constexpr llvm::StringRef k_symbol_file("AndroidModule.unstripped.so");
+constexpr llvm::StringRef k_breakpad_symbol_file("AndroidModule.so.sym");
+constexpr llvm::StringRef k_arch("aarch64-none-linux");
+constexpr llvm::StringRef
     k_module_uuid("80008338-82A0-51E5-5922-C905D23890DA-BDDEFECC");
-constexpr llvm::StringLiteral k_function_symbol("boom");
-constexpr llvm::StringLiteral k_hidden_function_symbol("boom_hidden");
+constexpr llvm::StringRef k_function_symbol("boom");
+constexpr llvm::StringRef k_hidden_function_symbol("boom_hidden");
 const size_t k_module_size = 3784;
 
 ModuleSpec GetTestModuleSpec();

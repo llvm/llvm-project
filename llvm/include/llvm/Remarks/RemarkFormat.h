@@ -19,7 +19,7 @@
 namespace llvm {
 namespace remarks {
 
-constexpr StringLiteral Magic("REMARKS");
+constexpr StringRef Magic("REMARKS");
 
 /// The format used for serializing/deserializing remarks.
 enum class Format { Unknown, YAML, YAMLStrTab, Bitstream };

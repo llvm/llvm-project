@@ -314,10 +314,10 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
 ProgramStateRef UnixAPIMisuseChecker::EnsureGetdelimBufferAndSizeCorrect(
     SVal LinePtrPtrSVal, SVal SizePtrSVal, const Expr *LinePtrPtrExpr,
     const Expr *SizePtrExpr, CheckerContext &C, ProgramStateRef State) const {
-  static constexpr llvm::StringLiteral SizeGreaterThanBufferSize =
+  static constexpr llvm::StringRef SizeGreaterThanBufferSize =
       "The buffer from the first argument is smaller than the size "
       "specified by the second parameter";
-  static constexpr llvm::StringLiteral SizeUndef =
+  static constexpr llvm::StringRef SizeUndef =
       "The buffer from the first argument is not NULL, but the size specified "
       "by the second parameter is undefined.";
 

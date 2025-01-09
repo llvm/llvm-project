@@ -87,9 +87,7 @@ public:
   /// @{
 
   bool shouldMangleCXXName(const NamedDecl *D) override;
-  bool shouldMangleStringLiteral(const StringLiteral *) override {
-    return false;
-  }
+  bool shouldMangleStringLiteral(const StringRef *) override { return false; }
 
   bool isUniqueInternalLinkageDecl(const NamedDecl *ND) override;
   void needsUniqueInternalLinkageNames() override {
@@ -128,7 +126,7 @@ public:
   void mangleItaniumThreadLocalWrapper(const VarDecl *D,
                                        raw_ostream &) override;
 
-  void mangleStringLiteral(const StringLiteral *, raw_ostream &) override;
+  void mangleStringLiteral(const StringRef *, raw_ostream &) override;
 
   void mangleLambdaSig(const CXXRecordDecl *Lambda, raw_ostream &) override;
 
@@ -7489,7 +7487,8 @@ void ItaniumMangleContextImpl::mangleCanonicalTypeName(
   mangleCXXRTTIName(Ty, Out, NormalizeIntegers);
 }
 
-void ItaniumMangleContextImpl::mangleStringLiteral(const StringLiteral *, raw_ostream &) {
+void ItaniumMangleContextImpl::mangleStringLiteral(const StringRef *,
+                                                   raw_ostream &) {
   llvm_unreachable("Can't mangle string literals");
 }
 

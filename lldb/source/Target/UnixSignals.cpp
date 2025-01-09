@@ -111,7 +111,7 @@ void UnixSignals::AddSignal(int signo, llvm::StringRef name,
 }
 
 void UnixSignals::AddSignalCode(int signo, int code,
-                                const llvm::StringLiteral description,
+                                const llvm::StringRef description,
                                 SignalCodePrintOption print_option) {
   collection::iterator signal = m_signals.find(signo);
   assert(signal != m_signals.end() &&

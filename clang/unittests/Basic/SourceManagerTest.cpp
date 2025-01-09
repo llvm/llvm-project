@@ -374,11 +374,11 @@ TEST_F(SourceManagerTest, getInvalidBOM) {
                 "\x84\x31\x95\x33#include <iostream>")),
             "GB-18030");
   ASSERT_EQ(StringRef(SrcMgr::ContentCache::getInvalidBOM(
-                llvm::StringLiteral::withInnerNUL(
+                llvm::StringRef::withInnerNUL(
                     "\x00\x00\xFE\xFF#include <iostream>"))),
             "UTF-32 (BE)");
   ASSERT_EQ(StringRef(SrcMgr::ContentCache::getInvalidBOM(
-                llvm::StringLiteral::withInnerNUL(
+                llvm::StringRef::withInnerNUL(
                     "\xFF\xFE\x00\x00#include <iostream>"))),
             "UTF-32 (LE)");
 }

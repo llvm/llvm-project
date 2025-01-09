@@ -150,7 +150,7 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *E) { EmitAggLoadOfLValue(E); }
   void VisitMemberExpr(MemberExpr *ME) { EmitAggLoadOfLValue(ME); }
   void VisitUnaryDeref(UnaryOperator *E) { EmitAggLoadOfLValue(E); }
-  void VisitStringLiteral(StringLiteral *E) { EmitAggLoadOfLValue(E); }
+  void VisitStringLiteral(StringRef *E) { EmitAggLoadOfLValue(E); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     EmitAggLoadOfLValue(E);

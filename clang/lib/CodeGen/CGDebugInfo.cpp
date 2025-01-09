@@ -5898,7 +5898,7 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 }
 
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
-                                            const StringLiteral *S) {
+                                            const StringRef *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
   PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
   if (!PLoc.isValid())

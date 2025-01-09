@@ -94,7 +94,7 @@ struct ReplayPreambleCheck : public tidy::ClangTidyCheck {
     PP->addPPCallbacks(::std::make_unique<ReplayPreamblePPCallback>(SM));
   }
 };
-llvm::StringLiteral CheckName = "replay-preamble-check";
+llvm::StringRef CheckName = "replay-preamble-check";
 struct ReplayPreambleModule : public tidy::ClangTidyModule {
   void
   addCheckFactories(tidy::ClangTidyCheckFactories &CheckFactories) override {

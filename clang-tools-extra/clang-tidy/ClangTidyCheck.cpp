@@ -202,7 +202,7 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   return std::nullopt;
 }
 
-static constexpr llvm::StringLiteral ConfigWarning(
+static constexpr llvm::StringRef ConfigWarning(
     "invalid configuration value '%0' for option '%1'%select{|; expected a "
     "bool|; expected an integer|; did you mean '%3'?}2");
 

@@ -328,7 +328,7 @@ public:
   void VisitCharacterLiteral(const CharacterLiteral *CL);
   void VisitFixedPointLiteral(const FixedPointLiteral *FPL);
   void VisitFloatingLiteral(const FloatingLiteral *FL);
-  void VisitStringLiteral(const StringLiteral *SL);
+  void VisitStringLiteral(const StringRef *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
   void VisitIfStmt(const IfStmt *IS);

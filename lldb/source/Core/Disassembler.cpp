@@ -780,7 +780,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
   char buffer[1024];
 
   auto option_value_sp = std::make_shared<OptionValueDictionary>();
-  static constexpr llvm::StringLiteral encoding_key("data_encoding");
+  static constexpr llvm::StringRef encoding_key("data_encoding");
   OptionValue::Type data_type = OptionValue::eTypeInvalid;
 
   while (!done) {
@@ -919,8 +919,8 @@ bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
 
   OptionValueDictionary *data_dictionary =
       data_dictionary_sp->GetAsDictionary();
-  static constexpr llvm::StringLiteral description_key("assembly_string");
-  static constexpr llvm::StringLiteral triple_key("triple");
+  static constexpr llvm::StringRef description_key("assembly_string");
+  static constexpr llvm::StringRef triple_key("triple");
 
   OptionValueSP value_sp = data_dictionary->GetValueForKey(description_key);
 

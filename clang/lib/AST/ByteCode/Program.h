@@ -29,7 +29,7 @@ namespace clang {
 class RecordDecl;
 class Expr;
 class FunctionDecl;
-class StringLiteral;
+class StringRef;
 class VarDecl;
 
 namespace interp {
@@ -64,8 +64,7 @@ public:
   const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S,
-                              const Expr *Base = nullptr);
+  unsigned createGlobalString(const StringRef *S, const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;

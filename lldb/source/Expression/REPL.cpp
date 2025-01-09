@@ -118,7 +118,7 @@ const char *REPL::IOHandlerGetFixIndentationCharacters() {
 }
 
 llvm::StringRef REPL::IOHandlerGetControlSequence(char ch) {
-  static constexpr llvm::StringLiteral control_sequence(":quit\n");
+  static constexpr llvm::StringRef control_sequence(":quit\n");
   if (ch == 'd')
     return control_sequence;
   return {};

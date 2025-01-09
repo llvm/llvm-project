@@ -1256,7 +1256,7 @@ TEST_F(FormatTestVerilog, Streaming) {
   verifyFormat("{<<byte{j}} = x;");
 }
 
-TEST_F(FormatTestVerilog, StringLiteral) {
+TEST_F(FormatTestVerilog, StringRef) {
   // Long strings should be broken.
   verifyFormat(R"(x({"xxxxxxxxxxxxxxxx ",
    "xxxx"});)",

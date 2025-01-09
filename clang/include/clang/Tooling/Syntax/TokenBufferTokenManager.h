@@ -24,7 +24,7 @@ public:
       : Tokens(Tokens), LangOpts(LangOpts), SM(SourceMgr) {}
 
   static bool classof(const TokenManager *N) { return N->kind() == Kind; }
-  llvm::StringLiteral kind() const override { return Kind; }
+  llvm::StringRef kind() const override { return Kind; }
 
   llvm::StringRef getText(Key I) const override {
     const auto *Token = getToken(I);
@@ -46,7 +46,7 @@ public:
 
 private:
   // This manager is powered by the TokenBuffer.
-  static constexpr llvm::StringLiteral Kind = "TokenBuffer";
+  static constexpr llvm::StringRef Kind = "TokenBuffer";
 
   /// Add \p Buffer to the underlying source manager, tokenize it and store the
   /// resulting tokens. Used exclusively in `FactoryImpl` to materialize tokens

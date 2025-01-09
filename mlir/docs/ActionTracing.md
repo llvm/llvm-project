@@ -62,8 +62,8 @@ public:
       : Base(irUnits) {}
   /// This tag should uniquely identify this action, it can be matched for filtering
   /// during processing.
-  static constexpr StringLiteral tag = "unique-tag-for-my-action";
-  static constexpr StringLiteral desc =
+  static constexpr StringRef tag = "unique-tag-for-my-action";
+  static constexpr StringRef desc =
       "This action will encapsulate a some very specific transformation";
 };
 ```
@@ -97,8 +97,8 @@ public:
       : Base(irUnits), count(count), padding(padding) {}
   /// This tag should uniquely identify this action, it can be matched for filtering
   /// during processing.
-  static constexpr StringLiteral tag = "unique-tag-for-my-action";
-  static constexpr StringLiteral desc =
+  static constexpr StringRef tag = "unique-tag-for-my-action";
+  static constexpr StringRef desc =
       "This action will encapsulate a some very specific transformation";
   /// Extra members can be carried by the Action
   int count;

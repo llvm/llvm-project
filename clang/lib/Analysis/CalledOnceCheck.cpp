@@ -48,29 +48,29 @@ using ParamSizedVector = llvm::SmallVector<T, EXPECTED_MAX_NUMBER_OF_PARAMS>;
 static constexpr unsigned EXPECTED_NUMBER_OF_BASIC_BLOCKS = 8;
 template <class T>
 using CFGSizedVector = llvm::SmallVector<T, EXPECTED_NUMBER_OF_BASIC_BLOCKS>;
-constexpr llvm::StringLiteral CONVENTIONAL_NAMES[] = {
+constexpr llvm::StringRef CONVENTIONAL_NAMES[] = {
     "completionHandler", "completion",      "withCompletionHandler",
     "withCompletion",    "completionBlock", "withCompletionBlock",
     "replyTo",           "reply",           "withReplyTo"};
-constexpr llvm::StringLiteral CONVENTIONAL_SUFFIXES[] = {
+constexpr llvm::StringRef CONVENTIONAL_SUFFIXES[] = {
     "WithCompletionHandler", "WithCompletion", "WithCompletionBlock",
     "WithReplyTo", "WithReply"};
-constexpr llvm::StringLiteral CONVENTIONAL_CONDITIONS[] = {
+constexpr llvm::StringRef CONVENTIONAL_CONDITIONS[] = {
     "error", "cancel", "shouldCall", "done", "OK", "success"};
 
 struct KnownCalledOnceParameter {
-  llvm::StringLiteral FunctionName;
+  llvm::StringRef FunctionName;
   unsigned ParamIndex;
 };
 constexpr KnownCalledOnceParameter KNOWN_CALLED_ONCE_PARAMETERS[] = {
-    {llvm::StringLiteral{"dispatch_async"}, 1},
-    {llvm::StringLiteral{"dispatch_async_and_wait"}, 1},
-    {llvm::StringLiteral{"dispatch_after"}, 2},
-    {llvm::StringLiteral{"dispatch_sync"}, 1},
-    {llvm::StringLiteral{"dispatch_once"}, 1},
-    {llvm::StringLiteral{"dispatch_barrier_async"}, 1},
-    {llvm::StringLiteral{"dispatch_barrier_async_and_wait"}, 1},
-    {llvm::StringLiteral{"dispatch_barrier_sync"}, 1}};
+    {llvm::StringRef{"dispatch_async"}, 1},
+    {llvm::StringRef{"dispatch_async_and_wait"}, 1},
+    {llvm::StringRef{"dispatch_after"}, 2},
+    {llvm::StringRef{"dispatch_sync"}, 1},
+    {llvm::StringRef{"dispatch_once"}, 1},
+    {llvm::StringRef{"dispatch_barrier_async"}, 1},
+    {llvm::StringRef{"dispatch_barrier_async_and_wait"}, 1},
+    {llvm::StringRef{"dispatch_barrier_sync"}, 1}};
 
 class ParameterStatus {
 public:
@@ -475,11 +475,11 @@ bool mentionsAnyOfConventionalNames(const Expr *E) {
   NamesCollector::NameCollection MentionedNames = NamesCollector::collect(E);
 
   return llvm::any_of(MentionedNames, [](llvm::StringRef ConditionName) {
-    return llvm::any_of(
-        CONVENTIONAL_CONDITIONS,
-        [ConditionName](const llvm::StringLiteral &Conventional) {
-          return ConditionName.contains_insensitive(Conventional);
-        });
+    return llvm::any_of(CONVENTIONAL_CONDITIONS,
+                        [ConditionName](const llvm::StringRef &Conventional) {
+                          return ConditionName.contains_insensitive(
+                              Conventional);
+                        });
   });
 }
 

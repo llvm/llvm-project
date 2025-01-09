@@ -54,8 +54,7 @@ enum ImplicitArgumentMask {
 };
 
 #define AMDGPU_ATTRIBUTE(Name, Str) {Name, Str},
-static constexpr std::pair<ImplicitArgumentMask, StringLiteral>
-    ImplicitAttrs[] = {
+static constexpr std::pair<ImplicitArgumentMask, StringRef> ImplicitAttrs[] = {
 #include "AMDGPUAttributes.def"
 };
 

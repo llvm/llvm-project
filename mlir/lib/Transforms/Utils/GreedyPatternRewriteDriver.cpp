@@ -813,7 +813,7 @@ public:
   GreedyPatternRewriteIteration(ArrayRef<IRUnit> units, int64_t iteration)
       : tracing::ActionImpl<GreedyPatternRewriteIteration>(units),
         iteration(iteration) {}
-  static constexpr StringLiteral tag = "GreedyPatternRewriteIteration";
+  static constexpr StringRef tag = "GreedyPatternRewriteIteration";
   void print(raw_ostream &os) const override {
     os << "GreedyPatternRewriteIteration(" << iteration << ")";
   }

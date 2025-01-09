@@ -214,7 +214,7 @@ public:
   SKIP(MemberExpr)
   SKIP(IntegerLiteral)
   SKIP(FloatingLiteral)
-  SKIP(StringLiteral)
+  SKIP(StringRef)
   SKIP(CXXBoolLiteralExpr)
   SKIP(CharacterLiteral)
 #undef SKIP

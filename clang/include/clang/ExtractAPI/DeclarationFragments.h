@@ -57,7 +57,7 @@ public:
     Keyword,
     Attribute,
     NumberLiteral,
-    StringLiteral,
+    StringRef,
     Identifier,
 
     /// Identifier that refers to a type in the context.

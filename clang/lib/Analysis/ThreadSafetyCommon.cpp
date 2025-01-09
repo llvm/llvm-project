@@ -44,7 +44,7 @@ std::string threadSafety::getSourceLiteralString(const Expr *CE) {
       return toString(cast<IntegerLiteral>(CE)->getValue(), 10, true);
     case Stmt::StringLiteralClass: {
       std::string ret("\"");
-      ret += cast<StringLiteral>(CE)->getString();
+      ret += cast<StringRef>(CE)->getString();
       ret += "\"";
       return ret;
     }
@@ -192,7 +192,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   if (!AttrExp)
     return CapabilityExpr();
 
-  if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
+  if (const auto *SLit = dyn_cast<StringRef>(AttrExp)) {
     if (SLit->getString() == "*")
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.

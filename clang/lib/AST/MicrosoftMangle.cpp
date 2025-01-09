@@ -151,7 +151,7 @@ public:
   MicrosoftMangleContextImpl(ASTContext &Context, DiagnosticsEngine &Diags,
                              bool IsAux = false);
   bool shouldMangleCXXName(const NamedDecl *D) override;
-  bool shouldMangleStringLiteral(const StringLiteral *SL) override;
+  bool shouldMangleStringLiteral(const StringRef *SL) override;
   void mangleCXXName(GlobalDecl GD, raw_ostream &Out) override;
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
                                 const MethodVFTableLocation &ML,
@@ -210,7 +210,7 @@ public:
                                  raw_ostream &Out) override;
   void mangleSEHFinallyBlock(GlobalDecl EnclosingDecl,
                              raw_ostream &Out) override;
-  void mangleStringLiteral(const StringLiteral *SL, raw_ostream &Out) override;
+  void mangleStringLiteral(const StringRef *SL, raw_ostream &Out) override;
   bool getNextDiscriminator(const NamedDecl *ND, unsigned &disc) {
     const DeclContext *DC = getEffectiveDeclContext(ND);
     if (!DC->isFunctionOrMethod())
@@ -568,8 +568,8 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
   return true;
 }
 
-bool
-MicrosoftMangleContextImpl::shouldMangleStringLiteral(const StringLiteral *SL) {
+bool MicrosoftMangleContextImpl::shouldMangleStringLiteral(
+    const StringRef *SL) {
   return true;
 }
 
@@ -4220,7 +4220,7 @@ MicrosoftMangleContextImpl::mangleDynamicAtExitDestructor(const VarDecl *D,
   mangleInitFiniStub(D, 'F', Out);
 }
 
-void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
+void MicrosoftMangleContextImpl::mangleStringLiteral(const StringRef *SL,
                                                      raw_ostream &Out) {
   // <char-type> ::= 0   # char, char16_t, char32_t
   //                     # (little endian char data in mangling)
@@ -4282,7 +4282,7 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
     return static_cast<char>((CodeUnit >> (8 * OffsetInCodeUnit)) & 0xff);
   };
 
-  // CRC all the bytes of the StringLiteral.
+  // CRC all the bytes of the StringRef.
   llvm::JamCRC JC;
   for (unsigned I = 0, E = StringByteLength; I != E; ++I)
     JC.update(GetLittleEndianByte(I));
@@ -4292,7 +4292,7 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   Mangler.mangleNumber(JC.getCRC());
 
   // <encoded-string>: The mangled name also contains the first 32 bytes
-  // (including null-terminator bytes) of the encoded StringLiteral.
+  // (including null-terminator bytes) of the encoded StringRef.
   // Each character is encoded by splitting them into bytes and then encoding
   // the constituent bytes.
   auto MangleByte = [&Mangler](char Byte) {

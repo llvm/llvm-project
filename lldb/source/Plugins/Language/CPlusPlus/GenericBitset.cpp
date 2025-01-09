@@ -69,8 +69,8 @@ GenericBitsetFrontEnd::GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib)
 }
 
 llvm::StringRef GenericBitsetFrontEnd::GetDataContainerMemberName() {
-  static constexpr llvm::StringLiteral s_libcxx_case("__first_");
-  static constexpr llvm::StringLiteral s_libstdcpp_case("_M_w");
+  static constexpr llvm::StringRef s_libcxx_case("__first_");
+  static constexpr llvm::StringRef s_libstdcpp_case("_M_w");
   switch (m_stdlib) {
   case StdLib::LibCxx:
     return s_libcxx_case;

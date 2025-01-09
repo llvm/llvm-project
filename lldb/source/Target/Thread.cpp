@@ -212,7 +212,7 @@ Thread::ThreadEventData::GetStackFrameFromEvent(const Event *event_ptr) {
 // Thread class
 
 llvm::StringRef Thread::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.thread");
+  static constexpr llvm::StringRef class_name("lldb.thread");
   return class_name;
 }
 

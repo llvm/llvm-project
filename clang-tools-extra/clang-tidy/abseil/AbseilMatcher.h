@@ -41,7 +41,7 @@ AST_POLYMORPHIC_MATCHER(
   // Determine whether filepath contains "absl/[absl-library]" substring, where
   // [absl-library] is AbseilLibraries list entry.
   StringRef Path = FileEntry->getName();
-  static constexpr llvm::StringLiteral AbslPrefix("absl/");
+  static constexpr llvm::StringRef AbslPrefix("absl/");
   size_t PrefixPosition = Path.find(AbslPrefix);
   if (PrefixPosition == StringRef::npos)
     return false;

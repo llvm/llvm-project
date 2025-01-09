@@ -844,14 +844,14 @@ bool Sema::UnifySection(StringRef SectionName,
 void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
                             PragmaMsStackAction Action,
                             llvm::StringRef StackSlotLabel,
-                            StringLiteral *SegmentName,
+                            StringRef *SegmentName,
                             llvm::StringRef PragmaName) {
-  PragmaStack<StringLiteral *> *Stack =
-    llvm::StringSwitch<PragmaStack<StringLiteral *> *>(PragmaName)
-        .Case("data_seg", &DataSegStack)
-        .Case("bss_seg", &BSSSegStack)
-        .Case("const_seg", &ConstSegStack)
-        .Case("code_seg", &CodeSegStack);
+  PragmaStack<StringRef *> *Stack =
+      llvm::StringSwitch<PragmaStack<StringRef *> *>(PragmaName)
+          .Case("data_seg", &DataSegStack)
+          .Case("bss_seg", &BSSSegStack)
+          .Case("const_seg", &ConstSegStack)
+          .Case("code_seg", &CodeSegStack);
   if (Action & PSK_Pop && Stack->Stack.empty())
     Diag(PragmaLocation, diag::warn_pragma_pop_failed) << PragmaName
         << "stack empty";
@@ -879,13 +879,13 @@ void Sema::ActOnPragmaMSStrictGuardStackCheck(SourceLocation PragmaLocation,
 }
 
 /// Called on well formed \#pragma bss_seg().
-void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
-                                int SectionFlags, StringLiteral *SegmentName) {
+void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation, int SectionFlags,
+                                StringRef *SegmentName) {
   UnifySection(SegmentName->getString(), SectionFlags, PragmaLocation);
 }
 
 void Sema::ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                                StringLiteral *SegmentName) {
+                                StringRef *SegmentName) {
   // There's no stack to maintain, so we just have a current section.  When we
   // see the default section, reset our current section back to null so we stop
   // tacking on unnecessary attributes.

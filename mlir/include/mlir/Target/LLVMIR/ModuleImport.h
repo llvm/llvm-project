@@ -256,14 +256,12 @@ public:
   /// list `immArgPositions` contains the positions of immargs on the LLVM
   /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
   /// corresponding MLIR attribute names.
-  LogicalResult
-  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
-                            ArrayRef<llvm::OperandBundleUse> opBundles,
-                            bool requiresOpBundles,
-                            ArrayRef<unsigned> immArgPositions,
-                            ArrayRef<StringLiteral> immArgAttrNames,
-                            SmallVectorImpl<Value> &valuesOut,
-                            SmallVectorImpl<NamedAttribute> &attrsOut);
+  LogicalResult convertIntrinsicArguments(
+      ArrayRef<llvm::Value *> values,
+      ArrayRef<llvm::OperandBundleUse> opBundles, bool requiresOpBundles,
+      ArrayRef<unsigned> immArgPositions, ArrayRef<StringRef> immArgAttrNames,
+      SmallVectorImpl<Value> &valuesOut,
+      SmallVectorImpl<NamedAttribute> &attrsOut);
 
 private:
   /// Clears the accumulated state before processing a new region.

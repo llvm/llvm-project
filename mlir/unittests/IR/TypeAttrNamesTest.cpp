@@ -24,7 +24,7 @@ namespace {
 struct FooType : Type::TypeBase<FooType, Type, TypeStorage> {
   using Base::Base;
 
-  static constexpr StringLiteral name = "fake.foo";
+  static constexpr StringRef name = "fake.foo";
 
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FooType)
 };
@@ -32,7 +32,7 @@ struct FooType : Type::TypeBase<FooType, Type, TypeStorage> {
 struct BarAttr : Attribute::AttrBase<BarAttr, Attribute, AttributeStorage> {
   using Base::Base;
 
-  static constexpr StringLiteral name = "fake.bar";
+  static constexpr StringRef name = "fake.bar";
 
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(BarAttr)
 };
@@ -44,8 +44,8 @@ struct FakeDialect : Dialect {
     addAttributes<BarAttr>();
   }
 
-  static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("fake");
+  static constexpr ::llvm::StringRef getDialectNamespace() {
+    return ::llvm::StringRef("fake");
   }
 
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FakeDialect)

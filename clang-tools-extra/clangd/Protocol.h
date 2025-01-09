@@ -1070,9 +1070,9 @@ struct CodeAction {
   /// The kind of the code action.
   /// Used to filter code actions.
   std::optional<std::string> kind;
-  const static llvm::StringLiteral QUICKFIX_KIND;
-  const static llvm::StringLiteral REFACTOR_KIND;
-  const static llvm::StringLiteral INFO_KIND;
+  const static llvm::StringRef QUICKFIX_KIND;
+  const static llvm::StringRef REFACTOR_KIND;
+  const static llvm::StringRef INFO_KIND;
 
   /// The diagnostics that this code action resolves.
   std::optional<std::vector<Diagnostic>> diagnostics;
@@ -1963,9 +1963,9 @@ struct FoldingRange {
   unsigned endLine = 0;
   unsigned endCharacter;
 
-  const static llvm::StringLiteral REGION_KIND;
-  const static llvm::StringLiteral COMMENT_KIND;
-  const static llvm::StringLiteral IMPORT_KIND;
+  const static llvm::StringRef REGION_KIND;
+  const static llvm::StringRef COMMENT_KIND;
+  const static llvm::StringRef IMPORT_KIND;
   std::string kind;
 };
 llvm::json::Value toJSON(const FoldingRange &Range);

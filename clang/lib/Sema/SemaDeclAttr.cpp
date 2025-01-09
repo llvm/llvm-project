@@ -112,7 +112,7 @@ static bool checkPositiveIntArgument(Sema &S, const AttrInfo &AI, const Expr *Ex
 bool Sema::checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
                                           const Expr *E, StringRef &Str,
                                           SourceLocation *ArgLocation) {
-  const auto *Literal = dyn_cast<StringLiteral>(E->IgnoreParenCasts());
+  const auto *Literal = dyn_cast<StringRef>(E->IgnoreParenCasts());
   if (ArgLocation)
     *ArgLocation = E->getBeginLoc();
 
@@ -144,7 +144,7 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
 
   // Now check for an actual string literal.
   Expr *ArgExpr = AL.getArgAsExpr(ArgNum);
-  const auto *Literal = dyn_cast<StringLiteral>(ArgExpr->IgnoreParenCasts());
+  const auto *Literal = dyn_cast<StringRef>(ArgExpr->IgnoreParenCasts());
   if (ArgLocation)
     *ArgLocation = ArgExpr->getBeginLoc();
 
@@ -369,7 +369,7 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
       continue;
     }
 
-    if (const auto *StrLit = dyn_cast<StringLiteral>(ArgExp)) {
+    if (const auto *StrLit = dyn_cast<StringRef>(ArgExp)) {
       if (StrLit->getLength() == 0 ||
           (StrLit->isOrdinary() && StrLit->getString() == "*")) {
         // Pass empty strings to the analyzer without warnings.
@@ -2322,11 +2322,10 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool IsUnavailable = AL.getUnavailableLoc().isValid();
   bool IsStrict = AL.getStrictLoc().isValid();
   StringRef Str;
-  if (const auto *SE = dyn_cast_if_present<StringLiteral>(AL.getMessageExpr()))
+  if (const auto *SE = dyn_cast_if_present<StringRef>(AL.getMessageExpr()))
     Str = SE->getString();
   StringRef Replacement;
-  if (const auto *SE =
-          dyn_cast_if_present<StringLiteral>(AL.getReplacementExpr()))
+  if (const auto *SE = dyn_cast_if_present<StringRef>(AL.getReplacementExpr()))
     Replacement = SE->getString();
 
   if (II->isStr("swift")) {
@@ -2565,14 +2564,14 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
     return;
 
   StringRef Language;
-  if (const auto *SE = dyn_cast_if_present<StringLiteral>(AL.getArgAsExpr(0)))
+  if (const auto *SE = dyn_cast_if_present<StringRef>(AL.getArgAsExpr(0)))
     Language = SE->getString();
   StringRef DefinedIn;
-  if (const auto *SE = dyn_cast_if_present<StringLiteral>(AL.getArgAsExpr(1)))
+  if (const auto *SE = dyn_cast_if_present<StringRef>(AL.getArgAsExpr(1)))
     DefinedIn = SE->getString();
   bool IsGeneratedDeclaration = AL.getArgAsIdent(2) != nullptr;
   StringRef USR;
-  if (const auto *SE = dyn_cast_if_present<StringLiteral>(AL.getArgAsExpr(3)))
+  if (const auto *SE = dyn_cast_if_present<StringRef>(AL.getArgAsExpr(3)))
     USR = SE->getString();
 
   D->addAttr(::new (S.Context) ExternalSourceSymbolAttr(
@@ -3159,8 +3158,8 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 bool Sema::checkTargetClonesAttrString(
-    SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-    Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+    SourceLocation LiteralLoc, StringRef Str, const StringRef *Literal, Decl *D,
+    bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
     SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3329,7 +3328,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkStringLiteralArgumentAttr(AL, I, CurStr, &LiteralLoc) ||
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
-            cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()), D,
+            cast<StringRef>(AL.getArgAsExpr(I)->IgnoreParenCasts()), D,
             HasDefault, HasCommas, HasNotDefault, StringsBuffer))
       return;
   }

@@ -39,9 +39,7 @@ public:
   std::string title() const override {
     return "Remove using namespace, re-qualify names instead";
   }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
 private:
   const UsingDirectiveDecl *TargetDirective = nullptr;

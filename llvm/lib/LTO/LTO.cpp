@@ -1718,7 +1718,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
   return ThinBackend(Func, Parallelism);
 }
 
-StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
+StringRef lto::getThinLTODefaultCPU(const Triple &TheTriple) {
   if (!TheTriple.isOSDarwin())
     return "";
   if (TheTriple.getArch() == Triple::x86_64)

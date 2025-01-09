@@ -58,7 +58,7 @@ public:
   /// Handler should be e.g. void peek(const PeekParams&, Callback<PeekResult>);
   /// PeekParams must be JSON-parseable and PeekResult must be serializable.
   template <typename Param, typename Result, typename ThisT>
-  void method(llvm::StringLiteral Method, ThisT *This,
+  void method(llvm::StringRef Method, ThisT *This,
               void (ThisT::*Handler)(const Param &, Callback<Result>));
 
   /// Bind a handler for an LSP notification.
@@ -66,7 +66,7 @@ public:
   /// Handler should be e.g. void poke(const PokeParams&);
   /// PokeParams must be JSON-parseable.
   template <typename Param, typename ThisT>
-  void notification(llvm::StringLiteral Method, ThisT *This,
+  void notification(llvm::StringRef Method, ThisT *This,
                     void (ThisT::*Handler)(const Param &));
 
   /// Bind a handler for an LSP command.
@@ -74,7 +74,7 @@ public:
   /// Handler should be e.g. void load(const LoadParams&, Callback<LoadResult>);
   /// LoadParams must be JSON-parseable and LoadResult must be serializable.
   template <typename Param, typename Result, typename ThisT>
-  void command(llvm::StringLiteral Command, ThisT *This,
+  void command(llvm::StringRef Command, ThisT *This,
                void (ThisT::*Handler)(const Param &, Callback<Result>));
 
   template <typename P, typename R>
@@ -84,7 +84,7 @@ public:
   /// Bind a function object to be used for outgoing method calls.
   /// e.g. OutgoingMethod<EParams, EResult> Edit = Bind.outgoingMethod("edit");
   /// EParams must be JSON-serializable, EResult must be parseable.
-  UntypedOutgoingMethod outgoingMethod(llvm::StringLiteral Method);
+  UntypedOutgoingMethod outgoingMethod(llvm::StringRef Method);
 
   template <typename P>
   using OutgoingNotification = llvm::unique_function<void(const P &)>;
@@ -93,7 +93,7 @@ public:
   /// Bind a function object to be used for outgoing notifications.
   /// e.g. OutgoingNotification<LogParams> Log = Bind.outgoingMethod("log");
   /// LogParams must be JSON-serializable.
-  UntypedOutgoingNotification outgoingNotification(llvm::StringLiteral Method);
+  UntypedOutgoingNotification outgoingNotification(llvm::StringRef Method);
 
 private:
   // FIXME: remove usage from ClangdLSPServer and make this private.
@@ -130,7 +130,7 @@ llvm::Expected<T> LSPBinder::parse(const llvm::json::Value &Raw,
 }
 
 template <typename Param, typename Result, typename ThisT>
-void LSPBinder::method(llvm::StringLiteral Method, ThisT *This,
+void LSPBinder::method(llvm::StringRef Method, ThisT *This,
                        void (ThisT::*Handler)(const Param &,
                                               Callback<Result>)) {
   Raw.MethodHandlers[Method] = [Method, Handler, This](JSON RawParams,
@@ -143,7 +143,7 @@ void LSPBinder::method(llvm::StringLiteral Method, ThisT *This,
 }
 
 template <typename Param, typename ThisT>
-void LSPBinder::notification(llvm::StringLiteral Method, ThisT *This,
+void LSPBinder::notification(llvm::StringRef Method, ThisT *This,
                              void (ThisT::*Handler)(const Param &)) {
   Raw.NotificationHandlers[Method] = [Method, Handler, This](JSON RawParams) {
     llvm::Expected<Param> P =
@@ -155,7 +155,7 @@ void LSPBinder::notification(llvm::StringLiteral Method, ThisT *This,
 }
 
 template <typename Param, typename Result, typename ThisT>
-void LSPBinder::command(llvm::StringLiteral Method, ThisT *This,
+void LSPBinder::command(llvm::StringRef Method, ThisT *This,
                         void (ThisT::*Handler)(const Param &,
                                                Callback<Result>)) {
   Raw.CommandHandlers[Method] = [Method, Handler, This](JSON RawParams,
@@ -168,12 +168,12 @@ void LSPBinder::command(llvm::StringLiteral Method, ThisT *This,
 }
 
 class LSPBinder::UntypedOutgoingNotification {
-  llvm::StringLiteral Method;
+  llvm::StringRef Method;
   RawOutgoing *Out;
-  UntypedOutgoingNotification(llvm::StringLiteral Method, RawOutgoing *Out)
+  UntypedOutgoingNotification(llvm::StringRef Method, RawOutgoing *Out)
       : Method(Method), Out(Out) {}
   friend UntypedOutgoingNotification
-      LSPBinder::outgoingNotification(llvm::StringLiteral);
+      LSPBinder::outgoingNotification(llvm::StringRef);
 
 public:
   template <typename Request> operator OutgoingNotification<Request>() && {
@@ -183,16 +183,16 @@ public:
 };
 
 inline LSPBinder::UntypedOutgoingNotification
-LSPBinder::outgoingNotification(llvm::StringLiteral Method) {
+LSPBinder::outgoingNotification(llvm::StringRef Method) {
   return UntypedOutgoingNotification(Method, &Out);
 }
 
 class LSPBinder::UntypedOutgoingMethod {
-  llvm::StringLiteral Method;
+  llvm::StringRef Method;
   RawOutgoing *Out;
-  UntypedOutgoingMethod(llvm::StringLiteral Method, RawOutgoing *Out)
+  UntypedOutgoingMethod(llvm::StringRef Method, RawOutgoing *Out)
       : Method(Method), Out(Out) {}
-  friend UntypedOutgoingMethod LSPBinder::outgoingMethod(llvm::StringLiteral);
+  friend UntypedOutgoingMethod LSPBinder::outgoingMethod(llvm::StringRef);
 
 public:
   template <typename Request, typename Response>
@@ -213,7 +213,7 @@ public:
 };
 
 inline LSPBinder::UntypedOutgoingMethod
-LSPBinder::outgoingMethod(llvm::StringLiteral Method) {
+LSPBinder::outgoingMethod(llvm::StringRef Method) {
   return UntypedOutgoingMethod(Method, &Out);
 }
 

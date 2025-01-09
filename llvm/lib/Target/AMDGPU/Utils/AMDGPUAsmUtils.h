@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class StringLiteral;
+class StringRef;
 class MCSubtargetInfo;
 
 namespace AMDGPU {
@@ -26,13 +26,13 @@ const int OPR_ID_DUPLICATE = -3;
 const int OPR_VAL_INVALID = -4;
 
 struct CustomOperand {
-  StringLiteral Name;
+  StringRef Name;
   unsigned Encoding = 0;
   bool (*Cond)(const MCSubtargetInfo &STI) = nullptr;
 };
 
 struct CustomOperandVal {
-  StringLiteral Name;
+  StringRef Name;
   unsigned Max;
   unsigned Default;
   unsigned Shift;
@@ -93,12 +93,12 @@ StringRef getHwreg(uint64_t Encoding, const MCSubtargetInfo &STI);
 
 namespace MTBUFFormat {
 
-extern StringLiteral const DfmtSymbolic[];
-extern StringLiteral const NfmtSymbolicGFX10[];
-extern StringLiteral const NfmtSymbolicSICI[];
-extern StringLiteral const NfmtSymbolicVI[];
-extern StringLiteral const UfmtSymbolicGFX10[];
-extern StringLiteral const UfmtSymbolicGFX11[];
+extern StringRef const DfmtSymbolic[];
+extern StringRef const NfmtSymbolicGFX10[];
+extern StringRef const NfmtSymbolicSICI[];
+extern StringRef const NfmtSymbolicVI[];
+extern StringRef const UfmtSymbolicGFX10[];
+extern StringRef const UfmtSymbolicGFX11[];
 extern unsigned const DfmtNfmt2UFmtGFX10[];
 extern unsigned const DfmtNfmt2UFmtGFX11[];
 
@@ -119,7 +119,7 @@ extern const char* const IdSymbolic[];
 namespace UCVersion {
 
 struct GFXVersion {
-  StringLiteral Symbol;
+  StringRef Symbol;
   unsigned Code;
 };
 

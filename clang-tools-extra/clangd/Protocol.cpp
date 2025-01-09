@@ -29,8 +29,8 @@ namespace {
 
 // Helper that doesn't treat `null` and absent fields as failures.
 template <typename T>
-bool mapOptOrNull(const llvm::json::Value &Params, llvm::StringLiteral Prop,
-                  T &Out, llvm::json::Path P) {
+bool mapOptOrNull(const llvm::json::Value &Params, llvm::StringRef Prop, T &Out,
+                  llvm::json::Path P) {
   auto *O = Params.getAsObject();
   assert(O);
   auto *V = O->get(Prop);
@@ -905,9 +905,9 @@ llvm::json::Value toJSON(const Command &C) {
   return std::move(Cmd);
 }
 
-const llvm::StringLiteral CodeAction::QUICKFIX_KIND = "quickfix";
-const llvm::StringLiteral CodeAction::REFACTOR_KIND = "refactor";
-const llvm::StringLiteral CodeAction::INFO_KIND = "info";
+const llvm::StringRef CodeAction::QUICKFIX_KIND = "quickfix";
+const llvm::StringRef CodeAction::REFACTOR_KIND = "refactor";
+const llvm::StringRef CodeAction::INFO_KIND = "info";
 
 llvm::json::Value toJSON(const CodeAction &CA) {
   auto CodeAction = llvm::json::Object{{"title", CA.title}};
@@ -1656,9 +1656,9 @@ bool fromJSON(const llvm::json::Value &Params, FoldingRangeParams &R,
   return O && O.map("textDocument", R.textDocument);
 }
 
-const llvm::StringLiteral FoldingRange::REGION_KIND = "region";
-const llvm::StringLiteral FoldingRange::COMMENT_KIND = "comment";
-const llvm::StringLiteral FoldingRange::IMPORT_KIND = "import";
+const llvm::StringRef FoldingRange::REGION_KIND = "region";
+const llvm::StringRef FoldingRange::COMMENT_KIND = "comment";
+const llvm::StringRef FoldingRange::IMPORT_KIND = "import";
 
 llvm::json::Value toJSON(const FoldingRange &Range) {
   llvm::json::Object Result{

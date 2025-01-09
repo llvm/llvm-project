@@ -1811,9 +1811,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   std::optional<QualType> ConstFPosTPtrTy = getPointerTy(getConstTy(FPosTTy));
   std::optional<QualType> FPosTPtrRestrictTy = getRestrictTy(FPosTPtrTy);
 
-  constexpr llvm::StringLiteral GenericSuccessMsg(
+  constexpr llvm::StringRef GenericSuccessMsg(
       "Assuming that '{0}' is successful");
-  constexpr llvm::StringLiteral GenericFailureMsg("Assuming that '{0}' fails");
+  constexpr llvm::StringRef GenericFailureMsg("Assuming that '{0}' fails");
 
   // We are finally ready to define specifications for all supported functions.
   //

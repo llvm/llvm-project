@@ -62,10 +62,10 @@ DiffScalarVal<bool, AD_Diff_Scalar_Bool>::print(raw_ostream &OS,
 
 } // end namespace llvm
 
-StringLiteral SymScalar::getSymbolNamePrefix(MachO::EncodeKind Kind) {
+StringRef SymScalar::getSymbolNamePrefix(MachO::EncodeKind Kind) {
   switch (Kind) {
   case MachO::EncodeKind::GlobalSymbol:
-    return StringLiteral("");
+    return StringRef("");
   case MachO::EncodeKind::ObjectiveCClass:
     return ObjC2MetaClassNamePrefix;
   case MachO::EncodeKind ::ObjectiveCClassEHType:

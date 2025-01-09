@@ -1049,13 +1049,13 @@ void CodeGenFunction::EmitNewArrayInitializer(
 
   const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
   const CXXParenListInitExpr *CPLIE = nullptr;
-  const StringLiteral *SL = nullptr;
+  const StringRef *SL = nullptr;
   const ObjCEncodeExpr *OCEE = nullptr;
   const Expr *IgnoreParen = nullptr;
   if (!ILE) {
     IgnoreParen = Init->IgnoreParenImpCasts();
     CPLIE = dyn_cast<CXXParenListInitExpr>(IgnoreParen);
-    SL = dyn_cast<StringLiteral>(IgnoreParen);
+    SL = dyn_cast<StringRef>(IgnoreParen);
     OCEE = dyn_cast<ObjCEncodeExpr>(IgnoreParen);
   }
 
@@ -1592,8 +1592,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     const InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
     const CXXParenListInitExpr *CPLIE = dyn_cast<CXXParenListInitExpr>(Init);
     const Expr *IgnoreParen = Init->IgnoreParenImpCasts();
-    if ((ILE && ILE->isStringLiteralInit()) ||
-        isa<StringLiteral>(IgnoreParen) || isa<ObjCEncodeExpr>(IgnoreParen)) {
+    if ((ILE && ILE->isStringLiteralInit()) || isa<StringRef>(IgnoreParen) ||
+        isa<ObjCEncodeExpr>(IgnoreParen)) {
       minElements =
           cast<ConstantArrayType>(Init->getType()->getAsArrayTypeUnsafe())
               ->getZExtSize();

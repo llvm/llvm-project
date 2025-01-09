@@ -120,7 +120,7 @@ enum {
 class StructuredDataDarwinLogProperties : public Properties {
 public:
   static llvm::StringRef GetSettingName() {
-    static constexpr llvm::StringLiteral g_setting_name("darwin-log");
+    static constexpr llvm::StringRef g_setting_name("darwin-log");
     return g_setting_name;
   }
 
@@ -165,12 +165,12 @@ const char *const s_filter_attributes[] = {
 };
 
 static llvm::StringRef GetDarwinLogTypeName() {
-  static constexpr llvm::StringLiteral s_key_name("DarwinLog");
+  static constexpr llvm::StringRef s_key_name("DarwinLog");
   return s_key_name;
 }
 
 static llvm::StringRef GetLogEventType() {
-  static constexpr llvm::StringLiteral s_event_type("log");
+  static constexpr llvm::StringRef s_event_type("log");
   return s_event_type;
 }
 
@@ -299,7 +299,7 @@ private:
   }
 
   static llvm::StringRef StaticGetOperation() {
-    static constexpr llvm::StringLiteral s_operation("regex");
+    static constexpr llvm::StringRef s_operation("regex");
     return s_operation;
   }
 
@@ -344,7 +344,7 @@ private:
   }
 
   static llvm::StringRef StaticGetOperation() {
-    static constexpr llvm::StringLiteral s_operation("match");
+    static constexpr llvm::StringRef s_operation("match");
     return s_operation;
   }
 

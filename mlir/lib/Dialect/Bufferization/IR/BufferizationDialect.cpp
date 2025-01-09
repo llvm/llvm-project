@@ -21,12 +21,11 @@ using namespace mlir::bufferization;
 
 /// Attribute name used to mark function arguments who's buffers can be written
 /// to during One-Shot Module Bufferize.
-constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
+constexpr const ::llvm::StringRef BufferizationDialect::kWritableAttrName;
 
 /// Attribute name used to mark the bufferization layout for region arguments
 /// during One-Shot Module Bufferize.
-constexpr const ::llvm::StringLiteral
-    BufferizationDialect::kBufferLayoutAttrName;
+constexpr const ::llvm::StringRef BufferizationDialect::kBufferLayoutAttrName;
 
 /// An attribute that can be attached to ops with an allocation and/or
 /// deallocation side effect. It indicates that the op is under a "manual
@@ -36,7 +35,7 @@ constexpr const ::llvm::StringLiteral
 /// guaranteed to deallocate a buffer under "manual deallocation" are
 /// allowed to have this attribute. (Deallocation ops without this
 /// attribute are rejected by the ownership-based buffer deallocation pass.)
-constexpr const ::llvm::StringLiteral BufferizationDialect::kManualDeallocation;
+constexpr const ::llvm::StringRef BufferizationDialect::kManualDeallocation;
 
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces

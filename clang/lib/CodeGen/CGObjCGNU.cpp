@@ -563,7 +563,7 @@ public:
   CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
       unsigned protocolClassVersion, unsigned classABI=1);
 
-  ConstantAddress GenerateConstantString(const StringLiteral *) override;
+  ConstantAddress GenerateConstantString(const StringRef *) override;
 
   RValue
   GenerateMessageSend(CodeGenFunction &CGF, ReturnValueSlot Return,
@@ -987,7 +987,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     B.CreateCall(Fn, Args);
   }
 
-  ConstantAddress GenerateConstantString(const StringLiteral *SL) override {
+  ConstantAddress GenerateConstantString(const StringRef *SL) override {
 
     auto Str = SL->getString();
     CharUnits Align = CGM.getPointerAlign();
@@ -2599,7 +2599,7 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
 }
 
 /// Generate an NSConstantString object.
-ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
+ConstantAddress CGObjCGNU::GenerateConstantString(const StringRef *SL) {
 
   std::string Str = SL->getString().str();
   CharUnits Align = CGM.getPointerAlign();

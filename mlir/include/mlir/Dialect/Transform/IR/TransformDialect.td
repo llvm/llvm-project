@@ -21,24 +21,24 @@ def Transform_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
     /// Symbol name for the default entry point "named sequence".
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kTransformEntryPointSymbolName = "__transform_main";
 
     /// Name of the attribute attachable to the symbol table operation
     /// containing named sequences. This is used to trigger verification.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kWithNamedSequenceAttrName = "transform.with_named_sequence";
 
     /// Name of the attribute attachable to an operation so it can be
     /// identified as root by the default interpreter pass.
-    constexpr const static ::llvm::StringLiteral kTargetTagAttrName =
+    constexpr const static ::llvm::StringRef kTargetTagAttrName =
         "transform.target_tag";
 
     /// Names of the attributes indicating whether an argument of an external
     /// transform dialect symbol is consumed or only read.
-    constexpr const static ::llvm::StringLiteral kArgConsumedAttrName =
+    constexpr const static ::llvm::StringRef kArgConsumedAttrName =
         "transform.consumed";
-    constexpr const static ::llvm::StringLiteral kArgReadOnlyAttrName =
+    constexpr const static ::llvm::StringRef kArgReadOnlyAttrName =
         "transform.readonly";
 
     /// Names of the attributes indicating whether an argument of an external

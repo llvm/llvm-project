@@ -81,7 +81,7 @@ public:
                    IntegerAttr descriptorSet, IntegerAttr binding,
                    IntegerAttr storageClass);
 
-  static constexpr StringLiteral name = "spirv.interface_var_abi";
+  static constexpr StringRef name = "spirv.interface_var_abi";
 };
 
 /// An attribute that specifies the SPIR-V (version, capabilities, extensions)
@@ -134,7 +134,7 @@ public:
                    IntegerAttr version, ArrayAttr capabilities,
                    ArrayAttr extensions);
 
-  static constexpr StringLiteral name = "spirv.ver_cap_ext";
+  static constexpr StringRef name = "spirv.ver_cap_ext";
 };
 
 /// An attribute that specifies the target version, allowed extensions and
@@ -190,7 +190,7 @@ public:
   /// Returns the target resource limits.
   ResourceLimitsAttr getResourceLimits() const;
 
-  static constexpr StringLiteral name = "spirv.target_env";
+  static constexpr StringRef name = "spirv.target_env";
 };
 } // namespace spirv
 } // namespace mlir

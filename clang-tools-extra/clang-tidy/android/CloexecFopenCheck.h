@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// fopen() is suggested to include "e" in their mode string; like "re" would be
 /// better than "r".
 ///
-/// This check only works when corresponding argument is StringLiteral. No
+/// This check only works when corresponding argument is StringRef. No
 /// constant propagation.
 ///
 /// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html

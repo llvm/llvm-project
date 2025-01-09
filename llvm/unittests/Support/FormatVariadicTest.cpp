@@ -445,7 +445,7 @@ TEST(FormatVariadicTest, StringFormatting) {
   const char FooArray[] = "FooArray";
   const char *FooPtr = "FooPtr";
   llvm::StringRef FooRef("FooRef");
-  constexpr StringLiteral FooLiteral("FooLiteral");
+  constexpr StringRef FooLiteral("FooLiteral");
   std::string FooString("FooString");
   // 1. Test that we can print various types of strings.
   EXPECT_EQ(FooArray, formatv("{0}", FooArray).str());

@@ -831,7 +831,7 @@ public:
         result = failure();
     }
     /// Case that uses the provided value when true.
-    KeywordSwitch &Case(StringLiteral str, ResultT value) {
+    KeywordSwitch &Case(StringRef str, ResultT value) {
       return Case(str, [&](StringRef, SMLoc) { return std::move(value); });
     }
     KeywordSwitch &Default(ResultT value) {
@@ -842,7 +842,7 @@ public:
     /// any errors need to be emitted).
     template <typename FnT>
     std::enable_if_t<!std::is_convertible<FnT, ResultT>::value, KeywordSwitch &>
-    Case(StringLiteral str, FnT &&fn) {
+    Case(StringRef str, FnT &&fn) {
       if (result)
         return *this;
 

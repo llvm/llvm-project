@@ -331,7 +331,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string overloadedOperandsCpp =  "{" # !interleave(overloadedOperands, ", ") # "}";
   string immArgPositionsCpp = "{" # !interleave(immArgPositions, ", ") # "}";
   string immArgAttrNamesCpp = "{" # !interleave(!foreach(name, immArgAttrNames,
-    "StringLiteral(\"" # name # "\")"), ", ") # "}";
+    "StringRef(\"" # name # "\")"), ", ") # "}";
   string baseLlvmBuilder = [{
     auto *inst = LLVM::detail::createIntrinsicCall(
       builder, moduleTranslation, &opInst, llvm::Intrinsic::}] # !interleave([

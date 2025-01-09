@@ -146,7 +146,7 @@ inline bool isPrint(char C) {
 /// punctuation characters can be found in the documentation of std::ispunct:
 /// https://en.cppreference.com/w/cpp/string/byte/ispunct.
 inline bool isPunct(char C) {
-  static constexpr StringLiteral Punctuations =
+  static constexpr StringRef Punctuations =
       R"(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)";
   return Punctuations.contains(C);
 }

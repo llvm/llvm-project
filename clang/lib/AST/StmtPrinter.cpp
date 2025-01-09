@@ -1478,9 +1478,7 @@ void StmtPrinter::VisitImaginaryLiteral(ImaginaryLiteral *Node) {
   OS << "i";
 }
 
-void StmtPrinter::VisitStringLiteral(StringLiteral *Str) {
-  Str->outputString(OS);
-}
+void StmtPrinter::VisitStringLiteral(StringRef *Str) { Str->outputString(OS); }
 
 void StmtPrinter::VisitParenExpr(ParenExpr *Node) {
   OS << "(";
@@ -2116,7 +2114,7 @@ void StmtPrinter::VisitMSPropertySubscriptExpr(MSPropertySubscriptExpr *Node) {
 void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
   switch (Node->getLiteralOperatorKind()) {
   case UserDefinedLiteral::LOK_Raw:
-    OS << cast<StringLiteral>(Node->getArg(0)->IgnoreImpCasts())->getString();
+    OS << cast<StringRef>(Node->getArg(0)->IgnoreImpCasts())->getString();
     break;
   case UserDefinedLiteral::LOK_Template: {
     const auto *DRE = cast<DeclRefExpr>(Node->getCallee()->IgnoreImpCasts());

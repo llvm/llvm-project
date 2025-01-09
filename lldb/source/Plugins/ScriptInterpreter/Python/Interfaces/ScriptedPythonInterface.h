@@ -55,13 +55,13 @@ public:
     std::variant<std::monostate, InvalidArgumentCountPayload> payload;
   };
 
-  llvm::Expected<std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload>>
+  llvm::Expected<std::map<llvm::StringRef, AbstrackMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
       const python::PythonDictionary &class_dict) const {
 
     using namespace python;
 
-    std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload> checker;
+    std::map<llvm::StringRef, AbstrackMethodCheckerPayload> checker;
 #define SET_CASE_AND_CONTINUE(method_name, case)                               \
   {                                                                            \
     checker[method_name] = {case, {}};                                         \
@@ -70,7 +70,7 @@ public:
 
     for (const AbstractMethodRequirement &requirement :
          GetAbstractMethodRequirements()) {
-      llvm::StringLiteral method_name = requirement.name;
+      llvm::StringRef method_name = requirement.name;
       if (!class_dict.HasKey(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
@@ -120,7 +120,7 @@ public:
     using Locker = ScriptInterpreterPythonImpl::Locker;
 
     Log *log = GetLog(LLDBLog::Script);
-    auto create_error = [](llvm::StringLiteral format, auto &&...ts) {
+    auto create_error = [](llvm::StringRef format, auto &&...ts) {
       return llvm::createStringError(
           llvm::formatv(format.data(), std::forward<decltype(ts)>(ts)...)
               .str());

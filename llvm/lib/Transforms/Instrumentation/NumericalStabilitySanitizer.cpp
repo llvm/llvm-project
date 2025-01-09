@@ -131,8 +131,8 @@ static cl::opt<bool> ClPropagateNonFTConstStoresAsFT(
         "For debugging purposes only"),
     cl::Hidden);
 
-constexpr StringLiteral kNsanModuleCtorName("nsan.module_ctor");
-constexpr StringLiteral kNsanInitName("__nsan_init");
+constexpr StringRef kNsanModuleCtorName("nsan.module_ctor");
+constexpr StringRef kNsanInitName("__nsan_init");
 
 // The following values must be kept in sync with the runtime.
 constexpr int kShadowScale = 2;

@@ -36,7 +36,7 @@ const Formula &Formula::create(llvm::BumpPtrAllocator &Alloc, Kind K,
   return *Result;
 }
 
-static llvm::StringLiteral sigil(Formula::Kind K) {
+static llvm::StringRef sigil(Formula::Kind K) {
   switch (K) {
   case Formula::AtomRef:
   case Formula::Literal:

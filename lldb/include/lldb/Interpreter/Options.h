@@ -364,11 +364,11 @@ llvm::Error CreateOptionParsingError(llvm::StringRef option_arg,
                                      llvm::StringRef long_option = {},
                                      llvm::StringRef additional_context = {});
 
-static constexpr llvm::StringLiteral g_bool_parsing_error_message =
+static constexpr llvm::StringRef g_bool_parsing_error_message =
     "Failed to parse as boolean";
-static constexpr llvm::StringLiteral g_int_parsing_error_message =
+static constexpr llvm::StringRef g_int_parsing_error_message =
     "Failed to parse as integer";
-static constexpr llvm::StringLiteral g_language_parsing_error_message =
+static constexpr llvm::StringRef g_language_parsing_error_message =
     "Unknown language";
 
 } // namespace lldb_private

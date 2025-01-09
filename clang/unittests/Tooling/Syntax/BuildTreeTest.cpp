@@ -1408,7 +1408,7 @@ FloatingLiteralExpression Expression
 )txt"}));
 }
 
-TEST_P(BuildSyntaxTreeTest, StringLiteral) {
+TEST_P(BuildSyntaxTreeTest, StringRef) {
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 void test() {

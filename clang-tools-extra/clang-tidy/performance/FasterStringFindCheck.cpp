@@ -19,7 +19,7 @@ namespace clang::tidy::performance {
 
 namespace {
 
-std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
+std::optional<std::string> makeCharacterLiteral(const StringRef *Literal) {
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
@@ -82,7 +82,7 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void FasterStringFindCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("literal");
+  const auto *Literal = Result.Nodes.getNodeAs<StringRef>("literal");
   const auto *FindFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
   auto Replacement = makeCharacterLiteral(Literal);

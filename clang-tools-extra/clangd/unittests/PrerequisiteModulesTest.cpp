@@ -411,7 +411,7 @@ export module A;
 export void printA();
   )cpp");
 
-  llvm::StringLiteral UserContents = R"cpp(
+  llvm::StringRef UserContents = R"cpp(
 import A;
 void func() {
   print^
@@ -450,7 +450,7 @@ export module A;
 export void printA(int a);
   )cpp");
 
-  llvm::StringLiteral UserContents = R"cpp(
+  llvm::StringRef UserContents = R"cpp(
 import A;
 void func() {
   printA(^);

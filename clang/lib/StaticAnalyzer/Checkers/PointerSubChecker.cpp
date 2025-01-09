@@ -28,7 +28,7 @@ namespace {
 class PointerSubChecker
   : public Checker< check::PreStmt<BinaryOperator> > {
   const BugType BT{this, "Pointer subtraction"};
-  const llvm::StringLiteral Msg_MemRegionDifferent =
+  const llvm::StringRef Msg_MemRegionDifferent =
       "Subtraction of two pointers that do not point into the same array "
       "is undefined behavior.";
 

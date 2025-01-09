@@ -16680,7 +16680,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
 Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
                                            Expr *LangStr,
                                            SourceLocation LBraceLoc) {
-  StringLiteral *Lit = cast<StringLiteral>(LangStr);
+  StringRef *Lit = cast<StringRef>(LangStr);
   assert(Lit->isUnevaluated() && "Unexpected string literal kind");
 
   StringRef Lang = Lit->getString();
@@ -17176,7 +17176,7 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
   assert(!Message->isTypeDependent() && !Message->isValueDependent() &&
          "can't evaluate a dependant static assert message");
 
-  if (const auto *SL = dyn_cast<StringLiteral>(Message)) {
+  if (const auto *SL = dyn_cast<StringRef>(Message)) {
     assert(SL->isUnevaluated() && "expected an unevaluated string");
     Result.assign(SL->getString().begin(), SL->getString().end());
     return true;
@@ -17960,7 +17960,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
 }
 
 void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
-                          StringLiteral *Message) {
+                          StringRef *Message) {
   AdjustDeclIfTemplate(Dcl);
 
   FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(Dcl);
@@ -18123,7 +18123,7 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
 }
 
 void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
-                               StringLiteral *DeletedMessage) {
+                               StringRef *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
     SetDeclDeleted(D, Loc, DeletedMessage);

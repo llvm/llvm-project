@@ -681,7 +681,7 @@ protected:
                               std::string &line) override;
 
   llvm::StringRef IOHandlerGetControlSequence(char ch) override {
-    static constexpr llvm::StringLiteral control_sequence("quit\n");
+    static constexpr llvm::StringRef control_sequence("quit\n");
     if (ch == 'd')
       return control_sequence;
     return {};

@@ -27,7 +27,7 @@ class ModuleTranslation;
 }
 namespace gpu {
 enum class CompilationTarget : uint32_t;
-constexpr StringLiteral elfSectionName = "section";
+constexpr StringRef elfSectionName = "section";
 
 /// This class indicates that the attribute associated with this trait is a GPU
 /// offloading translation attribute. These kinds of attributes must implement

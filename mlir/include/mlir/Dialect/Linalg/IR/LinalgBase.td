@@ -48,7 +48,7 @@ def Linalg_Dialect : Dialect {
   let hasConstantMaterializer = 1;
   let extraClassDeclaration = [{
     /// Attribute name used to memoize indexing maps for named ops.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kMemoizedIndexingMapsAttrName = "linalg.memoized_indexing_maps";
 
     using RegionBuilderFunType = llvm::function_ref<

@@ -19,18 +19,18 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-constexpr llvm::StringLiteral FunctionExprName = "FunctionExpr";
-constexpr llvm::StringLiteral CastExprName = "CastExpr";
-constexpr llvm::StringLiteral UnknownDestName = "UnknownDest";
-constexpr llvm::StringLiteral DestArrayTyName = "DestArrayTy";
-constexpr llvm::StringLiteral DestVarDeclName = "DestVarDecl";
-constexpr llvm::StringLiteral DestMallocExprName = "DestMalloc";
-constexpr llvm::StringLiteral DestExprName = "DestExpr";
-constexpr llvm::StringLiteral SrcVarDeclName = "SrcVarDecl";
-constexpr llvm::StringLiteral SrcExprName = "SrcExpr";
-constexpr llvm::StringLiteral LengthExprName = "LengthExpr";
-constexpr llvm::StringLiteral WrongLengthExprName = "WrongLength";
-constexpr llvm::StringLiteral UnknownLengthName = "UnknownLength";
+constexpr llvm::StringRef FunctionExprName = "FunctionExpr";
+constexpr llvm::StringRef CastExprName = "CastExpr";
+constexpr llvm::StringRef UnknownDestName = "UnknownDest";
+constexpr llvm::StringRef DestArrayTyName = "DestArrayTy";
+constexpr llvm::StringRef DestVarDeclName = "DestVarDecl";
+constexpr llvm::StringRef DestMallocExprName = "DestMalloc";
+constexpr llvm::StringRef DestExprName = "DestExpr";
+constexpr llvm::StringRef SrcVarDeclName = "SrcVarDecl";
+constexpr llvm::StringRef SrcExprName = "SrcExpr";
+constexpr llvm::StringRef LengthExprName = "LengthExpr";
+constexpr llvm::StringRef WrongLengthExprName = "WrongLength";
+constexpr llvm::StringRef UnknownLengthName = "UnknownLength";
 
 enum class LengthHandleKind { Increase, Decrease };
 
@@ -57,7 +57,7 @@ static const Expr *getDestCapacityExpr(const MatchFinder::MatchResult &Result) {
   return nullptr;
 }
 
-// Returns the length of \p E as an 'IntegerLiteral' or a 'StringLiteral'
+// Returns the length of \p E as an 'IntegerLiteral' or a 'StringRef'
 // without the null-terminator.
 static unsigned getLength(const Expr *E,
                           const MatchFinder::MatchResult &Result) {
@@ -80,11 +80,10 @@ static unsigned getLength(const Expr *E,
   if (const auto *StrDRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *StrVD = dyn_cast<VarDecl>(StrDRE->getDecl()))
       if (const Expr *StrInit = StrVD->getInit())
-        if (const auto *StrSL =
-                dyn_cast<StringLiteral>(StrInit->IgnoreImpCasts()))
+        if (const auto *StrSL = dyn_cast<StringRef>(StrInit->IgnoreImpCasts()))
           return StrSL->getLength();
 
-  if (const auto *SrcSL = dyn_cast<StringLiteral>(E))
+  if (const auto *SrcSL = dyn_cast<StringRef>(E))
     return SrcSL->getLength();
 
   return 0;

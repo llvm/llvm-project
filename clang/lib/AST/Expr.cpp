@@ -616,7 +616,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy,
                                PredefinedIdentKind IK, bool IsTransparent,
-                               StringLiteral *SL)
+                               StringRef *SL)
     : Expr(PredefinedExprClass, FNTy, VK_LValue, OK_Ordinary) {
   PredefinedExprBits.Kind = llvm::to_underlying(IK);
   assert((getIdentKind() == IK) &&
@@ -637,7 +637,7 @@ PredefinedExpr::PredefinedExpr(EmptyShell Empty, bool HasFunctionName)
 
 PredefinedExpr *PredefinedExpr::Create(const ASTContext &Ctx, SourceLocation L,
                                        QualType FNTy, PredefinedIdentKind IK,
-                                       bool IsTransparent, StringLiteral *SL) {
+                                       bool IsTransparent, StringRef *SL) {
   bool HasFunctionName = SL != nullptr;
   void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(HasFunctionName),
                            alignof(PredefinedExpr));
@@ -1092,8 +1092,8 @@ double FloatingLiteral::getValueAsApproximateDouble() const {
   return V.convertToDouble();
 }
 
-unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
-                                         StringLiteralKind SK) {
+unsigned StringRef::mapCharByteWidth(TargetInfo const &Target,
+                                     StringLiteralKind SK) {
   unsigned CharByteWidth = 0;
   switch (SK) {
   case StringLiteralKind::Ordinary:
@@ -1119,10 +1119,9 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
   return CharByteWidth;
 }
 
-StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
-                             StringLiteralKind Kind, bool Pascal, QualType Ty,
-                             const SourceLocation *Loc,
-                             unsigned NumConcatenated)
+StringRef::StringRef(const ASTContext &Ctx, StringRef Str,
+                     StringLiteralKind Kind, bool Pascal, QualType Ty,
+                     const SourceLocation *Loc, unsigned NumConcatenated)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
 
   unsigned Length = Str.size();
@@ -1132,7 +1131,7 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
 
   if (Kind != StringLiteralKind::Unevaluated) {
     assert(Ctx.getAsConstantArrayType(Ty) &&
-           "StringLiteral must be of constant array type!");
+           "StringRef must be of constant array type!");
     unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
     unsigned ByteLength = Str.size();
     assert((ByteLength % CharByteWidth == 0) &&
@@ -1176,37 +1175,35 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
   setDependence(ExprDependence::None);
 }
 
-StringLiteral::StringLiteral(EmptyShell Empty, unsigned NumConcatenated,
-                             unsigned Length, unsigned CharByteWidth)
+StringRef::StringRef(EmptyShell Empty, unsigned NumConcatenated,
+                     unsigned Length, unsigned CharByteWidth)
     : Expr(StringLiteralClass, Empty) {
   StringLiteralBits.CharByteWidth = CharByteWidth;
   StringLiteralBits.NumConcatenated = NumConcatenated;
   *getTrailingObjects<unsigned>() = Length;
 }
 
-StringLiteral *StringLiteral::Create(const ASTContext &Ctx, StringRef Str,
-                                     StringLiteralKind Kind, bool Pascal,
-                                     QualType Ty, const SourceLocation *Loc,
-                                     unsigned NumConcatenated) {
+StringRef *StringRef::Create(const ASTContext &Ctx, StringRef Str,
+                             StringLiteralKind Kind, bool Pascal, QualType Ty,
+                             const SourceLocation *Loc,
+                             unsigned NumConcatenated) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
                                1, NumConcatenated, Str.size()),
-                           alignof(StringLiteral));
-  return new (Mem)
-      StringLiteral(Ctx, Str, Kind, Pascal, Ty, Loc, NumConcatenated);
+                           alignof(StringRef));
+  return new (Mem) StringRef(Ctx, Str, Kind, Pascal, Ty, Loc, NumConcatenated);
 }
 
-StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
-                                          unsigned NumConcatenated,
-                                          unsigned Length,
-                                          unsigned CharByteWidth) {
+StringRef *StringRef::CreateEmpty(const ASTContext &Ctx,
+                                  unsigned NumConcatenated, unsigned Length,
+                                  unsigned CharByteWidth) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
                                1, NumConcatenated, Length * CharByteWidth),
-                           alignof(StringLiteral));
+                           alignof(StringRef));
   return new (Mem)
-      StringLiteral(EmptyShell(), NumConcatenated, Length, CharByteWidth);
+      StringRef(EmptyShell(), NumConcatenated, Length, CharByteWidth);
 }
 
-void StringLiteral::outputString(raw_ostream &OS) const {
+void StringRef::outputString(raw_ostream &OS) const {
   switch (getKind()) {
   case StringLiteralKind::Unevaluated:
   case StringLiteralKind::Ordinary:
@@ -1322,10 +1319,10 @@ void StringLiteral::outputString(raw_ostream &OS) const {
 /// string.
 ///
 SourceLocation
-StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
-                                 const LangOptions &Features,
-                                 const TargetInfo &Target, unsigned *StartToken,
-                                 unsigned *StartTokenByteOffset) const {
+StringRef::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
+                             const LangOptions &Features,
+                             const TargetInfo &Target, unsigned *StartToken,
+                             unsigned *StartTokenByteOffset) const {
   assert((getKind() == StringLiteralKind::Ordinary ||
           getKind() == StringLiteralKind::UTF8 ||
           getKind() == StringLiteralKind::Unevaluated) &&
@@ -2309,7 +2306,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
 
   auto MakeStringLiteral = [&](StringRef Tmp) {
     using LValuePathEntry = APValue::LValuePathEntry;
-    StringLiteral *Res = Ctx.getPredefinedStringLiteralFromCache(Tmp);
+    StringRef *Res = Ctx.getPredefinedStringLiteralFromCache(Tmp);
     // Decay the string to a pointer to the first character.
     LValuePathEntry Path[1] = {LValuePathEntry::ArrayIndex(0)};
     return APValue(Res, CharUnits::Zero(), Path, /*OnePastTheEnd=*/false);
@@ -2454,7 +2451,7 @@ bool InitListExpr::isStringLiteralInit() const {
   if (!Init)
     return false;
   Init = Init->IgnoreParenImpCasts();
-  return isa<StringLiteral>(Init) || isa<ObjCEncodeExpr>(Init);
+  return isa<StringRef>(Init) || isa<ObjCEncodeExpr>(Init);
 }
 
 bool InitListExpr::isTransparent() const {

@@ -1495,7 +1495,7 @@ void TextNodeDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
   OS << " " << Node->getValueAsApproximateDouble();
 }
 
-void TextNodeDumper::VisitStringLiteral(const StringLiteral *Str) {
+void TextNodeDumper::VisitStringLiteral(const StringRef *Str) {
   ColorScope Color(OS, ShowColors, ValueColor);
   OS << " ";
   Str->outputString(OS);
@@ -2174,7 +2174,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isTrivial())
     OS << " trivial";
 
-  if (const StringLiteral *M = D->getDeletedMessage())
+  if (const StringRef *M = D->getDeletedMessage())
     AddChild("delete message", [=] { Visit(M); });
 
   if (D->isIneligibleOrNotSelected())

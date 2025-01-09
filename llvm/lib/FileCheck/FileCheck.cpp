@@ -318,7 +318,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
 
 // StringRef holding all characters considered as horizontal whitespaces by
 // FileCheck input canonicalization.
-constexpr StringLiteral SpaceChars = " \t";
+constexpr StringRef SpaceChars = " \t";
 
 // Parsing helper function that strips the first character in S and returns it.
 static char popFront(StringRef &S) {

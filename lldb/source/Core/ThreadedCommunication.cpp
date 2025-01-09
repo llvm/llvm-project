@@ -33,7 +33,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 llvm::StringRef ThreadedCommunication::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.communication");
+  static constexpr llvm::StringRef class_name("lldb.communication");
   return class_name;
 }
 

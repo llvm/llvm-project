@@ -130,7 +130,7 @@ class ArrayType : public Type::TypeBase<ArrayType, CompositeType,
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.array";
+  static constexpr StringRef name = "spirv.array";
 
   static ArrayType get(Type elementType, unsigned elementCount);
 
@@ -162,7 +162,7 @@ class ImageType
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.image";
+  static constexpr StringRef name = "spirv.image";
 
   static ImageType
   get(Type elementType, Dim dim,
@@ -203,7 +203,7 @@ class PointerType : public Type::TypeBase<PointerType, SPIRVType,
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.pointer";
+  static constexpr StringRef name = "spirv.pointer";
 
   static PointerType get(Type pointeeType, StorageClass storageClass);
 
@@ -224,7 +224,7 @@ class RuntimeArrayType
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.rtarray";
+  static constexpr StringRef name = "spirv.rtarray";
 
   static RuntimeArrayType get(Type elementType);
 
@@ -250,7 +250,7 @@ class SampledImageType
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.sampled_image";
+  static constexpr StringRef name = "spirv.sampled_image";
 
   static SampledImageType get(Type imageType);
 
@@ -297,7 +297,7 @@ public:
   // Type for specifying the offset of the struct members
   using OffsetInfo = uint32_t;
 
-  static constexpr StringLiteral name = "spirv.struct";
+  static constexpr StringRef name = "spirv.struct";
 
   // Type for specifying the decoration(s) on struct members
   struct MemberDecorationInfo {
@@ -398,7 +398,7 @@ class CooperativeMatrixType
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.coopmatrix";
+  static constexpr StringRef name = "spirv.coopmatrix";
 
   static CooperativeMatrixType get(Type elementType, uint32_t rows,
                                    uint32_t columns, Scope scope,
@@ -426,7 +426,7 @@ class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "spirv.matrix";
+  static constexpr StringRef name = "spirv.matrix";
 
   static MatrixType get(Type columnType, uint32_t columnCount);
 

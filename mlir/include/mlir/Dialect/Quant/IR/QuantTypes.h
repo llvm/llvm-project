@@ -202,7 +202,7 @@ public:
   using Base::Base;
   using Base::getChecked;
 
-  static constexpr StringLiteral name = "quant.any";
+  static constexpr StringRef name = "quant.any";
 
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
@@ -263,7 +263,7 @@ public:
   using Base::Base;
   using Base::getChecked;
 
-  static constexpr StringLiteral name = "quant.uniform";
+  static constexpr StringRef name = "quant.uniform";
 
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
@@ -323,7 +323,7 @@ public:
   using Base::Base;
   using Base::getChecked;
 
-  static constexpr StringLiteral name = "quant.uniform_per_axis";
+  static constexpr StringRef name = "quant.uniform_per_axis";
 
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
@@ -393,7 +393,7 @@ public:
   using Base::Base;
   using Base::getChecked;
 
-  static constexpr StringLiteral name = "quant.calibrated";
+  static constexpr StringRef name = "quant.calibrated";
 
   /// Gets an instance of the type with all parameters specified but not
   /// checked.

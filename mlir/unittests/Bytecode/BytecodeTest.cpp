@@ -23,7 +23,7 @@
 using namespace llvm;
 using namespace mlir;
 
-StringLiteral irWithResources = R"(
+StringRef irWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>
 } {}
@@ -110,8 +110,8 @@ public:
 class TestOpPropertiesDialect : public Dialect {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOpPropertiesDialect)
-  static constexpr StringLiteral getDialectNamespace() {
-    return StringLiteral("test_op_properties");
+  static constexpr StringRef getDialectNamespace() {
+    return StringRef("test_op_properties");
   }
   explicit TestOpPropertiesDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
@@ -121,7 +121,7 @@ public:
 };
 } // namespace
 
-constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+constexpr StringRef withoutPropertiesAttrsSrc = R"mlir(
     "test_op_properties.op_without_properties"()
       {inherent_attr = 42, other_attr = 56} : () -> ()
 )mlir";

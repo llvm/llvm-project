@@ -2185,8 +2185,8 @@ struct HasSizeMatcher {
 };
 
 template <>
-inline bool HasSizeMatcher<StringLiteral>::hasSize(
-    const StringLiteral &Node, unsigned int N) {
+inline bool HasSizeMatcher<StringRef>::hasSize(const StringRef &Node,
+                                               unsigned int N) {
   return Node.getLength() == N;
 }
 

@@ -653,7 +653,7 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
 // inputs to the binary function. This table was taken from
 // https://gist.github.com/dougallj/81a80cd381988466c4e1c4889ecac95b#file-2-x86-base-txt
 // with slight massaging.
-constexpr StringLiteral TernlogFunctions[] = {
+constexpr StringRef TernlogFunctions[] = {
     "0",
     "~(a | b | c)",
     "c & ~(a | b)",
@@ -1014,15 +1014,9 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
   if (Categories == 0) {
     OS << "false";
   } else {
-    static constexpr StringLiteral CategoryNames[] = {
-      "QuietNaN",
-      "PositiveZero",
-      "NegativeZero",
-      "PositiveInfinity",
-      "NegativeInfinity",
-      "Subnormal",
-      "Negative",
-      "SignalingNaN",
+    static constexpr StringRef CategoryNames[] = {
+        "QuietNaN",         "PositiveZero", "NegativeZero", "PositiveInfinity",
+        "NegativeInfinity", "Subnormal",    "Negative",     "SignalingNaN",
     };
     bool Conjoin = false;
     for (size_t I = 0, E = std::size(CategoryNames); I != E; ++I) {

@@ -1954,8 +1954,8 @@ void OMPClausePrinter::VisitOMPSeverityClause(OMPSeverityClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPMessageClause(OMPMessageClause *Node) {
-  OS << "message(\""
-     << cast<StringLiteral>(Node->getMessageString())->getString() << "\")";
+  OS << "message(\"" << cast<StringRef>(Node->getMessageString())->getString()
+     << "\")";
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {

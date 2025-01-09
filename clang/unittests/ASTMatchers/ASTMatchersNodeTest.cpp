@@ -945,7 +945,7 @@ TEST_P(ASTMatchersTest, Matcher_DefaultArgument) {
   EXPECT_TRUE(notMatches("void x(int, int = 0) { int y; x(y, 0); }", Arg));
 }
 
-TEST_P(ASTMatchersTest, StringLiteral) {
+TEST_P(ASTMatchersTest, StringRef) {
   StatementMatcher Literal = stringLiteral();
   EXPECT_TRUE(matches("const char *s = \"string\";", Literal));
   // with escaped characters
@@ -1112,7 +1112,7 @@ TEST_P(ASTMatchersTest, StmtExpr) {
 }
 
 TEST_P(ASTMatchersTest, PredefinedExpr) {
-  // __func__ expands as StringLiteral("foo")
+  // __func__ expands as StringRef("foo")
   EXPECT_TRUE(matches("void foo() { __func__; }",
                       predefinedExpr(hasType(asString("const char[4]")),
                                      has(stringLiteral()))));

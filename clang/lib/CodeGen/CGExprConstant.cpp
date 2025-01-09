@@ -1252,7 +1252,7 @@ public:
       return Visit(subExpr, destType);
 
     case CK_ArrayToPointerDecay:
-      if (const auto *S = dyn_cast<StringLiteral>(subExpr))
+      if (const auto *S = dyn_cast<StringRef>(subExpr))
         return CGM.GetAddrOfConstantStringFromLiteral(S).getPointer();
       return nullptr;
     case CK_NullToPointer:
@@ -1428,7 +1428,7 @@ public:
     for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
       const Expr *Init = ILE->getInit(i);
       if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-        StringLiteral *SL = EmbedS->getDataStringLiteral();
+        StringRef *SL = EmbedS->getDataStringLiteral();
         llvm::APSInt Value(CGM.getContext().getTypeSize(DestTy),
                            DestTy->isUnsignedIntegerType());
         llvm::Constant *C;
@@ -1536,7 +1536,7 @@ public:
     return CGM.EmitNullConstant(Ty);
   }
 
-  llvm::Constant *VisitStringLiteral(const StringLiteral *E, QualType T) {
+  llvm::Constant *VisitStringLiteral(const StringRef *E, QualType T) {
     // This is a string literal initializing an array in an initializer.
     return CGM.GetConstantArrayFromStringLiteral(E);
   }
@@ -2079,7 +2079,7 @@ private:
   ConstantLValue VisitStmt(const Stmt *S) { return nullptr; }
   ConstantLValue VisitConstantExpr(const ConstantExpr *E);
   ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
-  ConstantLValue VisitStringLiteral(const StringLiteral *E);
+  ConstantLValue VisitStringLiteral(const StringRef *E);
   ConstantLValue VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
   ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
   ConstantLValue VisitObjCStringLiteral(const ObjCStringLiteral *E);
@@ -2261,8 +2261,7 @@ ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   return tryEmitGlobalCompoundLiteral(CompoundLiteralEmitter, E);
 }
 
-ConstantLValue
-ConstantLValueEmitter::VisitStringLiteral(const StringLiteral *E) {
+ConstantLValue ConstantLValueEmitter::VisitStringLiteral(const StringRef *E) {
   return CGM.GetAddrOfConstantStringFromLiteral(E);
 }
 
@@ -2271,7 +2270,7 @@ ConstantLValueEmitter::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
   return CGM.GetAddrOfConstantStringFromObjCEncode(E);
 }
 
-static ConstantLValue emitConstantObjCStringLiteral(const StringLiteral *S,
+static ConstantLValue emitConstantObjCStringLiteral(const StringRef *S,
                                                     QualType T,
                                                     CodeGenModule &CGM) {
   auto C = CGM.getObjCRuntime().GenerateConstantString(S);
@@ -2287,7 +2286,7 @@ ConstantLValue
 ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   assert(E->isExpressibleAsConstantInitializer() &&
          "this boxed expression can't be emitted as a compile-time constant");
-  const auto *SL = cast<StringLiteral>(E->getSubExpr()->IgnoreParenCasts());
+  const auto *SL = cast<StringRef>(E->getSubExpr()->IgnoreParenCasts());
   return emitConstantObjCStringLiteral(SL, E->getType(), CGM);
 }
 
@@ -2317,7 +2316,7 @@ ConstantLValueEmitter::VisitCallExpr(const CallExpr *E) {
       builtin != Builtin::BI__builtin___NSStringMakeConstantString)
     return nullptr;
 
-  const auto *Literal = cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts());
+  const auto *Literal = cast<StringRef>(E->getArg(0)->IgnoreParenCasts());
   if (builtin == Builtin::BI__builtin___NSStringMakeConstantString) {
     return CGM.getObjCRuntime().GenerateConstantString(Literal);
   } else {

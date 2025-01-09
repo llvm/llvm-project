@@ -293,8 +293,8 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
     return FloatLit1->getValue().bitwiseIsEqual(FloatLit2->getValue());
   }
   case Stmt::StringLiteralClass: {
-    const auto *StringLit1 = cast<StringLiteral>(Stmt1);
-    const auto *StringLit2 = cast<StringLiteral>(Stmt2);
+    const auto *StringLit1 = cast<StringRef>(Stmt1);
+    const auto *StringLit2 = cast<StringRef>(Stmt2);
     return StringLit1->getBytes() == StringLit2->getBytes();
   }
   case Stmt::MemberExprClass: {

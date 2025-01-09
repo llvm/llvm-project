@@ -18,14 +18,14 @@
 /// \code
 /// Grammar for the expressions supported:
 /// <Expression>        := <Literal> | <NamedValue> | <MatcherExpression>
-/// <Literal>           := <StringLiteral> | <Boolean> | <Double> | <Unsigned>
-/// <StringLiteral>     := "quoted string"
+/// <Literal>           := <StringRef> | <Boolean> | <Double> | <Unsigned>
+/// <StringRef>     := "quoted string"
 /// <Boolean>           := true | false
 /// <Double>            := [0-9]+.[0-9]* | [0-9]+.[0-9]*[eE][-+]?[0-9]+
 /// <Unsigned>          := [0-9]+
 /// <NamedValue>        := <Identifier>
 /// <MatcherExpression> := <Identifier>(<ArgumentList>) |
-///                        <Identifier>(<ArgumentList>).bind(<StringLiteral>)
+///                        <Identifier>(<ArgumentList>).bind(<StringRef>)
 /// <Identifier>        := [a-zA-Z]+
 /// <ArgumentList>      := <Expression> | <Expression>,<ArgumentList>
 /// \endcode

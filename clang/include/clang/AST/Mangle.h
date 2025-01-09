@@ -35,7 +35,7 @@ namespace clang {
   struct MethodVFTableLocation;
   class NamedDecl;
   class ObjCMethodDecl;
-  class StringLiteral;
+  class StringRef;
   struct ThisAdjustment;
   struct ThunkInfo;
   class VarDecl;
@@ -119,7 +119,7 @@ public:
 
   bool shouldMangleDeclName(const NamedDecl *D);
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
-  virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
+  virtual bool shouldMangleStringLiteral(const StringRef *SL) = 0;
 
   virtual bool isUniqueInternalLinkageDecl(const NamedDecl *ND) {
     return false;
@@ -142,7 +142,7 @@ public:
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
                                  bool NormalizeIntegers = false) = 0;
-  virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
+  virtual void mangleStringLiteral(const StringRef *SL, raw_ostream &) = 0;
   virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream&);
 
   void mangleGlobalBlock(const BlockDecl *BD,

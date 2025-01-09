@@ -775,8 +775,8 @@ void Output::output(StringRef S, QuotingType MustQuote) {
     return;
   }
 
-  StringLiteral Quote = MustQuote == QuotingType::Single ? StringLiteral("'")
-                                                         : StringLiteral("\"");
+  StringRef Quote =
+      MustQuote == QuotingType::Single ? StringRef("'") : StringRef("\"");
   output(Quote); // Starting quote.
 
   // When using double-quoted strings (and only in that case), non-printable
@@ -799,7 +799,7 @@ void Output::output(StringRef S, QuotingType MustQuote) {
   while (j < End) {
     if (S[j] == '\'') {                   // Escape quotes.
       output(StringRef(&Base[i], j - i)); // "flush".
-      output(StringLiteral("''"));        // Print it as ''
+      output(StringRef("''"));            // Print it as ''
       i = j + 1;
     }
     ++j;

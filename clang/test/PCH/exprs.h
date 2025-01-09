@@ -16,7 +16,7 @@ typedef typeof((42.5)) floating_literal;
 // ImaginaryLiteral
 typedef typeof(17.0i) imaginary_literal;
 
-// StringLiteral
+// StringRef
 const char *hello = "Hello" "PCH" "World";
 
 // CharacterLiteral

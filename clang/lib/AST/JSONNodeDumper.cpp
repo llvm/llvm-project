@@ -978,7 +978,7 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
     JOS.attribute("explicitlyDefaulted",
                   FD->isDeleted() ? "deleted" : "default");
 
-  if (StringLiteral *Msg = FD->getDeletedMessage())
+  if (StringRef *Msg = FD->getDeletedMessage())
     JOS.attribute("deletedMessage", Msg->getString());
 }
 
@@ -1636,7 +1636,7 @@ void JSONNodeDumper::VisitFloatingLiteral(const FloatingLiteral *FL) {
   FL->getValue().toString(Buffer);
   JOS.attribute("value", Buffer);
 }
-void JSONNodeDumper::VisitStringLiteral(const StringLiteral *SL) {
+void JSONNodeDumper::VisitStringLiteral(const StringRef *SL) {
   std::string Buffer;
   llvm::raw_string_ostream SS(Buffer);
   SL->outputString(SS);

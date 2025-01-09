@@ -16,8 +16,7 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
-                                     const StringLiteral *Lit) {
+bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx, const StringRef *Lit) {
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
@@ -58,7 +57,7 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   return false;
 }
 
-AST_MATCHER_P(StringLiteral, isConcatenatedLiteral, unsigned,
+AST_MATCHER_P(StringRef, isConcatenatedLiteral, unsigned,
               MaxConcatenatedTokens) {
   return Node.getNumConcatenated() > 1 &&
          Node.getNumConcatenated() < MaxConcatenatedTokens &&
@@ -95,8 +94,7 @@ void SuspiciousMissingCommaCheck::registerMatchers(MatchFinder *Finder) {
 void SuspiciousMissingCommaCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitializerList = Result.Nodes.getNodeAs<InitListExpr>("list");
-  const auto *ConcatenatedLiteral =
-      Result.Nodes.getNodeAs<StringLiteral>("str");
+  const auto *ConcatenatedLiteral = Result.Nodes.getNodeAs<StringRef>("str");
   assert(InitializerList && ConcatenatedLiteral);
 
   // Skip small arrays as they often generate false-positive.
@@ -108,7 +106,7 @@ void SuspiciousMissingCommaCheck::check(
   unsigned int Count = 0;
   for (unsigned int I = 0; I < Size; ++I) {
     const Expr *Child = InitializerList->getInit(I)->IgnoreImpCasts();
-    if (const auto *Literal = dyn_cast<StringLiteral>(Child)) {
+    if (const auto *Literal = dyn_cast<StringRef>(Child)) {
       if (Literal->getNumConcatenated() > 1)
         ++Count;
     }

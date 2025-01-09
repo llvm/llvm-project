@@ -179,12 +179,12 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPInteropDirective
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
-  //DUMP: StringLiteral{{.*}}"cuda"
-  //DUMP: StringLiteral{{.*}}"cuda_driver"
-  //DUMP: StringLiteral{{.*}}"opencl"
-  //DUMP: StringLiteral{{.*}}"sycl"
-  //DUMP: StringLiteral{{.*}}"hip"
-  //DUMP: StringLiteral{{.*}}"level_zero"
+  //DUMP: StringRef{{.*}}"cuda"
+  //DUMP: StringRef{{.*}}"cuda_driver"
+  //DUMP: StringRef{{.*}}"opencl"
+  //DUMP: StringRef{{.*}}"sycl"
+  //DUMP: StringRef{{.*}}"hip"
+  //DUMP: StringRef{{.*}}"level_zero"
   #pragma omp interop init( \
     prefer_type("cuda","cuda_driver","opencl","sycl","hip","level_zero"), \
     targetsync:I)
@@ -193,7 +193,7 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPInteropDirective
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
-  //DUMP: StringLiteral{{.*}}"level_zero"
+  //DUMP: StringRef{{.*}}"level_zero"
   //DUMP: IntegerLiteral{{.*}}2
   //DUMP: IntegerLiteral{{.*}}4
   #pragma omp interop init(prefer_type("level_zero",2,4),targetsync:I)
@@ -264,7 +264,7 @@ void fooTemp() {
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}'interop_var'
   //DUMP: DeclRefExpr{{.*}}NonTypeTemplateParm{{.*}}'I' 'int'
   //DUMP: IntegerLiteral{{.*}}'int' 4
-  //DUMP: StringLiteral{{.*}}"level_one"
+  //DUMP: StringRef{{.*}}"level_one"
 
   //PRINT: #pragma omp interop init(prefer_type(3,4,"level_one"), target : interop_var)
   //DUMP: FunctionDecl{{.*}}fooTemp
@@ -276,7 +276,7 @@ void fooTemp() {
   //DUMP: NonTypeTemplateParmDecl{{.*}}'int'{{.*}}I
   //DUMP: IntegerLiteral{{.*}}'int' 3
   //DUMP: IntegerLiteral{{.*}}'int' 4
-  //DUMP: StringLiteral{{.*}}"level_one"
+  //DUMP: StringRef{{.*}}"level_one"
   #pragma omp interop init(prefer_type(I,4,"level_one"), target: interop_var)
 }
 
@@ -291,7 +291,7 @@ void barTemp(T t) {
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
   //DUMP: IntegerLiteral{{.*}}'int' 4
-  //DUMP: StringLiteral{{.*}}"level_one"
+  //DUMP: StringRef{{.*}}"level_one"
   #pragma omp interop init(prefer_type(4,"level_one"), target: t)
 
   //PRINT: #pragma omp interop use(t)

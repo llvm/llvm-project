@@ -84,7 +84,7 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
-  static StringLiteral const StandardNames[NumLibFuncs];
+  static StringRef const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 

@@ -1710,12 +1710,12 @@ private:
   };
 
   struct StructuredOpField : OperandInfoTy {
-    StringLiteral Id;
-    StringLiteral Desc;
+    StringRef Id;
+    StringRef Desc;
     unsigned Width;
     bool IsDefined = false;
 
-    StructuredOpField(StringLiteral Id, StringLiteral Desc, unsigned Width,
+    StructuredOpField(StringRef Id, StringRef Desc, unsigned Width,
                       int64_t Default)
         : OperandInfoTy(Default), Id(Id), Desc(Desc), Width(Width) {}
     virtual ~StructuredOpField() = default;
@@ -2768,7 +2768,7 @@ bool AMDGPUAsmParser::AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
 }
 
 struct RegInfo {
-  StringLiteral Name;
+  StringRef Name;
   RegisterKind Kind;
 };
 

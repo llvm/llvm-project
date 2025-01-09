@@ -64,7 +64,7 @@ class PrinterHelper;
 struct PrintingPolicy;
 class RecordDecl;
 class SourceManager;
-class StringLiteral;
+class StringRef;
 class Token;
 class VarDecl;
 enum class CharacterLiteralKind;
@@ -411,12 +411,12 @@ protected:
     LLVM_PREFERRED_TYPE(PredefinedIdentKind)
     unsigned Kind : 4;
 
-    /// True if this PredefinedExpr has a trailing "StringLiteral *"
+    /// True if this PredefinedExpr has a trailing "StringRef *"
     /// for the predefined identifier.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFunctionName : 1;
 
-    /// True if this PredefinedExpr should be treated as a StringLiteral (for
+    /// True if this PredefinedExpr should be treated as a StringRef (for
     /// MSVC compatibility).
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsTransparent : 1;
@@ -471,18 +471,18 @@ protected:
 
   class StringLiteralBitfields {
     friend class ASTStmtReader;
-    friend class StringLiteral;
+    friend class StringRef;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
 
     /// The kind of this string literal.
-    /// One of the enumeration values of StringLiteral::StringKind.
+    /// One of the enumeration values of StringRef::StringKind.
     LLVM_PREFERRED_TYPE(StringLiteralKind)
     unsigned Kind : 3;
 
     /// The width of a single character in bytes. Only values of 1, 2,
-    /// and 4 bytes are supported. StringLiteral::mapCharByteWidth maps
+    /// and 4 bytes are supported. StringRef::mapCharByteWidth maps
     /// the target + string kind to the appropriate CharByteWidth.
     unsigned CharByteWidth : 3;
 
@@ -3287,21 +3287,20 @@ class GCCAsmStmt : public AsmStmt {
   friend class ASTStmtReader;
 
   SourceLocation RParenLoc;
-  StringLiteral *AsmStr;
+  StringRef *AsmStr;
 
   // FIXME: If we wanted to, we could allocate all of these in one big array.
-  StringLiteral **Constraints = nullptr;
-  StringLiteral **Clobbers = nullptr;
+  StringRef **Constraints = nullptr;
+  StringRef **Clobbers = nullptr;
   IdentifierInfo **Names = nullptr;
   unsigned NumLabels = 0;
 
 public:
   GCCAsmStmt(const ASTContext &C, SourceLocation asmloc, bool issimple,
              bool isvolatile, unsigned numoutputs, unsigned numinputs,
-             IdentifierInfo **names, StringLiteral **constraints, Expr **exprs,
-             StringLiteral *asmstr, unsigned numclobbers,
-             StringLiteral **clobbers, unsigned numlabels,
-             SourceLocation rparenloc);
+             IdentifierInfo **names, StringRef **constraints, Expr **exprs,
+             StringRef *asmstr, unsigned numclobbers, StringRef **clobbers,
+             unsigned numlabels, SourceLocation rparenloc);
 
   /// Build an empty inline-assembly statement.
   explicit GCCAsmStmt(EmptyShell Empty) : AsmStmt(GCCAsmStmtClass, Empty) {}
@@ -3311,9 +3310,9 @@ public:
 
   //===--- Asm String Analysis ---===//
 
-  const StringLiteral *getAsmString() const { return AsmStr; }
-  StringLiteral *getAsmString() { return AsmStr; }
-  void setAsmString(StringLiteral *E) { AsmStr = E; }
+  const StringRef *getAsmString() const { return AsmStr; }
+  StringRef *getAsmString() { return AsmStr; }
+  void setAsmString(StringRef *E) { AsmStr = E; }
 
   /// AsmStringPiece - this is part of a decomposed asm string specification
   /// (for use with the AnalyzeAsmString function below).  An asm string is
@@ -3384,12 +3383,10 @@ public:
 
   StringRef getOutputConstraint(unsigned i) const;
 
-  const StringLiteral *getOutputConstraintLiteral(unsigned i) const {
+  const StringRef *getOutputConstraintLiteral(unsigned i) const {
     return Constraints[i];
   }
-  StringLiteral *getOutputConstraintLiteral(unsigned i) {
-    return Constraints[i];
-  }
+  StringRef *getOutputConstraintLiteral(unsigned i) { return Constraints[i]; }
 
   Expr *getOutputExpr(unsigned i);
 
@@ -3412,10 +3409,10 @@ public:
 
   StringRef getInputConstraint(unsigned i) const;
 
-  const StringLiteral *getInputConstraintLiteral(unsigned i) const {
+  const StringRef *getInputConstraintLiteral(unsigned i) const {
     return Constraints[i + NumOutputs];
   }
-  StringLiteral *getInputConstraintLiteral(unsigned i) {
+  StringRef *getInputConstraintLiteral(unsigned i) {
     return Constraints[i + NumOutputs];
   }
 
@@ -3474,12 +3471,9 @@ public:
 private:
   void setOutputsAndInputsAndClobbers(const ASTContext &C,
                                       IdentifierInfo **Names,
-                                      StringLiteral **Constraints,
-                                      Stmt **Exprs,
-                                      unsigned NumOutputs,
-                                      unsigned NumInputs,
-                                      unsigned NumLabels,
-                                      StringLiteral **Clobbers,
+                                      StringRef **Constraints, Stmt **Exprs,
+                                      unsigned NumOutputs, unsigned NumInputs,
+                                      unsigned NumLabels, StringRef **Clobbers,
                                       unsigned NumClobbers);
 
 public:
@@ -3492,8 +3486,8 @@ public:
 
   StringRef getClobber(unsigned i) const;
 
-  StringLiteral *getClobberStringLiteral(unsigned i) { return Clobbers[i]; }
-  const StringLiteral *getClobberStringLiteral(unsigned i) const {
+  StringRef *getClobberStringLiteral(unsigned i) { return Clobbers[i]; }
+  const StringRef *getClobberStringLiteral(unsigned i) const {
     return Clobbers[i];
   }
 

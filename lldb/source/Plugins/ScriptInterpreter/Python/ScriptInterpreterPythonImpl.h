@@ -438,7 +438,7 @@ public:
   ~IOHandlerPythonInterpreter() override = default;
 
   llvm::StringRef GetControlSequence(char ch) override {
-    static constexpr llvm::StringLiteral control_sequence("quit()\n");
+    static constexpr llvm::StringRef control_sequence("quit()\n");
     if (ch == 'd')
       return control_sequence;
     return {};

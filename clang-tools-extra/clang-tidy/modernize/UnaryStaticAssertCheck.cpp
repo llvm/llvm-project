@@ -22,7 +22,7 @@ void UnaryStaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<StaticAssertDecl>("static_assert");
   const auto *AssertMessage =
-      dyn_cast_if_present<StringLiteral>(MatchedDecl->getMessage());
+      dyn_cast_if_present<StringRef>(MatchedDecl->getMessage());
 
   SourceLocation Loc = MatchedDecl->getLocation();
 

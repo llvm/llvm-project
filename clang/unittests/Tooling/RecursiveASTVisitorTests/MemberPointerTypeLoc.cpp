@@ -33,7 +33,7 @@ TEST(RecursiveASTVisitor, VisitTypeLocInMemberPointerTypeLoc) {
   MemberPointerTypeLocVisitor Visitor;
   Visitor.ExpectMatch("Bar", 4, 36);
   Visitor.ExpectMatch("T", 7, 23);
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
      class Bar { void func(int); };
      class Foo {
        void bind(const char*, void(Bar::*Foo)(int)) {}
@@ -47,7 +47,7 @@ TEST(RecursiveASTVisitor, VisitTypeLocInMemberPointerTypeLoc) {
 
 TEST(RecursiveASTVisitor, NoCrash) {
   MemberPointerTypeLocVisitor Visitor;
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
      // MemberPointerTypeLoc.getClassTInfo() is null.
      class a(b(a::*)) class
   )cpp";

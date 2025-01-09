@@ -112,7 +112,7 @@ StringRef DeclarationFragments::getFragmentKindString(
     return "attribute";
   case DeclarationFragments::FragmentKind::NumberLiteral:
     return "number";
-  case DeclarationFragments::FragmentKind::StringLiteral:
+  case DeclarationFragments::FragmentKind::StringRef:
     return "string";
   case DeclarationFragments::FragmentKind::Identifier:
     return "identifier";
@@ -137,7 +137,7 @@ DeclarationFragments::parseFragmentKindFromString(StringRef S) {
       .Case("keyword", DeclarationFragments::FragmentKind::Keyword)
       .Case("attribute", DeclarationFragments::FragmentKind::Attribute)
       .Case("number", DeclarationFragments::FragmentKind::NumberLiteral)
-      .Case("string", DeclarationFragments::FragmentKind::StringLiteral)
+      .Case("string", DeclarationFragments::FragmentKind::StringRef)
       .Case("identifier", DeclarationFragments::FragmentKind::Identifier)
       .Case("typeIdentifier",
             DeclarationFragments::FragmentKind::TypeIdentifier)

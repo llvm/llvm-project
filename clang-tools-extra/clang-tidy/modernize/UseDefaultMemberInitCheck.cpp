@@ -172,8 +172,7 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
     return cast<FloatingLiteral>(E1)->getValue().bitwiseIsEqual(
         cast<FloatingLiteral>(E2)->getValue());
   case Stmt::StringLiteralClass:
-    return cast<StringLiteral>(E1)->getString() ==
-           cast<StringLiteral>(E2)->getString();
+    return cast<StringRef>(E1)->getString() == cast<StringRef>(E2)->getString();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(E1)->getDecl() == cast<DeclRefExpr>(E2)->getDecl();
   default:

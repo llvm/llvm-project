@@ -163,8 +163,8 @@ GEN_HAS_MEMBER(wavefront_size)
 GEN_HAS_MEMBER(call_convention)
 GEN_HAS_MEMBER(runtime_loader_kernel_symbol)
 
-static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldNames() {
-  static constexpr StringLiteral const Table[] = {
+static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
+  static constexpr StringRef const Table[] = {
       "", // not found placeholder
 #define RECORD(name, altName, print, parse) #name
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -173,8 +173,8 @@ static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldNames() {
   return ArrayRef(Table);
 }
 
-static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldAltNames() {
-  static constexpr StringLiteral const Table[] = {
+static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
+  static constexpr StringRef const Table[] = {
       "", // not found placeholder
 #define RECORD(name, altName, print, parse) #altName
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -203,8 +203,8 @@ static ArrayRef<RetrieveFx> getMCExprIndexTable() {
   return ArrayRef(Table);
 }
 
-static StringMap<int> createIndexMap(ArrayRef<StringLiteral> names,
-                                     ArrayRef<StringLiteral> altNames) {
+static StringMap<int> createIndexMap(ArrayRef<StringRef> names,
+                                     ArrayRef<StringRef> altNames) {
   StringMap<int> map;
   assert(names.size() == altNames.size());
   for (unsigned i = 0; i < names.size(); ++i) {

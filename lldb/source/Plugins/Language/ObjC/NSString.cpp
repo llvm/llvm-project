@@ -33,7 +33,7 @@ NSString_Additionals::GetAdditionalSummaries() {
 bool lldb_private::formatters::NSStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &summary_options) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSString");
+  static constexpr llvm::StringRef g_TypeHint("NSString");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -312,7 +312,7 @@ bool lldb_private::formatters::NSMutableAttributedStringSummaryProvider(
 bool lldb_private::formatters::NSTaggedString_SummaryProvider(
     ValueObject &valobj, ObjCLanguageRuntime::ClassDescriptorSP descriptor,
     Stream &stream, const TypeSummaryOptions &summary_options) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSString");
+  static constexpr llvm::StringRef g_TypeHint("NSString");
 
   if (!descriptor)
     return false;

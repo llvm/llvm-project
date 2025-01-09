@@ -1078,8 +1078,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     // a DeletedMessage for the DefaultedOrDeletedInfo.
     if (auto Info = Record.readInt()) {
       bool HasMessage = Info & 2;
-      StringLiteral *DeletedMessage =
-          HasMessage ? cast<StringLiteral>(Record.readExpr()) : nullptr;
+      StringRef *DeletedMessage =
+          HasMessage ? cast<StringRef>(Record.readExpr()) : nullptr;
 
       unsigned NumLookups = Record.readInt();
       SmallVector<DeclAccessPair, 8> Lookups;
@@ -1740,7 +1740,7 @@ void ASTDeclReader::VisitBindingDecl(BindingDecl *BD) {
 
 void ASTDeclReader::VisitFileScopeAsmDecl(FileScopeAsmDecl *AD) {
   VisitDecl(AD);
-  AD->setAsmString(cast<StringLiteral>(Record.readExpr()));
+  AD->setAsmString(cast<StringRef>(Record.readExpr()));
   AD->setRParenLoc(readSourceLocation());
 }
 
@@ -2732,7 +2732,7 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   VisitDecl(D);
   D->AssertExprAndFailed.setPointer(Record.readExpr());
   D->AssertExprAndFailed.setInt(Record.readInt());
-  D->Message = cast_or_null<StringLiteral>(Record.readExpr());
+  D->Message = cast_or_null<StringRef>(Record.readExpr());
   D->RParenLoc = readSourceLocation();
 }
 

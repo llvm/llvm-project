@@ -200,7 +200,7 @@ bool clang::analyze_os_log::computeOSLogBufferLayout(
     llvm_unreachable("non-os_log builtin passed to computeOSLogBufferLayout");
   }
 
-  const StringLiteral *Lit = cast<StringLiteral>(StringArg->IgnoreParenCasts());
+  const StringRef *Lit = cast<StringRef>(StringArg->IgnoreParenCasts());
   assert(Lit && (Lit->isOrdinary() || Lit->isUTF8()));
   StringRef Data = Lit->getString();
   OSLogFormatStringHandler H(VarArgs);

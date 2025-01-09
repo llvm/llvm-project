@@ -420,9 +420,7 @@ public:
   const char *id() const override;
 
   bool hidden() const override { return false; }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
   std::string title() const override {
     return "Move function body to out-of-line";
   }

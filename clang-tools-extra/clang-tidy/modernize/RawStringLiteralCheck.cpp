@@ -39,7 +39,7 @@ bool isRawStringLiteral(StringRef Text) {
 }
 
 bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
-                               const StringLiteral *Literal,
+                               const StringRef *Literal,
                                const CharsBitSet &DisallowedChars) {
   // FIXME: Handle L"", u8"", u"" and U"" literals.
   if (!Literal->isOrdinary())
@@ -66,7 +66,7 @@ bool containsDelimiter(StringRef Bytes, const std::string &Delimiter) {
                         : (")" + Delimiter + R"(")")) != StringRef::npos;
 }
 
-std::string asRawStringLiteral(const StringLiteral *Literal,
+std::string asRawStringLiteral(const StringRef *Literal,
                                const std::string &DelimiterStem) {
   const StringRef Bytes = Literal->getBytes();
   std::string Delimiter;
@@ -120,7 +120,7 @@ void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("lit");
+  const auto *Literal = Result.Nodes.getNodeAs<StringRef>("lit");
   if (Literal->getBeginLoc().isMacroID())
     return;
 
@@ -135,7 +135,7 @@ void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void RawStringLiteralCheck::replaceWithRawStringLiteral(
-    const MatchFinder::MatchResult &Result, const StringLiteral *Literal,
+    const MatchFinder::MatchResult &Result, const StringRef *Literal,
     StringRef Replacement) {
   CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),

@@ -621,7 +621,7 @@ namespace clang {
     ExpectedStmt VisitImaginaryLiteral(ImaginaryLiteral *E);
     ExpectedStmt VisitFixedPointLiteral(FixedPointLiteral *E);
     ExpectedStmt VisitCharacterLiteral(CharacterLiteral *E);
-    ExpectedStmt VisitStringLiteral(StringLiteral *E);
+    ExpectedStmt VisitStringLiteral(StringRef *E);
     ExpectedStmt VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
     ExpectedStmt VisitAtomicExpr(AtomicExpr *E);
     ExpectedStmt VisitAddrLabelExpr(AddrLabelExpr *E);
@@ -4027,7 +4027,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // decl and its redeclarations may be required.
   }
 
-  StringLiteral *Msg = D->getDeletedMessage();
+  StringRef *Msg = D->getDeletedMessage();
   if (Msg) {
     auto Imported = import(Msg);
     if (!Imported)
@@ -6812,7 +6812,7 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
     Names.push_back(ToII);
   }
 
-  SmallVector<StringLiteral *, 4> Clobbers;
+  SmallVector<StringRef *, 4> Clobbers;
   for (unsigned I = 0, E = S->getNumClobbers(); I != E; I++) {
     if (auto ClobberOrErr = import(S->getClobberStringLiteral(I)))
       Clobbers.push_back(*ClobberOrErr);
@@ -6821,7 +6821,7 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
 
   }
 
-  SmallVector<StringLiteral *, 4> Constraints;
+  SmallVector<StringRef *, 4> Constraints;
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; I++) {
     if (auto OutputOrErr = import(S->getOutputConstraintLiteral(I)))
       Constraints.push_back(*OutputOrErr);
@@ -7632,7 +7632,7 @@ ExpectedStmt ASTNodeImporter::VisitCharacterLiteral(CharacterLiteral *E) {
       E->getValue(), E->getKind(), *ToTypeOrErr, *ToLocationOrErr);
 }
 
-ExpectedStmt ASTNodeImporter::VisitStringLiteral(StringLiteral *E) {
+ExpectedStmt ASTNodeImporter::VisitStringLiteral(StringRef *E) {
   ExpectedType ToTypeOrErr = import(E->getType());
   if (!ToTypeOrErr)
     return ToTypeOrErr.takeError();
@@ -7642,9 +7642,9 @@ ExpectedStmt ASTNodeImporter::VisitStringLiteral(StringLiteral *E) {
       E->tokloc_begin(), E->tokloc_end(), ToLocations.begin()))
     return std::move(Err);
 
-  return StringLiteral::Create(
-      Importer.getToContext(), E->getBytes(), E->getKind(), E->isPascal(),
-      *ToTypeOrErr, ToLocations.data(), ToLocations.size());
+  return StringRef::Create(Importer.getToContext(), E->getBytes(), E->getKind(),
+                           E->isPascal(), *ToTypeOrErr, ToLocations.data(),
+                           ToLocations.size());
 }
 
 ExpectedStmt ASTNodeImporter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {

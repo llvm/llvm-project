@@ -29,9 +29,8 @@ using namespace mlir::lsp;
 
 // Helper that doesn't treat `null` and absent fields as failures.
 template <typename T>
-static bool mapOptOrNull(const llvm::json::Value &params,
-                         llvm::StringLiteral prop, T &out,
-                         llvm::json::Path path) {
+static bool mapOptOrNull(const llvm::json::Value &params, llvm::StringRef prop,
+                         T &out, llvm::json::Path path) {
   const llvm::json::Object *o = params.getAsObject();
   assert(o);
 
@@ -1025,9 +1024,9 @@ llvm::json::Value mlir::lsp::toJSON(const WorkspaceEdit &value) {
 // CodeAction
 //===----------------------------------------------------------------------===//
 
-const llvm::StringLiteral CodeAction::kQuickFix = "quickfix";
-const llvm::StringLiteral CodeAction::kRefactor = "refactor";
-const llvm::StringLiteral CodeAction::kInfo = "info";
+const llvm::StringRef CodeAction::kQuickFix = "quickfix";
+const llvm::StringRef CodeAction::kRefactor = "refactor";
+const llvm::StringRef CodeAction::kInfo = "info";
 
 llvm::json::Value mlir::lsp::toJSON(const CodeAction &value) {
   llvm::json::Object codeAction{{"title", value.title}};

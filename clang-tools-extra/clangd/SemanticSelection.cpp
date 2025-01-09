@@ -194,7 +194,7 @@ getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
 
   std::vector<FoldingRange> Result;
   auto AddFoldingRange = [&](Position Start, Position End,
-                             llvm::StringLiteral Kind) {
+                             llvm::StringRef Kind) {
     if (Start.line >= End.line)
       return;
     FoldingRange FR;

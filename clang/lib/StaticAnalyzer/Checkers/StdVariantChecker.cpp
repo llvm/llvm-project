@@ -84,7 +84,7 @@ static bool isStdType(const Type *Type, llvm::StringRef TypeName) {
 }
 
 bool isStdVariant(const Type *Type) {
-  return isStdType(Type, llvm::StringLiteral("variant"));
+  return isStdType(Type, llvm::StringRef("variant"));
 }
 
 } // end of namespace clang::ento::tagged_union_modeling

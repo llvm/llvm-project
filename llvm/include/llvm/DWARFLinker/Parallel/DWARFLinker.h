@@ -100,7 +100,7 @@ struct SectionDescriptorBase {
   /// Returns section kind.
   DebugSectionKind getKind() { return SectionKind; }
   /// Returns section name.
-  const StringLiteral &getName() const { return getSectionName(SectionKind); }
+  const StringRef &getName() const { return getSectionName(SectionKind); }
   /// Returns endianess used by section.
   llvm::endianness getEndianess() const { return Endianess; }
   /// Returns FormParams used by section.

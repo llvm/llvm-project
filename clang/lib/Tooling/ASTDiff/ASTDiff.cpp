@@ -462,7 +462,7 @@ std::string SyntaxTree::Impl::getStmtValue(const Stmt *S) const {
   }
   if (auto *D = dyn_cast<DeclRefExpr>(S))
     return getRelativeName(D->getDecl(), getEnclosingDeclContext(AST, S));
-  if (auto *String = dyn_cast<StringLiteral>(S))
+  if (auto *String = dyn_cast<StringRef>(S))
     return std::string(String->getString());
   if (auto *B = dyn_cast<CXXBoolLiteralExpr>(S))
     return B->getValue() ? "true" : "false";

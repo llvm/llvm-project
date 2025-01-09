@@ -110,7 +110,7 @@ private:
 
 // Consume the entire buffer and return all `NoLintToken`s that were found.
 static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
-  static constexpr llvm::StringLiteral NOLINT = "NOLINT";
+  static constexpr llvm::StringRef NOLINT = "NOLINT";
   SmallVector<NoLintToken> NoLints;
 
   size_t Pos = 0;

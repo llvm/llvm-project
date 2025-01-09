@@ -307,14 +307,6 @@ namespace llvm {
       assert(isValid() && "Invalid twine!");
     }
 
-    /// Construct from a StringLiteral.
-    /*implicit*/ Twine(const StringLiteral &Str)
-        : LHSKind(StringLiteralKind) {
-      LHS.ptrAndLength.ptr = Str.data();
-      LHS.ptrAndLength.length = Str.size();
-      assert(isValid() && "Invalid twine!");
-    }
-
     /// Construct from a SmallString.
     /*implicit*/ Twine(const SmallVectorImpl<char> &Str)
         : LHSKind(PtrAndLengthKind) {

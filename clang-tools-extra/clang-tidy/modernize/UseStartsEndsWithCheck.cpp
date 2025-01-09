@@ -39,7 +39,7 @@ struct NotLengthExprForStringNode {
       : ID(std::move(ID)), Node(std::move(Node)), Context(Context) {}
   bool operator()(const internal::BoundNodesMap &Nodes) const {
     // Match a string literal and an integer size or strlen() call.
-    if (const auto *StringLiteralNode = Nodes.getNodeAs<StringLiteral>(ID)) {
+    if (const auto *StringLiteralNode = Nodes.getNodeAs<StringRef>(ID)) {
       if (const auto *IntegerLiteralSizeNode = Node.get<IntegerLiteral>()) {
         return StringLiteralNode->getLength() !=
                IntegerLiteralSizeNode->getValue().getZExtValue();
@@ -51,7 +51,7 @@ struct NotLengthExprForStringNode {
           return true;
         }
 
-        if (const auto *StrlenArgNode = dyn_cast<StringLiteral>(
+        if (const auto *StrlenArgNode = dyn_cast<StringRef>(
                 StrlenNode->getArg(0)->IgnoreParenImpCasts())) {
           return StrlenArgNode->getLength() != StringLiteralNode->getLength();
         }

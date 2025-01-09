@@ -730,7 +730,7 @@ public:
 
   // Override child traversal for certain node types.
   using RecursiveASTVisitor::getStmtChildren;
-  // PredefinedExpr like __func__ has a StringLiteral child for its value.
+  // PredefinedExpr like __func__ has a StringRef child for its value.
   // It's not written, so don't traverse it.
   Stmt::child_range getStmtChildren(PredefinedExpr *) {
     return {StmtIterator{}, StmtIterator{}};

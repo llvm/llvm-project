@@ -137,8 +137,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
-static constexpr llvm::StringLiteral g_loader_path = "@loader_path";
-static constexpr llvm::StringLiteral g_executable_path = "@executable_path";
+static constexpr llvm::StringRef g_loader_path = "@loader_path";
+static constexpr llvm::StringRef g_executable_path = "@executable_path";
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
 

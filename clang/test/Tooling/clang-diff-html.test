@@ -27,7 +27,7 @@ update + move
 CHECK: 2' class='u m'>2</span>
 
 insertion
-CHECK: <span id='R[[R:[0-9]+]]' tid='L-1' title='StringLiteral
+CHECK: <span id='R[[R:[0-9]+]]' tid='L-1' title='StringRef
 CHECK-NEXT: -1 -> [[R]]
 CHECK-NEXT: Bar' class='i'>&quot;Bar&quot;</span>
 

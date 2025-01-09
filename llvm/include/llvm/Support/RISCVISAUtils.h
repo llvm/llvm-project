@@ -20,7 +20,7 @@
 namespace llvm {
 
 namespace RISCVISAUtils {
-constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
+constexpr StringRef AllStdExts = "mafdqlcbkjtpvnh";
 
 /// Represents the major and version number components of a RISC-V extension.
 struct ExtensionVersion {

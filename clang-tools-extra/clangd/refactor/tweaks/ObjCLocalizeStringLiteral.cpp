@@ -30,9 +30,7 @@ namespace {
 class ObjCLocalizeStringLiteral : public Tweak {
 public:
   const char *id() const final;
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
   bool prepare(const Selection &Inputs) override;
   Expected<Tweak::Effect> apply(const Selection &Inputs) override;
@@ -50,7 +48,7 @@ bool ObjCLocalizeStringLiteral::prepare(const Selection &Inputs) {
     return false;
   // Allow the refactoring even if the user selected only the C string part
   // of the expression.
-  if (N->ASTNode.get<StringLiteral>()) {
+  if (N->ASTNode.get<StringRef>()) {
     if (N->Parent)
       N = N->Parent;
   }

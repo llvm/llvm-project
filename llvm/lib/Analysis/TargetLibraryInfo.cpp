@@ -42,8 +42,7 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
                           "AMD vector math library")));
 
-StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
-    {
+StringRef const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
 #define TLI_DEFINE_STRING
 #include "llvm/Analysis/TargetLibraryInfo.def"
 };
@@ -182,7 +181,7 @@ static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
-                               ArrayRef<StringLiteral> StandardNames) {
+                               ArrayRef<StringRef> StandardNames) {
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
   TLI.setUnavailable(LibFunc_getc_unlocked);
@@ -915,7 +914,7 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
 static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
-                       ArrayRef<StringLiteral> StandardNames) {
+                       ArrayRef<StringRef> StandardNames) {
   initializeBase(TLI, T);
   initializeLibCalls(TLI, T, StandardNames);
 }
@@ -992,7 +991,7 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 }
 
 static DenseMap<StringRef, LibFunc>
-buildIndexMap(ArrayRef<StringLiteral> StandardNames) {
+buildIndexMap(ArrayRef<StringRef> StandardNames) {
   DenseMap<StringRef, LibFunc> Indices;
   unsigned Idx = 0;
   Indices.reserve(LibFunc::NumLibFuncs);

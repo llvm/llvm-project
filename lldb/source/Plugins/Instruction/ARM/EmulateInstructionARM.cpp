@@ -14353,9 +14353,9 @@ bool EmulateInstructionARM::TestEmulation(Stream &out_stream, ArchSpec &arch,
     return false;
   }
 
-  static constexpr llvm::StringLiteral opcode_key("opcode");
-  static constexpr llvm::StringLiteral before_key("before_state");
-  static constexpr llvm::StringLiteral after_key("after_state");
+  static constexpr llvm::StringRef opcode_key("opcode");
+  static constexpr llvm::StringRef before_key("before_state");
+  static constexpr llvm::StringRef after_key("after_state");
 
   OptionValueSP value_sp = test_data->GetValueForKey(opcode_key);
 

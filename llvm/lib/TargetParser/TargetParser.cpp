@@ -21,8 +21,8 @@ using namespace AMDGPU;
 namespace {
 
 struct GPUInfo {
-  StringLiteral Name;
-  StringLiteral CanonicalName;
+  StringRef Name;
+  StringRef CanonicalName;
   AMDGPU::GPUKind Kind;
   unsigned Features;
 };

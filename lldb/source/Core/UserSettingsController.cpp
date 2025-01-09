@@ -102,7 +102,7 @@ Properties::Apropos(llvm::StringRef keyword,
 }
 
 llvm::StringRef Properties::GetExperimentalSettingsName() {
-  static constexpr llvm::StringLiteral g_experimental("experimental");
+  static constexpr llvm::StringRef g_experimental("experimental");
   return g_experimental;
 }
 

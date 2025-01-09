@@ -520,7 +520,7 @@ static mlir::GenRegistration
 // These enums are encoded as <id> to constant values in SPIR-V blob, but we
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
-constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
+constexpr llvm::StringRef constantIdEnumAttrs[] = {
     "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
     "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
     "SPIRV_MatrixLayoutAttr"};

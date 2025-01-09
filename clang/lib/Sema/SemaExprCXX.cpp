@@ -3333,7 +3333,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     // FIXME: DiagnoseUseOfDecl?
     if (Operator->isDeleted()) {
       if (Diagnose) {
-        StringLiteral *Msg = Operator->getDeletedMessage();
+        StringRef *Msg = Operator->getDeletedMessage();
         Diag(StartLoc, diag::err_deleted_function_use)
             << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
         NoteDeletedFunction(Operator);
@@ -4129,7 +4129,7 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
   // be converted to an rvalue of type "pointer to char"; a wide
   // string literal can be converted to an rvalue of type "pointer
   // to wchar_t" (C++ 4.2p2).
-  if (StringLiteral *StrLit = dyn_cast<StringLiteral>(From->IgnoreParens()))
+  if (StringRef *StrLit = dyn_cast<StringRef>(From->IgnoreParens()))
     if (const PointerType *ToPtrType = ToType->getAs<PointerType>())
       if (const BuiltinType *ToPointeeType
           = ToPtrType->getPointeeType()->getAs<BuiltinType>()) {

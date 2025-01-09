@@ -13,8 +13,8 @@
 
 using namespace mlir;
 
-static const StringLiteral kToSortMark = "test_to_sort";
-static const StringLiteral kOrderIndex = "test_sort_index";
+static const StringRef kToSortMark = "test_to_sort";
+static const StringRef kOrderIndex = "test_sort_index";
 
 namespace {
 

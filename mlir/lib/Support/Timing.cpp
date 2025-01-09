@@ -34,8 +34,7 @@ using namespace detail;
 using DisplayMode = DefaultTimingManager::DisplayMode;
 using OutputFormat = DefaultTimingManager::OutputFormat;
 
-constexpr llvm::StringLiteral kTimingDescription =
-    "... Execution time report ...";
+constexpr llvm::StringRef kTimingDescription = "... Execution time report ...";
 
 //===----------------------------------------------------------------------===//
 // TimingManager

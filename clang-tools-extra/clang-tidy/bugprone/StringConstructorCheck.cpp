@@ -159,7 +159,7 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnOnLargeLength)
       diag(Loc, "suspicious large length parameter");
   } else if (Result.Nodes.getNodeAs<Expr>("literal-with-length")) {
-    const auto *Str = Result.Nodes.getNodeAs<StringLiteral>("str");
+    const auto *Str = Result.Nodes.getNodeAs<StringRef>("str");
     const auto *Lit = Result.Nodes.getNodeAs<IntegerLiteral>("int");
     if (Lit->getValue().ugt(Str->getLength())) {
       diag(Loc, "length is bigger than string literal size");

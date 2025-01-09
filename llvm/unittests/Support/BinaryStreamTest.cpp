@@ -459,8 +459,8 @@ TEST_F(BinaryStreamTest, FixedStreamArrayIteratorArrow) {
 
 // Test that VarStreamArray works correctly.
 TEST_F(BinaryStreamTest, VarStreamArray) {
-  StringLiteral Strings("1. Test2. Longer Test3. Really Long Test4. Super "
-                        "Extra Longest Test Of All");
+  StringRef Strings("1. Test2. Longer Test3. Really Long Test4. Super "
+                    "Extra Longest Test Of All");
   ArrayRef<uint8_t> StringBytes(
       reinterpret_cast<const uint8_t *>(Strings.data()), Strings.size());
   initializeInput(StringBytes, 1);

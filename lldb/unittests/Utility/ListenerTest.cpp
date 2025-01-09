@@ -115,7 +115,7 @@ TEST(ListenerTest, GetEventWait) {
 
 TEST(ListenerTest, StartStopListeningForEventSpec) {
   constexpr uint32_t event_mask = 1;
-  static constexpr llvm::StringLiteral broadcaster_class = "broadcaster-class";
+  static constexpr llvm::StringRef broadcaster_class = "broadcaster-class";
 
   class TestBroadcaster : public Broadcaster {
     using Broadcaster::Broadcaster;

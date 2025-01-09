@@ -26,7 +26,7 @@ struct HasStaticDialectName : std::false_type {};
 template <typename T>
 struct HasStaticDialectName<
     T, typename std::enable_if<
-           std::is_same<::llvm::StringLiteral,
+           std::is_same<::llvm::StringRef,
                         std::decay_t<decltype(T::dialectName)>>::value,
            void>::type> : std::true_type {};
 

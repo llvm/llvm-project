@@ -628,7 +628,7 @@ public:
   bool VisitFloatingLiteral(const FloatingLiteral *E) { return true; }
   bool VisitFixedPointLiteral(const FixedPointLiteral *E) { return true; }
   bool VisitCharacterLiteral(const CharacterLiteral *E) { return true; }
-  bool VisitStringLiteral(const StringLiteral *E) { return true; }
+  bool VisitStringLiteral(const StringRef *E) { return true; }
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) { return true; }
 
   bool VisitConstantExpr(const ConstantExpr *CE) {

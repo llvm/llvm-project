@@ -1137,8 +1137,7 @@ static bool doRewriteToUTF8StringBoxedExpressionHelper(
   if (OrigTy->isArrayType())
     OrigTy = Ctx.getArrayDecayedType(OrigTy);
 
-  if (const StringLiteral *
-        StrE = dyn_cast<StringLiteral>(OrigArg->IgnoreParens())) {
+  if (const StringRef *StrE = dyn_cast<StringRef>(OrigArg->IgnoreParens())) {
     commit.replaceWithInner(Msg->getSourceRange(), StrE->getSourceRange());
     commit.insert(StrE->getBeginLoc(), "@");
     return true;

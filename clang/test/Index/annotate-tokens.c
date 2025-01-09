@@ -114,7 +114,7 @@ void test() {
 // CHECK: Punctuation: "*" [9:14 - 9:15] VarDecl=hello:9:16 (Definition)
 // CHECK: Identifier: "hello" [9:16 - 9:21] VarDecl=hello:9:16 (Definition)
 // CHECK: Punctuation: "=" [9:22 - 9:23] VarDecl=hello:9:16 (Definition)
-// CHECK: Literal: ""Hello"" [9:24 - 9:31] StringLiteral=
+// CHECK: Literal: ""Hello"" [9:24 - 9:31] StringRef=
 // CHECK: Punctuation: ";" [9:31 - 9:32] DeclStmt=
 // CHECK: Punctuation: "}" [10:1 - 10:2] CompoundStmt=
 // CHECK: Keyword: "__builtin_va_arg" [15:9 - 15:25] UnexposedExpr=

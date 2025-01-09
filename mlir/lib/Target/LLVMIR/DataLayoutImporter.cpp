@@ -165,7 +165,7 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
 
 LogicalResult
 DataLayoutImporter::tryToEmplaceAddrSpaceEntry(StringRef token,
-                                               llvm::StringLiteral spaceKey) {
+                                               llvm::StringRef spaceKey) {
   auto key = StringAttr::get(context, spaceKey);
   if (keyEntries.count(key))
     return success();

@@ -15,7 +15,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 namespace {
-AST_MATCHER(StringLiteral, containsNul) {
+AST_MATCHER(StringRef, containsNul) {
   for (size_t I = 0; I < Node.getLength(); ++I)
     if (Node.getCodeUnit(I) == '\0')
       return true;
@@ -57,7 +57,7 @@ void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
 
 void StringLiteralWithEmbeddedNulCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("strlit")) {
+  if (const auto *SL = Result.Nodes.getNodeAs<StringRef>("strlit")) {
     for (size_t Offset = 0, Length = SL->getLength(); Offset < Length;
          ++Offset) {
       // Find a sequence of character like "\0x12".
@@ -71,7 +71,7 @@ void StringLiteralWithEmbeddedNulCheck::check(
     }
   }
 
-  if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("truncated")) {
+  if (const auto *SL = Result.Nodes.getNodeAs<StringRef>("truncated")) {
     diag(SL->getBeginLoc(),
          "truncated string literal with embedded NUL character");
   }

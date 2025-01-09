@@ -81,7 +81,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     return SIF_None;
 
   // Otherwise we can only handle string literals.
-  StringLiteral *SL = dyn_cast<StringLiteral>(Init);
+  StringRef *SL = dyn_cast<StringRef>(Init);
   if (!SL)
     return SIF_Other;
 
@@ -151,7 +151,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     break;
   }
 
-  llvm_unreachable("missed a StringLiteral kind?");
+  llvm_unreachable("missed a StringRef kind?");
 }
 
 static StringInitFailureKind IsStringInit(Expr *init, QualType declType,
@@ -172,7 +172,7 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
   while (true) {
     E->setType(Ty);
     E->setValueKind(VK_PRValue);
-    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
+    if (isa<StringRef>(E) || isa<ObjCEncodeExpr>(E))
       break;
     E = IgnoreParensSingleStep(E);
   }
@@ -204,7 +204,7 @@ static bool initializingConstexprVariable(const InitializedEntity &Entity) {
   return false;
 }
 
-static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
+static void CheckC23ConstexprInitStringLiteral(const StringRef *SE,
                                                Sema &SemaRef, QualType &TT);
 
 static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
@@ -215,7 +215,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   uint64_t StrLength = ConstantArrayTy->getZExtSize();
 
   if (CheckC23ConstexprInit)
-    if (const StringLiteral *SL = dyn_cast<StringLiteral>(Str->IgnoreParens()))
+    if (const StringRef *SL = dyn_cast<StringRef>(Str->IgnoreParens()))
       CheckC23ConstexprInitStringLiteral(SL, S, DeclT);
 
   if (const IncompleteArrayType *IAT = dyn_cast<IncompleteArrayType>(AT)) {
@@ -235,7 +235,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   // the size may be smaller or larger than the string we are initializing.
   // FIXME: Avoid truncation for 64-bit length strings.
   if (S.getLangOpts().CPlusPlus) {
-    if (StringLiteral *SL = dyn_cast<StringLiteral>(Str->IgnoreParens())) {
+    if (StringRef *SL = dyn_cast<StringRef>(Str->IgnoreParens())) {
       // For Pascal strings it's OK to strip off the terminating null character,
       // so the example below is valid:
       //
@@ -2030,7 +2030,7 @@ canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
 
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-    StringLiteral *SL = EE->getDataStringLiteral();
+    StringRef *SL = EE->getDataStringLiteral();
     return IsStringInit(SL, InitArrayType, Context) == SIF_None;
   }
   return false;
@@ -3034,7 +3034,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       }
 
       if (!hadError && !isa<InitListExpr>(DIE->getInit()) &&
-          !isa<StringLiteral>(DIE->getInit())) {
+          !isa<StringRef>(DIE->getInit())) {
         // The initializer is not an initializer list.
         if (!VerifyOnly) {
           SemaRef.Diag(DIE->getInit()->getBeginLoc(),
@@ -3224,7 +3224,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       PromotedCharTy = Context.getPromotedIntegerType(CharTy);
     unsigned PromotedCharTyWidth = Context.getTypeSize(PromotedCharTy);
 
-    if (StringLiteral *SL = dyn_cast<StringLiteral>(SubExpr)) {
+    if (StringRef *SL = dyn_cast<StringRef>(SubExpr)) {
       // Get the length of the string.
       uint64_t StrLen = SL->getLength();
       if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
@@ -8818,7 +8818,7 @@ bool InitializationSequence::Diagnose(Sema &S,
       OverloadingResult Ovl
         = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
 
-      StringLiteral *Msg = Best->Function->getDeletedMessage();
+      StringRef *Msg = Best->Function->getDeletedMessage();
       S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
           << OnlyArg->getType() << DestType.getNonReferenceType()
           << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
@@ -9082,7 +9082,7 @@ bool InitializationSequence::Diagnose(Sema &S,
                      S.getSpecialMember(cast<CXXMethodDecl>(Best->Function)))
               << DestType << ArgsRange;
         else {
-          StringLiteral *Msg = Best->Function->getDeletedMessage();
+          StringRef *Msg = Best->Function->getDeletedMessage();
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
               << DestType << (Msg != nullptr)
               << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
@@ -9669,7 +9669,7 @@ static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
   llvm_unreachable("unhandled case in switch");
 }
 
-static void CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
+static void CheckC23ConstexprInitStringLiteral(const StringRef *SE,
                                                Sema &SemaRef, QualType &TT) {
   assert(SemaRef.getLangOpts().C23);
   // character that string literal contains fits into TT - target type.
@@ -9976,7 +9976,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           if (ElementTypes[I]->isArrayType()) {
             if (isa<InitListExpr, DesignatedInitExpr>(ListInit->getInit(I)))
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
-            else if (isa<StringLiteral>(
+            else if (isa<StringRef>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))
               ElementTypes[I] =
                   Context.getLValueReferenceType(ElementTypes[I].withConst());

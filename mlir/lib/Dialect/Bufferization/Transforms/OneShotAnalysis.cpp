@@ -79,12 +79,11 @@ static bool isaTensor(Type t) { return isa<TensorType>(t); }
 //===----------------------------------------------------------------------===//
 
 /// Attribute marker to specify op operands that bufferize in-place.
-constexpr StringLiteral kInPlaceOperandsAttrName = "__inplace_operands_attr__";
+constexpr StringRef kInPlaceOperandsAttrName = "__inplace_operands_attr__";
 
-constexpr StringLiteral kOpResultAliasSetAttrName =
-    "__opresult_alias_set_attr__";
+constexpr StringRef kOpResultAliasSetAttrName = "__opresult_alias_set_attr__";
 
-constexpr StringLiteral kBbArgAliasSetAttrName = "__bbarg_alias_set_attr__";
+constexpr StringRef kBbArgAliasSetAttrName = "__bbarg_alias_set_attr__";
 
 /// Mark whether OpOperand will be bufferized inplace.
 static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {

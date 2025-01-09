@@ -912,7 +912,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     // Empty asm string is allowed because it will not introduce
     // any assembly code.
     if (!(getLangOpts().GNUAsm || Result.isInvalid())) {
-      const auto *SL = cast<StringLiteral>(Result.get());
+      const auto *SL = cast<StringRef>(Result.get());
       if (!SL->getString().trim().empty())
         Diag(StartLoc, diag::err_gnu_inline_asm_disabled);
     }
@@ -1401,7 +1401,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
 
   // Parse function body eagerly if it is either '= delete;' or '= default;' as
   // ActOnStartOfFunctionDef needs to know whether the function is deleted.
-  StringLiteral *DeletedMessage = nullptr;
+  StringRef *DeletedMessage = nullptr;
   Sema::FnBodyKind BodyKind = Sema::FnBodyKind::Other;
   SourceLocation KWLoc;
   if (TryConsumeToken(tok::equal)) {
@@ -1676,7 +1676,7 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
 
   ExprResult AsmString(ParseStringLiteralExpression());
   if (!AsmString.isInvalid()) {
-    const auto *SL = cast<StringLiteral>(AsmString.get());
+    const auto *SL = cast<StringRef>(AsmString.get());
     if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
         << SL->isWide()

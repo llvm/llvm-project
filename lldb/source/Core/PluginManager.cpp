@@ -1645,7 +1645,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
-    static constexpr llvm::StringLiteral g_property_name("plugin");
+    static constexpr llvm::StringRef g_property_name("plugin");
 
     OptionValuePropertiesSP plugin_properties_sp =
         parent_properties_sp->GetSubProperty(nullptr, g_property_name);
@@ -1678,7 +1678,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, llvm::StringRef plugin_type_na
 static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     Debugger &debugger, llvm::StringRef plugin_type_name,
     llvm::StringRef plugin_type_desc, bool can_create) {
-  static constexpr llvm::StringLiteral g_property_name("plugin");
+  static constexpr llvm::StringRef g_property_name("plugin");
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
@@ -1751,16 +1751,15 @@ CreateSettingForPlugin(Debugger &debugger, llvm::StringRef plugin_type_name,
   return false;
 }
 
-static constexpr llvm::StringLiteral kDynamicLoaderPluginName("dynamic-loader");
-static constexpr llvm::StringLiteral kPlatformPluginName("platform");
-static constexpr llvm::StringLiteral kProcessPluginName("process");
-static constexpr llvm::StringLiteral kTracePluginName("trace");
-static constexpr llvm::StringLiteral kObjectFilePluginName("object-file");
-static constexpr llvm::StringLiteral kSymbolFilePluginName("symbol-file");
-static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
-static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
-static constexpr llvm::StringLiteral
-    kStructuredDataPluginName("structured-data");
+static constexpr llvm::StringRef kDynamicLoaderPluginName("dynamic-loader");
+static constexpr llvm::StringRef kPlatformPluginName("platform");
+static constexpr llvm::StringRef kProcessPluginName("process");
+static constexpr llvm::StringRef kTracePluginName("trace");
+static constexpr llvm::StringRef kObjectFilePluginName("object-file");
+static constexpr llvm::StringRef kSymbolFilePluginName("symbol-file");
+static constexpr llvm::StringRef kSymbolLocatorPluginName("symbol-locator");
+static constexpr llvm::StringRef kJITLoaderPluginName("jit-loader");
+static constexpr llvm::StringRef kStructuredDataPluginName("structured-data");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin(Debugger &debugger,

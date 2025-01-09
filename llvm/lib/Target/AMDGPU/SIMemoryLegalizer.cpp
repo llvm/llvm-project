@@ -721,7 +721,7 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
 /// Default. Otherwise returns all the address spaces concerned by the MMRA.
 static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
                                                SIAtomicAddrSpace Default) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+  static constexpr StringRef FenceASPrefix = "amdgpu-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)

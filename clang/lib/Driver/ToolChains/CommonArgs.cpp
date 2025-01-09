@@ -1308,7 +1308,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
-  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+  constexpr llvm::StringRef Targets("-fopenmp-targets=");
 
   SmallVector<std::string> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();

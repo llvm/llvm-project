@@ -19,7 +19,7 @@
 
 namespace llvm {
 namespace gi {
-static constexpr StringLiteral MIFlagsEnumClassName = "MIFlagEnum";
+static constexpr StringRef MIFlagsEnumClassName = "MIFlagEnum";
 
 namespace {
 class PrettyStackTraceParse : public PrettyStackTraceEntry {

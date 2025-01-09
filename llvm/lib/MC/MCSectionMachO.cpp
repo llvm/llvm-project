@@ -23,47 +23,42 @@ using namespace llvm;
 /// types.  This *must* be kept in order with and stay synchronized with the
 /// section type list.
 static constexpr struct {
-  StringLiteral AssemblerName, EnumName;
+  StringRef AssemblerName, EnumName;
 } SectionTypeDescriptors[MachO::LAST_KNOWN_SECTION_TYPE + 1] = {
-    {StringLiteral("regular"), StringLiteral("S_REGULAR")}, // 0x00
-    {StringLiteral("zerofill"), StringLiteral("S_ZEROFILL")}, // 0x01
-    {StringLiteral("cstring_literals"),
-     StringLiteral("S_CSTRING_LITERALS")}, // 0x02
-    {StringLiteral("4byte_literals"),
-     StringLiteral("S_4BYTE_LITERALS")}, // 0x03
-    {StringLiteral("8byte_literals"),
-     StringLiteral("S_8BYTE_LITERALS")}, // 0x04
-    {StringLiteral("literal_pointers"),
-     StringLiteral("S_LITERAL_POINTERS")}, // 0x05
-    {StringLiteral("non_lazy_symbol_pointers"),
-     StringLiteral("S_NON_LAZY_SYMBOL_POINTERS")}, // 0x06
-    {StringLiteral("lazy_symbol_pointers"),
-     StringLiteral("S_LAZY_SYMBOL_POINTERS")},                        // 0x07
-    {StringLiteral("symbol_stubs"), StringLiteral("S_SYMBOL_STUBS")}, // 0x08
-    {StringLiteral("mod_init_funcs"),
-     StringLiteral("S_MOD_INIT_FUNC_POINTERS")}, // 0x09
-    {StringLiteral("mod_term_funcs"),
-     StringLiteral("S_MOD_TERM_FUNC_POINTERS")},                     // 0x0A
-    {StringLiteral("coalesced"), StringLiteral("S_COALESCED")},      // 0x0B
-    {StringLiteral("") /*FIXME??*/, StringLiteral("S_GB_ZEROFILL")}, // 0x0C
-    {StringLiteral("interposing"), StringLiteral("S_INTERPOSING")},  // 0x0D
-    {StringLiteral("16byte_literals"),
-     StringLiteral("S_16BYTE_LITERALS")},                           // 0x0E
-    {StringLiteral("") /*FIXME??*/, StringLiteral("S_DTRACE_DOF")}, // 0x0F
-    {StringLiteral("") /*FIXME??*/,
-     StringLiteral("S_LAZY_DYLIB_SYMBOL_POINTERS")}, // 0x10
-    {StringLiteral("thread_local_regular"),
-     StringLiteral("S_THREAD_LOCAL_REGULAR")}, // 0x11
-    {StringLiteral("thread_local_zerofill"),
-     StringLiteral("S_THREAD_LOCAL_ZEROFILL")}, // 0x12
-    {StringLiteral("thread_local_variables"),
-     StringLiteral("S_THREAD_LOCAL_VARIABLES")}, // 0x13
-    {StringLiteral("thread_local_variable_pointers"),
-     StringLiteral("S_THREAD_LOCAL_VARIABLE_POINTERS")}, // 0x14
-    {StringLiteral("thread_local_init_function_pointers"),
-     StringLiteral("S_THREAD_LOCAL_INIT_FUNCTION_POINTERS")}, // 0x15
-    {StringLiteral("") /* linker-synthesized */,
-     StringLiteral("S_INIT_FUNC_OFFSETS")}, // 0x16
+    {StringRef("regular"), StringRef("S_REGULAR")},                   // 0x00
+    {StringRef("zerofill"), StringRef("S_ZEROFILL")},                 // 0x01
+    {StringRef("cstring_literals"), StringRef("S_CSTRING_LITERALS")}, // 0x02
+    {StringRef("4byte_literals"), StringRef("S_4BYTE_LITERALS")},     // 0x03
+    {StringRef("8byte_literals"), StringRef("S_8BYTE_LITERALS")},     // 0x04
+    {StringRef("literal_pointers"), StringRef("S_LITERAL_POINTERS")}, // 0x05
+    {StringRef("non_lazy_symbol_pointers"),
+     StringRef("S_NON_LAZY_SYMBOL_POINTERS")}, // 0x06
+    {StringRef("lazy_symbol_pointers"),
+     StringRef("S_LAZY_SYMBOL_POINTERS")},                    // 0x07
+    {StringRef("symbol_stubs"), StringRef("S_SYMBOL_STUBS")}, // 0x08
+    {StringRef("mod_init_funcs"),
+     StringRef("S_MOD_INIT_FUNC_POINTERS")}, // 0x09
+    {StringRef("mod_term_funcs"),
+     StringRef("S_MOD_TERM_FUNC_POINTERS")},                        // 0x0A
+    {StringRef("coalesced"), StringRef("S_COALESCED")},             // 0x0B
+    {StringRef("") /*FIXME??*/, StringRef("S_GB_ZEROFILL")},        // 0x0C
+    {StringRef("interposing"), StringRef("S_INTERPOSING")},         // 0x0D
+    {StringRef("16byte_literals"), StringRef("S_16BYTE_LITERALS")}, // 0x0E
+    {StringRef("") /*FIXME??*/, StringRef("S_DTRACE_DOF")},         // 0x0F
+    {StringRef("") /*FIXME??*/,
+     StringRef("S_LAZY_DYLIB_SYMBOL_POINTERS")}, // 0x10
+    {StringRef("thread_local_regular"),
+     StringRef("S_THREAD_LOCAL_REGULAR")}, // 0x11
+    {StringRef("thread_local_zerofill"),
+     StringRef("S_THREAD_LOCAL_ZEROFILL")}, // 0x12
+    {StringRef("thread_local_variables"),
+     StringRef("S_THREAD_LOCAL_VARIABLES")}, // 0x13
+    {StringRef("thread_local_variable_pointers"),
+     StringRef("S_THREAD_LOCAL_VARIABLE_POINTERS")}, // 0x14
+    {StringRef("thread_local_init_function_pointers"),
+     StringRef("S_THREAD_LOCAL_INIT_FUNCTION_POINTERS")}, // 0x15
+    {StringRef("") /* linker-synthesized */,
+     StringRef("S_INIT_FUNC_OFFSETS")}, // 0x16
 };
 
 /// SectionAttrDescriptors - This is an array of descriptors for section
@@ -71,22 +66,24 @@ static constexpr struct {
 /// by attribute, instead it is searched.
 static constexpr struct {
   unsigned AttrFlag;
-  StringLiteral AssemblerName, EnumName;
+  StringRef AssemblerName, EnumName;
 } SectionAttrDescriptors[] = {
-#define ENTRY(ASMNAME, ENUM) \
-  { MachO::ENUM, StringLiteral(ASMNAME), StringLiteral(#ENUM) },
-ENTRY("pure_instructions",   S_ATTR_PURE_INSTRUCTIONS)
-ENTRY("no_toc",              S_ATTR_NO_TOC)
-ENTRY("strip_static_syms",   S_ATTR_STRIP_STATIC_SYMS)
-ENTRY("no_dead_strip",       S_ATTR_NO_DEAD_STRIP)
-ENTRY("live_support",        S_ATTR_LIVE_SUPPORT)
-ENTRY("self_modifying_code", S_ATTR_SELF_MODIFYING_CODE)
-ENTRY("debug",               S_ATTR_DEBUG)
-ENTRY("" /*FIXME*/,          S_ATTR_SOME_INSTRUCTIONS)
-ENTRY("" /*FIXME*/,          S_ATTR_EXT_RELOC)
-ENTRY("" /*FIXME*/,          S_ATTR_LOC_RELOC)
+#define ENTRY(ASMNAME, ENUM)                                                   \
+  {MachO::ENUM, StringRef(ASMNAME), StringRef(#ENUM)},
+    ENTRY("pure_instructions", S_ATTR_PURE_INSTRUCTIONS) ENTRY("no_toc",
+                                                               S_ATTR_NO_TOC)
+        ENTRY("strip_static_syms", S_ATTR_STRIP_STATIC_SYMS) ENTRY(
+            "no_dead_strip", S_ATTR_NO_DEAD_STRIP) ENTRY("live_support",
+                                                         S_ATTR_LIVE_SUPPORT)
+            ENTRY("self_modifying_code", S_ATTR_SELF_MODIFYING_CODE)
+                ENTRY("debug", S_ATTR_DEBUG) ENTRY("" /*FIXME*/,
+                                                   S_ATTR_SOME_INSTRUCTIONS)
+                    ENTRY("" /*FIXME*/, S_ATTR_EXT_RELOC)
+                        ENTRY("" /*FIXME*/, S_ATTR_LOC_RELOC)
 #undef ENTRY
-  { 0, StringLiteral("none"), StringLiteral("") }, // used if section has no attributes but has a stub size
+                            {0, StringRef("none"),
+                             StringRef("")}, // used if section has no
+                                             // attributes but has a stub size
 };
 
 MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,

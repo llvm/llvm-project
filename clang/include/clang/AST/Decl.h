@@ -68,7 +68,7 @@ class NamespaceDecl;
 class ParmVarDecl;
 class RecordDecl;
 class Stmt;
-class StringLiteral;
+class StringRef;
 class TagDecl;
 class TemplateArgumentList;
 class TemplateArgumentListInfo;
@@ -1960,7 +1960,7 @@ public:
   /// Stashed information about a defaulted/deleted function body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
-                              StringLiteral *> {
+                              StringRef *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
@@ -1972,7 +1972,7 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-           StringLiteral *DeletedMessage = nullptr);
+           StringRef *DeletedMessage = nullptr);
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.
@@ -1980,12 +1980,11 @@ public:
       return {getTrailingObjects<DeclAccessPair>(), NumLookups};
     }
 
-    StringLiteral *getDeletedMessage() const {
-      return HasDeletedMessage ? *getTrailingObjects<StringLiteral *>()
-                               : nullptr;
+    StringRef *getDeletedMessage() const {
+      return HasDeletedMessage ? *getTrailingObjects<StringRef *>() : nullptr;
     }
 
-    void setDeletedMessage(StringLiteral *Message);
+    void setDeletedMessage(StringRef *Message);
   };
 
 private:
@@ -2473,7 +2472,7 @@ public:
     return FunctionDeclBits.IsDeleted && !isDefaulted();
   }
 
-  void setDeletedAsWritten(bool D = true, StringLiteral *Message = nullptr);
+  void setDeletedAsWritten(bool D = true, StringRef *Message = nullptr);
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.
@@ -2630,7 +2629,7 @@ public:
   }
 
   /// Get the message that indicates why this function was deleted.
-  StringLiteral *getDeletedMessage() const {
+  StringRef *getDeletedMessage() const {
     return FunctionDeclBits.HasDefaultedOrDeletedInfo
                ? DefaultedOrDeletedInfo->getDeletedMessage()
                : nullptr;
@@ -4410,18 +4409,18 @@ private:
 };
 
 class FileScopeAsmDecl : public Decl {
-  StringLiteral *AsmString;
+  StringRef *AsmString;
   SourceLocation RParenLoc;
 
-  FileScopeAsmDecl(DeclContext *DC, StringLiteral *asmstring,
-                   SourceLocation StartL, SourceLocation EndL)
-    : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
+  FileScopeAsmDecl(DeclContext *DC, StringRef *asmstring, SourceLocation StartL,
+                   SourceLocation EndL)
+      : Decl(FileScopeAsm, DC, StartL), AsmString(asmstring), RParenLoc(EndL) {}
 
   virtual void anchor();
 
 public:
   static FileScopeAsmDecl *Create(ASTContext &C, DeclContext *DC,
-                                  StringLiteral *Str, SourceLocation AsmLoc,
+                                  StringRef *Str, SourceLocation AsmLoc,
                                   SourceLocation RParenLoc);
 
   static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
@@ -4433,9 +4432,9 @@ public:
     return SourceRange(getAsmLoc(), getRParenLoc());
   }
 
-  const StringLiteral *getAsmString() const { return AsmString; }
-  StringLiteral *getAsmString() { return AsmString; }
-  void setAsmString(StringLiteral *Asm) { AsmString = Asm; }
+  const StringRef *getAsmString() const { return AsmString; }
+  StringRef *getAsmString() { return AsmString; }
+  void setAsmString(StringRef *Asm) { AsmString = Asm; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == FileScopeAsm; }

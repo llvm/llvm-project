@@ -52,9 +52,7 @@ class PopulateSwitch : public Tweak {
   bool prepare(const Selection &Sel) override;
   Expected<Effect> apply(const Selection &Sel) override;
   std::string title() const override { return "Populate switch"; }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::QUICKFIX_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::QUICKFIX_KIND; }
 
 private:
   class ExpectedCase {

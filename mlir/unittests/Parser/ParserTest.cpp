@@ -66,7 +66,7 @@ TEST(MLIRParser, ParseAttr) {
   MLIRContext context;
   Builder b(&context);
   { // Successful parse
-    StringLiteral attrAsm = "array<i64: 1, 2, 3>";
+    StringRef attrAsm = "array<i64: 1, 2, 3>";
     size_t numRead = 0;
     Attribute attr = parseAttribute(attrAsm, &context, Type(), &numRead);
     EXPECT_EQ(attr, b.getDenseI64ArrayAttr({1, 2, 3}));

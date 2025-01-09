@@ -45,13 +45,13 @@ namespace {
 //===----------------------------------------------------------------------===//
 
 // Common match failure reasons.
-static constexpr StringLiteral kMatchFailureNotSMETileTypeMultiple(
+static constexpr StringRef kMatchFailureNotSMETileTypeMultiple(
     "op vector size is not multiple of SME tiles");
-static constexpr StringLiteral kMatchFailureUnsupportedMaskOp(
+static constexpr StringRef kMatchFailureUnsupportedMaskOp(
     "op mask is unsupported for legalization/decomposition");
-static constexpr StringLiteral
+static constexpr StringRef
     kMatchFailureNonPermutationMap("op affine map is not a permutation");
-static constexpr StringLiteral kMatchFailureNotIllegalToLegal(
+static constexpr StringRef kMatchFailureNotIllegalToLegal(
     "expected transpose from illegal type to legal type");
 
 /// An SMESubTile represents a single SME-sized sub-tile from decomposing a

@@ -90,9 +90,9 @@ const char *ContentCache::getInvalidBOM(StringRef BufStr) {
   // http://en.wikipedia.org/wiki/Byte_order_mark for more information.
   const char *InvalidBOM =
       llvm::StringSwitch<const char *>(BufStr)
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
+          .StartsWith(llvm::StringRef::withInnerNUL("\x00\x00\xFE\xFF"),
                       "UTF-32 (BE)")
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
+          .StartsWith(llvm::StringRef::withInnerNUL("\xFF\xFE\x00\x00"),
                       "UTF-32 (LE)")
           .StartsWith("\xFE\xFF", "UTF-16 (BE)")
           .StartsWith("\xFF\xFE", "UTF-16 (LE)")

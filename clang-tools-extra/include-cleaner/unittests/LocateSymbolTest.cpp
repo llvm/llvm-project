@@ -101,7 +101,7 @@ public:
 TEST(LocateSymbol, Decl) {
   // Looks for decl with name 'foo' and performs locateSymbol on it.
   // Expects all the locations in the case to be returned as a location.
-  const llvm::StringLiteral Cases[] = {
+  const llvm::StringRef Cases[] = {
       "struct ^foo; struct ^foo {};",
       "namespace ns { void ^foo(); void ^foo() {} }",
       "enum class ^foo; enum class ^foo {};",
@@ -157,7 +157,7 @@ TEST(LocateSymbol, CompleteSymbolHint) {
   }
   {
     // Completeness is only absent in cases that matters.
-    const llvm::StringLiteral Cases[] = {
+    const llvm::StringRef Cases[] = {
         "struct ^foo; struct ^foo {};",
         "template <typename> struct ^foo; template <typename> struct ^foo {};",
         "template <typename> void ^foo(); template <typename> void ^foo() {};",
@@ -174,7 +174,7 @@ TEST(LocateSymbol, CompleteSymbolHint) {
   {
     // All declarations should be marked as complete in cases that a definition
     // is not usually needed.
-    const llvm::StringLiteral Cases[] = {
+    const llvm::StringRef Cases[] = {
         "void foo(); void foo() {}",
         "extern int foo; int foo;",
     };

@@ -1125,102 +1125,102 @@ StringRef getTypeMangling(Type type, bool isSigned) {
 }
 
 template <typename ReduceOp>
-constexpr StringLiteral getGroupFuncName();
+constexpr StringRef getGroupFuncName();
 
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupIAddOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupIAddOp>() {
   return "_Z17__spirv_GroupIAddii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupFAddOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupFAddOp>() {
   return "_Z17__spirv_GroupFAddii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupSMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupSMinOp>() {
   return "_Z17__spirv_GroupSMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupUMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupUMinOp>() {
   return "_Z17__spirv_GroupUMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupFMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupFMinOp>() {
   return "_Z17__spirv_GroupFMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupSMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupSMaxOp>() {
   return "_Z17__spirv_GroupSMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupUMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupUMaxOp>() {
   return "_Z17__spirv_GroupUMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupFMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupFMaxOp>() {
   return "_Z17__spirv_GroupFMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformIAddOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformIAddOp>() {
   return "_Z27__spirv_GroupNonUniformIAddii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFAddOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformFAddOp>() {
   return "_Z27__spirv_GroupNonUniformFAddii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformIMulOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformIMulOp>() {
   return "_Z27__spirv_GroupNonUniformIMulii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMulOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformFMulOp>() {
   return "_Z27__spirv_GroupNonUniformFMulii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformSMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformSMinOp>() {
   return "_Z27__spirv_GroupNonUniformSMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformUMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformUMinOp>() {
   return "_Z27__spirv_GroupNonUniformUMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMinOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformFMinOp>() {
   return "_Z27__spirv_GroupNonUniformFMinii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformSMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformSMaxOp>() {
   return "_Z27__spirv_GroupNonUniformSMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformUMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformUMaxOp>() {
   return "_Z27__spirv_GroupNonUniformUMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformFMaxOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformFMaxOp>() {
   return "_Z27__spirv_GroupNonUniformFMaxii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseAndOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformBitwiseAndOp>() {
   return "_Z33__spirv_GroupNonUniformBitwiseAndii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseOrOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformBitwiseOrOp>() {
   return "_Z32__spirv_GroupNonUniformBitwiseOrii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformBitwiseXorOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformBitwiseXorOp>() {
   return "_Z33__spirv_GroupNonUniformBitwiseXorii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalAndOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformLogicalAndOp>() {
   return "_Z33__spirv_GroupNonUniformLogicalAndii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalOrOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformLogicalOrOp>() {
   return "_Z32__spirv_GroupNonUniformLogicalOrii";
 }
 template <>
-constexpr StringLiteral getGroupFuncName<spirv::GroupNonUniformLogicalXorOp>() {
+constexpr StringRef getGroupFuncName<spirv::GroupNonUniformLogicalXorOp>() {
   return "_Z33__spirv_GroupNonUniformLogicalXorii";
 }
 } // namespace

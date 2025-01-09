@@ -1869,7 +1869,7 @@ public:
     Satisfied = true;
     PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                                N->getLocationContext());
-    llvm::StringLiteral Msg = "Stream is closed here";
+    llvm::StringRef Msg = "Stream is closed here";
     return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg);
   }
 };

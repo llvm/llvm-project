@@ -161,7 +161,7 @@ std::string summarizeExpr(const Expr *E) {
       Result.resize(llvm::StringRef(Result).rtrim().size());
       return Result;
     }
-    std::string VisitStringLiteral(const StringLiteral *E) {
+    std::string VisitStringLiteral(const StringRef *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
@@ -933,7 +933,7 @@ private:
       return false;
     // Ignore some punctuation and whitespace around comment.
     // In particular this allows designators to match nicely.
-    llvm::StringLiteral IgnoreChars = " =.";
+    llvm::StringRef IgnoreChars = " =.";
     SourcePrefix = SourcePrefix.rtrim(IgnoreChars);
     ParamName = ParamName.trim(IgnoreChars);
     // Other than that, the comment must contain exactly ParamName.

@@ -825,24 +825,23 @@ public:
   }
 };
 
-/// StringRegion - Region associated with a StringLiteral.
+/// StringRegion - Region associated with a StringRef.
 class StringRegion : public TypedValueRegion {
   friend class MemRegionManager;
 
-  const StringLiteral *Str;
+  const StringRef *Str;
 
-  StringRegion(const StringLiteral *str, const GlobalInternalSpaceRegion *sreg)
+  StringRegion(const StringRef *str, const GlobalInternalSpaceRegion *sreg)
       : TypedValueRegion(sreg, StringRegionKind), Str(str) {
     assert(str);
   }
 
-  static void ProfileRegion(llvm::FoldingSetNodeID &ID,
-                            const StringLiteral *Str,
+  static void ProfileRegion(llvm::FoldingSetNodeID &ID, const StringRef *Str,
                             const MemRegion *superRegion);
 
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const StringLiteral *getStringLiteral() const { return Str; }
+  const StringRef *getStringLiteral() const { return Str; }
 
   QualType getValueType() const override { return Str->getType(); }
 
@@ -1485,7 +1484,7 @@ public:
   /// Return a unique symbolic region belonging to heap memory space.
   const SymbolicRegion *getSymbolicHeapRegion(SymbolRef sym);
 
-  const StringRegion *getStringRegion(const StringLiteral *Str);
+  const StringRegion *getStringRegion(const StringRef *Str);
 
   const ObjCStringRegion *getObjCStringRegion(const ObjCStringLiteral *Str);
 

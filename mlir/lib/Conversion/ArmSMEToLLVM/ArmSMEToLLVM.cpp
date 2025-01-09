@@ -36,7 +36,7 @@ using namespace mlir;
 
 namespace {
 
-static constexpr StringLiteral kInMemoryTileIdAttr("arm_sme.in_memory_tile_id");
+static constexpr StringRef kInMemoryTileIdAttr("arm_sme.in_memory_tile_id");
 
 /// Helper to create an arm_sme.intr.ld1*.(horiz|vert)' intrinsic.
 static Operation *createLoadTileSliceIntrinsic(

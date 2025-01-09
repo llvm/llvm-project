@@ -32,10 +32,10 @@ using namespace mlir::LLVM::detail;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
 
-static constexpr StringLiteral vecTypeHintMDName = "vec_type_hint";
-static constexpr StringLiteral workGroupSizeHintMDName = "work_group_size_hint";
-static constexpr StringLiteral reqdWorkGroupSizeMDName = "reqd_work_group_size";
-static constexpr StringLiteral intelReqdSubGroupSizeMDName =
+static constexpr StringRef vecTypeHintMDName = "vec_type_hint";
+static constexpr StringRef workGroupSizeHintMDName = "work_group_size_hint";
+static constexpr StringRef reqdWorkGroupSizeMDName = "reqd_work_group_size";
+static constexpr StringRef intelReqdSubGroupSizeMDName =
     "intel_reqd_sub_group_size";
 
 /// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect

@@ -63,7 +63,7 @@ lldb::REPLSP ClangREPL::CreateInstance(Status &error,
 Status ClangREPL::DoInitialization() { return Status(); }
 
 llvm::StringRef ClangREPL::GetSourceFileBasename() {
-  static constexpr llvm::StringLiteral g_repl("repl.c");
+  static constexpr llvm::StringRef g_repl("repl.c");
   return g_repl;
 }
 

@@ -128,7 +128,7 @@ enum {
 class PlatformDarwinProperties : public Properties {
 public:
   static llvm::StringRef GetSettingName() {
-    static constexpr llvm::StringLiteral g_setting_name("darwin");
+    static constexpr llvm::StringRef g_setting_name("darwin");
     return g_setting_name;
   }
 
@@ -863,8 +863,8 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
 
 llvm::Expected<StructuredData::DictionarySP>
 PlatformDarwin::FetchExtendedCrashInformation(Process &process) {
-  static constexpr llvm::StringLiteral crash_info_key("Crash-Info Annotations");
-  static constexpr llvm::StringLiteral asi_info_key(
+  static constexpr llvm::StringRef crash_info_key("Crash-Info Annotations");
+  static constexpr llvm::StringRef asi_info_key(
       "Application Specific Information");
 
   // We cache the information we find in the process extended info dict:

@@ -168,7 +168,7 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
     if (!IsPolymorphic)
       return;
     if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-      constexpr llvm::StringLiteral Msg =
+      constexpr llvm::StringRef Msg =
           "Pointer arithmetic on a pointer to base class is dangerous "
           "because derived and base class may have different size.";
       auto R = std::make_unique<PathSensitiveBugReport>(BT_polyArray, Msg, N);
@@ -188,7 +188,7 @@ void PointerArithChecker::reportPointerArithMisuse(const Expr *E,
     return;
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    constexpr llvm::StringLiteral Msg =
+    constexpr llvm::StringRef Msg =
         "Pointer arithmetic on non-array variables relies on memory layout, "
         "which is dangerous.";
     auto R = std::make_unique<PathSensitiveBugReport>(BT_pointerArith, Msg, N);

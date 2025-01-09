@@ -3355,7 +3355,7 @@ void SITargetLowering::passSpecialInputs(
   // in the same location as the input.
   // clang-format off
   static constexpr std::pair<AMDGPUFunctionArgInfo::PreloadedValue,
-                              StringLiteral> ImplicitAttrs[] = {
+                              StringRef> ImplicitAttrs[] = {
      {AMDGPUFunctionArgInfo::DISPATCH_PTR, "amdgpu-no-dispatch-ptr"},
      {AMDGPUFunctionArgInfo::QUEUE_PTR, "amdgpu-no-queue-ptr" },
      {AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR, "amdgpu-no-implicitarg-ptr"},

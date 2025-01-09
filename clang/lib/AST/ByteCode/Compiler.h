@@ -158,7 +158,7 @@ public:
   bool VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E);
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
-  bool VisitStringLiteral(const StringLiteral *E);
+  bool VisitStringLiteral(const StringRef *E);
   bool VisitObjCStringLiteral(const ObjCStringLiteral *E);
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
   bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);

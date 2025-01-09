@@ -19,7 +19,7 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-constexpr StringLiteral DXILOpNamePrefix = "dx.op.";
+constexpr StringRef DXILOpNamePrefix = "dx.op.";
 
 namespace {
 enum OverloadKind : uint16_t {

@@ -14,9 +14,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cert {
 
-static constexpr llvm::StringLiteral SourceDeclName = "ChangedPVD";
-static constexpr llvm::StringLiteral MutatingOperatorName = "MutatingOp";
-static constexpr llvm::StringLiteral MutatingCallName = "MutatingCall";
+static constexpr llvm::StringRef SourceDeclName = "ChangedPVD";
+static constexpr llvm::StringRef MutatingOperatorName = "MutatingOp";
+static constexpr llvm::StringRef MutatingCallName = "MutatingCall";
 
 void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
   const auto MemberExprOrSourceObject = anyOf(

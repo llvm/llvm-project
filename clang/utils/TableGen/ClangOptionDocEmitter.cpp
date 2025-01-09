@@ -252,7 +252,7 @@ void emitOptionWithArgs(StringRef Prefix, const Record *Option,
   }
 }
 
-constexpr StringLiteral DefaultMetaVarName = "<arg>";
+constexpr StringRef DefaultMetaVarName = "<arg>";
 
 void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
   // Find the arguments to list after the option.

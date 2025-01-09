@@ -1079,7 +1079,7 @@ bool Parser::HandlePragmaMSSection(StringRef PragmaName,
   ExprResult StringResult = ParseStringLiteralExpression();
   if (StringResult.isInvalid())
     return false; // Already diagnosed.
-  StringLiteral *SegmentName = cast<StringLiteral>(StringResult.get());
+  StringRef *SegmentName = cast<StringRef>(StringResult.get());
   if (SegmentName->getCharByteWidth() != 1) {
     PP.Diag(PragmaLocation, diag::warn_pragma_expected_non_wide_string)
         << PragmaName;
@@ -1188,7 +1188,7 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
     }
   }
   // Grab the string literal for our section name.
-  StringLiteral *SegmentName = nullptr;
+  StringRef *SegmentName = nullptr;
   if (Tok.isNot(tok::r_paren)) {
     if (Tok.isNot(tok::string_literal)) {
       unsigned DiagID = Action != Sema::PSK_Reset ? !SlotLabel.empty() ?
@@ -1201,7 +1201,7 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
     ExprResult StringResult = ParseStringLiteralExpression();
     if (StringResult.isInvalid())
       return false; // Already diagnosed.
-    SegmentName = cast<StringLiteral>(StringResult.get());
+    SegmentName = cast<StringRef>(StringResult.get());
     if (SegmentName->getCharByteWidth() != 1) {
       PP.Diag(PragmaLocation, diag::warn_pragma_expected_non_wide_string)
           << PragmaName;
@@ -1240,7 +1240,7 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
     return false;
 
   // Parse either the known section names or the string section name.
-  StringLiteral *SegmentName = nullptr;
+  StringRef *SegmentName = nullptr;
   if (Tok.isAnyIdentifier()) {
     auto *II = Tok.getIdentifierInfo();
     StringRef Section = llvm::StringSwitch<StringRef>(II->getName())
@@ -1258,14 +1258,14 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
       Toks[0].setLiteralData(Section.data());
       Toks[0].setLength(Section.size());
       SegmentName =
-          cast<StringLiteral>(Actions.ActOnStringLiteral(Toks, nullptr).get());
+          cast<StringRef>(Actions.ActOnStringLiteral(Toks, nullptr).get());
       PP.Lex(Tok);
     }
   } else if (Tok.is(tok::string_literal)) {
     ExprResult StringResult = ParseStringLiteralExpression();
     if (StringResult.isInvalid())
       return false;
-    SegmentName = cast<StringLiteral>(StringResult.get());
+    SegmentName = cast<StringRef>(StringResult.get());
     if (SegmentName->getCharByteWidth() != 1) {
       PP.Diag(PragmaLocation, diag::warn_pragma_expected_non_wide_string)
           << PragmaName;
@@ -1354,7 +1354,7 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
     ExprResult StringResult = ParseStringLiteralExpression();
     if (StringResult.isInvalid())
       return false; // Already diagnosed.
-    StringLiteral *SegmentName = cast<StringLiteral>(StringResult.get());
+    StringRef *SegmentName = cast<StringRef>(StringResult.get());
     if (SegmentName->getCharByteWidth() != 1) {
       PP.Diag(PragmaLocation, diag::warn_pragma_expected_non_wide_string)
           << PragmaName;
@@ -3873,7 +3873,7 @@ bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
   ExprResult StringResult = ParseStringLiteralExpression();
   if (StringResult.isInvalid())
     return false; // Already diagnosed.
-  StringLiteral *OptimizationList = cast<StringLiteral>(StringResult.get());
+  StringRef *OptimizationList = cast<StringRef>(StringResult.get());
   if (OptimizationList->getCharByteWidth() != 1) {
     PP.Diag(PragmaLocation, diag::warn_pragma_expected_non_wide_string)
         << PragmaName;

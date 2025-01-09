@@ -100,7 +100,7 @@ TEST(IncludeCleaner, StdlibUnused) {
 }
 
 TEST(IncludeCleaner, GetUnusedHeaders) {
-  llvm::StringLiteral MainFile = R"cpp(
+  llvm::StringRef MainFile = R"cpp(
     #include "a.h"
     #include "b.h"
     #include "dir/c.h"

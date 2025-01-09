@@ -67,7 +67,7 @@ public:
                            BugReporter &BReporter) const;
 
 private:
-  const llvm::StringLiteral MPIError = "MPI Error";
+  const llvm::StringRef MPIError = "MPI Error";
   const BugType UnmatchedWaitBugType;
   const BugType MissingWaitBugType;
   const BugType DoubleNonblockingBugType;

@@ -264,7 +264,7 @@ namespace Temporary {
   D<C{nullptr, &r3}> d; // expected-error {{pointer to temporary object}}
 }
 
-namespace StringLiteral {
+namespace StringRef {
   template<decltype(auto)> struct Y {};
   Y<&"hello"> y1; // expected-error {{pointer to string literal}}
   Y<"hello"> y2; // expected-error {{reference to string literal}}

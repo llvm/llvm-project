@@ -32,7 +32,7 @@ namespace {
 struct FileLineColLocTestingAction
     : public ActionImpl<FileLineColLocTestingAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(FileLineColLocTestingAction)
-  static constexpr StringLiteral tag = "file-line-col-loc-testing-action";
+  static constexpr StringRef tag = "file-line-col-loc-testing-action";
   FileLineColLocTestingAction(ArrayRef<IRUnit> irUnits)
       : ActionImpl<FileLineColLocTestingAction>(irUnits) {}
 };

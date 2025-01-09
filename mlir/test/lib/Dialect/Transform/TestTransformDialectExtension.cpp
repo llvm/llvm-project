@@ -41,8 +41,8 @@ public:
 
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
-  static constexpr llvm::StringLiteral getOperationName() {
-    return llvm::StringLiteral("transform.test_transform_op");
+  static constexpr llvm::StringRef getOperationName() {
+    return llvm::StringRef("transform.test_transform_op");
   }
 
   DiagnosedSilenceableFailure apply(transform::TransformRewriter &rewriter,
@@ -96,8 +96,8 @@ public:
 
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
-  static constexpr llvm::StringLiteral getOperationName() {
-    return llvm::StringLiteral(
+  static constexpr llvm::StringRef getOperationName() {
+    return llvm::StringRef(
         "transform.test_transform_unrestricted_op_no_interface");
   }
 

@@ -428,7 +428,7 @@ private:
 /// @param Offset The start index of the desired substring.
 static Expected<StringRef> terminatedSubstr(StringRef Str, size_t Offset) {
   size_t StrEnd = Str.find('\0', Offset);
-  if (StrEnd == StringLiteral::npos) {
+  if (StrEnd == StringRef::npos) {
     return createError(
         "String overran bounds of string table (no null terminator)");
   }

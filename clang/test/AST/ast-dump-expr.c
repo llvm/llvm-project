@@ -300,23 +300,23 @@ void PrimaryExpressions(int a) {
 
   "a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char[2]' lvalue "a"
+  // CHECK: StringRef 0x{{[^ ]*}} <col:3> 'char[2]' lvalue "a"
 
   L"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'int[2]' lvalue L"a"
+  // CHECK: StringRef 0x{{[^ ]*}} <col:3> 'int[2]' lvalue L"a"
 
   u8"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char[2]' lvalue u8"a"
+  // CHECK: StringRef 0x{{[^ ]*}} <col:3> 'char[2]' lvalue u8"a"
 
   U"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned int[2]' lvalue U"a"
+  // CHECK: StringRef 0x{{[^ ]*}} <col:3> 'unsigned int[2]' lvalue U"a"
 
   u"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned short[2]' lvalue u"a"
+  // CHECK: StringRef 0x{{[^ ]*}} <col:3> 'unsigned short[2]' lvalue u"a"
 
   1;
   // CHECK: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-1]]:3> 'int' 1

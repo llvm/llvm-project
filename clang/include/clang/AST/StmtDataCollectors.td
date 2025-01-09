@@ -86,7 +86,7 @@ class FloatingLiteral {
     addData(llvm::hash_value(S->getValue()));
   }];
 }
-class StringLiteral {
+class StringRef {
   code Code = [{
     addData(S->getString());
 }];

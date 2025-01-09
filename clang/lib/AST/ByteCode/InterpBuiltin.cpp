@@ -1555,7 +1555,7 @@ static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
           // A null base is acceptable.
           return returnInt(true);
         } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
-          if (!isa<StringLiteral>(E))
+          if (!isa<StringRef>(E))
             return returnInt(false);
           return returnInt(LV.getLValueOffset().isZero());
         } else if (Base.is<TypeInfoLValue>()) {

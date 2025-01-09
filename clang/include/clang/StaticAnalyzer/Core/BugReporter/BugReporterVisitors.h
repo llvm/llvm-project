@@ -446,9 +446,9 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final : public BugReporterVisitor {
   // FIXME: constexpr initialization isn't supported by MSVC2013.
-  constexpr static llvm::StringLiteral GenericTrueMessage =
+  constexpr static llvm::StringRef GenericTrueMessage =
       "Assuming the condition is true";
-  constexpr static llvm::StringLiteral GenericFalseMessage =
+  constexpr static llvm::StringRef GenericFalseMessage =
       "Assuming the condition is false";
 
 public:

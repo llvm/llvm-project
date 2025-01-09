@@ -17,15 +17,15 @@ using namespace mlir::tracing;
 namespace {
 struct DebuggerAction : public ActionImpl<DebuggerAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DebuggerAction)
-  static constexpr StringLiteral tag = "debugger-action";
+  static constexpr StringRef tag = "debugger-action";
 };
 struct OtherAction : public ActionImpl<OtherAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OtherAction)
-  static constexpr StringLiteral tag = "other-action";
+  static constexpr StringRef tag = "other-action";
 };
 struct ThirdAction : public ActionImpl<ThirdAction> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ThirdAction)
-  static constexpr StringLiteral tag = "third-action";
+  static constexpr StringRef tag = "third-action";
 };
 
 // Simple action that does nothing.

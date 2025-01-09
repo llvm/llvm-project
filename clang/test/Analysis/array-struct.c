@@ -26,7 +26,7 @@ void f(void) {
   d.data_array[9] = 17;
 }
 
-// StringLiteral in lvalue context and pointer to array type.
+// StringRef in lvalue context and pointer to array type.
 // p: ElementRegion, q: StringRegion
 void f2(void) {
   char *p = "/usr/local";

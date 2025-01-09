@@ -143,7 +143,7 @@ public:
   }
 
   template <typename Param, typename Result, typename ThisT>
-  void method(llvm::StringLiteral method, ThisT *thisPtr,
+  void method(llvm::StringRef method, ThisT *thisPtr,
               void (ThisT::*handler)(const Param &, Callback<Result>)) {
     methodHandlers[method] = [method, handler,
                               thisPtr](llvm::json::Value rawParams,
@@ -156,7 +156,7 @@ public:
   }
 
   template <typename Param, typename ThisT>
-  void notification(llvm::StringLiteral method, ThisT *thisPtr,
+  void notification(llvm::StringRef method, ThisT *thisPtr,
                     void (ThisT::*handler)(const Param &)) {
     notificationHandlers[method] = [method, handler,
                                     thisPtr](llvm::json::Value rawParams) {
@@ -175,7 +175,7 @@ public:
 
   /// Create an OutgoingNotification object used for the given method.
   template <typename T>
-  OutgoingNotification<T> outgoingNotification(llvm::StringLiteral method) {
+  OutgoingNotification<T> outgoingNotification(llvm::StringRef method) {
     return [&, method](const T &params) {
       std::lock_guard<std::mutex> transportLock(transportOutputMutex);
       Logger::info("--> {0}", method);
@@ -189,7 +189,7 @@ public:
   /// is invoked.
   template <typename Param, typename Result>
   OutgoingRequest<Param>
-  outgoingRequest(llvm::StringLiteral method,
+  outgoingRequest(llvm::StringRef method,
                   OutgoingRequestCallback<Result> callback) {
     return [&, method, callback](const Param &param, llvm::json::Value id) {
       auto callbackWrapper = [method, callback = std::move(callback)](

@@ -210,12 +210,12 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     return false;
 
   // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
+  if (!isa<StringRef>(Arg->IgnoreParenImpCasts()))
     return Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
            << Arg->getSourceRange();
 
   // Check the type of special register given.
-  StringRef Reg = cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
+  StringRef Reg = cast<StringRef>(Arg->IgnoreParenImpCasts())->getString();
   SmallVector<StringRef, 6> Fields;
   Reg.split(Fields, ":");
 

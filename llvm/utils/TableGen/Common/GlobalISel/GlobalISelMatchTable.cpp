@@ -42,7 +42,7 @@ std::string getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
 }
 
 // GIMT_Encode2/4/8
-constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
+constexpr StringRef EncodeMacroName = "GIMT_Encode";
 
 } // namespace
 

@@ -1752,7 +1752,7 @@ unsigned encodeFieldSaSdst(unsigned SaSdst) {
 namespace Exp {
 
 struct ExpTgt {
-  StringLiteral Name;
+  StringRef Name;
   unsigned Tgt;
   unsigned MaxIndex;
 };
@@ -1839,7 +1839,7 @@ StringRef getDfmtName(unsigned Id) {
   return DfmtSymbolic[Id];
 }
 
-static StringLiteral const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
+static StringRef const *getNfmtLookupTable(const MCSubtargetInfo &STI) {
   if (isSI(STI) || isCI(STI))
     return NfmtSymbolicSICI;
   if (isVI(STI) || isGFX9(STI))

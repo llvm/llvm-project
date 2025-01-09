@@ -59,7 +59,7 @@ bool SparcTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 struct SparcCPUInfo {
-  llvm::StringLiteral Name;
+  llvm::StringRef Name;
   SparcTargetInfo::CPUKind Kind;
   SparcTargetInfo::CPUGeneration Generation;
 };

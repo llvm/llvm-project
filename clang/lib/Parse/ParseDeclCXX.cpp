@@ -1006,7 +1006,7 @@ static FixItHint getStaticAssertNoMessageFixIt(const Expr *AssertExpr,
                                                SourceLocation EndExprLoc) {
   if (const auto *BO = dyn_cast_or_null<BinaryOperator>(AssertExpr)) {
     if (BO->getOpcode() == BO_LAnd &&
-        isa<StringLiteral>(BO->getRHS()->IgnoreImpCasts()))
+        isa<StringRef>(BO->getRHS()->IgnoreImpCasts()))
       return FixItHint::CreateReplacement(BO->getOperatorLoc(), ",");
   }
   return FixItHint::CreateInsertion(EndExprLoc, ", \"\"");
@@ -5194,8 +5194,8 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
     Toks[0].setLocation(StartLoc);
     Toks[0].setLiteralData(StrBuffer.data());
     Toks[0].setLength(StrBuffer.size());
-    StringLiteral *UuidString =
-        cast<StringLiteral>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());
+    StringRef *UuidString =
+        cast<StringRef>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());
     ArgExprs.push_back(UuidString);
   }
 

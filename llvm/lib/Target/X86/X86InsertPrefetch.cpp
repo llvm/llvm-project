@@ -113,7 +113,7 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
   if (FunctionSamples::UseMD5)
     return false;
 
-  static constexpr std::pair<StringLiteral, unsigned> HintTypes[] = {
+  static constexpr std::pair<StringRef, unsigned> HintTypes[] = {
       {"_nta_", X86::PREFETCHNTA},
       {"_t0_", X86::PREFETCHT0},
       {"_t1_", X86::PREFETCHT1},

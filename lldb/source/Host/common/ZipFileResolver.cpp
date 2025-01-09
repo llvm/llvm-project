@@ -22,14 +22,14 @@ bool ZipFileResolver::ResolveSharedLibraryPath(const FileSpec &file_spec,
                                                lldb::offset_t &so_file_size) {
   // When bionic loads .so file from APK or zip file, this file_spec will be
   // "zip_path!/so_path". Otherwise it is just a normal file path.
-  static constexpr llvm::StringLiteral k_zip_separator("!/");
+  static constexpr llvm::StringRef k_zip_separator("!/");
   std::string path(file_spec.GetPath());
   size_t pos = path.find(k_zip_separator);
 
 #if defined(_WIN32)
   // When the file_spec is resolved as a Windows path, the zip .so path will be
   // "zip_path!\so_path". Support both patterns on Windows.
-  static constexpr llvm::StringLiteral k_zip_separator_win("!\\");
+  static constexpr llvm::StringRef k_zip_separator_win("!\\");
   if (pos == std::string::npos)
     pos = path.find(k_zip_separator_win);
 #endif

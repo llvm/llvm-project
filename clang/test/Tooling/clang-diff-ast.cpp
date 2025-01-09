@@ -45,7 +45,7 @@ class X : Base {
   // CHECK: ParmVarDecl: i(int)(
   const char *foo(int i) {
     if (i == 0)
-      // CHECK: StringLiteral: foo(
+      // CHECK: StringRef: foo(
       return "foo";
     // CHECK-NOT: ImplicitCastExpr
     return 0;

@@ -65,9 +65,9 @@ struct VariadicPackTypeInfo {
 ///   - Special types, e.g. GITypeOf, Variadic arguments list.
 class PatternType {
 public:
-  static constexpr StringLiteral SpecialTyClassName = "GISpecialType";
-  static constexpr StringLiteral TypeOfClassName = "GITypeOf";
-  static constexpr StringLiteral VariadicClassName = "GIVariadic";
+  static constexpr StringRef SpecialTyClassName = "GISpecialType";
+  static constexpr StringRef TypeOfClassName = "GITypeOf";
+  static constexpr StringRef VariadicClassName = "GIVariadic";
 
   enum PTKind : uint8_t {
     PT_None,
@@ -553,7 +553,7 @@ private:
 /// PatFragPattern.
 class PatFrag {
 public:
-  static constexpr StringLiteral ClassName = "GICombinePatFrag";
+  static constexpr StringRef ClassName = "GICombinePatFrag";
 
   enum ParamKind {
     PK_Root,
@@ -696,7 +696,7 @@ enum BuiltinKind {
 
 class BuiltinPattern : public InstructionPattern {
   struct BuiltinInfo {
-    StringLiteral DefName;
+    StringRef DefName;
     BuiltinKind Kind;
     unsigned NumOps;
     unsigned NumDefs;
@@ -708,7 +708,7 @@ class BuiltinPattern : public InstructionPattern {
   }};
 
 public:
-  static constexpr StringLiteral ClassName = "GIBuiltinInst";
+  static constexpr StringRef ClassName = "GIBuiltinInst";
 
   BuiltinPattern(const Record &Def, StringRef Name)
       : InstructionPattern(K_Builtin, Name), I(getBuiltinInfo(Def)) {}

@@ -172,9 +172,7 @@ initializerForParams(const SmallVector<MethodParameter, 8> &Params,
 class ObjCMemberwiseInitializer : public Tweak {
 public:
   const char *id() const final;
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
   bool prepare(const Selection &Inputs) override;
   Expected<Tweak::Effect> apply(const Selection &Inputs) override;

@@ -1213,9 +1213,9 @@ struct CodeAction {
   /// The kind of the code action.
   /// Used to filter code actions.
   std::optional<std::string> kind;
-  const static llvm::StringLiteral kQuickFix;
-  const static llvm::StringLiteral kRefactor;
-  const static llvm::StringLiteral kInfo;
+  const static llvm::StringRef kQuickFix;
+  const static llvm::StringRef kRefactor;
+  const static llvm::StringRef kInfo;
 
   /// The diagnostics that this code action resolves.
   std::optional<std::vector<Diagnostic>> diagnostics;

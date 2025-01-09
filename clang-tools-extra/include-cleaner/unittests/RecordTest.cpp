@@ -601,7 +601,7 @@ TEST_F(PragmaIncludeTest, AlwaysKeep) {
 }
 
 TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
-  llvm::StringLiteral Filename = "test.cpp";
+  llvm::StringRef Filename = "test.cpp";
   auto Code = R"cpp(#include "exporter.h")cpp";
   Inputs.ExtraFiles["exporter.h"] = R"cpp(
   #pragma once

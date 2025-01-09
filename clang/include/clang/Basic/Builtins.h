@@ -69,7 +69,7 @@ enum ID {
 };
 
 struct Info {
-  llvm::StringLiteral Name;
+  llvm::StringRef Name;
   const char *Type, *Attributes;
   const char *Features;
   HeaderDesc Header;

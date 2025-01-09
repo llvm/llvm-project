@@ -2928,7 +2928,7 @@ private:
               const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
               const AdditionalKeywords &Keywords) {
     // Keep this array sorted, since we are binary searching over it.
-    static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
+    static constexpr llvm::StringRef FoundationIdentifiers[] = {
         "CGFloat",
         "CGPoint",
         "CGPointMake",

@@ -68,7 +68,7 @@ private:
   std::optional<clang::ast_matchers::StatementMatcher>
       StringCStrCallExprMatcher;
 
-  const StringLiteral *FormatExpr;
+  const StringRef *FormatExpr;
   std::string StandardFormatString;
 
   /// Casts to be used to wrap arguments to retain printf compatibility.
@@ -113,7 +113,7 @@ private:
   void finalizeFormatText();
   static std::optional<StringRef>
   formatStringContainsUnreplaceableMacro(const CallExpr *CallExpr,
-                                         const StringLiteral *FormatExpr,
+                                         const StringRef *FormatExpr,
                                          SourceManager &SM, Preprocessor &PP);
   bool conversionNotPossible(std::string Reason) {
     ConversionNotPossibleReason = std::move(Reason);

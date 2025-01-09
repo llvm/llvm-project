@@ -162,7 +162,7 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
     return true;
 
   // Match one of the named types.
-  static constexpr StringLiteral NamedTypes[] = {
+  static constexpr StringRef NamedTypes[] = {
       "isVoid", "Metadata", "f16",  "f32",     "f64",
       "f80",    "f128",     "bf16", "ppcf128", "x86amx"};
   return is_contained(NamedTypes, Suffix);

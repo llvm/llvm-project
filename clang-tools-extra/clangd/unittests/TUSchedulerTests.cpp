@@ -591,11 +591,11 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   trace::TestTracer Tracer;
   TUScheduler S(CDB, Opts);
 
-  llvm::StringLiteral SourceContents = R"cpp(
+  llvm::StringRef SourceContents = R"cpp(
     int* a;
     double* b = a;
   )cpp";
-  llvm::StringLiteral OtherSourceContents = R"cpp(
+  llvm::StringRef OtherSourceContents = R"cpp(
     int* a;
     double* b = a + 0;
   )cpp";
@@ -1146,8 +1146,8 @@ TEST_F(TUSchedulerTests, AsyncPreambleThread) {
     Notification &N;
   };
 
-  static constexpr llvm::StringLiteral InputsV0 = "v0";
-  static constexpr llvm::StringLiteral InputsV1 = "v1";
+  static constexpr llvm::StringRef InputsV0 = "v0";
+  static constexpr llvm::StringRef InputsV1 = "v1";
   Notification Ready;
   TUScheduler S(CDB, optsForTest(),
                 std::make_unique<BlockPreambleThread>(InputsV1, Ready));

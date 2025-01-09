@@ -356,7 +356,7 @@ void CtorInitializer() {
     // CHECK-NEXT: |-ParmVarDecl
     // CHECK-NEXT: |-CXXCtorInitializer 'S'
     // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S'
-    // CHECK-NEXT: |   `-StringLiteral
+    // CHECK-NEXT: |   `-StringRef
 
     BaseInit(double) : S(invalid) {}
     // CHECK:      CXXConstructorDecl {{.*}} BaseInit 'void (double)'
@@ -371,7 +371,7 @@ void CtorInitializer() {
     // CHECK-NEXT: |-ParmVarDecl
     // CHECK-NEXT: |-CXXCtorInitializer 'DelegatingInit'
     // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'DelegatingInit'
-    // CHECK-NEXT: |   `-StringLiteral
+    // CHECK-NEXT: |   `-StringRef
 
     DelegatingInit(double) : DelegatingInit(invalid) {}
     // CHECK:      CXXConstructorDecl {{.*}} DelegatingInit 'void (double)'

@@ -700,23 +700,23 @@ void Test() {
 namespace GH60518 {
 // Lambdas should not try to capture
 // function parameters that are used in enable_if
-struct StringLiteral {
+struct StringRef {
 template <int N>
-StringLiteral(const char (&array)[N]) // cxx03-note {{declared here}}
+StringRef(const char (&array)[N]) // cxx03-note {{declared here}}
     __attribute__((enable_if(__builtin_strlen(array) == 2, // cxx03-error {{'enable_if' attribute expression never produces a constant expression}} cxx03-note {{read of variable}}
                               "invalid string literal")));
 };
 
 namespace cpp_attribute {
-struct StringLiteral {
+struct StringRef {
 template <int N>
-StringLiteral(const char (&array)[N]) [[clang::annotate_type("test", array)]];
+StringRef(const char (&array)[N]) [[clang::annotate_type("test", array)]];
 };
 }
 
 void Func1() {
-  [[maybe_unused]] auto y = [&](decltype(StringLiteral("xx"))) {}; // cxx03-note {{in instantiation of function template specialization}}
-  [[maybe_unused]] auto z = [&](decltype(cpp_attribute::StringLiteral("xx"))) {};
+  [[maybe_unused]] auto y = [&](decltype(StringRef("xx"))) {}; // cxx03-note {{in instantiation of function template specialization}}
+  [[maybe_unused]] auto z = [&](decltype(cpp_attribute::StringRef("xx"))) {};
 }
 
 }

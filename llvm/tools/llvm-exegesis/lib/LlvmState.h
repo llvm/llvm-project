@@ -26,7 +26,7 @@
 #include <memory>
 #include <string>
 
-static constexpr llvm::StringLiteral kNoRegister("%noreg");
+static constexpr llvm::StringRef kNoRegister("%noreg");
 
 namespace llvm {
 namespace exegesis {

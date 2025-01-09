@@ -357,7 +357,7 @@ public:
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.
-    llvm::StringLiteral Kind;
+    llvm::StringRef Kind;
   };
 
   // Ref to the clangd::Diag.

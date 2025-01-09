@@ -1280,9 +1280,7 @@ TEST(ClangdServer, RespectsTweakFormatting) {
         return E;
       }
       std::string title() const override { return id(); }
-      llvm::StringLiteral kind() const override {
-        return llvm::StringLiteral("");
-      };
+      llvm::StringRef kind() const override { return llvm::StringRef(""); };
     };
 
     void contributeTweaks(std::vector<std::unique_ptr<Tweak>> &Out) override {

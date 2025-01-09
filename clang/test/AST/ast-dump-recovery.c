@@ -103,7 +103,7 @@ void test3() {
 void test4() {
   enum GH62446 {
     // CHECK:      RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
-    // CHECK-NEXT: |-StringLiteral {{.*}} "a"
+    // CHECK-NEXT: |-StringRef {{.*}} "a"
     // CHECK-NEXT: `-IntegerLiteral {{.*}} 2
     invalid_enum_value = "a" * 2,
     b,

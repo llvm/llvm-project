@@ -56,7 +56,7 @@ private:
 
 #if LLVM_ENABLE_LIBXML2
 
-static constexpr std::pair<StringLiteral, StringLiteral> MtNsHrefsPrefixes[] = {
+static constexpr std::pair<StringRef, StringRef> MtNsHrefsPrefixes[] = {
     {"urn:schemas-microsoft-com:asm.v1", "ms_asmv1"},
     {"urn:schemas-microsoft-com:asm.v2", "ms_asmv2"},
     {"urn:schemas-microsoft-com:asm.v3", "ms_asmv3"},

@@ -19,7 +19,7 @@ namespace llvm {
 namespace PPC {
 
 struct CPUInfo {
-  StringLiteral Name;
+  StringRef Name;
   // FIXME: add the features field for this CPU.
 };
 

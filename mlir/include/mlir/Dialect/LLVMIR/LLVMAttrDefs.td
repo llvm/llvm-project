@@ -1190,8 +1190,8 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     static TargetFeaturesAttr featuresAt(Operation* op);
 
     /// Canonical name for this attribute within MLIR.
-    static constexpr StringLiteral getAttributeName() {
-      return StringLiteral("target_features");
+    static constexpr StringRef getAttributeName() {
+      return StringRef("target_features");
     }
   }];
 

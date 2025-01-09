@@ -203,10 +203,10 @@ static StringRef extractRegisterName(const Expr *Expression,
 // clobbers list. If there's a conflict, returns the location of the
 // conflicted clobber, else returns nullptr
 static SourceLocation
-getClobberConflictLocation(MultiExprArg Exprs, StringLiteral **Constraints,
-                           StringLiteral **Clobbers, int NumClobbers,
-                           unsigned NumLabels,
-                           const TargetInfo &Target, ASTContext &Cont) {
+getClobberConflictLocation(MultiExprArg Exprs, StringRef **Constraints,
+                           StringRef **Clobbers, int NumClobbers,
+                           unsigned NumLabels, const TargetInfo &Target,
+                           ASTContext &Cont) {
   llvm::StringSet<> InOutVars;
   // Collect all the input and output registers from the extended asm
   // statement in order to check for conflicts with the clobber list
@@ -241,10 +241,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  unsigned NumLabels,
                                  SourceLocation RParenLoc) {
   unsigned NumClobbers = clobbers.size();
-  StringLiteral **Constraints =
-    reinterpret_cast<StringLiteral**>(constraints.data());
-  StringLiteral *AsmString = cast<StringLiteral>(asmString);
-  StringLiteral **Clobbers = reinterpret_cast<StringLiteral**>(clobbers.data());
+  StringRef **Constraints = reinterpret_cast<StringRef **>(constraints.data());
+  StringRef *AsmString = cast<StringRef>(asmString);
+  StringRef **Clobbers = reinterpret_cast<StringRef **>(clobbers.data());
 
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
 
@@ -256,7 +255,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   Context.getFunctionFeatureMap(FeatureMap, FD);
 
   for (unsigned i = 0; i != NumOutputs; i++) {
-    StringLiteral *Literal = Constraints[i];
+    StringRef *Literal = Constraints[i];
     assert(Literal->isOrdinary());
 
     StringRef OutputName;
@@ -348,7 +347,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
 
   for (unsigned i = NumOutputs, e = NumOutputs + NumInputs; i != e; i++) {
-    StringLiteral *Literal = Constraints[i];
+    StringRef *Literal = Constraints[i];
     assert(Literal->isOrdinary());
 
     StringRef InputName;
@@ -459,7 +458,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
-    StringLiteral *Literal = Clobbers[i];
+    StringRef *Literal = Clobbers[i];
     assert(Literal->isOrdinary());
 
     StringRef Clobber = Literal->getString();
@@ -529,7 +528,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     }
 
     // Now that we have the right indexes go ahead and check.
-    StringLiteral *Literal = Constraints[ConstraintIdx];
+    StringRef *Literal = Constraints[ConstraintIdx];
     const Type *Ty = Exprs[ConstraintIdx]->getType().getTypePtr();
     if (Ty->isDependentType() || Ty->isIncompleteType())
       continue;

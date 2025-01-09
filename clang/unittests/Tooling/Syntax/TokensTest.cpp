@@ -575,7 +575,7 @@ TEST_F(TokenCollectorTest, LateBoundTokens) {
 }
 
 TEST_F(TokenCollectorTest, DelayedParsing) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     struct Foo {
       int method() {
         // Parser will visit method bodies and initializers multiple times, but
@@ -608,7 +608,7 @@ TEST_F(TokenCollectorTest, MultiFile) {
     int b = ADD(1, 2);
     #define MULT(X, Y) X*Y
   )cpp");
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     #include "foo.h"
     int c = ADD(1, MULT(2,3));
   )cpp";

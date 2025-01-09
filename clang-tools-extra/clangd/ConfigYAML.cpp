@@ -314,7 +314,7 @@ private:
     // Parse is called when Key is encountered, and passed the associated value.
     // It should emit diagnostics if the value is invalid (e.g. wrong type).
     // If Key is seen twice, Parse runs only once and an error is reported.
-    void handle(llvm::StringLiteral Key, std::function<void(Node &)> Parse) {
+    void handle(llvm::StringRef Key, std::function<void(Node &)> Parse) {
       for (const auto &Entry : Keys) {
         (void)Entry;
         assert(Entry.first != Key && "duplicate key handler");

@@ -694,8 +694,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    llvm::StringRef path) {
   Status error;
 
-  static constexpr llvm::StringLiteral g_dylibext(".dylib");
-  static constexpr llvm::StringLiteral g_solibext(".so");
+  static constexpr llvm::StringRef g_dylibext(".dylib");
+  static constexpr llvm::StringRef g_solibext(".so");
 
   if (!baton)
     return FileSystem::eEnumerateDirectoryResultQuit;
@@ -867,7 +867,7 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
 }
 
 llvm::StringRef Debugger::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.debugger");
+  static constexpr llvm::StringRef class_name("lldb.debugger");
   return class_name;
 }
 

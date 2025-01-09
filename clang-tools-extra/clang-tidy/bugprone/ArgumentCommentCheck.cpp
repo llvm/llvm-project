@@ -254,7 +254,7 @@ bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
          (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
          (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
          (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
-         (CommentStringLiterals && isa<StringLiteral>(Arg)) ||
+         (CommentStringLiterals && isa<StringRef>(Arg)) ||
          (CommentNullPtrs && isa<CXXNullPtrLiteralExpr>(Arg));
 }
 

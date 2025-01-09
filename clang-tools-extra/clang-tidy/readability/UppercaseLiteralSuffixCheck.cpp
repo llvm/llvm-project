@@ -23,37 +23,34 @@ namespace {
 
 struct IntegerLiteralCheck {
   using type = clang::IntegerLiteral;
-  static constexpr llvm::StringLiteral Name = llvm::StringLiteral("integer");
+  static constexpr llvm::StringRef Name = llvm::StringRef("integer");
   // What should be skipped before looking for the Suffixes? (Nothing here.)
-  static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("");
+  static constexpr llvm::StringRef SkipFirst = llvm::StringRef("");
   // Suffix can only consist of 'u' and 'l' chars, and can be a complex number
   // ('i', 'j'). In MS compatibility mode, suffixes like i32 are supported.
-  static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLiIjJ");
+  static constexpr llvm::StringRef Suffixes = llvm::StringRef("uUlLiIjJ");
 };
-constexpr llvm::StringLiteral IntegerLiteralCheck::Name;
-constexpr llvm::StringLiteral IntegerLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral IntegerLiteralCheck::Suffixes;
+constexpr llvm::StringRef IntegerLiteralCheck::Name;
+constexpr llvm::StringRef IntegerLiteralCheck::SkipFirst;
+constexpr llvm::StringRef IntegerLiteralCheck::Suffixes;
 
 struct FloatingLiteralCheck {
   using type = clang::FloatingLiteral;
-  static constexpr llvm::StringLiteral Name =
-      llvm::StringLiteral("floating point");
+  static constexpr llvm::StringRef Name = llvm::StringRef("floating point");
   // C++17 introduced hexadecimal floating-point literals, and 'f' is both a
   // valid hexadecimal digit in a hex float literal and a valid floating-point
   // literal suffix.
   // So we can't just "skip to the chars that can be in the suffix".
   // Since the exponent ('p'/'P') is mandatory for hexadecimal floating-point
   // literals, we first skip everything before the exponent.
-  static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("pP");
+  static constexpr llvm::StringRef SkipFirst = llvm::StringRef("pP");
   // Suffix can only consist of 'f', 'l', "f16", 'h', 'q' chars,
   // and can be a complex number ('i', 'j').
-  static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("fFlLhHqQiIjJ");
+  static constexpr llvm::StringRef Suffixes = llvm::StringRef("fFlLhHqQiIjJ");
 };
-constexpr llvm::StringLiteral FloatingLiteralCheck::Name;
-constexpr llvm::StringLiteral FloatingLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral FloatingLiteralCheck::Suffixes;
+constexpr llvm::StringRef FloatingLiteralCheck::Name;
+constexpr llvm::StringRef FloatingLiteralCheck::SkipFirst;
+constexpr llvm::StringRef FloatingLiteralCheck::Suffixes;
 
 struct NewSuffix {
   SourceRange LiteralLocation;

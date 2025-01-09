@@ -374,7 +374,7 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
 }
 
 llvm::StringRef Broadcaster::GetBroadcasterClass() const {
-  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
+  static constexpr llvm::StringRef class_name("lldb.anonymous");
   return class_name;
 }
 

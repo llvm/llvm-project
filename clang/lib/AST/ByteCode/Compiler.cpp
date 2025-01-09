@@ -2311,7 +2311,7 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+bool Compiler<Emitter>::VisitStringLiteral(const StringRef *E) {
   if (DiscardResult)
     return true;
 
@@ -2379,9 +2379,9 @@ bool Compiler<Emitter>::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
   auto &A = Ctx.getASTContext();
   std::string Str;
   A.getObjCEncodingForType(E->getEncodedType(), Str);
-  StringLiteral *SL =
-      StringLiteral::Create(A, Str, StringLiteralKind::Ordinary,
-                            /*Pascal=*/false, E->getType(), E->getAtLoc());
+  StringRef *SL =
+      StringRef::Create(A, Str, StringLiteralKind::Ordinary,
+                        /*Pascal=*/false, E->getType(), E->getAtLoc());
   return this->delegate(SL);
 }
 
@@ -2401,9 +2401,9 @@ bool Compiler<Emitter>::VisitSYCLUniqueStableNameExpr(
   QualType ArrayTy = A.getConstantArrayType(CharTy, Size, nullptr,
                                             ArraySizeModifier::Normal, 0);
 
-  StringLiteral *SL =
-      StringLiteral::Create(A, ResultStr, StringLiteralKind::Ordinary,
-                            /*Pascal=*/false, ArrayTy, E->getLocation());
+  StringRef *SL =
+      StringRef::Create(A, ResultStr, StringLiteralKind::Ordinary,
+                        /*Pascal=*/false, ArrayTy, E->getLocation());
 
   unsigned StringIndex = P.createGlobalString(SL);
   return this->emitGetPtrGlobal(StringIndex, E);

@@ -264,7 +264,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
             << Ctor->getParent()
             << Ctor->getInheritedConstructor().getConstructor()->getParent();
       else {
-        StringLiteral *Msg = FD->getDeletedMessage();
+        StringRef *Msg = FD->getDeletedMessage();
         Diag(Loc, diag::err_deleted_function_use)
             << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
       }
@@ -1981,9 +1981,9 @@ ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
   for (const Token &Tok : StringToks)
     StringTokLocs.push_back(Tok.getLocation());
 
-  StringLiteral *Lit = StringLiteral::Create(
-      Context, Literal.GetString(), StringLiteralKind::Unevaluated, false, {},
-      &StringTokLocs[0], StringTokLocs.size());
+  StringRef *Lit = StringRef::Create(Context, Literal.GetString(),
+                                     StringLiteralKind::Unevaluated, false, {},
+                                     &StringTokLocs[0], StringTokLocs.size());
 
   if (!Literal.getUDSuffix().empty()) {
     SourceLocation UDSuffixLoc =
@@ -2117,10 +2117,9 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
       Context.getStringLiteralArrayType(CharTy, Literal.GetNumStringChars());
 
   // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
-  StringLiteral *Lit = StringLiteral::Create(Context, Literal.GetString(),
-                                             Kind, Literal.Pascal, StrTy,
-                                             &StringTokLocs[0],
-                                             StringTokLocs.size());
+  StringRef *Lit =
+      StringRef::Create(Context, Literal.GetString(), Kind, Literal.Pascal,
+                        StrTy, &StringTokLocs[0], StringTokLocs.size());
   if (Literal.getUDSuffix().empty())
     return Lit;
 
@@ -3492,7 +3491,7 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   }
 
   QualType ResTy;
-  StringLiteral *SL = nullptr;
+  StringRef *SL = nullptr;
   if (cast<DeclContext>(currentDecl)->isDependentContext())
     ResTy = Context.DependentTy;
   else {
@@ -3515,15 +3514,15 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
                                            /*IndexTypeQuals*/ 0);
-      SL = StringLiteral::Create(Context, RawChars, StringLiteralKind::Wide,
-                                 /*Pascal*/ false, ResTy, Loc);
+      SL = StringRef::Create(Context, RawChars, StringLiteralKind::Wide,
+                             /*Pascal*/ false, ResTy, Loc);
     } else {
       ResTy = Context.adjustStringLiteralBaseType(Context.CharTy.withConst());
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
                                            /*IndexTypeQuals*/ 0);
-      SL = StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
-                                 /*Pascal*/ false, ResTy, Loc);
+      SL = StringRef::Create(Context, Str, StringLiteralKind::Ordinary,
+                             /*Pascal*/ false, ResTy, Loc);
     }
   }
 
@@ -3763,9 +3762,9 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           Context.adjustStringLiteralBaseType(Context.CharTy.withConst()),
           llvm::APInt(32, Length + 1), nullptr, ArraySizeModifier::Normal, 0);
       Expr *Lit =
-          StringLiteral::Create(Context, StringRef(TokSpelling.data(), Length),
-                                StringLiteralKind::Ordinary,
-                                /*Pascal*/ false, StrTy, &TokLoc, 1);
+          StringRef::Create(Context, StringRef(TokSpelling.data(), Length),
+                            StringLiteralKind::Ordinary,
+                            /*Pascal*/ false, StrTy, &TokLoc, 1);
       return BuildLiteralOperatorCall(R, OpNameInfo, Lit, TokLoc);
     }
 
@@ -10847,10 +10846,10 @@ static bool checkArithmeticBinOpPointerOperands(Sema &S, SourceLocation Loc,
 /// literal.
 static void diagnoseStringPlusInt(Sema &Self, SourceLocation OpLoc,
                                   Expr *LHSExpr, Expr *RHSExpr) {
-  StringLiteral* StrExpr = dyn_cast<StringLiteral>(LHSExpr->IgnoreImpCasts());
+  StringRef *StrExpr = dyn_cast<StringRef>(LHSExpr->IgnoreImpCasts());
   Expr* IndexExpr = RHSExpr;
   if (!StrExpr) {
-    StrExpr = dyn_cast<StringLiteral>(RHSExpr->IgnoreImpCasts());
+    StrExpr = dyn_cast<StringRef>(RHSExpr->IgnoreImpCasts());
     IndexExpr = LHSExpr;
   }
 
@@ -11952,15 +11951,15 @@ static void diagnoseTautologicalComparison(Sema &S, SourceLocation Loc,
   // operand is null); the user probably wants string comparison function.
   Expr *LiteralString = nullptr;
   Expr *LiteralStringStripped = nullptr;
-  if ((isa<StringLiteral>(LHSStripped) || isa<ObjCEncodeExpr>(LHSStripped)) &&
+  if ((isa<StringRef>(LHSStripped) || isa<ObjCEncodeExpr>(LHSStripped)) &&
       !RHSStripped->isNullPointerConstant(S.Context,
                                           Expr::NPC_ValueDependentIsNull)) {
     LiteralString = LHS;
     LiteralStringStripped = LHSStripped;
-  } else if ((isa<StringLiteral>(RHSStripped) ||
+  } else if ((isa<StringRef>(RHSStripped) ||
               isa<ObjCEncodeExpr>(RHSStripped)) &&
-             !LHSStripped->isNullPointerConstant(S.Context,
-                                          Expr::NPC_ValueDependentIsNull)) {
+             !LHSStripped->isNullPointerConstant(
+                 S.Context, Expr::NPC_ValueDependentIsNull)) {
     LiteralString = RHS;
     LiteralStringStripped = RHSStripped;
   }
@@ -15116,14 +15115,14 @@ static void DiagnoseLogicalAndInLogicalOrLHS(Sema &S, SourceLocation OpLoc,
     if (Bop->getOpcode() == BO_LAnd) {
       // If it's "string_literal && a || b" don't warn since the precedence
       // doesn't matter.
-      if (!isa<StringLiteral>(Bop->getLHS()->IgnoreParenImpCasts()))
+      if (!isa<StringRef>(Bop->getLHS()->IgnoreParenImpCasts()))
         return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, Bop);
     } else if (Bop->getOpcode() == BO_LOr) {
       if (BinaryOperator *RBop = dyn_cast<BinaryOperator>(Bop->getRHS())) {
         // If it's "a || b && string_literal || c" we didn't warn earlier for
         // "a || b && string_literal", but warn now.
         if (RBop->getOpcode() == BO_LAnd &&
-            isa<StringLiteral>(RBop->getRHS()->IgnoreParenImpCasts()))
+            isa<StringRef>(RBop->getRHS()->IgnoreParenImpCasts()))
           return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, RBop);
       }
     }
@@ -15137,7 +15136,7 @@ static void DiagnoseLogicalAndInLogicalOrRHS(Sema &S, SourceLocation OpLoc,
     if (Bop->getOpcode() == BO_LAnd) {
       // If it's "a || b && string_literal" don't warn since the precedence
       // doesn't matter.
-      if (!isa<StringLiteral>(Bop->getRHS()->IgnoreParenImpCasts()))
+      if (!isa<StringRef>(Bop->getRHS()->IgnoreParenImpCasts()))
         return EmitDiagnosticForLogicalAndInLogicalOr(S, OpLoc, Bop);
     }
   }
@@ -16789,7 +16788,7 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
 }
 
 ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                                StringLiteral *BinaryData) {
+                                StringRef *BinaryData) {
   EmbedDataStorage *Data = new (Context) EmbedDataStorage;
   Data->BinaryData = BinaryData;
   return new (Context)

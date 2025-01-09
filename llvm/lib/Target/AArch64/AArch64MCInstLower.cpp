@@ -65,7 +65,7 @@ MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
 
     StringRef Name = Printer.getSymbol(GV)->getName();
     // Don't mangle ARM64EC runtime functions.
-    static constexpr StringLiteral ExcludedFns[] = {
+    static constexpr StringRef ExcludedFns[] = {
         "__os_arm64x_check_icall_cfg", "__os_arm64x_dispatch_call_no_redirect",
         "__os_arm64x_check_icall"};
     if (is_contained(ExcludedFns, Name))

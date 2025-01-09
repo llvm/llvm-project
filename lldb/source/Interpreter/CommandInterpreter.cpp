@@ -123,7 +123,7 @@ enum {
 };
 
 llvm::StringRef CommandInterpreter::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.commandInterpreter");
+  static constexpr llvm::StringRef class_name("lldb.commandInterpreter");
   return class_name;
 }
 

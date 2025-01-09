@@ -19,7 +19,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
-AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
+AST_MATCHER(StringRef, isOrdinary) { return Node.isOrdinary(); }
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)

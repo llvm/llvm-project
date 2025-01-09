@@ -1647,7 +1647,7 @@ private:
                                      const ParsedTemplateInfo &TemplateInfo,
                                      const VirtSpecifiers &VS,
                                      SourceLocation PureSpecLoc);
-  StringLiteral *ParseCXXDeletedFunctionMessage();
+  StringRef *ParseCXXDeletedFunctionMessage();
   void SkipDeletedFunctionBody();
   void ParseCXXNonStaticMemberInitializer(Decl *VarD);
   void ParseLexedAttributes(ParsingClass &Class);

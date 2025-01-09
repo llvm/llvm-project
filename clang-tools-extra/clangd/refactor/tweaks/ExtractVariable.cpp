@@ -578,9 +578,7 @@ public:
   std::string title() const override {
     return "Extract subexpression to variable";
   }
-  llvm::StringLiteral kind() const override {
-    return CodeAction::REFACTOR_KIND;
-  }
+  llvm::StringRef kind() const override { return CodeAction::REFACTOR_KIND; }
 
 private:
   // the expression to extract

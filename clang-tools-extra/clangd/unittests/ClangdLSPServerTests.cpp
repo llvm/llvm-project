@@ -189,7 +189,7 @@ TEST_F(LSPTest, DiagnosticsHeaderSaved) {
 TEST_F(LSPTest, RecordsLatencies) {
   trace::TestTracer Tracer;
   auto &Client = start();
-  llvm::StringLiteral MethodName = "method_name";
+  llvm::StringRef MethodName = "method_name";
   EXPECT_THAT(Tracer.takeMetric("lsp_latency", MethodName), testing::SizeIs(0));
   llvm::consumeError(Client.call(MethodName, {}).take().takeError());
   stop();
@@ -471,7 +471,7 @@ TEST_F(LSPTest, FeatureModulesThreadingTest) {
 }
 
 TEST_F(LSPTest, DiagModuleTest) {
-  static constexpr llvm::StringLiteral DiagMsg = "DiagMsg";
+  static constexpr llvm::StringRef DiagMsg = "DiagMsg";
   class DiagModule final : public FeatureModule {
     struct DiagHooks : public ASTListener {
       void sawDiagnostic(const clang::Diagnostic &, clangd::Diag &D) override {

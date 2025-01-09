@@ -36,8 +36,8 @@ enum class OperandSide { Left, Right };
 using BugReportPtr = std::unique_ptr<PathSensitiveBugReport>;
 
 struct NoteTagTemplate {
-  llvm::StringLiteral SignInfo;
-  llvm::StringLiteral UpperBoundIntro;
+  llvm::StringRef SignInfo;
+  llvm::StringRef UpperBoundIntro;
 };
 
 constexpr NoteTagTemplate NoteTagTemplates[] = {

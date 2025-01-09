@@ -1683,9 +1683,9 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
   else if (unPackOp)
     linalgOp = unPackOp.getSource().getDefiningOp<LinalgOp>();
   if (linalgOp != linalgOpTarget) {
-    auto errorMsg =
-        packOp ? StringLiteral{"not a single use by the LinalgOp target"}
-               : StringLiteral{"not produced by the LinalgOp target"};
+    auto errorMsg = packOp
+                        ? StringRef{"not a single use by the LinalgOp target"}
+                        : StringRef{"not produced by the LinalgOp target"};
     return emitSilenceableError() << errorMsg;
   }
 
@@ -1705,8 +1705,8 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
     ArrayRef<int64_t> perm =
         (permType == OuterOrInnerPerm::Outer) ? getOuterPerm() : getInnerPerm();
     auto errorMsg = (permType == OuterOrInnerPerm::Outer)
-                        ? StringLiteral{"invalid outer_perm"}
-                        : StringLiteral{"invalid inner_perm"};
+                        ? StringRef{"invalid outer_perm"}
+                        : StringRef{"invalid inner_perm"};
     if (!isValidPackingPermutation(packOp, perm, permType) ||
         !isValidPackingPermutation(unPackOp, perm, permType)) {
       Operation *packOrUnpackOp =

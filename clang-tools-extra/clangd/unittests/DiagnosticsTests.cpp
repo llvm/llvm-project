@@ -2101,7 +2101,7 @@ $fix[[  $diag[[#include "unused.h"]]
 }
 
 TEST(DiagnosticsTest, FixItFromHeader) {
-  llvm::StringLiteral Header(R"cpp(
+  llvm::StringRef Header(R"cpp(
     void foo(int *);
     void foo(int *, int);)cpp");
   Annotations Source(R"cpp(

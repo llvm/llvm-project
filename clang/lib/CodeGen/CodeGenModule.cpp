@@ -6271,7 +6271,7 @@ llvm::Function *CodeGenModule::getIntrinsic(unsigned IID,
 
 static llvm::StringMapEntry<llvm::GlobalVariable *> &
 GetConstantCFStringEntry(llvm::StringMap<llvm::GlobalVariable *> &Map,
-                         const StringLiteral *Literal, bool TargetIsLSB,
+                         const StringRef *Literal, bool TargetIsLSB,
                          bool &IsUTF16, unsigned &StringLength) {
   StringRef String = Literal->getString();
   unsigned NumBytes = String.size();
@@ -6304,7 +6304,7 @@ GetConstantCFStringEntry(llvm::StringMap<llvm::GlobalVariable *> &Map,
 }
 
 ConstantAddress
-CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
+CodeGenModule::GetAddrOfConstantCFString(const StringRef *Literal) {
   unsigned StringLength = 0;
   bool isUTF16 = false;
   llvm::StringMapEntry<llvm::GlobalVariable *> &Entry =
@@ -6525,7 +6525,7 @@ QualType CodeGenModule::getObjCFastEnumerationStateType() {
 }
 
 llvm::Constant *
-CodeGenModule::GetConstantArrayFromStringLiteral(const StringLiteral *E) {
+CodeGenModule::GetConstantArrayFromStringLiteral(const StringRef *E) {
   assert(!E->getType()->isPointerType() && "Strings are always arrays");
 
   // Don't emit it as the address of the string, emit the string data itself
@@ -6591,7 +6591,7 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
 /// GetAddrOfConstantStringFromLiteral - Return a pointer to a
 /// constant array for the given string literal.
 ConstantAddress
-CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
+CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringRef *S,
                                                   StringRef Name) {
   CharUnits Alignment =
       getContext().getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);

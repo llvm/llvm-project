@@ -34,7 +34,7 @@ namespace include_cleaner {
 namespace {
 namespace cl = llvm::cl;
 
-llvm::StringRef Overview = llvm::StringLiteral(R"(
+llvm::StringRef Overview = llvm::StringRef(R"(
 clang-include-cleaner analyzes the #include directives in source code.
 
 It suggests removing headers that the code is not using.

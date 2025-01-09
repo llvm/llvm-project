@@ -35,7 +35,7 @@ TEST(InsertionPointTests, Generic) {
   )cpp");
 
   auto StartsWith =
-      [&](llvm::StringLiteral S) -> std::function<bool(const Decl *)> {
+      [&](llvm::StringRef S) -> std::function<bool(const Decl *)> {
     return [S](const Decl *D) {
       if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
         return llvm::StringRef(ND->getNameAsString()).starts_with(S);
@@ -47,7 +47,7 @@ TEST(InsertionPointTests, Generic) {
   auto &NS = cast<NamespaceDecl>(findDecl(AST, "ns"));
 
   // Test single anchors.
-  auto Point = [&](llvm::StringLiteral Prefix, Anchor::Dir Direction) {
+  auto Point = [&](llvm::StringRef Prefix, Anchor::Dir Direction) {
     auto Loc = insertionPoint(NS, {Anchor{StartsWith(Prefix), Direction}});
     return sourceLocToPosition(AST.getSourceManager(), Loc);
   };
@@ -62,7 +62,7 @@ TEST(InsertionPointTests, Generic) {
   EXPECT_EQ(Point("no_match", Anchor::Below), Position{});
 
   // Test anchor chaining.
-  auto Chain = [&](llvm::StringLiteral P1, llvm::StringLiteral P2) {
+  auto Chain = [&](llvm::StringRef P1, llvm::StringRef P2) {
     auto Loc = insertionPoint(NS, {Anchor{StartsWith(P1), Anchor::Above},
                                    Anchor{StartsWith(P2), Anchor::Above}});
     return sourceLocToPosition(AST.getSourceManager(), Loc);

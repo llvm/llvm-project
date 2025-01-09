@@ -78,7 +78,7 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
     if (!N)
       return;
 
-    constexpr llvm::StringLiteral Msg =
+    constexpr llvm::StringRef Msg =
         "Returned pointer value points outside the original object "
         "(potential buffer overflow)";
 

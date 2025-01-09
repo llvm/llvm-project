@@ -93,8 +93,8 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using Adaptor = AOpAdaptor;
-// CHECK:   static constexpr ::llvm::StringLiteral getOperationName() {
-// CHECK:     return ::llvm::StringLiteral("test.a_op");
+// CHECK:   static constexpr ::llvm::StringRef getOperationName() {
+// CHECK:     return ::llvm::StringRef("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
 // CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA() {

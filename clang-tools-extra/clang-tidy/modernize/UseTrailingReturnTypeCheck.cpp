@@ -113,7 +113,7 @@ private:
 };
 } // namespace
 
-constexpr llvm::StringLiteral Message =
+constexpr llvm::StringRef Message =
     "use a trailing return type for this function";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,

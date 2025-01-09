@@ -13,7 +13,7 @@
 namespace clang {
 namespace ast_matchers {
 
-constexpr llvm::StringLiteral GtestMockDecls = R"cc(
+constexpr llvm::StringRef GtestMockDecls = R"cc(
   static int testerr;
 
 #define GTEST_AMBIGUOUS_ELSE_BLOCKER_ \

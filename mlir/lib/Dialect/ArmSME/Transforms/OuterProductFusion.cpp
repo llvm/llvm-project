@@ -32,16 +32,15 @@ using namespace mlir::arm_sme;
 namespace {
 
 // Common match failure reasons.
-static constexpr StringLiteral
-    kMatchFailureNoAccumulator("no accumulator operand");
-static constexpr StringLiteral kMatchFailureExpectedOuterProductDefOp(
+static constexpr StringRef kMatchFailureNoAccumulator("no accumulator operand");
+static constexpr StringRef kMatchFailureExpectedOuterProductDefOp(
     "defining op of accumulator must be 'arm_sme.outerproduct'");
-static constexpr StringLiteral kMatchFailureInconsistentCombiningKind(
+static constexpr StringRef kMatchFailureInconsistentCombiningKind(
     "combining kind (add or sub) of outer products must match");
-static constexpr StringLiteral kMatchFailureInconsistentMasking(
+static constexpr StringRef kMatchFailureInconsistentMasking(
     "unsupported masking, either both outerproducts are masked "
     "or neither");
-static constexpr StringLiteral kMatchFailureOuterProductNotSingleUse(
+static constexpr StringRef kMatchFailureOuterProductNotSingleUse(
     "outer product(s) not single use and cannot be removed, no benefit to "
     "fusing");
 

@@ -1147,7 +1147,7 @@ public:
     return true;
   }
 
-  bool WalkUpFromStringLiteral(StringLiteral *S) {
+  bool WalkUpFromStringLiteral(StringRef *S) {
     Builder.markChildToken(S->getBeginLoc(), syntax::NodeRole::LiteralToken);
     Builder.foldNode(Builder.getExprRange(S),
                      new (allocator()) syntax::StringLiteralExpression, S);

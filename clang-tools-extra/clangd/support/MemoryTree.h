@@ -36,7 +36,7 @@ public:
   /// No copy of the \p Name.
   /// Note that returned pointers are invalidated with subsequent calls to
   /// child/detail.
-  MemoryTree &child(llvm::StringLiteral Name) { return createChild(Name); }
+  MemoryTree &child(llvm::StringRef Name) { return createChild(Name); }
 
   MemoryTree(const MemoryTree &) = delete;
   MemoryTree &operator=(const MemoryTree &) = delete;

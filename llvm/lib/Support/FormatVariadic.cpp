@@ -179,7 +179,7 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
   // When validation fails, return an array of replacement items that
   // will print an error message as the outout of this formatv() (used when
   // validation is enabled in release mode).
-  auto getErrorReplacements = [SavedFmtStr](StringLiteral ErrorMsg) {
+  auto getErrorReplacements = [SavedFmtStr](StringRef ErrorMsg) {
     return SmallVector<ReplacementItem, 2>{
         ReplacementItem("Invalid formatv() call: "), ReplacementItem(ErrorMsg),
         ReplacementItem(" for format string: "), ReplacementItem(SavedFmtStr)};

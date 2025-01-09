@@ -3890,10 +3890,10 @@ SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   return 0;
 }
 
-SmallVector<StringLiteral>
+SmallVector<StringRef>
 SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
                                   const MachineFunction &MF) const {
-  SmallVector<StringLiteral> RegFlags;
+  SmallVector<StringRef> RegFlags;
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   if (FuncInfo->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
     RegFlags.push_back("WWM_REG");

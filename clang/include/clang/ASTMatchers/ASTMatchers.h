@@ -2452,7 +2452,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXBoolLiteralExpr>
 ///   char *s = "abcd";
 ///   wchar_t *ws = L"abcd";
 /// \endcode
-extern const internal::VariadicDynCastAllOfMatcher<Stmt, StringLiteral>
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, StringRef>
     stringLiteral;
 
 /// Matches character literals (also matches wchar_t).
@@ -7156,7 +7156,7 @@ extern const AstTypeMatcher<ConstantArrayType> constantArrayType;
 ///   matches "abcd", L"abcd"
 AST_POLYMORPHIC_MATCHER_P(hasSize,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(ConstantArrayType,
-                                                          StringLiteral),
+                                                          StringRef),
                           unsigned, N) {
   return internal::HasSizeMatcher<NodeType>::hasSize(Node, N);
 }

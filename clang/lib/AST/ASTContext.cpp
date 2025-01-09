@@ -13045,14 +13045,14 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
                               ArraySizeModifier::Normal, /*IndexTypeQuals*/ 0);
 }
 
-StringLiteral *
+StringRef *
 ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
-  StringLiteral *&Result = StringLiteralCache[Key];
+  StringRef *&Result = StringLiteralCache[Key];
   if (!Result)
-    Result = StringLiteral::Create(
-        *this, Key, StringLiteralKind::Ordinary,
-        /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
-        SourceLocation());
+    Result = StringRef::Create(*this, Key, StringLiteralKind::Ordinary,
+                               /*Pascal*/ false,
+                               getStringLiteralArrayType(CharTy, Key.size()),
+                               SourceLocation());
   return Result;
 }
 

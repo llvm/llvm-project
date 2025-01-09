@@ -366,7 +366,7 @@ FunctionDecl 'stringConstruct'
   |         `-ImplicitCastExpr
   |           `-CXXConstructExpr
   |             |-ImplicitCastExpr
-  |             | `-StringLiteral
+  |             | `-StringRef
   |             `-CXXDefaultArgExpr
   |               `-UnaryOperator
   |                 `-IntegerLiteral
@@ -378,7 +378,7 @@ FunctionDecl 'stringConstruct'
       `-MaterializeTemporaryExpr
         `-CXXConstructExpr
           |-ImplicitCastExpr
-          | `-StringLiteral
+          | `-StringRef
           `-CXXDefaultArgExpr
             `-UnaryOperator
               `-IntegerLiteral
@@ -391,11 +391,11 @@ FunctionDecl 'stringConstruct'
 `-CompoundStmt
   |-DeclStmt
   | `-VarDecl 's'
-  |   `-StringLiteral
+  |   `-StringRef
   `-CXXOperatorCallExpr
     |-DeclRefExpr 'operator='
     |-DeclRefExpr 's'
-    `-StringLiteral
+    `-StringRef
 )cpp");
   }
 
@@ -417,7 +417,7 @@ FunctionDecl 'overloadCall'
   |         `-ImplicitCastExpr
   |           `-CXXConstructExpr
   |             |-ImplicitCastExpr
-  |             | `-StringLiteral
+  |             | `-StringRef
   |             `-CXXDefaultArgExpr
   |               `-UnaryOperator
   |                 `-IntegerLiteral
@@ -434,7 +434,7 @@ FunctionDecl 'overloadCall'
 `-CompoundStmt
   |-DeclStmt
   | `-VarDecl 's'
-  |   `-StringLiteral
+  |   `-StringRef
   `-CXXMemberCallExpr
     `-MemberExpr
       `-DeclRefExpr 's'
@@ -486,7 +486,7 @@ StaticAssertDecl
 | `-SubstNonTypeTemplateParmExpr
 |   |-NonTypeTemplateParmDecl 'alignment'
 |   `-IntegerLiteral
-`-StringLiteral
+`-StringRef
 )cpp");
 
     EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
@@ -494,7 +494,7 @@ StaticAssertDecl
               R"cpp(
 StaticAssertDecl
 |-IntegerLiteral
-`-StringLiteral
+`-StringRef
 )cpp");
   }
 

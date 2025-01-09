@@ -54,7 +54,7 @@ def C_IndexAttr : TestAttr<"Index"> {
   let hasCustomAssemblyFormat = 1;
 
 // DECL-LABEL: class IndexAttr : public ::mlir::Attribute
-// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
+// DECL: static constexpr ::llvm::StringRef getMnemonic() {
 // DECL:   return {"index"};
 // DECL: }
 // DECL: static ::mlir::Attribute parse(
@@ -87,7 +87,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
 // DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static ::llvm::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
+// DECL: static constexpr ::llvm::StringRef getMnemonic() {
 // DECL:   return {"cmpnd_a"};
 // DECL: }
 // DECL: static ::mlir::Attribute parse(

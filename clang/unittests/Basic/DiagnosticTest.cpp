@@ -258,7 +258,7 @@ TEST_F(SuppressionMappingTest, UnknownDiagName) {
 }
 
 TEST_F(SuppressionMappingTest, SuppressesGroup) {
-  llvm::StringLiteral SuppressionMappingFile = R"(
+  llvm::StringRef SuppressionMappingFile = R"(
   [unused]
   src:*)";
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";
@@ -273,7 +273,7 @@ TEST_F(SuppressionMappingTest, SuppressesGroup) {
 }
 
 TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
-  llvm::StringLiteral SuppressionMappingFile = R"(
+  llvm::StringRef SuppressionMappingFile = R"(
   [unused]
   src:*
   src:*foo.cpp=emit)";
@@ -290,7 +290,7 @@ TEST_F(SuppressionMappingTest, EmitCategoryIsExcluded) {
 }
 
 TEST_F(SuppressionMappingTest, LongestMatchWins) {
-  llvm::StringLiteral SuppressionMappingFile = R"(
+  llvm::StringRef SuppressionMappingFile = R"(
   [unused]
   src:*clang/*
   src:*clang/lib/Sema/*=emit
@@ -310,7 +310,7 @@ TEST_F(SuppressionMappingTest, LongestMatchWins) {
 }
 
 TEST_F(SuppressionMappingTest, IsIgnored) {
-  llvm::StringLiteral SuppressionMappingFile = R"(
+  llvm::StringRef SuppressionMappingFile = R"(
   [unused]
   src:*clang/*)";
   Diags.getDiagnosticOptions().DiagnosticSuppressionMappingsFile = "foo.txt";

@@ -29,7 +29,7 @@ namespace {
 /// Message:
 ///   CallExpr
 ///   |-DeclRefExpr fcall
-///   `-StringLiteral "foo"
+///   `-StringRef "foo"
 class DumpAST : public Tweak {
 public:
   const char *id() const final;
@@ -46,7 +46,7 @@ public:
     return std::string(
         llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef()));
   }
-  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
+  llvm::StringRef kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 
 private:
@@ -92,7 +92,7 @@ public:
     return Effect::showMessage(llvm::to_string(Inputs.ASTSelection));
   }
   std::string title() const override { return "Show selection tree"; }
-  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
+  llvm::StringRef kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 };
 REGISTER_TWEAK(ShowSelectionTree)
@@ -118,7 +118,7 @@ class DumpSymbol : public Tweak {
     return Effect::showMessage(Out.str());
   }
   std::string title() const override { return "Dump symbol under the cursor"; }
-  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
+  llvm::StringRef kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 };
 REGISTER_TWEAK(DumpSymbol)
@@ -154,7 +154,7 @@ public:
         "Show {0} layout",
         TypeWithKeyword::getTagTypeKindName(Record->getTagKind())));
   }
-  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
+  llvm::StringRef kind() const override { return CodeAction::INFO_KIND; }
   // FIXME: this is interesting to most users. However:
   //  - triggering is too broad (e.g. triggers on comments within a class)
   //  - showMessage has inconsistent UX (e.g. newlines are stripped in VSCode)

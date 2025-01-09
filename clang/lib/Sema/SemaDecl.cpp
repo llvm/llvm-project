@@ -7965,7 +7965,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle GNU asm-label extension (encoded as an attribute).
   if (Expr *E = (Expr*)D.getAsmLabel()) {
     // The parser guarantees this is a string.
-    StringLiteral *SE = cast<StringLiteral>(E);
+    StringRef *SE = cast<StringRef>(E);
     StringRef Label = SE->getString();
     if (S->getFnParent() != nullptr) {
       switch (SC) {
@@ -10245,7 +10245,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle GNU asm-label extension (encoded as an attribute).
   if (Expr *E = (Expr*) D.getAsmLabel()) {
     // The parser guarantees this is a string.
-    StringLiteral *SE = cast<StringLiteral>(E);
+    StringRef *SE = cast<StringRef>(E);
     NewFD->addAttr(AsmLabelAttr::Create(Context, SE->getString(),
                                         /*IsLiteralLabel=*/true,
                                         SE->getStrTokenLoc(0)));
@@ -12944,10 +12944,10 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
 
   // Diagnose auto array declarations in C23, unless it's a supported extension.
   if (getLangOpts().C23 && Type->isArrayType() &&
-      !isa_and_present<StringLiteral, InitListExpr>(Init)) {
-      Diag(Range.getBegin(), diag::err_auto_not_allowed)
-          << (int)Deduced->getContainedAutoType()->getKeyword()
-          << /*in array decl*/ 23 << Range;
+      !isa_and_present<StringRef, InitListExpr>(Init)) {
+    Diag(Range.getBegin(), diag::err_auto_not_allowed)
+        << (int)Deduced->getContainedAutoType()->getKeyword()
+        << /*in array decl*/ 23 << Range;
     return QualType();
   }
 
@@ -14416,7 +14416,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
         const auto *Init = ILE->getInit(I);
         if (!Init)
           break;
-        const auto *SL = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+        const auto *SL = dyn_cast<StringRef>(Init->IgnoreImpCasts());
         if (!SL)
           break;
 
@@ -14430,7 +14430,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             const auto *Init = ILE->getInit(J);
             if (!Init)
               break;
-            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+            const auto *SLJ = dyn_cast<StringRef>(Init->IgnoreImpCasts());
             if (!SLJ || SLJ->getNumConcatenated() > 1) {
               OnlyOneMissingComma = false;
               break;
@@ -14548,7 +14548,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   // Apply section attributes and pragmas to global variables.
   if (GlobalStorage && var->isThisDeclarationADefinition() &&
       !inTemplateInstantiation()) {
-    PragmaStack<StringLiteral *> *Stack = nullptr;
+    PragmaStack<StringRef *> *Stack = nullptr;
     int SectionFlags = ASTContext::PSF_Read;
     bool MSVCEnv =
         Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment();
@@ -20259,7 +20259,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 Decl *Sema::ActOnFileScopeAsmDecl(Expr *expr,
                                   SourceLocation StartLoc,
                                   SourceLocation EndLoc) {
-  StringLiteral *AsmString = cast<StringLiteral>(expr);
+  StringRef *AsmString = cast<StringRef>(expr);
 
   FileScopeAsmDecl *New = FileScopeAsmDecl::Create(Context, CurContext,
                                                    AsmString, StartLoc,

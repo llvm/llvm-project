@@ -651,7 +651,7 @@ public:
   ExprResult ParseObjCStringLiteral(SourceLocation *AtLocs,
                                     ArrayRef<Expr *> Strings);
 
-  ExprResult BuildObjCStringLiteral(SourceLocation AtLoc, StringLiteral *S);
+  ExprResult BuildObjCStringLiteral(SourceLocation AtLoc, StringRef *S);
 
   /// BuildObjCNumericLiteral - builds an ObjCBoxedExpr AST node for the
   /// numeric literal expression. Type of the expression will be "NSNumber *"

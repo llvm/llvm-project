@@ -92,7 +92,7 @@ void NameToDIE::Append(const NameToDIE &other) {
   }
 }
 
-constexpr llvm::StringLiteral kIdentifierNameToDIE("N2DI");
+constexpr llvm::StringRef kIdentifierNameToDIE("N2DI");
 
 bool NameToDIE::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
                        const StringTableReader &strtab) {

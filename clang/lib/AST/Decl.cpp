@@ -3102,11 +3102,11 @@ bool FunctionDecl::isVariadic() const {
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
     ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-    StringLiteral *DeletedMessage) {
+    StringRef *DeletedMessage) {
   static constexpr size_t Alignment =
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
-                alignof(DeclAccessPair), alignof(StringLiteral *)});
-  size_t Size = totalSizeToAlloc<DeclAccessPair, StringLiteral *>(
+                alignof(DeclAccessPair), alignof(StringRef *)});
+  size_t Size = totalSizeToAlloc<DeclAccessPair, StringRef *>(
       Lookups.size(), DeletedMessage != nullptr);
 
   DefaultedOrDeletedFunctionInfo *Info =
@@ -3117,7 +3117,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
   std::uninitialized_copy(Lookups.begin(), Lookups.end(),
                           Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
-    *Info->getTrailingObjects<StringLiteral *>() = DeletedMessage;
+    *Info->getTrailingObjects<StringRef *>() = DeletedMessage;
   return Info;
 }
 
@@ -3130,7 +3130,7 @@ void FunctionDecl::setDefaultedOrDeletedInfo(
   DefaultedOrDeletedInfo = Info;
 }
 
-void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
+void FunctionDecl::setDeletedAsWritten(bool D, StringRef *Message) {
   FunctionDeclBits.IsDeleted = D;
 
   if (Message) {
@@ -3144,14 +3144,14 @@ void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
 }
 
 void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
-    StringLiteral *Message) {
+    StringRef *Message) {
   // We should never get here with the DefaultedOrDeletedInfo populated, but
   // no space allocated for the deleted message, since that would require
   // recreating this, but setDefaultedOrDeletedInfo() disallows overwriting
   // an already existing DefaultedOrDeletedFunctionInfo.
   assert(HasDeletedMessage &&
          "No space to store a delete message in this DefaultedOrDeletedInfo");
-  *getTrailingObjects<StringLiteral *>() = Message;
+  *getTrailingObjects<StringRef *>() = Message;
 }
 
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
@@ -5602,7 +5602,7 @@ SourceRange TypeAliasDecl::getSourceRange() const {
 void FileScopeAsmDecl::anchor() {}
 
 FileScopeAsmDecl *FileScopeAsmDecl::Create(ASTContext &C, DeclContext *DC,
-                                           StringLiteral *Str,
+                                           StringRef *Str,
                                            SourceLocation AsmLoc,
                                            SourceLocation RParenLoc) {
   return new (C, DC) FileScopeAsmDecl(DC, Str, AsmLoc, RParenLoc);

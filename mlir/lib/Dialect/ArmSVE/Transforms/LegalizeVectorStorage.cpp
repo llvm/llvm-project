@@ -25,7 +25,7 @@ using namespace mlir::arm_sve;
 // detect IR this pass failed to completely legalize, and report an error.
 // If everything was successfully legalized, no tagged ops will remain after
 // this pass.
-constexpr StringLiteral kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
+constexpr StringRef kSVELegalizerTag("__arm_sve_legalize_vector_storage__");
 
 /// Definitions:
 ///

@@ -116,8 +116,8 @@ class {0} : public ::mlir::{2} {
   friend class ::mlir::MLIRContext;
 public:
   ~{0}() override;
-  static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("{1}");
+  static constexpr ::llvm::StringRef getDialectNamespace() {
+    return ::llvm::StringRef("{1}");
   }
 )";
 
@@ -203,7 +203,7 @@ static const char *const discardableAttrHelperDecl = R"(
     class {0}AttrHelper {{
       ::mlir::StringAttr name;
     public:
-      static constexpr ::llvm::StringLiteral getNameStr() {{
+      static constexpr ::llvm::StringRef getNameStr() {{
         return "{4}.{1}";
       }
       constexpr ::mlir::StringAttr getName() {{

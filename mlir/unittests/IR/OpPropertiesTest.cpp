@@ -155,8 +155,8 @@ public:
 class TestOpPropertiesDialect : public Dialect {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOpPropertiesDialect)
-  static constexpr StringLiteral getDialectNamespace() {
-    return StringLiteral("test_op_properties");
+  static constexpr StringRef getDialectNamespace() {
+    return StringRef("test_op_properties");
   }
   explicit TestOpPropertiesDialect(MLIRContext *context)
       : Dialect(getDialectNamespace(), context,
@@ -165,7 +165,7 @@ public:
   }
 };
 
-constexpr StringLiteral mlirSrc = R"mlir(
+constexpr StringRef mlirSrc = R"mlir(
     "test_op_properties.op_with_properties"()
       <{a = -42 : i32,
         b = -4.200000e+01 : f32,
@@ -384,7 +384,7 @@ TEST(OpPropertiesTest, getOrAddProperties) {
   op->erase();
 }
 
-constexpr StringLiteral withoutPropertiesAttrsSrc = R"mlir(
+constexpr StringRef withoutPropertiesAttrsSrc = R"mlir(
     "test_op_properties.op_without_properties"()
       {inherent_attr = 42, other_attr = 56} : () -> ()
 )mlir";

@@ -2385,11 +2385,11 @@ public:
   }
 };
 
-class StringLiteral : public Node {
+class StringRef : public Node {
   const Node *Type;
 
 public:
-  StringLiteral(const Node *Type_) : Node(KStringLiteral), Type(Type_) {}
+  StringRef(const Node *Type_) : Node(KStringLiteral), Type(Type_) {}
 
   template<typename Fn> void match(Fn F) const { F(Type); }
 
@@ -4853,7 +4853,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return nullptr;
     // FIXME: We need to include the string contents in the mangling.
     if (consumeIf('E'))
-      return make<StringLiteral>(T);
+      return make<StringRef>(T);
     return nullptr;
   }
   case 'D':

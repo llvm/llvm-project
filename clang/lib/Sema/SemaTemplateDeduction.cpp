@@ -5173,7 +5173,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
   }
 
   // Make sure that we treat 'char[]' equaly as 'char*' in C23 mode.
-  auto *String = dyn_cast<StringLiteral>(Init);
+  auto *String = dyn_cast<StringRef>(Init);
   if (getLangOpts().C23 && String && Type.getType()->isArrayType()) {
     Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
     TypeLoc TL = TypeLoc(Init->getType(), Type.getOpaqueData());

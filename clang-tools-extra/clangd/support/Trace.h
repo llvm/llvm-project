@@ -51,8 +51,8 @@ struct Metric {
     /// time.
     Distribution,
   };
-  constexpr Metric(llvm::StringLiteral Name, MetricType Type,
-                   llvm::StringLiteral LabelName = llvm::StringLiteral(""))
+  constexpr Metric(llvm::StringRef Name, MetricType Type,
+                   llvm::StringRef LabelName = llvm::StringRef(""))
       : Name(Name), Type(Type), LabelName(LabelName) {}
 
   /// Records a measurement for this metric to active tracer.
@@ -60,12 +60,12 @@ struct Metric {
 
   /// Uniquely identifies the metric. Should use snake_case identifiers, can use
   /// dots for hierarchy if needed. e.g. method_latency, foo.bar.
-  const llvm::StringLiteral Name;
+  const llvm::StringRef Name;
   const MetricType Type;
   /// Indicates what measurement labels represent, e.g. "operation_name" for a
   /// metric tracking latencies. If non empty all measurements must also have a
   /// non-empty label.
-  const llvm::StringLiteral LabelName;
+  const llvm::StringRef LabelName;
 };
 
 /// A consumer of trace events and measurements. The events are produced by

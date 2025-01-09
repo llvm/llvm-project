@@ -889,8 +889,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
       return false;
     }
 
-    static constexpr llvm::StringLiteral g_cplusplus_object_name("this");
-    static constexpr llvm::StringLiteral g_objc_object_name("self");
+    static constexpr llvm::StringRef g_cplusplus_object_name("this");
+    static constexpr llvm::StringRef g_objc_object_name("self");
     llvm::StringRef object_name =
         m_in_cplusplus_method ? g_cplusplus_object_name : g_objc_object_name;
 
@@ -920,7 +920,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     }
 
     if (m_in_objectivec_method) {
-      static constexpr llvm::StringLiteral cmd_name("_cmd");
+      static constexpr llvm::StringRef cmd_name("_cmd");
 
       cmd_ptr = GetObjectPointer(frame_sp, cmd_name, object_ptr_error);
 

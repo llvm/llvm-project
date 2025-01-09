@@ -11042,10 +11042,10 @@ StmtResult SemaOpenMP::ActOnOpenMPErrorDirective(ArrayRef<OMPClause *> Clauses,
   if (!AtC || AtC->getAtKind() == OMPC_AT_compilation) {
     if (SeverityC && SeverityC->getSeverityKind() == OMPC_SEVERITY_warning)
       Diag(SeverityC->getSeverityKindKwLoc(), diag::warn_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "WARNING");
+          << (ME ? cast<StringRef>(ME)->getString() : "WARNING");
     else
       Diag(StartLoc, diag::err_diagnose_if_succeeded)
-          << (ME ? cast<StringLiteral>(ME)->getString() : "ERROR");
+          << (ME ? cast<StringRef>(ME)->getString() : "ERROR");
     if (!SeverityC || SeverityC->getSeverityKind() != OMPC_SEVERITY_warning)
       return StmtError();
   }
@@ -16033,7 +16033,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
                                                 SourceLocation LParenLoc,
                                                 SourceLocation EndLoc) {
   assert(ME && "NULL expr in Message clause");
-  if (!isa<StringLiteral>(ME)) {
+  if (!isa<StringRef>(ME)) {
     Diag(ME->getBeginLoc(), diag::warn_clause_expected_string)
         << getOpenMPClauseName(OMPC_message);
     return nullptr;
@@ -16916,7 +16916,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
       continue;
     if (E->isIntegerConstantExpr(getASTContext()))
       continue;
-    if (isa<StringLiteral>(E))
+    if (isa<StringRef>(E))
       continue;
     Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
     return nullptr;

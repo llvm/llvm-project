@@ -76,7 +76,7 @@ public:
 } // namespace
 
 REGISTER_SET_WITH_PROGRAMSTATE(MarkedSymbols, SymbolRef)
-REGISTER_MAP_WITH_PROGRAMSTATE(DenotedSymbols, SymbolRef, const StringLiteral *)
+REGISTER_MAP_WITH_PROGRAMSTATE(DenotedSymbols, SymbolRef, const StringRef *)
 
 bool ExprInspectionChecker::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
@@ -450,7 +450,7 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
     return;
   }
 
-  const auto *E = dyn_cast<StringLiteral>(CE->getArg(1)->IgnoreParenCasts());
+  const auto *E = dyn_cast<StringRef>(CE->getArg(1)->IgnoreParenCasts());
   if (!E) {
     reportBug("Not a string literal", C);
     return;
@@ -470,8 +470,8 @@ public:
   SymbolExpressor(ProgramStateRef State) : State(State) {}
 
   std::optional<std::string> lookup(const SymExpr *S) {
-    if (const StringLiteral *const *SLPtr = State->get<DenotedSymbols>(S)) {
-      const StringLiteral *SL = *SLPtr;
+    if (const StringRef *const *SLPtr = State->get<DenotedSymbols>(S)) {
+      const StringRef *SL = *SLPtr;
       return std::string(SL->getBytes());
     }
     return std::nullopt;

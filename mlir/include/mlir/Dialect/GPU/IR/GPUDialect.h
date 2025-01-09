@@ -48,7 +48,7 @@ public:
   // Used for generic hooks in TypeBase.
   using Base::Base;
 
-  static constexpr StringLiteral name = "gpu.async_token";
+  static constexpr StringRef name = "gpu.async_token";
 };
 
 /// MMAMatrixType storage and uniquing. Array is uniqued based on its shape
@@ -132,7 +132,7 @@ class MMAMatrixType
 public:
   using Base::Base;
 
-  static constexpr StringLiteral name = "gpu.mma_matrix";
+  static constexpr StringRef name = "gpu.mma_matrix";
 
   /// Get MMAMatrixType and verify construction Invariants.
   static MMAMatrixType get(ArrayRef<int64_t> shape, Type elementType,
@@ -182,7 +182,7 @@ public:
                                        TypeStorage>::Base;
   using Base::Base;
 
-  static constexpr StringLiteral name = "gpu.sparse.dntensor_handle";
+  static constexpr StringRef name = "gpu.sparse.dntensor_handle";
 };
 
 class SparseSpMatHandleType
@@ -192,7 +192,7 @@ public:
       typename Type::TypeBase<SparseSpMatHandleType, Type, TypeStorage>::Base;
   using Base::Base;
 
-  static constexpr StringLiteral name = "gpu.sparse.spmat_handle";
+  static constexpr StringRef name = "gpu.sparse.spmat_handle";
 };
 
 class SparseSpGEMMOpHandleType
@@ -202,7 +202,7 @@ public:
                                        TypeStorage>::Base;
   using Base::Base;
 
-  static constexpr StringLiteral name = "gpu.sparse.spgemmop_handle";
+  static constexpr StringRef name = "gpu.sparse.spgemmop_handle";
 };
 
 } // namespace gpu

@@ -218,7 +218,7 @@ namespace TestStaticAssertDecl {
 // CHECK:      NamespaceDecl{{.*}} TestStaticAssertDecl
 // CHECK-NEXT:   StaticAssertDecl{{.*> .*$}}
 // CHECK-NEXT:     CXXBoolLiteralExpr
-// CHECK-NEXT:     StringLiteral
+// CHECK-NEXT:     StringRef
 
 namespace testFunctionTemplateDecl {
   class A { };
@@ -805,7 +805,7 @@ namespace TestFileScopeAsmDecl {
 }
 // CHECK:      NamespaceDecl{{.*}} TestFileScopeAsmDecl{{$}}
 // CHECK:        FileScopeAsmDecl{{.*> .*$}}
-// CHECK-NEXT:     StringLiteral
+// CHECK-NEXT:     StringRef
 
 namespace TestFriendDecl2 {
   void f();

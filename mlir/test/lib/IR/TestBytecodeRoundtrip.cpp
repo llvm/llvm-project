@@ -151,7 +151,7 @@ private:
           // For version less than 2.0, override the encoding of IntegerType.
           if (auto type = llvm::dyn_cast<IntegerType>(entryValue)) {
             llvm::outs() << "Overriding IntegerType encoding...\n";
-            dialectGroupName = StringLiteral("funky");
+            dialectGroupName = StringRef("funky");
             writer.writeVarInt(/* IntegerType */ 999);
             writer.writeVarInt(type.getWidth() << 2 | type.getSignedness());
             return success();
@@ -176,7 +176,7 @@ private:
           // `dialectName` is the name of the group we have the opportunity to
           // override. In this case, override only the dialect group "funky",
           // for which does not exist in memory.
-          if (dialectName != StringLiteral("funky"))
+          if (dialectName != StringRef("funky"))
             return success();
 
           uint64_t encoding;
@@ -217,7 +217,7 @@ private:
             // Specify that this type will need to be written as part of the
             // builtin group. This will override the default dialect group of
             // the attribute (test).
-            dialectGroupName = StringLiteral("builtin");
+            dialectGroupName = StringRef("builtin");
             if (succeeded(iface->writeType(builtinI32Type, writer)))
               return success();
           }
@@ -240,7 +240,7 @@ private:
     parseConfig.getBytecodeReaderConfig().attachTypeCallback(
         [&](DialectBytecodeReader &reader, StringRef dialectName,
             Type &entry) -> LogicalResult {
-          if (dialectName != StringLiteral("builtin"))
+          if (dialectName != StringRef("builtin"))
             return success();
           Type builtinAttr = iface->readType(reader);
           if (auto integerType =
@@ -276,7 +276,7 @@ private:
             // Specify that this attribute will need to be written as part of
             // the builtin group. This will override the default dialect group
             // of the attribute (test).
-            dialectGroupName = StringLiteral("builtin");
+            dialectGroupName = StringRef("builtin");
             auto denseAttr = DenseIntElementsAttr::get(
                 RankedTensorType::get({2}, i32Type),
                 {testParamAttrs.getV0(), testParamAttrs.getV1()});

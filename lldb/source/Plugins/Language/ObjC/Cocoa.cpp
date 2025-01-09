@@ -340,7 +340,7 @@ bool lldb_private::formatters::NSIndexSetSummaryProvider(
 
 static void NSNumber_FormatChar(ValueObject &valobj, Stream &stream, char value,
                                 lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:char");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:char");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -353,7 +353,7 @@ static void NSNumber_FormatChar(ValueObject &valobj, Stream &stream, char value,
 
 static void NSNumber_FormatShort(ValueObject &valobj, Stream &stream,
                                  short value, lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:short");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:short");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -366,7 +366,7 @@ static void NSNumber_FormatShort(ValueObject &valobj, Stream &stream,
 
 static void NSNumber_FormatInt(ValueObject &valobj, Stream &stream, int value,
                                lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:int");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:int");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -379,7 +379,7 @@ static void NSNumber_FormatInt(ValueObject &valobj, Stream &stream, int value,
 
 static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
                                 int64_t value, lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:long");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:long");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -393,7 +393,7 @@ static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
 static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
                                   const llvm::APInt &value,
                                   lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:int128_t");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:int128_t");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -409,7 +409,7 @@ static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
 
 static void NSNumber_FormatFloat(ValueObject &valobj, Stream &stream,
                                  float value, lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:float");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:float");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -422,7 +422,7 @@ static void NSNumber_FormatFloat(ValueObject &valobj, Stream &stream,
 
 static void NSNumber_FormatDouble(ValueObject &valobj, Stream &stream,
                                   double value, lldb::LanguageType lang) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSNumber:double");
+  static constexpr llvm::StringRef g_TypeHint("NSNumber:double");
 
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(lang))
@@ -825,8 +825,8 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   if (!NSStringSummaryProvider(*text, summary, options) || summary.Empty())
     return false;
 
-  static constexpr llvm::StringLiteral quote_char("\"");
-  static constexpr llvm::StringLiteral g_TypeHint("NSString");
+  static constexpr llvm::StringRef quote_char("\"");
+  static constexpr llvm::StringRef g_TypeHint("NSString");
   llvm::StringRef prefix, suffix;
   if (Language *language = Language::FindPlugin(options.GetLanguage()))
     std::tie(prefix, suffix) = language->GetFormatterPrefixSuffix(g_TypeHint);

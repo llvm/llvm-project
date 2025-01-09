@@ -45,7 +45,7 @@ void SourceFile::RecordLineStarts() {
 // Module files all have one; so can source files.
 void SourceFile::IdentifyPayload() {
   llvm::StringRef content{buf_->getBufferStart(), buf_->getBufferSize()};
-  constexpr llvm::StringLiteral UTF8_BOM{"\xef\xbb\xbf"};
+  constexpr llvm::StringRef UTF8_BOM{"\xef\xbb\xbf"};
   if (content.starts_with(UTF8_BOM)) {
     bom_end_ = UTF8_BOM.size();
     encoding_ = Encoding::UTF_8;

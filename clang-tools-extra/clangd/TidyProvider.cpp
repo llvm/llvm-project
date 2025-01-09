@@ -195,7 +195,7 @@ TidyProvider addTidyChecks(llvm::StringRef Checks,
 }
 
 TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
-  constexpr llvm::StringLiteral Separator(",");
+  constexpr llvm::StringRef Separator(",");
   static const std::string BadChecks = llvm::join_items(
       Separator,
       // We want this list to start with a separator to

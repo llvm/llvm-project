@@ -188,7 +188,7 @@ enum {
 class PlatformDarwinKernelProperties : public Properties {
 public:
   static llvm::StringRef GetSettingName() {
-    static constexpr llvm::StringLiteral g_setting_name("darwin-kernel");
+    static constexpr llvm::StringRef g_setting_name("darwin-kernel");
     return g_setting_name;
   }
 
@@ -411,8 +411,8 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
-  static constexpr llvm::StringLiteral g_sdk_suffix = ".sdk";
-  static constexpr llvm::StringLiteral g_kdk_suffix = ".kdk";
+  static constexpr llvm::StringRef g_sdk_suffix = ".sdk";
+  static constexpr llvm::StringRef g_kdk_suffix = ".kdk";
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   const FileSpec file_spec(path);
@@ -473,8 +473,8 @@ FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path,
     bool recurse) {
-  static constexpr llvm::StringLiteral g_kext_suffix = ".kext";
-  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
+  static constexpr llvm::StringRef g_kext_suffix = ".kext";
+  static constexpr llvm::StringRef g_dsym_suffix = ".dSYM";
 
   const FileSpec file_spec(path);
   llvm::StringRef file_spec_extension = file_spec.GetFileNameExtension();
@@ -657,7 +657,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
 //    /dir/dir/mach.development.t7004
 bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
     const FileSpec &kernel_dsym) {
-  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
+  static constexpr llvm::StringRef g_dsym_suffix = ".dSYM";
   std::string possible_path = kernel_dsym.GetPath();
   if (kernel_dsym.GetFileNameExtension() != g_dsym_suffix)
     return false;
@@ -687,7 +687,7 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 std::vector<FileSpec>
 PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle) {
   std::vector<FileSpec> results;
-  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
+  static constexpr llvm::StringRef g_dsym_suffix = ".dSYM";
   if (dsym_bundle.GetFileNameExtension() != g_dsym_suffix) {
     return results;
   }

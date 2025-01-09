@@ -1486,7 +1486,7 @@ namespace clang {
       UseKeyword,
       RequiresKeyword,
       Star,
-      StringLiteral,
+      StringRef,
       IntegerLiteral,
       TextualKeyword,
       LBrace,
@@ -1705,18 +1705,18 @@ retry:
 
     // Parse the string literal.
     LangOptions LangOpts;
-    StringLiteralParser StringLiteral(LToken, SourceMgr, LangOpts, *Target);
-    if (StringLiteral.hadError)
+    StringLiteralParser StringRef(LToken, SourceMgr, LangOpts, *Target);
+    if (StringRef.hadError)
       goto retry;
 
     // Copy the string literal into our string data allocator.
-    unsigned Length = StringLiteral.GetStringLength();
+    unsigned Length = StringRef.GetStringLength();
     char *Saved = StringData.Allocate<char>(Length + 1);
-    memcpy(Saved, StringLiteral.GetString().data(), Length);
+    memcpy(Saved, StringRef.GetString().data(), Length);
     Saved[Length] = 0;
 
     // Form the token.
-    Tok.Kind = MMToken::StringLiteral;
+    Tok.Kind = MMToken::StringRef;
     Tok.StringData = Saved;
     Tok.StringLength = Length;
     break;
@@ -1828,7 +1828,7 @@ void ModuleMapParser::skipUntil(MMToken::TokenKind K) {
 bool ModuleMapParser::parseModuleId(ModuleId &Id) {
   Id.clear();
   do {
-    if (Tok.is(MMToken::Identifier) || Tok.is(MMToken::StringLiteral)) {
+    if (Tok.is(MMToken::Identifier) || Tok.is(MMToken::StringRef)) {
       Id.push_back(
           std::make_pair(std::string(Tok.getString()), Tok.getLocation()));
       consumeToken();
@@ -2290,7 +2290,7 @@ void ModuleMapParser::parseExternModuleDecl() {
   }
 
   // Parse the referenced module map file name.
-  if (!Tok.is(MMToken::StringLiteral)) {
+  if (!Tok.is(MMToken::StringRef)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_mmap_file);
     HadError = true;
     return;
@@ -2445,7 +2445,7 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   }
 
   // Parse the header name.
-  if (!Tok.is(MMToken::StringLiteral)) {
+  if (!Tok.is(MMToken::StringRef)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_header)
       << "header";
     HadError = true;
@@ -2547,7 +2547,7 @@ static bool compareModuleHeaders(const Module::Header &A,
 ///     umbrella string-literal
 void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
   // Parse the directory name.
-  if (!Tok.is(MMToken::StringLiteral)) {
+  if (!Tok.is(MMToken::StringRef)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_header)
       << "umbrella";
     HadError = true;
@@ -2737,7 +2737,7 @@ void ModuleMapParser::parseLinkDecl() {
   }
 
   // Parse the library name
-  if (!Tok.is(MMToken::StringLiteral)) {
+  if (!Tok.is(MMToken::StringRef)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_library_name)
       << IsFramework << SourceRange(LinkLoc);
     HadError = true;
@@ -2845,7 +2845,7 @@ void ModuleMapParser::parseConflict() {
   consumeToken();
 
   // Parse the message.
-  if (!Tok.is(MMToken::StringLiteral)) {
+  if (!Tok.is(MMToken::StringRef)) {
     Diags.Report(Tok.getLocation(), diag::err_mmap_expected_conflicts_message)
       << formatModuleId(Conflict.Id);
     return;
@@ -3120,7 +3120,7 @@ bool ModuleMapParser::parseModuleMapFile() {
     case MMToken::RSquare:
     case MMToken::RequiresKeyword:
     case MMToken::Star:
-    case MMToken::StringLiteral:
+    case MMToken::StringRef:
     case MMToken::IntegerLiteral:
     case MMToken::TextualKeyword:
     case MMToken::UmbrellaKeyword:

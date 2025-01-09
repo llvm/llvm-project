@@ -208,7 +208,7 @@ bool operator==(const Value &L, const Value &R) {
   llvm_unreachable("Unknown value kind");
 }
 
-void Path::report(llvm::StringLiteral Msg) {
+void Path::report(llvm::StringRef Msg) {
   // Walk up to the root context, and count the number of segments.
   unsigned Count = 0;
   const Path *P;

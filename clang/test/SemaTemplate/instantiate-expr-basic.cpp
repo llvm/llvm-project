@@ -7,7 +7,7 @@ struct S {
     10;       // IntegerLiteral
     10.5;     // FloatingLiteral
     'c';      // CharacterLiteral
-    "hello";  // StringLiteral
+    "hello";  // StringRef
     true;     // CXXBooleanLiteralExpr
     nullptr;  // CXXNullPtrLiteralExpr
     __null;   // GNUNullExpr

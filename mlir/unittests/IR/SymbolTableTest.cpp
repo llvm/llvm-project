@@ -61,7 +61,7 @@ protected:
   std::unique_ptr<MLIRContext> context;
 
 private:
-  constexpr static llvm::StringLiteral kInput = R"MLIR(
+  constexpr static llvm::StringRef kInput = R"MLIR(
       module {
         test.conversion_func_op private @foo() {
           "test.conversion_call_op"() { callee=@bar } : () -> ()

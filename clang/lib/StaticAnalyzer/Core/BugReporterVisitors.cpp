@@ -692,7 +692,7 @@ bool NoStoreFuncVisitor::wasModifiedBeforeCallExit(
       CallExitBeginN->getState()->getSVal(RegionOfInterest));
 }
 
-static llvm::StringLiteral WillBeUsedForACondition =
+static llvm::StringRef WillBeUsedForACondition =
     ", which participates in a condition later";
 
 PathDiagnosticPieceRef NoStoreFuncVisitor::maybeEmitNote(
@@ -3208,8 +3208,8 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   return true;
 }
 
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
+constexpr llvm::StringRef ConditionBRVisitor::GenericTrueMessage;
+constexpr llvm::StringRef ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

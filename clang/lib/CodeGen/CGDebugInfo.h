@@ -580,8 +580,7 @@ public:
   /// nice to be able to symbolize the line and column information. This is
   /// especially useful for sanitizers, as it allows symbolization of
   /// heap-buffer-overflows on constant strings.
-  void AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
-                                 const StringLiteral *S);
+  void AddStringLiteralDebugInfo(llvm::GlobalVariable *GV, const StringRef *S);
 
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);

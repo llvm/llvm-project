@@ -351,7 +351,7 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
 MATCHER_P(withFileName, Inc, "") { return arg.FileName == Inc; }
 
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {
-  llvm::StringLiteral ModifiedContents = R"cpp(
+  llvm::StringRef ModifiedContents = R"cpp(
     #include "baz.h"
     #include "foo.h"
     #include "sub/aux.h"

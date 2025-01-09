@@ -2000,23 +2000,22 @@ ProcessGDBRemote::HandleThreadAsyncInterrupt(uint8_t signo,
 
 lldb::ThreadSP
 ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
-  static constexpr llvm::StringLiteral g_key_tid("tid");
-  static constexpr llvm::StringLiteral g_key_name("name");
-  static constexpr llvm::StringLiteral g_key_reason("reason");
-  static constexpr llvm::StringLiteral g_key_metype("metype");
-  static constexpr llvm::StringLiteral g_key_medata("medata");
-  static constexpr llvm::StringLiteral g_key_qaddr("qaddr");
-  static constexpr llvm::StringLiteral g_key_dispatch_queue_t(
-      "dispatch_queue_t");
-  static constexpr llvm::StringLiteral g_key_associated_with_dispatch_queue(
+  static constexpr llvm::StringRef g_key_tid("tid");
+  static constexpr llvm::StringRef g_key_name("name");
+  static constexpr llvm::StringRef g_key_reason("reason");
+  static constexpr llvm::StringRef g_key_metype("metype");
+  static constexpr llvm::StringRef g_key_medata("medata");
+  static constexpr llvm::StringRef g_key_qaddr("qaddr");
+  static constexpr llvm::StringRef g_key_dispatch_queue_t("dispatch_queue_t");
+  static constexpr llvm::StringRef g_key_associated_with_dispatch_queue(
       "associated_with_dispatch_queue");
-  static constexpr llvm::StringLiteral g_key_queue_name("qname");
-  static constexpr llvm::StringLiteral g_key_queue_kind("qkind");
-  static constexpr llvm::StringLiteral g_key_queue_serial_number("qserialnum");
-  static constexpr llvm::StringLiteral g_key_registers("registers");
-  static constexpr llvm::StringLiteral g_key_memory("memory");
-  static constexpr llvm::StringLiteral g_key_description("description");
-  static constexpr llvm::StringLiteral g_key_signal("signal");
+  static constexpr llvm::StringRef g_key_queue_name("qname");
+  static constexpr llvm::StringRef g_key_queue_kind("qkind");
+  static constexpr llvm::StringRef g_key_queue_serial_number("qserialnum");
+  static constexpr llvm::StringRef g_key_registers("registers");
+  static constexpr llvm::StringRef g_key_memory("memory");
+  static constexpr llvm::StringRef g_key_description("description");
+  static constexpr llvm::StringRef g_key_signal("signal");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;

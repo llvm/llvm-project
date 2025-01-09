@@ -1483,7 +1483,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
           (unsigned)(ExtraLDSSize * ExtraLdsDwGranularity * sizeof(uint32_t)));
 
       // Set PsInputEna and PsInputAddr .spi_ps_input_ena and .spi_ps_input_addr
-      static StringLiteral const PsInputFields[] = {
+      static StringRef const PsInputFields[] = {
           ".persp_sample_ena",    ".persp_center_ena",
           ".persp_centroid_ena",  ".persp_pull_model_ena",
           ".linear_sample_ena",   ".linear_center_ena",

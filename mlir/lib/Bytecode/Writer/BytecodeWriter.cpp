@@ -146,7 +146,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Backpatch a byte in the result buffer at the given offset.
-  void patchByte(uint64_t offset, uint8_t value, StringLiteral desc) {
+  void patchByte(uint64_t offset, uint8_t value, StringRef desc) {
     LLVM_DEBUG(llvm::dbgs() << "patchByte(" << offset << ',' << uint64_t(value)
                             << ")\t" << desc << '\n');
     assert(offset < size() && offset >= prevResultSize &&
@@ -156,7 +156,7 @@ public:
 
   /// Emit the provided blob of data, which is owned by the caller and is
   /// guaranteed to not die before the end of the bytecode process.
-  void emitOwnedBlob(ArrayRef<uint8_t> data, StringLiteral desc) {
+  void emitOwnedBlob(ArrayRef<uint8_t> data, StringRef desc) {
     LLVM_DEBUG(llvm::dbgs()
                << "emitOwnedBlob(" << data.size() << "b)\t" << desc << '\n');
     // Push the current buffer before adding the provided data.
@@ -169,7 +169,7 @@ public:
   /// bytecode process. The alignment value is also encoded, making it available
   /// on load.
   void emitOwnedBlobAndAlignment(ArrayRef<uint8_t> data, uint32_t alignment,
-                                 StringLiteral desc) {
+                                 StringRef desc) {
     emitVarInt(alignment, desc);
     emitVarInt(data.size(), desc);
 
@@ -177,7 +177,7 @@ public:
     emitOwnedBlob(data, desc);
   }
   void emitOwnedBlobAndAlignment(ArrayRef<char> data, uint32_t alignment,
-                                 StringLiteral desc) {
+                                 StringRef desc) {
     ArrayRef<uint8_t> castedData(reinterpret_cast<const uint8_t *>(data.data()),
                                  data.size());
     emitOwnedBlobAndAlignment(castedData, alignment, desc);
@@ -205,14 +205,14 @@ public:
 
   /// Emit a single byte.
   template <typename T>
-  void emitByte(T byte, StringLiteral desc) {
+  void emitByte(T byte, StringRef desc) {
     LLVM_DEBUG(llvm::dbgs()
                << "emitByte(" << uint64_t(byte) << ")\t" << desc << '\n');
     currentResult.push_back(static_cast<uint8_t>(byte));
   }
 
   /// Emit a range of bytes.
-  void emitBytes(ArrayRef<uint8_t> bytes, StringLiteral desc) {
+  void emitBytes(ArrayRef<uint8_t> bytes, StringRef desc) {
     LLVM_DEBUG(llvm::dbgs()
                << "emitBytes(" << bytes.size() << "b)\t" << desc << '\n');
     llvm::append_range(currentResult, bytes);
@@ -225,7 +225,7 @@ public:
   /// All remaining bits in the first byte, along with all of the bits in
   /// additional bytes, provide the value of the integer encoded in
   /// little-endian order.
-  void emitVarInt(uint64_t value, StringLiteral desc) {
+  void emitVarInt(uint64_t value, StringRef desc) {
     LLVM_DEBUG(llvm::dbgs() << "emitVarInt(" << value << ")\t" << desc << '\n');
 
     // In the most common case, the value can be represented in a single byte.
@@ -239,13 +239,13 @@ public:
   /// a varint with zigzag encoding, meaning that we use the low bit of the
   /// value to indicate the sign of the value. This allows for more efficient
   /// encoding of negative values by limiting the number of active bits
-  void emitSignedVarInt(uint64_t value, StringLiteral desc) {
+  void emitSignedVarInt(uint64_t value, StringRef desc) {
     emitVarInt((value << 1) ^ (uint64_t)((int64_t)value >> 63), desc);
   }
 
   /// Emit a variable length integer whose low bit is used to encode the
   /// provided flag, i.e. encoded as: (value << 1) | (flag ? 1 : 0).
-  void emitVarIntWithFlag(uint64_t value, bool flag, StringLiteral desc) {
+  void emitVarIntWithFlag(uint64_t value, bool flag, StringRef desc) {
     emitVarInt((value << 1) | (flag ? 1 : 0), desc);
   }
 
@@ -253,13 +253,13 @@ public:
   // String Emission
 
   /// Emit the given string as a nul terminated string.
-  void emitNulTerminatedString(StringRef str, StringLiteral desc) {
+  void emitNulTerminatedString(StringRef str, StringRef desc) {
     emitString(str, desc);
     emitByte(0, "null terminator");
   }
 
   /// Emit the given string without a nul terminator.
-  void emitString(StringRef str, StringLiteral desc) {
+  void emitString(StringRef str, StringRef desc) {
     emitBytes({reinterpret_cast<const uint8_t *>(str.data()), str.size()},
               desc);
   }
@@ -310,7 +310,7 @@ private:
   /// than 1. We mark it noinline here so that the single byte hot path isn't
   /// pessimized.
   LLVM_ATTRIBUTE_NOINLINE void emitMultiByteVarInt(uint64_t value,
-                                                   StringLiteral desc);
+                                                   StringRef desc);
 
   /// Append a new result buffer to the current contents.
   void appendResult(std::vector<uint8_t> &&result) {
@@ -615,7 +615,7 @@ void EncodingEmitter::writeTo(raw_ostream &os) const {
   os.write((const char *)currentResult.data(), currentResult.size());
 }
 
-void EncodingEmitter::emitMultiByteVarInt(uint64_t value, StringLiteral desc) {
+void EncodingEmitter::emitMultiByteVarInt(uint64_t value, StringRef desc) {
   // Compute the number of bytes needed to encode the value. Each byte can hold
   // up to 7-bits of data. We only check up to the number of bits we can encode
   // in the first byte (8).

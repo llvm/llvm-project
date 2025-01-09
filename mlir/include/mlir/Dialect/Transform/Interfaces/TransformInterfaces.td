@@ -245,7 +245,7 @@ def FindPayloadReplacementOpInterface
   let extraSharedClassDeclaration = [{
     /// Name of the attribute attachable to an operation, indicating that
     /// TrackingListener failures should be silenced.
-    constexpr const static ::llvm::StringLiteral
+    constexpr const static ::llvm::StringRef
         kSilenceTrackingFailuresAttrName =
             "transform.silence_tracking_failures";
   }];

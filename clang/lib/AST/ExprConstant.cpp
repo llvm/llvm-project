@@ -2173,8 +2173,8 @@ static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
     return true;
   }
 
-  // Otherwise, we have a StringLiteral.
-  const auto *Lit = dyn_cast<StringLiteral>(BaseExpr);
+  // Otherwise, we have a StringRef.
+  const auto *Lit = dyn_cast<StringRef>(BaseExpr);
   if (const auto *PE = dyn_cast<PredefinedExpr>(BaseExpr))
     Lit = PE->getFunctionName();
 
@@ -2340,7 +2340,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
     StringRef Ident;
     if (Base.is<TypeInfoLValue>())
       InvalidBaseKind = 0;
-    else if (isa_and_nonnull<StringLiteral>(BaseE))
+    else if (isa_and_nonnull<StringRef>(BaseE))
       InvalidBaseKind = 1;
     else if (isa_and_nonnull<MaterializeTemporaryExpr>(BaseE) ||
              isa_and_nonnull<LifetimeExtendedTemporaryDecl>(BaseVD))
@@ -3588,7 +3588,7 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
 static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
                                             uint64_t Index) {
   assert(!isa<SourceLocExpr>(Lit) &&
-         "SourceLocExpr should have already been converted to a StringLiteral");
+         "SourceLocExpr should have already been converted to a StringRef");
 
   // FIXME: Support MakeStringConstant
   if (const auto *ObjCEnc = dyn_cast<ObjCEncodeExpr>(Lit)) {
@@ -3600,7 +3600,7 @@ static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
 
   if (auto PE = dyn_cast<PredefinedExpr>(Lit))
     Lit = PE->getFunctionName();
-  const StringLiteral *S = cast<StringLiteral>(Lit);
+  const StringRef *S = cast<StringRef>(Lit);
   const ConstantArrayType *CAT =
       Info.Ctx.getAsConstantArrayType(S->getType());
   assert(CAT && "string literal isn't an array");
@@ -3617,7 +3617,7 @@ static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
 //
 // FIXME: This is inefficient; we should probably introduce something similar
 // to the LLVM ConstantDataArray to make this cheaper.
-static void expandStringLiteral(EvalInfo &Info, const StringLiteral *S,
+static void expandStringLiteral(EvalInfo &Info, const StringRef *S,
                                 APValue &Result,
                                 QualType AllocType = QualType()) {
   const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(
@@ -4542,7 +4542,7 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
 
       CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal, AK);
-    } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
+    } else if (isa<StringRef>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
       // APValue for the whole string.
       assert(LVal.Designator.Entries.size() <= 1 &&
@@ -8648,7 +8648,7 @@ public:
 //  * FunctionDecl
 // - Literals
 //  * CompoundLiteralExpr in C (and in global scope in C++)
-//  * StringLiteral
+//  * StringRef
 //  * PredefinedExpr
 //  * ObjCStringLiteralExpr
 //  * ObjCEncodeExpr
@@ -8683,7 +8683,7 @@ public:
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
-  bool VisitStringLiteral(const StringLiteral *E) {
+  bool VisitStringLiteral(const StringRef *E) {
     return Success(APValue::LValueBase(
         E, 0, Info.getASTContext().getNextStringLiteralVersion()));
   }
@@ -9417,9 +9417,9 @@ public:
     QualType ArrayTy = Info.Ctx.getConstantArrayType(
         CharTy, Size, nullptr, ArraySizeModifier::Normal, 0);
 
-    StringLiteral *SL =
-        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteralKind::Ordinary,
-                              /*Pascal*/ false, ArrayTy, E->getLocation());
+    StringRef *SL =
+        StringRef::Create(Info.Ctx, ResultStr, StringLiteralKind::Ordinary,
+                          /*Pascal*/ false, ArrayTy, E->getLocation());
 
     evaluateLValue(SL, Result);
     Result.addArray(Info, E, cast<ConstantArrayType>(ArrayTy));
@@ -11492,7 +11492,7 @@ namespace {
     bool VisitCXXConstructExpr(const CXXConstructExpr *E,
                                const LValue &Subobject,
                                APValue *Value, QualType Type);
-    bool VisitStringLiteral(const StringLiteral *E,
+    bool VisitStringLiteral(const StringRef *E,
                             QualType AllocType = QualType()) {
       expandStringLiteral(Info, E, Result, AllocType);
       return true;
@@ -11565,7 +11565,7 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E,
   // C++11 [dcl.init.string]p1: A char array [...] can be initialized by [...]
   // an appropriately-typed string literal enclosed in braces.
   if (E->isStringLiteralInit()) {
-    auto *SL = dyn_cast<StringLiteral>(E->getInit(0)->IgnoreParenImpCasts());
+    auto *SL = dyn_cast<StringRef>(E->getInit(0)->IgnoreParenImpCasts());
     // FIXME: Support ObjCEncodeExpr here once we support it in
     // ArrayExprEvaluator generally.
     if (!SL)
@@ -11650,7 +11650,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     if (ArrayIndex >= NumEltsToInit)
       break;
     if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-      StringLiteral *SL = EmbedS->getDataStringLiteral();
+      StringRef *SL = EmbedS->getDataStringLiteral();
       for (unsigned I = EmbedS->getStartingElementPos(),
                     N = EmbedS->getDataElementCount();
            I != EmbedS->getStartingElementPos() + N; ++I) {
@@ -12305,7 +12305,7 @@ static bool EvaluateBuiltinConstantPForLValue(const APValue &LV) {
     // A null base is acceptable.
     return true;
   } else if (const Expr *E = Base.dyn_cast<const Expr *>()) {
-    if (!isa<StringLiteral>(E))
+    if (!isa<StringRef>(E))
       return false;
     return LV.getLValueOffset().isZero();
   } else if (Base.is<TypeInfoLValue>()) {
@@ -13005,8 +13005,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Visit(E->getArg(0));
 
   case Builtin::BI__builtin_ptrauth_string_discriminator: {
-    const auto *Literal =
-        cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
+    const auto *Literal = cast<StringRef>(E->getArg(0)->IgnoreParenImpCasts());
     uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
     return Success(Result, E);
   }
@@ -15366,7 +15365,7 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
                                   const Expr *Arg,
                                   bool SNaN,
                                   llvm::APFloat &Result) {
-  const StringLiteral *S = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
+  const StringRef *S = dyn_cast<StringRef>(Arg->IgnoreParenCasts());
   if (!S) return false;
 
   const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(ResultTy);
@@ -17735,7 +17734,7 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
   QualType CharTy = E->getType()->getPointeeType();
 
   // Fast path: if it's a string literal, search the string value.
-  if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
+  if (const StringRef *S = dyn_cast_or_null<StringRef>(
           String.getLValueBase().dyn_cast<const Expr *>())) {
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();

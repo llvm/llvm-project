@@ -1474,44 +1474,43 @@ TEST(SignatureHelpTest, Overloads) {
 }
 
 TEST(SignatureHelpTest, FunctionPointers) {
-  llvm::StringLiteral Tests[] = {
-      // Variable of function pointer type
-      R"cpp(
+  llvm::StringRef Tests[] = {// Variable of function pointer type
+                             R"cpp(
     void (*foo)(int x, int y);
     int main() { foo(^); }
   )cpp",
-      // Wrapped in an AttributedType
-      R"cpp(
+                             // Wrapped in an AttributedType
+                             R"cpp(
     void (__stdcall *foo)(int x, int y);
     int main() { foo(^); }
   )cpp",
-      // Another syntax for an AttributedType
-      R"cpp(
+                             // Another syntax for an AttributedType
+                             R"cpp(
     void (__attribute__(stdcall) *foo)(int x, int y);
     int main() { foo(^); },
   )cpp",
-      // Wrapped in a typedef
-      R"cpp(
+                             // Wrapped in a typedef
+                             R"cpp(
     typedef void (*fn)(int x, int y);
     fn foo;
     int main() { foo(^); }
   )cpp",
-      // Wrapped in both a typedef and an AttributedTyped
-      R"cpp(
+                             // Wrapped in both a typedef and an AttributedTyped
+                             R"cpp(
     typedef void (__stdcall *fn)(int x, int y);
     fn foo;
     int main() { foo(^); }
   )cpp",
-      // Field of function pointer type
-      R"cpp(
+                             // Field of function pointer type
+                             R"cpp(
     struct S {
       void (*foo)(int x, int y);
     };
     S s;
     int main() { s.foo(^); }
   )cpp",
-      // Field of function pointer typedef type
-      R"cpp(
+                             // Field of function pointer typedef type
+                             R"cpp(
     typedef void (*fn)(int x, int y);
     struct S {
       fn foo;
@@ -1612,7 +1611,7 @@ TEST(SignatureHelpTest, ActiveArg) {
 }
 
 TEST(SignatureHelpTest, OpeningParen) {
-  llvm::StringLiteral Tests[] = {
+  llvm::StringRef Tests[] = {
       // Recursive function call.
       R"cpp(
         int foo(int a, int b, int c);
@@ -4050,8 +4049,8 @@ TEST(CompletionTest, ObjCCategoryDecls) {
 }
 
 TEST(CompletionTest, PreambleCodeComplete) {
-  llvm::StringLiteral Baseline = "\n#define MACRO 12\nint num = MACRO;";
-  llvm::StringLiteral ModifiedCC =
+  llvm::StringRef Baseline = "\n#define MACRO 12\nint num = MACRO;";
+  llvm::StringRef ModifiedCC =
       "#include \"header.h\"\n#define MACRO 12\nint num = MACRO; int num2 = M^";
 
   Annotations Test(ModifiedCC);
@@ -4211,7 +4210,7 @@ TEST(SignatureHelp, TemplateArguments) {
 }
 
 TEST(CompletionTest, DoNotCrash) {
-  llvm::StringLiteral Cases[] = {
+  llvm::StringRef Cases[] = {
       R"cpp(
     template <typename = int> struct Foo {};
     auto a = [x(3)](Foo<^>){};

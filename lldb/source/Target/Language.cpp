@@ -43,7 +43,7 @@ LanguageProperties &Language::GetGlobalLanguageProperties() {
 }
 
 llvm::StringRef LanguageProperties::GetSettingName() {
-  static constexpr llvm::StringLiteral g_setting_name("language");
+  static constexpr llvm::StringRef g_setting_name("language");
   return g_setting_name;
 }
 

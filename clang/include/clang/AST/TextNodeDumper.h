@@ -277,7 +277,7 @@ public:
   void VisitIntegerLiteral(const IntegerLiteral *Node);
   void VisitFixedPointLiteral(const FixedPointLiteral *Node);
   void VisitFloatingLiteral(const FloatingLiteral *Node);
-  void VisitStringLiteral(const StringLiteral *Str);
+  void VisitStringLiteral(const StringRef *Str);
   void VisitInitListExpr(const InitListExpr *ILE);
   void VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   void VisitUnaryOperator(const UnaryOperator *Node);

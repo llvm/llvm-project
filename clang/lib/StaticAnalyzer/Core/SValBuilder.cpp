@@ -344,7 +344,7 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   }
 
   case Stmt::StringLiteralClass: {
-    const auto *SL = cast<StringLiteral>(E);
+    const auto *SL = cast<StringRef>(E);
     return makeLoc(getRegionManager().getStringRegion(SL));
   }
 

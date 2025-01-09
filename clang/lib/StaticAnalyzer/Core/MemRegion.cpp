@@ -244,7 +244,7 @@ void StaticGlobalSpaceRegion::Profile(llvm::FoldingSetNodeID &ID) const {
 }
 
 void StringRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
-                                 const StringLiteral *Str,
+                                 const StringRef *Str,
                                  const MemRegion *superRegion) {
   ID.AddInteger(static_cast<unsigned>(StringRegionKind));
   ID.AddPointer(Str);
@@ -552,7 +552,7 @@ void ObjCIvarRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void StringRegion::dumpToStream(raw_ostream &os) const {
-  assert(Str != nullptr && "Expecting non-null StringLiteral");
+  assert(Str != nullptr && "Expecting non-null StringRef");
   Str->printPretty(os, nullptr, PrintingPolicy(getContext().getLangOpts()));
 }
 
@@ -982,7 +982,7 @@ const CodeSpaceRegion *MemRegionManager::getCodeRegion() {
 // Constructing regions.
 //===----------------------------------------------------------------------===//
 
-const StringRegion *MemRegionManager::getStringRegion(const StringLiteral *Str){
+const StringRegion *MemRegionManager::getStringRegion(const StringRef *Str) {
   return getSubRegion<StringRegion>(
       Str, cast<GlobalInternalSpaceRegion>(getGlobalsRegion()));
 }

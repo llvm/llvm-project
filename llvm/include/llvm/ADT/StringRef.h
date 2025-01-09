@@ -843,38 +843,6 @@ namespace llvm {
     /// @}
   };
 
-  /// A wrapper around a string literal that serves as a proxy for constructing
-  /// global tables of StringRefs with the length computed at compile time.
-  /// In order to avoid the invocation of a global constructor, StringLiteral
-  /// should *only* be used in a constexpr context, as such:
-  ///
-  /// constexpr StringLiteral S("test");
-  ///
-  class StringLiteral : public StringRef {
-  private:
-    constexpr StringLiteral(const char *Str, size_t N) : StringRef(Str, N) {
-    }
-
-  public:
-    template <size_t N>
-    constexpr StringLiteral(const char (&Str)[N])
-#if defined(__clang__) && __has_attribute(enable_if)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgcc-compat"
-        __attribute((enable_if(__builtin_strlen(Str) == N - 1,
-                               "invalid string literal")))
-#pragma clang diagnostic pop
-#endif
-        : StringRef(Str, N - 1) {
-    }
-
-    // Explicit construction for strings like "foo\0bar".
-    template <size_t N>
-    static constexpr StringLiteral withInnerNUL(const char (&Str)[N]) {
-      return StringLiteral(Str, N - 1);
-    }
-  };
-
   /// @name StringRef Comparison Operators
   /// @{
 

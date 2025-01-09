@@ -69,7 +69,7 @@ protected:
 /// CRTP Implementation of an action. This class provides a base class for
 /// implementing specific actions.
 ///  Derived classes are expected to provide the following:
-///   * static constexpr StringLiteral tag = "...";
+///   * static constexpr StringRef tag = "...";
 ///     - This method returns a unique string identifier, similar to a command
 ///       line flag or DEBUG_TYPE.
 template <typename Derived>

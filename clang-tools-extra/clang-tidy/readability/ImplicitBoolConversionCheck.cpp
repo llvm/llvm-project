@@ -154,7 +154,7 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
     return (CharLit->getValue() == 0) ? "false" : "true";
   }
 
-  if (isa<StringLiteral>(Expression->IgnoreCasts())) {
+  if (isa<StringRef>(Expression->IgnoreCasts())) {
     return "true";
   }
 

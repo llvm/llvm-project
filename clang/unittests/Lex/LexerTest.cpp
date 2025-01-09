@@ -628,7 +628,7 @@ TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
 }
 
 TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
-  const llvm::StringLiteral Source = R"cpp(
+  const llvm::StringRef Source = R"cpp(
   // First line comment.
   //* Second line comment which is ambigious.
   ; // Have a non-comment token to make sure something is lexed.
@@ -653,7 +653,7 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
 }
 
 TEST_F(LexerTest, GetRawTokenOnEscapedNewLineChecksWhitespace) {
-  const llvm::StringLiteral Source = R"cc(
+  const llvm::StringRef Source = R"cc(
   #define ONE \
   1
 

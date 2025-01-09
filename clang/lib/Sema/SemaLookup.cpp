@@ -3603,7 +3603,7 @@ Sema::LiteralOperatorLookupResult
 Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
                             ArrayRef<QualType> ArgTys, bool AllowRaw,
                             bool AllowTemplate, bool AllowStringTemplatePack,
-                            bool DiagnoseMissing, StringLiteral *StringLit) {
+                            bool DiagnoseMissing, StringRef *StringLit) {
   LookupName(R, S);
   assert(R.getResultKind() != LookupResult::Ambiguous &&
          "literal operator lookup can't be ambiguous");

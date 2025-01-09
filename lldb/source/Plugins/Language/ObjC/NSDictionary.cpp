@@ -71,7 +71,8 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   if (!scratch_ts_sp)
     return compiler_type;
 
-  static constexpr llvm::StringLiteral g_lldb_autogen_nspair("__lldb_autogen_nspair");
+  static constexpr llvm::StringRef g_lldb_autogen_nspair(
+      "__lldb_autogen_nspair");
 
   compiler_type = scratch_ts_sp->GetTypeForIdentifier<clang::CXXRecordDecl>(g_lldb_autogen_nspair);
 
@@ -408,7 +409,7 @@ namespace Foundation1437 {
 template <bool name_entries>
 bool lldb_private::formatters::NSDictionarySummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSDictionary");
+  static constexpr llvm::StringRef g_TypeHint("NSDictionary");
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
     return false;

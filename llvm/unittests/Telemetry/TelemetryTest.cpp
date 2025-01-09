@@ -143,7 +143,7 @@ public:
     return Error::success();
   }
 
-  StringLiteral name() const override { return "TestDestination"; }
+  StringRef name() const override { return "TestDestination"; }
 
 private:
   TestContext *CurrentContext;

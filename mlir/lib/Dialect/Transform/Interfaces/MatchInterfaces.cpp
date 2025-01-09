@@ -15,10 +15,10 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Keyword syntax for positional specification inversion.
-constexpr const static llvm::StringLiteral kDimExceptKeyword = "except";
+constexpr const static llvm::StringRef kDimExceptKeyword = "except";
 
 /// Keyword syntax for full inclusion in positional specification.
-constexpr const static llvm::StringLiteral kDimAllKeyword = "all";
+constexpr const static llvm::StringRef kDimAllKeyword = "all";
 
 ParseResult transform::parseTransformMatchDims(OpAsmParser &parser,
                                                DenseI64ArrayAttr &rawDimList,

@@ -10,7 +10,7 @@ void n2322() {
    spans multiple lines \
    before terminating";
 // CHECK: ImplicitCastExpr {{.*}} <line:9
-// CHECK-NEXT: StringLiteral {{.*}} <col:3>
+// CHECK-NEXT: StringRef {{.*}} <col:3>
 
   // The line number associated with a pp-directive should be the line number
   // of the line with the first # token.
@@ -24,7 +24,7 @@ void n2322() {
   1000
   "string literal";
 // CHECK: ImplicitCastExpr {{.*}} <line:1000
-// CHECK: StringLiteral {{.*}} <col:3>
+// CHECK: StringRef {{.*}} <col:3>
 
   // The line number associated with a macro invocation should be the line
   // number of the first character of the macro name in the invocation.

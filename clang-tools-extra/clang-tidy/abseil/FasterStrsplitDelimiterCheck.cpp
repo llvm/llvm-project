@@ -18,9 +18,9 @@ namespace clang::tidy::abseil {
 
 namespace {
 
-AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
+AST_MATCHER(StringRef, lengthIsOne) { return Node.getLength() == 1; }
 
-std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
+std::optional<std::string> makeCharacterLiteral(const StringRef *Literal,
                                                 const ASTContext &Context) {
   assert(Literal->getLength() == 1 &&
          "Only single character string should be matched");
@@ -29,7 +29,7 @@ std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
   std::string Result = clang::tooling::fixit::getText(*Literal, Context).str();
   bool IsRawStringLiteral = StringRef(Result).starts_with(R"(R")");
   // Since raw string literal might contain unescaped non-printable characters,
-  // we normalize them using `StringLiteral::outputString`.
+  // we normalize them using `StringRef::outputString`.
   if (IsRawStringLiteral) {
     Result.clear();
     llvm::raw_string_ostream Stream(Result);
@@ -99,7 +99,7 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
 
 void FasterStrsplitDelimiterCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("Literal");
+  const auto *Literal = Result.Nodes.getNodeAs<StringRef>("Literal");
 
   if (Literal->getBeginLoc().isMacroID() || Literal->getEndLoc().isMacroID())
     return;

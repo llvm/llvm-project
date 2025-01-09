@@ -4518,12 +4518,12 @@ unsigned clang_Cursor_isFunctionInlined(CXCursor C) {
   return FD->isInlined();
 }
 
-static StringLiteral *getCFSTR_value(CallExpr *callExpr) {
+static StringRef *getCFSTR_value(CallExpr *callExpr) {
   if (callExpr->getNumArgs() != 1) {
     return nullptr;
   }
 
-  StringLiteral *S = nullptr;
+  StringRef *S = nullptr;
   auto *arg = callExpr->getArg(0);
   if (arg->getStmtClass() == Stmt::ImplicitCastExprClass) {
     ImplicitCastExpr *I = static_cast<ImplicitCastExpr *>(arg);
@@ -4533,9 +4533,9 @@ static StringLiteral *getCFSTR_value(CallExpr *callExpr) {
       return nullptr;
     }
 
-    S = static_cast<StringLiteral *>(I->getSubExprAsWritten());
+    S = static_cast<StringRef *>(I->getSubExprAsWritten());
   } else if (arg->getStmtClass() == Stmt::StringLiteralClass) {
-    S = static_cast<StringLiteral *>(callExpr->getArg(0));
+    S = static_cast<StringRef *>(callExpr->getArg(0));
   } else {
     return nullptr;
   }
@@ -4663,7 +4663,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
     auto *subExpr = I->getSubExprAsWritten();
     if (subExpr->getStmtClass() == Stmt::StringLiteralClass ||
         subExpr->getStmtClass() == Stmt::ObjCStringLiteralClass) {
-      const StringLiteral *StrE = nullptr;
+      const StringRef *StrE = nullptr;
       const ObjCStringLiteral *ObjCExpr;
       ObjCExpr = dyn_cast<ObjCStringLiteral>(subExpr);
 
@@ -4671,7 +4671,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         StrE = ObjCExpr->getString();
         result->EvalType = CXEval_ObjCStrLiteral;
       } else {
-        StrE = cast<StringLiteral>(I->getSubExprAsWritten());
+        StrE = cast<StringRef>(I->getSubExprAsWritten());
         result->EvalType = CXEval_StrLiteral;
       }
 
@@ -4684,7 +4684,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
     }
   } else if (expr->getStmtClass() == Stmt::ObjCStringLiteralClass ||
              expr->getStmtClass() == Stmt::StringLiteralClass) {
-    const StringLiteral *StrE = nullptr;
+    const StringRef *StrE = nullptr;
     const ObjCStringLiteral *ObjCExpr;
     ObjCExpr = dyn_cast<ObjCStringLiteral>(expr);
 
@@ -4692,7 +4692,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
       StrE = ObjCExpr->getString();
       result->EvalType = CXEval_ObjCStrLiteral;
     } else {
-      StrE = cast<StringLiteral>(expr);
+      StrE = cast<StringRef>(expr);
       result->EvalType = CXEval_StrLiteral;
     }
 
@@ -4711,7 +4711,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         CC->getSubExpr()->getStmtClass() == Stmt::CallExprClass) {
 
       callExpr = static_cast<CallExpr *>(CC->getSubExpr());
-      StringLiteral *S = getCFSTR_value(callExpr);
+      StringRef *S = getCFSTR_value(callExpr);
       if (S) {
         std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
@@ -4737,7 +4737,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         return nullptr;
     } else if (rettype.getAsString() == "CFStringRef") {
 
-      StringLiteral *S = getCFSTR_value(callExpr);
+      StringRef *S = getCFSTR_value(callExpr);
       if (S) {
         std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
@@ -5387,11 +5387,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
 
     if (C.kind == CXCursor_ObjCStringLiteral ||
         C.kind == CXCursor_StringLiteral) {
-      const StringLiteral *SLit;
+      const StringRef *SLit;
       if (const ObjCStringLiteral *OSL = dyn_cast<ObjCStringLiteral>(E)) {
         SLit = OSL->getString();
       } else {
-        SLit = cast<StringLiteral>(E);
+        SLit = cast<StringRef>(E);
       }
       SmallString<256> Buf;
       llvm::raw_svector_ostream OS(Buf);
@@ -5951,7 +5951,7 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
   case CXCursor_ImaginaryLiteral:
     return cxstring::createRef("ImaginaryLiteral");
   case CXCursor_StringLiteral:
-    return cxstring::createRef("StringLiteral");
+    return cxstring::createRef("StringRef");
   case CXCursor_CharacterLiteral:
     return cxstring::createRef("CharacterLiteral");
   case CXCursor_ParenExpr:

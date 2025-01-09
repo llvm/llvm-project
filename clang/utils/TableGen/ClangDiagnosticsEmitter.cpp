@@ -994,7 +994,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                                       StopAt Stop) {
   std::vector<Piece *> Parsed;
 
-  constexpr StringLiteral StopSets[] = {"%", "%|}", "%|}$"};
+  constexpr StringRef StopSets[] = {"%", "%|}", "%|}$"};
   StringRef StopSet = StopSets[static_cast<int>(Stop)];
 
   while (!Text.empty()) {

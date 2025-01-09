@@ -72,7 +72,7 @@ template <typename T> struct QueryParser::LexOrCompleteWord {
     }
   }
 
-  LexOrCompleteWord &Case(llvm::StringLiteral CaseStr, const T &Value,
+  LexOrCompleteWord &Case(llvm::StringRef CaseStr, const T &Value,
                           bool IsCompletion = true) {
 
     if (WordCompletionPos == StringRef::npos)

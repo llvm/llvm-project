@@ -265,10 +265,8 @@ public:
                         SVal Buf,
                         bool hypothetical = false) const;
 
-  const StringLiteral *getCStringLiteral(CheckerContext &C,
-                                         ProgramStateRef &state,
-                                         const Expr *expr,
-                                         SVal val) const;
+  const StringRef *getCStringLiteral(CheckerContext &C, ProgramStateRef &state,
+                                     const Expr *expr, SVal val) const;
 
   /// Invalidate the destination buffer determined by characters copied.
   static ProgramStateRef
@@ -1074,7 +1072,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     // so we can assume that the byte length is the correct C string length.
     SValBuilder &svalBuilder = C.getSValBuilder();
     QualType sizeTy = svalBuilder.getContext().getSizeType();
-    const StringLiteral *strLit = cast<StringRegion>(MR)->getStringLiteral();
+    const StringRef *strLit = cast<StringRegion>(MR)->getStringLiteral();
     return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
   }
   case MemRegion::NonParamVarRegionKind: {
@@ -1083,7 +1081,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
     const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
     if (Decl->getType().isConstQualified() && Decl->hasGlobalStorage()) {
       if (const Expr *Init = Decl->getInit()) {
-        if (auto *StrLit = dyn_cast<StringLiteral>(Init)) {
+        if (auto *StrLit = dyn_cast<StringRef>(Init)) {
           SValBuilder &SvalBuilder = C.getSValBuilder();
           QualType SizeTy = SvalBuilder.getContext().getSizeType();
           return SvalBuilder.makeIntVal(StrLit->getLength(), SizeTy);
@@ -1127,8 +1125,10 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   }
 }
 
-const StringLiteral *CStringChecker::getCStringLiteral(CheckerContext &C,
-  ProgramStateRef &state, const Expr *expr, SVal val) const {
+const StringRef *CStringChecker::getCStringLiteral(CheckerContext &C,
+                                                   ProgramStateRef &state,
+                                                   const Expr *expr,
+                                                   SVal val) const {
 
   // Get the memory region pointed to by the val.
   const MemRegion *bufRegion = val.getAsRegion();
@@ -2354,9 +2354,9 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallEvent &Call,
   // For now, we only do this if they're both known string literals.
 
   // Attempt to extract string literals from both expressions.
-  const StringLiteral *LeftStrLiteral =
+  const StringRef *LeftStrLiteral =
       getCStringLiteral(C, state, Left.Expression, LeftVal);
-  const StringLiteral *RightStrLiteral =
+  const StringRef *RightStrLiteral =
       getCStringLiteral(C, state, Right.Expression, RightVal);
   bool canComputeResult = false;
   SVal resultVal = svalBuilder.conjureSymbolVal(nullptr, Call.getOriginExpr(),
@@ -2740,7 +2740,7 @@ void CStringChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     const Expr *Init = D->getInit();
     if (!Init)
       continue;
-    if (!isa<StringLiteral>(Init))
+    if (!isa<StringRef>(Init))
       continue;
 
     Loc VarLoc = state->getLValue(D, C.getLocationContext());

@@ -267,7 +267,7 @@ getSelectionCanonizalizationAction(const Stmt *S, const Stmt *Parent) {
   // - The string literal in ObjC string literal is selected, e.g.:
   //     @"test"   becomes   @"test"
   //      ~~~~~~             ~~~~~~~
-  if (isa<StringLiteral>(S) && isa<ObjCStringLiteral>(Parent))
+  if (isa<StringRef>(S) && isa<ObjCStringLiteral>(Parent))
     return SelectParent;
   // The entire call should be selected when just the member expression
   // that refers to the method or the decl ref that refers to the function

@@ -230,8 +230,8 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 struct CPUSuffix {
-  llvm::StringLiteral Name;
-  llvm::StringLiteral Suffix;
+  llvm::StringRef Name;
+  llvm::StringRef Suffix;
 };
 
 static constexpr CPUSuffix Suffixes[] = {

@@ -504,7 +504,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
         candidates.BestViableFunction(S, range.getBegin(), Best);
     assert(Res == OR_Deleted && "Inconsistent overload resolution");
 
-    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    StringRef *Msg = Best->Function->getDeletedMessage();
     candidates.NoteCandidates(
         PartialDiagnosticAt(range.getBegin(),
                             S.PDiag(diag::err_ovl_deleted_conversion_in_cast)

@@ -69,7 +69,7 @@ TEST(CastExprTest, GetSubExprAsWrittenThroughConstantExpr) {
 //     |-value: Struct
 //     `-CXXConstructExpr 'X' 'void (const char *)'
 //       `-ImplicitCastExpr 'const char *' <ArrayToPointerDecay>
-//         `-StringLiteral 'const char [7]' lvalue "foobar"
+//         `-StringRef 'const char [7]' lvalue "foobar"
 TEST(CastExprTest, GetCtorConversionFunctionThroughConstantExpr) {
   CastExprVisitor Visitor;
   Visitor.OnCast = [](CastExpr *Expr) {

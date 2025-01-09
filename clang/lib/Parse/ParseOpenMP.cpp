@@ -842,7 +842,7 @@ enum OMPContextLvl {
 
 static StringRef stringLiteralParser(Parser &P) {
   ExprResult Res = P.ParseStringLiteralExpression(true);
-  return Res.isUsable() ? Res.getAs<StringLiteral>()->getString() : "";
+  return Res.isUsable() ? Res.getAs<StringRef>()->getString() : "";
 }
 
 static StringRef getNameFromIdOrString(Parser &P, Token &Tok,

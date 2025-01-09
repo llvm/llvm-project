@@ -39,8 +39,8 @@ struct CPUModel {
 };
 
 struct CPUInfo {
-  StringLiteral Name;
-  StringLiteral DefaultMarch;
+  StringRef Name;
+  StringRef DefaultMarch;
   bool FastScalarUnalignedAccess;
   bool FastVectorUnalignedAccess;
   CPUModel Model;

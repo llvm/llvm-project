@@ -3738,7 +3738,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_allow_runtime_check: {
     StringRef Kind =
-        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+        cast<StringRef>(E->getArg(0)->IgnoreParenCasts())->getString();
     LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Value *Allow = Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check),
@@ -5480,7 +5480,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Re-encode each wide string to UTF8 and make an MDString.
     SmallVector<Metadata *, 1> Strings;
     for (const Expr *Arg : E->arguments()) {
-      const auto *Str = cast<StringLiteral>(Arg->IgnoreParenCasts());
+      const auto *Str = cast<StringRef>(Arg->IgnoreParenCasts());
       assert(Str->getCharByteWidth() == 2);
       StringRef WideBytes = Str->getBytes();
       std::string StrUtf8;
@@ -5508,7 +5508,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Get the annotation string, go through casts. Sema requires this to be a
     // non-wide string literal, potentially casted, so the cast<> is safe.
     const Expr *AnnotationStrExpr = E->getArg(1)->IgnoreParenCasts();
-    StringRef Str = cast<StringLiteral>(AnnotationStrExpr)->getString();
+    StringRef Str = cast<StringRef>(AnnotationStrExpr)->getString();
     return RValue::get(
         EmitAnnotationCall(F, AnnVal, Str, E->getExprLoc(), nullptr));
   }
@@ -8973,7 +8973,7 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
 
   if (SysReg.empty()) {
     const Expr *SysRegStrExpr = E->getArg(0)->IgnoreParenCasts();
-    SysReg = cast<clang::StringLiteral>(SysRegStrExpr)->getString();
+    SysReg = cast<clang::StringRef>(SysRegStrExpr)->getString();
   }
 
   llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysReg) };
@@ -14803,7 +14803,7 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
 
 Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
   const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  StringRef CPUStr = cast<clang::StringRef>(CPUExpr)->getString();
   return EmitX86CpuIs(CPUStr);
 }
 
@@ -14894,7 +14894,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 
 Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  StringRef FeatureStr = cast<StringRef>(FeatureExpr)->getString();
   if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
     return Builder.getFalse();
   return EmitX86CpuSupports(FeatureStr);
@@ -14991,7 +14991,7 @@ Value *CodeGenFunction::EmitX86CpuInit() {
 
 Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   const Expr *ArgExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef ArgStr = cast<StringLiteral>(ArgExpr)->getString();
+  StringRef ArgStr = cast<StringRef>(ArgExpr)->getString();
   llvm::SmallVector<StringRef, 8> Features;
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
@@ -15033,7 +15033,7 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
 Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
 
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  StringRef FeatureStr = cast<StringRef>(FeatureExpr)->getString();
   if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
     return Builder.getFalse();
 
@@ -17750,7 +17750,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
   case Builtin::BI__builtin_cpu_is: {
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    StringRef CPUStr = cast<clang::StringRef>(CPUExpr)->getString();
     llvm::Triple Triple = getTarget().getTriple();
 
     unsigned LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue;
@@ -17790,7 +17790,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_cpu_supports: {
     llvm::Triple Triple = getTarget().getTriple();
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    StringRef CPUStr = cast<clang::StringRef>(CPUExpr)->getString();
     if (Triple.isOSAIX()) {
       unsigned SupportMethod, FieldIdx, Mask, Value;
       CmpInst::Predicate CompOp;
@@ -22986,7 +22986,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
 
 Value *CodeGenFunction::EmitRISCVCpuIs(const CallExpr *E) {
   const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  StringRef CPUStr = cast<clang::StringRef>(CPUExpr)->getString();
   return EmitRISCVCpuIs(CPUStr);
 }
 

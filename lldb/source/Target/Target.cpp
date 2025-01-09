@@ -164,7 +164,7 @@ const Target::Arch &Target::Arch::operator=(const ArchSpec &spec) {
 }
 
 llvm::StringRef Target::GetStaticBroadcasterClass() {
-  static constexpr llvm::StringLiteral class_name("lldb.target");
+  static constexpr llvm::StringRef class_name("lldb.target");
   return class_name;
 }
 

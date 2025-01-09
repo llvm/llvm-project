@@ -81,7 +81,7 @@ TEST(TypePrinter, TemplateId2) {
 }
 
 TEST(TypePrinter, ParamsUglified) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     template <typename _Tp, template <typename> class __f>
     const __f<_Tp&> *A = nullptr;
   )cpp";
@@ -98,7 +98,7 @@ TEST(TypePrinter, ParamsUglified) {
 }
 
 TEST(TypePrinter, SuppressElaboration) {
-  llvm::StringLiteral Code = R"cpp(
+  llvm::StringRef Code = R"cpp(
     namespace shared {
     namespace a {
     template <typename T>

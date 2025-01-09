@@ -775,15 +775,11 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::LDS_KERNEL_ID,
   };
 
-  static constexpr StringLiteral ImplicitAttrNames[] = {
-    "amdgpu-no-dispatch-ptr",
-    "amdgpu-no-queue-ptr",
-    "amdgpu-no-implicitarg-ptr",
-    "amdgpu-no-dispatch-id",
-    "amdgpu-no-workgroup-id-x",
-    "amdgpu-no-workgroup-id-y",
-    "amdgpu-no-workgroup-id-z",
-    "amdgpu-no-lds-kernel-id",
+  static constexpr StringRef ImplicitAttrNames[] = {
+      "amdgpu-no-dispatch-ptr",    "amdgpu-no-queue-ptr",
+      "amdgpu-no-implicitarg-ptr", "amdgpu-no-dispatch-id",
+      "amdgpu-no-workgroup-id-x",  "amdgpu-no-workgroup-id-y",
+      "amdgpu-no-workgroup-id-z",  "amdgpu-no-lds-kernel-id",
   };
 
   MachineRegisterInfo &MRI = MF.getRegInfo();

@@ -4344,7 +4344,7 @@ public:
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
-  LValue EmitStringLiteralLValue(const StringLiteral *E);
+  LValue EmitStringLiteralLValue(const StringRef *E);
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
   LValue EmitUnaryOpLValue(const UnaryOperator *E);

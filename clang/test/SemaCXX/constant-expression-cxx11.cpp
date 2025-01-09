@@ -494,7 +494,7 @@ constexpr int strcmp_ce(const char *p, const char *q) {
   return (!*p || *p != *q) ? *p - *q : strcmp_ce(p+1, q+1);
 }
 
-namespace StringLiteral {
+namespace StringRef {
 
 template<typename Char>
 constexpr int MangleChars(const Char *p) {

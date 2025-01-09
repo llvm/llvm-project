@@ -7,17 +7,17 @@
 
 struct S {
   // CHECK:      CXXMethodDecl {{.*}} a 'void ()' delete
-  // CHECK-NEXT:   delete message: StringLiteral {{.*}} "foo"
+  // CHECK-NEXT:   delete message: StringRef {{.*}} "foo"
   void a() = delete("foo");
 
   // CHECK:      FunctionTemplateDecl {{.*}} b
   // CHECK-NEXT:   TemplateTypeParmDecl
   // CHECK-NEXT:   CXXMethodDecl {{.*}} b 'void ()' delete
-  // CHECK-NEXT:     delete message: StringLiteral {{.*}} "bar"
+  // CHECK-NEXT:     delete message: StringRef {{.*}} "bar"
   template <typename>
   void b() = delete("bar");
 };
 
 // CHECK:      FunctionDecl {{.*}} c 'void ()' delete
-// CHECK-NEXT:   delete message: StringLiteral {{.*}} "baz"
+// CHECK-NEXT:   delete message: StringRef {{.*}} "baz"
 void c() = delete("baz");

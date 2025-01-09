@@ -63,7 +63,7 @@ def IntegerLiteral : StmtNode<Expr>;
 def FixedPointLiteral : StmtNode<Expr>;
 def FloatingLiteral : StmtNode<Expr>;
 def ImaginaryLiteral : StmtNode<Expr>;
-def StringLiteral : StmtNode<Expr>;
+def StringRef : StmtNode<Expr>;
 def CharacterLiteral : StmtNode<Expr>;
 def ParenExpr : StmtNode<Expr>;
 def UnaryOperator : StmtNode<Expr>;

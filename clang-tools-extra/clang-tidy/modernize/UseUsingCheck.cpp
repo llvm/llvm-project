@@ -26,11 +26,11 @@ AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
 
 namespace clang::tidy::modernize {
 
-static constexpr llvm::StringLiteral ExternCDeclName = "extern-c-decl";
-static constexpr llvm::StringLiteral ParentDeclName = "parent-decl";
-static constexpr llvm::StringLiteral TagDeclName = "tag-decl";
-static constexpr llvm::StringLiteral TypedefName = "typedef";
-static constexpr llvm::StringLiteral DeclStmtName = "decl-stmt";
+static constexpr llvm::StringRef ExternCDeclName = "extern-c-decl";
+static constexpr llvm::StringRef ParentDeclName = "parent-decl";
+static constexpr llvm::StringRef TagDeclName = "tag-decl";
+static constexpr llvm::StringRef TypedefName = "typedef";
+static constexpr llvm::StringRef DeclStmtName = "decl-stmt";
 
 UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),

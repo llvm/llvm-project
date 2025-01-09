@@ -66,116 +66,110 @@ public:
   ~StringSwitch() = default;
 
   // Case-sensitive case matchers
-  StringSwitch &Case(StringLiteral S, T Value) {
+  StringSwitch &Case(StringRef S, T Value) {
     if (!Result && Str == S) {
       Result = std::move(Value);
     }
     return *this;
   }
 
-  StringSwitch& EndsWith(StringLiteral S, T Value) {
+  StringSwitch &EndsWith(StringRef S, T Value) {
     if (!Result && Str.ends_with(S)) {
       Result = std::move(Value);
     }
     return *this;
   }
 
-  StringSwitch& StartsWith(StringLiteral S, T Value) {
+  StringSwitch &StartsWith(StringRef S, T Value) {
     if (!Result && Str.starts_with(S)) {
       Result = std::move(Value);
     }
     return *this;
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, T Value) {
     return Case(S0, Value).Case(S1, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, T Value) {
     return Case(S0, Value).Cases(S1, S2, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, StringRef S5, T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, StringRef S5, StringRef S6, T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, S6, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, StringRef S5, StringRef S6, StringRef S7,
+                      T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, S6, S7, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, StringLiteral S8,
-                      T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, StringRef S5, StringRef S6, StringRef S7,
+                      StringRef S8, T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, S6, S7, S8, Value);
   }
 
-  StringSwitch &Cases(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                      StringLiteral S3, StringLiteral S4, StringLiteral S5,
-                      StringLiteral S6, StringLiteral S7, StringLiteral S8,
-                      StringLiteral S9, T Value) {
+  StringSwitch &Cases(StringRef S0, StringRef S1, StringRef S2, StringRef S3,
+                      StringRef S4, StringRef S5, StringRef S6, StringRef S7,
+                      StringRef S8, StringRef S9, T Value) {
     return Case(S0, Value).Cases(S1, S2, S3, S4, S5, S6, S7, S8, S9, Value);
   }
 
   // Case-insensitive case matchers.
-  StringSwitch &CaseLower(StringLiteral S, T Value) {
+  StringSwitch &CaseLower(StringRef S, T Value) {
     if (!Result && Str.equals_insensitive(S))
       Result = std::move(Value);
 
     return *this;
   }
 
-  StringSwitch &EndsWithLower(StringLiteral S, T Value) {
+  StringSwitch &EndsWithLower(StringRef S, T Value) {
     if (!Result && Str.ends_with_insensitive(S))
       Result = Value;
 
     return *this;
   }
 
-  StringSwitch &StartsWithLower(StringLiteral S, T Value) {
+  StringSwitch &StartsWithLower(StringRef S, T Value) {
     if (!Result && Str.starts_with_insensitive(S))
       Result = std::move(Value);
 
     return *this;
   }
 
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, T Value) {
+  StringSwitch &CasesLower(StringRef S0, StringRef S1, T Value) {
     return CaseLower(S0, Value).CaseLower(S1, Value);
   }
 
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           T Value) {
+  StringSwitch &CasesLower(StringRef S0, StringRef S1, StringRef S2, T Value) {
     return CaseLower(S0, Value).CasesLower(S1, S2, Value);
   }
 
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           StringLiteral S3, T Value) {
+  StringSwitch &CasesLower(StringRef S0, StringRef S1, StringRef S2,
+                           StringRef S3, T Value) {
     return CaseLower(S0, Value).CasesLower(S1, S2, S3, Value);
   }
 
-  StringSwitch &CasesLower(StringLiteral S0, StringLiteral S1, StringLiteral S2,
-                           StringLiteral S3, StringLiteral S4, T Value) {
+  StringSwitch &CasesLower(StringRef S0, StringRef S1, StringRef S2,
+                           StringRef S3, StringRef S4, T Value) {
     return CaseLower(S0, Value).CasesLower(S1, S2, S3, S4, Value);
   }
 

@@ -258,7 +258,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
 TEST(ClangdAST, GetOnlyInstantiation) {
   struct {
     const char *Code;
-    llvm::StringLiteral NodeType;
+    llvm::StringRef NodeType;
     const char *Name;
   } Cases[] = {
       {

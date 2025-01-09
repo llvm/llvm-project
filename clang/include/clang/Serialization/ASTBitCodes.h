@@ -1612,7 +1612,7 @@ enum StmtCode {
   /// An ImaginaryLiteral record.
   EXPR_IMAGINARY_LITERAL,
 
-  /// A StringLiteral record.
+  /// A StringRef record.
   EXPR_STRING_LITERAL,
 
   /// A CharacterLiteral record.

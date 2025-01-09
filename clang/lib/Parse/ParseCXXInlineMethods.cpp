@@ -21,17 +21,17 @@
 using namespace clang;
 
 /// Parse the optional ("message") part of a deleted-function-body.
-StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
+StringRef *Parser::ParseCXXDeletedFunctionMessage() {
   if (!Tok.is(tok::l_paren))
     return nullptr;
-  StringLiteral *Message = nullptr;
+  StringRef *Message = nullptr;
   BalancedDelimiterTracker BT{*this, tok::l_paren};
   BT.consumeOpen();
 
   if (isTokenStringLiteral()) {
     ExprResult Res = ParseUnevaluatedStringLiteralExpression();
     if (Res.isUsable()) {
-      Message = Res.getAs<StringLiteral>();
+      Message = Res.getAs<StringRef>();
       Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
                                        ? diag::warn_cxx23_delete_with_message
                                        : diag::ext_delete_with_message)
@@ -113,7 +113,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
         << 1 /* deleted */;
-      StringLiteral *Message = ParseCXXDeletedFunctionMessage();
+      StringRef *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {

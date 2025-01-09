@@ -206,7 +206,7 @@ FormatStringConverter::FormatStringConverter(
       Args(Call->getArgs()), NumArgs(Call->getNumArgs()),
       ArgsOffset(FormatArgOffset + 1), LangOpts(LO) {
   assert(ArgsOffset <= NumArgs);
-  FormatExpr = llvm::dyn_cast<StringLiteral>(
+  FormatExpr = llvm::dyn_cast<StringRef>(
       Args[FormatArgOffset]->IgnoreImplicitAsWritten());
 
   if (!FormatExpr || !FormatExpr->isOrdinary()) {
@@ -243,7 +243,7 @@ FormatStringConverter::FormatStringConverter(
 
 std::optional<StringRef>
 FormatStringConverter::formatStringContainsUnreplaceableMacro(
-    const CallExpr *Call, const StringLiteral *FormatExpr, SourceManager &SM,
+    const CallExpr *Call, const StringRef *FormatExpr, SourceManager &SM,
     Preprocessor &PP) {
   // If a macro invocation surrounds the entire call then we don't want that to
   // inhibit conversion. The whole format string will appear to come from that

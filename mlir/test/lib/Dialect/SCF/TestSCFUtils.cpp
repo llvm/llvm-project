@@ -101,18 +101,15 @@ struct TestSCFIfUtilsPass
   }
 };
 
-static const StringLiteral kTestPipeliningLoopMarker =
-    "__test_pipelining_loop__";
-static const StringLiteral kTestPipeliningStageMarker =
-    "__test_pipelining_stage__";
+static const StringRef kTestPipeliningLoopMarker = "__test_pipelining_loop__";
+static const StringRef kTestPipeliningStageMarker = "__test_pipelining_stage__";
 /// Marker to express the order in which operations should be after
 /// pipelining.
-static const StringLiteral kTestPipeliningOpOrderMarker =
+static const StringRef kTestPipeliningOpOrderMarker =
     "__test_pipelining_op_order__";
 
-static const StringLiteral kTestPipeliningAnnotationPart =
-    "__test_pipelining_part";
-static const StringLiteral kTestPipeliningAnnotationIteration =
+static const StringRef kTestPipeliningAnnotationPart = "__test_pipelining_part";
+static const StringRef kTestPipeliningAnnotationIteration =
     "__test_pipelining_iteration";
 
 struct TestSCFPipeliningPass

@@ -5083,7 +5083,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "StringLiteral",
+// CHECK-NEXT:        "kind": "StringRef",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -5128,7 +5128,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "StringLiteral",
+// CHECK-NEXT:        "kind": "StringRef",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -5173,7 +5173,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "StringLiteral",
+// CHECK-NEXT:        "kind": "StringRef",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -5218,7 +5218,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "StringLiteral",
+// CHECK-NEXT:        "kind": "StringRef",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},
@@ -5263,7 +5263,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "StringLiteral",
+// CHECK-NEXT:        "kind": "StringRef",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "offset": {{[0-9]+}},

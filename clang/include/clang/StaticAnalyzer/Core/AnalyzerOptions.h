@@ -290,15 +290,15 @@ public:
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   bool isUnknownAnalyzerConfig(llvm::StringRef Name) {
-    static std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = []() {
+    static std::vector<llvm::StringRef> AnalyzerConfigCmdFlags = []() {
       // Create an array of all -analyzer-config command line options.
-      std::vector<llvm::StringLiteral> AnalyzerConfigCmdFlags = {
+      std::vector<llvm::StringRef> AnalyzerConfigCmdFlags = {
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
 
 #define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  llvm::StringLiteral(CMDFLAG),
+  llvm::StringRef(CMDFLAG),
 
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 #undef ANALYZER_OPTION
@@ -428,10 +428,10 @@ using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
-  static constexpr llvm::StringLiteral StaticAnalyzerCheckerNames[] = {
+  static constexpr llvm::StringRef StaticAnalyzerCheckerNames[] = {
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
-  llvm::StringLiteral(FULLNAME),
+  llvm::StringRef(FULLNAME),
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
@@ -447,9 +447,9 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredPackages(bool IncludeExperimental) {
-  static constexpr llvm::StringLiteral StaticAnalyzerPackageNames[] = {
+  static constexpr llvm::StringRef StaticAnalyzerPackageNames[] = {
 #define GET_PACKAGES
-#define PACKAGE(FULLNAME) llvm::StringLiteral(FULLNAME),
+#define PACKAGE(FULLNAME) llvm::StringRef(FULLNAME),
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef PACKAGE
 #undef GET_PACKAGES

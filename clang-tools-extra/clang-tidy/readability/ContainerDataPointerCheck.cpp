@@ -17,11 +17,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-constexpr llvm::StringLiteral ContainerExprName = "container-expr";
-constexpr llvm::StringLiteral DerefContainerExprName = "deref-container-expr";
-constexpr llvm::StringLiteral AddrOfContainerExprName =
-    "addr-of-container-expr";
-constexpr llvm::StringLiteral AddressOfName = "address-of";
+constexpr llvm::StringRef ContainerExprName = "container-expr";
+constexpr llvm::StringRef DerefContainerExprName = "deref-container-expr";
+constexpr llvm::StringRef AddrOfContainerExprName = "addr-of-container-expr";
+constexpr llvm::StringRef AddressOfName = "address-of";
 
 void ContainerDataPointerCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

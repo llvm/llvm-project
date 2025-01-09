@@ -497,7 +497,7 @@ bool Pointer::pointsToLiteral() const {
     return false;
 
   const Expr *E = block()->getDescriptor()->asExpr();
-  return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
+  return E && !isa<MaterializeTemporaryExpr, StringRef>(E);
 }
 
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,

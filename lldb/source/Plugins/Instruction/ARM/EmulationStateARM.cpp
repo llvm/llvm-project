@@ -275,8 +275,8 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
 
 bool EmulationStateARM::LoadStateFromDictionary(
     OptionValueDictionary *test_data) {
-  static constexpr llvm::StringLiteral memory_key("memory");
-  static constexpr llvm::StringLiteral registers_key("registers");
+  static constexpr llvm::StringRef memory_key("memory");
+  static constexpr llvm::StringRef registers_key("registers");
 
   if (!test_data)
     return false;
@@ -286,8 +286,8 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load memory, if present.
 
   if (value_sp.get() != nullptr) {
-    static constexpr llvm::StringLiteral address_key("address");
-    static constexpr llvm::StringLiteral data_key("data");
+    static constexpr llvm::StringRef address_key("address");
+    static constexpr llvm::StringRef data_key("data");
     uint64_t start_address = 0;
 
     OptionValueDictionary *mem_dict = value_sp->GetAsDictionary();
@@ -325,7 +325,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
   if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_r0, 16))
     return false;
 
-  static constexpr llvm::StringLiteral cpsr_name("cpsr");
+  static constexpr llvm::StringRef cpsr_name("cpsr");
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;

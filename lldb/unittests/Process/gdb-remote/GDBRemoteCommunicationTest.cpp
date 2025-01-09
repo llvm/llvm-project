@@ -48,8 +48,8 @@ protected:
 // checksum calculation works.
 TEST_F(GDBRemoteCommunicationTest, ReadPacket) {
   struct TestCase {
-    llvm::StringLiteral Packet;
-    llvm::StringLiteral Payload;
+    llvm::StringRef Packet;
+    llvm::StringRef Payload;
   };
   static constexpr TestCase Tests[] = {
       {{"$#00"}, {""}},

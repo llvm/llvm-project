@@ -270,7 +270,7 @@ TEST(SelectionTest, CommonAncestor) {
             auto lambda = [](const char*){ return 0; };
             int x = lambda([["y^"]]);
           )cpp",
-          "StringLiteral", // Not DeclRefExpr to operator()!
+          "StringRef", // Not DeclRefExpr to operator()!
       },
       {
           R"cpp(
@@ -804,7 +804,7 @@ TEST(SelectionTest, Implicit) {
   auto T = makeSelectionTree(Test, AST);
 
   const SelectionTree::Node *Str = T.commonAncestor();
-  EXPECT_EQ("StringLiteral", nodeKind(Str)) << "Implicit selected?";
+  EXPECT_EQ("StringRef", nodeKind(Str)) << "Implicit selected?";
   EXPECT_EQ("ImplicitCastExpr", nodeKind(Str->Parent));
   EXPECT_EQ("CXXConstructExpr", nodeKind(Str->Parent->Parent));
   const SelectionTree::Node *ICE = Str->Parent->Parent->Parent;

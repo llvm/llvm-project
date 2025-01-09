@@ -165,19 +165,19 @@ inline bool isMappableType(mlir::Type type) {
 }
 
 /// Used to obtain the attribute name for declare.
-static constexpr StringLiteral getDeclareAttrName() {
-  return StringLiteral("acc.declare");
+static constexpr StringRef getDeclareAttrName() {
+  return StringRef("acc.declare");
 }
 
-static constexpr StringLiteral getDeclareActionAttrName() {
-  return StringLiteral("acc.declare_action");
+static constexpr StringRef getDeclareActionAttrName() {
+  return StringRef("acc.declare_action");
 }
 
-static constexpr StringLiteral getRoutineInfoAttrName() {
-  return StringLiteral("acc.routine_info");
+static constexpr StringRef getRoutineInfoAttrName() {
+  return StringRef("acc.routine_info");
 }
 
-static constexpr StringLiteral getCombinedConstructsAttrName() {
+static constexpr StringRef getCombinedConstructsAttrName() {
   return CombinedConstructsTypeAttr::name;
 }
 

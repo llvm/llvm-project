@@ -624,7 +624,7 @@ bool DynamicLoaderDarwin::UpdateDYLDImageInfoFromNewImageInfo(
 std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
-  auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
+  auto log_err = [log](llvm::StringRef err_msg) -> std::nullopt_t {
     LLDB_LOGV(log, "{}", err_msg);
     return std::nullopt;
   };

@@ -44,7 +44,7 @@ bool lldb_private::formatters::CFAbsoluteTimeSummaryProvider(
 
 bool lldb_private::formatters::CFBagSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static constexpr llvm::StringLiteral g_TypeHint("CFBag");
+  static constexpr llvm::StringRef g_TypeHint("CFBag");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
@@ -222,7 +222,7 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
 
 bool lldb_private::formatters::CFBinaryHeapSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static constexpr llvm::StringLiteral g_TypeHint("CFBinaryHeap");
+  static constexpr llvm::StringRef g_TypeHint("CFBinaryHeap");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)

@@ -249,7 +249,7 @@ public:
 template <bool cf_style>
 bool lldb_private::formatters::NSSetSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static constexpr llvm::StringLiteral g_TypeHint("NSSet");
+  static constexpr llvm::StringRef g_TypeHint("NSSet");
 
   ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)

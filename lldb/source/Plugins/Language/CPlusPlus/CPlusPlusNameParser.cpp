@@ -330,7 +330,7 @@ bool CPlusPlusNameParser::ConsumeAnonymousNamespace() {
   if (!ConsumeToken(tok::l_paren)) {
     return false;
   }
-  constexpr llvm::StringLiteral g_anonymous("anonymous");
+  constexpr llvm::StringRef g_anonymous("anonymous");
   if (HasMoreTokens() && Peek().is(tok::raw_identifier) &&
       Peek().getRawIdentifier() == g_anonymous) {
     Advance();
@@ -354,7 +354,7 @@ bool CPlusPlusNameParser::ConsumeLambda() {
   if (!ConsumeToken(tok::l_brace)) {
     return false;
   }
-  constexpr llvm::StringLiteral g_lambda("lambda");
+  constexpr llvm::StringRef g_lambda("lambda");
   if (HasMoreTokens() && Peek().is(tok::raw_identifier) &&
       Peek().getRawIdentifier() == g_lambda) {
     // Put the matched brace back so we can use ConsumeBrackets

@@ -1652,10 +1652,10 @@ public:
   };
   SmallVector<AlignPackIncludeState, 8> AlignPackIncludeStack;
   // Segment #pragmas.
-  PragmaStack<StringLiteral *> DataSegStack;
-  PragmaStack<StringLiteral *> BSSSegStack;
-  PragmaStack<StringLiteral *> ConstSegStack;
-  PragmaStack<StringLiteral *> CodeSegStack;
+  PragmaStack<StringRef *> DataSegStack;
+  PragmaStack<StringRef *> BSSSegStack;
+  PragmaStack<StringRef *> ConstSegStack;
+  PragmaStack<StringRef *> CodeSegStack;
 
   // #pragma strict_gs_check.
   PragmaStack<bool> StrictGuardStackCheckStack;
@@ -1693,7 +1693,7 @@ public:
   };
 
   /// Last section used with #pragma init_seg.
-  StringLiteral *CurInitSeg;
+  StringRef *CurInitSeg;
   SourceLocation CurInitSegLoc;
 
   /// Sections used with #pragma alloc_text.
@@ -1866,16 +1866,16 @@ public:
   /// Called on well formed \#pragma bss_seg/data_seg/const_seg/code_seg.
   void ActOnPragmaMSSeg(SourceLocation PragmaLocation,
                         PragmaMsStackAction Action,
-                        llvm::StringRef StackSlotLabel,
-                        StringLiteral *SegmentName, llvm::StringRef PragmaName);
+                        llvm::StringRef StackSlotLabel, StringRef *SegmentName,
+                        llvm::StringRef PragmaName);
 
   /// Called on well formed \#pragma section().
   void ActOnPragmaMSSection(SourceLocation PragmaLocation, int SectionFlags,
-                            StringLiteral *SegmentName);
+                            StringRef *SegmentName);
 
   /// Called on well-formed \#pragma init_seg().
   void ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                            StringLiteral *SegmentName);
+                            StringRef *SegmentName);
 
   /// Called on well-formed \#pragma alloc_text().
   void ActOnPragmaMSAllocText(
@@ -2153,7 +2153,7 @@ public:
            isConstantEvaluatedOverride;
   }
 
-  SourceLocation getLocationOfStringLiteralByte(const StringLiteral *SL,
+  SourceLocation getLocationOfStringLiteralByte(const StringRef *SL,
                                                 unsigned ByteNo) const;
 
   enum FormatArgumentPassingKind {
@@ -2200,7 +2200,7 @@ public:
   };
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
 
-  bool FormatStringHasSArg(const StringLiteral *FExpr);
+  bool FormatStringHasSArg(const StringRef *FExpr);
 
   /// Check for comparisons of floating-point values using == and !=. Issue a
   /// warning if the comparison is not likely to do what the programmer
@@ -4542,7 +4542,7 @@ public:
   /// Check Target Version attrs
   bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
   bool checkTargetClonesAttrString(
-      SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
+      SourceLocation LiteralLoc, StringRef Str, const StringRef *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
       SmallVectorImpl<SmallString<64>> &StringsBuffer);
 
@@ -6002,11 +6002,11 @@ public:
 
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
   void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
-                      StringLiteral *Message = nullptr);
+                      StringRef *Message = nullptr);
   void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
 
   void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
-                           StringLiteral *DeletedMessage = nullptr);
+                           StringRef *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -7105,7 +7105,7 @@ public:
 
   // #embed
   ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                            StringLiteral *BinaryData);
+                            StringRef *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
@@ -9364,7 +9364,7 @@ public:
   LookupLiteralOperator(Scope *S, LookupResult &R, ArrayRef<QualType> ArgTys,
                         bool AllowRaw, bool AllowTemplate,
                         bool AllowStringTemplate, bool DiagnoseMissing,
-                        StringLiteral *StringLit = nullptr);
+                        StringRef *StringLit = nullptr);
 
   void ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                                ArrayRef<Expr *> Args, ADLResult &Functions);

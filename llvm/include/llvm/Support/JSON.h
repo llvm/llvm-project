@@ -659,7 +659,7 @@ public:
   /// Records that the value at the current path is invalid.
   /// Message is e.g. "expected number" and becomes part of the final error.
   /// This overwrites any previously written error message in the root.
-  void report(llvm::StringLiteral Message);
+  void report(llvm::StringRef Message);
 
   /// The root may be treated as a Path.
   Path(Root &R) : Parent(nullptr), Seg(&R) {}
@@ -701,10 +701,10 @@ private:
 /// It also stores the latest reported error and the path where it occurred.
 class Path::Root {
   llvm::StringRef Name;
-  llvm::StringLiteral ErrorMessage;
+  llvm::StringRef ErrorMessage;
   std::vector<Path::Segment> ErrorPath; // Only valid in error state. Reversed.
 
-  friend void Path::report(llvm::StringLiteral Message);
+  friend void Path::report(llvm::StringRef Message);
 
 public:
   Root(llvm::StringRef Name = "") : Name(Name), ErrorMessage("") {}
@@ -853,7 +853,7 @@ public:
 
   /// Maps a property to a field.
   /// If the property is missing or invalid, reports an error.
-  template <typename T> bool map(StringLiteral Prop, T &Out) {
+  template <typename T> bool map(StringRef Prop, T &Out) {
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
       return fromJSON(*E, Out, P.field(Prop));
@@ -864,7 +864,7 @@ public:
   /// Maps a property to a field, if it exists.
   /// If the property exists and is invalid, reports an error.
   /// (Optional requires special handling, because missing keys are OK).
-  template <typename T> bool map(StringLiteral Prop, std::optional<T> &Out) {
+  template <typename T> bool map(StringRef Prop, std::optional<T> &Out) {
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
       return fromJSON(*E, Out, P.field(Prop));
@@ -875,7 +875,7 @@ public:
   /// Maps a property to a field, if it exists.
   /// If the property exists and is invalid, reports an error.
   /// If the property does not exist, Out is unchanged.
-  template <typename T> bool mapOptional(StringLiteral Prop, T &Out) {
+  template <typename T> bool mapOptional(StringRef Prop, T &Out) {
     assert(*this && "Must check this is an object before calling map()");
     if (const Value *E = O->get(Prop))
       return fromJSON(*E, Out, P.field(Prop));

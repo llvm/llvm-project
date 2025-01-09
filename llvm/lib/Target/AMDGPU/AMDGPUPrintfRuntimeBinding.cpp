@@ -122,7 +122,7 @@ static bool shouldPrintAsStr(char Specifier, Type *OpType) {
   return Specifier == 's' && isa<PointerType>(OpType);
 }
 
-constexpr StringLiteral NonLiteralStr("???");
+constexpr StringRef NonLiteralStr("???");
 static_assert(NonLiteralStr.size() == 3);
 
 static StringRef getAsConstantStr(Value *V) {

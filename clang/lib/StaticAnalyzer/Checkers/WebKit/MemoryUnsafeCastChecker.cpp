@@ -79,7 +79,7 @@ static void emitDiagnosticsUnrelated(const BoundNodes &Nodes, BugReporter &BR,
 
 namespace clang {
 namespace ast_matchers {
-AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
+AST_MATCHER_P(StringRef, mentionsBoundType, std::string, BindingID) {
   return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
     const auto &BN = Nodes.getNode(this->BindingID);
     if (const auto *ND = BN.get<NamedDecl>()) {

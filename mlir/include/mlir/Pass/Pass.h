@@ -500,7 +500,7 @@ public:
   PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass);
 
   /// The tag required by ActionImpl to identify this action.
-  static constexpr StringLiteral tag = "pass-execution";
+  static constexpr StringRef tag = "pass-execution";
 
   /// Print a textual version of this action to `os`.
   void print(raw_ostream &os) const override;

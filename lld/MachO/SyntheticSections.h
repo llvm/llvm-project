@@ -345,7 +345,7 @@ public:
   void writeTo(uint8_t *buf) const override;
   void setUp();
 
-  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+  static constexpr llvm::StringRef symbolPrefix = "_objc_msgSend$";
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 

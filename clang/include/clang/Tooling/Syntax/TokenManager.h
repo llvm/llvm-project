@@ -31,7 +31,7 @@ public:
   virtual ~TokenManager() = default;
 
   /// Describes what the exact class kind of the TokenManager is.
-  virtual llvm::StringLiteral kind() const = 0;
+  virtual llvm::StringRef kind() const = 0;
 
   /// A key to identify a specific token. The token concept depends on the
   /// underlying implementation -- it can be a spelled token from the original

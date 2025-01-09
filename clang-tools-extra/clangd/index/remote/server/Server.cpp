@@ -366,7 +366,7 @@ private:
   void logResponse(const google::protobuf::Message &M) {
     vlog(">>> {0}\n{1}", M.GetDescriptor()->name(), TextProto{M});
   }
-  void logRequestSummary(llvm::StringLiteral RequestName, unsigned Sent,
+  void logRequestSummary(llvm::StringRef RequestName, unsigned Sent,
                          stopwatch::time_point StartTime) {
     auto Duration = stopwatch::now() - StartTime;
     auto Millis =

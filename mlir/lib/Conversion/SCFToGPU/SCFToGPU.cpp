@@ -55,7 +55,7 @@ using namespace mlir::scf;
 // TODO: Implement a cleaner solution, factoring out the "matching" logic
 // from the pattern and its callees into a separate function that can be called
 // from both the pattern and the op legality check.
-static constexpr StringLiteral kVisitedAttrName = "SCFToGPU_visited";
+static constexpr StringRef kVisitedAttrName = "SCFToGPU_visited";
 
 // Extract an indexed value from KernelDim3.
 static Value getDim3Value(const gpu::KernelDim3 &dim3, unsigned pos) {

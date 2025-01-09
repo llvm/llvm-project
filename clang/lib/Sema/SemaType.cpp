@@ -6547,7 +6547,7 @@ static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
   }
 
   // Ensure the argument is a string.
-  auto *StrLiteral = dyn_cast<StringLiteral>(Attr.getArgAsExpr(0));
+  auto *StrLiteral = dyn_cast<StringRef>(Attr.getArgAsExpr(0));
   if (!StrLiteral) {
     S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
         << Attr << AANT_ArgumentString;
@@ -7592,7 +7592,7 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     // but the form may not be.
     StringRef Str;
     if (Attr.isArgExpr(0))
-      Str = cast<StringLiteral>(Attr.getArgAsExpr(0))->getString();
+      Str = cast<StringRef>(Attr.getArgAsExpr(0))->getString();
     else
       Str = Attr.getArgAsIdent(0)->Ident->getName();
     PcsAttr::PCSType Type;

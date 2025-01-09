@@ -85,7 +85,7 @@ Derived1 makeDerived1() {
 // CHECK-NEXT:                   "valueCategory": "prvalue",
 // CHECK-NEXT:                   "castKind": "ArrayToPointerDecay",
 
-// CHECK:                          "kind": "StringLiteral",
+// CHECK:                          "kind": "StringRef",
 // CHECK:                          "type": {
 // CHECK-NEXT:                       "qualType": "const char[10]"
 // CHECK-NEXT:                     },
@@ -158,7 +158,7 @@ Derived2 makeDerived2() {
 // CHECK-NEXT:             "valueCategory": "prvalue",
 // CHECK-NEXT:             "castKind": "ArrayToPointerDecay",
 
-// CHECK:                    "kind": "StringLiteral",
+// CHECK:                    "kind": "StringRef",
 // CHECK:                    "type": {
 // CHECK-NEXT:                 "qualType": "const char[8]"
 // CHECK-NEXT:               },

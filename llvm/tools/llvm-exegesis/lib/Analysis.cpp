@@ -91,7 +91,7 @@ static void writeMeasurementValue(raw_ostream &OS, const double Value) {
   static constexpr auto SerializationLen = MaxDigitCount + DecimalSeparatorLen;
 
   // WARNING: when changing the format, also adjust the small-size estimate ^.
-  static constexpr StringLiteral SimpleFloatFormat = StringLiteral("{0:F}");
+  static constexpr StringRef SimpleFloatFormat = StringRef("{0:F}");
 
   writeEscaped<Tag>(
       OS, formatv(SimpleFloatFormat.data(), Value).sstr<SerializationLen>());

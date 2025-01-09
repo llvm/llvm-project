@@ -79,7 +79,7 @@ TEST(MemoryTree, DetailedNodesWithDetails) {
 
 TEST(MemoryTree, Record) {
   trace::TestTracer Tracer;
-  static constexpr llvm::StringLiteral MetricName = "memory_usage";
+  static constexpr llvm::StringRef MetricName = "memory_usage";
   static constexpr trace::Metric OutMetric(MetricName, trace::Metric::Value,
                                            "component_name");
   auto AddNodes = [](MemoryTree Root) {
