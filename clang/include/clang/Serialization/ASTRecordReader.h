@@ -337,6 +337,13 @@ public:
   /// Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs);
 
+  /// Reads one attribute from the current stream position, advancing Idx.
+  Attr *readAttr(Decl *D);
+
+  /// Reads attributes from the current stream position, advancing Idx.
+  void readAttributes(AttrVec &Attrs, Decl *D);
+
+
   /// Read an BTFTypeTagAttr object.
   BTFTypeTagAttr *readBTFTypeTagAttr() {
     return cast<BTFTypeTagAttr>(readAttr());

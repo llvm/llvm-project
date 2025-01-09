@@ -22,6 +22,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
@@ -638,7 +639,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
 
   if (HasAttrs) {
     AttrVec Attrs;
-    Record.readAttributes(Attrs);
+    Record.readAttributes(Attrs, D);
     // Avoid calling setAttrs() directly because it uses Decl::getASTContext()
     // internally which is unsafe during derialization.
     D->setAttrsImpl(Attrs, Reader.getContext());
@@ -725,12 +726,12 @@ void ASTDeclReader::VisitTypeDecl(TypeDecl *TD) {
 RedeclarableResult ASTDeclReader::VisitTypedefNameDecl(TypedefNameDecl *TD) {
   RedeclarableResult Redecl = VisitRedeclarable(TD);
   VisitTypeDecl(TD);
-  TypeSourceInfo *TInfo = readTypeSourceInfo();
-  if (Record.readInt()) { // isModed
-    QualType modedT = Record.readType();
-    TD->setModedTypeSourceInfo(TInfo, modedT);
-  } else
-    TD->setTypeSourceInfo(TInfo);
+    TypeSourceInfo *TInfo = readTypeSourceInfo();
+    if (Record.readInt()) { // isModed
+      QualType modedT = Record.readType();
+      TD->setModedTypeSourceInfo(TInfo, modedT);
+    } else
+      TD->setTypeSourceInfo(TInfo);
   // Read and discard the declaration for which this is a typedef name for
   // linkage, if it exists. We cannot rely on our type to pull in this decl,
   // because it might have been merged with a type from another module and
@@ -3167,10 +3168,64 @@ Attr *ASTRecordReader::readAttr() {
   return New;
 }
 
+Attr *ASTRecordReader::readAttr(Decl *D) {
+  AttrReader Record(*this);
+  auto V = Record.readInt();
+  if (!V)
+    return nullptr;
+
+  Attr *New = nullptr;
+  // Kind is stored as a 1-based integer because 0 is used to indicate a null
+  // Attr pointer.
+  auto Kind = static_cast<attr::Kind>(V - 1);
+  ASTContext &Context = getContext();
+
+  IdentifierInfo *AttrName = Record.readIdentifier();
+  IdentifierInfo *ScopeName = Record.readIdentifier();
+  SourceRange AttrRange = Record.readSourceRange();
+  SourceLocation ScopeLoc = Record.readSourceLocation();
+  unsigned ParsedKind = Record.readInt();
+  unsigned Syntax = Record.readInt();
+  unsigned SpellingIndex = Record.readInt();
+  bool IsAlignas = (ParsedKind == AttributeCommonInfo::AT_Aligned &&
+                    Syntax == AttributeCommonInfo::AS_Keyword &&
+                    SpellingIndex == AlignedAttr::Keyword_alignas);
+  bool IsRegularKeywordAttribute = Record.readBool();
+
+  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
+                           AttributeCommonInfo::Kind(ParsedKind),
+                           {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
+                            IsAlignas, IsRegularKeywordAttribute});
+  if (Kind == attr::PreferredName) {
+    bool isInherited = Record.readInt();
+    bool isImplicit = Record.readInt();
+    bool isPackExpansion = Record.readInt();
+
+
+    serialization::TypeID TypeID = getGlobalTypeID(Record.readInt());
+    SourceLocation SL = Record.readSourceLocation();
+    NestedNameSpecifierLoc NNL = readNestedNameSpecifierLoc();
+    SourceLocation TSL = Record.readSourceLocation();
+    Reader->PendingPreferredNameAttributes.push_back({D, Info, TypeID, isInherited, isImplicit, isPackExpansion, SL, NNL, TSL});
+    return nullptr;
+  }
+
+#include "clang/Serialization/AttrPCHRead.inc"
+
+  assert(New && "Unable to decode attribute?");
+  return New;
+}
+
 /// Reads attributes from the current stream position.
 void ASTRecordReader::readAttributes(AttrVec &Attrs) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
     if (auto *A = readAttr())
+      Attrs.push_back(A);
+}
+
+void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl* D) {
+  for (unsigned I = 0, E = readInt(); I != E; ++I)
+    if (auto *A = readAttr(D))
       Attrs.push_back(A);
 }
 
@@ -3572,7 +3627,7 @@ void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
-                                           Decl *Previous, Decl *Canon) {
+                                           Decl *Previous, Decl *Canon) {                                     
   D->RedeclLink.setPrevious(cast<DeclT>(Previous));
   D->First = cast<DeclT>(Previous)->First;
 }
@@ -4199,6 +4254,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
         ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, Offsets.second, ID))
       return nullptr;
   }
+  // This is the crashing line.  
   assert(Record.getIdx() == Record.size());
 
   // Load any relevant update records.

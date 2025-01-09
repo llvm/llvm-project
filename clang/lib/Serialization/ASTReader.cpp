@@ -23,6 +23,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
@@ -41,6 +42,7 @@
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
@@ -9859,6 +9861,29 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
+
+    ASTContext &Context = getContext();
+    for (unsigned I = 0; I != PendingPreferredNameAttributes.size(); ++I) {
+      auto *D = PendingPreferredNameAttributes[I].D;
+      QualType InfoTy = GetType(PendingPreferredNameAttributes[I].TypeID);
+      TypeSourceInfo *TInfo = nullptr;
+      if (!InfoTy.isNull()) {
+        TInfo = getContext().CreateTypeSourceInfo(InfoTy);
+        // TODO - this piece doesn't work yet
+        ElaboratedTypeLoc &Loc = (ElaboratedTypeLoc)TInfo->getTypeLoc();
+        Loc.setElaboratedKeywordLoc(PendingPreferredNameAttributes[I].ElaboratedTypedefSourceLocation);
+        Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NNS);
+        Loc.setNameLoc(PendingPreferredNameAttributes[I].TypedefSourceLocation);
+      }
+
+      AttrVec &Attrs = getContext().getDeclAttrs(D);
+      PreferredNameAttr *New = new (Context) PreferredNameAttr(Context, PendingPreferredNameAttributes[I].Info, TInfo);
+      cast<InheritableAttr>(New)->setInherited(PendingPreferredNameAttributes[I].isInherited);
+      New->setImplicit(PendingPreferredNameAttributes[I].isImplicit);
+      New->setPackExpansion(PendingPreferredNameAttributes[I].isPackExpansion);
+      Attrs.push_back(New);
+    }
+    PendingPreferredNameAttributes.clear();
 
     // For each decl chain that we wanted to complete while deserializing, mark
     // it as "still needs to be completed".

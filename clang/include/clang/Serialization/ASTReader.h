@@ -13,7 +13,10 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTREADER_H
 
+#include "clang/AST/DeclID.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -1156,6 +1159,19 @@ private:
   SmallVector<std::pair<VarDecl *, serialization::TypeID>, 16>
       PendingDeducedVarTypes;
 
+  struct PendingPreferredNameAttribute {
+    Decl* D;
+    AttributeCommonInfo Info;
+    serialization::TypeID TypeID;
+    bool isInherited;
+    bool isImplicit;
+    bool isPackExpansion;
+    SourceLocation ElaboratedTypedefSourceLocation;
+    NestedNameSpecifierLoc NNS;
+    SourceLocation TypedefSourceLocation;
+  };
+  std::deque<PendingPreferredNameAttribute> PendingPreferredNameAttributes;
+
   /// The list of redeclaration chains that still need to be
   /// reconstructed, and the local offset to the corresponding list
   /// of redeclarations.
@@ -1419,7 +1435,7 @@ public:
   const serialization::reader::DeclContextLookupTable *
   getLoadedLookupTables(DeclContext *Primary) const;
 
-private:
+  private:
   struct ImportedModule {
     ModuleFile *Mod;
     ModuleFile *ImportedBy;

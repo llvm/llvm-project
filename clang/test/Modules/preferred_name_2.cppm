@@ -24,9 +24,7 @@ class foo_templ;
 typedef foo_templ<char> foo;
 
 template<class _CharT>
-class
-__attribute__((__preferred_name__(foo)))
-foo_templ {
+class foo_templ {
 public:
     foo_templ() {}
 };
