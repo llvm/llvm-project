@@ -248,6 +248,16 @@ public:
                        OpenMPDirectiveKind Kind, bool EmitChecks = true,
                        bool ForceSimpleCall = false) override;
 
+  /// Emit the target offloading code associated with \a D. This is not
+  /// supported by the GPU-side and simply returns an error.
+  virtual void emitTargetCall(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
+      llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
+      llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                       const OMPLoopDirective &D)>
+          SizeEmitter);
+
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
   /// \param CriticalOpGen Generator for the statement associated with the given

@@ -34,10 +34,11 @@ int foo() {
 }
 
 void bar() {
-#pragma omp target
-  ;
 #pragma omp parallel
   ;
+#pragma omp parallel for
+  for (int i = 0; i < 1; ++i)
+    ;
 }
 
 void baz(int *p) {
@@ -56,6 +57,7 @@ int qux() {
 // AMDGCN: @c = addrspace(4) constant i32 0, align 4
 // AMDGCN: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // AMDGCN: @[[GLOB1:[0-9]+]] = private unnamed_addr addrspace(1) constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
+// AMDGCN: @[[GLOB2:[0-9]+]] = private unnamed_addr addrspace(1) constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 // AMDGCN: @d = global i32 0, align 4
 // AMDGCN: @g = global i32 0, align 4
 // AMDGCN: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
@@ -65,6 +67,7 @@ int qux() {
 // NVPTX: @c = addrspace(4) constant i32 0, align 4
 // NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 // NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
+// NVPTX: @[[GLOB2:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 //.
 // AMDGCN-LABEL: define dso_local noundef i32 @_Z3foov(
 // AMDGCN-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -82,9 +85,12 @@ int qux() {
 // AMDGCN-SAME: ) #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8, addrspace(5)
+// AMDGCN-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
 // AMDGCN-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
+// AMDGCN-NEXT:    [[CAPTURED_VARS_ADDRS1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS1]] to ptr
 // AMDGCN-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0)
+// AMDGCN-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined.1, ptr @_Z3barv_omp_outlined.1_wrapper, ptr [[CAPTURED_VARS_ADDRS1_ASCAST]], i64 0)
 // AMDGCN-NEXT:    ret void
 //
 //
@@ -116,6 +122,111 @@ int qux() {
 // AMDGCN-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // AMDGCN-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_ASCAST]])
 // AMDGCN-NEXT:    call void @_Z3barv_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]]) #[[ATTR3:[0-9]+]]
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN-LABEL: define internal void @_Z3barv_omp_outlined.1(
+// AMDGCN-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTGLOBAL_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTGLOBAL_TID__ADDR]] to ptr
+// AMDGCN-NEXT:    [[DOTBOUND_TID__ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTBOUND_TID__ADDR]] to ptr
+// AMDGCN-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IV]] to ptr
+// AMDGCN-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
+// AMDGCN-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
+// AMDGCN-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
+// AMDGCN-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
+// AMDGCN-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
+// AMDGCN-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
+// AMDGCN-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// AMDGCN-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
+// AMDGCN-NEXT:    store i32 0, ptr [[DOTOMP_LB_ASCAST]], align 4
+// AMDGCN-NEXT:    store i32 0, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// AMDGCN-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
+// AMDGCN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// AMDGCN-NEXT:    call void @__kmpc_for_static_init_4(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP1]], i32 33, ptr [[DOTOMP_IS_LAST_ASCAST]], ptr [[DOTOMP_LB_ASCAST]], ptr [[DOTOMP_UB_ASCAST]], ptr [[DOTOMP_STRIDE_ASCAST]], i32 1, i32 1)
+// AMDGCN-NEXT:    br label %[[OMP_DISPATCH_COND:.*]]
+// AMDGCN:       [[OMP_DISPATCH_COND]]:
+// AMDGCN-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 0
+// AMDGCN-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// AMDGCN:       [[COND_TRUE]]:
+// AMDGCN-NEXT:    br label %[[COND_END:.*]]
+// AMDGCN:       [[COND_FALSE]]:
+// AMDGCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    br label %[[COND_END]]
+// AMDGCN:       [[COND_END]]:
+// AMDGCN-NEXT:    [[COND:%.*]] = phi i32 [ 0, %[[COND_TRUE]] ], [ [[TMP3]], %[[COND_FALSE]] ]
+// AMDGCN-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
+// AMDGCN-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
+// AMDGCN-NEXT:    br i1 [[CMP1]], label %[[OMP_DISPATCH_BODY:.*]], label %[[OMP_DISPATCH_END:.*]]
+// AMDGCN:       [[OMP_DISPATCH_BODY]]:
+// AMDGCN-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// AMDGCN:       [[OMP_INNER_FOR_COND]]:
+// AMDGCN-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// AMDGCN-NEXT:    br i1 [[CMP2]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// AMDGCN:       [[OMP_INNER_FOR_BODY]]:
+// AMDGCN-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// AMDGCN-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// AMDGCN-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
+// AMDGCN-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
+// AMDGCN:       [[OMP_BODY_CONTINUE]]:
+// AMDGCN-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// AMDGCN:       [[OMP_INNER_FOR_INC]]:
+// AMDGCN-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP10]], 1
+// AMDGCN-NEXT:    store i32 [[ADD3]], ptr [[DOTOMP_IV_ASCAST]], align 4
+// AMDGCN-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// AMDGCN:       [[OMP_INNER_FOR_END]]:
+// AMDGCN-NEXT:    br label %[[OMP_DISPATCH_INC:.*]]
+// AMDGCN:       [[OMP_DISPATCH_INC]]:
+// AMDGCN-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_LB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// AMDGCN-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
+// AMDGCN-NEXT:    store i32 [[ADD4]], ptr [[DOTOMP_LB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_STRIDE_ASCAST]], align 4
+// AMDGCN-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP13]], [[TMP14]]
+// AMDGCN-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB_ASCAST]], align 4
+// AMDGCN-NEXT:    br label %[[OMP_DISPATCH_COND]]
+// AMDGCN:       [[OMP_DISPATCH_END]]:
+// AMDGCN-NEXT:    call void @__kmpc_for_static_fini(ptr addrspacecast (ptr addrspace(1) @[[GLOB2]] to ptr), i32 [[TMP1]])
+// AMDGCN-NEXT:    ret void
+//
+//
+// AMDGCN-LABEL: define internal void @_Z3barv_omp_outlined.1_wrapper(
+// AMDGCN-SAME: i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2, addrspace(5)
+// AMDGCN-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN-NEXT:    [[DOTADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTADDR]] to ptr
+// AMDGCN-NEXT:    [[DOTADDR1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTADDR1]] to ptr
+// AMDGCN-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
+// AMDGCN-NEXT:    [[GLOBAL_ARGS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[GLOBAL_ARGS]] to ptr
+// AMDGCN-NEXT:    store i16 [[TMP0]], ptr [[DOTADDR_ASCAST]], align 2
+// AMDGCN-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1_ASCAST]], align 4
+// AMDGCN-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
+// AMDGCN-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS_ASCAST]])
+// AMDGCN-NEXT:    call void @_Z3barv_omp_outlined.1(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]]) #[[ATTR3]]
 // AMDGCN-NEXT:    ret void
 //
 //
@@ -151,8 +262,10 @@ int qux() {
 // NVPTX-SAME: ) #[[ATTR0]] {
 // NVPTX-NEXT:  [[ENTRY:.*:]]
 // NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
+// NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 // NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined, ptr @_Z3barv_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+// NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @_Z3barv_omp_outlined1, ptr @_Z3barv_omp_outlined1_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 // NVPTX-NEXT:    ret void
 //
 //
@@ -178,6 +291,98 @@ int qux() {
 // NVPTX-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
 // NVPTX-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 // NVPTX-NEXT:    call void @_Z3barv_omp_outlined(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR3:[0-9]+]]
+// NVPTX-NEXT:    ret void
+//
+//
+// NVPTX-LABEL: define internal void @_Z3barv_omp_outlined1(
+// NVPTX-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// NVPTX-NEXT:  [[ENTRY:.*:]]
+// NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
+// NVPTX-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[I:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// NVPTX-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
+// NVPTX-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// NVPTX-NEXT:    store i32 0, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
+// NVPTX-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
+// NVPTX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// NVPTX-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NVPTX-NEXT:    br label %[[OMP_DISPATCH_COND:.*]]
+// NVPTX:       [[OMP_DISPATCH_COND]]:
+// NVPTX-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 0
+// NVPTX-NEXT:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// NVPTX:       [[COND_TRUE]]:
+// NVPTX-NEXT:    br label %[[COND_END:.*]]
+// NVPTX:       [[COND_FALSE]]:
+// NVPTX-NEXT:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    br label %[[COND_END]]
+// NVPTX:       [[COND_END]]:
+// NVPTX-NEXT:    [[COND:%.*]] = phi i32 [ 0, %[[COND_TRUE]] ], [ [[TMP3]], %[[COND_FALSE]] ]
+// NVPTX-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// NVPTX-NEXT:    store i32 [[TMP4]], ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[TMP5]], [[TMP6]]
+// NVPTX-NEXT:    br i1 [[CMP1]], label %[[OMP_DISPATCH_BODY:.*]], label %[[OMP_DISPATCH_END:.*]]
+// NVPTX:       [[OMP_DISPATCH_BODY]]:
+// NVPTX-NEXT:    br label %[[OMP_INNER_FOR_COND:.*]]
+// NVPTX:       [[OMP_INNER_FOR_COND]]:
+// NVPTX-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// NVPTX-NEXT:    br i1 [[CMP2]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
+// NVPTX:       [[OMP_INNER_FOR_BODY]]:
+// NVPTX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// NVPTX-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// NVPTX-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
+// NVPTX-NEXT:    br label %[[OMP_BODY_CONTINUE:.*]]
+// NVPTX:       [[OMP_BODY_CONTINUE]]:
+// NVPTX-NEXT:    br label %[[OMP_INNER_FOR_INC:.*]]
+// NVPTX:       [[OMP_INNER_FOR_INC]]:
+// NVPTX-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP10]], 1
+// NVPTX-NEXT:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
+// NVPTX-NEXT:    br label %[[OMP_INNER_FOR_COND]]
+// NVPTX:       [[OMP_INNER_FOR_END]]:
+// NVPTX-NEXT:    br label %[[OMP_DISPATCH_INC:.*]]
+// NVPTX:       [[OMP_DISPATCH_INC]]:
+// NVPTX-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// NVPTX-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4
+// NVPTX-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP11]], [[TMP12]]
+// NVPTX-NEXT:    store i32 [[ADD4]], ptr [[DOTOMP_LB]], align 4
+// NVPTX-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_STRIDE]], align 4
+// NVPTX-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP13]], [[TMP14]]
+// NVPTX-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_UB]], align 4
+// NVPTX-NEXT:    br label %[[OMP_DISPATCH_COND]]
+// NVPTX:       [[OMP_DISPATCH_END]]:
+// NVPTX-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
+// NVPTX-NEXT:    ret void
+//
+//
+// NVPTX-LABEL: define internal void @_Z3barv_omp_outlined1_wrapper(
+// NVPTX-SAME: i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
+// NVPTX-NEXT:  [[ENTRY:.*:]]
+// NVPTX-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
+// NVPTX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+// NVPTX-NEXT:    store i16 [[TMP0]], ptr [[DOTADDR]], align 2
+// NVPTX-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// NVPTX-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
+// NVPTX-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
+// NVPTX-NEXT:    call void @_Z3barv_omp_outlined1(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR3]]
 // NVPTX-NEXT:    ret void
 //
 //

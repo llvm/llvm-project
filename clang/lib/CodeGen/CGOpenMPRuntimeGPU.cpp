@@ -1309,6 +1309,19 @@ void CGOpenMPRuntimeGPU::emitBarrierCall(CodeGenFunction &CGF,
                       Args);
 }
 
+void CGOpenMPRuntimeGPU::emitTargetCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
+    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << "Cannot emit a '#pragma omp target' on the GPU";
+  CGM.Error(D.getBeginLoc(), Out.str());
+}
+
 void CGOpenMPRuntimeGPU::emitCriticalRegion(
     CodeGenFunction &CGF, StringRef CriticalName,
     const RegionCodeGenTy &CriticalOpGen, SourceLocation Loc,
