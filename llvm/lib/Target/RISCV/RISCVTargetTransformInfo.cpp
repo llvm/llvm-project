@@ -1189,6 +1189,33 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                                   : RISCV::VMV_V_X,
                                               LT.second, CostKind);
   }
+  case Intrinsic::experimental_vp_splice: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    SmallVector<unsigned, 3> Opcodes;
+    Value *ImmValue = *(ICA.getInst()->arg_begin() + 2);
+    auto *Imm = dyn_cast<ConstantInt>(ImmValue);
+    if (Imm->isNegative())
+      Opcodes = {RISCV::VSLIDEDOWN_VI, RISCV::VSLIDEUP_VX};
+    else
+      Opcodes = {RISCV::VSLIDEDOWN_VX, RISCV::VSLIDEUP_VI};
+
+    if (!ST->hasVInstructions())
+      return InstructionCost::getInvalid();
+
+    if (LT.second.getScalarType() == MVT::i1) {
+      SmallVector<unsigned, 8> AddOpcodes = {
+          RISCV::VMV1R_V, RISCV::VMV1R_V, RISCV::VMV_V_I,    RISCV::VMERGE_VIM,
+          RISCV::VMV_V_I, RISCV::VMV1R_V, RISCV::VMERGE_VIM, RISCV::VMSNE_VI};
+      return LT.first *
+                 (getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+                  getRISCVInstructionCost(AddOpcodes, LT.second, CostKind)) +
+             1;
+    } else {
+      return LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind) +
+             1;
+    }
+    break;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
