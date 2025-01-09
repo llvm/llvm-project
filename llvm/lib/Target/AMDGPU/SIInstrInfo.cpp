@@ -2780,10 +2780,10 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI,
     Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0X);
   }
 
-  // Swap doesn't breach constantbus or literal limits
+  // Swap doesn't breach constant bus or literal limits
   // It may move literal to position other than src0, this is not allowed pre-gfx10
   // However, most test cases need literals in Src0 for VOP
-  // FIX-ME: After gfx9, literal can be in place other than Src0
+  // FIXME: After gfx9, literal can be in place other than Src0
   if (isVALU(MI)){
     if ((int)OpIdx0 == Src0Idx &&
         !MO0->isReg() && !isInlineConstant(*MO0, OpInfo1))
@@ -2804,8 +2804,8 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI,
     return isLegalRegOperand(MI, OpIdx0, *MO1);
   }
   
-  // No need to check 64bit literals since swapping does not bring new 
-  // 64bit literals into current instruction to fold to 32bit
+  // No need to check 64-bit literals since swapping does not bring new 
+  // 64-bit literals into current instruction to fold to 32-bit
 
   return isImmOperandLegal(MI, OpIdx1, *MO0);
 }
