@@ -35,4 +35,7 @@ void uses(bool cond) {
 
 // CHECK: #pragma acc update device_type(J) dtype(K)
 #pragma acc update device_type(J) dtype(K)
+
+// CHECK: #pragma acc update self(I, iPtr, array, array[1], array[1:2])
+#pragma acc update self(I, iPtr, array, array[1], array[1:2])
 }

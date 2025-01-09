@@ -10,6 +10,10 @@
 int some_int();
 long some_long();
 
+int Global;
+short GlobalArray[5];
+
+
 void NormalFunc() {
   // CHECK-LABEL: NormalFunc
   // CHECK-NEXT: CompoundStmt
@@ -70,6 +74,21 @@ void NormalFunc() {
   // CHECK-NEXT: CallExpr{{.*}}'long'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
+
+#pragma acc update self(Global, GlobalArray, GlobalArray[0], GlobalArray[0:1])
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}} 'short' lvalue
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: IntegerLiteral{{.*}} 1
 }
 
 template<typename T>
@@ -123,6 +142,26 @@ void TemplFunc(T t) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+
+  decltype(T::value) Local = 0, LocalArray[5] = {};
+  // CHECK-NEXT: DeclStmt 
+  // CHECK-NEXT: VarDecl
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: VarDecl
+  // CHECK-NEXT: InitListExpr
+
+#pragma acc update self(Local, LocalArray, LocalArray[0], LocalArray[0:1])
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(T::value)'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
 
   // Instantiation:
   // CHECK-NEXT: FunctionDecl{{.*}} TemplFunc 'void (SomeStruct)' implicit_instantiation
@@ -194,6 +233,28 @@ void TemplFunc(T t) {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'value' 'const unsigned int'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'SomeStruct'
+
+  // CHECK-NEXT: DeclStmt 
+  // CHECK-NEXT: VarDecl
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: IntegerLiteral
+  // CHECK-NEXT: VarDecl
+  // CHECK-NEXT: InitListExpr
+  // CHECK-NEXT: array_filler
+
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(SomeStruct::value)':'const unsigned int'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
 }
 
 struct SomeStruct{
