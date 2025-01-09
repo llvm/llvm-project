@@ -56,6 +56,7 @@
 //  int     __strcoll(const char*, const char*, __locale_t);
 //  size_t  __strxfrm(char*, const char*, size_t, __locale_t);
 //
+//  int     __iswctype(wint_t, wctype_t, __locale_t);
 //  int     __iswspace(wint_t, __locale_t);
 //  int     __iswprint(wint_t, __locale_t);
 //  int     __iswcntrl(wint_t, __locale_t);
@@ -191,6 +192,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __s1, const wchar_t* _
 }
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return wcsxfrm_l(__dest, __src, __n, __loc);
+}
+inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __ch, wctype_t __type, __locale_t __loc) {
+  return iswctype_l(__ch, __type, __loc);
 }
 inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __ch, __locale_t __loc) { return iswprint_l(__ch, __loc); }
