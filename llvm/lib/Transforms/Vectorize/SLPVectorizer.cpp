@@ -4972,8 +4972,8 @@ static Value *createInsertVector(
     const unsigned VecVF = getNumElements(Vec->getType());
     SmallVector<int> Mask(VecVF, PoisonMaskElem);
     std::iota(Mask.begin(), std::next(Mask.begin(), Index), 0);
-    for (unsigned I : seq<unsigned>(Index, SubVecVF))
-      Mask[I] = I - Index + VecVF;
+    for (unsigned I : seq<unsigned>(SubVecVF))
+      Mask[I + Index] = I + VecVF;
     if (Generator) {
       Vec = Generator(Vec, V, Mask);
     } else {

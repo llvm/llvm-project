@@ -1,0 +1,17 @@
+---
+Name: SwiftImportAsForObjC
+Classes:
+  - Name:            MethodTest
+    Methods:
+      - Selector:        getUnowned
+        MethodKind:      Instance
+        SwiftReturnOwnership: unretained
+      - Selector:        getOwned
+        MethodKind:      Instance
+        SwiftReturnOwnership: retained
+
+Functions:
+  - Name:            getObjCUnowned
+    SwiftReturnOwnership: unretained
+  - Name:            getObjCOwned
+    SwiftReturnOwnership: retained
