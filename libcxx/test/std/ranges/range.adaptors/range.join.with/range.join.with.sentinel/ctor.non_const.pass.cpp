@@ -29,9 +29,12 @@ constexpr bool test() {
     std::ranges::join_with_view jwv(vec, 0);
     using JWV = decltype(jwv);
     static_assert(!std::ranges::common_range<JWV>);
-    using CSent = std::ranges::sentinel_t<const JWV>;
 
-    auto se                    = jwv.end();
+    using Sent  = std::ranges::sentinel_t<JWV>;
+    using CSent = std::ranges::sentinel_t<const JWV>;
+    static_assert(!std::same_as<Sent, CSent>);
+
+    Sent se                    = jwv.end();
     [[maybe_unused]] CSent cse = se;
   }
 
