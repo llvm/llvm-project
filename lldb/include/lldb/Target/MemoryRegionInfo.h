@@ -27,9 +27,9 @@ public:
   MemoryRegionInfo() = default;
   MemoryRegionInfo(RangeType range, OptionalBool read, OptionalBool write,
                    OptionalBool execute, OptionalBool shared,
-                   OptionalBool mapped, ConstString name,
-                   OptionalBool flash, lldb::offset_t blocksize,
-                   OptionalBool memory_tagged, OptionalBool stack_memory)
+                   OptionalBool mapped, ConstString name, OptionalBool flash,
+                   lldb::offset_t blocksize, OptionalBool memory_tagged,
+                   OptionalBool stack_memory)
       : m_range(range), m_read(read), m_write(write), m_execute(execute),
         m_shared(shared), m_mapped(mapped), m_name(name), m_flash(flash),
         m_blocksize(blocksize), m_memory_tagged(memory_tagged),
@@ -101,9 +101,9 @@ public:
   bool operator==(const MemoryRegionInfo &rhs) const {
     return m_range == rhs.m_range && m_read == rhs.m_read &&
            m_write == rhs.m_write && m_execute == rhs.m_execute &&
-           m_shared == rhs.m_shared &&
-           m_mapped == rhs.m_mapped && m_name == rhs.m_name &&
-           m_flash == rhs.m_flash && m_blocksize == rhs.m_blocksize &&
+           m_shared == rhs.m_shared && m_mapped == rhs.m_mapped &&
+           m_name == rhs.m_name && m_flash == rhs.m_flash &&
+           m_blocksize == rhs.m_blocksize &&
            m_memory_tagged == rhs.m_memory_tagged &&
            m_pagesize == rhs.m_pagesize &&
            m_is_stack_memory == rhs.m_is_stack_memory;
@@ -174,7 +174,7 @@ public:
   using std::vector<lldb_private::MemoryRegionInfo>::vector;
 };
 
-}
+} // namespace lldb_private
 
 namespace llvm {
 template <>
@@ -186,6 +186,6 @@ struct format_provider<lldb_private::MemoryRegionInfo::OptionalBool> {
   static void format(const lldb_private::MemoryRegionInfo::OptionalBool &B,
                      raw_ostream &OS, StringRef Options);
 };
-}
+} // namespace llvm
 
 #endif // LLDB_TARGET_MEMORYREGIONINFO_H
