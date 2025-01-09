@@ -26,6 +26,17 @@ bool isOverrideMethod(const FunctionDecl *Function) {
     return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
   return false;
 }
+
+bool hasAttrAfterParam(const clang::SourceManager *SourceManager,
+                       const ParmVarDecl *Param) {
+  for (const auto *Attr : Param->attrs()) {
+    if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
+                                                 Attr->getLocation())) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -189,6 +200,11 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
     if (Param->isUsed() || Param->isReferenced() || !Param->getDeclName() ||
         Param->hasAttr<UnusedAttr>())
       continue;
+    if (hasAttrAfterParam(Result.SourceManager, Param)) {
+      // Due to how grammar works, attributes would be wrongly applied to the
+      // type if we remove the preceding parameter name.
+      continue;
+    }
 
     // In non-strict mode ignore function definitions with empty bodies
     // (constructor initializer counts for non-empty body).

@@ -33,6 +33,10 @@ void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
 // CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
 
+int *k([[clang::lifetimebound]] int *i) {;}
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'i' is unused [misc-unused-parameters]
+// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) {;}{{$}}
+
 // Unchanged cases
 // ===============
 void f(int i); // Don't remove stuff in declarations
@@ -41,6 +45,7 @@ void h(int i[]);
 void s(int i[1]);
 void u(void (*fn)());
 void w(int i) { (void)i; } // Don't remove used parameters
+int *x(int *i [[clang::lifetimebound]]) { return nullptr; } // Don't reanchor attribute to the type.
 
 bool useLambda(int (*fn)(int));
 static bool static_var = useLambda([] (int a) { return a; });
