@@ -31,26 +31,30 @@ concept CanPreIncrement = requires(I& i) { ++i; };
 template <class I>
 concept CanPostIncrement = requires(I& i) { i++; };
 
+template <bool RefIsGlvalue, class Inner>
+using VRange = std::conditional_t<RefIsGlvalue, std::vector<Inner>, RvalueVector<Inner>>;
+
+template <bool RefIsGlvalue>
 constexpr void test_pre_increment() {
   { // `V` and `Pattern` are not empty. Test return type too.
-    using V       = std::array<std::array<int, 2>, 3>;
+    using V       = VRange<RefIsGlvalue, std::array<int, 2>>;
     using Pattern = std::array<int, 2>;
     using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
 
-    using Iter  = std::ranges::iterator_t<JWV>;
-    using CIter = std::ranges::iterator_t<const JWV>;
-    static_assert(CanPreIncrement<Iter>);
-    static_assert(!CanPreIncrement<const Iter>);
-    static_assert(CanPreIncrement<CIter>);
-    static_assert(!CanPreIncrement<const CIter>);
-
-    JWV jwv(V{{{1, 1}, {2, 2}, {3, 3}}}, Pattern{0, 0});
+    JWV jwv(V{{1, 1}, {2, 2}, {3, 3}}, Pattern{0, 0});
 
     {
+      using Iter = std::ranges::iterator_t<JWV>;
+      static_assert(CanPreIncrement<Iter>);
+      static_assert(!CanPreIncrement<const Iter>);
+
       auto it = jwv.begin();
       assert(*it == 1);
       std::same_as<Iter&> decltype(auto) it_ref = ++it;
-      assert(it_ref == it);
+      if constexpr (RefIsGlvalue) {
+        assert(it_ref == it);
+      }
+
       ++it;
       assert(*it == 0);
       ++it_ref;
@@ -61,7 +65,11 @@ constexpr void test_pre_increment() {
       assert(*it == 0);
     }
 
-    {
+    if constexpr (RefIsGlvalue) {
+      using CIter = std::ranges::iterator_t<const JWV>;
+      static_assert(CanPreIncrement<CIter>);
+      static_assert(!CanPreIncrement<const CIter>);
+
       auto cit = std::as_const(jwv).begin();
       assert(*cit == 1);
       std::same_as<CIter&> decltype(auto) cit_ref = ++cit;
@@ -77,10 +85,28 @@ constexpr void test_pre_increment() {
     }
   }
 
+  { // `V` and `Pattern` are empty.
+    using V       = VRange<RefIsGlvalue, std::ranges::empty_view<int>>;
+    using Pattern = std::ranges::empty_view<int>;
+    using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
+
+    JWV jwv = {};
+
+    {
+      auto it = jwv.begin();
+      assert(it == jwv.end());
+    }
+
+    if constexpr (RefIsGlvalue) {
+      auto cit = std::as_const(jwv).begin();
+      assert(cit == std::as_const(jwv).end());
+    }
+  }
+
 #if !defined(TEST_COMPILER_GCC) // GCC c++/101777
 
   { // `Pattern` is empty, `V` is not.
-    using V       = std::array<std::vector<int>, 3>;
+    using V       = VRange<RefIsGlvalue, std::vector<int>>;
     using Pattern = std::vector<int>;
     using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
 
@@ -97,7 +123,7 @@ constexpr void test_pre_increment() {
       assert(it == jwv.end());
     }
 
-    {
+    if constexpr (RefIsGlvalue) {
       auto cit = std::as_const(jwv).begin();
       assert(*cit == -1);
       ++cit;
@@ -110,11 +136,11 @@ constexpr void test_pre_increment() {
   }
 
   { // `V` has empty subrange in the middle, `Pattern` is not empty.
-    using V       = std::array<std::vector<int>, 3>;
+    using V       = VRange<RefIsGlvalue, std::vector<int>>;
     using Pattern = std::ranges::single_view<int>;
     using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, Pattern>;
 
-    JWV jwv(V{{{1}, {}, {3}}}, Pattern{0});
+    JWV jwv(V{{1}, {}, {3}}, Pattern{0});
 
     {
       auto it = jwv.begin();
@@ -127,7 +153,7 @@ constexpr void test_pre_increment() {
       assert(*it == 3);
     }
 
-    {
+    if constexpr (RefIsGlvalue) {
       auto cit = std::as_const(jwv).begin();
       assert(*cit == 1);
       ++cit;
@@ -139,12 +165,42 @@ constexpr void test_pre_increment() {
     }
   }
 
+  { // Only last element of `V` is not empty. `Pattern` is not empty.
+    using V       = VRange<RefIsGlvalue, std::vector<int>>;
+    using Pattern = std::ranges::single_view<int>;
+    using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, Pattern>;
+
+    JWV jwv(V{{}, {}, {555}}, Pattern{1});
+
+    {
+      auto it = jwv.begin();
+      assert(*it == 1);
+      ++it;
+      assert(*it == 1);
+      ++it;
+      assert(*it == 555);
+      ++it;
+      assert(it == jwv.end());
+    }
+
+    if constexpr (RefIsGlvalue) {
+      auto cit = std::as_const(jwv).begin();
+      assert(*cit == 1);
+      ++cit;
+      assert(*cit == 1);
+      ++cit;
+      assert(*cit == 555);
+      ++cit;
+      assert(cit == std::as_const(jwv).end());
+    }
+  }
+
   { // Only first element of `V` is not empty. `Pattern` is empty.
-    using V       = std::array<std::vector<int>, 3>;
+    using V       = VRange<RefIsGlvalue, std::vector<int>>;
     using Pattern = std::ranges::empty_view<int>;
     using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, Pattern>;
 
-    JWV jwv(V{{{777}, {}, {}}}, Pattern{});
+    JWV jwv(V{{777}, {}, {}}, Pattern{});
 
     {
       auto it = jwv.begin();
@@ -153,7 +209,7 @@ constexpr void test_pre_increment() {
       assert(it == jwv.end());
     }
 
-    {
+    if constexpr (RefIsGlvalue) {
       auto cit = std::as_const(jwv).begin();
       assert(*cit == 777);
       ++cit;
@@ -163,9 +219,8 @@ constexpr void test_pre_increment() {
 
 #endif // !defined(TEST_COMPILER_GCC)
 
-  { // Only last element of `V` is not empty. `Pattern` is empty. `V` models input range and `ref-is-glvalue` is false.
-    using Inner   = RvalueVector<std::string>;
-    using V       = BasicView<Inner, ViewProperties{}, DefaultCtorInputIter>;
+  { // Only last element of `V` is not empty. `Pattern` is empty. `V` models input range.
+    using V       = BasicView<VRange<RefIsGlvalue, std::string>, ViewProperties{}, DefaultCtorInputIter>;
     using Pattern = std::ranges::empty_view<char>;
     using JWV     = std::ranges::join_with_view<V, Pattern>;
 
@@ -177,10 +232,8 @@ constexpr void test_pre_increment() {
     assert(it == jwv.end());
   }
 
-  { // Only first element of `V` is not empty. `Pattern` is not empty.
-    // `V` models input range and `ref-is-glvalue` is false.
-    using Inner   = RvalueVector<std::string>;
-    using V       = BasicView<Inner, ViewProperties{}, DefaultCtorInputIter>;
+  { // Only first element of `V` is not empty. `Pattern` is not empty. `V` models input range.
+    using V       = BasicView<VRange<RefIsGlvalue, std::string>, ViewProperties{}, DefaultCtorInputIter>;
     using Pattern = std::ranges::single_view<char>;
     using JWV     = std::ranges::join_with_view<V, Pattern>;
 
@@ -306,7 +359,8 @@ constexpr void test_post_increment() {
 }
 
 constexpr bool test() {
-  test_pre_increment();
+  test_pre_increment<false>();
+  test_pre_increment<true>();
   test_post_increment();
 
   return true;
