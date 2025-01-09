@@ -99,7 +99,6 @@ jobs:
           repository: Microsoft/DirectXShaderCompiler
           ref: ${{ inputs.DXC-branch }}
           path: DXC
-          fetch-depth: 1
           submodules: true
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -107,21 +106,18 @@ jobs:
           repository: llvm/llvm-project
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
-          fetch-depth: 1
       - name: Checkout OffloadTest
         uses: actions/checkout@v4
         with:
           repository: llvm-beanz/offload-test-suite
           ref: ${{ inputs.OffloadTest-branch }}
           path: OffloadTest
-          fetch-depth: 1
       - name: Checkout Golden Images
         uses: actions/checkout@v4
         with:
           repository: llvm-beanz/offload-golden-images
           ref: main
           path: golden-images
-          fetch-depth: 1
       - name: Setup Windows
         if: runner.os == 'Windows'
         uses: llvm/actions/setup-windows@main
