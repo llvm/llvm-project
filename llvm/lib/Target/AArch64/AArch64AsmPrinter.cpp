@@ -606,10 +606,10 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
 
-  // If the pointer is statically known to be zero, it has a zero tag and the
-  // tag check will pass since the shadow memory corresponding to address 0
-  // is initialized to zero and never updated. We can therefore elide the tag
-  // check.
+  // The HWASan pass won't emit a CHECK_MEMACCESS intrinsic with a pointer
+  // statically known to be zero. However, conceivably the HWASan pass has a
+  // "maybe non-zero" pointer but later optimization passes convert it into
+  // a null pointer. As a last line of defense, we perform elision here too.
   if (Reg == AArch64::XZR)
     return;
 
