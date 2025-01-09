@@ -1423,9 +1423,9 @@ name: vfred_vs1_vs2_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1_vs2_incompatible_eew
-    ; CHECK: %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVFREDMAX_VS_M1_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0 /* tu, mu */
-    %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 3 /* e8 */, 0
+    %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 6 /* e64 */, 0
     %y:vr = PseudoVFREDMAX_VS_M1_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0
 ...
 ---
