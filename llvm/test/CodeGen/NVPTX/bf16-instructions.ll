@@ -114,9 +114,9 @@ define bfloat @test_fsub(bfloat %0, bfloat %1) {
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b16 %rs1, [test_fsub_param_0];
-; SM80-NEXT:    ld.param.b16 %rs2, [test_fsub_param_1];
-; SM80-NEXT:    mov.b16 %rs3, 0xBF80;
-; SM80-NEXT:    fma.rn.bf16 %rs4, %rs2, %rs3, %rs1;
+; SM80-NEXT:    mov.b16 %rs2, 0xBF80;
+; SM80-NEXT:    ld.param.b16 %rs3, [test_fsub_param_1];
+; SM80-NEXT:    fma.rn.bf16 %rs4, %rs3, %rs2, %rs1;
 ; SM80-NEXT:    st.param.b16 [func_retval0], %rs4;
 ; SM80-NEXT:    ret;
 ;

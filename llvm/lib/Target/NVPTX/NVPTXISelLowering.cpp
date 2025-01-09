@@ -2527,8 +2527,8 @@ SDValue NVPTXTargetLowering::LowerFADD(SDValue Op, SelectionDAG &DAG) const {
     return PromoteBinOpToF32(Op.getNode(), DAG);
   }
 
-  // FADD(a, b) -> FMA(a, 1.0, b)
-  return expandFADD(Op.getNode(), DAG);
+  // Legal
+  return Op;
 }
 
 SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
@@ -2537,8 +2537,8 @@ SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
     return PromoteBinOpToF32(Op.getNode(), DAG);
   }
 
-  // FSUB(a, b) -> FMA(b, -1.0, a)
-  return expandFSUB(Op.getNode(), DAG);
+  // Legal
+  return Op;
 }
 
 SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
@@ -2547,8 +2547,8 @@ SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
     return PromoteBinOpToF32(Op.getNode(), DAG);
   }
 
-  // FMUL(a, b) -> FMA(a, b, -0.0)
-  return expandFMUL(Op.getNode(), DAG);
+  // Legal
+  return Op;
 }
 
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,

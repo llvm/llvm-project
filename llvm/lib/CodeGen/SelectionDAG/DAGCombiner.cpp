@@ -17559,13 +17559,10 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return N2;
   }
 
-  const bool PreferFMAAdd = (TLI.isOperationLegal(ISD::FMA, VT) &&
-                             !TLI.isOperationLegal(ISD::FADD, VT));
-
   // FIXME: Support splat of constant.
-  if (!PreferFMAAdd && N0CFP && N0CFP->isExactlyValue(1.0))
+  if (N0CFP && N0CFP->isExactlyValue(1.0))
     return matcher.getNode(ISD::FADD, DL, VT, N1, N2);
-  if (!PreferFMAAdd && N1CFP && N1CFP->isExactlyValue(1.0))
+  if (N1CFP && N1CFP->isExactlyValue(1.0))
     return matcher.getNode(ISD::FADD, DL, VT, N0, N2);
 
   // Canonicalize (fma c, x, y) -> (fma x, c, y)
@@ -17597,7 +17594,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // (fma x, -1, y) -> (fadd (fneg x), y)
   // FIXME: Support splat of constant.
-  if (N1CFP && !PreferFMAAdd) {
+  if (N1CFP) {
     if (N1CFP->isExactlyValue(1.0))
       return matcher.getNode(ISD::FADD, DL, VT, N0, N2);
 
@@ -17607,14 +17604,15 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       AddToWorklist(RHSNeg.getNode());
       return matcher.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
     }
-  }
-  // fma (fneg x), K, y -> fma x -K, y
-  if (N1CFP && matcher.match(N0, ISD::FNEG) &&
-      (TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-       (N1.hasOneUse() &&
-        !TLI.isFPImmLegal(N1CFP->getValueAPF(), VT, ForCodeSize)))) {
-    return matcher.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
-                           matcher.getNode(ISD::FNEG, DL, VT, N1), N2);
+
+    // fma (fneg x), K, y -> fma x -K, y
+    if (matcher.match(N0, ISD::FNEG) &&
+        (TLI.isOperationLegal(ISD::ConstantFP, VT) ||
+         (N1.hasOneUse() &&
+          !TLI.isFPImmLegal(N1CFP->getValueAPF(), VT, ForCodeSize)))) {
+      return matcher.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
+                             matcher.getNode(ISD::FNEG, DL, VT, N1), N2);
+    }
   }
 
   // FIXME: Support splat of constant.

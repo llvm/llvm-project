@@ -5325,23 +5325,6 @@ public:
                            SDNodeFlags Flags, const SDLoc &DL,
                            SelectionDAG &DAG) const;
 
-  /// Expand floating point add
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandFADD(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand floating point multiply
-  /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandFMUL(SDNode *N, SelectionDAG &DAG) const;
-
-  /// Expand floating point subtract
-  /// \param N Node to expand
-  /// \param Result output after conversion
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandFSUB(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// \param N Node to expand
