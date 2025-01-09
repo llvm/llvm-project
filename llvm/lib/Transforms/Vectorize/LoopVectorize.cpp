@@ -8824,10 +8824,6 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
   Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
   Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
 
-  // Check that the extends extend from the same type.
-  if (A->getType() != B->getType())
-    return std::nullopt;
-
   TTI::PartialReductionExtendKind OpAExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtA);
   TTI::PartialReductionExtendKind OpBExtend =
@@ -8842,8 +8838,9 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
-                Update->getOpcode(), A->getType(), PHI->getType(), VF,
-                OpAExtend, OpBExtend, std::make_optional(BinOp->getOpcode()));
+                Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
+                VF, OpAExtend, OpBExtend,
+                std::make_optional(BinOp->getOpcode()));
             return Cost.isValid();
           },
           Range))

@@ -304,8 +304,10 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
 
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *ExtTy = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
-                                                : BinOpR->getOperand(0));
+  auto *InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
+                                                     : BinOpR->getOperand(0));
+  auto *InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
+                                                     : BinOpR->getOperand(1));
 
   auto GetExtendKind = [](VPRecipeBase *R) {
     // The extend could come from outside the plan.
@@ -321,8 +323,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), ExtTy, PhiType, VF,
-                                         GetExtendKind(ExtAR),
+  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
+                                         PhiType, VF, GetExtendKind(ExtAR),
                                          GetExtendKind(ExtBR), Opcode);
 }
 

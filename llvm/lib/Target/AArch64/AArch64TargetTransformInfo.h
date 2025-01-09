@@ -359,8 +359,8 @@ public:
   }
 
   InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
                           TTI::PartialReductionExtendKind OpAExtend,
                           TTI::PartialReductionExtendKind OpBExtend,
                           std::optional<unsigned> BinOp) const {
@@ -371,7 +371,10 @@ public:
     if (Opcode != Instruction::Add)
       return Invalid;
 
-    EVT InputEVT = EVT::getEVT(InputType);
+    if (InputTypeA != InputTypeB)
+      return Invalid;
+
+    EVT InputEVT = EVT::getEVT(InputTypeA);
     EVT AccumEVT = EVT::getEVT(AccumType);
 
     if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
@@ -411,7 +414,7 @@ public:
          !ST->isSVEorStreamingSVEAvailable()))
       return Invalid;
 
-    if (!BinOp || (*BinOp) != Instruction::Mul)
+    if (!BinOp || *BinOp != Instruction::Mul)
       return Invalid;
 
     return Cost;

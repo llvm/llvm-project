@@ -1291,10 +1291,12 @@ public:
   /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
   /// takes an accumulator and a binary operation operand that itself is fed by
   /// two extends. An example of an operation that uses a partial reduction is a
-  /// dot product, which reduces a vector to another of 4 times fewer elements.
+  /// dot product, which reduces two vectors to another of 4 times fewer and 4
+  /// times larger elements.
   InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF, PartialReductionExtendKind OpAExtend,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          PartialReductionExtendKind OpAExtend,
                           PartialReductionExtendKind OpBExtend,
                           std::optional<unsigned> BinOp = std::nullopt) const;
 
@@ -2130,10 +2132,12 @@ public:
   /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
   /// takes an accumulator and a binary operation operand that itself is fed by
   /// two extends. An example of an operation that uses a partial reduction is a
-  /// dot product, which reduces a vector to another of 4 times fewer elements.
+  /// dot product, which reduces two vectors to another of 4 times fewer and 4
+  /// times larger elements.
   virtual InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF, PartialReductionExtendKind OpAExtend,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          PartialReductionExtendKind OpAExtend,
                           PartialReductionExtendKind OpBExtend,
                           std::optional<unsigned> BinOp) const = 0;
 
@@ -2817,12 +2821,13 @@ public:
   }
 
   InstructionCost getPartialReductionCost(
-      unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
-      PartialReductionExtendKind OpAExtend,
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, PartialReductionExtendKind OpAExtend,
       PartialReductionExtendKind OpBExtend,
       std::optional<unsigned> BinOp = std::nullopt) const override {
-    return Impl.getPartialReductionCost(Opcode, InputType, AccumType, VF,
-                                        OpAExtend, OpBExtend, BinOp);
+    return Impl.getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                        AccumType, VF, OpAExtend, OpBExtend,
+                                        BinOp);
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF) override {
