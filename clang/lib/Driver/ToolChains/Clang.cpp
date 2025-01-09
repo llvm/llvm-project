@@ -1146,17 +1146,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
 
-  // When host compiling with OpenMP or HIP offloading include
-  // the host overlay definitions.
-  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
-    SmallString<128> P(D.ResourceDir);
-    llvm::sys::path::append(P, "include");
-    llvm::sys::path::append(P, "openmp_wrappers");
-    llvm::sys::path::append(P, "hip_host_overlay.h");
-    CmdArgs.push_back("-include");
-    CmdArgs.push_back(Args.MakeArgString(P));
-  }
-
   // Add include for either -fopenmp= or -fopenmp
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false)){
