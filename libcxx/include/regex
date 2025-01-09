@@ -842,20 +842,20 @@ namespace regex_constants {
 // syntax_option_type
 
 enum syntax_option_type {
-  icase    = 1 << 0,
-  nosubs   = 1 << 1,
-  optimize = 1 << 2,
-  collate  = 1 << 3,
+  icase      = 1 << 0,
+  nosubs     = 1 << 1,
+  optimize   = 1 << 2,
+  collate    = 1 << 3,
 #  ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
   ECMAScript = 1 << 9,
 #  else
   ECMAScript = 0,
 #  endif
-  basic    = 1 << 4,
-  extended = 1 << 5,
-  awk      = 1 << 6,
-  grep     = 1 << 7,
-  egrep    = 1 << 8,
+  basic      = 1 << 4,
+  extended   = 1 << 5,
+  awk        = 1 << 6,
+  grep       = 1 << 7,
+  egrep      = 1 << 8,
   // 1 << 9 may be used by ECMAScript
   multiline = 1 << 10
 };
@@ -5548,9 +5548,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const regex_token_iterator& __x) const;
 #  if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const {
-    return *this == regex_token_iterator();
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const { return *this == regex_token_iterator(); }
 #  endif
 #  if _LIBCPP_STD_VER < 20
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const regex_token_iterator& __x) const { return !(*this == __x); }
@@ -5811,8 +5809,8 @@ template <class _BidirT>
 using match_results _LIBCPP_AVAILABILITY_PMR =
     std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
 
-using cmatch _LIBCPP_AVAILABILITY_PMR = match_results<const char*>;
-using smatch _LIBCPP_AVAILABILITY_PMR = match_results<std::pmr::string::const_iterator>;
+using cmatch _LIBCPP_AVAILABILITY_PMR  = match_results<const char*>;
+using smatch _LIBCPP_AVAILABILITY_PMR  = match_results<std::pmr::string::const_iterator>;
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
 using wcmatch _LIBCPP_AVAILABILITY_PMR = match_results<const wchar_t*>;
