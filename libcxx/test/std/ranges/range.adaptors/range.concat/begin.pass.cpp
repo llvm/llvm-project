@@ -17,7 +17,6 @@
 constexpr void general_tests() {
   std::vector<int> v1 = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<int> v2 = {1, 2, 3, 4, 5, 6, 7, 8};
-  using type          = std::vector<int>;
   // Check the return type of `.begin()`
   {
     std::ranges::concat_view view(v1, v2);

@@ -26,7 +26,6 @@ constexpr void test() {
   using Sentinel       = sentinel_wrapper<Iterator>;
   using View           = minimal_view<Iterator, Sentinel>;
   using ConcatView     = std::ranges::concat_view<View>;
-  using ConcatIterator = std::ranges::iterator_t<ConcatView>;
 
   auto make_concat_view = [](auto begin, auto end) {
     View view{Iterator(begin), Sentinel(Iterator(end))};

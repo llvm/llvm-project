@@ -49,7 +49,6 @@ constexpr bool test() {
   int buff[] = {0, 1, 2, 3, 4, 5, 6, 7};
 
   {
-    using Result = std::ranges::concat_view<Range>;
     Range range(buff, buff + 8);
 
     {
