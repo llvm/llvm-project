@@ -176,10 +176,10 @@ TYPE_PARSER(sourced(construct<OmpTraitPropertyExtension>( //
         Parser<OmpTraitPropertyExtension::ExtensionValue>{}, ","_tok)))))
 
 TYPE_PARSER(sourced(construct<OmpTraitProperty>(
-    // Try extension first, before OmpTraitPropertyName.
+    // Try clause first, then extension before OmpTraitPropertyName.
+    construct<OmpTraitProperty>(indirect(Parser<OmpClause>{})) ||
     construct<OmpTraitProperty>(Parser<OmpTraitPropertyExtension>{}) ||
     construct<OmpTraitProperty>(Parser<OmpTraitPropertyName>{}) ||
-    construct<OmpTraitProperty>(indirect(Parser<OmpClause>{})) ||
     construct<OmpTraitProperty>(scalarExpr))))
 
 TYPE_PARSER(construct<OmpTraitSelectorName::Value>(
