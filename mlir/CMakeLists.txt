@@ -170,7 +170,7 @@ configure_file(
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
 # By default, find_package and probing for installed pybind11 is performed.
-# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to 
+# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to
 # disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 
@@ -196,8 +196,10 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories( "include")
-include_directories( ${MLIR_INCLUDE_DIR})
+include_directories(BEFORE
+  "include"
+  ${MLIR_INCLUDE_DIR}
+  )
 
 # Adding tools/mlir-tblgen here as calling add_tablegen sets some variables like
 # MLIR_TABLEGEN_EXE in PARENT_SCOPE which gets lost if that folder is included
