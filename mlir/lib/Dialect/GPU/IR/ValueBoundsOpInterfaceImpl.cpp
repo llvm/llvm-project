@@ -35,7 +35,7 @@ struct GpuIdOpInterface
       cstr.bound(v) >= range.smin().getSExtValue();
       cstr.bound(v) <= range.smax().getSExtValue();
     };
-    // No arguments, so we don't need to pass in their ranges.
+    assert(inferrable->getNumOperands() == 0 && "ID ops have no operands");
     inferrable.inferResultRanges({}, translateConstraint);
   }
 };

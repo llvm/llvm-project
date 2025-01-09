@@ -62,6 +62,9 @@ func.func @launch_func(%arg0 : index) {
     "test.compare"(%thread_id_z, %c0) {cmp = "GE"} : (index, index) -> ()
     // expected-remark @below{{true}}
     "test.compare"(%thread_id_z, %c2) {cmp = "LT"} : (index, index) -> ()
+
+    // expected-remark @below{{true}}
+    "test.compare"(%thread_id_x, %block_dim_x) {cmp = "LT"} : (index, index) -> ()
     gpu.terminator
   }
 
@@ -114,6 +117,8 @@ module attributes {gpu.container_module} {
       // expected-remark @below{{true}}
       "test.compare"(%block_dim_x, %c8) {cmp = "EQ"} : (index, index) -> ()
 
+      // expected-remark @below{{true}}
+      "test.compare"(%thread_id_x, %block_dim_x) {cmp = "LT"} : (index, index) -> ()
       gpu.return
     }
   }
@@ -144,6 +149,10 @@ module attributes {gpu.container_module} {
       // expected-remark @below{{true}}
       "test.compare"(%thread_id_x, %c8) {cmp = "LT"} : (index, index) -> ()
 
+      // Note: there isn't a way to express the ID <= size constraint
+      // in this form
+      // expected-error @below{{unknown}}
+      "test.compare"(%thread_id_x, %block_dim_x) {cmp = "LT"} : (index, index) -> ()
       gpu.return
     }
   }
