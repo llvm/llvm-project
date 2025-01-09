@@ -20,7 +20,7 @@ using namespace clang;
 bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
   return OpenACCDeviceTypeClause::classof(C) ||
          OpenACCClauseWithCondition::classof(C) ||
-         OpenACCClauseWithExprs::classof(C);
+         OpenACCClauseWithExprs::classof(C) || OpenACCSelfClause::classof(C);
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
@@ -41,12 +41,13 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
 }
 bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
-  return OpenACCIfClause::classof(C) || OpenACCSelfClause::classof(C);
+  return OpenACCIfClause::classof(C);
 }
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
          OpenACCVectorLengthClause::classof(C) ||
          OpenACCDeviceNumClause::classof(C) ||
+         OpenACCDefaultAsyncClause::classof(C) ||
          OpenACCVectorClause::classof(C) || OpenACCWorkerClause::classof(C) ||
          OpenACCCollapseClause::classof(C) || OpenACCAsyncClause::classof(C);
 }
@@ -86,19 +87,43 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
                                              SourceLocation LParenLoc,
                                              Expr *ConditionExpr,
                                              SourceLocation EndLoc) {
-  void *Mem = C.Allocate(sizeof(OpenACCIfClause), alignof(OpenACCIfClause));
+  void *Mem = C.Allocate(OpenACCSelfClause::totalSizeToAlloc<Expr *>(1));
   return new (Mem)
       OpenACCSelfClause(BeginLoc, LParenLoc, ConditionExpr, EndLoc);
+}
+
+OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> VarList,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCSelfClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCSelfClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
+                                     SourceLocation LParenLoc,
+                                     llvm::ArrayRef<Expr *> VarList,
+                                     SourceLocation EndLoc)
+    : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
+                              EndLoc),
+      HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
+  std::uninitialized_copy(VarList.begin(), VarList.end(),
+                          getTrailingObjects<Expr *>());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
                                      Expr *ConditionExpr, SourceLocation EndLoc)
-    : OpenACCClauseWithCondition(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
-                                 ConditionExpr, EndLoc) {
+    : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
+                              EndLoc),
+      HasConditionExpr(ConditionExpr != nullptr), NumExprs(1) {
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
+  std::uninitialized_copy(&ConditionExpr, &ConditionExpr + 1,
+                          getTrailingObjects<Expr *>());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {
@@ -237,6 +262,27 @@ OpenACCDeviceNumClause *OpenACCDeviceNumClause::Create(const ASTContext &C,
   void *Mem =
       C.Allocate(sizeof(OpenACCDeviceNumClause), alignof(OpenACCDeviceNumClause));
   return new (Mem) OpenACCDeviceNumClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCDefaultAsyncClause::OpenACCDefaultAsyncClause(SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     Expr *IntExpr,
+                                                     SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::DefaultAsync, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "default_async expression type not scalar/dependent");
+}
+
+OpenACCDefaultAsyncClause *
+OpenACCDefaultAsyncClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                                  SourceLocation LParenLoc, Expr *IntExpr,
+                                  SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCDefaultAsyncClause),
+                         alignof(OpenACCDefaultAsyncClause));
+  return new (Mem)
+      OpenACCDefaultAsyncClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
 OpenACCWaitClause *OpenACCWaitClause::Create(
@@ -533,9 +579,17 @@ void OpenACCClausePrinter::VisitIfClause(const OpenACCIfClause &C) {
 
 void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
   OS << "self";
-  if (const Expr *CondExpr = C.getConditionExpr()) {
+
+  if (C.isConditionExprClause()) {
+    if (const Expr *CondExpr = C.getConditionExpr()) {
+      OS << "(";
+      printExpr(CondExpr);
+      OS << ")";
+    }
+  } else {
     OS << "(";
-    printExpr(CondExpr);
+    llvm::interleaveComma(C.getVarList(), OS,
+                          [&](const Expr *E) { printExpr(E); });
     OS << ")";
   }
 }
@@ -571,6 +625,13 @@ void OpenACCClausePrinter::VisitVectorLengthClause(
 void OpenACCClausePrinter::VisitDeviceNumClause(
     const OpenACCDeviceNumClause &C) {
   OS << "device_num(";
+  printExpr(C.getIntExpr());
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  OS << "default_async(";
   printExpr(C.getIntExpr());
   OS << ")";
 }

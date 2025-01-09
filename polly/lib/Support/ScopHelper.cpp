@@ -604,7 +604,8 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
 
   for (auto *User : Ptr->users()) {
     auto *UserI = dyn_cast<Instruction>(User);
-    if (!UserI || !R.contains(UserI))
+    if (!UserI || UserI->getFunction() != LInst->getFunction() ||
+        !R.contains(UserI))
       continue;
     if (!UserI->mayWriteToMemory())
       continue;

@@ -126,7 +126,8 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
     assert(sb);
     mlir::Value addr = sb.getAddr();
     assert(addr);
-    return hlfir::mayHaveAllocatableComponent(addr.getType());
+    return !fir::isPointerType(addr.getType()) &&
+           hlfir::mayHaveAllocatableComponent(addr.getType());
   };
 
   if (needInitClone()) {
