@@ -1177,7 +1177,7 @@ void CodeGenAction::ExecuteAction() {
   BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), CI.getCASOpts(),
 			 *VMContext,
                          std::move(LinkModules), "", nullptr, nullptr,
-                         TheModule.get(), nullptr);
+                         nullptr, TheModule.get());
 
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
