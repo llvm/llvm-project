@@ -27,11 +27,17 @@ constexpr bool test() {
     std::vector<std::vector<int>> vec = {{1, 2}, {3, 4}, {5, 6}};
     int pattern                       = 0;
     std::ranges::join_with_view jwv(vec, pattern);
-    auto it = jwv.begin();
+
+    using JWV   = decltype(jwv);
+    using Iter  = std::ranges::iterator_t<JWV>;
+    using CIter = std::ranges::iterator_t<const JWV>;
+    static_assert(std::convertible_to<Iter, CIter>);
+    static_assert(std::constructible_from<CIter, Iter>);
+
+    Iter it = jwv.begin();
     assert(*it == 1);
 
-    using CIter      = std::ranges::iterator_t<const decltype(jwv)>;
-    const CIter cit1 = it; // `cit1` points to element of `V`
+    const CIter cit1 = it; // `cit1` points to element of `V`; this constructor should not be explicit
     assert(*cit1 == 1);
     assert(cit1 == it);
 
