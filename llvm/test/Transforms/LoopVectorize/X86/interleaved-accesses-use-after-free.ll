@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-accesses -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s -check-prefix=LOOP-ACCESS
-; RUN: opt -passes=loop-vectorize -debug-only=vectorutils -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s -check-prefix=LV
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
 
@@ -24,27 +24,10 @@ target triple = "x86_64-redhat-linux-gnu"
 %struct.baz = type { i64, %struct.pluto }
 
 ; LOOP-ACCESS: Too many dependences, stopped recording
-
-; If no dependences are recorded because there are too many, LoopAccessAnalysis
-; just conservatively returns true for any pair of instructions compared (even
-; those belonging to the same store group). This tests make sure that we do not
-; incorrectly release a store group which had no dependences between its
-; members, even if we have no dependences recorded because there are too many. 
-
-; CHECK: LV: Creating an interleave group with:  store ptr null, ptr %phi5, align 8
-; CHECK: LV: Inserted:  store ptr %load12, ptr %getelementptr11, align 8
-; CHECK:     into the interleave group with  store ptr null, ptr %phi5
-; CHECK: LV: Inserted:  store ptr %load7, ptr %getelementptr, align 8
-; CHECK:     into the interleave group with  store ptr null, ptr %phi5
-
-; CHECK: LV: Creating an interleave group with:  store ptr null, ptr %getelementptr13, align 8
-; CHECK: LV: Inserted:  store ptr null, ptr %phi6, align 8
-; CHECK:     into the interleave group with  store ptr null, ptr %getelementptr13
-; CHECK: LV: Invalidated store group due to dependence between   store ptr %load7, ptr %getelementptr, align 8 and   store ptr null, ptr %getelementptr13, align 8
-; CHECK-NOT: LV: Invalidated store group due to dependence between
+; LV: Can't vectorize due to memory conflicts
 
 ; Note: The (only) invalidated store group is the one containing A (store ptr %load7, ptr %getelementptr, align 8) which is:
-; Group with instructions:  
+; Group with instructions:
 ;   store ptr null, ptr %phi5, align 8
 ;   store ptr %load7, ptr %getelementptr, align 8
 ;   store ptr %load12, ptr %getelementptr11, align 8
