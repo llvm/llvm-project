@@ -169,9 +169,8 @@ class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class QCI_RVInst16CI_RS1<bits<5> imm5, string OpcodeStr>
-    : RVInst16CI<0b000, 0b10, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1">,
-      Sched<[ReadIALU]> {
+class QCIRVInst16CI_RS1<bits<5> imm5, string OpcodeStr>
+    : RVInst16CI<0b000, 0b10, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1"> {
     bits<5> rs1;
 
     let Inst{12} = 0b1;
@@ -179,8 +178,8 @@ class QCI_RVInst16CI_RS1<bits<5> imm5, string OpcodeStr>
     let Inst{6-2} = imm5{4-0};
 }
 
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class QCI_RVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
+let hasSideEffects = 1 in
+class QCIRVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
     : RVInst16CI<0b000, 0b10, (outs), (ins), OpcodeStr, ""> {
     let Inst{12} = 0b1;
     let Inst{11-7} = funct5;
@@ -188,7 +187,7 @@ class QCI_RVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class QCISystem_INT_IMM<bits<1> funct1, string opcodestr>
+class QCIInt_IMM<bits<1> funct1, string opcodestr>
     : RVInstIBase<0b000, OPC_SYSTEM, (outs), (ins uimm10:$imm10), opcodestr,
                   "$imm10"> {
   bits<10> imm10;
@@ -356,22 +355,25 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
     let Inst{6-2} = 0b00000;
   }
 
-  def QC_SETINTI : QCISystem_INT_IMM<0b0, "qc.setinti">;
-  def QC_CLRINTI : QCISystem_INT_IMM<0b1, "qc.clrinti">;
+  def QC_SETINTI : QCIInt_IMM<0b0, "qc.setinti">;
+  def QC_CLRINTI : QCIInt_IMM<0b1, "qc.clrinti">;
 
-  def QC_C_EIR    : QCI_RVInst16CI_RS1<0b00001, "qc.c.eir">;
-  def QC_C_SETINT : QCI_RVInst16CI_RS1<0b00010, "qc.c.setint">;
-  def QC_C_CLRINT : QCI_RVInst16CI_RS1<0b00011, "qc.c.clrint">;
-  def QC_C_DI     : QCI_RVInst16CI_NONE<0b10110, "qc.c.di">;
-  def QC_C_EI     : QCI_RVInst16CI_NONE<0b10111, "qc.c.ei">;
+  def QC_C_EIR    : QCIRVInst16CI_RS1<0b00001, "qc.c.eir">;
+  def QC_C_SETINT : QCIRVInst16CI_RS1<0b00010, "qc.c.setint">;
+  def QC_C_CLRINT : QCIRVInst16CI_RS1<0b00011, "qc.c.clrint">;
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in {
-  def QC_C_MIENTER      : QCI_RVInst16CI_NONE<0b10000, "qc.c.mienter">;
-  def QC_C_MIENTER_NEST : QCI_RVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
+let mayLoad = 0, mayStore = 0 in {
+  def QC_C_DI     : QCIRVInst16CI_NONE<0b10110, "qc.c.di">;
+  def QC_C_EI     : QCIRVInst16CI_NONE<0b10111, "qc.c.ei">;
 }
 
-let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isReturn = 1, isTerminator = 1 in
-  def QC_C_MILEAVERET   : QCI_RVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
+let mayLoad = 1, mayStore = 1 in {
+  def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
+  def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
+}
+
+let mayLoad = 1, mayStore = 1, isReturn = 1, isTerminator = 1 in
+  def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 } // Predicates = [HasVendorXqciint, IsRV32], DecoderNamespace = "Xqciint"
 
 //===----------------------------------------------------------------------===//
