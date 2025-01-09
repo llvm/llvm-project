@@ -414,16 +414,18 @@ define <vscale x 1 x i64> @vp_gather(ptr %a, i32 %len) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
 ; CHECK-NEXT:    [[ODD:%.*]] = and <vscale x 1 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <vscale x 1 x i64> [[ODD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[A:%.*]], <vscale x 1 x i64> [[VEC_IND]], i32 3
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[TMP2]], <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP2]], i64 16, <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[TMP0]]
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VEC_IND_NEXT_SCALAR]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
@@ -475,14 +477,16 @@ define void @vp_scatter(ptr %a, i32 %len) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
 ; CHECK-NEXT:    [[ODD:%.*]] = and <vscale x 1 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <vscale x 1 x i64> [[ODD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[A:%.*]], <vscale x 1 x i64> [[VEC_IND]], i32 3
-; CHECK-NEXT:    tail call void @llvm.vp.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> [[TMP2]], <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> zeroinitializer, ptr [[TMP2]], i64 16, <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[TMP0]]
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VEC_IND_NEXT_SCALAR]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
