@@ -240,15 +240,15 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
+* The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+  and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+  and [Non-trapping float-to-int Conversions] language features, which are
+  [widely implemented in engines].
 
-A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
-the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
--mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
-and -mextended-const.
+* A new Lime1 target CPU is added, `-mcpu=lime1`. This CPU follows the
+  definition of the Lime1 CPU [here], and enables `-mmultivalue`,
+  `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
+  `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
 
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
