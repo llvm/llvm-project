@@ -292,6 +292,21 @@ INSTANTIATE_TEST_SUITE_P(
                     MemoryRegionInfo::eDontKnow, MemoryRegionInfo::eDontKnow,
                     MemoryRegionInfo::eDontKnow),
             },
+            ""),
+        // We must look for exact flag strings, ignoring substrings of longer
+        // flag names.
+        std::make_tuple(
+            "0-0 rw-p 00000000 00:00 0\n"
+            "VmFlags: amt mtb amtb",
+            MemoryRegionInfos{
+                MemoryRegionInfo(
+                    make_range(0, 0), MemoryRegionInfo::eYes,
+                    MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
+                    MemoryRegionInfo::eNo, MemoryRegionInfo::eYes,
+                    ConstString(nullptr), MemoryRegionInfo::eDontKnow, 0,
+                    MemoryRegionInfo::eNo, MemoryRegionInfo::eDontKnow,
+                    MemoryRegionInfo::eNo),
+            },
             "")));
 
 TEST_P(LinuxProcSMapsTestFixture, ParseSMapRegions) {

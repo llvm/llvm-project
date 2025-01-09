@@ -2802,10 +2802,11 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     if (memory_tagged != MemoryRegionInfo::eDontKnow ||
         is_shadow_stack != MemoryRegionInfo::eDontKnow) {
       response.PutCString("flags:");
+      // Space is the separator.
       if (memory_tagged == MemoryRegionInfo::eYes)
-        response.PutCString("mt");
+        response.PutCString("mt ");
       if (is_shadow_stack == MemoryRegionInfo::eYes)
-        response.PutCString("ss");
+        response.PutCString("ss ");
 
       response.PutChar(';');
     }
