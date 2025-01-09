@@ -1,0 +1,11 @@
+# RUN: llvm-exegesis --mtriple=riscv64 --mcpu=sifive-p470 --mode=latency --opcode-name=ADD --use-dummy-perf-counters --benchmark-phase=dry-run-measurement | FileCheck %s
+# REQUIRES: riscv-registered-target
+
+# This test makes sure that llvm-exegesis doesn't execute "cross-compiled" snippets in the presence of
+# --dry-run-measurement. RISC-V was chosen simply because most of the time we run tests on X86 machines.
+
+# Should not contain misleading results.
+# CHECK: measurements:    []
+
+# Should not contain error messages like "snippet crashed while running: Segmentation fault".
+# CHECK: error:           ''
