@@ -105,14 +105,12 @@ static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
       });
 }
 
-BackendConsumer::BackendConsumer(const CompilerInstance &CI,
-                                 BackendAction Action,
-                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                                 const std::string &InFile,
-                                 SmallVector<LinkModule, 4> LinkModules,
-                                 std::unique_ptr<raw_pwrite_stream> OS,
-                                 LLVMContext &C,
-                                 CoverageSourceInfo *CoverageInfo)
+BackendConsumer::BackendConsumer(
+    const CompilerInstance &CI, BackendAction Action,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, LLVMContext &C,
+    SmallVector<LinkModule, 4> LinkModules, StringRef InFile,
+    std::unique_ptr<raw_pwrite_stream> OS, CoverageSourceInfo *CoverageInfo,
+    llvm::Module *CurLinkModule)
     : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
       CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
       LangOpts(CI.getLangOpts()), AsmOutStream(std::move(OS)), FS(VFS),
@@ -120,29 +118,7 @@ BackendConsumer::BackendConsumer(const CompilerInstance &CI,
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
                             CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
                             CI.getCodeGenOpts(), C, CoverageInfo)),
-      LinkModules(std::move(LinkModules)) {
-  TimerIsEnabled = CodeGenOpts.TimePasses;
-  llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
-  llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
-}
-
-// This constructor is used in installing an empty BackendConsumer
-// to use the clang diagnostic handler for IR input files. It avoids
-// initializing the OS field.
-BackendConsumer::BackendConsumer(const CompilerInstance &CI,
-                                 BackendAction Action,
-                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                                 llvm::Module *Module,
-                                 SmallVector<LinkModule, 4> LinkModules,
-                                 LLVMContext &C)
-    : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
-      CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
-      LangOpts(CI.getLangOpts()), FS(VFS),
-      LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
-      Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), CI.getHeaderSearchOpts(),
-                            CI.getPreprocessorOpts(), CI.getCodeGenOpts(), C,
-                            nullptr)),
-      LinkModules(std::move(LinkModules)), CurLinkModule(Module) {
+      LinkModules(std::move(LinkModules)), CurLinkModule(CurLinkModule) {
   TimerIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
@@ -1008,8 +984,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      CI, BA, &CI.getVirtualFileSystem(), std::string(InFile),
-      std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
+      CI, BA, &CI.getVirtualFileSystem(), *VMContext, std::move(LinkModules),
+      InFile, std::move(OS), CoverageInfo));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -1177,8 +1153,9 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), TheModule.get(),
-                         std::move(LinkModules), *VMContext);
+  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), *VMContext,
+                         std::move(LinkModules), "", nullptr, nullptr,
+                         TheModule.get());
 
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
