@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -int-range-optimizations %s | FileCheck %s
 gpu.module @module{
     gpu.func @kernel_1() kernel {
         %tidx = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
