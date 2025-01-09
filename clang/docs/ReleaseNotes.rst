@@ -767,6 +767,9 @@ Bug Fixes in This Version
 - Fixed a crash when passing the variable length array type to ``va_arg`` (#GH119360).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer incorrectly diagnosing use of a deleted destructor when the
+  selected overload of ``operator delete`` for that type is a destroying delete
+  (#GH46818).
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
