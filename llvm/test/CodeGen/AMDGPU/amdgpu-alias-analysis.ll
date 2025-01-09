@@ -323,7 +323,7 @@ define void @test_9_9(ptr addrspace(9) %p, ptr addrspace(9) %p1) {
 ; CHECK: MayAlias:    i32 addrspace(3)* %arg, i32 addrspace(3)* %arg1
 ; CHECK: MustAlias:   i32 addrspace(3)* %arg, i32* %arg2
 ; CHECK: MustAlias:   i32 addrspace(3)* %arg1, i32* %arg2
-define amdgpu_kernel void @test_kernel_arg_local_ptr(ptr addrspace(3) noundef align 4 %arg) {
+define amdgpu_kernel void @test_kernel_arg_local_ptr(ptr addrspace(3) %arg) {
 entry:
   %load1 = load i32, ptr addrspace(3) %arg, align 4
   %arg.plus.1 = getelementptr inbounds nuw i8, ptr addrspace(3) %arg, i64 1
