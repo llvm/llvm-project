@@ -130,4 +130,14 @@ body: |
     %x:vr = PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 3 /* e32 */, 0
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0
 ...
+---
+name: vfcvtbf16_x_f_v_nofpexcept
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfcvt_x_f_v_nofpexcept
+    ; CHECK: %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 4 /* e16 */, 0
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0
+...
 
