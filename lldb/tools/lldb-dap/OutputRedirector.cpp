@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===/
 
-#include "llvm/Support/Error.h"
-#include <system_error>
 #if defined(_WIN32)
 #include <fcntl.h>
 #include <io.h>
@@ -19,59 +17,47 @@
 #include "OutputRedirector.h"
 #include "llvm/ADT/StringRef.h"
 
-using lldb_private::Pipe;
-using lldb_private::Status;
-using llvm::createStringError;
-using llvm::Error;
-using llvm::Expected;
-using llvm::StringRef;
+using namespace llvm;
 
 namespace lldb_dap {
 
-Expected<int> OutputRedirector::GetWriteFileDescriptor() {
-  if (!m_pipe.CanWrite())
-    return createStringError(std::errc::bad_file_descriptor,
-                             "write handle is not open for writing");
-  return m_pipe.GetWriteFileDescriptor();
-}
+Error RedirectFd(int fd, std::function<void(llvm::StringRef)> callback) {
+  int new_fd[2];
+#if defined(_WIN32)
+  if (_pipe(new_fd, 4096, O_TEXT) == -1) {
+#else
+  if (pipe(new_fd) == -1) {
+#endif
+    int error = errno;
+    return createStringError(inconvertibleErrorCode(),
+                             "Couldn't create new pipe for fd %d. %s", fd,
+                             strerror(error));
+  }
 
-Error OutputRedirector::RedirectTo(std::function<void(StringRef)> callback) {
-  Status status = m_pipe.CreateNew(/*child_process_inherit=*/false);
-  if (status.Fail())
-    return status.takeError();
+  if (dup2(new_fd[1], fd) == -1) {
+    int error = errno;
+    return createStringError(inconvertibleErrorCode(),
+                             "Couldn't override the fd %d. %s", fd,
+                             strerror(error));
+  }
 
-  m_forwarder = std::thread([this, callback]() {
+  int read_fd = new_fd[0];
+  std::thread t([read_fd, callback]() {
     char buffer[OutputBufferSize];
-    while (m_pipe.CanRead() && !m_stopped) {
-      size_t bytes_read;
-      Status status = m_pipe.Read(&buffer, sizeof(buffer), bytes_read);
-      if (status.Fail())
-        continue;
-
-      // EOF detected
-      if (bytes_read == 0 || m_stopped)
+    while (true) {
+      ssize_t bytes_count = read(read_fd, &buffer, sizeof(buffer));
+      if (bytes_count == 0)
+        return;
+      if (bytes_count == -1) {
+        if (errno == EAGAIN || errno == EINTR)
+          continue;
         break;
-
-      callback(StringRef(buffer, bytes_read));
+      }
+      callback(StringRef(buffer, bytes_count));
     }
   });
-
+  t.detach();
   return Error::success();
-}
-
-void OutputRedirector::Stop() {
-  m_stopped = true;
-
-  if (m_pipe.CanWrite()) {
-    // Closing the pipe may not be sufficient to wake up the thread in case the
-    // write descriptor is duplicated (to stdout/err or to another process).
-    // Write a null byte to ensure the read call returns.
-    char buf[] = "\0";
-    size_t bytes_written;
-    m_pipe.Write(buf, sizeof(buf), bytes_written);
-    m_pipe.CloseWriteFileDescriptor();
-    m_forwarder.join();
-  }
 }
 
 } // namespace lldb_dap

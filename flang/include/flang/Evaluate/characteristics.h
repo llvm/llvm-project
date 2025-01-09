@@ -102,6 +102,10 @@ public:
     }
     if (auto type{x.GetType()}) {
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
+      result.corank_ = GetCorank(x);
+      if (result.corank_ > 0) {
+        result.attrs_.set(Attr::Coarray);
+      }
       if (type->category() == TypeCategory::Character) {
         if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
           if (auto length{chExpr->LEN()}) {

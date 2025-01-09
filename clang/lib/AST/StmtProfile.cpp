@@ -2555,8 +2555,13 @@ void OpenACCClauseProfiler::VisitCreateClause(
 }
 
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
-  if (Clause.hasConditionExpr())
-    Profiler.VisitStmt(Clause.getConditionExpr());
+  if (Clause.isConditionExprClause()) {
+    if (Clause.hasConditionExpr())
+      Profiler.VisitStmt(Clause.getConditionExpr());
+  } else {
+    for (auto *E : Clause.getVarList())
+      Profiler.VisitStmt(E);
+  }
 }
 
 void OpenACCClauseProfiler::VisitFinalizeClause(
