@@ -37,7 +37,7 @@ int ProcessStatus::get_fatal_signal() {
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   int pipe_fds[2];
   if (::pipe(pipe_fds) == -1) {
-    ::free(func);
+    delete func;
     return ProcessStatus::error("pipe(2) failed");
   }
 
@@ -46,13 +46,13 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   ::fflush(stdout);
   pid_t pid = ::fork();
   if (pid == -1) {
-    ::free(func);
+    delete func;
     return ProcessStatus::error("fork(2) failed");
   }
 
   if (!pid) {
     (*func)();
-    ::free(func);
+    delete func;
     ::exit(0);
   }
   ::close(pipe_fds[1]);
@@ -63,13 +63,13 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
   if (::poll(&poll_fd, 1, timeout_ms) == -1) {
-    ::free(func);
+    delete func;
     return ProcessStatus::error("poll(2) failed");
   }
   // If the pipe wasn't closed by the child yet then timeout has expired.
   if (!(poll_fd.revents & POLLHUP)) {
     ::kill(pid, SIGKILL);
-    ::free(func);
+    delete func;
     return ProcessStatus::timed_out_ps();
   }
 
@@ -78,11 +78,11 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   // and doesn't turn into a zombie.
   pid_t status = ::waitpid(pid, &wstatus, 0);
   if (status == -1) {
-    ::free(func);
+    delete func;
     return ProcessStatus::error("waitpid(2) failed");
   }
   assert(status == pid);
-  ::free(func);
+  delete func;
   return {wstatus};
 }
 
