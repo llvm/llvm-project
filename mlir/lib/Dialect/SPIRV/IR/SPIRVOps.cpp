@@ -2094,3 +2094,30 @@ LogicalResult spirv::VectorTimesScalarOp::verify() {
     return emitOpError("scalar operand and result element type match");
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GLDistanceOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::GLDistanceOp::verify() {
+  auto p0Type = getP0().getType();
+  auto p1Type = getP1().getType();
+  auto resultType = getResult().getType();
+
+  auto p0VectorType = p0Type.dyn_cast<VectorType>();
+  auto p1VectorType = p1Type.dyn_cast<VectorType>();
+  if (!p0VectorType || !p1VectorType)
+    return emitOpError("operands must be vectors");
+
+  if (p0VectorType.getShape() != p1VectorType.getShape())
+    return emitOpError("operands must have same shape");
+
+  if (!resultType.isa<FloatType>())
+    return emitOpError("result must be scalar float");
+
+  if (p0VectorType.getElementType() != resultType || 
+      p1VectorType.getElementType() != resultType)
+    return emitOpError("operand vector elements must match result type");
+
+  return success();
+}
