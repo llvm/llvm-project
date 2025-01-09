@@ -23,6 +23,13 @@ gpu.module @module{
 }
 
 // CHECK-LABEL: gpu.func @kernel_1
-// CHECK-NOT: gpu.printf "threadidx"
+// CHECK: %[[false:.+]] = arith.constant false
+// CHECK: %[[c64_i32:.+]] = arith.constant 64 : i32
+// CHECK: %[[S0:.+]] = nvvm.read.ptx.sreg.tid.y range <i32, 0, 128> : i32
+// CHECK: scf.if %[[false]] {
+// CHECK: gpu.printf "threadidx"
+// CHECK: %[[S1:.+]] = arith.cmpi sgt, %[[S0]], %[[c64_i32]] : i32
+// CHECK: scf.if %[[S1]] {
 // CHECK: gpu.printf "threadidy"
-// CHECK-NOT: gpu.printf "threadidz"
+// CHECK: scf.if %[[false]] {
+// CHECK: gpu.printf "threadidz"
