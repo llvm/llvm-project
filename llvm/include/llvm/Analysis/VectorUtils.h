@@ -243,8 +243,9 @@ bool widenShuffleMaskElts(ArrayRef<int> M, SmallVectorImpl<int> &NewMask);
 
 /// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
 /// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
-/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
-/// Returns false on failure, and ScaledMask will be in an undefined state.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or
+/// vice-versa). Returns false on failure, and ScaledMask will be in an
+/// undefined state.
 bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 

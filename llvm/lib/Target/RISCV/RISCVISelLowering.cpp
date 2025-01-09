@@ -5656,7 +5656,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
       return V;
 
-
   // Before hitting generic lowering fallbacks, try to widen the mask
   // to a wider SEW.
   if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
