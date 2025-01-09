@@ -14,10 +14,18 @@ __attribute__((address_space(1))) int int_as_one;
 typedef int bar;
 bar b;
 
+struct StructWithBitfield {
+  int i : 5;
+  short s : 3;
+  char c: 2;
+  long long int lli : 3;
+};
+
 void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2, si8 vi1, si8 vi2,
                                   long long int i1, long long int i2, short si,
-                                  _BitInt(31) bi1, _BitInt(31) bi2) {
+                                  _BitInt(31) bi1, _BitInt(31) bi2, int i,
+                                  char ci) {
   // CHECK-LABEL: define void @test_builtin_elementwise_abs(
   // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
   // CHECK-NEXT:  call float @llvm.fabs.f32(float [[F1]])
@@ -64,6 +72,35 @@ void test_builtin_elementwise_abs(float f1, float f2, double d1, double d2,
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
   // CHECK-NEXT: [[RES:%.+]] = call i16 @llvm.abs.i16(i16 [[SI]], i1 false)
   si = __builtin_elementwise_abs(si);
+
+  struct StructWithBitfield t;
+
+  // CHECK:      [[BFLOAD:%.+]] = load i16, ptr %t, align 8
+  // CHECK-NEXT: [[BFSHL:%.+]] = shl i16 [[BFLOAD]], 11
+  // CHECK-NEXT: [[BFASHR:%.+]] = ashr i16 [[BFSHL]], 11
+  // CHECK-NEXT: [[BFCAST:%.+]] = sext i16 [[BFASHR]] to i32
+  // CHECK-NEXT: [[RES:%.+]] = call i32 @llvm.abs.i32(i32 [[BFCAST]], i1 false)
+  i = __builtin_elementwise_abs(t.i);
+
+  // CHECK:      [[BFLOAD:%.+]] = load i16, ptr %t, align 8
+  // CHECK-NEXT: [[BFSHL:%.+]] = shl i16 [[BFLOAD]], 8
+  // CHECK-NEXT: [[BFASHR:%.+]] = ashr i16 [[BFSHL]], 13
+  // CHECK-NEXT: [[RES:%.+]] = call i16 @llvm.abs.i16(i16 [[BFASHR]], i1 false)
+  si = __builtin_elementwise_abs(t.s);
+
+  // CHECK:      [[BFLOAD:%.+]] = load i16, ptr %t, align 8
+  // CHECK-NEXT: [[BFSHL:%.+]] = shl i16 [[BFLOAD]], 6
+  // CHECK-NEXT: [[BFASHR:%.+]] = ashr i16 [[BFSHL]], 14
+  // CHECK-NEXT: [[BFCAST:%.+]] = trunc i16 [[BFASHR]] to i8
+  // CHECK-NEXT: [[RES:%.+]] = call i8 @llvm.abs.i8(i8 [[BFCAST]], i1 false)
+  ci = __builtin_elementwise_abs(t.c);
+
+  // CHECK:      [[BFLOAD:%.+]] = load i16, ptr %t, align 8
+  // CHECK-NEXT: [[BFSHL:%.+]] = shl i16 [[BFLOAD]], 3
+  // CHECK-NEXT: [[BFASHR:%.+]] = ashr i16 [[BFSHL]], 13
+  // CHECK-NEXT: [[BFCAST:%.+]] = sext i16 [[BFASHR]] to i64
+  // CHECK-NEXT: [[RES:%.+]] = call i64 @llvm.abs.i64(i64 [[BFCAST]], i1 false)
+  i1 = __builtin_elementwise_abs(t.lli);
 }
 
 void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,

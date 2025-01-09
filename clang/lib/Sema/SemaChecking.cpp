@@ -14645,13 +14645,27 @@ bool Sema::BuiltinVectorToScalarMath(CallExpr *TheCall) {
   return false;
 }
 
+static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
+                                             SourceLocation Loc) {
+  QualType L = LHS->getEnumCoercedType(S.Context),
+           R = RHS->getEnumCoercedType(S.Context);
+  if (L->isUnscopedEnumerationType() && R->isUnscopedEnumerationType() &&
+      !S.Context.hasSameUnqualifiedType(L, R)) {
+    return S.Diag(Loc, diag::err_conv_mixed_enum_types_cxx26)
+           << LHS->getSourceRange() << RHS->getSourceRange()
+           << /*Arithmetic Between*/ 0 << L << R;
+  }
+  return false;
+}
+
 std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
                                                 bool FPOnly) {
   if (checkArgCount(TheCall, 2))
     return std::nullopt;
 
-  checkEnumArithmeticConversions(TheCall->getArg(0), TheCall->getArg(1),
-                                 TheCall->getExprLoc(), ACK_Comparison);
+  if (checkBuiltinVectorMathMixedEnums(
+          *this, TheCall->getArg(0), TheCall->getArg(1), TheCall->getExprLoc()))
+    return std::nullopt;
 
   Expr *Args[2];
   for (int I = 0; I < 2; ++I) {
@@ -14687,6 +14701,13 @@ std::optional<QualType> Sema::BuiltinVectorMath(CallExpr *TheCall,
 bool Sema::BuiltinElementwiseTernaryMath(CallExpr *TheCall,
                                          bool CheckForFloatArgs) {
   if (checkArgCount(TheCall, 3))
+    return true;
+
+  SourceLocation Loc = TheCall->getExprLoc();
+  if (checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(0),
+                                       TheCall->getArg(1), Loc) ||
+      checkBuiltinVectorMathMixedEnums(*this, TheCall->getArg(1),
+                                       TheCall->getArg(2), Loc))
     return true;
 
   Expr *Args[3];
