@@ -42,4 +42,4 @@
     :server-id 'tblgen-lsp)))
 
 (provide 'tblgen-lsp)
-;;; tblgen-lsp.el ends here
+;;; tblgen-lsp-client.el ends here
