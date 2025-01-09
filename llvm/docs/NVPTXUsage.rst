@@ -733,6 +733,96 @@ these intrinsics is a boolean flag, with the same functionality as described in 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
 
+Warp Group Intrinsics
+---------------------
+
+'``llvm.nvvm.wgmma.fence.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.fence.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.fence.sync.aligned``' intrinsic generates the
+``wgmma.fence.sync.aligned`` PTX instruction, which establishes an ordering
+between prior accesses to any warpgroup registers and subsequent accesses to
+the same registers by a ``wgmma.mma_async`` instruction.
+
+The ``wgmma.fence`` instruction must be issued by all warps of the warpgroup in
+the following locations:
+
+* Before the first ``wgmma.mma_async`` operation in a warpgroup.
+* Between a register access by a thread in the warpgroup and any
+  ``wgmma.mma_async`` instruction that accesses the same registers, except when
+  these are accumulator register accesses across multiple ``wgmma.mma_async``
+  instructions of the same shape in which case an ordering guarantee is
+  provided by default.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+
+'``llvm.nvvm.wgmma.commit_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.commit_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned`` PTX instruction, which creates a new
+wgmma-group per warpgroup and batches all prior ``wgmma.mma_async``
+instructions initiated by the executing warp but not committed to any
+wgmma-group into the new wgmma-group. If there are no uncommitted ``wgmma
+mma_async`` instructions then, ``wgmma.commit_group`` results in an empty
+wgmma-group.
+
+An executing thread can wait for the completion of all ``wgmma.mma_async``
+operations in a wgmma-group by using ``wgmma.wait_group``.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+
+'``llvm.nvvm.wgmma.wait_group.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 immarg N)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.wgmma.wait_group.sync.aligned``' intrinsic generates the
+``wgmma.commit_group.sync.aligned N`` PTX instruction, which will cause the
+executing thread to wait until only ``N`` or fewer of the most recent
+wgmma-groups are pending and all the prior wgmma-groups committed by the
+executing threads are complete. For example, when ``N`` is 0, the executing
+thread waits on all the prior wgmma-groups to complete. Operand ``N`` is an
+integer constant.
+
+Accessing the accumulator register or the input register containing the
+fragments of matrix A of a ``wgmma.mma_async`` instruction without first
+performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
+including that ``wgmma.mma_async`` instruction is undefined behavior.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+
 Other Intrinsics
 ----------------
 

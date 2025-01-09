@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__locale_dir/locale_guard.h>
 #include <__locale_dir/support/windows.h>
 #include <clocale> // std::localeconv() & friends
 #include <cstdarg> // va_start & friends
@@ -28,7 +27,7 @@ __locale_t __newlocale(int /*mask*/, const char* locale, __locale_t /*base*/) {
 }
 
 lconv* __localeconv(__locale_t& loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   lconv* lc = std::localeconv();
   if (!lc)
     return lc;
@@ -40,12 +39,12 @@ lconv* __localeconv(__locale_t& loc) {
 //
 #if !defined(_LIBCPP_MSVCRT)
 float __strtof(const char* nptr, char** endptr, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::strtof(nptr, endptr);
 }
 
 long double __strtold(const char* nptr, char** endptr, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::strtold(nptr, endptr);
 }
 #endif
@@ -55,7 +54,7 @@ long double __strtold(const char* nptr, char** endptr, __locale_t loc) {
 //
 #if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
 size_t __strftime(char* ret, size_t n, const char* format, const struct tm* tm, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::strftime(ret, n, format, tm);
 }
 #endif
@@ -67,18 +66,18 @@ decltype(MB_CUR_MAX) __mb_len_max(__locale_t __l) {
 #if defined(_LIBCPP_MSVCRT)
   return ::___mb_cur_max_l_func(__l);
 #else
-  std::__locale_guard __current(__l);
+  __locale_guard __current(__l);
   return MB_CUR_MAX;
 #endif
 }
 
 wint_t __btowc(int c, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::btowc(c);
 }
 
 int __wctob(wint_t c, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::wctob(c);
 }
 
@@ -88,12 +87,12 @@ size_t __wcsnrtombs(char* __restrict dst,
                     size_t len,
                     mbstate_t* __restrict ps,
                     __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return ::wcsnrtombs(dst, src, nwc, len, ps);
 }
 
 size_t __wcrtomb(char* __restrict s, wchar_t wc, mbstate_t* __restrict ps, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::wcrtomb(s, wc, ps);
 }
 
@@ -103,24 +102,24 @@ size_t __mbsnrtowcs(wchar_t* __restrict dst,
                     size_t len,
                     mbstate_t* __restrict ps,
                     __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return ::mbsnrtowcs(dst, src, nms, len, ps);
 }
 
 size_t
 __mbrtowc(wchar_t* __restrict pwc, const char* __restrict s, size_t n, mbstate_t* __restrict ps, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::mbrtowc(pwc, s, n, ps);
 }
 
 size_t __mbrlen(const char* __restrict s, size_t n, mbstate_t* __restrict ps, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::mbrlen(s, n, ps);
 }
 
 size_t __mbsrtowcs(
     wchar_t* __restrict dst, const char** __restrict src, size_t len, mbstate_t* __restrict ps, __locale_t loc) {
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return std::mbsrtowcs(dst, src, len, ps);
 }
 
@@ -132,7 +131,7 @@ int __snprintf(char* ret, size_t n, __locale_t loc, const char* format, ...) {
   int result = ::__stdio_common_vsprintf(
       _CRT_INTERNAL_LOCAL_PRINTF_OPTIONS | _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR, ret, n, format, loc, ap);
 #else
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   int result = std::vsnprintf(ret, n, format, ap);
@@ -178,7 +177,7 @@ int __libcpp_vasprintf(char** sptr, const char* __restrict format, va_list ap) {
 int __asprintf(char** ret, __locale_t loc, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  std::__locale_guard __current(loc);
+  __locale_guard __current(loc);
   return __libcpp_vasprintf(ret, format, ap);
 }
 

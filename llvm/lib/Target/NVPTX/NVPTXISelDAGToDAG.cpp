@@ -14,10 +14,11 @@
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/NVVMIntrinsicFlags.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -176,10 +177,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case ISD::ADDRSPACECAST:
     SelectAddrSpaceCast(N);
     return;
-  case ISD::ConstantFP:
-    if (tryConstantFP(N))
-      return;
-    break;
   case ISD::CopyToReg: {
     if (N->getOperand(1).getValueType() == MVT::i128) {
       SelectV2I64toI128(N);
@@ -210,21 +207,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
   }
-}
-
-// There's no way to specify FP16 and BF16 immediates in .(b)f16 ops, so we
-// have to load them into an .(b)f16 register first.
-bool NVPTXDAGToDAGISel::tryConstantFP(SDNode *N) {
-  if (N->getValueType(0) != MVT::f16 && N->getValueType(0) != MVT::bf16)
-    return false;
-  SDValue Val = CurDAG->getTargetConstantFP(
-      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), N->getValueType(0));
-  SDNode *LoadConstF16 = CurDAG->getMachineNode(
-      (N->getValueType(0) == MVT::f16 ? NVPTX::LOAD_CONST_F16
-                                      : NVPTX::LOAD_CONST_BF16),
-      SDLoc(N), N->getValueType(0), Val);
-  ReplaceNode(N, LoadConstF16);
-  return true;
 }
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
@@ -318,7 +300,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
-  for (auto *U : Vector.getNode()->uses()) {
+  for (auto *U : Vector.getNode()->users()) {
     if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       continue;
     if (U->getOperand(0) != Vector)
@@ -2468,6 +2450,11 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   return true;
 }
 
+static inline bool isAddLike(const SDValue V) {
+  return V.getOpcode() == ISD::ADD ||
+         (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
+}
+
 // SelectDirectAddr - Match a direct address for DAG.
 // A direct address could be a globaladdress or externalsymbol.
 bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
@@ -2494,7 +2481,7 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 // symbol+offset
 bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
     SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (isAddLike(Addr)) {
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       SDValue base = Addr.getOperand(0);
       if (SelectDirectAddr(base, Base)) {
@@ -2531,7 +2518,7 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       Addr.getOpcode() == ISD::TargetGlobalAddress)
     return false; // direct calls.
 
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (isAddLike(Addr)) {
     if (SelectDirectAddr(Addr.getOperand(0), Addr)) {
       return false;
     }

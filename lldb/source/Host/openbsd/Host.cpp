@@ -41,18 +41,7 @@ namespace lldb_private {
 class ProcessLaunchInfo;
 }
 
-Environment Host::GetEnvironment() {
-  Environment env;
-  char *v;
-  char **var = environ;
-  for (; var != NULL && *var != NULL; ++var) {
-    v = strchr(*var, (int)'-');
-    if (v == NULL)
-      continue;
-    env.insert(v);
-  }
-  return env;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool
 GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
@@ -127,7 +116,7 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
         process_info.SetUserID(proc_kinfo.p_ruid);
         process_info.SetGroupID(proc_kinfo.p_rgid);
         process_info.SetEffectiveUserID(proc_kinfo.p_uid);
-	process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
+        process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
         return true;
       }
     }

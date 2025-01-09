@@ -177,12 +177,19 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   return ElementType::Invalid;
 }
 
-ResourceInfo::ResourceInfo(uint32_t RecordID, uint32_t Space,
-                           uint32_t LowerBound, uint32_t Size,
-                           TargetExtType *HandleTy, bool GloballyCoherent,
-                           bool HasCounter)
-    : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-      GloballyCoherent(GloballyCoherent), HasCounter(HasCounter) {
+ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
+                                   const dxil::ResourceClass RC_,
+                                   const dxil::ResourceKind Kind_,
+                                   bool GloballyCoherent, bool HasCounter)
+    : HandleTy(HandleTy), GloballyCoherent(GloballyCoherent),
+      HasCounter(HasCounter) {
+  // If we're provided a resource class and kind, trust them.
+  if (Kind_ != dxil::ResourceKind::Invalid) {
+    RC = RC_;
+    Kind = Kind_;
+    return;
+  }
+
   if (auto *Ty = dyn_cast<RawBufferExtType>(HandleTy)) {
     RC = Ty->isWriteable() ? ResourceClass::UAV : ResourceClass::SRV;
     Kind = Ty->isStructured() ? ResourceKind::StructuredBuffer
@@ -209,17 +216,96 @@ ResourceInfo::ResourceInfo(uint32_t RecordID, uint32_t Space,
     llvm_unreachable("Unknown handle type");
 }
 
-bool ResourceInfo::isUAV() const { return RC == ResourceClass::UAV; }
+static void formatTypeName(SmallString<64> &Dest, StringRef Name,
+                           bool isWriteable, bool isROV) {
+  Dest = isWriteable ? (isROV ? "RasterizerOrdered" : "RW") : "";
+  Dest += Name;
+}
 
-bool ResourceInfo::isCBuffer() const { return RC == ResourceClass::CBuffer; }
+StructType *ResourceTypeInfo::createElementStruct() {
+  SmallString<64> TypeName;
 
-bool ResourceInfo::isSampler() const { return RC == ResourceClass::Sampler; }
+  switch (Kind) {
+  case ResourceKind::Texture1D:
+  case ResourceKind::Texture2D:
+  case ResourceKind::Texture3D:
+  case ResourceKind::TextureCube:
+  case ResourceKind::Texture1DArray:
+  case ResourceKind::Texture2DArray:
+  case ResourceKind::TextureCubeArray: {
+    auto *RTy = cast<TextureExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::Texture2DMS:
+  case ResourceKind::Texture2DMSArray: {
+    auto *RTy = cast<MSTextureExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   /*IsROV=*/false);
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::TypedBuffer: {
+    auto *RTy = cast<TypedBufferExtType>(HandleTy);
+    formatTypeName(TypeName, getResourceKindName(Kind), RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::RawBuffer: {
+    auto *RTy = cast<RawBufferExtType>(HandleTy);
+    formatTypeName(TypeName, "ByteAddressBuffer", RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::StructuredBuffer: {
+    auto *RTy = cast<RawBufferExtType>(HandleTy);
+    formatTypeName(TypeName, "StructuredBuffer", RTy->isWriteable(),
+                   RTy->isROV());
+    return StructType::create(RTy->getResourceType(), TypeName);
+  }
+  case ResourceKind::FeedbackTexture2D:
+  case ResourceKind::FeedbackTexture2DArray: {
+    auto *RTy = cast<FeedbackTextureExtType>(HandleTy);
+    TypeName = formatv("{0}<{1}>", getResourceKindName(Kind),
+                       llvm::to_underlying(RTy->getFeedbackType()));
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::CBuffer:
+    return StructType::create(HandleTy->getContext(), "cbuffer");
+  case ResourceKind::Sampler: {
+    auto *RTy = cast<SamplerExtType>(HandleTy);
+    TypeName = formatv("SamplerState<{0}>",
+                       llvm::to_underlying(RTy->getSamplerType()));
+    return StructType::create(Type::getInt32Ty(HandleTy->getContext()),
+                              TypeName);
+  }
+  case ResourceKind::TBuffer:
+  case ResourceKind::RTAccelerationStructure:
+    llvm_unreachable("Unhandled resource kind");
+  case ResourceKind::Invalid:
+  case ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind");
+  }
+  llvm_unreachable("Unhandled ResourceKind enum");
+}
 
-bool ResourceInfo::isStruct() const {
+bool ResourceTypeInfo::isUAV() const { return RC == ResourceClass::UAV; }
+
+bool ResourceTypeInfo::isCBuffer() const {
+  return RC == ResourceClass::CBuffer;
+}
+
+bool ResourceTypeInfo::isSampler() const {
+  return RC == ResourceClass::Sampler;
+}
+
+bool ResourceTypeInfo::isStruct() const {
   return Kind == ResourceKind::StructuredBuffer;
 }
 
-bool ResourceInfo::isTyped() const {
+bool ResourceTypeInfo::isTyped() const {
   switch (Kind) {
   case ResourceKind::Texture1D:
   case ResourceKind::Texture2D:
@@ -248,12 +334,12 @@ bool ResourceInfo::isTyped() const {
   llvm_unreachable("Unhandled ResourceKind enum");
 }
 
-bool ResourceInfo::isFeedback() const {
+bool ResourceTypeInfo::isFeedback() const {
   return Kind == ResourceKind::FeedbackTexture2D ||
          Kind == ResourceKind::FeedbackTexture2DArray;
 }
 
-bool ResourceInfo::isMultiSample() const {
+bool ResourceTypeInfo::isMultiSample() const {
   return Kind == ResourceKind::Texture2DMS ||
          Kind == ResourceKind::Texture2DMSArray;
 }
@@ -289,22 +375,23 @@ static bool isROV(dxil::ResourceKind Kind, TargetExtType *Ty) {
   llvm_unreachable("Unhandled ResourceKind enum");
 }
 
-ResourceInfo::UAVInfo ResourceInfo::getUAV() const {
+ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
   assert(isUAV() && "Not a UAV");
   return {GloballyCoherent, HasCounter, isROV(Kind, HandleTy)};
 }
 
-uint32_t ResourceInfo::getCBufferSize(const DataLayout &DL) const {
+uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
   return cast<CBufferExtType>(HandleTy)->getCBufferSize();
 }
 
-dxil::SamplerType ResourceInfo::getSamplerType() const {
+dxil::SamplerType ResourceTypeInfo::getSamplerType() const {
   assert(isSampler() && "Not a Sampler");
   return cast<SamplerExtType>(HandleTy)->getSamplerType();
 }
 
-ResourceInfo::StructInfo ResourceInfo::getStruct(const DataLayout &DL) const {
+ResourceTypeInfo::StructInfo
+ResourceTypeInfo::getStruct(const DataLayout &DL) const {
   assert(isStruct() && "Not a Struct");
 
   Type *ElTy = cast<RawBufferExtType>(HandleTy)->getResourceType();
@@ -354,7 +441,7 @@ static std::pair<Type *, bool> getTypedElementType(dxil::ResourceKind Kind,
   llvm_unreachable("Unhandled ResourceKind enum");
 }
 
-ResourceInfo::TypedInfo ResourceInfo::getTyped() const {
+ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
   assert(isTyped() && "Not typed");
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
@@ -365,143 +452,24 @@ ResourceInfo::TypedInfo ResourceInfo::getTyped() const {
   return {ET, Count};
 }
 
-dxil::SamplerFeedbackType ResourceInfo::getFeedbackType() const {
+dxil::SamplerFeedbackType ResourceTypeInfo::getFeedbackType() const {
   assert(isFeedback() && "Not Feedback");
   return cast<FeedbackTextureExtType>(HandleTy)->getFeedbackType();
 }
-
-uint32_t ResourceInfo::getMultiSampleCount() const {
+uint32_t ResourceTypeInfo::getMultiSampleCount() const {
   assert(isMultiSample() && "Not MultiSampled");
   return cast<MSTextureExtType>(HandleTy)->getSampleCount();
 }
 
-MDTuple *ResourceInfo::getAsMetadata(Module &M) const {
-  LLVMContext &Ctx = M.getContext();
-  const DataLayout &DL = M.getDataLayout();
-
-  SmallVector<Metadata *, 11> MDVals;
-
-  Type *I32Ty = Type::getInt32Ty(Ctx);
-  Type *I1Ty = Type::getInt1Ty(Ctx);
-  auto getIntMD = [&I32Ty](uint32_t V) {
-    return ConstantAsMetadata::get(
-        Constant::getIntegerValue(I32Ty, APInt(32, V)));
-  };
-  auto getBoolMD = [&I1Ty](uint32_t V) {
-    return ConstantAsMetadata::get(
-        Constant::getIntegerValue(I1Ty, APInt(1, V)));
-  };
-
-  MDVals.push_back(getIntMD(Binding.RecordID));
-
-  // TODO: We need API to create a symbol of the appropriate type to emit here.
-  // See https://github.com/llvm/llvm-project/issues/116849
-  MDVals.push_back(
-      ValueAsMetadata::get(UndefValue::get(PointerType::getUnqual(Ctx))));
-  MDVals.push_back(MDString::get(Ctx, ""));
-
-  MDVals.push_back(getIntMD(Binding.Space));
-  MDVals.push_back(getIntMD(Binding.LowerBound));
-  MDVals.push_back(getIntMD(Binding.Size));
-
-  if (isCBuffer()) {
-    MDVals.push_back(getIntMD(getCBufferSize(DL)));
-    MDVals.push_back(nullptr);
-  } else if (isSampler()) {
-    MDVals.push_back(getIntMD(llvm::to_underlying(getSamplerType())));
-    MDVals.push_back(nullptr);
-  } else {
-    MDVals.push_back(getIntMD(llvm::to_underlying(getResourceKind())));
-
-    if (isUAV()) {
-      ResourceInfo::UAVInfo UAVFlags = getUAV();
-      MDVals.push_back(getBoolMD(UAVFlags.GloballyCoherent));
-      MDVals.push_back(getBoolMD(UAVFlags.HasCounter));
-      MDVals.push_back(getBoolMD(UAVFlags.IsROV));
-    } else {
-      // All SRVs include sample count in the metadata, but it's only meaningful
-      // for multi-sampled textured. Also, UAVs can be multisampled in SM6.7+,
-      // but this just isn't reflected in the metadata at all.
-      uint32_t SampleCount = isMultiSample() ? getMultiSampleCount() : 0;
-      MDVals.push_back(getIntMD(SampleCount));
-    }
-
-    // Further properties are attached to a metadata list of tag-value pairs.
-    SmallVector<Metadata *> Tags;
-    if (isStruct()) {
-      Tags.push_back(
-          getIntMD(llvm::to_underlying(ExtPropTags::StructuredBufferStride)));
-      Tags.push_back(getIntMD(getStruct(DL).Stride));
-    } else if (isTyped()) {
-      Tags.push_back(getIntMD(llvm::to_underlying(ExtPropTags::ElementType)));
-      Tags.push_back(getIntMD(llvm::to_underlying(getTyped().ElementTy)));
-    } else if (isFeedback()) {
-      Tags.push_back(
-          getIntMD(llvm::to_underlying(ExtPropTags::SamplerFeedbackKind)));
-      Tags.push_back(getIntMD(llvm::to_underlying(getFeedbackType())));
-    }
-    MDVals.push_back(Tags.empty() ? nullptr : MDNode::get(Ctx, Tags));
-  }
-
-  return MDNode::get(Ctx, MDVals);
+bool ResourceTypeInfo::operator==(const ResourceTypeInfo &RHS) const {
+  return std::tie(HandleTy, GloballyCoherent, HasCounter) ==
+         std::tie(RHS.HandleTy, RHS.GloballyCoherent, RHS.HasCounter);
 }
 
-std::pair<uint32_t, uint32_t> ResourceInfo::getAnnotateProps(Module &M) const {
-  const DataLayout &DL = M.getDataLayout();
-
-  uint32_t ResourceKind = llvm::to_underlying(getResourceKind());
-  uint32_t AlignLog2 = isStruct() ? getStruct(DL).AlignLog2 : 0;
-  bool IsUAV = isUAV();
-  ResourceInfo::UAVInfo UAVFlags = IsUAV ? getUAV() : ResourceInfo::UAVInfo{};
-  bool IsROV = IsUAV && UAVFlags.IsROV;
-  bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
-  uint8_t SamplerCmpOrHasCounter = 0;
-  if (IsUAV)
-    SamplerCmpOrHasCounter = UAVFlags.HasCounter;
-  else if (isSampler())
-    SamplerCmpOrHasCounter = getSamplerType() == SamplerType::Comparison;
-
-  // TODO: Document this format. Currently the only reference is the
-  // implementation of dxc's DxilResourceProperties struct.
-  uint32_t Word0 = 0;
-  Word0 |= ResourceKind & 0xFF;
-  Word0 |= (AlignLog2 & 0xF) << 8;
-  Word0 |= (IsUAV & 1) << 12;
-  Word0 |= (IsROV & 1) << 13;
-  Word0 |= (IsGloballyCoherent & 1) << 14;
-  Word0 |= (SamplerCmpOrHasCounter & 1) << 15;
-
-  uint32_t Word1 = 0;
-  if (isStruct())
-    Word1 = getStruct(DL).Stride;
-  else if (isCBuffer())
-    Word1 = getCBufferSize(DL);
-  else if (isFeedback())
-    Word1 = llvm::to_underlying(getFeedbackType());
-  else if (isTyped()) {
-    ResourceInfo::TypedInfo Typed = getTyped();
-    uint32_t CompType = llvm::to_underlying(Typed.ElementTy);
-    uint32_t CompCount = Typed.ElementCount;
-    uint32_t SampleCount = isMultiSample() ? getMultiSampleCount() : 0;
-
-    Word1 |= (CompType & 0xFF) << 0;
-    Word1 |= (CompCount & 0xFF) << 8;
-    Word1 |= (SampleCount & 0xFF) << 16;
-  }
-
-  return {Word0, Word1};
-}
-
-bool ResourceInfo::operator==(const ResourceInfo &RHS) const {
-  return std::tie(Binding, HandleTy, GloballyCoherent, HasCounter) ==
-         std::tie(RHS.Binding, RHS.HandleTy, RHS.GloballyCoherent,
-                  RHS.HasCounter);
-}
-
-bool ResourceInfo::operator<(const ResourceInfo &RHS) const {
+bool ResourceTypeInfo::operator<(const ResourceTypeInfo &RHS) const {
   // An empty datalayout is sufficient for sorting purposes.
   DataLayout DummyDL;
-  if (std::tie(Binding, RC, Kind) < std::tie(RHS.Binding, RHS.RC, RHS.Kind))
+  if (std::tie(RC, Kind) < std::tie(RHS.RC, RHS.Kind))
     return true;
   if (isCBuffer() && RHS.isCBuffer() &&
       getCBufferSize(DummyDL) < RHS.getCBufferSize(DummyDL))
@@ -524,13 +492,7 @@ bool ResourceInfo::operator<(const ResourceInfo &RHS) const {
   return false;
 }
 
-void ResourceInfo::print(raw_ostream &OS, const DataLayout &DL) const {
-  OS << "  Binding:\n"
-     << "    Record ID: " << Binding.RecordID << "\n"
-     << "    Space: " << Binding.Space << "\n"
-     << "    Lower Bound: " << Binding.LowerBound << "\n"
-     << "    Size: " << Binding.Size << "\n";
-
+void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   OS << "  Class: " << getResourceClassName(RC) << "\n"
      << "  Kind: " << getResourceKindName(Kind) << "\n";
 
@@ -562,10 +524,164 @@ void ResourceInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
+GlobalVariable *ResourceBindingInfo::createSymbol(Module &M, StructType *Ty,
+                                                  StringRef Name) {
+  assert(!Symbol && "Symbol has already been created");
+  Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
+                              GlobalValue::ExternalLinkage,
+                              /*Initializer=*/nullptr, Name);
+  return Symbol;
+}
+
+MDTuple *ResourceBindingInfo::getAsMetadata(Module &M,
+                                            dxil::ResourceTypeInfo &RTI) const {
+  LLVMContext &Ctx = M.getContext();
+  const DataLayout &DL = M.getDataLayout();
+
+  SmallVector<Metadata *, 11> MDVals;
+
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  Type *I1Ty = Type::getInt1Ty(Ctx);
+  auto getIntMD = [&I32Ty](uint32_t V) {
+    return ConstantAsMetadata::get(
+        Constant::getIntegerValue(I32Ty, APInt(32, V)));
+  };
+  auto getBoolMD = [&I1Ty](uint32_t V) {
+    return ConstantAsMetadata::get(
+        Constant::getIntegerValue(I1Ty, APInt(1, V)));
+  };
+
+  MDVals.push_back(getIntMD(Binding.RecordID));
+  assert(Symbol && "Cannot yet create useful resource metadata without symbol");
+  MDVals.push_back(ValueAsMetadata::get(Symbol));
+  MDVals.push_back(MDString::get(Ctx, Symbol->getName()));
+  MDVals.push_back(getIntMD(Binding.Space));
+  MDVals.push_back(getIntMD(Binding.LowerBound));
+  MDVals.push_back(getIntMD(Binding.Size));
+
+  if (RTI.isCBuffer()) {
+    MDVals.push_back(getIntMD(RTI.getCBufferSize(DL)));
+    MDVals.push_back(nullptr);
+  } else if (RTI.isSampler()) {
+    MDVals.push_back(getIntMD(llvm::to_underlying(RTI.getSamplerType())));
+    MDVals.push_back(nullptr);
+  } else {
+    MDVals.push_back(getIntMD(llvm::to_underlying(RTI.getResourceKind())));
+
+    if (RTI.isUAV()) {
+      ResourceTypeInfo::UAVInfo UAVFlags = RTI.getUAV();
+      MDVals.push_back(getBoolMD(UAVFlags.GloballyCoherent));
+      MDVals.push_back(getBoolMD(UAVFlags.HasCounter));
+      MDVals.push_back(getBoolMD(UAVFlags.IsROV));
+    } else {
+      // All SRVs include sample count in the metadata, but it's only meaningful
+      // for multi-sampled textured. Also, UAVs can be multisampled in SM6.7+,
+      // but this just isn't reflected in the metadata at all.
+      uint32_t SampleCount =
+          RTI.isMultiSample() ? RTI.getMultiSampleCount() : 0;
+      MDVals.push_back(getIntMD(SampleCount));
+    }
+
+    // Further properties are attached to a metadata list of tag-value pairs.
+    SmallVector<Metadata *> Tags;
+    if (RTI.isStruct()) {
+      Tags.push_back(
+          getIntMD(llvm::to_underlying(ExtPropTags::StructuredBufferStride)));
+      Tags.push_back(getIntMD(RTI.getStruct(DL).Stride));
+    } else if (RTI.isTyped()) {
+      Tags.push_back(getIntMD(llvm::to_underlying(ExtPropTags::ElementType)));
+      Tags.push_back(getIntMD(llvm::to_underlying(RTI.getTyped().ElementTy)));
+    } else if (RTI.isFeedback()) {
+      Tags.push_back(
+          getIntMD(llvm::to_underlying(ExtPropTags::SamplerFeedbackKind)));
+      Tags.push_back(getIntMD(llvm::to_underlying(RTI.getFeedbackType())));
+    }
+    MDVals.push_back(Tags.empty() ? nullptr : MDNode::get(Ctx, Tags));
+  }
+
+  return MDNode::get(Ctx, MDVals);
+}
+
+std::pair<uint32_t, uint32_t>
+ResourceBindingInfo::getAnnotateProps(Module &M,
+                                      dxil::ResourceTypeInfo &RTI) const {
+  const DataLayout &DL = M.getDataLayout();
+
+  uint32_t ResourceKind = llvm::to_underlying(RTI.getResourceKind());
+  uint32_t AlignLog2 = RTI.isStruct() ? RTI.getStruct(DL).AlignLog2 : 0;
+  bool IsUAV = RTI.isUAV();
+  ResourceTypeInfo::UAVInfo UAVFlags =
+      IsUAV ? RTI.getUAV() : ResourceTypeInfo::UAVInfo{};
+  bool IsROV = IsUAV && UAVFlags.IsROV;
+  bool IsGloballyCoherent = IsUAV && UAVFlags.GloballyCoherent;
+  uint8_t SamplerCmpOrHasCounter = 0;
+  if (IsUAV)
+    SamplerCmpOrHasCounter = UAVFlags.HasCounter;
+  else if (RTI.isSampler())
+    SamplerCmpOrHasCounter = RTI.getSamplerType() == SamplerType::Comparison;
+
+  // TODO: Document this format. Currently the only reference is the
+  // implementation of dxc's DxilResourceProperties struct.
+  uint32_t Word0 = 0;
+  Word0 |= ResourceKind & 0xFF;
+  Word0 |= (AlignLog2 & 0xF) << 8;
+  Word0 |= (IsUAV & 1) << 12;
+  Word0 |= (IsROV & 1) << 13;
+  Word0 |= (IsGloballyCoherent & 1) << 14;
+  Word0 |= (SamplerCmpOrHasCounter & 1) << 15;
+
+  uint32_t Word1 = 0;
+  if (RTI.isStruct())
+    Word1 = RTI.getStruct(DL).Stride;
+  else if (RTI.isCBuffer())
+    Word1 = RTI.getCBufferSize(DL);
+  else if (RTI.isFeedback())
+    Word1 = llvm::to_underlying(RTI.getFeedbackType());
+  else if (RTI.isTyped()) {
+    ResourceTypeInfo::TypedInfo Typed = RTI.getTyped();
+    uint32_t CompType = llvm::to_underlying(Typed.ElementTy);
+    uint32_t CompCount = Typed.ElementCount;
+    uint32_t SampleCount = RTI.isMultiSample() ? RTI.getMultiSampleCount() : 0;
+
+    Word1 |= (CompType & 0xFF) << 0;
+    Word1 |= (CompCount & 0xFF) << 8;
+    Word1 |= (SampleCount & 0xFF) << 16;
+  }
+
+  return {Word0, Word1};
+}
+
+void ResourceBindingInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
+                                const DataLayout &DL) const {
+  if (Symbol) {
+    OS << "  Symbol: ";
+    Symbol->printAsOperand(OS);
+    OS << "\n";
+  }
+
+  OS << "  Binding:\n"
+     << "    Record ID: " << Binding.RecordID << "\n"
+     << "    Space: " << Binding.Space << "\n"
+     << "    Lower Bound: " << Binding.LowerBound << "\n"
+     << "    Size: " << Binding.Size << "\n";
+
+  RTI.print(OS, DL);
+}
+
 //===----------------------------------------------------------------------===//
 
-void DXILResourceMap::populate(Module &M) {
-  SmallVector<std::pair<CallInst *, ResourceInfo>> CIToInfo;
+bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
+                                     ModuleAnalysisManager::Invalidator &Inv) {
+  // Passes that introduce resource types must explicitly invalidate this pass.
+  auto PAC = PA.getChecker<DXILResourceTypeAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+//===----------------------------------------------------------------------===//
+
+void DXILBindingMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  SmallVector<std::tuple<CallInst *, ResourceBindingInfo, ResourceTypeInfo>>
+      CIToInfos;
 
   for (Function &F : M.functions()) {
     if (!F.isDeclaration())
@@ -575,8 +691,9 @@ void DXILResourceMap::populate(Module &M) {
     switch (ID) {
     default:
       continue;
-    case Intrinsic::dx_handle_fromBinding: {
+    case Intrinsic::dx_resource_handlefrombinding: {
       auto *HandleTy = cast<TargetExtType>(F.getReturnType());
+      ResourceTypeInfo &RTI = DRTM[HandleTy];
 
       for (User *U : F.users())
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
@@ -587,10 +704,10 @@ void DXILResourceMap::populate(Module &M) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-          ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space, LowerBound, Size, HandleTy};
+          ResourceBindingInfo RBI = ResourceBindingInfo{
+              /*RecordID=*/0, Space, LowerBound, Size, HandleTy};
 
-          CIToInfo.emplace_back(CI, RI);
+          CIToInfos.emplace_back(CI, RBI, RTI);
         }
 
       break;
@@ -598,16 +715,19 @@ void DXILResourceMap::populate(Module &M) {
     }
   }
 
-  llvm::stable_sort(CIToInfo, [](auto &LHS, auto &RHS) {
-    // Sort by resource class first for grouping purposes, and then by the rest
-    // of the fields so that we can remove duplicates.
-    ResourceClass LRC = LHS.second.getResourceClass();
-    ResourceClass RRC = RHS.second.getResourceClass();
-    return std::tie(LRC, LHS.second) < std::tie(RRC, RHS.second);
+  llvm::stable_sort(CIToInfos, [](auto &LHS, auto &RHS) {
+    const auto &[LCI, LRBI, LRTI] = LHS;
+    const auto &[RCI, RRBI, RRTI] = RHS;
+    // Sort by resource class first for grouping purposes, and then by the
+    // binding and type so we can remove duplicates.
+    ResourceClass LRC = LRTI.getResourceClass();
+    ResourceClass RRC = RRTI.getResourceClass();
+
+    return std::tie(LRC, LRBI, LRTI) < std::tie(RRC, RRBI, RRTI);
   });
-  for (auto [CI, RI] : CIToInfo) {
-    if (Infos.empty() || RI != Infos.back())
-      Infos.push_back(RI);
+  for (auto [CI, RBI, RTI] : CIToInfos) {
+    if (Infos.empty() || RBI != Infos.back())
+      Infos.push_back(RBI);
     CallMap[CI] = Infos.size() - 1;
   }
 
@@ -616,27 +736,30 @@ void DXILResourceMap::populate(Module &M) {
   FirstUAV = FirstCBuffer = FirstSampler = Size;
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
-    ResourceInfo &RI = Infos[I];
-    if (RI.isUAV() && FirstUAV == Size) {
+    ResourceBindingInfo &RBI = Infos[I];
+    ResourceTypeInfo &RTI = DRTM[RBI.getHandleTy()];
+    if (RTI.isUAV() && FirstUAV == Size) {
       FirstUAV = I;
       NextID = 0;
-    } else if (RI.isCBuffer() && FirstCBuffer == Size) {
+    } else if (RTI.isCBuffer() && FirstCBuffer == Size) {
       FirstCBuffer = I;
       NextID = 0;
-    } else if (RI.isSampler() && FirstSampler == Size) {
+    } else if (RTI.isSampler() && FirstSampler == Size) {
       FirstSampler = I;
       NextID = 0;
     }
 
     // Adjust the resource binding to use the next ID.
-    RI.setBindingID(NextID++);
+    RBI.setBindingID(NextID++);
   }
 }
 
-void DXILResourceMap::print(raw_ostream &OS, const DataLayout &DL) const {
+void DXILBindingMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
+                           const DataLayout &DL) const {
   for (unsigned I = 0, E = Infos.size(); I != E; ++I) {
     OS << "Binding " << I << ":\n";
-    Infos[I].print(OS, DL);
+    const dxil::ResourceBindingInfo &RBI = Infos[I];
+    RBI.print(OS, DRTM[RBI.getHandleTy()], DL);
     OS << "\n";
   }
 
@@ -649,60 +772,82 @@ void DXILResourceMap::print(raw_ostream &OS, const DataLayout &DL) const {
 
 //===----------------------------------------------------------------------===//
 
-AnalysisKey DXILResourceAnalysis::Key;
+AnalysisKey DXILResourceTypeAnalysis::Key;
+AnalysisKey DXILResourceBindingAnalysis::Key;
 
-DXILResourceMap DXILResourceAnalysis::run(Module &M,
-                                          ModuleAnalysisManager &AM) {
-  DXILResourceMap Data;
-  Data.populate(M);
+DXILBindingMap DXILResourceBindingAnalysis::run(Module &M,
+                                                ModuleAnalysisManager &AM) {
+  DXILBindingMap Data;
+  DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  Data.populate(M, DRTM);
   return Data;
 }
 
-PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
-  DXILResourceMap &DBM = AM.getResult<DXILResourceAnalysis>(M);
+PreservedAnalyses
+DXILResourceBindingPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
+  DXILBindingMap &DBM = AM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
 
-  DBM.print(OS, M.getDataLayout());
+  DBM.print(OS, DRTM, M.getDataLayout());
   return PreservedAnalyses::all();
 }
 
-DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
-  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
+void DXILResourceTypeWrapperPass::anchor() {}
+
+DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
+  initializeDXILResourceTypeWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
+INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
+                "DXIL Resource Type Analysis", false, true)
+char DXILResourceTypeWrapperPass::ID = 0;
 
-void DXILResourceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
+  return new DXILResourceTypeWrapperPass();
+}
+
+DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
+    : ModulePass(ID) {
+  initializeDXILResourceBindingWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
+DXILResourceBindingWrapperPass::~DXILResourceBindingWrapperPass() = default;
+
+void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
   AU.setPreservesAll();
 }
 
-bool DXILResourceWrapperPass::runOnModule(Module &M) {
-  Map.reset(new DXILResourceMap());
+bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
+  Map.reset(new DXILBindingMap());
 
-  Map->populate(M);
+  DRTM = &getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  Map->populate(M, *DRTM);
 
   return false;
 }
 
-void DXILResourceWrapperPass::releaseMemory() { Map.reset(); }
+void DXILResourceBindingWrapperPass::releaseMemory() { Map.reset(); }
 
-void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *M) const {
+void DXILResourceBindingWrapperPass::print(raw_ostream &OS,
+                                           const Module *M) const {
   if (!Map) {
     OS << "No resource map has been built!\n";
     return;
   }
-  Map->print(OS, M->getDataLayout());
+  Map->print(OS, *DRTM, M->getDataLayout());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
+void DXILResourceBindingWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
 
-INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resource-binding",
-                "DXIL Resource analysis", false, true)
-char DXILResourceWrapperPass::ID = 0;
+INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
+                "DXIL Resource Binding Analysis", false, true)
+char DXILResourceBindingWrapperPass::ID = 0;
 
-ModulePass *llvm::createDXILResourceWrapperPassPass() {
-  return new DXILResourceWrapperPass();
+ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
+  return new DXILResourceBindingWrapperPass();
 }
