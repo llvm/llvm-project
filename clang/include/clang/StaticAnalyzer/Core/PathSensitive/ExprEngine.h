@@ -290,6 +290,10 @@ public:
   /// This tag applies to a node created after removeDead.
   static const ProgramPointTag *cleanupNodeTag();
 
+  /// A tag to track when loop widening occurs.
+  /// This tag applies to a node created after getWidenedLoopState.
+  static const ProgramPointTag *loopWideningNodeTag();
+
   /// processCFGElement - Called by CoreEngine. Used to generate new successor
   ///  nodes by processing the 'effects' of a CFG element.
   void processCFGElement(const CFGElement E, ExplodedNode *Pred,
