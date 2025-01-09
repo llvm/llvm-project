@@ -25,7 +25,6 @@ define void @test_store_to_zeroptr() #0 {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __hwasan_check_x4294967071_19_fixed_0_short_v2
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov w9, #42 // =0x2a
 ; CHECK-NEXT:    str x9, [x8]

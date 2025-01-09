@@ -605,6 +605,14 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+
+  // If the pointer is statically known to be zero, it has a zero tag and the
+  // tag check will pass since the shadow memory corresponding to address 0
+  // is initialized to zero and never updated. We can therefore elide the tag
+  // check.
+  if (Reg == AArch64::XZR)
+    return;
+
   bool IsShort =
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) ||
        (MI.getOpcode() ==
