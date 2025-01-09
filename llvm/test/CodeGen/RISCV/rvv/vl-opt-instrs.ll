@@ -3535,3 +3535,63 @@ define <vscale x 4 x i1> @vmfgt_vv(<vscale x 4 x float> %a, <vscale x 4 x i1> %b
   %2 = call <vscale x 4 x i1> @llvm.riscv.vmand.nxv4i1(<vscale x 4 x i1> %1, <vscale x 4 x i1> %b, iXLen %vl)
   ret <vscale x 4 x i1> %2
 }
+
+define <vscale x 4 x i32> @vmerge_vvm(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vmerge_vvm:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmerge_vvm:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
+; VLOPT-NEXT:    vadd.vv v8, v8, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i1> %c, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %b, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmerge_vxm(<vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i1> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vmerge_vxm:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vmerge.vxm v8, v8, a0, v0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmerge_vxm:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vmerge.vxm v8, v8, a0, v0
+; VLOPT-NEXT:    vadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, <vscale x 4 x i1> %c, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vmerge_vim(<vscale x 4 x i32> %a, <vscale x 4 x i1> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vmerge_vim:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vmerge.vim v8, v8, 9, v0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vmerge_vim:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vmerge.vim v8, v8, 9, v0
+; VLOPT-NEXT:    vadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vmerge.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 9, <vscale x 4 x i1> %c, iXLen -1)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
