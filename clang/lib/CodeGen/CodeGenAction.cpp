@@ -124,8 +124,7 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
   if (CodeGenOpts.TimePasses)
-    LLVMIRGeneration.init("irgen", "LLVM IR Generation Time",
-                          CI.getFrontendTimerGroup());
+    LLVMIRGeneration.init("irgen", "LLVM IR Generation", CI.getTimerGroup());
 }
 
 llvm::Module* BackendConsumer::getModule() const {

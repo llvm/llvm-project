@@ -16,6 +16,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -1213,10 +1214,6 @@ void EmitAssemblyHelper::emitAssembly(const CompilerInstance &CI,
                                       BackendAction Action,
                                       std::unique_ptr<raw_pwrite_stream> OS,
                                       BackendConsumer *BC) {
-  Timer timer;
-  if (CodeGenOpts.TimePasses)
-    timer.init("codegen", "Code Generation Time");
-  TimeRegion Region(CodeGenOpts.TimePasses ? &timer : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
   bool RequiresCodeGen = actionRequiresCodeGen(Action);
@@ -1358,6 +1355,19 @@ void clang::emitBackendOutput(CompilerInstance &CI, StringRef TDesc,
   const auto &CGOpts = CI.getCodeGenOpts();
   const auto &TOpts = CI.getTargetOpts();
   const auto &LOpts = CI.getLangOpts();
+
+  Timer timer;
+  if (CGOpts.TimePasses) {
+    CI.getFrontendTimer().stopTimer();
+    timer.init("backend", "Backend", CI.getTimerGroup());
+    timer.startTimer();
+  }
+  auto _ = llvm::make_scope_exit([&] {
+    if (!CGOpts.TimePasses)
+      return;
+    timer.stopTimer();
+    CI.getFrontendTimer().startTimer();
+  });
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
