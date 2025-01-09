@@ -716,6 +716,8 @@ let SMETargetGuard = "sme2" in {
   def SVZERO_ZT : Inst<"svzero_zt", "vi", "", MergeNone, "aarch64_sme_zero_zt", [IsOverloadNone, IsStreamingCompatible, IsOutZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
 
+def IN_STREAMING_MODE :  Inst<"__arm_in_streaming_mode", "sv", "Pc", MergeNone, "aarch64_sme_in_streaming_mode", [IsOverloadNone, IsStreamingCompatible], []>;
+
 //
 // lookup table expand four contiguous registers
 //
