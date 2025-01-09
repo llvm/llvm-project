@@ -1215,7 +1215,7 @@ void EmitAssemblyHelper::emitAssembly(const CompilerInstance &CI,
                                       BackendConsumer *BC) {
   Timer timer;
   if (CodeGenOpts.TimePasses)
-    timer.init("codegen", "Code Generation Time", CI.getFrontendTimerGroup());
+    timer.init("codegen", "Code Generation Time");
   TimeRegion Region(CodeGenOpts.TimePasses ? &timer : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
