@@ -85,7 +85,7 @@ void DependencyScanningFrontendAction::ExecuteAction() {
 
 std::unique_ptr<ASTConsumer>
 DependencyScanningFrontendAction::CreateASTConsumer(CompilerInstance &CI,
-                                              StringRef InFile) {
+                                                    StringRef InFile) {
   return std::make_unique<ASTConsumer>();
 }
 
