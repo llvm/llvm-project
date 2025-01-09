@@ -3456,14 +3456,6 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 struct OmpClause;
 struct OmpClauseList;
 
-struct OmpDirectiveSpecification {
-  TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
-  std::tuple<llvm::omp::Directive,
-      std::optional<common::Indirection<OmpClauseList>>>
-      t;
-  CharBlock source;
-};
-
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.

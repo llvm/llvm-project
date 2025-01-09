@@ -476,7 +476,6 @@ public:
   NODE(parser, NullInit)
   NODE(parser, ObjectDecl)
   NODE(parser, OldParameterStmt)
-  NODE(parser, OmpDirectiveSpecification)
   NODE(parser, OmpTraitPropertyName)
   NODE(parser, OmpTraitScore)
   NODE(parser, OmpTraitPropertyExtension)

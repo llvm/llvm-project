@@ -2070,10 +2070,6 @@ public:
   void Unparse(const llvm::omp::Directive &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
   }
-  void Unparse(const OmpDirectiveSpecification &x) {
-    Walk(std::get<llvm::omp::Directive>(x.t));
-    Walk(std::get<std::optional<common::Indirection<OmpClauseList>>>(x.t));
-  }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");
     Walk(x.v);

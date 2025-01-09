@@ -153,9 +153,6 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
-TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>(
-    OmpDirectiveNameParser{}, maybe(indirect(Parser<OmpClauseList>{})))))
-
 // --- Parsers for context traits -------------------------------------
 
 TYPE_PARSER(construct<OmpTraitPropertyName>( //
