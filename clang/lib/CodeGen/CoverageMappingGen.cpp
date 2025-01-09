@@ -938,19 +938,37 @@ struct CounterCoverageMappingBuilder
   }
 
   struct BranchCounterPair {
-    Counter Executed;
-    Counter Skipped;
+    Counter Executed; ///< The Counter previously assigned.
+    Counter Skipped;  ///< An expression (Parent-Executed), or equivalent to it.
   };
 
+  /// Retrieve or assign the pair of Counter(s).
+  ///
+  /// This returns BranchCounterPair {Executed, Skipped}.
+  /// Executed is the Counter associated with S assigned by an earlier
+  /// CounterMapping pass.
+  /// Skipped may be an expression (Executed - ParentCnt) or newly
+  /// assigned Counter in EnableSingleByteCoverage, as subtract
+  /// expressions are not available in this mode.
+  ///
+  /// \param S Key to the CounterMap
+  /// \param ParentCnt The Counter representing how many times S is evaluated.
+  /// \param SkipCntForOld (To be removed later) Optional fake Counter
+  ///                      to override Skipped for adjustment of
+  ///                      expressions in the old behavior of
+  ///                      EnableSingleByteCoverage that is unaware of
+  ///                      Branch coverage.
   BranchCounterPair
   getBranchCounterPair(const Stmt *S, Counter ParentCnt,
                        std::optional<Counter> SkipCntForOld = std::nullopt) {
     auto &TheMap = CounterMap[S];
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
 
-    // The old behavior of SingleByte shouldn't emit Branches.
+    // The old behavior of SingleByte is unaware of Branches.
+    // Will be pruned after the migration of SingleByte.
     if (llvm::EnableSingleByteCoverage) {
-      assert(SkipCntForOld);
+      assert(SkipCntForOld &&
+             "SingleByte must provide SkipCntForOld as a fake Skipped count.");
       return {ExecCnt, *SkipCntForOld};
     }
 

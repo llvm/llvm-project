@@ -54,6 +54,7 @@ static_library("bugprone") {
     "MultiLevelImplicitPointerConversionCheck.cpp",
     "MultipleNewInOneExpressionCheck.cpp",
     "MultipleStatementMacroCheck.cpp",
+    "NarrowingConversionsCheck.cpp",
     "NoEscapeCheck.cpp",
     "NonZeroEnumToBoolConversionCheck.cpp",
     "NondeterministicPointerIterationOrderCheck.cpp",
