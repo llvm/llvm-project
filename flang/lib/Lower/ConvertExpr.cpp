@@ -27,7 +27,6 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
-#include "flang/Lower/DumpEvaluateExpr.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
@@ -47,6 +46,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Runtime/support.h"
+#include "flang/Semantics/dump-expr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -3925,7 +3925,7 @@ private:
   /// determine the actual number of iterations when slicing triples are
   /// present. Lower these expressions here.
   bool determineShapeWithSlice(const Fortran::lower::SomeExpr &lhs) {
-    LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(
+    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::dump(
         llvm::dbgs() << "determine shape of:\n", lhs));
     // FIXME: We may not want to use ExtractDataRef here since it doesn't deal
     // with substrings, etc.
@@ -5073,7 +5073,7 @@ private:
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Expr<A> &x) {
-    LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(llvm::dbgs(), x));
+    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::dump(llvm::dbgs(), x));
     if (isArray(x) || (explicitSpaceIsActive() && isLeftHandSide()) ||
         isElementalProcWithArrayArgs(x))
       return Fortran::common::visit([&](const auto &e) { return genarr(e); },

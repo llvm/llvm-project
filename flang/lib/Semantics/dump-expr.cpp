@@ -1,4 +1,4 @@
-//===-- Lower/DumpEvaluateExpr.cpp ----------------------------------------===//
+//===-- Semantics/DumpEvaluateExpr.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/DumpEvaluateExpr.h"
+#include "flang/Semantics/dump-expr.h"
 #include <iostream>
 
 static constexpr char whiteSpacePadding[] =
     ">>                                               ";
 static constexpr auto whiteSize = sizeof(whiteSpacePadding) - 1;
 
-inline const char *Fortran::lower::DumpEvaluateExpr::getIndentString() const {
+inline const char *
+Fortran::semantics::DumpEvaluateExpr::getIndentString() const {
   auto count = (level * 2 >= whiteSize) ? whiteSize : level * 2;
   return whiteSpacePadding + whiteSize - count;
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::CoarrayRef &x) {
   indent("coarray ref");
   show(x.base());
@@ -29,20 +30,20 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::BOZLiteralConstant &) {
   print("BOZ literal constant");
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::NullPointer &) {
   print("null pointer");
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
-  print("symbol: "s + std::string(toStringRef(symbol.name())));
+  print("symbol: "s + symbol.name().ToString());
   if (const auto *assoc =
           ultimate.detailsIf<Fortran::semantics::AssocEntityDetails>()) {
     indent("assoc details");
@@ -51,23 +52,23 @@ void Fortran::lower::DumpEvaluateExpr::show(
   }
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::StaticDataObject &) {
   print("static data object");
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ImpliedDoIndex &) {
   print("implied do index");
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::BaseObject &x) {
   indent("base object");
   show(x.u);
   outdent();
 }
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::Component &x) {
   indent("component");
   show(x.base());
@@ -75,7 +76,7 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::NamedEntity &x) {
   indent("named entity");
   if (const auto *component = x.UnwrapComponent())
@@ -85,14 +86,14 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::TypeParamInquiry &x) {
   indent("type inquiry");
   show(x.base());
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::Triplet &x) {
   indent("triplet");
   show(x.lower());
@@ -101,14 +102,14 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::Subscript &x) {
   indent("subscript");
   show(x.u);
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ArrayRef &x) {
   indent("array ref");
   show(x.base());
@@ -116,14 +117,14 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::DataRef &x) {
   indent("data ref");
   show(x.u);
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::Substring &x) {
   indent("substring");
   show(x.parent());
@@ -132,20 +133,20 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::semantics::ParamValue &x) {
   indent("param value");
   show(x.GetExplicit());
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::semantics::DerivedTypeSpec::ParameterMapType::value_type
         &x) {
   show(x.second);
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::semantics::DerivedTypeSpec &x) {
   indent("derived type spec");
   for (auto &v : x.parameters())
@@ -153,12 +154,12 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::StructureConstructorValues::value_type &x) {
   show(x.second);
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::StructureConstructor &x) {
   indent("structure constructor");
   show(x.derivedTypeSpec());
@@ -167,21 +168,21 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x) {
   indent("expr some type");
   show(x.u);
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ComplexPart &x) {
   indent("complex part");
   show(x.complex());
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ActualArgument &x) {
   indent("actual argument");
   if (const auto *symbol = x.GetAssumedTypeDummy())
@@ -191,7 +192,7 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::ProcedureDesignator &x) {
   indent("procedure designator");
   if (const auto *component = x.GetComponent())
@@ -203,28 +204,28 @@ void Fortran::lower::DumpEvaluateExpr::show(
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::SpecificIntrinsic &) {
   print("specific intrinsic");
 }
 
-void Fortran::lower::DumpEvaluateExpr::show(
+void Fortran::semantics::DumpEvaluateExpr::show(
     const Fortran::evaluate::DescriptorInquiry &x) {
   indent("descriptor inquiry");
   show(x.base());
   outdent();
 }
 
-void Fortran::lower::DumpEvaluateExpr::print(llvm::Twine twine) {
+void Fortran::semantics::DumpEvaluateExpr::print(llvm::Twine twine) {
   outs << getIndentString() << twine << '\n';
 }
 
-void Fortran::lower::DumpEvaluateExpr::indent(llvm::StringRef s) {
+void Fortran::semantics::DumpEvaluateExpr::indent(llvm::StringRef s) {
   print(s + " {");
   level++;
 }
 
-void Fortran::lower::DumpEvaluateExpr::outdent() {
+void Fortran::semantics::DumpEvaluateExpr::outdent() {
   if (level)
     level--;
   print("}");
@@ -234,37 +235,37 @@ void Fortran::lower::DumpEvaluateExpr::outdent() {
 // Boilerplate entry points that the debugger can find.
 //===----------------------------------------------------------------------===//
 
-void Fortran::lower::dumpEvExpr(const Fortran::semantics::SomeExpr &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::semantics::SomeExpr &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(
+void Fortran::semantics::dumpEvExpr(
     const Fortran::evaluate::Expr<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>>
         &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(
+void Fortran::semantics::dumpEvExpr(
     const Fortran::evaluate::Expr<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>>
         &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(const Fortran::evaluate::ArrayRef &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::ArrayRef &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(const Fortran::evaluate::DataRef &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::DataRef &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(const Fortran::evaluate::Substring &x) {
+void Fortran::semantics::dumpEvExpr(const Fortran::evaluate::Substring &x) {
   DumpEvaluateExpr::dump(x);
 }
 
-void Fortran::lower::dumpEvExpr(
+void Fortran::semantics::dumpEvExpr(
     const Fortran::evaluate::Designator<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 4>>
         &x) {
