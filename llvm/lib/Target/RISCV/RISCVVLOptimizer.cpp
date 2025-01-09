@@ -637,7 +637,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M: {
-    return 0;
+    return MILog2SEW;
   }
 
   // Vector Iota Instruction
@@ -944,6 +944,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMADD_VX:
   case RISCV::VNMSUB_VV:
   case RISCV::VNMSUB_VX:
+  // Vector Integer Merge Instructions
+  case RISCV::VMERGE_VIM:
+  case RISCV::VMERGE_VVM:
+  case RISCV::VMERGE_VXM:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:

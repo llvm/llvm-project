@@ -147,6 +147,13 @@ public:
   ~Scheduler() {}
 
   bool trySchedule(ArrayRef<Instruction *> Instrs);
+  /// Clear the scheduler's state, including the DAG.
+  void clear() {
+    Bndls.clear();
+    // TODO: clear view once it lands.
+    DAG.clear();
+    ScheduleTopItOpt = std::nullopt;
+  }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
