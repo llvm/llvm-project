@@ -8,15 +8,13 @@ Install dependencies first:
 .. code-block:: sh
 
   $ sudo apt update
-  $ sudo apt install git cmake ninja-build clang gcc-multilib wget unzip
+  $ sudo apt install git cmake ninja-build clang gcc-multilib
 
 .. code-block:: sh
 
-  $ cd /tmp
-  $ wget https://github.com/llvm/llvm-project/archive/refs/heads/main.zip
-  $ unzip -q main.zip
-  $ mkdir llvm-project-main/build
-  $ cd llvm-project-main/build
+  $ git clone --depth=1 git@github.com:llvm/llvm-project.git /tmp/llvm-project
+  $ mkdir /tmp/llvm-project/build
+  $ cd /tmp/llvm-project/build
   $ cmake ../runtimes -GNinja \
     -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
     -DCMAKE_BUILD_TYPE=Debug \
