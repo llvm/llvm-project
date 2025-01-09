@@ -876,9 +876,14 @@ llvm::LogicalResult fir::PointerType::verify(
 //===----------------------------------------------------------------------===//
 
 // Fortran derived type
+// unpacked:
 // `type` `<` name
 //           (`(` id `:` type (`,` id `:` type)* `)`)?
 //           (`{` id `:` type (`,` id `:` type)* `}`)? '>'
+// packed:
+// `type` `<` name
+//           (`(` id `:` type (`,` id `:` type)* `)`)?
+//           (`<{` id `:` type (`,` id `:` type)* `}>`)? '>'
 mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   llvm::StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))

@@ -420,7 +420,7 @@ struct TypeBuilderImpl {
             fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
             mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
             prev_offset += pad;
-            cs.emplace_back("__padding"+std::to_string(padCounter++), padTy);
+            cs.emplace_back("__padding" + std::to_string(padCounter++), padTy);
           }
           prev_offset += compSize;
         }
@@ -437,7 +437,8 @@ struct TypeBuilderImpl {
               mlir::Type i8Ty{mlir::IntegerType::get(context, 8)};
               fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
               mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
-              cs.emplace_back("__padding"+std::to_string(padCounter++), padTy);
+              cs.emplace_back("__padding" + std::to_string(padCounter++),
+                              padTy);
             }
           }
         }
