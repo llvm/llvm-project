@@ -5717,6 +5717,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
+        ":ValueBoundsOpInterface",
         "//llvm:Core",
         "//llvm:Support",
     ],
