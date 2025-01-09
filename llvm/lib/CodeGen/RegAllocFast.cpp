@@ -1187,10 +1187,9 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
   if (AllocationOrder.empty()) {
     const Function &Fn = MF.getFunction();
     if (EmitError) {
-      DiagnosticInfoRegAllocFailure DI(
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "no registers from class available to allocate", Fn,
-          MI.getDebugLoc());
-      Fn.getContext().diagnose(DI);
+          MI.getDebugLoc()));
     }
 
     ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();

@@ -241,6 +241,11 @@ add_header_library(
   complex_type
   HDRS
     complex_type.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
 )
 
 add_header_library(
@@ -262,7 +267,9 @@ add_header_library(
   HDRS
     fixedvector.h
   DEPENDS
+    .libc_assert
     libc.src.__support.CPP.array
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_header_library(

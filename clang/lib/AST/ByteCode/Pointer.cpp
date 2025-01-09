@@ -96,6 +96,8 @@ void Pointer::operator=(const Pointer &P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -132,6 +134,8 @@ void Pointer::operator=(Pointer &&P) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else if (P.isFunctionPointer()) {
     PointeeStorage.Fn = P.PointeeStorage.Fn;
+  } else if (P.isTypeidPointer()) {
+    PointeeStorage.Typeid = P.PointeeStorage.Typeid;
   } else {
     assert(false && "Unhandled storage kind");
   }
@@ -150,6 +154,14 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
   if (isFunctionPointer())
     return asFunctionPointer().toAPValue(ASTCtx);
+
+  if (isTypeidPointer()) {
+    TypeInfoLValue TypeInfo(PointeeStorage.Typeid.TypePtr);
+    return APValue(
+        APValue::LValueBase::getTypeInfo(
+            TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
+        CharUnits::Zero(), APValue::NoLValuePath{});
+  }
 
   // Build the lvalue base from the block.
   const Descriptor *Desc = getDeclDesc();
@@ -304,6 +316,9 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   case Storage::Fn:
     OS << "(Fn) { " << asFunctionPointer().getFunction() << " + " << Offset
        << " }";
+    break;
+  case Storage::Typeid:
+    OS << "(Typeid)";
   }
 }
 
@@ -450,6 +465,8 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
     return true;
   if (A.isFunctionPointer() && B.isFunctionPointer())
     return true;
+  if (A.isTypeidPointer() && B.isTypeidPointer())
+    return true;
 
   if (A.isIntegralPointer() || B.isIntegralPointer())
     return A.getSource() == B.getSource();
@@ -476,10 +493,10 @@ bool Pointer::pointsToLiteral() const {
   if (isZero() || !isBlockPointer())
     return false;
 
-  const Expr *E = block()->getDescriptor()->asExpr();
   if (block()->isDynamic())
     return false;
 
+  const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 

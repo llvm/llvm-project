@@ -429,14 +429,3 @@ def : Pat<(int_riscv_masked_cmpxchg_i64
           (PseudoMaskedCmpXchg32
             GPR:$addr, GPR:$cmpval, GPR:$newval, GPR:$mask, timm:$ordering)>;
 } // Predicates = [HasStdExtA, IsRV64]
-
-let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<relaxed_load<atomic_load_8>,  LB, i32>;
-  def : LdPat<relaxed_load<atomic_load_16>, LH, i32>;
-  def : LdPat<relaxed_load<atomic_load_32>, LW, i32>;
-
-  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i32>;
-  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i32>;
-  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
-}
-

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX950 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefix=GFX940-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX950 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefix=GFX940-ERR --implicit-check-not=error: %s
 
 ds_read_b64_tr_b4 v[0:1], v1
 // GFX940-ERR: [[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

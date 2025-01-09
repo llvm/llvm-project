@@ -14,10 +14,11 @@
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/NVVMIntrinsicFlags.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -176,10 +177,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case ISD::ADDRSPACECAST:
     SelectAddrSpaceCast(N);
     return;
-  case ISD::ConstantFP:
-    if (tryConstantFP(N))
-      return;
-    break;
   case ISD::CopyToReg: {
     if (N->getOperand(1).getValueType() == MVT::i128) {
       SelectV2I64toI128(N);
@@ -210,21 +207,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_ldu_global_p:
     return tryLDGLDU(N);
   }
-}
-
-// There's no way to specify FP16 and BF16 immediates in .(b)f16 ops, so we
-// have to load them into an .(b)f16 register first.
-bool NVPTXDAGToDAGISel::tryConstantFP(SDNode *N) {
-  if (N->getValueType(0) != MVT::f16 && N->getValueType(0) != MVT::bf16)
-    return false;
-  SDValue Val = CurDAG->getTargetConstantFP(
-      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), N->getValueType(0));
-  SDNode *LoadConstF16 = CurDAG->getMachineNode(
-      (N->getValueType(0) == MVT::f16 ? NVPTX::LOAD_CONST_F16
-                                      : NVPTX::LOAD_CONST_BF16),
-      SDLoc(N), N->getValueType(0), Val);
-  ReplaceNode(N, LoadConstF16);
-  return true;
 }
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
@@ -318,7 +300,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
     return false;
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
-  for (auto *U : Vector.getNode()->uses()) {
+  for (auto *U : Vector.getNode()->users()) {
     if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       continue;
     if (U->getOperand(0) != Vector)
@@ -1001,6 +983,17 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   return true;
 }
 
+static bool isVectorElementTypeUpsized(EVT EltVT) {
+  // Despite vectors like v8i8, v16i8, v8i16 being within the bit-limit for
+  // total load/store size, PTX syntax only supports v2/v4. Thus, we can't use
+  // vectorized loads/stores with the actual element type for i8/i16 as that
+  // would require v8/v16 variants that do not exist.
+  // In order to load/store such vectors efficiently, in Type Legalization
+  // we split the vector into word-sized chunks (v2x16/v4i8). Now, we will
+  // lower to PTX as vectors of b32.
+  return Isv2x16VT(EltVT) || EltVT == MVT::v4i8;
+}
+
 bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   MemSDNode *MemSD = cast<MemSDNode>(N);
   EVT LoadedVT = MemSD->getMemoryVT();
@@ -1055,11 +1048,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   EVT EltVT = N->getValueType(0);
 
-  // v8x16 is a special case. PTX doesn't have ld.v8.16
-  // instruction. Instead, we split the vector into v2x16 chunks and
-  // load them with ld.v4.b32.
-  if (Isv2x16VT(EltVT)) {
-    assert(N->getOpcode() == NVPTXISD::LoadV4 && "Unexpected load opcode.");
+  if (isVectorElementTypeUpsized(EltVT)) {
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
     FromTypeWidth = 32;
@@ -1223,16 +1212,16 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (EltVT.isVector()) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
-    // vectors of 16bits type are loaded/stored as multiples of v2x16 elements.
+    // vectors of 8/16bits type are loaded/stored as multiples of v4i8/v2x16
+    // elements.
     if ((EltVT == MVT::f16 && OrigType == MVT::v2f16) ||
         (EltVT == MVT::bf16 && OrigType == MVT::v2bf16) ||
-        (EltVT == MVT::i16 && OrigType == MVT::v2i16)) {
-      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+        (EltVT == MVT::i16 && OrigType == MVT::v2i16) ||
+        (EltVT == MVT::i8 && OrigType == MVT::v4i8)) {
+      assert(NumElts % OrigType.getVectorNumElements() == 0 &&
+             "NumElts must be divisible by the number of elts in subvectors");
       EltVT = OrigType;
-      NumElts /= 2;
-    } else if (OrigType == MVT::v4i8) {
-      EltVT = OrigType;
-      NumElts = 1;
+      NumElts /= OrigType.getVectorNumElements();
     }
   }
 
@@ -1739,11 +1728,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     return false;
   }
 
-  // v8x16 is a special case. PTX doesn't have st.v8.x16
-  // instruction. Instead, we split the vector into v2x16 chunks and
-  // store them with st.v4.b32.
-  if (Isv2x16VT(EltVT)) {
-    assert(N->getOpcode() == NVPTXISD::StoreV4 && "Unexpected load opcode.");
+  if (isVectorElementTypeUpsized(EltVT)) {
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
     ToTypeWidth = 32;
@@ -2465,6 +2450,11 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   return true;
 }
 
+static inline bool isAddLike(const SDValue V) {
+  return V.getOpcode() == ISD::ADD ||
+         (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
+}
+
 // SelectDirectAddr - Match a direct address for DAG.
 // A direct address could be a globaladdress or externalsymbol.
 bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
@@ -2491,7 +2481,7 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 // symbol+offset
 bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
     SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (isAddLike(Addr)) {
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       SDValue base = Addr.getOperand(0);
       if (SelectDirectAddr(base, Base)) {
@@ -2528,7 +2518,7 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       Addr.getOpcode() == ISD::TargetGlobalAddress)
     return false; // direct calls.
 
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (isAddLike(Addr)) {
     if (SelectDirectAddr(Addr.getOperand(0), Addr)) {
       return false;
     }

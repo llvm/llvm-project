@@ -837,6 +837,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::Type))
+      Fn->addFnAttr(llvm::Attribute::SanitizeType);
     if (SanOpts.has(SanitizerKind::NumericalStability))
       Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
@@ -1614,6 +1616,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
 
+  PGO.verifyCounterMap();
+
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
@@ -1736,6 +1740,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
+  PGO.markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }
