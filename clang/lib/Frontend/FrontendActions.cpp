@@ -69,7 +69,7 @@ void InitOnlyAction::ExecuteAction() {
 }
 
 // Basically PreprocessOnlyAction::ExecuteAction.
-void ReadPCHAndPreprocessAction::ExecuteAction() {
+void DependencyScanningFrontendAction::ExecuteAction() {
   Preprocessor &PP = getCompilerInstance().getPreprocessor();
 
   // Ignore unknown pragmas.
@@ -84,7 +84,7 @@ void ReadPCHAndPreprocessAction::ExecuteAction() {
 }
 
 std::unique_ptr<ASTConsumer>
-ReadPCHAndPreprocessAction::CreateASTConsumer(CompilerInstance &CI,
+DependencyScanningFrontendAction::CreateASTConsumer(CompilerInstance &CI,
                                               StringRef InFile) {
   return std::make_unique<ASTConsumer>();
 }
