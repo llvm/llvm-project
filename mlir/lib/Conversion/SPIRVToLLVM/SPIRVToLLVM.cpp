@@ -1028,7 +1028,8 @@ public:
 static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
-                                              Type resultType) {
+                                              Type resultType,
+                                              bool convergent = true) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (func)
@@ -1039,7 +1040,7 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       symbolTable->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes));
   func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
-  func.setConvergent(true);
+  func.setConvergent(convergent);
   func.setNoUnwind(true);
   func.setWillReturn(true);
   return func;
