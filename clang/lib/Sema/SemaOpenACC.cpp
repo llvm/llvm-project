@@ -471,6 +471,22 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Device: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::Host: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1038,6 +1054,28 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
   return OpenACCPresentClause::Create(Ctx, Clause.getBeginLoc(),
                                       Clause.getLParenLoc(),
                                       Clause.getVarList(), Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitHostClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, so there
+  // really isn't anything to do here. GCC does some duplicate-finding, though
+  // it isn't apparent in the standard where this is justified.
+
+  return OpenACCHostClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), Clause.getVarList(),
+                                   Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, so there
+  // really isn't anything to do here. GCC does some duplicate-finding, though
+  // it isn't apparent in the standard where this is justified.
+
+  return OpenACCDeviceClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(

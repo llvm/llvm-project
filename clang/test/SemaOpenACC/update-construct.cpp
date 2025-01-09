@@ -10,9 +10,7 @@ void uses() {
 #pragma acc update if(true) self(Var)
 #pragma acc update if_present self(Var)
 #pragma acc update self(Var)
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented}}
 #pragma acc update host(Var)
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
   // expected-error@+2{{OpenACC clause 'if' may not follow a 'device_type' clause in a 'update' construct}}
@@ -56,35 +54,29 @@ void uses() {
 
   // Cannot be the body of an 'if', 'while', 'do', 'switch', or
   // 'label'.
-  // expected-error@+3{{OpenACC 'update' construct may not appear in place of the statement following an if statement}}
+  // expected-error@+2{{OpenACC 'update' construct may not appear in place of the statement following an if statement}}
   if (true)
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
-  // expected-error@+3{{OpenACC 'update' construct may not appear in place of the statement following a while statement}}
+  // expected-error@+2{{OpenACC 'update' construct may not appear in place of the statement following a while statement}}
   while (true)
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
-  // expected-error@+3{{OpenACC 'update' construct may not appear in place of the statement following a do statement}}
+  // expected-error@+2{{OpenACC 'update' construct may not appear in place of the statement following a do statement}}
   do
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
   while (true);
 
-  // expected-error@+3{{OpenACC 'update' construct may not appear in place of the statement following a switch statement}}
+  // expected-error@+2{{OpenACC 'update' construct may not appear in place of the statement following a switch statement}}
   switch(Var)
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
-  // expected-error@+3{{OpenACC 'update' construct may not appear in place of the statement following a label statement}}
+  // expected-error@+2{{OpenACC 'update' construct may not appear in place of the statement following a label statement}}
   LABEL:
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
   // For loops are OK.
   for (;;)
-    // expected-warning@+1{{OpenACC clause 'device' not yet implemented}}
 #pragma acc update device(Var)
 
   // Checking for 'async', which requires an 'int' expression.
@@ -132,11 +124,19 @@ void varlist_restrictions_templ() {
   // Members of a subarray of struct or class type may not appear, but others
   // are permitted to.
 #pragma acc update self(iArray[0:1])
+#pragma acc update host(iArray[0:1])
+#pragma acc update device(iArray[0:1])
 
 #pragma acc update self(Array[0:1])
+#pragma acc update host(Array[0:1])
+#pragma acc update device(Array[0:1])
 
   // expected-error@+1{{OpenACC sub-array is not allowed here}}
 #pragma acc update self(Array[0:1].MemberOfComp)
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update host(Array[0:1].MemberOfComp)
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update device(Array[0:1].MemberOfComp)
 }
 
 void varlist_restrictions() {
@@ -149,19 +149,33 @@ void varlist_restrictions() {
   int *LocalPtr;
 
 #pragma acc update self(LocalInt, LocalPtr, Single)
+#pragma acc update host(LocalInt, LocalPtr, Single)
+#pragma acc update device(LocalInt, LocalPtr, Single)
 
 #pragma acc update self(Single.MemberOfComp)
+#pragma acc update host(Single.MemberOfComp)
+#pragma acc update device(Single.MemberOfComp)
 
 #pragma acc update self(Single.Array[0:1])
+#pragma acc update host(Single.Array[0:1])
+#pragma acc update device(Single.Array[0:1])
 
 
   // Members of a subarray of struct or class type may not appear, but others
   // are permitted to.
 #pragma acc update self(iArray[0:1])
+#pragma acc update host(iArray[0:1])
+#pragma acc update device(iArray[0:1])
 
 #pragma acc update self(Array[0:1])
+#pragma acc update host(Array[0:1])
+#pragma acc update device(Array[0:1])
 
   // expected-error@+1{{OpenACC sub-array is not allowed here}}
 #pragma acc update self(Array[0:1].MemberOfComp)
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update host(Array[0:1].MemberOfComp)
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc update device(Array[0:1].MemberOfComp)
 }
 

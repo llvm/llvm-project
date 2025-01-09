@@ -89,6 +89,33 @@ void NormalFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
   // CHECK-NEXT: IntegerLiteral{{.*}} 0
   // CHECK-NEXT: IntegerLiteral{{.*}} 1
+
+#pragma acc update host(Global, GlobalArray, GlobalArray[0], GlobalArray[0:1]) device(Global, GlobalArray, GlobalArray[0], GlobalArray[0:1])
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: host clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}} 'short' lvalue
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: IntegerLiteral{{.*}} 1
+  // CHECK-NEXT: device clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}} 'short' lvalue
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 0
+  // CHECK-NEXT: IntegerLiteral{{.*}} 1
 }
 
 template<typename T>
@@ -153,6 +180,29 @@ void TemplFunc(T t) {
 #pragma acc update self(Local, LocalArray, LocalArray[0], LocalArray[0:1])
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(T::value)'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
+
+#pragma acc update host(Local, LocalArray, LocalArray[0], LocalArray[0:1]) device(Local, LocalArray, LocalArray[0], LocalArray[0:1])
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: host clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(T::value)'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
+  // CHECK-NEXT: device clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(T::value)'
   // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(T::value)[5]'
   // CHECK-NEXT: ArraySubscriptExpr
@@ -244,6 +294,32 @@ void TemplFunc(T t) {
 
   // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(SomeStruct::value)':'const unsigned int'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
+
+  // CHECK-NEXT: OpenACCUpdateConstruct{{.*}}update
+  // CHECK-NEXT: host clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(SomeStruct::value)':'const unsigned int'
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: ArraySubscriptExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}}0
+  // CHECK-NEXT: IntegerLiteral{{.*}}1
+  // CHECK-NEXT: device clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 'Local' 'decltype(SomeStruct::value)':'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}} 'LocalArray' 'decltype(SomeStruct::value)[5]'
   // CHECK-NEXT: ArraySubscriptExpr
