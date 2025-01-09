@@ -54,6 +54,8 @@ Breaking changes
   in line with GNU ld, but is a change in behavior from previous LLD
   releases.
   
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
 
