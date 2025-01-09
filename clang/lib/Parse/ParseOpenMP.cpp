@@ -4596,7 +4596,6 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
       }
       default:
         llvm_unreachable("Unexpected allocate modifier");
-        break;
       }
     } else {
       P.Diag(Tok, diag::err_expected) << tok::l_paren;
