@@ -70,7 +70,7 @@ struct __get_as_integer_type_impl<8> {
 };
 
 template <class _Tp>
-using __get_as_integer_type_t = typename __get_as_integer_type_impl<sizeof(_Tp)>::type;
+using __get_as_integer_type_t _LIBCPP_NODEBUG = typename __get_as_integer_type_impl<sizeof(_Tp)>::type;
 
 // This isn't specialized for 64 byte vectors on purpose. They have the potential to significantly reduce performance
 // in mixed simd/non-simd workloads and don't provide any performance improvement for currently vectorized algorithms
@@ -90,7 +90,7 @@ inline constexpr size_t __native_vector_size = 1;
 #  endif
 
 template <class _ArithmeticT, size_t _Np>
-using __simd_vector __attribute__((__ext_vector_type__(_Np))) = _ArithmeticT;
+using __simd_vector __attribute__((__ext_vector_type__(_Np))) _LIBCPP_NODEBUG = _ArithmeticT;
 
 template <class _VecT>
 inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size_t {
@@ -106,7 +106,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp __simd_vector_underlying_type_impl(__simd_vector<_Tp, 
 }
 
 template <class _VecT>
-using __simd_vector_underlying_type_t = decltype(std::__simd_vector_underlying_type_impl(_VecT{}));
+using __simd_vector_underlying_type_t _LIBCPP_NODEBUG = decltype(std::__simd_vector_underlying_type_impl(_VecT{}));
 
 // This isn't inlined without always_inline when loading chars.
 template <class _VecT, class _Iter>
