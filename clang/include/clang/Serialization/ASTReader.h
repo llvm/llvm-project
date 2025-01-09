@@ -1435,7 +1435,7 @@ public:
   const serialization::reader::DeclContextLookupTable *
   getLoadedLookupTables(DeclContext *Primary) const;
 
-  private:
+private:
   struct ImportedModule {
     ModuleFile *Mod;
     ModuleFile *ImportedBy;

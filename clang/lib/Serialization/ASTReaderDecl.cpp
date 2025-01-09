@@ -22,7 +22,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
-#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
@@ -39,7 +38,6 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AttrKinds.h"
-#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -64,7 +62,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/CGData/CodeGenData.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -728,12 +725,12 @@ void ASTDeclReader::VisitTypeDecl(TypeDecl *TD) {
 RedeclarableResult ASTDeclReader::VisitTypedefNameDecl(TypedefNameDecl *TD) {
   RedeclarableResult Redecl = VisitRedeclarable(TD);
   VisitTypeDecl(TD);
-    TypeSourceInfo *TInfo = readTypeSourceInfo();
-    if (Record.readInt()) { // isModed
-      QualType modedT = Record.readType();
-      TD->setModedTypeSourceInfo(TInfo, modedT);
-    } else
-      TD->setTypeSourceInfo(TInfo);
+  TypeSourceInfo *TInfo = readTypeSourceInfo();
+  if (Record.readInt()) { // isModed
+    QualType modedT = Record.readType();
+    TD->setModedTypeSourceInfo(TInfo, modedT);
+  } else
+    TD->setTypeSourceInfo(TInfo);
   // Read and discard the declaration for which this is a typedef name for
   // linkage, if it exists. We cannot rely on our type to pull in this decl,
   // because it might have been merged with a type from another module and
@@ -3623,7 +3620,7 @@ void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
-                                           Decl *Previous, Decl *Canon) {                                     
+                                           Decl *Previous, Decl *Canon) {
   D->RedeclLink.setPrevious(cast<DeclT>(Previous));
   D->First = cast<DeclT>(Previous)->First;
 }
@@ -4250,7 +4247,6 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
         ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, Offsets.second, ID))
       return nullptr;
   }
-  // This is the crashing line.  
   assert(Record.getIdx() == Record.size());
 
   // Load any relevant update records.
