@@ -238,7 +238,7 @@ GCS support includes the following new registers:
 * `gcs_features_locked`
 * `gcspr_el0`
 
-These map to the registers ptrace provides. The first two have had a `gcs_`
+These map to the registers ptrace provides. The first two have a `gcs_`
 prefix added as their names are too generic without it.
 
 When the GCS is enabled the kernel allocates a memory region for it. This region
@@ -267,14 +267,14 @@ GCS registers, apart from the enable bit of `gcs_features_enabled`. This is
 because there are limits on how often and from where you can set this
 bit.
 
-We cannot enable GCS from ptrace at all and it is expected that a process
-that has enabled GCS then disabled it, will not enable it again. The simplest
+GCS cannot be enabled from ptrace and it is expected that a process which
+has enabled and then disabled GCS, will not enable it again. The simplest
 choice was to not restore the enable bit at all. It is up to the user or
 program to manage that bit.
 
 The return address that LLDB pushed onto the Guarded Control Stack will be left
 in place. As will any values that were pushed to the stack by functions run
-during the expresison.
+during the expression.
 
 When the process resumes, `gcspr_el0` will be pointing to the original entry
 on the guarded control stack. So the other values will have no effect and
