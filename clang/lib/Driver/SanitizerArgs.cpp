@@ -332,7 +332,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 
 static SanitizerMaskCutoffs
 parseSanitizeSkipHotCutoffArgs(const Driver &D, const llvm::opt::ArgList &Args,
-                       bool DiagnoseErrors) {
+                               bool DiagnoseErrors) {
   SanitizerMaskCutoffs Cutoffs;
   for (const auto *Arg : Args)
     if (Arg->getOption().matches(options::OPT_fsanitize_skip_hot_cutoff_EQ)) {
