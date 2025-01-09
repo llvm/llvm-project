@@ -114,7 +114,7 @@ void UseIntegerSignComparisonCheck::check(
   assert(SignedCastExpression);
 
   // Ignore the match if we know that the signed int value is not negative.
-  Expr::EvalResult EVResult;
+  Expr::EvalResult EVResult = Expr::EvalResult();
   if (!SignedCastExpression->isValueDependent() &&
       SignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
                                                         *Result.Context)) {
