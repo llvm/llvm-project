@@ -785,9 +785,8 @@ define i1 @eq_mul_constants_with_tz_extra_use1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_mul_constants_with_tz_extra_use1(
 ; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], 12
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1073741823
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Y:%.*]], 12
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = mul i32 %x, 12
