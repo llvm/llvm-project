@@ -4,52 +4,6 @@ permissions:
   contents: read
 
 on:
-  workflow_dispatch:
-    inputs:
-      LLVM-Ref:
-        description: 'Test Suite Branch'
-        required: false
-        default: 'main'
-        type: string
-      LLVM-branch:
-        description: 'LLVM Branch'
-        required: false
-        default: 'main'
-        type: string
-      DXC-branch:
-        description: 'DXC Branch'
-        required: false
-        default: 'main'
-        type: string
-      BuildType:
-        description: 'Build Type'
-        required: false
-        default: 'Release'
-        type: choice
-        options:
-        - Release
-        - RelWithDebInfo
-        - Debug
-      TestTarget:
-        required: false
-        default: 'check-hlsl'
-        type: string
-      Test-Clang:
-        required: true
-        type: choice
-        options:
-        - On
-        - Off
-      SKU:
-        required: true
-        type: choice
-        options:
-        - hlsl-metal
-      LLVM-ExtraCMakeArgs:
-        description: 'Extra CMake Args for LLVM'
-        required: false
-        default: ''
-        type: string
   workflow_call:
     inputs:
       OffloadTest-branch:
@@ -57,36 +11,17 @@ on:
         required: false
         default: 'main'
         type: string
-      LLVM-branch:
+      LLVM-ref:
         description: 'LLVM Branch'
-        required: false
-        default: 'main'
-        type: string
-      DXC-branch:
-        description: 'DXC Branch'
         required: false
         default: 'main'
         type: string
       SKU:
         required: true
         type: string
-      BuildType:
-        description: 'Build Type'
-        required: false
-        default: 'Release'
-        type: string
-      Test-Clang:
-        required: false
-        default: 'On'
-        type: string
       TestTarget:
         required: false
         default: 'check-hlsl'
-        type: string
-      LLVM-ExtraCMakeArgs:
-        description: 'Extra CMake Args for LLVM'
-        required: false
-        default: ''
         type: string
 
 jobs:
@@ -94,26 +29,25 @@ jobs:
     runs-on: [self-hosted, "${{ inputs.SKU }}"]
     steps:
       - name: Checkout DXC
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: Microsoft/DirectXShaderCompiler
-          ref: ${{ inputs.DXC-branch }}
+          ref: main
           path: DXC
           submodules: true
       - name: Checkout LLVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          repository: llvm/llvm-project
           ref: ${{ inputs.LLVM-branch }}
           path: llvm-project
       - name: Checkout OffloadTest
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: llvm-beanz/offload-test-suite
-          ref: ${{ inputs.OffloadTest-branch }}
+          ref: main
           path: OffloadTest
       - name: Checkout Golden Images
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           repository: llvm-beanz/offload-golden-images
           ref: main
@@ -128,14 +62,14 @@ jobs:
             cd DXC
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
             ninja dxv llvm-dis
       - name: Build LLVM
         run: |
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja ${{ inputs.LLVM-ExtraCMakeArgs }} -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_TEST_CLANG=${{ inputs.Test-Clang }} -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja -DDXIL_DIS=${{ github.workspace }}/DXC/build/bin/llvm-dis -DLLVM_INCLUDE_DXIL_TESTS=On -DCMAKE_BUILD_TYPE=Release -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DDXC_DIR=${{ github.workspace }}/DXC/build/bin -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends llvm-test-depends clang-test-depends
       - name: Run HLSL Tests
         run: |
@@ -146,7 +80,7 @@ jobs:
             ninja check-hlsl-unit
             ninja ${{ inputs.TestTarget }}
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action/macos@v2
+        uses: EnricoMi/publish-unit-test-result-action/macos@170bf24d20d201b842d7a52403b73ed297e6645b # v2
         if: always() && runner.os == 'macOS'
         with:
           comment_mode: off

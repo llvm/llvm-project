@@ -1,4 +1,4 @@
-name: HLSL Tests - macOS
+name: HLSL Tests
 
 permissions:
   contents: read
@@ -16,9 +16,15 @@ on:
       - llvm/**/Frontend/HLSL/**/*
 
 jobs:
-  HLSL-macOS:
-    uses: ./.github/workflows/hlsl-test-all.yaml
+  HLSL-Tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - hlsl-macos
+
+    uses: ./.github/workflows/hlsl-test-all.yaml@${{ github.base_ref}}
     with:
       SKU: hlsl-macos
-      TestTarget: check-hlsl-clang-mtl
-      LLVM-branch: ${{ github.ref }}
+      TestTarget: check-hlsl-clang-mtl # TODO: This target changes based on SKU
+      LLVM-ref: ${{ github.ref }}
