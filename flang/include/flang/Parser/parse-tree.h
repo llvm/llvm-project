@@ -3481,12 +3481,14 @@ inline namespace traits {
 // trait-property-name ->
 //    identifier | string-literal
 struct OmpTraitPropertyName {
+  CharBlock source;
   WRAPPER_CLASS_BOILERPLATE(OmpTraitPropertyName, std::string);
 };
 
 // trait-score ->
 //    SCORE(non-negative-const-integer-expression)
 struct OmpTraitScore {
+  CharBlock source;
   WRAPPER_CLASS_BOILERPLATE(OmpTraitScore, ScalarIntExpr);
 };
 
@@ -3511,8 +3513,10 @@ struct OmpTraitScore {
 //      constant integer expression  <- conflict with (b)
 //
 struct OmpTraitPropertyExtension {
+  CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
   struct ExtensionValue {
+    CharBlock source;
     UNION_CLASS_BOILERPLATE(ExtensionValue);
     std::variant<OmpTraitPropertyName, ScalarExpr,
         common::Indirection<OmpTraitPropertyExtension>>
@@ -3533,6 +3537,7 @@ struct OmpTraitPropertyExtension {
 // will happen if the scalar integer expression sees a logical expresion.
 // To avoid this, parse all expressions as scalar expressions.
 struct OmpTraitProperty {
+  CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpTraitProperty);
   std::variant<OmpTraitPropertyName, common::Indirection<OmpClause>,
       ScalarExpr, // trait-property-expresion
@@ -3558,6 +3563,7 @@ struct OmpTraitProperty {
 // Trait-set-selectors:
 //    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
 struct OmpTraitSelectorName {
+  CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
   ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
       Extension, Isa, Kind, Requires, Simd, Uid, Vendor)
@@ -3568,6 +3574,7 @@ struct OmpTraitSelectorName {
 //    trait-selector-name |
 //    trait-selector-name ([trait-score:] trait-property, ...)
 struct OmpTraitSelector {
+  CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpTraitSelector);
   struct Properties {
     TUPLE_CLASS_BOILERPLATE(Properties);
@@ -3580,6 +3587,7 @@ struct OmpTraitSelector {
 //    CONSTRUCT | DEVICE | IMPLEMENTATION | USER |  // since 5.0
 //    TARGET_DEVICE                                 // since 5.1
 struct OmpTraitSetSelectorName {
+  CharBlock source;
   ENUM_CLASS(Value, Construct, Device, Implementation, Target_Device, User)
   WRAPPER_CLASS_BOILERPLATE(OmpTraitSetSelectorName, Value);
 };
@@ -3587,6 +3595,7 @@ struct OmpTraitSetSelectorName {
 // trait-set-selector ->
 //    trait-set-selector-name = {trait-selector, ...}
 struct OmpTraitSetSelector {
+  CharBlock source;
   TUPLE_CLASS_BOILERPLATE(OmpTraitSetSelector);
   std::tuple<OmpTraitSetSelectorName, std::list<OmpTraitSelector>> t;
 };
@@ -3594,6 +3603,7 @@ struct OmpTraitSetSelector {
 // context-selector-specification ->
 //    trait-set-selector, ...
 struct OmpContextSelectorSpecification { // Modifier
+  CharBlock source;
   WRAPPER_CLASS_BOILERPLATE(
       OmpContextSelectorSpecification, std::list<OmpTraitSetSelector>);
 };
