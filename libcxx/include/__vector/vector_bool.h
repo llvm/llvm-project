@@ -115,7 +115,7 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
   __external_cap_to_internal(size_type __n) _NOEXCEPT {
-    return (__n - 1) / __bits_per_word + 1;
+    return __n > 0 ? (__n - 1) / __bits_per_word + 1 : size_type(0);
   }
 
 public:
