@@ -147,7 +147,8 @@ static bool startsNextOperand(const FormatToken &Current) {
 // Returns \c true if \c Current is a binary operation that must break.
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
-  return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+  return Current.CanBreakBefore &&
+         Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
          (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
               ? startsNextOperand
               : isAlignableBinaryOperator)(Current);
