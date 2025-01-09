@@ -27,7 +27,7 @@ class MCSymbol;
 template <typename T> class SmallVectorImpl;
 
 /// Emits exception handling directives.
-class LLVM_LIBRARY_VISIBILITY EHStreamer : public AsmPrinterHandler {
+class LLVM_LIBRARY_VISIBILITY EHStreamer : public AsmBasicPrinterHandler {
 protected:
   /// Target of directive emission.
   AsmPrinter *Asm;

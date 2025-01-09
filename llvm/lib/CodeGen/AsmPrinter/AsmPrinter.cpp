@@ -392,7 +392,7 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
 }
 
 AsmPrinter::~AsmPrinter() {
-  assert(!DD && Handlers.size() == NumUserHandlers &&
+  assert(!DD && DebugHandlers.size() == NumUserDebugHandlers &&
          "Debug/EH info didn't get finalized");
 }
 
@@ -2591,7 +2591,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   // This deletes all the ephemeral handlers that AsmPrinter added, while
   // keeping all the user-added handlers alive until the AsmPrinter is
   // destroyed.
-  Handlers.erase(Handlers.begin() + NumUserHandlers, Handlers.end());
+  Handlers.clear();
   DebugHandlers.erase(DebugHandlers.begin() + NumUserDebugHandlers,
                       DebugHandlers.end());
   DD = nullptr;
@@ -4411,19 +4411,15 @@ void AsmPrinter::emitStackMaps() {
 
 void AsmPrinter::addAsmPrinterHandler(
     std::unique_ptr<AsmPrinterHandler> Handler) {
-  Handlers.insert(Handlers.begin(), std::move(Handler));
-  NumUserHandlers++;
-}
-
-void AsmPrinter::addDebugHandler(std::unique_ptr<DebugHandlerBase> Handler) {
   DebugHandlers.insert(DebugHandlers.begin(), std::move(Handler));
   NumUserDebugHandlers++;
 }
 
-/// Pin vtable to this file.
+/// Pin vtables to this file.
+AsmBasicPrinterHandler::~AsmBasicPrinterHandler() = default;
 AsmPrinterHandler::~AsmPrinterHandler() = default;
 
-void AsmPrinterHandler::markFunctionEnd() {}
+void AsmBasicPrinterHandler::markFunctionEnd() {}
 
 // In the binary's "xray_instr_map" section, an array of these function entries
 // describes each instrumentation point.  When XRay patches your code, the index

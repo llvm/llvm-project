@@ -14,7 +14,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_PSEUDOPROBEPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/AsmPrinterHandler.h"
+#include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
 

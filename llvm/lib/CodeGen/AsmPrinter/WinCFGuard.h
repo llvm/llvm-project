@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class LLVM_LIBRARY_VISIBILITY WinCFGuard : public AsmPrinterHandler {
+class LLVM_LIBRARY_VISIBILITY WinCFGuard : public AsmBasicPrinterHandler {
   /// Target of directive emission.
   AsmPrinter *Asm;
   std::vector<const MCSymbol *> LongjmpTargets;
