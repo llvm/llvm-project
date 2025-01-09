@@ -34,10 +34,15 @@ using namespace llvm::AMDGPU;
 using namespace llvm::PatternMatch;
 
 namespace {
-class AMDGPUUniformIntrinsicCombine : public FunctionPass {
+class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUniformIntrinsicCombine() : FunctionPass(ID) {}
+  const AMDGPUTargetMachine *AMDGPUTM;
+  AMDGPUUniformIntrinsicCombineLegacy(const AMDGPUTargetMachine *TM)
+      : FunctionPass(ID), AMDGPUTM(TM) {
+    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -59,10 +64,11 @@ public:
 };
 } // namespace
 
-char AMDGPUUniformIntrinsicCombine::ID = 0;
-char &llvm::AMDGPUUniformIntrinsicCombineID = AMDGPUUniformIntrinsicCombine::ID;
+char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
+char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
+    AMDGPUUniformIntrinsicCombineLegacy::ID;
 
-bool AMDGPUUniformIntrinsicCombine::runOnFunction(Function &F) {
+bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {
   if (skipFunction(F)) {
     return false;
   }
@@ -128,13 +134,14 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
   return false;
 }
 
-INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombine, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
                       "AMDGPU uniformIntrinsic Combine", false, false)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombine, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
                     "AMDGPU uniformIntrinsic Combine", false, false)
 
-FunctionPass *llvm::createAMDGPUUniformIntrinsicCombinePass() {
-  return new AMDGPUUniformIntrinsicCombine();
+FunctionPass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass(
+    const AMDGPUTargetMachine *TM) {
+  return new AMDGPUUniformIntrinsicCombineLegacy(TM);
 }
