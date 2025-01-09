@@ -69,6 +69,7 @@ ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 FunctionPass *createAMDGPUIdxRegAllocPass();
+FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -270,6 +271,9 @@ extern char &AMDGPURegPressAnalysisID;
 
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
+
+void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
+extern char &AMDGPUPrivateObjectVGPRsID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();

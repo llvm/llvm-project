@@ -156,8 +156,7 @@ public:
   unsigned allocateLaneSharedGlobal(const DataLayout &DL,
                                     const GlobalVariable &GV);
 
-  unsigned allocatePrivateInVGPR(const DataLayout &DL,
-                                 const AllocaInst &Alloca);
+  unsigned allocatePrivateInVGPR(const DataLayout &DL, AllocaInst &Alloca);
 
   static std::optional<uint32_t> getLDSKernelIdMetadata(const Function &F);
   static std::optional<uint32_t> getLDSAbsoluteAddress(const GlobalValue &GV);

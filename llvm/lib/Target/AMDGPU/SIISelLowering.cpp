@@ -8746,8 +8746,8 @@ SDValue SITargetLowering::lowerFrameIndex(AMDGPUMachineFunction *MFI,
   int FI = cast<FrameIndexSDNode>(Op)->getIndex();
   if (const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI)) {
     if (AMDGPU::IsPromotablePrivate(*Alloca)) {
-      unsigned Offset =
-          MFI->allocatePrivateInVGPR(DAG.getDataLayout(), *Alloca);
+      unsigned Offset = MFI->allocatePrivateInVGPR(
+          DAG.getDataLayout(), const_cast<AllocaInst &>(*Alloca));
       return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
     }
   }
