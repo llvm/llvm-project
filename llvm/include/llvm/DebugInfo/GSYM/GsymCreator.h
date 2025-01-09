@@ -147,7 +147,7 @@ class GsymCreator {
   bool IsSegment = false;
   bool Finalized = false;
   bool Quiet;
-
+  bool UseMergedFuncs = false;
 
   /// Get the first function start address.
   ///
@@ -486,6 +486,9 @@ public:
   /// encode.
   llvm::Expected<std::unique_ptr<GsymCreator>>
   createSegment(uint64_t SegmentSize, size_t &FuncIdx) const;
+
+  bool getUseMergedFunctions() const { return UseMergedFuncs; }
+  void setUseMergedFunctions(bool Enable) { UseMergedFuncs = Enable; }
 };
 
 } // namespace gsym

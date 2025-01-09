@@ -22,7 +22,7 @@ using namespace llvm;
 using namespace gsym;
 
 GsymCreator::GsymCreator(bool Quiet)
-    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
+    : StrTab(StringTableBuilder::ELF), Quiet(Quiet), UseMergedFuncs(false) {
   insertFile(StringRef());
 }
 

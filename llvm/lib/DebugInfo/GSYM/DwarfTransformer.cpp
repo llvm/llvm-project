@@ -405,7 +405,7 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
           OS << "warning: duplicate line table detected for DIE:\n";
           Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
         });
-      else
+      else if (!Gsym.getUseMergedFunctions())
         Out.Report("Non-monotonically increasing addresses",
                    [&](raw_ostream &OS) {
                      OS << "error: line table has addresses that do not "
