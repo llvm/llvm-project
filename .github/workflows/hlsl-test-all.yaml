@@ -123,7 +123,7 @@ jobs:
           path: golden-images
           fetch-depth: 1
       - name: Setup Windows
-        if: runner.os == 'windows'
+        if: runner.os == 'Windows'
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
