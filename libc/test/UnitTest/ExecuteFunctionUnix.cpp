@@ -8,13 +8,13 @@
 
 #include "ExecuteFunction.h"
 #include "src/__support/macros/config.h"
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <memory>
+#include "test/UnitTest/ExecuteFunction.h" // FunctionCaller
+#include <assert.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -35,21 +35,20 @@ int ProcessStatus::get_fatal_signal() {
 }
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
-  std::unique_ptr<FunctionCaller> X(func);
   int pipe_fds[2];
   if (::pipe(pipe_fds) == -1)
     return ProcessStatus::error("pipe(2) failed");
 
   // Don't copy the buffers into the child process and print twice.
-  std::cout.flush();
-  std::cerr.flush();
+  ::fflush(stderr);
+  ::fflush(stdout);
   pid_t pid = ::fork();
   if (pid == -1)
     return ProcessStatus::error("fork(2) failed");
 
   if (!pid) {
     (*func)();
-    std::exit(0);
+    ::exit(0);
   }
   ::close(pipe_fds[1]);
 
