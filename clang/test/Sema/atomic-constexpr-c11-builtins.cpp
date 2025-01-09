@@ -239,6 +239,10 @@ static_assert(fetch_add(100, -50) == two_values{100, 50});
 static_assert(fetch_add(int_max, 1) == two_values{int_max, int_min}); // overflow is defined for atomic
 static_assert(fetch_add(int_min, -1) == two_values{int_min, int_max});
 
+// __int128
+static_assert(fetch_add(__int128{42}, __int128{10}) == two_values{__int128{42}, __int128{52}});
+static_assert(fetch_add(__int128{int_max}, __int128{1}) == two_values{__int128{int_max}, __int128{int_max} + __int128{1}}); // it's much bigger than 64bit
+
 // floats
 static_assert(fetch_add(10.3, 2.1) == two_values{10.3, 12.4});
 static_assert(fetch_add(10.3f, 2.1f) == two_values{10.3f, 12.4f});

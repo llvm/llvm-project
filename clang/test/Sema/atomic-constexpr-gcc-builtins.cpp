@@ -317,6 +317,10 @@ static_assert(fetch_add(100, -50) == two_values{100, 50});
 static_assert(fetch_add(int_max, 1) == two_values{int_max, int_min}); // overflow is defined for atomic
 static_assert(fetch_add(int_min, -1) == two_values{int_min, int_max});
 
+// __int128
+static_assert(fetch_add(__int128{42}, __int128{10}) == two_values{__int128{42}, __int128{52}});
+static_assert(fetch_add(__int128{int_max}, __int128{1}) == two_values{__int128{int_max}, __int128{int_max} + __int128{1}}); // it's much bigger than 64bit
+
 // pointers
 static_assert(fetch_add_ptr(&array[0], 1) == two_values{&array[0], &array[1]});
 static_assert(fetch_add_ptr(&small_array[0], 1) == two_values{&small_array[0], &small_array[1]});
