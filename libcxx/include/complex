@@ -1236,31 +1236,27 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> cosh(const complex<_Tp>& __x) {
 
 // tanh
 
-template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __sin2(const _Tp __x) noexcept
-{
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __sin2(const _Tp __x) noexcept {
   static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
   return 2 * std::sin(__x) * std::cos(__x);
 }
 
-template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __sinh2(const _Tp __x) noexcept
-{
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __sinh2(const _Tp __x) noexcept {
   static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
   return 2 * std::sinh(__x) * std::cosh(__x);
 }
 
-template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cos2(const _Tp __x) noexcept
-{
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __cos2(const _Tp __x) noexcept {
   static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
   const _Tp __cos = std::cos(__x);
   return 2 * __cos * __cos - 1;
 }
 
-template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __cosh2(const _Tp __x) noexcept
-{
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp __cosh2(const _Tp __x) noexcept {
   static_assert(std::is_arithmetic<_Tp>::value, "requires an arithmetic type");
   const _Tp __cosh = std::cosh(__x);
   return 2 * __cosh * __cosh - 1;

@@ -20,46 +20,45 @@
 
 #include "test_macros.h"
 
-template<class T>
-TEST_CONSTEXPR_CXX20 const std::complex<T> testcases[] =
-{
-    std::complex<T>( 1.e-6,  1.e-6),
-    std::complex<T>(-1.e-6,  1.e-6),
+template <class T>
+TEST_CONSTEXPR_CXX20 const std::complex<T> testcases[] = {
+    std::complex<T>(1.e-6, 1.e-6),
+    std::complex<T>(-1.e-6, 1.e-6),
     std::complex<T>(-1.e-6, -1.e-6),
-    std::complex<T>( 1.e-6, -1.e-6),
+    std::complex<T>(1.e-6, -1.e-6),
 
-    std::complex<T>( 1.e+6,  1.e-6),
-    std::complex<T>(-1.e+6,  1.e-6),
+    std::complex<T>(1.e+6, 1.e-6),
+    std::complex<T>(-1.e+6, 1.e-6),
     std::complex<T>(-1.e+6, -1.e-6),
-    std::complex<T>( 1.e+6, -1.e-6),
+    std::complex<T>(1.e+6, -1.e-6),
 
-    std::complex<T>( 1.e-6,  1.e+6),
-    std::complex<T>(-1.e-6,  1.e+6),
+    std::complex<T>(1.e-6, 1.e+6),
+    std::complex<T>(-1.e-6, 1.e+6),
     std::complex<T>(-1.e-6, -1.e+6),
-    std::complex<T>( 1.e-6, -1.e+6),
+    std::complex<T>(1.e-6, -1.e+6),
 
-    std::complex<T>( 1.e+6,  1.e+6),
-    std::complex<T>(-1.e+6,  1.e+6),
+    std::complex<T>(1.e+6, 1.e+6),
+    std::complex<T>(-1.e+6, 1.e+6),
     std::complex<T>(-1.e+6, -1.e+6),
-    std::complex<T>( 1.e+6, -1.e+6),
+    std::complex<T>(1.e+6, -1.e+6),
 
     std::complex<T>(-0, -1.e-6),
-    std::complex<T>(-0,  1.e-6),
-    std::complex<T>(-0,  1.e+6),
+    std::complex<T>(-0, 1.e-6),
+    std::complex<T>(-0, 1.e+6),
     std::complex<T>(-0, -1.e+6),
-    std::complex<T>( 0, -1.e-6),
-    std::complex<T>( 0,  1.e-6),
-    std::complex<T>( 0,  1.e+6),
-    std::complex<T>( 0, -1.e+6),
+    std::complex<T>(0, -1.e-6),
+    std::complex<T>(0, 1.e-6),
+    std::complex<T>(0, 1.e+6),
+    std::complex<T>(0, -1.e+6),
 
     std::complex<T>(-1.e-6, -0),
-    std::complex<T>( 1.e-6, -0),
-    std::complex<T>( 1.e+6, -0),
+    std::complex<T>(1.e-6, -0),
+    std::complex<T>(1.e+6, -0),
     std::complex<T>(-1.e+6, -0),
-    std::complex<T>(-1.e-6,  0),
-    std::complex<T>( 1.e-6,  0),
-    std::complex<T>( 1.e+6,  0),
-    std::complex<T>(-1.e+6,  0),
+    std::complex<T>(-1.e-6, 0),
+    std::complex<T>(1.e-6, 0),
+    std::complex<T>(1.e+6, 0),
+    std::complex<T>(-1.e+6, 0),
 
     std::complex<T>(std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()),
     std::complex<T>(-std::numeric_limits<T>::infinity(), std::numeric_limits<T>::quiet_NaN()),
@@ -209,7 +208,7 @@ TEST_CONSTEXPR_CXX20 const std::complex<T> testcases[] =
     std::complex<T>(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest()),
 };
 
-enum {zero, non_zero, lowest_value, maximum_value, inf, NaN, non_zero_nan};
+enum { zero, non_zero, lowest_value, maximum_value, inf, NaN, non_zero_nan };
 
 template <class T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
 TEST_CONSTEXPR_CXX20 bool test_isinf(T v) {
@@ -245,28 +244,25 @@ classify(const std::complex<T>& x)
         return non_zero_nan;
     }
     if (x.real() == std::numeric_limits<T>::max() || x.imag() == std::numeric_limits<T>::max())
-        return maximum_value;
+      return maximum_value;
     if (x.real() == std::numeric_limits<T>::lowest() || x.imag() == std::numeric_limits<T>::lowest())
-        return lowest_value;
+      return lowest_value;
     return non_zero;
 }
 
-template<class T>
-inline
-int
-classify(T x)
-{
-    if (x == 0)
-        return zero;
-    if (std::isinf(x))
-        return inf;
-    if (std::isnan(x))
-        return NaN;
-    if (x == std::numeric_limits<T>::max())
-        return maximum_value;
-    if (x == std::numeric_limits<T>::lowest())
-        return lowest_value;
-    return non_zero;
+template <class T>
+inline int classify(T x) {
+  if (x == 0)
+    return zero;
+  if (std::isinf(x))
+    return inf;
+  if (std::isnan(x))
+    return NaN;
+  if (x == std::numeric_limits<T>::max())
+    return maximum_value;
+  if (x == std::numeric_limits<T>::lowest())
+    return lowest_value;
+  return non_zero;
 }
 
 void is_about(float x, float y)
