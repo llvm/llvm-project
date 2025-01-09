@@ -409,7 +409,7 @@ TEST_F(RtsanFileTest, SetbufDieWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
 
-  auto Func = [&f, &buffer]() { setbuf(f, buffer); };
+  auto Func = [f, &buffer]() { setbuf(f, buffer); };
 
   ExpectRealtimeDeath(Func, "setbuf");
   ExpectNonRealtimeSurvival(Func);
@@ -421,12 +421,34 @@ TEST_F(RtsanFileTest, SetvbufDieWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
 
-  auto Func = [&f, &buffer, &size]() {
+  auto Func = [f, &buffer, size]() {
     int r = setvbuf(f, buffer, _IOFBF, size);
     EXPECT_THAT(r, Eq(0));
   };
 
   ExpectRealtimeDeath(Func, "setvbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetlinebufDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f]() { setlinebuf(f); };
+
+  ExpectRealtimeDeath(Func, "setlinebuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetbufferDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() { setbuffer(f, buffer, size); };
+
+  ExpectRealtimeDeath(Func, "setbuffer");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
