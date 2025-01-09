@@ -60,6 +60,11 @@ struct remove_addrspace<T [[clang::address_space(N)]]> : type_identity<T> {};
 template <class T>
 using remove_addrspace_t = typename remove_addrspace<T>::type;
 
+template <typename To, typename From> inline To bitCast(From V) {
+  static_assert(sizeof(To) == sizeof(From), "Bad conversion");
+  return __builtin_bit_cast(To, V);
+}
+
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread
 /// is identified by \p Mask.
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width);
