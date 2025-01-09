@@ -3025,3 +3025,171 @@ define <vscale x 4 x float> @vfrsub_vx(<vscale x 4 x float> %a, float %b, iXLen 
   %2 = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %1, <vscale x 4 x float> %a, iXLen 7, iXLen %vl)
   ret <vscale x 4 x float> %2
 }
+
+define <vscale x 4 x double> @vfwadd_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwadd_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwadd.vv v12, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v12, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwadd_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwadd.vv v12, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v12, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwadd.nxv4f64.nxv4f32.nxv4f32(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwadd_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwadd_vf:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwadd.vf v12, v8, fa0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v12, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwadd_vf:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwadd.vf v12, v8, fa0
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v12, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwadd.nxv4f64.nxv4f32.f32(<vscale x 4 x double> poison, <vscale x 4 x float> %a, float %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwsub_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwsub_vv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwsub.vv v12, v8, v10
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v12, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwsub_vv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwsub.vv v12, v8, v10
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v12, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwsub.nxv4f64.nxv4f32.nxv4f32(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwsub_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwsub_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwsub.vf v12, v8, fa0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v12, v12
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwsub_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwsub.vf v12, v8, fa0
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v12, v12
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwsub.nxv4f64.nxv4f32.f32(<vscale x 4 x double> poison, <vscale x 4 x float> %a, float %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwadd_wv(<vscale x 4 x double> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwadd_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwadd.wv v8, v8, v12
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwadd_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwadd.wv v8, v8, v12
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwadd.w.nxv4f64.nxv4f32.nxv4f32(<vscale x 4 x double> poison, <vscale x 4 x double> %a, <vscale x 4 x float> %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwadd_wf(<vscale x 4 x double> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwadd_wf:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwadd.wf v8, v8, fa0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwadd_wf:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwadd.wf v8, v8, fa0
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwadd.w.nxv4f64.nxv4f32.f32(<vscale x 4 x double> poison, <vscale x 4 x double> %a, float %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwsub_wv(<vscale x 4 x double> %a, <vscale x 4 x float> %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwsub_wv:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwsub.wv v8, v8, v12
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwsub_wv:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwsub.wv v8, v8, v12
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwsub.w.nxv4f64.nxv4f32.nxv4f32(<vscale x 4 x double> poison, <vscale x 4 x double> %a, <vscale x 4 x float> %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
+
+define <vscale x 4 x double> @vfwsub_wf(<vscale x 4 x double> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwsub_wf:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfwsub.wf v8, v8, fa0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfwsub_wf:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfwsub.wf v8, v8, fa0
+; VLOPT-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VLOPT-NEXT:    vfadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x double> @llvm.riscv.vfwsub.w.nxv4f64.nxv4f32.f32(<vscale x 4 x double> poison, <vscale x 4 x double> %a, float %b, iXLen 7, iXLen -1)
+  %2 = call <vscale x 4 x double> @llvm.riscv.vfadd.nxv4f64.nxv4f64(<vscale x 4 x double> poison, <vscale x 4 x double> %1, <vscale x 4 x double> %1, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x double> %2
+}
