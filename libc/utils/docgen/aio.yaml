@@ -17,29 +17,29 @@ macros:
     in-latest-posix: ''
     
 functions:
-  aio_fildes:
-    in-latest-posix: ''
-  aio_offset:
-    in-latest-posix: ''
   aio_buf:
-    in-latest-posix: ''
-  aio_nbytes:
-    in-latest-posix: ''
-  aio_reqprio:
-    in-latest-posix: ''
-  aio_sigevent:
-    in-latest-posix: ''
-  aio_lio_opcode:
     in-latest-posix: ''
   aio_cancel:
     in-latest-posix: ''
   aio_error:
     in-latest-posix: ''
+  aio_fildes:
+    in-latest-posix: ''
   aio_fsync:
+    in-latest-posix: ''
+  aio_lio_opcode:
+    in-latest-posix: ''
+  aio_nbytes:
+    in-latest-posix: ''
+  aio_offset:
     in-latest-posix: ''
   aio_read:
     in-latest-posix: ''
+  aio_reqprio:
+    in-latest-posix: ''
   aio_return:
+    in-latest-posix: ''
+  aio_sigevent:
     in-latest-posix: ''
   aio_suspend:
     in-latest-posix: ''
