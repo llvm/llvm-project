@@ -72,18 +72,10 @@ class BackendConsumer : public ASTConsumer {
 public:
   BackendConsumer(const CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const std::string &InFile,
-                  SmallVector<LinkModule, 4> LinkModules,
-                  std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
-
-  // This constructor is used in installing an empty BackendConsumer
-  // to use the clang diagnostic handler for IR input files. It avoids
-  // initializing the OS field.
-  BackendConsumer(const CompilerInstance &CI, BackendAction Action,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
-                  llvm::LLVMContext &C);
+                  llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
+                  StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,
+                  CoverageSourceInfo *CoverageInfo,
+                  llvm::Module *CurLinkModule = nullptr);
 
   llvm::Module *getModule() const;
   std::unique_ptr<llvm::Module> takeModule();
