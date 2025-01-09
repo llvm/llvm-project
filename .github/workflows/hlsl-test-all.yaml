@@ -2,7 +2,6 @@ name: HLSL Test
 
 permissions:
   contents: read
-  checks: write
 
 on:
   workflow_dispatch:
