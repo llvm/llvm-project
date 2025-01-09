@@ -324,7 +324,46 @@ add_entrypoint_object(
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
-  if(LLVM_LIBC_INCLUDE_SCUDO)
+  if (NOT "${LLVM_LIBC_INCLUDE_SNMALLOC}" STREQUAL "")
+    message(STATUS "Including snmalloc as the allocator, source directory: ${LLVM_LIBC_INCLUDE_SNMALLOC}")
+    add_subdirectory(snmalloc)
+    add_entrypoint_object(
+      malloc
+      ALIAS
+      DEPENDS
+        .snmalloc.malloc
+    )
+    add_entrypoint_object(
+      calloc
+      ALIAS
+      DEPENDS
+        .snmalloc.calloc
+    )
+    add_entrypoint_object(
+      realloc
+      ALIAS
+      DEPENDS
+        .snmalloc.realloc
+    )
+    add_entrypoint_object(
+      aligned_alloc
+      ALIAS
+      DEPENDS
+        .snmalloc.aligned_alloc
+    )
+    add_entrypoint_object(
+      free
+      ALIAS
+      DEPENDS
+        .snmalloc.free
+    )
+    add_entrypoint_object(
+      mallopt
+      ALIAS
+      DEPENDS
+        .snmalloc.mallopt
+    )
+  elseif(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
 
     include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
