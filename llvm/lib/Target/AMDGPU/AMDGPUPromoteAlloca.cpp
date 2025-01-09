@@ -385,12 +385,41 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
          match(I->getOperand(2), m_SpecificInt(Size)) && !I->isVolatile();
 }
 
+static bool hasVariableOffset(GetElementPtrInst *GEP) {
+  // Iterate over all operands starting from the first index (index 0 is the
+  // base pointer).
+  for (unsigned i = 1, e = GEP->getNumOperands(); i != e; ++i) {
+    Value *Op = GEP->getOperand(i);
+    // Check if the operand is not a constant integer value
+    if (!isa<ConstantInt>(Op)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static Value *
-calculateVectorIndex(Value *Ptr,
-                     const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
+calculateVectorIndex(Value *Ptr, std::map<GetElementPtrInst *, Value *> &GEPIdx,
+                     const DataLayout &DL) {
   auto *GEP = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts());
   if (!GEP)
     return ConstantInt::getNullValue(Type::getInt32Ty(Ptr->getContext()));
+
+  // If the index of this GEP is a variable that might be deleted,
+  // update the index with its latest value. We've already handled any GEPs
+  // with unsupported index types(in GEPToVectorIndex) at this point.
+  if (hasVariableOffset(GEP)) {
+    unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
+    APInt ConstOffset(BW, 0);
+    if (GEP->collectOffset(DL, BW, VarOffsets, ConstOffset)) {
+      if (VarOffsets.size() == 1 && ConstOffset.isZero()) {
+        auto *UpdatedValue = VarOffsets.front().first;
+        GEPIdx[GEP] = UpdatedValue;
+        return UpdatedValue;
+      }
+    }
+  }
 
   auto I = GEPIdx.find(GEP);
   assert(I != GEPIdx.end() && "Must have entry for GEP!");
@@ -496,7 +525,7 @@ static Value *promoteAllocaUserToVector(
     }
 
     Value *Index = calculateVectorIndex(
-        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx);
+        cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx, DL);
 
     // We're loading the full vector.
     Type *AccessTy = Inst->getType();
@@ -552,7 +581,8 @@ static Value *promoteAllocaUserToVector(
     // to know the current value. If this is a store of a single element, we
     // need to know the value.
     StoreInst *SI = cast<StoreInst>(Inst);
-    Value *Index = calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx);
+    Value *Index =
+        calculateVectorIndex(SI->getPointerOperand(), GEPVectorIdx, DL);
     Value *Val = SI->getValueOperand();
 
     // We're storing the full vector, we can handle this without knowing CurVal.
@@ -850,7 +880,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         if (Ptr != &Alloca && !GEPVectorIdx.count(GEP))
           return nullptr;
 
-        return dyn_cast<ConstantInt>(calculateVectorIndex(Ptr, GEPVectorIdx));
+        return dyn_cast<ConstantInt>(
+            calculateVectorIndex(Ptr, GEPVectorIdx, *DL));
       };
 
       unsigned OpNum = U->getOperandNo();
