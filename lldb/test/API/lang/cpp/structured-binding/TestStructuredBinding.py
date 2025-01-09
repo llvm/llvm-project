@@ -99,7 +99,8 @@ class TestStructuredBinding(TestBase):
         self.expect_expr("ty2", result_value="'z'")
         self.expect_expr("tz2", result_value="10")
 
-        self.expect("frame variable",
+        self.expect(
+            "frame variable",
             substrs=[
                 "tx1 =",
                 "ty1 =",
@@ -108,4 +109,6 @@ class TestStructuredBinding(TestBase):
                 "ty2 =",
                 "tz2 =",
                 "mp1 =",
-                "mp2 ="])
+                "mp2 =",
+            ],
+        )
