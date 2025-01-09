@@ -21,13 +21,7 @@ using namespace llvm;
 
 namespace {
 
-  static void dumpRegSet(SetVector<Register> VRegs) {
-    dbgs() << "\n";
-    for (auto R : VRegs) {
-      dbgs() << printReg(R) << " ";
-    }
-    dbgs() << "\n";
-  }
+  
 
 class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   const LiveIntervals &LIS;
@@ -46,11 +40,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 
   DenseMap<VRegMaskPair, unsigned> Virt2StackSlotMap;
 
-  // TODO: HOW TO MAP VREG + LANEMASK TO SPILL SLOT ???
-
-  // IF IT EVEN POSSIBLE TO SPILL REG.SUBREG ?
-
-  // CREATE NEW PSEUDOS SI_SPILL_XXX_SAVE/RESTORE_WITH_SUBREG ???
+  LLVM_ATTRIBUTE_NOINLINE void
+  dumpRegSet(SetVector<VRegMaskPair> VMPs);
 
   unsigned createSpillSlot(const TargetRegisterClass *RC) {
     unsigned Size = TRI->getSpillSize(*RC);
@@ -95,17 +86,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   DenseMap<unsigned, unsigned> PostponedLoopLatches;
   DenseMap<unsigned, SmallVector<unsigned>> LoopHeader2Latches;
 
-  void printVRegMaskPair(const VRegMaskPair P) {
-    SmallVector<unsigned> Idxs;
-    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
-    bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, P.LaneMask, Idxs);
-    dbgs() << "Vreg: ";
-    if (HasSubReg)
-      for (auto i : Idxs)
-        dbgs() << printReg(P.VReg, TRI, i, MRI) << "]\n";
-    else
-      dbgs() << printReg(P.VReg) << "]\n";
-  }
+  LLVM_ATTRIBUTE_NOINLINE void
+  printVRegMaskPair(const VRegMaskPair P);
 
   void dump() {
     for (auto SI : RegisterMap) {
@@ -192,6 +174,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   unsigned fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
                          unsigned Capacity = 0);
 
+  bool isCoveredActive(VRegMaskPair VMP, const RegisterSet Active);
+
 public:
   AMDGPUSSASpiller() = default;
 
@@ -208,6 +192,28 @@ public:
       }
   bool run(MachineFunction &MF);
 };
+
+LLVM_ATTRIBUTE_NOINLINE void
+AMDGPUSSASpiller::dumpRegSet(SetVector<VRegMaskPair> VMPs) {
+  dbgs() << "\n";
+  for (auto P : VMPs) {
+    printVRegMaskPair(P);
+  }
+  dbgs() << "\n";
+}
+
+LLVM_ATTRIBUTE_NOINLINE void
+AMDGPUSSASpiller::printVRegMaskPair(const VRegMaskPair P) {
+  SmallVector<unsigned> Idxs;
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
+  bool HasSubReg = TRI->getCoveringSubRegIndexes(*MRI, RC, P.LaneMask, Idxs);
+  dbgs() << "Vreg: [";
+  if (HasSubReg)
+    for (auto i : Idxs)
+      dbgs() << printReg(P.VReg, TRI, i, MRI) << "]\n";
+  else
+    dbgs() << printReg(P.VReg) << "]\n";
+}
 
 AMDGPUSSASpiller::SpillInfo &
 AMDGPUSSASpiller::getBlockInfo(const MachineBasicBlock &MBB) {
@@ -264,10 +270,14 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
       Register VReg = U.getReg();
       if (!takeReg(VReg))
         continue;
+
+      if (U.getSubReg() != AMDGPU::NoSubRegister) {
+        dbgs() << U << "\n";
+      }
       
       VRegMaskPair VMP(U, *TRI);
       
-      if (Active.insert(VMP)) {
+      if (!isCoveredActive(VMP, Active)) {
         // Not in reg, hence, should have been spilled before
         // FIXME: This is ODD as the Spilled set is a union among all
         // predecessors and should already contain all spilled before!
@@ -290,11 +300,16 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     }
     T4->stopTimer();
 
+    dumpRegSet(Active);
+
     RegisterSet ToSpill;
     limit(MBB, Active, Spilled, I, NumAvailableRegs, ToSpill);
     limit(MBB, Active, Spilled, std::next(I),
           NumAvailableRegs - getSizeInRegs(Defs), ToSpill);
     T4->startTimer();
+
+    dumpRegSet(Active);
+
     for (auto R : ToSpill) {
       spillBefore(MBB, I, R);
       Spilled.insert(R);
@@ -313,7 +328,10 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     if (NU.isDead(MBB, MBB.end(), R))
       Deads.insert(R);
   }
+  dumpRegSet(Deads);
+  dumpRegSet(Active);
   Active.set_subtract(Deads);
+  dumpRegSet(Active);
 }
 
 void AMDGPUSSASpiller::processLoop(MachineLoop *L) {
@@ -462,15 +480,13 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
 const TargetRegisterClass *
 AMDGPUSSASpiller::getRegClassForVregMaskPair(VRegMaskPair VMP,
                                              unsigned &SubRegIdx) {
-  const TargetRegisterClass *RC;
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.VReg);
 
-  if (VMP.LaneMask.all()) {
-    RC = TRI->getRegClassForReg(*MRI, VMP.VReg);
-  } else {
+  if (!VMP.LaneMask.all()) {
     SmallVector<unsigned> Idxs;
     if (TRI->getCoveringSubRegIndexes(*MRI, RC, VMP.LaneMask, Idxs)) {
       SubRegIdx = Idxs[0];
-      for (int i = 1; i < Idxs.size() - 1; i++)
+      for (unsigned i = 1; i < Idxs.size() - 1; i++)
         SubRegIdx = TRI->composeSubRegIndices(SubRegIdx, Idxs[i]);
       RC = TRI->getSubRegisterClass(RC, SubRegIdx);
     }
@@ -540,29 +556,111 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
   }
 
   sortRegSetAt(MBB, I, Active);
+  
+  dumpRegSet(Active);
 
   // Here we expect that the furthest use is use of %4:VReg_1024.sub_31 so its
   // size is 32bits
 
   while (CurRP > Limit) {
     auto P = Active.pop_back_val();
-    unsigned RegSize = getSizeInRegs(P.VReg);
-    CurRP -= RegSize;
-    if (!Spilled.contains(P))
-      ToSpill.insert(P);
+    unsigned RegSize = getSizeInRegs(P);
+    unsigned SizeToSpill = CurRP - Limit;
+    if (RegSize > SizeToSpill) {
+      const TargetRegisterClass *SuperRC = TRI->getRegClassForReg(*MRI, P.VReg);
+      DenseMap<unsigned, unsigned> Cands;
+      SmallVector<unsigned> Sorted;
+      for (auto &SubReg : MRI->reg_operands(P.VReg)) {
+        unsigned SubRegIdx = SubReg.getSubReg();
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubRegIdx);
+        if ((P.LaneMask & Mask) != LaneBitmask::getNone()) {
+          VRegMaskPair X(P.VReg, Mask);
+          unsigned D = I == MBB.end() ? NU.getNextUseDistance(MBB, X)
+                                      : NU.getNextUseDistance(I, X);
+          Cands[D] = SubRegIdx;
+          Sorted.push_back(D);
+        }
+      }
+
+      LaneBitmask ActiveMask = P.LaneMask;
+      std::sort(Sorted.begin(), Sorted.end(), [](unsigned x, unsigned y) { return x > y;});
+      for (auto i : Sorted) {
+        unsigned SubIdx = Cands[i];
+        LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(Cands[i]);
+        VRegMaskPair Y(P.VReg, SubMask);
+        dbgs() << "[ " << printReg(Y.VReg, TRI, SubIdx, MRI) << " ] : " << i << "\n";
+        const TargetRegisterClass *RC =
+            TRI->getSubRegisterClass(SuperRC, SubIdx);
+        unsigned Size = TRI->getRegClassWeight(RC).RegWeight;
+        CurRP -= Size;
+        if (!Spilled.contains(Y))
+          ToSpill.insert(Y);
+        ActiveMask &= (~SubMask);
+        if (CurRP == Limit)
+          break;
+      }
+
+      if (ActiveMask.any()) {
+        VRegMaskPair Q(P.VReg, ActiveMask);
+        printVRegMaskPair(Q);
+        Active.insert(Q);
+      }
+
+      
+      // const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, P.VReg);
+      // SmallVector<unsigned> Idxs;
+      // if (TRI->getCoveringSubRegIndexes(*MRI, RC, P.LaneMask, Idxs)) {
+      //   // TODO: in SSA form each definition always defines the whole register.
+      //   // So, in Active set we have a regiters with a full bit mask. Same time,
+      //   // if the register uses are a uses of a subregs, we are interested in
+      //   // spilling the furthest subreg use.
+      //   /*
+      //       %1:vreg_1024 <- def
+      //       ***
+      //       ***
+      //       use of %1:vreg_1024.sub0   Dist x
+      //       use of %1:vreg_1024.sub1
+      //       use of %1:vreg_1024.sub2
+      //       ***
+      //       many instructions here
+      //       ***
+      //       use of %1:vreg_1024.sub31  Dist y
+
+      //       We want to spill %1.sub31 as its use is the furthest one!
+      //       For that we'd want to build a sorted vector of the subreg uses first.
+      //   */
+      //   unsigned SubRegIdx;
+      //   unsigned i = 0;
+      //   do {
+      //     SubRegIdx = TRI->composeSubRegIndices(SubRegIdx, Idxs[i]);
+      //     RC = TRI->getSubRegisterClass(RC, SubRegIdx);
+      //     SizeToSpill -= TRI->getRegClassWeight(RC).RegWeight;
+      //     i++;
+      //   } while (SizeToSpill != 0 && i < Idxs.size() - 1);
+      //   LaneBitmask SpillMask = TRI->getSubRegIndexLaneMask(SubRegIdx);
+      //   P.LaneMask &= ~SpillMask;
+      //   ToSpill.insert({P.VReg, SpillMask});
+      //   Active.insert(P);
+      // }
+    } else {
+      CurRP -= RegSize;
+      if (!Spilled.contains(P))
+        ToSpill.insert(P);
+    }
   }
   T2->stopTimer();
 }
 
 unsigned AMDGPUSSASpiller::getSizeInRegs(const VRegMaskPair VMP) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
+  unsigned SubRegIdx = 0;
+  const TargetRegisterClass *RC = getRegClassForVregMaskPair(VMP, SubRegIdx);
   return TRI->getRegClassWeight(RC).RegWeight;
 }
 
 unsigned AMDGPUSSASpiller::getSizeInRegs(const RegisterSet VRegs) {
   unsigned Size = 0;
   for (auto VMP : VRegs) {
-    Size += getSizeInRegs(VMP.VReg);
+    Size += getSizeInRegs(VMP);
   }
   return Size;
 }
@@ -574,7 +672,7 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   unsigned Size = getSizeInRegs(Active);
   sortRegSetAt(MBB, MBB.begin(), S);
   for (auto VMP : S) {
-    unsigned RSize = getSizeInRegs(VMP.VReg);
+    unsigned RSize = getSizeInRegs(VMP);
     if (Size + RSize < Limit) {
       Active.insert(VMP);
       Size += RSize;
@@ -583,14 +681,24 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   return Size;
 }
 
+bool AMDGPUSSASpiller::isCoveredActive(VRegMaskPair VMP,
+                                       const RegisterSet Active) {
+  printVRegMaskPair(VMP);
+  dumpRegSet(Active);
+  for (auto P : Active) {
+    if (P.VReg == VMP.VReg) {
+      return (P.LaneMask & VMP.LaneMask).any();
+    }
+  }
+  return false;
+}
+
 bool AMDGPUSSASpiller::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   MRI = &MF.getRegInfo();
   MFI = &MF.getFrameInfo();
   TRI = ST->getRegisterInfo();
   TII = ST->getInstrInfo();
-
-  Virt2StackSlotMap.resize(MRI->getNumVirtRegs());
 
   init(MF, false);
   processFunction(MF);
