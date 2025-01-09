@@ -1709,14 +1709,12 @@ LogicalResult spirv::MatrixTimesVectorOp::verify() {
 
   if (matrixType.getNumColumns() != vectorType.getNumElements())
     return emitOpError("matrix columns (")
-           << matrixType.getNumColumns()
-           << ") must match vector operand size ("
+           << matrixType.getNumColumns() << ") must match vector operand size ("
            << vectorType.getNumElements() << ")";
 
   if (resultType.getNumElements() != matrixType.getNumRows())
     return emitOpError("result size (")
-           << resultType.getNumElements()
-           << ") must match the matrix rows ("
+           << resultType.getNumElements() << ") must match the matrix rows ("
            << matrixType.getNumRows() << ")";
 
   auto matrixElementType = matrixType.getElementType();
