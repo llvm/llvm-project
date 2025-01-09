@@ -33,7 +33,6 @@
 namespace llvm {
 
 class AddrLabelMap;
-class AsmBasicPrinterHandler;
 class AsmPrinterHandler;
 class BasicBlock;
 class BlockAddress;
@@ -45,6 +44,7 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
+class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -188,14 +188,16 @@ protected:
   /// For dso_local functions, the current $local alias for the function.
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
-  /// A vector of all EH info emitters we should use. This vector
-  /// maintains ownership of the emitters.
-  SmallVector<std::unique_ptr<AsmBasicPrinterHandler>, 2> Handlers;
+  /// A handle to the EH info emitter (if present)
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1>
+      EHHandlers; // only for EHHandler subtypes, but some c++ compilers will
+                  // incorrectly warn us if we declare that
 
   // A vector of all Debuginfo emitters we should use. Protected so that
-  // targets can add their own.
-  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> DebugHandlers;
-  size_t NumUserDebugHandlers = 0;
+  // targets can add their own. This vector maintains ownership of the
+  // emitters.
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 2> Handlers;
+  size_t NumUserHandlers = 0;
 
   StackMaps SM;
 

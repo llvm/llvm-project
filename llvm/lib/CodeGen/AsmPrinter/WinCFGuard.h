@@ -14,13 +14,13 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_WINCFGUARD_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_WINCFGUARD_H
 
-#include "llvm/CodeGen/AsmPrinterHandler.h"
+#include "EHStreamer.h"
 #include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
 
-class LLVM_LIBRARY_VISIBILITY WinCFGuard : public AsmBasicPrinterHandler {
+class LLVM_LIBRARY_VISIBILITY WinCFGuard : public AsmPrinterHandler {
   /// Target of directive emission.
   AsmPrinter *Asm;
   std::vector<const MCSymbol *> LongjmpTargets;

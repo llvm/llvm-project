@@ -30,9 +30,9 @@ typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
 
 /// Collects and handles AsmPrinter objects required to build debug
 /// or EH information.
-class AsmBasicPrinterHandler {
+class AsmPrinterHandler {
 public:
-  virtual ~AsmBasicPrinterHandler();
+  virtual ~AsmPrinterHandler();
 
   virtual void beginModule(Module *M) {}
 
@@ -64,27 +64,22 @@ public:
   /// immediately prior to markFunctionEnd.
   virtual void endBasicBlockSection(const MachineBasicBlock &MBB) {}
 
-  /// Emit target-specific EH funclet machinery.
-  virtual void beginFunclet(const MachineBasicBlock &MBB,
-                            MCSymbol *Sym = nullptr) {}
-  virtual void endFunclet() {}
-};
-
-class AsmPrinterHandler : public AsmBasicPrinterHandler {
-public:
-  virtual ~AsmPrinterHandler();
-
   /// For symbols that have a size designated (e.g. common symbols),
   /// this tracks that size.
   virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {}
 
   /// Process beginning of an instruction.
-  virtual void beginInstruction(const MachineInstr *MI) = 0;
+  virtual void beginInstruction(const MachineInstr *MI) {}
 
   /// Process end of an instruction.
-  virtual void endInstruction() = 0;
+  virtual void endInstruction() {}
 
   virtual void beginCodeAlignment(const MachineBasicBlock &MBB) {}
+
+  /// Emit target-specific EH funclet machinery.
+  virtual void beginFunclet(const MachineBasicBlock &MBB,
+                            MCSymbol *Sym = nullptr) {}
+  virtual void endFunclet() {}
 };
 
 } // End of namespace llvm
