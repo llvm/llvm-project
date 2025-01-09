@@ -149,11 +149,11 @@ _LIBCPP_HIDE_FROM_ABI add_pointer_t<_ValueType> any_cast(any*) _NOEXCEPT;
 
 namespace __any_imp {
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-using _Buffer = aligned_storage_t<3 * sizeof(void*), alignof(void*)>;
+using _Buffer _LIBCPP_NODEBUG = aligned_storage_t<3 * sizeof(void*), alignof(void*)>;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 template <class _Tp>
-using _IsSmallObject =
+using _IsSmallObject _LIBCPP_NODEBUG =
     integral_constant<bool,
                       sizeof(_Tp) <= sizeof(_Buffer) && alignof(_Buffer) % alignof(_Tp) == 0 &&
                           is_nothrow_move_constructible<_Tp>::value >;
@@ -185,7 +185,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool __compare_typeid(type_info const* __id, const 
 }
 
 template <class _Tp>
-using _Handler = conditional_t< _IsSmallObject<_Tp>::value, _SmallHandler<_Tp>, _LargeHandler<_Tp>>;
+using _Handler _LIBCPP_NODEBUG = conditional_t< _IsSmallObject<_Tp>::value, _SmallHandler<_Tp>, _LargeHandler<_Tp>>;
 
 } // namespace __any_imp
 
@@ -278,8 +278,9 @@ public:
 #    endif
 
 private:
-  typedef __any_imp::_Action _Action;
-  using _HandleFuncPtr = void* (*)(_Action, any const*, any*, const type_info*, const void* __fallback_info);
+  using _Action _LIBCPP_NODEBUG = __any_imp::_Action;
+  using _HandleFuncPtr
+      _LIBCPP_NODEBUG = void* (*)(_Action, any const*, any*, const type_info*, const void* __fallback_info);
 
   union _Storage {
     _LIBCPP_HIDE_FROM_ABI constexpr _Storage() : __ptr(nullptr) {}

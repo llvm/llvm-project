@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__make_unsigned)
 
 template <class _Tp>
-using __make_unsigned_t = __make_unsigned(_Tp);
+using __make_unsigned_t _LIBCPP_NODEBUG = __make_unsigned(_Tp);
 
 #else
 using __unsigned_types =
@@ -88,7 +88,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __make_unsigned_t<_Tp> __to_unsigned_lik
 }
 
 template <class _Tp, class _Up>
-using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;
+using __copy_unsigned_t _LIBCPP_NODEBUG = __conditional_t<is_unsigned<_Tp>::value, __make_unsigned_t<_Up>, _Up>;
 
 _LIBCPP_END_NAMESPACE_STD
 

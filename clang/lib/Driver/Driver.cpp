@@ -1503,9 +1503,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
         // Set specific Vulkan version if applicable.
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
-          const llvm::StringSet<> ValidValues = {"vulkan1.2", "vulkan1.3"};
-          if (ValidValues.contains(A->getValue())) {
-            T.setOSName(A->getValue());
+          const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
+              {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
+              {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
+
+          auto TargetInfo = ValidTargets.find(A->getValue());
+          if (TargetInfo != ValidTargets.end()) {
+            T.setOSName(TargetInfo->getKey());
+            T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
           } else {
             Diag(diag::err_drv_invalid_value)
                 << A->getAsString(Args) << A->getValue();
@@ -6721,6 +6726,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = std::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
+        else if (Target.isAppleMachO())
+          TC = std::make_unique<toolchains::AppleMachO>(*this, Target, Args);
         else if (Target.isOSBinFormatMachO())
           TC = std::make_unique<toolchains::MachO>(*this, Target, Args);
         else

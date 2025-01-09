@@ -71,11 +71,11 @@
 #### TODO: Fix non-determinism leading that is currently worked around with `{{[1-3]}}` below.
 
 # CHECK-MERGED-LOOKUP: Found 3 functions at address 0x0000000000000248:
-# CHECK-MERGED-LOOKUP-NEXT:       0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
-# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
-# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT:       0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
+# CHECK-MERGED-LOOKUP-NEXT-NEXT:  0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
  
-# CHECK-NORMAL-LOOKUP: 0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml/out/file_0{{[1-3]}}.cpp:5
+# CHECK-NORMAL-LOOKUP: 0x0000000000000248: my_func_0{{[1-3]}} @ /tmp/test_gsym_yaml{{[/\\]}}out/file_0{{[1-3]}}.cpp:5
 
 
 --- !mach-o
