@@ -83,7 +83,10 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
     MachineFunction &MF, MachineJumpTableInfo &MJTI) {
   int NumChangedJumpTables = 0;
   // Regard a jump table as hot by default. If the source and all of destination
-  // blocks are cold, regard the jump table as cold.
+  // blocks are cold, regard the jump table as cold. While a destination block
+  // does not read a jump table (unless it's also a source block), a hot
+  // destination heuristically makes its jump table hot to accommodate for
+  // potential profile data skews (from sampled profiles, for example).
   DataHotness Hotness = DataHotness::Hot;
   for (const auto &MBB : MF) {
     // IMPORTANT, `getJumpTableIndex` is a thin wrapper around per-target
@@ -121,11 +124,9 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
   if (!MJTI || MJTI->getJumpTables().empty())
     return false;
 
-  // Place jump tables according to block hotness if block counters are
-  // available. Check function entry count because BFI depends on it to derive
-  // block counters.
+  // Place jump tables according to block hotness if function has profile data.
   if (PSI && PSI->hasProfileSummary() && MBFI &&
-      MF.getFunction().getEntryCount())
+      MF.getFunction().hasProfileData())
     return splitJumpTablesWithProfiles(MF, *MJTI);
 
   // Conservatively place all jump tables in the hot-suffixed section if profile
