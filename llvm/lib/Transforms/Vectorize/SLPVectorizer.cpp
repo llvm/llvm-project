@@ -104,6 +104,7 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 using namespace slpvectorizer;
+using namespace std::placeholders;
 
 #define SV_NAME "slp-vectorizer"
 #define DEBUG_TYPE "SLP"
@@ -4953,6 +4954,37 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
           TTI::TCK_RecipThroughput, Index, Tp);
   }
   return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+}
+
+/// Correctly creates insert_subvector, checking that the index is multiple of
+/// the subvectors length. Otherwise, generates shuffle using \p Generator or
+/// using default shuffle.
+static Value *createInsertVector(
+    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
+  const unsigned SubVecVF = getNumElements(V->getType());
+  if (Index % SubVecVF == 0) {
+    Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
+                                     Builder.getInt64(Index));
+  } else {
+    // Create shuffle, insertvector requires that index is multiple of
+    // the subvector length.
+    const unsigned VecVF = getNumElements(Vec->getType());
+    SmallVector<int> Mask(VecVF, PoisonMaskElem);
+    std::iota(Mask.begin(), std::next(Mask.begin(), Index), 0);
+    for (unsigned I : seq<unsigned>(SubVecVF))
+      Mask[I + Index] = I + VecVF;
+    if (Generator) {
+      Vec = Generator(Vec, V, Mask);
+    } else {
+      // 1. Resize V to the size of Vec.
+      SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+      std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+      V = Builder.CreateShuffleVector(V, ResizeMask);
+      Vec = Builder.CreateShuffleVector(Vec, V, Mask);
+    }
+  }
+  return Vec;
 }
 
 BoUpSLP::LoadsState
@@ -13883,9 +13915,8 @@ Value *BoUpSLP::gather(
     Instruction *InsElt;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      Vec = InsElt = Builder.CreateInsertVector(
-          Vec->getType(), Vec, Scalar,
-          Builder.getInt64(Pos * VecTy->getNumElements()));
+      Vec = InsElt = cast<Instruction>(createInsertVector(
+          Builder, Vec, Scalar, Pos * getNumElements(VecTy)));
       auto *II = dyn_cast<IntrinsicInst>(InsElt);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
         return Vec;
@@ -14485,23 +14516,10 @@ public:
                                          V, SimplifyQuery(*R.DL));
                                    }));
           unsigned InsertionIndex = Idx * ScalarTyNumElements;
-          const unsigned SubVecVF =
-              cast<FixedVectorType>(V->getType())->getNumElements();
-          if (InsertionIndex % SubVecVF == 0) {
-            Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
-                                             Builder.getInt64(InsertionIndex));
-          } else {
-            // Create shuffle, insertvector requires that index is multiple of
-            // the subvectors length.
-            const unsigned VecVF =
-                cast<FixedVectorType>(Vec->getType())->getNumElements();
-            SmallVector<int> Mask(VecVF, PoisonMaskElem);
-            std::iota(Mask.begin(), Mask.end(), 0);
-            for (unsigned I : seq<unsigned>(
-                     InsertionIndex, (Idx + SubVecVF) * ScalarTyNumElements))
-              Mask[I] = I - Idx + VecVF;
-            Vec = createShuffle(Vec, V, Mask);
-          }
+          Vec = createInsertVector(
+              Builder, Vec, V, InsertionIndex,
+              std::bind(&ShuffleInstructionBuilder::createShuffle, this, _1, _2,
+                        _3));
           if (!CommonMask.empty()) {
             std::iota(
                 std::next(CommonMask.begin(), InsertionIndex),
@@ -17747,7 +17765,6 @@ bool BoUpSLP::collectValuesToDemote(
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
-  using namespace std::placeholders;
   auto FinalAnalysis = [&]() {
     if (!IsProfitableToDemote)
       return false;

@@ -1133,7 +1133,7 @@ AST Matchers
 
 - Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
 
-- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr.
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr or DependentNameType.
 
 clang-format
 ------------
@@ -1286,6 +1286,12 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
+- Changed ``-fsanitize=pointer-overflow`` to no longer report ``NULL + 0`` as
+  undefined behavior in C, in line with
+  `N3322 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3322.pdf>`_,
+  and matching the previous behavior for C++.
+  ``NULL + non_zero`` continues to be reported as undefined behavior.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
@@ -1300,6 +1306,8 @@ OpenMP Support
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The
   ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
   always build support for AMDGPU and NVPTX targets.
+- Added support for combined masked constructs  'omp parallel masked taskloop',
+  'omp parallel masked taskloop simd','omp masked taskloop' and 'omp masked taskloop simd' directive.
 
 Improvements
 ^^^^^^^^^^^^

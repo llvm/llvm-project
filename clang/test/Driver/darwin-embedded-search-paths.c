@@ -1,3 +1,4 @@
+// REQUIRES: !(default-cxx-stdlib=libc++)
 // UNSUPPORTED: system-windows
 //   Windows is unsupported because we use the Unix path separator `/` in the test.
 
@@ -6,7 +7,8 @@
 // RUN: %clang -x c -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
-// Unlike the Darwin driver, the MachO driver doesn't default to libc++
+// Unlike the Darwin driver, the MachO driver doesn't default to libc++, and unless
+// CLANG_DEFAULT_CXX_STDLIB is libc++ it won't add any search paths.
 // RUN: %clang -x c++ -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
