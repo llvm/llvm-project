@@ -541,3 +541,45 @@ func.func @findumsb(%arg0 : i64) -> () {
   %2 = spirv.GL.FindUMsb %arg0 : i64
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Distance 
+//===----------------------------------------------------------------------===//
+
+func.func @distance_scalar(%arg0 : f32, %arg1 : f32) {
+  // CHECK: spirv.GL.Distance {{%.*}}, {{%.*}} : f32, f32 -> f32
+  %0 = spirv.GL.Distance %arg0, %arg1 : f32, f32 -> f32
+  return
+}
+
+func.func @distance_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  // CHECK: spirv.GL.Distance {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xf32> -> f32
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<3xf32>, vector<3xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_type(%arg0 : i32, %arg1 : i32) {
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : i32, i32 -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_vector_size(%arg0 : vector<5xf32>, %arg1 : vector<5xf32>) {
+  // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<5xf32>, vector<5xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @distance_invalid_result(%arg0 : f32, %arg1 : f32) {
+  // expected-error @+1 {{'spirv.GL.Distance' op result #0 must be 16/32/64-bit float}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : f32, f32 -> i32
+  return
+}

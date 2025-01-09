@@ -2104,20 +2104,29 @@ LogicalResult spirv::GLDistanceOp::verify() {
   auto p1Type = getP1().getType();
   auto resultType = getResult().getType();
 
-  auto p0VectorType = p0Type.dyn_cast<VectorType>();
-  auto p1VectorType = p1Type.dyn_cast<VectorType>();
-  if (!p0VectorType || !p1VectorType)
-    return emitOpError("operands must be vectors");
+  auto getFloatType = [](Type type) -> FloatType {
+    if (auto vectorType = llvm::dyn_cast<VectorType>(type))
+      return llvm::dyn_cast<FloatType>(vectorType.getElementType());
+    return llvm::dyn_cast<FloatType>(type);
+  };
 
-  if (p0VectorType.getShape() != p1VectorType.getShape())
-    return emitOpError("operands must have same shape");
+  FloatType p0FloatType = getFloatType(p0Type);
+  FloatType p1FloatType = getFloatType(p1Type);
+  FloatType resultFloatType = llvm::dyn_cast<FloatType>(resultType);
 
-  if (!resultType.isa<FloatType>())
-    return emitOpError("result must be scalar float");
+  if (!p0FloatType || !p1FloatType || !resultFloatType)
+    return emitOpError("operands and result must be float scalar or vector of float"); 
 
-  if (p0VectorType.getElementType() != resultType || 
-      p1VectorType.getElementType() != resultType)
-    return emitOpError("operand vector elements must match result type");
+  if (p0FloatType != resultFloatType || p1FloatType != resultFloatType)
+    return emitOpError("operand and result element types must match");
+
+  if (auto p0Vec = llvm::dyn_cast<VectorType>(p0Type)) {
+    if (!llvm::dyn_cast<VectorType>(p1Type) || 
+        p0Vec.getShape() != llvm::dyn_cast<VectorType>(p1Type).getShape())
+      return emitOpError("vector operands must have same shape");
+  } else if (llvm::isa<VectorType>(p1Type)) {
+    return emitOpError("expected both operands to be scalars or both to be vectors");
+  }
 
   return success();
 }
