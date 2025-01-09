@@ -57,6 +57,7 @@ RUN apt-get update && \
     nodejs \
     perl-modules \
     python3-psutil \
+    sudo \
 
     # These are needed by the premerge pipeline. Pip is used to install
     # dependent python packages and ccache is used for build caching. File and
@@ -73,5 +74,11 @@ ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 # permissions issues in some tests. Set the user id to 1001 as that is the
 # user id that Github Actions uses to perform the checkout action.
 RUN useradd gha -u 1001 -m -s /bin/bash
+
+# Also add the user to passwordless sudoers so that we can install software
+# later on without having to rebuild the container.
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
 USER gha
 
