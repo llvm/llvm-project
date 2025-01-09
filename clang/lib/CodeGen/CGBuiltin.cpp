@@ -1235,6 +1235,8 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //    size_t flexible_array_member_size =
   //            count * flexible_array_member_base_size;
   //
+  //    if (flexible_array_member_size < 0)
+  //        return 0;
   //    return flexible_array_member_size;
   //
   // 2) '&ptr->array[idx]':
@@ -1248,6 +1250,8 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   //    size_t index_size = index * flexible_array_member_base_size;
   //
+  //    if (flexible_array_member_size < 0 || index < 0)
+  //        return 0;
   //    return flexible_array_member_size - index_size;
   //
   // 3) '&ptr->field':
@@ -1262,7 +1266,9 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //    size_t field_offset = offsetof (struct s, field);
   //    size_t offset_diff = struct_size - field_offset;
   //
-  //    return flexible_array_member_size + offset_diff;
+  //    if (flexible_array_member_size < 0)
+  //        return 0;
+  //    return flexible_array_member_size;
   //
   // 4) '&ptr->field_array[idx]':
   //
@@ -1280,6 +1286,8 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   //    size_t offset_diff = sizeof_struct - field_offset;
   //
+  //    if (flexible_array_member_size < 0 || index < 0)
+  //        return 0;
   //    return offset_diff + flexible_array_member_size;
 
   QualType CountTy = CountFD->getType();
@@ -1302,13 +1310,13 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   Value *Index = nullptr;
   if (Idx) {
     bool IdxSigned = Idx->getType()->isSignedIntegerType();
-    Index = EmitAnyExprToTemp(Idx).getScalarVal();
+    Index = EmitScalarExpr(Idx);
     Index = Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
   }
 
   //  size_t sizeof_struct = sizeof (struct s);
   llvm::StructType *StructTy = getTypes().getCGRecordLayout(RD).getLLVMType();
-  const llvm::DataLayout &Layout = Builder.GetInsertBlock()->getDataLayout();
+  const llvm::DataLayout &Layout = CGM.getDataLayout();
   TypeSize Size = Layout.getTypeSizeInBits(StructTy);
   Value *SizeofStruct =
       llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
@@ -1350,6 +1358,9 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       //  return flexible_array_member_size - index_size;
       return CheckForNegative(Builder.CreateSub(
           FlexibleArrayMemberSize, IndexSize, "result", !IsSigned, IsSigned));
+    } else { // Option (1) 'ptr->array'
+      //  return flexible_array_member_size;
+      return CheckForNegative(FlexibleArrayMemberSize);
     }
   } else {
     if (Idx) { // Option (4) '&ptr->field_array[idx]'
@@ -1381,11 +1392,6 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
           Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result"));
     }
   }
-
-  // Option (1) 'ptr->array'
-
-  //  return flexible_array_member_size;
-  return CheckForNegative(FlexibleArrayMemberSize);
 }
 
 /// Returns a Value corresponding to the size of the given expression.
