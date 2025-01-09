@@ -148,6 +148,69 @@ public:
     return false;
   }
 
+  MCPhysReg getAuthenticatedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::AUTIAZ:
+    case AArch64::AUTIBZ:
+    case AArch64::AUTIASP:
+    case AArch64::AUTIBSP:
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+      return AArch64::LR;
+    case AArch64::AUTIA1716:
+    case AArch64::AUTIB1716:
+      return AArch64::X17;
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      return AArch64::LR;
+
+    case AArch64::AUTIA:
+    case AArch64::AUTIB:
+    case AArch64::AUTDA:
+    case AArch64::AUTDB:
+    case AArch64::AUTIZA:
+    case AArch64::AUTIZB:
+    case AArch64::AUTDZA:
+    case AArch64::AUTDZB:
+      assert(Inst.getOperand(0).isReg());
+      return Inst.getOperand(0).getReg();
+
+    default:
+      return getNoRegister();
+    }
+  }
+
+  bool isAuthenticationOfReg(const MCInst &Inst,
+                             const unsigned RegAuthenticated) const override {
+    if (RegAuthenticated == getNoRegister())
+      return false;
+    return getAuthenticatedReg(Inst) == RegAuthenticated;
+  }
+
+  llvm::MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const override {
+    assert(isReturn(Inst));
+    switch (Inst.getOpcode()) {
+    case AArch64::RET:
+      // There should be one register that the return reads, and
+      // that's the one being used as the jump target?
+      for (unsigned OpIdx = 0, EndIdx = Inst.getNumOperands(); OpIdx < EndIdx;
+           ++OpIdx) {
+        const MCOperand &MO = Inst.getOperand(OpIdx);
+        if (MO.isReg())
+          return MO.getReg();
+      }
+      return getNoRegister();
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+    case AArch64::ERET:
+      return AArch64::LR;
+    default:
+      llvm_unreachable("Unhandled return instruction");
+    }
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }

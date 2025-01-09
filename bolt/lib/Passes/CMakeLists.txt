@@ -23,6 +23,7 @@ add_llvm_library(LLVMBOLTPasses
   LoopInversionPass.cpp
   LivenessAnalysis.cpp
   MCF.cpp
+  NonPacProtectedRetAnalysis.cpp
   PatchEntries.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
