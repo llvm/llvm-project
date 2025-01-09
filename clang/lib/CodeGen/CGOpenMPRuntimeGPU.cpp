@@ -1316,10 +1316,10 @@ void CGOpenMPRuntimeGPU::emitTargetCall(
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
         SizeEmitter) {
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Out << "Cannot emit a '#pragma omp target' on the GPU";
-  CGM.Error(D.getBeginLoc(), Out.str());
+  unsigned DiagID = CGM.getDiags().getCustomDiagID(
+      DiagnosticsEngine::Error,
+      "Cannot emit a '#pragma omp target' region on the GPU");
+  CGM.getDiags().Report(D.getBeginLoc(), DiagID);
 }
 
 void CGOpenMPRuntimeGPU::emitCriticalRegion(
