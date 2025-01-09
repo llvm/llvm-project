@@ -244,8 +244,8 @@ DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
                                               unsigned count) {
   assert(SymbolManager::canSymbolicate(type) && "Invalid metadata symbol type");
 
-  SymbolRef sym =
-      SymMgr.acquire<SymbolMetadata>(region, expr, type, LCtx, count, symbolTag);
+  SymbolRef sym = SymMgr.acquire<SymbolMetadata>(region, expr, type, LCtx,
+                                                 count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
