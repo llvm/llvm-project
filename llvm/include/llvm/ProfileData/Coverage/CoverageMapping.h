@@ -215,9 +215,12 @@ public:
   /// LHS.
   Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
 
+  /// K to V map. K will be Counter in most cases. V may be Counter or
+  /// Expression.
   using SubstMap = std::map<Counter, Counter>;
 
-  /// Return a counter for each term in the expression replaced by SubstMap.
+  /// \return A counter equivalent to \C, with each term in its
+  /// expression replaced with term from \p Map.
   Counter subst(Counter C, const SubstMap &Map);
 };
 
