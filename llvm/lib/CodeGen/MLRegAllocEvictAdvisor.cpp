@@ -1251,22 +1251,17 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 }
 #endif // #ifdef LLVM_HAVE_TFLITE
 
-void RegAllocEvictionAdvisorAnalysis::initializeMLProvider(
-    RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode, LLVMContext &Ctx) {
-  if (Provider)
-    return;
-  switch (Mode) {
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
+RegAllocEvictionAdvisorProvider *
+llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
+  return new ReleaseModeEvictionAdvisorProvider(Ctx);
+}
+
+RegAllocEvictionAdvisorProvider *
+llvm::createDevelopmentModeAdvisorProvider(LLVMContext &Ctx) {
 #if defined(LLVM_HAVE_TFLITE)
-    Provider.reset(new DevelopmentModeEvictionAdvisorProvider(Ctx));
+  return new DevelopmentModeEvictionAdvisorProvider(Ctx);
 #endif
-    break;
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Provider.reset(new ReleaseModeEvictionAdvisorProvider(Ctx));
-    break;
-  default:
-    break;
-  }
+  return nullptr;
 }
 
 RegAllocEvictionAdvisorAnalysisLegacy *

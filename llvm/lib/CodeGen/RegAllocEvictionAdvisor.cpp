@@ -118,11 +118,21 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
     RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode, LLVMContext &Ctx) {
   if (Provider)
     return;
-  if (Mode == RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default)
+  switch (Mode) {
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
-  else
-    initializeMLProvider(Mode, Ctx);
+    break;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
+#if defined(LLVM_HAVE_TFLITE)
+    Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
+#endif
+    break;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
+    break;
+  }
+
   if (!Provider)
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));

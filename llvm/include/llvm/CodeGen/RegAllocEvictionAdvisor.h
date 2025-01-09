@@ -266,9 +266,6 @@ private:
   void
   initializeProvider(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode,
                      LLVMContext &Ctx);
-  void
-  initializeMLProvider(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode,
-                       LLVMContext &Ctx);
 
   std::unique_ptr<RegAllocEvictionAdvisorProvider> Provider;
 };
@@ -281,6 +278,12 @@ RegAllocEvictionAdvisorAnalysisLegacy *createReleaseModeAdvisorAnalysisLegacy();
 
 RegAllocEvictionAdvisorAnalysisLegacy *
 createDevelopmentModeAdvisorAnalysisLegacy();
+
+RegAllocEvictionAdvisorProvider *
+createReleaseModeAdvisorProvider(LLVMContext &Ctx);
+
+RegAllocEvictionAdvisorProvider *
+createDevelopmentModeAdvisorProvider(LLVMContext &Ctx);
 
 // TODO: move to RegAllocEvictionAdvisor.cpp when we move implementation
 // out of RegAllocGreedy.cpp
