@@ -4595,7 +4595,7 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
         break;
       }
       default:
-        assert(false && "Unexpected allocate modifier");
+        llvm_unreachable("Unexpected allocate modifier");
         break;
       }
     } else {
