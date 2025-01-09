@@ -997,13 +997,15 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
   CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile, bool GeneratingReducedBMI);
+                        StringRef OutputFile, bool GeneratingReducedBMI,
+                        bool AllowASTWithErrors);
 
 public:
   CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile)
+                        StringRef OutputFile, bool AllowASTWithErrors = false)
       : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/false) {}
+                              /*GeneratingReducedBMI=*/false,
+                              AllowASTWithErrors) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
@@ -1013,9 +1015,10 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
 
 public:
   ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile)
+                      StringRef OutputFile, bool AllowASTWithErrors = false)
       : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/true) {}
+                              /*GeneratingReducedBMI=*/true,
+                              AllowASTWithErrors) {}
 };
 
 /// If we can elide the definition of \param D in reduced BMI.
