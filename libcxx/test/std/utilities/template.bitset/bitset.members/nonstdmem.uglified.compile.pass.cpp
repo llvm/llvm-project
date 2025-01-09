@@ -24,12 +24,9 @@ struct my_base {
   typedef int* iterator;
   typedef const int* const_iterator;
   typedef my_base base;
-<<<<<<< HEAD
   typedef const int& const_reference;
-=======
   typedef std::ptrdiff_t difference_type;
   typedef std::size_t size_type;
->>>>>>> 620da4a790b5 (Fix ambiguity due to non-uglified member typedefs)
 };
 
 template <std::size_t N>
@@ -94,4 +91,3 @@ static_assert(std::is_same<my_derived<32>::size_type, std::size_t>::value, "");
 static_assert(std::is_same<my_derived<48>::size_type, std::size_t>::value, "");
 static_assert(std::is_same<my_derived<64>::size_type, std::size_t>::value, "");
 static_assert(std::is_same<my_derived<96>::size_type, std::size_t>::value, "");
->>>>>>> 620da4a790b5 (Fix ambiguity due to non-uglified member typedefs)

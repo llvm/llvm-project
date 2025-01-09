@@ -170,16 +170,8 @@ struct __has_storage_type<__bitset<_N_words, _Size> > {
 };
 
 template <size_t _N_words, size_t _Size>
-struct __size_difference_type_traits<std::__bitset<_N_words, _Size> > {
-  using difference_type = typename std::__bitset<_N_words, _Size>::__difference_type;
-  using size_type       = typename std::__bitset<_N_words, _Size>::__size_type;
-};
-
-template <size_t _N_words, size_t _Size>
 class __bitset {
 public:
-  typedef ptrdiff_t __difference_type;
-  typedef size_t __size_type;
   typedef size_t __storage_type;
 
 protected:
@@ -440,8 +432,6 @@ inline size_t __bitset<_N_words, _Size>::__hash_code() const _NOEXCEPT {
 template <size_t _Size>
 class __bitset<1, _Size> {
 public:
-  typedef ptrdiff_t __difference_type;
-  typedef size_t __size_type;
   typedef size_t __storage_type;
 
 protected:
@@ -557,8 +547,6 @@ inline size_t __bitset<1, _Size>::__hash_code() const _NOEXCEPT {
 template <>
 class __bitset<0, 0> {
 public:
-  typedef ptrdiff_t __difference_type;
-  typedef size_t __size_type;
   typedef size_t __storage_type;
 
 protected:

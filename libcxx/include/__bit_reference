@@ -23,6 +23,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/void_t.h>
 #include <__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,8 +43,14 @@ struct __has_storage_type {
   static const bool value = false;
 };
 
-template <typename _Cp>
+template <class, class>
 struct __size_difference_type_traits {
+  using difference_type = ptrdiff_t;
+  using size_type       = size_t;
+};
+
+template <class _Cp>
+struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type, typename _Cp::size_type> > {
   using difference_type = typename _Cp::difference_type;
   using size_type       = typename _Cp::size_type;
 };
@@ -595,9 +602,9 @@ inline _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cr, false> swap_ranges(
 template <class _Cp>
 struct __bit_array {
   using difference_type _LIBCPP_NODEBUG   = typename __size_difference_type_traits<_Cp>::difference_type;
-  using __storage_type _LIBCPP_NODEBUG   = typename _Cp::__storage_type;
+  using __storage_type _LIBCPP_NODEBUG    = typename _Cp::__storage_type;
   using __storage_pointer _LIBCPP_NODEBUG = typename _Cp::__storage_pointer;
-  using iterator _LIBCPP_NODEBUG         = typename _Cp::iterator;
+  using iterator _LIBCPP_NODEBUG          = typename _Cp::iterator;
 
   static const unsigned __bits_per_word = _Cp::__bits_per_word;
   static const unsigned _Np             = 4;
