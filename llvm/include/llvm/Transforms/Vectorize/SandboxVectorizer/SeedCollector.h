@@ -292,7 +292,9 @@ class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
   Context &Ctx;
-  Context::CallbackID EraseCallbackID;
+  Context::CallbackID EraseCallbackID =
+      std::numeric_limits<Context::CallbackID>::max();
+
   /// \Returns the number of SeedBundle groups for all seed types.
   /// This is to be used for limiting compilation time.
   unsigned totalNumSeedGroups() const {
