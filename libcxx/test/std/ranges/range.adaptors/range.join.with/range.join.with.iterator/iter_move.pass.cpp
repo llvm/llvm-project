@@ -135,6 +135,44 @@ private:
 
 static_assert(std::forward_iterator<ProxyIter>);
 
+template <std::forward_iterator Iter>
+class IterMoveTrackingIterator {
+public:
+  using value_type      = std::iter_value_t<Iter>;
+  using difference_type = std::iter_difference_t<Iter>;
+
+  IterMoveTrackingIterator() = default;
+  constexpr explicit IterMoveTrackingIterator(Iter iter, bool* flag = nullptr) : iter_(std::move(iter)), flag_(flag) {}
+
+  constexpr IterMoveTrackingIterator& operator++() {
+    ++iter_;
+    return *this;
+  }
+
+  constexpr IterMoveTrackingIterator operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  constexpr decltype(auto) operator*() const { return *iter_; }
+
+  constexpr bool operator==(const IterMoveTrackingIterator& other) const { return iter_ == other.iter_; }
+
+  friend constexpr decltype(auto) iter_move(const IterMoveTrackingIterator& iter) {
+    assert(iter.flag_ != nullptr);
+    *iter.flag_ = true;
+    return std::ranges::iter_move(iter.iter_);
+  }
+
+private:
+  Iter iter_  = Iter();
+  bool* flag_ = nullptr;
+};
+
+static_assert(std::forward_iterator<IterMoveTrackingIterator<int*>> &&
+              !std::bidirectional_iterator<IterMoveTrackingIterator<int*>>);
+
 constexpr bool test() {
   { // Test `iter_move` when result is true rvalue reference. Test return types.
     using V       = std::array<std::array<char, 1>, 2>;
@@ -334,6 +372,41 @@ constexpr bool test() {
     }
 
     assert(std::ranges::all_of(jwv, &MoveOnlyInt::was_moved_from));
+  }
+
+  { // Make sure `iter_move` calls underlying's iterator `iter_move` (not `std::move(*i)`).
+    using Inner               = std::vector<int>;
+    using InnerTrackingIter   = IterMoveTrackingIterator<Inner::iterator>;
+    using TrackingInner       = std::ranges::subrange<InnerTrackingIter>;
+    using Pattern             = std::array<int, 1>;
+    using PatternTrackingIter = IterMoveTrackingIterator<Pattern::iterator>;
+    using TrackingPattern     = std::ranges::subrange<PatternTrackingIter>;
+    using JWV                 = std::ranges::join_with_view<std::span<TrackingInner>, TrackingPattern>;
+
+    std::array<Inner, 2> v{{{1}, {2}}};
+    Pattern pat{-1};
+
+    bool v_moved = false;
+    std::array<TrackingInner, 2> tracking_v{
+        TrackingInner(InnerTrackingIter(v[0].begin(), &v_moved), InnerTrackingIter(v[0].end())),
+        TrackingInner(InnerTrackingIter(v[1].begin()), InnerTrackingIter(v[1].end()))};
+
+    bool pat_moved = false;
+    TrackingPattern tracking_pat(PatternTrackingIter(pat.begin(), &pat_moved), PatternTrackingIter(pat.end()));
+
+    JWV jwv(tracking_v, tracking_pat);
+    auto it = jwv.begin();
+
+    // Test calling `iter_move` when `it` points to element of `v`
+    assert(!v_moved);
+    assert(iter_move(it) == 1);
+    assert(v_moved);
+
+    // Test calling `iter_move` when `it` points to element of `pat`
+    ++it;
+    assert(!pat_moved);
+    assert(iter_move(it) == -1);
+    assert(pat_moved);
   }
 
   return true;
