@@ -2642,17 +2642,28 @@ DeleteDeadIFuncs(Module &M,
 }
 
 // Follows the use-def chain of \p V backwards until it finds a Function,
-// in which case it collects in \p Versions.
-static void collectVersions(Value *V, SmallVectorImpl<Function *> &Versions) {
+// in which case it collects in \p Versions. Return true on successful
+// use-def chain traversal, false otherwise.
+static bool collectVersions(TargetTransformInfo &TTI, Value *V,
+                            SmallVectorImpl<Function *> &Versions) {
   if (auto *F = dyn_cast<Function>(V)) {
+    if (!TTI.isMultiversionedFunction(*F))
+      return false;
     Versions.push_back(F);
   } else if (auto *Sel = dyn_cast<SelectInst>(V)) {
-    collectVersions(Sel->getTrueValue(), Versions);
-    collectVersions(Sel->getFalseValue(), Versions);
+    if (!collectVersions(TTI, Sel->getTrueValue(), Versions))
+      return false;
+    if (!collectVersions(TTI, Sel->getFalseValue(), Versions))
+      return false;
   } else if (auto *Phi = dyn_cast<PHINode>(V)) {
     for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
-      collectVersions(Phi->getIncomingValue(I), Versions);
+      if (!collectVersions(TTI, Phi->getIncomingValue(I), Versions))
+        return false;
+  } else {
+    // Unknown instruction type. Bail.
+    return false;
   }
+  return true;
 }
 
 // Bypass the IFunc Resolver of MultiVersioned functions when possible. To
@@ -2690,22 +2701,19 @@ static bool OptimizeNonTrivialIFuncs(
     if (Resolver->isInterposable())
       continue;
 
-    // Discover the callee versions.
-    SmallVector<Function *> Callees;
-    for (BasicBlock &BB : *Resolver)
-      if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
-        collectVersions(Ret->getReturnValue(), Callees);
-
-    if (Callees.empty())
-      continue;
-
     TargetTransformInfo &TTI = GetTTI(*Resolver);
 
-    // This IFunc is not FMV.
-    if (any_of(Callees, [&TTI](Function *F) {
-          return !TTI.isMultiversionedFunction(*F);
+    // Discover the callee versions.
+    SmallVector<Function *> Callees;
+    if (any_of(*Resolver, [&TTI, &Callees](BasicBlock &BB) {
+          if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
+            if (!collectVersions(TTI, Ret->getReturnValue(), Callees))
+              return true;
+          return false;
         }))
       continue;
+
+    assert(!Callees.empty() && "Expecting successful collection of versions");
 
     // Cache the feature mask for each callee.
     for (Function *Callee : Callees) {
