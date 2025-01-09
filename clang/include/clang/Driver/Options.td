@@ -4310,10 +4310,6 @@ def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
   NormalizedValues<["All", "This", "None"]>,
   NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
   MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
-def fextend_this_ptr_liveness : Flag<["-"], "fextend-this-ptr-liveness">,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<fextend_variable_liveness_EQ>, AliasArgs<["this"]>,
-  HelpText<"Alias for -fextend-variable-liveness=this.">;
 def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
   Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,
