@@ -904,6 +904,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   }
 
   RecordType::TypeList typeList;
+  if (!parser.parseOptionalLess()) {
+    result.pack(true);
+  }
+
   if (!parser.parseOptionalLBrace()) {
     while (true) {
       llvm::StringRef field;
@@ -917,8 +921,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
       if (parser.parseOptionalComma())
         break;
     }
-    if (parser.parseRBrace())
-      return {};
+    if (parser.parseOptionalGreater()) {
+      if (parser.parseRBrace())
+        return {};
+    }
   }
 
   if (parser.parseGreater())
@@ -945,6 +951,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       printer << ')';
     }
     if (getTypeList().size()) {
+      if (isPacked()) {
+        printer << '<';
+      }
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
@@ -952,6 +961,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
         ch = ',';
       }
       printer << '}';
+      if (isPacked()) {
+        printer << '>';
+      }
     }
     recordTypeVisited.erase(uniqueKey());
   }
