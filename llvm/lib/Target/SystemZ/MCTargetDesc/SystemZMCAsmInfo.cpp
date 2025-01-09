@@ -29,19 +29,14 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   AllowAtInName = true;
   AllowAtAtStartOfIdentifier = true;
   AllowDollarAtStartOfIdentifier = true;
-  AllowHashAtStartOfIdentifier = true;
   AssemblerDialect = AD_HLASM;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   CommentString = "*";
-  DotIsPC = false;
-  EmitGNUAsmStartIndentationMarker = false;
-  EmitLabelsInUpperCase = true;
   ExceptionsType = ExceptionHandling::ZOS;
+  IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;
-  RestrictCommentStringToStartOfStatement = true;
-  StarIsPC = true;
   SupportsDebugInformation = true;
 }
 

@@ -1499,10 +1499,6 @@ def Arith_CmpIOp
                        SignlessIntegerLikeOfAnyRank:$lhs,
                        SignlessIntegerLikeOfAnyRank:$rhs);
 
-  let extraClassDeclaration = [{
-    static arith::CmpIPredicate getPredicateByName(StringRef name);
-  }];
-
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -1545,10 +1541,6 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf",
                        FloatLike:$rhs,
                        DefaultValuedAttr<
                          Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
-
-  let extraClassDeclaration = [{
-    static arith::CmpFPredicate getPredicateByName(StringRef name);
-  }];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;

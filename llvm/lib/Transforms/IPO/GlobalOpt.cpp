@@ -105,7 +105,7 @@ static cl::opt<int> ColdCCRelFreq(
     "coldcc-rel-freq", cl::Hidden, cl::init(2),
     cl::desc(
         "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling"
+        "entry frequency, for a call site to be considered cold for enabling "
         "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,

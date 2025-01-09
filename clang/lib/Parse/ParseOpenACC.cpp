@@ -1003,7 +1003,9 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // the 'update' clause, so we have to handle it here.  U se an assert to
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
-      [[fallthrough]];
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+      break;
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
@@ -1082,13 +1084,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         return OpenACCCanContinue();
       }
 
-      // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
-      // be removed leaving just the 'setIntExprDetails'.
-      if (ClauseKind == OpenACCClauseKind::NumWorkers ||
-          ClauseKind == OpenACCClauseKind::DeviceNum ||
-          ClauseKind == OpenACCClauseKind::VectorLength)
-        ParsedClause.setIntExprDetails(IntExpr.get());
-
+      ParsedClause.setIntExprDetails(IntExpr.get());
       break;
     }
     case OpenACCClauseKind::DType:

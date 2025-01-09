@@ -94,7 +94,7 @@ AMDGPUPreLegalizerCombinerImpl::AMDGPUPreLegalizerCombinerImpl(
     const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI, STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
