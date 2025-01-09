@@ -9868,17 +9868,19 @@ void ASTReader::finishPendingActions() {
       if (!InfoTy.isNull()) {
         TInfo = getContext().CreateTypeSourceInfo(InfoTy);
         if (auto Loc = TInfo->getTypeLoc().getAs<ElaboratedTypeLoc>()) {
-          Loc.setElaboratedKeywordLoc(PendingPreferredNameAttributes[I].ElaboratedTypedefSourceLocation);
-          Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NNS);
-          if (auto TypedefLoc = Loc.getNextTypeLoc().getAs<TypedefTypeLoc>()) {
-            TypedefLoc.setNameLoc(PendingPreferredNameAttributes[I].TypedefSourceLocation);
-          }
+          Loc.setElaboratedKeywordLoc(
+              PendingPreferredNameAttributes[I].ElaboratedTypedefSL);
+          Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NestedNameSL);
+          if (auto TypedefLoc = Loc.getNextTypeLoc().getAs<TypedefTypeLoc>())
+            TypedefLoc.setNameLoc(PendingPreferredNameAttributes[I].TypedefSL);
         }
       }
 
       AttrVec &Attrs = getContext().getDeclAttrs(D);
-      PreferredNameAttr *New = new (Context) PreferredNameAttr(Context, PendingPreferredNameAttributes[I].Info, TInfo);
-      cast<InheritableAttr>(New)->setInherited(PendingPreferredNameAttributes[I].isInherited);
+      PreferredNameAttr *New = new (Context) PreferredNameAttr(
+          Context, PendingPreferredNameAttributes[I].Info, TInfo);
+      cast<InheritableAttr>(New)->setInherited(
+          PendingPreferredNameAttributes[I].isInherited);
       New->setImplicit(PendingPreferredNameAttributes[I].isImplicit);
       New->setPackExpansion(PendingPreferredNameAttributes[I].isPackExpansion);
       Attrs.push_back(New);

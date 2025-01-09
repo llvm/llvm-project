@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTREADER_H
 
-#include "clang/AST/DeclID.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -1160,15 +1159,15 @@ private:
       PendingDeducedVarTypes;
 
   struct PendingPreferredNameAttribute {
-    Decl* D;
+    Decl *D;
     AttributeCommonInfo Info;
     serialization::TypeID TypeID;
     bool isInherited;
     bool isImplicit;
     bool isPackExpansion;
-    SourceLocation ElaboratedTypedefSourceLocation;
-    NestedNameSpecifierLoc NNS;
-    SourceLocation TypedefSourceLocation;
+    SourceLocation ElaboratedTypedefSL;
+    NestedNameSpecifierLoc NestedNameSL;
+    SourceLocation TypedefSL;
   };
   std::deque<PendingPreferredNameAttribute> PendingPreferredNameAttributes;
 

@@ -3144,9 +3144,10 @@ public:
     bool IsRegularKeywordAttribute = readBool();
 
     AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                            AttributeCommonInfo::Kind(ParsedKind),
-                            {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
-                              IsAlignas, IsRegularKeywordAttribute});
+                             AttributeCommonInfo::Kind(ParsedKind),
+                             {AttributeCommonInfo::Syntax(Syntax),
+                              SpellingIndex, IsAlignas,
+                              IsRegularKeywordAttribute});
     return Info;
   }
 
@@ -3164,21 +3165,20 @@ public:
     ASTContext &Context = Reader.getContext();
     Attr *New = nullptr;
     auto Record = *this;
-  #include "clang/Serialization/AttrPCHRead.inc"
+#include "clang/Serialization/AttrPCHRead.inc"
 
     assert(New && "Unable to decode attribute?");
     return New;
   }
 };
-}
-
+} // namespace
 
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   attr::Kind Kind;
   if (auto KindOpt = Record.readAttrKind(); !KindOpt)
     return nullptr;
-  else 
+  else
     Kind = *KindOpt;
 
   AttributeCommonInfo Info = Record.readAttributeCommonInfo();
@@ -3190,7 +3190,7 @@ Attr *ASTRecordReader::readAttr(Decl *D) {
   attr::Kind Kind;
   if (auto KindOpt = Record.readAttrKind(); !KindOpt)
     return nullptr;
-  else 
+  else
     Kind = *KindOpt;
 
   AttributeCommonInfo Info = Record.readAttributeCommonInfo();
@@ -3199,10 +3199,12 @@ Attr *ASTRecordReader::readAttr(Decl *D) {
     bool isImplicit = Record.readInt();
     bool isPackExpansion = Record.readInt();
     serialization::TypeID TypeID = getGlobalTypeID(Record.readInt());
-    SourceLocation SL = Record.readSourceLocation();
-    NestedNameSpecifierLoc NNL = readNestedNameSpecifierLoc();
-    SourceLocation TSL = Record.readSourceLocation();
-    Reader->PendingPreferredNameAttributes.push_back({D, Info, TypeID, isInherited, isImplicit, isPackExpansion, SL, NNL, TSL});
+    SourceLocation ElaboratedTypedefSL = Record.readSourceLocation();
+    NestedNameSpecifierLoc NestedNameSL = readNestedNameSpecifierLoc();
+    SourceLocation TypedefSL = Record.readSourceLocation();
+    Reader->PendingPreferredNameAttributes.push_back(
+        {D, Info, TypeID, isInherited, isImplicit, isPackExpansion,
+         ElaboratedTypedefSL, NestedNameSL, TypedefSL});
     return nullptr;
   }
 
@@ -3211,12 +3213,12 @@ Attr *ASTRecordReader::readAttr(Decl *D) {
 
 /// Reads attributes from the current stream position.
 void ASTRecordReader::readAttributes(AttrVec &Attrs) {
-  for (unsigned I = 0, E = readInt(); I != E; ++I) 
+  for (unsigned I = 0, E = readInt(); I != E; ++I)
     if (auto *A = readAttr())
       Attrs.push_back(A);
 }
 
-void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl* D) {
+void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
     if (auto *A = readAttr(D))
       Attrs.push_back(A);
