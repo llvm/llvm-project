@@ -44,7 +44,7 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
   fputil::get_env(&oldEnv);
   if (sigsetjmp(jumpBuffer, 1) == 0)
     func->call();
-  free(func);
+  delete func;
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
   fputil::set_env(&oldEnv);
