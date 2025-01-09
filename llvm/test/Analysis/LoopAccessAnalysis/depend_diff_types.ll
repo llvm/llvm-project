@@ -237,13 +237,8 @@ exit:
 define void @type_size_equivalence_sink_loopinv_negind(ptr nocapture %vec, i64 %n) {
 ; CHECK-LABEL: 'type_size_equivalence_sink_loopinv_negind'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %ld.i64 = load i64, ptr %gep.minus.iv.4, align 8 ->
-; CHECK-NEXT:            store i32 %ld.i64.i32, ptr %gep.minus.n, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
