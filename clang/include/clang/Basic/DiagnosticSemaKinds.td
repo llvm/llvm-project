@@ -3415,6 +3415,8 @@ def err_typecheck_vector_not_convertable : Error<
   "cannot convert between vector values of different size (%0 and %1)">;
 def err_typecheck_vector_not_convertable_non_scalar : Error<
   "cannot convert between vector and non-scalar values (%0 and %1)">;
+def err_typecheck_vector_not_convertable_non_vector : Error<
+  "cannot convert between vector type %0 and non-vector type %1">;
 def err_typecheck_vector_lengths_not_equal : Error<
   "vector operands do not have the same number of elements (%0 and %1)">;
 def warn_typecheck_vector_element_sizes_not_equal : Warning<

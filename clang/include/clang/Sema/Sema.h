@@ -7429,6 +7429,11 @@ public:
   /// the perspective of SVE bitcasts.
   bool isValidSveBitcast(QualType srcType, QualType destType);
 
+  /// Check for bitcast beween a regular vector type and builtin Neon vector
+  /// type.
+  bool isValidNeonVectorBuiltinTypeBitcast(SourceRange OpRange, QualType SrcTy,
+                                           QualType DstTy);
+
   /// Are the two types matrix types and do they have the same dimensions i.e.
   /// do they have the same number of rows and the same number of columns?
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);

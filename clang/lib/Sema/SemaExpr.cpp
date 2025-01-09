@@ -7530,6 +7530,54 @@ bool Sema::isValidSveBitcast(QualType srcTy, QualType destTy) {
          ValidScalableConversion(destTy, srcTy);
 }
 
+bool Sema::isValidNeonVectorBuiltinTypeBitcast(SourceRange OpRange,
+                                               QualType SrcTy, QualType DstTy) {
+  assert(SrcTy->isNeonVectorBuiltinType() || DstTy->isNeonVectorBuiltinType());
+
+  auto checkCast = [&](QualType BT, QualType OT) -> unsigned {
+    if (OT->isNeonVectorBuiltinType()) {
+      if (BT.getCanonicalType() != OT.getCanonicalType())
+        return diag::err_invalid_conversion_between_vectors;
+      return 0;
+    }
+
+    if (!OT->isVectorType()) {
+      if (!OT->isScalarType())
+        return diag::err_typecheck_vector_not_convertable_non_scalar;
+
+      if (!OT->isIntegralType(Context))
+        return diag::err_typecheck_vector_not_convertable_non_vector;
+    }
+
+    uint64_t OTLen;
+    QualType OTEltTy;
+    if (const VectorType *VT = OT->getAs<VectorType>()) {
+      OTLen = VT->getNumElements();
+      OTEltTy = VT->getElementType();
+    } else {
+      OTLen = 1;
+      OTEltTy = OT;
+    }
+
+    uint64_t BTLen =
+        BT->getAs<BuiltinType>()->getKind() == BuiltinType::MFloat8x8 ? 8u
+                                                                      : 16u;
+    if (BTLen * 8u != OTLen * Context.getTypeSize(OTEltTy))
+      return diag::err_invalid_conversion_between_vectors;
+    return 0;
+  };
+
+  QualType BT = SrcTy;
+  QualType OT = DstTy;
+  if (!SrcTy->isNeonVectorBuiltinType())
+    std::swap(BT, OT);
+
+  if (unsigned msg = checkCast(BT, OT))
+    return Diag(OpRange.getBegin(), msg) << BT << OT << OpRange;
+
+  return true;
+}
+
 bool Sema::areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy) {
   if (!destTy->isMatrixType() || !srcTy->isMatrixType())
     return false;
