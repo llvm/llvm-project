@@ -380,9 +380,9 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 8
 ; CHECK-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 10000, [[TMP24]]
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 10000, [[N_MOD_VF2]]
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC3]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 8
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC3]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT8:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]

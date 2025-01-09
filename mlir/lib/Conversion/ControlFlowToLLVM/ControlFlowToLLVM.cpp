@@ -215,7 +215,6 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-      AssertOpLowering,
       BranchOpLowering,
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
@@ -258,6 +257,7 @@ struct ConvertControlFlowToLLVM
     LLVMTypeConverter converter(ctx, options);
     RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -286,6 +286,7 @@ struct ControlFlowToLLVMDialectInterface
       RewritePatternSet &patterns) const final {
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, patterns);
   }
 };
 } // namespace
