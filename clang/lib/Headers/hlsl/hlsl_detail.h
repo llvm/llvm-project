@@ -33,6 +33,14 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
 
+constexpr vector<uint, 4> d3d_color_to_ubyte4(vector<float, 4> V) {
+  // Use the same scaling factor used by FXC (i.e., 255.001953)
+  // Excerpt from stackoverflow discussion:
+  // "Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5"
+  // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
+  return V.zyxw * 255.001953f;
+}
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_
