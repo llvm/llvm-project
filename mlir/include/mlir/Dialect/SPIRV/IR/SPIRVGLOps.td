@@ -1035,11 +1035,11 @@ def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [Pure]> {
   let summary = "Return distance between two points";
 
   let description = [{
-    Result is the distance between x and y. This is |x - y|, where |x| is the 
-    length of x computed as sqrt(x * x).
+    Result is the distance between p0 and p1, i.e., length(p0 - p1).
 
-    The operands must all be vectors whose component type is floating-point.
-    Result Type must be a scalar floating-point type.
+    The operands must all be a scalar or vector whose component type is floating-point.
+
+    Result Type must be a scalar of the same type as the component type of the operands.
 
     #### Example:
 
@@ -1068,11 +1068,17 @@ def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float> {
   let summary = "Return the cross product of two 3-component vectors";
 
   let description = [{
-    Result is the cross product of x and y, i.e. dot(x,y).
+    Result is the cross product of x and y, i.e., the resulting components are, in order:
 
-    Arguments x and y must be vectors of size 3, of floating-point type.
-    Results are computed per component.
-    The result is a vector of the same type as the inputs.
+    x[1] * y[2] - y[1] * x[2]
+
+    x[2] * y[0] - y[2] * x[0]
+
+    x[0] * y[1] - y[0] * x[1]
+
+    All the operands must be vectors of 3 components of a floating-point type.
+
+    Result Type and the type of all operands must be the same type.
 
     #### Example:
 
@@ -1089,12 +1095,11 @@ def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float
   let summary = "Normalizes a vector operand";
 
   let description = [{
-    Result is the vector v/sqrt(dot(v,v)).
-    The result is undefined if dot(v,v) is less than or equal to 0.
+    Result is the vector in the same direction as x but with a length of 1.
 
-    The operand v must be a vector whose component type is floating-point.
-    The Result Type must be the same type as v.
-    Results are computed per component.
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    Result Type and the type of x must be the same type.
 
     #### Example:
 
@@ -1111,14 +1116,15 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
   let summary = "Calculate reflection direction vector";
 
   let description = [{
-    Result is the reflection direction vector: I - 2 * dot(N, I) * N, where I is 
-    the incident vector and N is the surface orientation vector.
+    For the incident vector I and surface orientation N, the result is the reflection direction:
 
-    N must be normalized to achieve the desired result.
+    I - 2 * dot(N, I) * N
+
+    N must already be normalized in order to achieve the desired result.
 
     The operands must all be a scalar or vector whose component type is floating-point.
-    Result Type and the type of all operands must be the same type. 
-    Results are computed per component.
+
+    Result Type and the type of all operands must be the same type.
 
     #### Example:
 
