@@ -2,18 +2,20 @@
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
-// RUN: %clang_cc1 -verify -fopenmp -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP60
+// RUN: %clang_cc1 -verify -fopenmp -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=52 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
-// RUN %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
-// RUN %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
-// RUN %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -I %S/Inputs -ast-print %s | FileCheck %s --check-prefix=CHECK
 
-// RUN %clang_cc1 -verify -fopenmp-simd -I %S/Inputs -ast-print %s | FileCheck %s
-// RUN %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
-// RUN %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP51
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=52 -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP52
+
+// RUN: %clang_cc1 -verify -fopenmp-simd -I %S/Inputs -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -I %S/Inputs -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -I %S/Inputs -verify %s -ast-print | FileCheck %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -37,10 +39,10 @@ void bazz();
 // OMP50: #pragma omp end declare target{{$}}
 #endif // _OPENMP
 
-#if _OPENMP == 202411
+#if _OPENMP == 202011
 extern "C" {
 void boo_c() {}
-#pragma omp declare target enter(boo_c) indirect
+#pragma omp declare target to(boo_c) indirect
 // OMP51: #pragma omp declare target indirect
 // OMP51: void boo_c() {
 // OMP51: }
@@ -55,27 +57,25 @@ void yoo(){}
 }
 extern "C++" {
 void boo_cpp() {}
-#pragma omp declare target enter(boo_cpp) indirect
-// OMP60: #pragma omp declare target indirect
-// OMP60: void boo_cpp() {
-// OMP60: }
-// OMP60: #pragma omp end declare target
+#pragma omp declare target to(boo_cpp) indirect
+// OMP51: #pragma omp declare target indirect
+// OMP51: void boo_cpp() {
+// OMP51: }
 
 constexpr bool f() {return false;}
 #pragma omp begin declare target indirect(f())
 void zoo() {}
 void xoo();
 #pragma omp end declare target
-#pragma omp declare target enter(zoo) indirect(false)
-// OMP60: #pragma omp declare target indirect(f())
-// OMP60: #pragma omp declare target indirect(false)
-// OMP60: void zoo() {
-// OMP60: }
-// OMP60: #pragma omp end declare target
-// OMP60: #pragma omp declare target indirect(f())
-// OMP60: void xoo();
-// OMP60: #pragma omp end declare target
-
+#pragma omp declare target to(zoo) indirect(false)
+// OMP51: #pragma omp declare target indirect(f())
+// OMP51: #pragma omp declare target indirect(false)
+// OMP51: void zoo() {
+// OMP51: }
+// OMP51: #pragma omp end declare target
+// OMP51: #pragma omp declare target indirect(f())
+// OMP51: void xoo();
+// OMP51: #pragma omp end declare target
 }
 #endif // _OPENMP
 
@@ -229,12 +229,23 @@ void f1() {
 int b1, b2, b3;
 void f2() {
 }
-
-#if (_OPENMP >= 202111)
+#if _OPENMP >= 202111
 #pragma omp declare target enter(b1) enter(b2), enter(b3, f2)
 #else
 #pragma omp declare target to(b1) to(b2), to(b3, f2)
 #endif // _OPENMP == 202111
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: int b1;
+// CHECK: #pragma omp end declare target{{$}}
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: int b2;
+// CHECK: #pragma omp end declare target{{$}}
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: int b3;
+// CHECK: #pragma omp end declare target{{$}}
+// CHECK: #pragma omp declare target{{$}}
+// CHECK: void f2()
+// CHECK: #pragma omp end declare target{{$}}
 
 int c1, c2, c3;
 #pragma omp declare target link(c1) link(c2), link(c3)
@@ -325,7 +336,7 @@ int baz() { return 1; }
 
 #pragma omp declare target
 int abc1() { return 1; }
-#if (_OPENMP >= 202111)
+#if _OPENMP >= 202111
 #pragma omp declare target enter(abc1) device_type(nohost)
 #else
 #pragma omp declare target to(abc1) device_type(nohost)
@@ -368,11 +379,11 @@ int main (int argc, char **argv) {
   baz<float>();
   baz<int>();
 
-#if (_OPENMP >= 202111)
+#if _OPENMP >= 202111
 #pragma omp declare target enter(foo2)
 #else
 #pragma omp declare target to (foo2)
-#endif // _OPENMP == 202111
+#endif
 
   #pragma omp declare target link(x)
   return (0);

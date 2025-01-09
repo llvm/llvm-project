@@ -18407,7 +18407,7 @@ static bool actOnOMPReductionKindClause(
     // Minus(-) operator is not supported in TR11 (OpenMP 6.0). Setting BOK to
     // BO_Comma will automatically diagnose it for OpenMP > 52 as not allowed
     // reduction identifier.
-    if (S.LangOpts.OpenMP > 60)
+    if (S.LangOpts.OpenMP > 52)
       BOK = BO_Comma;
     else
       BOK = BO_Add;

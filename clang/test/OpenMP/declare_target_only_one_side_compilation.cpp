@@ -29,7 +29,7 @@ int G5;
 static int G6;
 #pragma omp end declare target
 
-#pragma omp declare target enter(G5, G6) device_type(nohost)
+#pragma omp declare target to(G5, G6) device_type(nohost)
 
 #pragma omp begin declare target device_type(host)
 int G7;
@@ -43,7 +43,7 @@ static int G10;
 
 int G11;
 static int G12;
-#pragma omp declare target enter(G9, G10, G11, G12) device_type(host)
+#pragma omp declare target to(G9, G10, G11, G12) device_type(host)
 
 // TODO: The code below should probably work but it is not 100% clear.
 #if 0

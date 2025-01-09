@@ -41,7 +41,7 @@ declare **obj3 = &obj2;
 target *S1 = &S;
 #pragma omp end declare target
 #pragma omp declare target(ptr_3)
-#pragma omp declare target enter(c)
+#pragma omp declare target to(c)
 
 // CHECK: #pragma omp declare target
 // CHECK-NEXT: static int variable = 100;
@@ -124,4 +124,3 @@ target *S1 = &S;
 // CHECK-NEXT: #pragma omp declare target
 // CHECK-NEXT: target *S1 = &S;
 // CHECK-NEXT: #pragma omp end declare target
-

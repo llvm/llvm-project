@@ -58,11 +58,7 @@
 
 int dx = 0;
 extern int dx;
-#ifdef OMP5
-#pragma omp declare target enter(dx)
-#else
 #pragma omp declare target to(dx)
-#endif
 
 int dy = 0;
 #pragma omp begin declare target
@@ -266,17 +262,9 @@ struct TTT {
 
 #ifdef OMP5
 void host_fun() {}
-#if _OPENMP == 201511
 #pragma omp declare target to(host_fun) device_type(host)
-#else
-#pragma omp declare target enter(host_fun) device_type(host)
-#endif
 void device_fun() {}
-#if _OPENMP == 201511
 #pragma omp declare target to(device_fun) device_type(nohost)
-#else
-#pragma omp declare target enter(device_fun) device_type(nohost)
-#endif
 // HOST5-NOT: define {{.*}}void {{.*}}device_fun{{.*}}
 // HOST5: define {{.*}}void {{.*}}host_fun{{.*}}
 // HOST5-NOT: define {{.*}}void {{.*}}device_fun{{.*}}

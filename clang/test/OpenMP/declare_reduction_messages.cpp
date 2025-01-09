@@ -96,7 +96,7 @@ T foo(T arg) {
   #pragma omp parallel reduction (red1 : i)
   {
   }
-  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   {
   }
   }
@@ -110,7 +110,7 @@ T foo(T arg) {
   #pragma omp parallel reduction (red1 : i)
   {
   }
-  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+  #pragma omp parallel reduction (red2 : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   {
   }
   }
@@ -127,7 +127,7 @@ int main() {
   #pragma omp parallel reduction (::Class1<int>::fun : c1)
   {
   }
-  #pragma omp parallel reduction (::Class2<int>::fun : i) // expected-error {{incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
+  #pragma omp parallel reduction (::Class2<int>::fun : i) // expected-error {{incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', '&&', '||', 'min' or 'max' or declare reduction for type 'int'}}
   {
   }
   return fun(15) + foo(15); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
