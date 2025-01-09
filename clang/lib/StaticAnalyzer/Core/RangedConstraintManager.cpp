@@ -62,8 +62,8 @@ ProgramStateRef RangedConstraintManager::assumeSym(ProgramStateRef State,
 
         SymbolManager &SymMgr = getSymbolManager();
         QualType DiffTy = SymMgr.getContext().getPointerDiffType();
-        SymbolRef Subtraction = SymMgr.acquire<SymSymExpr>(SSE->getRHS(), BO_Sub,
-                                                       SSE->getLHS(), DiffTy);
+        SymbolRef Subtraction = SymMgr.acquire<SymSymExpr>(
+            SSE->getRHS(), BO_Sub, SSE->getLHS(), DiffTy);
 
         const llvm::APSInt &Zero = getBasicVals().getValue(0, DiffTy);
         Op = BinaryOperator::reverseComparisonOp(Op);

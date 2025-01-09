@@ -1481,8 +1481,8 @@ private:
   std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
-          return State->getSymbolManager().acquire<UnarySymExpr>(Sym, UO_Minus,
-                                                             Sym->getType());
+          return State->getSymbolManager().acquire<UnarySymExpr>(
+              Sym, UO_Minus, Sym->getType());
         },
         Sym->getType());
   }
@@ -1540,7 +1540,8 @@ private:
 
       // Let's find an expression e.g. (x < y).
       BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
-      const SymSymExpr *SymSym = SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
+      const SymSymExpr *SymSym =
+          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
       const RangeSet *QueriedRangeSet = getConstraint(State, SymSym);
 
       // If ranges were not previously found,
