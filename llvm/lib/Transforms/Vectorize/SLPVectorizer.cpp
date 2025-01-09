@@ -6918,13 +6918,13 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     return L1.second > L2.second;
   };
 
-  auto IsMaskedGatherSupported = [&](ArrayRef<LoadInst *> Loads) {
+  auto IsMaskedGatherSupported = [&, TTI = TTI](ArrayRef<LoadInst *> Loads) {
     ArrayRef<Value *> Values(reinterpret_cast<Value *const *>(Loads.begin()),
                              Loads.size());
     Align Alignment = computeCommonAlignment<LoadInst>(Values);
     auto *Ty = getWidenedType(Loads.front()->getType(), Loads.size());
-    return this->TTI->isLegalMaskedGather(Ty, Alignment) &&
-           !this->TTI->forceScalarizeMaskedGather(Ty, Alignment);
+    return TTI->isLegalMaskedGather(Ty, Alignment) &&
+           !TTI->forceScalarizeMaskedGather(Ty, Alignment);
   };
 
   auto GetVectorizedRanges = [this](ArrayRef<LoadInst *> Loads,
@@ -16972,8 +16972,9 @@ void BoUpSLP::optimizeGatherSequence() {
   // and its mask indeces are the same as in the first one or undefs. E.g.
   // shuffle %0, poison, <0, 0, 0, undef> is less defined than shuffle %0,
   // poison, <0, 0, 0, 0>.
-  auto &&IsIdenticalOrLessDefined = [this](Instruction *I1, Instruction *I2,
-                                           SmallVectorImpl<int> &NewMask) {
+  auto &&IsIdenticalOrLessDefined = [TTI = TTI](Instruction *I1,
+                                                Instruction *I2,
+                                                SmallVectorImpl<int> &NewMask) {
     if (I1->getType() != I2->getType())
       return false;
     auto *SI1 = dyn_cast<ShuffleVectorInst>(I1);
@@ -17005,8 +17006,8 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           this->TTI->getNumberOfParts(SI1->getType()) ==
-               this->TTI->getNumberOfParts(
+           TTI->getNumberOfParts(SI1->getType()) ==
+               TTI->getNumberOfParts(
                    getWidenedType(SI1->getType()->getElementType(),
                                   SM1.size() - LastUndefsCnt));
   };
@@ -17767,7 +17768,7 @@ bool BoUpSLP::collectValuesToDemote(
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
-  auto FinalAnalysis = [&]() {
+  auto FinalAnalysis = [&, TTI = TTI]() {
     if (!IsProfitableToDemote)
       return false;
     bool Res = all_of(
@@ -17786,8 +17787,8 @@ bool BoUpSLP::collectValuesToDemote(
       const unsigned VF = E.Scalars.size();
       Type *OrigScalarTy = E.Scalars.front()->getType();
       if (UniqueBases.size() <= 2 ||
-          this->TTI->getNumberOfParts(getWidenedType(OrigScalarTy, VF)) ==
-              this->TTI->getNumberOfParts(getWidenedType(
+          TTI->getNumberOfParts(getWidenedType(OrigScalarTy, VF)) ==
+              TTI->getNumberOfParts(getWidenedType(
                   IntegerType::get(OrigScalarTy->getContext(), BitWidth), VF)))
         ToDemote.push_back(E.Idx);
     }
