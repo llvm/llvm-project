@@ -30,6 +30,7 @@
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_const.h>
+#include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_volatile.h>
@@ -458,7 +459,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 };
 
 template <class _Tp>
-  requires(is_pointer_v<_Tp>)
+  requires(is_pointer_v<_Tp> && is_object_v<remove_pointer_t<_Tp>>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   using __base = __atomic_ref_base<_Tp>;
 
