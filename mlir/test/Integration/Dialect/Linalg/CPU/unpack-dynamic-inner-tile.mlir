@@ -1,5 +1,6 @@
 // DEFINE: %{compile} =  mlir-opt %s \
-// DEFINE:  -transform-interpreter -test-transform-dialect-erase-schedule |\
+// DEFINE:  -transform-interpreter -test-transform-dialect-erase-schedule \
+// DEFINE:  --lower-vector-mask |\
 // DEFINE: mlir-opt \
 // DEFINE:  -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = main
@@ -90,14 +91,19 @@ module @transforms attributes { transform.with_named_sequence } {
     %func_op = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.linalg.decompose_pack_unpack
-      transform.apply_patterns.linalg.decompose_pad
+      transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
+
+    // 3. Vectorize tensor.insert_slice
+    // Vector sizes match the inner tiles in the payload IR.
+    %slice = transform.structured.match ops{["tensor.insert_slice"]} in %func_op : (!transform.op<"func.func">) -> !transform.any_op
+    transform.structured.vectorize %slice vector_sizes [8, 1] : !transform.any_op
 
     // 3. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
       {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
-   // 4. Canonicalize
+    // 4. Canonicalize
     %func_op_bufferized = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op_bufferized {
       transform.apply_patterns.canonicalization
