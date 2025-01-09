@@ -1011,3 +1011,78 @@ define i32 @rotr_i32_add(i32 %x, i32 %y) {
   %r = add i32 %shr, %shl
   ret i32 %r
 }
+
+define i32 @fshr_i32_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshr_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Z]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[Y:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %z
+  %shl = lshr i32 %x, %z
+  %shr = shl i32 %y, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @fshl_i32_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @fshl_i32_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 32, [[Z:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 32, %z
+  %shl = shl i32 %y, %z
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotl_i32_add_greater(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotl_i32_add_greater(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 33, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 33, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @rotr_i32_add_greater(i32 %x, i32 %y) {
+; CHECK-LABEL: @rotr_i32_add_greater(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 34, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = shl i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 34, %y
+  %shl = lshr i32 %x, %y
+  %shr = shl i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
+
+define i32 @not_rotl_i32_add_less(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_rotl_i32_add_less(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[Y:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], [[SUB]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[SHR]], [[SHL]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sub = sub i32 31, %y
+  %shl = shl i32 %x, %y
+  %shr = lshr i32 %x, %sub
+  %r = add i32 %shr, %shl
+  ret i32 %r
+}
