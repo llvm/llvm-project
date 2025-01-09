@@ -541,6 +541,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
 #if LLPC_BUILD_NPI
   initializeAMDGPULowerVGPREncodingPass(*PR);
   initializeAMDGPUIdxRegAllocPass(*PR);
+  initializeAMDGPUPrivateObjectVGPRsPass(*PR);
 #endif /* LLPC_BUILD_NPI */
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
@@ -1535,6 +1536,11 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID);
 
+#if LLPC_BUILD_NPI
+  if (isPassEnabled(EnablePromotePrivate))
+    insertPass(&PHIEliminationID, &AMDGPUPrivateObjectVGPRsID);
+
+#endif /* LLPC_BUILD_NPI */
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 

@@ -74,6 +74,7 @@ FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 #if LLPC_BUILD_NPI
 FunctionPass *createAMDGPUIdxRegAllocPass();
+FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
 #endif /* LLPC_BUILD_NPI */
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
@@ -281,6 +282,11 @@ extern char &AMDGPURegPressAnalysisID;
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
 
+#if LLPC_BUILD_NPI
+void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
+extern char &AMDGPUPrivateObjectVGPRsID;
+
+#endif /* LLPC_BUILD_NPI */
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);

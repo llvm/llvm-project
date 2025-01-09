@@ -877,12 +877,13 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 #if LLPC_BUILD_NPI
     assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
+            static_cast<uint64_t>(PGMRSrc3) == 0)); // Dummy comment
 #else /* LLPC_BUILD_NPI */
     assert(STM.hasGFX90AInsts() ||
            (CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(
                 PGMRSrc3) &&
-#endif /* LLPC_BUILD_NPI */
             static_cast<uint64_t>(PGMRSrc3) == 0));
+#endif /* LLPC_BUILD_NPI */
     if (STM.hasGFX90AInsts()) {
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
