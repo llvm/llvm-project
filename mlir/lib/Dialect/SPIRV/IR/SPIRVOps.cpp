@@ -2115,17 +2115,19 @@ LogicalResult spirv::GLDistanceOp::verify() {
   FloatType resultFloatType = llvm::dyn_cast<FloatType>(resultType);
 
   if (!p0FloatType || !p1FloatType || !resultFloatType)
-    return emitOpError("operands and result must be float scalar or vector of float"); 
+    return emitOpError(
+        "operands and result must be float scalar or vector of float");
 
   if (p0FloatType != resultFloatType || p1FloatType != resultFloatType)
     return emitOpError("operand and result element types must match");
 
   if (auto p0Vec = llvm::dyn_cast<VectorType>(p0Type)) {
-    if (!llvm::dyn_cast<VectorType>(p1Type) || 
+    if (!llvm::dyn_cast<VectorType>(p1Type) ||
         p0Vec.getShape() != llvm::dyn_cast<VectorType>(p1Type).getShape())
       return emitOpError("vector operands must have same shape");
   } else if (llvm::isa<VectorType>(p1Type)) {
-    return emitOpError("expected both operands to be scalars or both to be vectors");
+    return emitOpError(
+        "expected both operands to be scalars or both to be vectors");
   }
 
   return success();
