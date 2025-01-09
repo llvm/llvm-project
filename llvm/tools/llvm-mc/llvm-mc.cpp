@@ -569,7 +569,7 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->initSections(true, *STI);
+      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }

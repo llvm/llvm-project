@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx906 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX906-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX940-ERR %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx950 -show-encoding < %s | FileCheck --check-prefix=GFX950 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx906 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX906-ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX940-ERR %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding < %s | FileCheck --check-prefix=GFX950 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck -check-prefix=GFX12-ERR %s
 
 v_cvt_pk_bf16_f32 v5, v1, v2
 // GFX906-ERR: error: instruction not supported on this GPU

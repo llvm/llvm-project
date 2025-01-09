@@ -67,13 +67,13 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                                         \
+    static __attribute__((used)) type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                   \
     __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
     __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                              \
+    inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
@@ -94,7 +94,7 @@ _LIBCPP_END_NAMESPACE_STD
     [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
-    bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                              \
+    inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
       return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \

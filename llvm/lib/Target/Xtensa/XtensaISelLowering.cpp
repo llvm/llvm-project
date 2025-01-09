@@ -506,7 +506,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Memcpy = DAG.getMemcpy(
           Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
           /*isVolatile=*/false, /*AlwaysInline=*/false,
-          /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+          /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+          MachinePointerInfo());
       MemOpChains.push_back(Memcpy);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
@@ -746,7 +747,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
       return Op;
     // Check if use node maybe lowered to the ADDMI instruction
     SDNode &OpNode = *Op.getNode();
-    if ((OpNode.hasOneUse() && OpNode.use_begin()->getOpcode() == ISD::ADD) &&
+    if ((OpNode.hasOneUse() && OpNode.user_begin()->getOpcode() == ISD::ADD) &&
         isShiftedInt<16, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
@@ -1319,10 +1320,12 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
   case Xtensa::S8I:
   case Xtensa::S16I:
   case Xtensa::S32I:
+  case Xtensa::S32I_N:
   case Xtensa::L8UI:
   case Xtensa::L16SI:
   case Xtensa::L16UI:
-  case Xtensa::L32I: {
+  case Xtensa::L32I:
+  case Xtensa::L32I_N: {
     // Insert memory wait instruction "memw" before volatile load/store as it is
     // implemented in gcc. If memoperands is empty then assume that it aslo
     // maybe volatile load/store and insert "memw".

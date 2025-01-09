@@ -4495,7 +4495,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     //
     int numUses = 0;
     int nonAddCount = 0;
-    for (const SDNode *User : N0.getNode()->uses()) {
+    for (const SDNode *User : N0.getNode()->users()) {
       numUses++;
       if (User->getOpcode() != ISD::FADD)
         ++nonAddCount;
@@ -4523,7 +4523,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
         opIsLive = true;
 
       if (!opIsLive)
-        for (const SDNode *User : left->uses()) {
+        for (const SDNode *User : left->users()) {
           int orderNo3 = User->getIROrder();
           if (orderNo3 > orderNo) {
             opIsLive = true;
@@ -4532,7 +4532,7 @@ PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
         }
 
       if (!opIsLive)
-        for (const SDNode *User : right->uses()) {
+        for (const SDNode *User : right->users()) {
           int orderNo3 = User->getIROrder();
           if (orderNo3 > orderNo) {
             opIsLive = true;
@@ -4730,7 +4730,7 @@ static SDValue PerformREMCombine(SDNode *N,
   const SDValue &Num = N->getOperand(0);
   const SDValue &Den = N->getOperand(1);
 
-  for (const SDNode *U : Num->uses()) {
+  for (const SDNode *U : Num->users()) {
     if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
         U->getOperand(1) == Den) {
       // Num % Den -> Num - (Num / Den) * Den
