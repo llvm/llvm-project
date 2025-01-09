@@ -38,7 +38,7 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
-inline bool FloatToIntIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_f2i_rm_ftz:
   case Intrinsic::nvvm_f2i_rn_ftz:
@@ -106,7 +106,7 @@ inline bool FloatToIntIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   return false;
 }
 
-inline bool FloatToIntIntrinsicConvertsToSignedInt(Intrinsic::ID IntrinsicID) {
+inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   // f2i
   case Intrinsic::nvvm_f2i_rm:
@@ -174,7 +174,7 @@ inline bool FloatToIntIntrinsicConvertsToSignedInt(Intrinsic::ID IntrinsicID) {
 }
 
 inline APFloat::roundingMode
-GetFloatToIntRoundingMode(Intrinsic::ID IntrinsicID) {
+GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   // RM:
   case Intrinsic::nvvm_f2i_rm:
