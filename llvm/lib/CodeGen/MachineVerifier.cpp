@@ -1277,7 +1277,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
         if (MMO.getRanges()) {
           auto operandBits = [](const MDOperand &o) -> unsigned {
-            ConstantInt *i = mdconst::dyn_extract<ConstantInt>(o);
+            ConstantInt *i = mdconst::extract<ConstantInt>(o);
             if (!i->isNegative())
               return i->getValue().getActiveBits();
             APInt reversed(i->getValue());
