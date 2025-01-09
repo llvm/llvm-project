@@ -48,6 +48,8 @@ Breaking changes
   was a binutils-internal relocation used during relaxation, and was not
   emitted by compilers/assemblers.
 
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
 * ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.

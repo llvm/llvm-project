@@ -5,7 +5,7 @@
 ; RUN: opt -module-summary %t/f.s -o %t/f.o
 ; RUN: opt -module-summary %t/g.s -o %t/g.o
 ; RUN: %lld --time-trace --time-trace-granularity=0 -dylib %t/f.o %t/g.o -o %t/libTest.dylib
-; RUN: cat %t/libTest.dylib.time-trace \
+; RUN: cat %t/libTest.dylib.time-trace.json \
 ; RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 ; RUN:   | FileCheck %s
 

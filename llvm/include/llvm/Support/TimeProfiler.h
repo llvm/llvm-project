@@ -83,6 +83,8 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
+static constexpr const auto TimeTraceFileExtension = ".time-trace.json";
+
 // Type of the time trace event.
 enum class TimeTraceEventType {
   // Complete events have a duration (start and end time points) and are marked
@@ -137,7 +139,7 @@ void timeTraceProfilerWrite(raw_pwrite_stream &OS);
 
 /// Write profiling data to a file.
 /// The function will write to \p PreferredFileName if provided, if not
-/// then will write to \p FallbackFileName appending .time-trace.
+/// then will write to \p FallbackFileName appending .time-trace.json.
 /// Returns a StringError indicating a failure if the function is
 /// unable to open the file for writing.
 Error timeTraceProfilerWrite(StringRef PreferredFileName,
