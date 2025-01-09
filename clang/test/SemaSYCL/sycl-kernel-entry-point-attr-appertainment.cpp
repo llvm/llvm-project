@@ -170,7 +170,7 @@ struct B3 {
 };
 
 // expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
-namespace bad4 [[clang::sycl_kernel_entry_point(BADKN<4>)]] {}
+namespace [[clang::sycl_kernel_entry_point(BADKN<4>)]] bad4 {}
 
 #if __cplusplus >= 202002L
 // expected-error@+2 {{'sycl_kernel_entry_point' attribute only applies to functions}}
