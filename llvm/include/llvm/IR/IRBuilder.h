@@ -2688,10 +2688,6 @@ public:
   /// Create an assume intrinsic call that represents an dereferencable
   /// assumption on the provided pointer.
   CallInst *CreateDereferenceableAssumption(Value *PtrValue, Value *SizeValue);
-
-  /// Create an assume intrinsic call that represents a nonnull assumption
-  /// on the provided pointer.
-  CallInst *CreateNonNullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting

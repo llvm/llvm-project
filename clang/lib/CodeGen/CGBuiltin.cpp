@@ -3848,7 +3848,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       SizeValue =
           Builder.CreateIntCast(SizeValue, IntPtrTy, false, "casted.size");
     Builder.CreateDereferenceableAssumption(PtrValue, SizeValue);
-    Builder.CreateNonNullAssumption(PtrValue);
     return RValue::get(nullptr);
   }
   case Builtin::BI__assume:

@@ -7,7 +7,6 @@
 // CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 10) ]
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0]]) ]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -24,7 +23,6 @@ int test1(int *a) {
 // CHECK-NEXT:    store ptr [[A:%.*]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 32) ]
-// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP0]]) ]
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
