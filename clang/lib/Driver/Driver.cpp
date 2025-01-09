@@ -1398,7 +1398,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   bool HasConfigFileTail = !ContainsError && CfgOptionsTail;
 
   // All arguments, from both config file and command line.
-  InputArgList Args = HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions);
+  InputArgList Args =
+      HasConfigFileHead ? std::move(*CfgOptionsHead) : std::move(*CLOptions);
 
   if (HasConfigFileHead)
     for (auto *Opt : *CLOptions)
