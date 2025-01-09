@@ -1173,7 +1173,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
   // since:
   // 1) it has a zero tag
   // 2) the shadow memory corresponding to address 0 is initialized to zero and
-  // never updated.
+  //    never updated.
   // We can therefore elide the tag check.
   llvm::KnownBits Known(DL.getPointerTypeSizeInBits(Addr->getType()));
   llvm::computeKnownBits(Addr, Known, DL);
