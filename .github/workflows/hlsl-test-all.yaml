@@ -133,7 +133,7 @@ jobs:
             mkdir build
             cd build
             cmake -G Ninja -DCMAKE_BUILD_TYPE=${{ inputs.BuildType }} -C ${{ github.workspace }}/DXC/cmake/caches/PredefinedParams.cmake -C ${{ github.workspace }}/OffloadTest/cmake/caches/sccache.cmake -DHLSL_DISABLE_SOURCE_GENERATION=On ${{ github.workspace }}/DXC/
-            ninja
+            ninja dxv llvm-dis
       - name: Build LLVM
         run: |
             cd llvm-project
