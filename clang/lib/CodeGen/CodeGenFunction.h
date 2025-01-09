@@ -1620,6 +1620,13 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
+  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
+
+  void markStmtAsUsed(bool Skipped, const Stmt *S) {
+    PGO.markStmtAsUsed(Skipped, S);
+  }
+  void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {

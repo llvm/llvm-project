@@ -939,12 +939,11 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
                m_OneUse(m_Shift(m_Value(Y), m_Value(Shift)))))
       return nullptr;
     if (!match(I.getOperand(1 - ShOpnum),
-               m_BinOp(m_Value(ShiftedX), m_Value(Mask))))
+               m_c_BinOp(m_CombineAnd(
+                             m_OneUse(m_Shift(m_Value(X), m_Specific(Shift))),
+                             m_Value(ShiftedX)),
+                         m_Value(Mask))))
       return nullptr;
-
-    if (!match(ShiftedX, m_OneUse(m_Shift(m_Value(X), m_Specific(Shift)))))
-      return nullptr;
-
     // Make sure we are matching instruction shifts and not ConstantExpr
     auto *IY = dyn_cast<Instruction>(I.getOperand(ShOpnum));
     auto *IX = dyn_cast<Instruction>(ShiftedX);
