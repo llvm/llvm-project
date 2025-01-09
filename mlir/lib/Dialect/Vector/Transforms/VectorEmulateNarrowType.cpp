@@ -1193,7 +1193,7 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
                                       Value subByteVec) {
   auto srcVecType = cast<VectorType>(subByteVec.getType());
   int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
-  assert(8 % srcBitwidth == 0 && "Invalid source bitwidth");
+  assert(8 % srcBitwidth == 0 && "Unsupported sub-byte type (not a divisor of i8)");
   int64_t bitwidthFactor = 8 / srcBitwidth;
   SmallVector<int64_t> vecShape(srcVecType.getShape());
   // Adjust last dimension of the vector, so the total size remains the same.
@@ -1207,7 +1207,7 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
 /// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
 /// Example for a single element:
-/// extract numBits=2 starting at bitIdx=2
+/// Extract numBits=2 starting at bitIdx=2
 /// src     = [0 | 1 | 0 | 1 | 1 | 1 | 1 | 0]
 /// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
 /// target  = [.   .   .   .   ^   ^   .   .]
@@ -1244,7 +1244,7 @@ static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
 /// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
 /// Example for a single element:
-/// extract numBits=2 starting at bitIdx=2
+/// Extract numBits=2 starting at bitIdx=2
 /// src     = [0 | 1 | 0 | 1 | 1 | 0 | 1 | 0]
 /// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
 /// target  = [.   .   .   .   ^   ^   .   .]
