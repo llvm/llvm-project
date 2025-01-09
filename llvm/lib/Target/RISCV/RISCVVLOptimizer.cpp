@@ -983,6 +983,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+  // Vector Single-Width Floating-Point Add/Subtract Instructions
+  case RISCV::VFADD_VF:
+  case RISCV::VFADD_VV:
+  case RISCV::VFSUB_VF:
+  case RISCV::VFSUB_VV:
+  case RISCV::VFRSUB_VF:
   // Single-Width Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFCVT_XU_F_V:
   case RISCV::VFCVT_X_F_V:
