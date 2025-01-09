@@ -1342,9 +1342,9 @@ body: |
 name: vwred_vs2
 body: |
   bb.0:
-    ; CHECK-LABEL: name: vred_vs2
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %y:vr = PseudoVREDAND_VS_M1_E8 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-LABEL: name: vwred_vs2
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVWREDSUM_VS_M1_E8 $noreg, $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
     %y:vr = PseudoVWREDSUM_VS_M1_E8 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
@@ -1382,7 +1382,7 @@ body: |
 name: vwred_incompatible_emul
 body: |
   bb.0:
-    ; CHECK-LABEL: name: vwred_vs1_incompatible_emul
+    ; CHECK-LABEL: name: vwred_incompatible_emul
     ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVWREDSUM_VS_MF2_E8 $noreg, %x, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0

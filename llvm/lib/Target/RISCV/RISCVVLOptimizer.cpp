@@ -711,8 +711,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 
   // Vector Widening Integer Reduction Instructions
-  // The Dest and VS1 read only element 0 for the vector register. Return 2*EEW
-  // for these. VS2 has EEW=SEW and EMUL=LMUL.
+  // The Dest and VS1 read only element 0 for the vector register. Return
+  // 2*EEW for these. VS2 has EEW=SEW and EMUL=LMUL.
   case RISCV::VWREDSUM_VS:
   case RISCV::VWREDSUMU_VS:
   // Vector Widening Floating-Point Reduction Instructions
@@ -720,10 +720,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWREDUSUM_VS: {
     bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    if (MO.getOperandNo() == 2)
-      return OperandInfo(
-          RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(Log2EEW, MI), Log2EEW);
-    return OperandInfo(Log2EEW);
+    return Log2EEW;
   }
 
   default:
@@ -745,6 +742,8 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   switch (RVV->BaseInstr) {
   // Vector Reduction Operations
   // Vector Single-Width Integer Reduction Instructions
+  // Vector Widening Integer Reduction Instructions
+  // Vector Widening Floating-Point Reduction Instructions
   // The Dest and VS1 only read element 0 of the vector register. Return just
   // the EEW for these.
   case RISCV::VREDAND_VS:
@@ -755,6 +754,10 @@ getOperandInfo(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VREDOR_VS:
   case RISCV::VREDSUM_VS:
   case RISCV::VREDXOR_VS:
+  case RISCV::VWREDSUM_VS:
+  case RISCV::VWREDSUMU_VS:
+  case RISCV::VFWREDOSUM_VS:
+  case RISCV::VFWREDUSUM_VS:
     if (MO.getOperandNo() != 2)
       return OperandInfo(*Log2EEW);
     break;
