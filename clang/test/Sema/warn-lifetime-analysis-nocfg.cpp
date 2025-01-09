@@ -815,12 +815,18 @@ struct S {
 struct Q {
   const S* get() const [[clang::lifetimebound]];
 };
+
+std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
+
 void test1() {
   std::string_view k1 = S().sv; // OK
   std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
   
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
 }
 
 struct Bar {};
