@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @add(%arg0: !s32i, %arg1: !s32i) -> !s32i
+  cir.func @call_with_side_effect() {
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(all)
+    %3 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %4 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    cir.return
+  }
+  // CHECK-LABEL: @call_with_side_effect()
+  //      CHECK:    %{{.+}} = cir.call @add(%{{.+}}, %{{.+}}) : (!s32i, !s32i) -> !s32i
+  // CHECK-NEXT:    %{{.+}} = cir.call @add(%{{.+}}, %{{.+}}) : (!s32i, !s32i) -> !s32i side_effect(pure)
+  // CHECK-NEXT:    %{{.+}} = cir.call @add(%{{.+}}, %{{.+}}) : (!s32i, !s32i) -> !s32i side_effect(const)
+  //      CHECK:  }
+}

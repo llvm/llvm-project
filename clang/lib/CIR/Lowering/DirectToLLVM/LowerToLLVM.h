@@ -31,6 +31,11 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
 mlir::LLVM::CConv convertCallingConv(cir::CallingConv callinvConv);
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
+
 void buildCtorDtorList(
     mlir::ModuleOp module, mlir::StringRef globalXtorName,
     mlir::StringRef llvmXtorName,

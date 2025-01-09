@@ -367,7 +367,8 @@ public:
                               CIRGenCalleeInfo CalleeInfo,
                               mlir::NamedAttrList &Attrs,
                               cir::CallingConv &callingConv,
-                              bool AttrOnCallSite, bool IsThunk);
+                              cir::SideEffect &sideEffect, bool AttrOnCallSite,
+                              bool IsThunk);
 
   /// Helper function for getDefaultFunctionAttributes. Builds a set of function
   /// attributes which can be simply added to a function.

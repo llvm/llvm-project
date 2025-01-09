@@ -2681,10 +2681,11 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl GD,
                                             cir::FuncOp func, bool isThunk) {
   // TODO(cir): More logic of constructAttributeList is needed.
   cir::CallingConv callingConv;
+  cir::SideEffect sideEffect;
 
   // Initialize PAL with existing attributes to merge attributes.
   mlir::NamedAttrList PAL{func.getExtraAttrs().getElements().getValue()};
-  constructAttributeList(func.getName(), info, GD, PAL, callingConv,
+  constructAttributeList(func.getName(), info, GD, PAL, callingConv, sideEffect,
                          /*AttrOnCallSite=*/false, isThunk);
   func.setExtraAttrsAttr(cir::ExtraFuncAttributesAttr::get(
       &getMLIRContext(), PAL.getDictionary(&getMLIRContext())));

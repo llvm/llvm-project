@@ -652,10 +652,11 @@ public:
                            mlir::Type returnType = cir::VoidType(),
                            mlir::ValueRange operands = mlir::ValueRange(),
                            cir::CallingConv callingConv = cir::CallingConv::C,
+                           cir::SideEffect sideEffect = cir::SideEffect::All,
                            cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
 
-    cir::CallOp callOp =
-        create<cir::CallOp>(loc, callee, returnType, operands, callingConv);
+    cir::CallOp callOp = create<cir::CallOp>(loc, callee, returnType, operands,
+                                             callingConv, sideEffect);
 
     if (extraFnAttr) {
       callOp->setAttr("extra_attrs", extraFnAttr);
@@ -671,10 +672,11 @@ public:
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
                            mlir::ValueRange operands = mlir::ValueRange(),
                            cir::CallingConv callingConv = cir::CallingConv::C,
+                           cir::SideEffect sideEffect = cir::SideEffect::All,
                            cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        callingConv, extraFnAttr);
+                        callingConv, sideEffect, extraFnAttr);
   }
 
   cir::CallOp
@@ -682,21 +684,23 @@ public:
                        cir::FuncType fn_type,
                        mlir::ValueRange operands = mlir::ValueRange(),
                        cir::CallingConv callingConv = cir::CallingConv::C,
+                       cir::SideEffect sideEffect = cir::SideEffect::All,
                        cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
 
     llvm::SmallVector<mlir::Value, 4> resOperands({ind_target});
     resOperands.append(operands.begin(), operands.end());
 
     return createCallOp(loc, mlir::SymbolRefAttr(), fn_type.getReturnType(),
-                        resOperands, callingConv, extraFnAttr);
+                        resOperands, callingConv, sideEffect, extraFnAttr);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::ValueRange operands = mlir::ValueRange(),
                            cir::CallingConv callingConv = cir::CallingConv::C,
+                           cir::SideEffect sideEffect = cir::SideEffect::All,
                            cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
     return createCallOp(loc, callee, cir::VoidType(), operands, callingConv,
-                        extraFnAttr);
+                        sideEffect, extraFnAttr);
   }
 
   cir::CallOp
@@ -705,10 +709,11 @@ public:
                   mlir::Type returnType = cir::VoidType(),
                   mlir::ValueRange operands = mlir::ValueRange(),
                   cir::CallingConv callingConv = cir::CallingConv::C,
+                  cir::SideEffect sideEffect = cir::SideEffect::All,
                   cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
     cir::CallOp tryCallOp =
         create<cir::CallOp>(loc, callee, returnType, operands, callingConv,
-                            /*exception=*/getUnitAttr());
+                            sideEffect, /*exception=*/getUnitAttr());
     if (extraFnAttr) {
       tryCallOp->setAttr("extra_attrs", extraFnAttr);
     } else {
@@ -724,20 +729,22 @@ public:
   createTryCallOp(mlir::Location loc, cir::FuncOp callee,
                   mlir::ValueRange operands,
                   cir::CallingConv callingConv = cir::CallingConv::C,
+                  cir::SideEffect sideEffect = cir::SideEffect::All,
                   cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
     return createTryCallOp(loc, mlir::SymbolRefAttr::get(callee),
                            callee.getFunctionType().getReturnType(), operands,
-                           callingConv, extraFnAttr);
+                           callingConv, sideEffect, extraFnAttr);
   }
 
   cir::CallOp
   createIndirectTryCallOp(mlir::Location loc, mlir::Value ind_target,
                           cir::FuncType fn_type, mlir::ValueRange operands,
-                          cir::CallingConv callingConv = cir::CallingConv::C) {
+                          cir::CallingConv callingConv = cir::CallingConv::C,
+                          cir::SideEffect sideEffect = cir::SideEffect::All) {
     llvm::SmallVector<mlir::Value, 4> resOperands({ind_target});
     resOperands.append(operands.begin(), operands.end());
     return createTryCallOp(loc, mlir::SymbolRefAttr(), fn_type.getReturnType(),
-                           resOperands, callingConv);
+                           resOperands, callingConv, sideEffect);
   }
 
   struct GetMethodResults {

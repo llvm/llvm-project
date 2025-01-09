@@ -99,4 +99,23 @@ module {
   // LLVM-NEXT:   %2 = call i32 (i32, ...) %1(i32 0, i32 0)
   // LLVM-NEXT:   ret i32 %2
 
+  cir.func private @add(%arg0: !s32i, %arg1: !s32i) -> !s32i
+
+  cir.func @call_with_side_effect() {
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(all)
+    %3 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %4 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    cir.return
+  }
+
+  // LLVM: @call_with_side_effect
+  // LLVM:   %{{.+}} = call i32 @add(i32 0, i32 1)
+  // LLVM:   %{{.+}} = call i32 @add(i32 0, i32 1) #[[#pure:]]
+  // LLVM:   %{{.+}} = call i32 @add(i32 0, i32 1) #[[#const:]]
+  // LLVM: }
+  // LLVM: attributes #[[#pure]] = { nounwind willreturn memory(read) }
+  // LLVM: attributes #[[#const]] = { nounwind willreturn memory(none) }
+
 } // end module

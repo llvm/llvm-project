@@ -345,12 +345,10 @@ static void AddAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
 ///     attributes that restrict how the frontend generates code must be
 ///     added here rather than getDefaultFunctionAttributes.
 ///
-void CIRGenModule::constructAttributeList(StringRef Name,
-                                          const CIRGenFunctionInfo &FI,
-                                          CIRGenCalleeInfo CalleeInfo,
-                                          mlir::NamedAttrList &funcAttrs,
-                                          cir::CallingConv &callingConv,
-                                          bool AttrOnCallSite, bool IsThunk) {
+void CIRGenModule::constructAttributeList(
+    StringRef Name, const CIRGenFunctionInfo &FI, CIRGenCalleeInfo CalleeInfo,
+    mlir::NamedAttrList &funcAttrs, cir::CallingConv &callingConv,
+    cir::SideEffect &sideEffect, bool AttrOnCallSite, bool IsThunk) {
   // Implementation Disclaimer
   //
   // UnimplementedFeature and asserts are used throughout the code to track
@@ -364,6 +362,7 @@ void CIRGenModule::constructAttributeList(StringRef Name,
 
   // Collect function CIR attributes from the CC lowering.
   callingConv = FI.getEffectiveCallingConvention();
+  sideEffect = cir::SideEffect::All;
   // TODO: NoReturn, cmse_nonsecure_call
 
   // Collect function CIR attributes from the callee prototype if we have one.
@@ -421,8 +420,10 @@ void CIRGenModule::constructAttributeList(StringRef Name,
     if (TargetDecl->hasAttr<ConstAttr>()) {
       // gcc specifies that 'const' functions have greater restrictions than
       // 'pure' functions, so they also cannot have infinite loops.
+      sideEffect = cir::SideEffect::Const;
     } else if (TargetDecl->hasAttr<PureAttr>()) {
       // gcc specifies that 'pure' functions cannot have infinite loops.
+      sideEffect = cir::SideEffect::Pure;
     } else if (TargetDecl->hasAttr<NoAliasAttr>()) {
     }
 
@@ -466,11 +467,13 @@ void CIRGenModule::constructAttributeList(StringRef Name,
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, funcAttrs);
 }
 
-static cir::CIRCallOpInterface emitCallLikeOp(
-    CIRGenFunction &CGF, mlir::Location callLoc, cir::FuncType indirectFuncTy,
-    mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
-    SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
-    cir::CallingConv callingConv, cir::ExtraFuncAttributesAttr extraFnAttrs) {
+static cir::CIRCallOpInterface
+emitCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
+               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
+               cir::FuncOp directFuncOp,
+               SmallVectorImpl<mlir::Value> &CIRCallArgs, bool isInvoke,
+               cir::CallingConv callingConv, cir::SideEffect sideEffect,
+               cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
   auto getOrCreateSurroundingTryOp = [&]() {
     // In OG, we build the landing pad for this scope. In CIR, we emit a
@@ -521,10 +524,11 @@ static cir::CIRCallOpInterface emitCallLikeOp(
     assert(callingConv == cir::CallingConv::C && "NYI");
     if (indirectFuncTy) {
       callOpWithExceptions = builder.createIndirectTryCallOp(
-          callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs);
+          callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs, callingConv,
+          sideEffect);
     } else {
-      callOpWithExceptions =
-          builder.createTryCallOp(callLoc, directFuncOp, CIRCallArgs);
+      callOpWithExceptions = builder.createTryCallOp(
+          callLoc, directFuncOp, CIRCallArgs, callingConv, sideEffect);
     }
     callOpWithExceptions->setAttr("extra_attrs", extraFnAttrs);
 
@@ -544,12 +548,12 @@ static cir::CIRCallOpInterface emitCallLikeOp(
   if (indirectFuncTy) {
     // TODO(cir): Set calling convention for indirect calls.
     assert(callingConv == cir::CallingConv::C && "NYI");
-    return builder.createIndirectCallOp(callLoc, indirectFuncVal,
-                                        indirectFuncTy, CIRCallArgs,
-                                        cir::CallingConv::C, extraFnAttrs);
+    return builder.createIndirectCallOp(
+        callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs,
+        cir::CallingConv::C, sideEffect, extraFnAttrs);
   }
   return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs, callingConv,
-                              extraFnAttrs);
+                              sideEffect, extraFnAttrs);
 }
 
 static RValue getRValueThroughMemory(mlir::Location loc,
@@ -755,8 +759,9 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &CallInfo,
     FnName = calleeFnOp.getName();
 
   cir::CallingConv callingConv;
+  cir::SideEffect sideEffect;
   CGM.constructAttributeList(FnName, CallInfo, Callee.getAbstractInfo(), Attrs,
-                             callingConv,
+                             callingConv, sideEffect,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
@@ -837,7 +842,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &CallInfo,
 
     cir::CIRCallOpInterface callLikeOp = emitCallLikeOp(
         *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
-        CIRCallArgs, isInvoke, callingConv, extraFnAttrs);
+        CIRCallArgs, isInvoke, callingConv, sideEffect, extraFnAttrs);
 
     if (E)
       callLikeOp->setAttr("ast",

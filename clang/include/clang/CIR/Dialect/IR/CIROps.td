@@ -3574,6 +3574,39 @@ def DeleteArrayOp : CIR_Op<"delete.array">,
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
+def SE_All : I32EnumAttrCase<"All", 1, "all">;
+def SE_Pure : I32EnumAttrCase<"Pure", 2, "pure">;
+def SE_Const : I32EnumAttrCase<"Const", 3, "const">;
+
+def SideEffect : I32EnumAttr<
+    "SideEffect", "allowed side effects of a function",
+    [SE_All, SE_Pure, SE_Const]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of the callee
+    of a call operation. This is an enumeration attribute and all possible
+    enumerators are:
+
+    - all: The callee can have any side effects. This is the default if no side
+      effects are explicitly listed.
+    - pure: The callee may read data from memory, but it cannot write data to
+      memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The callee may not read or write data from memory. This has the
+      same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(all)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+  let cppNamespace = "::cir";
+}
+
 class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     Op<CIR_Dialect, mnemonic,
        !listconcat(extra_traits,
@@ -3624,6 +3657,7 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     OptionalAttr<FlatSymbolRefAttr>:$callee,
     Variadic<CIR_AnyType>:$arg_ops,
     DefaultValuedAttr<CallingConv, "CallingConv::C">:$calling_conv,
+    DefaultValuedAttr<SideEffect, "SideEffect::All">:$side_effect,
     ExtraFuncAttr:$extra_attrs,
     OptionalAttr<ASTCallExprInterface>:$ast
   );
@@ -3676,12 +3710,15 @@ def CallOp : CIR_CallOp<"call", [NoRegionArguments]> {
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
               CArg<"mlir::ValueRange", "{}">:$operands,
               CArg<"CallingConv", "CallingConv::C">:$callingConv,
+              CArg<"SideEffect", "SideEffect::All">:$sideEffect,
               CArg<"mlir::UnitAttr", "{}">:$exception), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
       $_state.addAttribute("calling_conv",
         CallingConvAttr::get($_builder.getContext(), callingConv));
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
       if (exception)
         $_state.addAttribute("exception", exception);
       if (resType && !isa<VoidType>(resType))
@@ -3693,6 +3730,7 @@ def CallOp : CIR_CallOp<"call", [NoRegionArguments]> {
                "FuncType":$fn_type,
                CArg<"mlir::ValueRange", "{}">:$operands,
                CArg<"CallingConv", "CallingConv::C">:$callingConv,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect,
                CArg<"mlir::UnitAttr", "{}">:$exception), [{
       $_state.addOperands(ValueRange{ind_target});
       $_state.addOperands(operands);
@@ -3700,6 +3738,8 @@ def CallOp : CIR_CallOp<"call", [NoRegionArguments]> {
         $_state.addTypes(fn_type.getReturnType());
       $_state.addAttribute("calling_conv",
         CallingConvAttr::get($_builder.getContext(), callingConv));
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
       if (exception)
         $_state.addAttribute("exception", exception);
       // Create region placeholder for potential cleanups.
@@ -3742,7 +3782,8 @@ def TryCallOp : CIR_CallOp<"try_call",
                CArg<"mlir::ValueRange", "{}">:$operands,
                CArg<"mlir::ValueRange", "{}">:$contOperands,
                CArg<"mlir::ValueRange", "{}">:$landingPadOperands,
-               CArg<"CallingConv", "CallingConv::C">:$callingConv), [{
+               CArg<"CallingConv", "CallingConv::C">:$callingConv,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
@@ -3751,6 +3792,8 @@ def TryCallOp : CIR_CallOp<"try_call",
 
       $_state.addAttribute("calling_conv",
         CallingConvAttr::get($_builder.getContext(), callingConv));
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
       $_state.addOperands(contOperands);
@@ -3771,7 +3814,8 @@ def TryCallOp : CIR_CallOp<"try_call",
                CArg<"mlir::ValueRange", "{}">:$operands,
                CArg<"mlir::ValueRange", "{}">:$contOperands,
                CArg<"mlir::ValueRange", "{}">:$landingPadOperands,
-               CArg<"CallingConv", "CallingConv::C">:$callingConv), [{
+               CArg<"CallingConv", "CallingConv::C">:$callingConv,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(operands.begin(), operands.end());
       $_state.addOperands(finalCallOperands);
@@ -3781,6 +3825,8 @@ def TryCallOp : CIR_CallOp<"try_call",
 
       $_state.addAttribute("calling_conv",
         CallingConvAttr::get($_builder.getContext(), callingConv));
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
 
       // Handle branches
       $_state.addOperands(contOperands);
@@ -4187,7 +4233,7 @@ def MemCpyInlineOp : CIR_MemOp<"memcpy_inline"> {
     Given two CIR pointers, `src` and `dst`, `memcpy_inline` will copy `len`
     bytes from the memory pointed by `src` to the memory pointed by `dst`.
 
-    Unlike `cir.libc.memcpy`,  this Op guarantees that no external functions 
+    Unlike `cir.libc.memcpy`,  this Op guarantees that no external functions
     are called, and length of copied bytes is a constant.
 
     Examples:

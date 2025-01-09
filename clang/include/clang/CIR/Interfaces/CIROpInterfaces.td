@@ -37,6 +37,9 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<
           "Return the calling convention of the call operation",
           "cir::CallingConv", "getCallingConv", (ins)>,
+      InterfaceMethod<
+          "Return the side effects of the call operation",
+          "cir::SideEffect", "getSideEffect", (ins)>,
     ];
   }
 
@@ -50,20 +53,20 @@ let cppNamespace = "::cir" in {
       >,
       InterfaceMethod<"",
       "bool", "hasLocalLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{ 
-        return cir::isLocalLinkage($_op.getLinkage()); 
+      /*defaultImplementation=*/[{
+        return cir::isLocalLinkage($_op.getLinkage());
       }]
       >,
       InterfaceMethod<"",
       "bool", "hasExternalWeakLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{ 
-        return cir::isExternalWeakLinkage($_op.getLinkage()); 
+      /*defaultImplementation=*/[{
+        return cir::isExternalWeakLinkage($_op.getLinkage());
       }]
       >,
       InterfaceMethod<"",
       "bool", "isExternalLinkage", (ins), [{}],
-      /*defaultImplementation=*/[{ 
-        return cir::isExternalLinkage($_op.getLinkage()); 
+      /*defaultImplementation=*/[{
+        return cir::isExternalLinkage($_op.getLinkage());
       }]
       >,
       InterfaceMethod<"",
@@ -87,8 +90,8 @@ let cppNamespace = "::cir" in {
       }]
       >,
     ];
-    let extraClassDeclaration = [{ 
-    bool hasDefaultVisibility();  
+    let extraClassDeclaration = [{
+    bool hasDefaultVisibility();
     bool canBenefitFromLocalAlias();
   }];
   }
