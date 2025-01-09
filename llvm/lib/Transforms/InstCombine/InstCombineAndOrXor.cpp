@@ -1674,9 +1674,7 @@ static Instruction *reassociateFCmps(BinaryOperator &BO,
   // or  (fcmp uno X, 0), (or  (fcmp uno Y, 0), Z) --> or  (fcmp uno X, Y), Z
   // Intersect FMF from the 2 source fcmps.
   Value *NewFCmp =
-      Builder.CreateFCmpFMF(NanPred, X, Y,
-                            cast<FPMathOperator>(Op0)->getFastMathFlags() &
-                                cast<FPMathOperator>(BO10)->getFastMathFlags());
+      Builder.CreateFCmpFMF(NanPred, X, Y, FMFSource::intersect(Op0, BO10));
   return BinaryOperator::Create(Opcode, NewFCmp, BO11);
 }
 

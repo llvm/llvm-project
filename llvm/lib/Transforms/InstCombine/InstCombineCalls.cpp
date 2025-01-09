@@ -2505,7 +2505,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         //       propagate?)
         Value *V = Builder.CreateBinaryIntrinsic(
             IID, X, ConstantFP::get(Arg0->getType(), Res),
-            II->getFastMathFlags() & M->getFastMathFlags());
+            FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }
     }
