@@ -167,7 +167,7 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 #### Windows ABI and codegen
 
 Reid Kleckner \
-reid.kleckner@gmail.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
