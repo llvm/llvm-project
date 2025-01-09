@@ -386,7 +386,15 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
     }
     return result;
   };
-  return inferDivSRange(lhs, rhs, ceilDivSIFix);
+  ConstantIntRanges result = inferDivSRange(lhs, rhs, ceilDivSIFix);
+  if (lhs.smin().isMinSignedValue() && lhs.smax().sgt(lhs.smin())) {
+    // If lhs range includes INT_MIN and lhs is not a single value, we can
+    // suddenly wrap to positive val, skipping entire negative range, add
+    // [INT_MIN + 1, smax()] range to the result to handle this.
+    auto newLhs = ConstantIntRanges::fromSigned(lhs.smin() + 1, lhs.smax());
+    result = result.rangeUnion(inferDivSRange(newLhs, rhs, ceilDivSIFix));
+  }
+  return result;
 }
 
 ConstantIntRanges

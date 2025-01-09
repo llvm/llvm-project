@@ -421,7 +421,8 @@ Non-comprehensive list of changes in this release
   ``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
   ``__builtin_reduce_xor``, ``__builtin_elementwise_popcount``,
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-  ``__builtin_elementwise_sub_sat``.
+  ``__builtin_elementwise_sub_sat``, ``__builtin_reduce_min`` (For integral element type),
+  ``__builtin_reduce_max`` (For integral element type).
 
 - Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
   not a power of two, matching preexisting behaviour for vector types.
@@ -445,9 +446,8 @@ New Compiler Flags
 - The ``-Warray-compare-cxx26`` warning has been added to warn about array comparison
   starting from C++26, this warning is enabled as an error by default.
 
-- '-fsanitize-merge' (default) and '-fno-sanitize-merge' have been added for
-  fine-grained control of which UBSan checks are allowed to be merged by the
-  backend (for example, -fno-sanitize-merge=bool,enum).
+- clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
+  in addition to ``-f[no-]color-diagnostics``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -488,8 +488,6 @@ Removed Compiler Flags
   derivatives) is now removed, since it's no longer possible to suppress the
   diagnostic (see above). Users can expect an `unknown warning` diagnostic if
   it's still in use.
-- The experimental flag '-ubsan-unique-traps' has been removed. It is
-  superseded by '-fno-sanitize-merge'.
 
 Attribute Changes in Clang
 --------------------------
@@ -706,6 +704,46 @@ Improvements to Clang's diagnostics
       return ptr + index < ptr; // warning
     }
 
+- Clang now emits a ``-Wvarargs`` diagnostic when the second argument
+  to ``va_arg`` is of array type, which is an undefined behavior (#GH119360).
+
+  .. code-block:: c++
+
+    void test() {
+      va_list va;
+      va_arg(va, int[10]); // warning
+    }
+
+- Fix -Wdangling false positives on conditional operators (#120206).
+
+- Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
+  Objective-C. Clang now emits a diagnostic message instead of hanging.
+
+- The :doc:`ThreadSafetyAnalysis` now supports passing scoped capabilities into functions:
+  an attribute on the scoped capability parameter indicates both the expected associated capabilities and,
+  like in the case of attributes on the function declaration itself, their state before and after the call.
+
+  .. code-block:: c++
+
+    #include "mutex.h"
+
+    Mutex mu1, mu2;
+    int a GUARDED_BY(mu1);
+
+    void require(MutexLocker& scope REQUIRES(mu1)) {
+      scope.Unlock();
+      a = 0; // Warning!  Requires mu1.
+      scope.Lock();
+    }
+
+    void testParameter() {
+      MutexLocker scope(&mu1), scope2(&mu2);
+      require(scope2); // Warning! Mutex managed by 'scope2' is 'mu2' instead of 'mu1'
+      require(scope); // OK.
+      scope.Unlock();
+      require(scope); // Warning!  Requires mu1.
+    }
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -726,6 +764,7 @@ Bug Fixes in This Version
   the unsupported type instead of the ``register`` keyword (#GH109776).
 - Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
+- Fixed a crash when passing the variable length array type to ``va_arg`` (#GH119360).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
 - No longer return ``false`` for ``noexcept`` expressions involving a
@@ -857,6 +896,12 @@ Bug Fixes to C++ Support
 - Fixed recognition of ``std::initializer_list`` when it's surrounded with ``extern "C++"`` and exported
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
+- Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Passing incomplete types to ``__is_base_of`` and other builtin type traits for which the corresponding
+  standard type trait mandates a complete type is now a hard (non-sfinae-friendly) error
+  (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
+- Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
+- Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -977,6 +1022,12 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  For AArch64:
+
+  * FUJITSU-MONAKA (fujitsu-monaka)
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -1073,6 +1124,14 @@ AST Matchers
 
 - Ensure ``pointee`` matches Objective-C pointer types.
 
+- Add ``dependentScopeDeclRefExpr`` matcher to match expressions that refer to dependent scope declarations.
+
+- Add ``dependentNameType`` matcher to match a dependent name type.
+
+- Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
+
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr or DependentNameType.
+
 clang-format
 ------------
 
@@ -1084,6 +1143,10 @@ clang-format
   ``Never``, and ``true`` to ``Always``.
 - Adds ``RemoveEmptyLinesInUnwrappedLines`` option.
 - Adds ``KeepFormFeed`` option and set it to ``true`` for ``GNU`` style.
+- Adds ``AllowShortNamespacesOnASingleLine`` option.
+- Adds ``VariableTemplates`` option.
+- Adds support for bash globstar in ``.clang-format-ignore``.
+- Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 
 libclang
 --------
@@ -1113,6 +1176,13 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- In loops where the loop condition is opaque (i.e. the analyzer cannot
+  determine whether it's true or false), the analyzer will no longer assume
+  execution paths that perform more that two iterations. These unjustified
+  assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
+  the FFMPEG codebase) in loops where the programmer intended only two or three
+  steps but the analyzer wasn't able to understand that the loop is limited.
 
 Improvements
 ^^^^^^^^^^^^
@@ -1208,15 +1278,25 @@ Sanitizers
 
 - Implemented ``-f[no-]sanitize-trap=local-bounds``, and ``-f[no-]sanitize-recover=local-bounds``.
 
+- ``-fsanitize-merge`` (default) and ``-fno-sanitize-merge`` have been added for
+  fine-grained, unified control of which UBSan checks can potentially be merged
+  by the compiler (for example,
+  ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
+  a declaration is an anonymous union or anonymous struct.
 
 OpenMP Support
 --------------
 - Added support for 'omp assume' directive.
 - Added support for 'omp scope' directive.
 - Added support for allocator-modifier in 'allocate' clause.
+- Changed the OpenMP DeviceRTL to use 'generic' IR. The
+  ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
+  always build support for AMDGPU and NVPTX targets.
 
 Improvements
 ^^^^^^^^^^^^

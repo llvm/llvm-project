@@ -1,12 +1,14 @@
-// RUN: %clang_cc1 -fsanitize=local-bounds    -fsanitize-trap=local-bounds -emit-llvm -triple x86_64-apple-darwin10              %s -o - |     FileCheck %s
-// RUN: %clang_cc1 -fsanitize=array-bounds -O                              -emit-llvm -triple x86_64-apple-darwin10 %s -o -              | not FileCheck %s
-// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - |     FileCheck %s
-//
-// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -O3 -mllvm -bounds-checking-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTLOCAL
-// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -O3                                      -emit-llvm -triple x86_64-apple-darwin10 %s -o - | not FileCheck %s --check-prefixes=NOOPTLOCAL
-//
 // N.B. The clang driver defaults to -fsanitize-merge but clang_cc1 effectively
 // defaults to -fno-sanitize-merge.
+// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - |     FileCheck %s
+// RUN: %clang_cc1 -fsanitize=array-bounds -O                              -emit-llvm -triple x86_64-apple-darwin10 %s -o -              | not FileCheck %s
+//
+// RUN: %clang_cc1 -fsanitize=local-bounds    -fsanitize-trap=local-bounds -emit-llvm -triple x86_64-apple-darwin10              %s -o - |     FileCheck %s
+//
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds                               -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTLOCAL
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -fno-sanitize-merge           -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTLOCAL
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -fsanitize-merge=local-bounds -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - | not FileCheck %s --check-prefixes=NOOPTLOCAL
+//
 // RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds                               -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTARRAY
 // RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -fno-sanitize-merge           -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTARRAY
 // RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -fsanitize-merge=array-bounds -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - | not FileCheck %s --check-prefixes=NOOPTARRAY
