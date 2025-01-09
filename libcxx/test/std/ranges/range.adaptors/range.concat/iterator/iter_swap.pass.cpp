@@ -23,9 +23,9 @@ concept has_iter_swap = requires(It it) { std::ranges::iter_swap(it, it); };
 
 template <class Iterator, bool IsNoexcept>
 constexpr void test() {
-  using Sentinel       = sentinel_wrapper<Iterator>;
-  using View           = minimal_view<Iterator, Sentinel>;
-  using ConcatView     = std::ranges::concat_view<View>;
+  using Sentinel   = sentinel_wrapper<Iterator>;
+  using View       = minimal_view<Iterator, Sentinel>;
+  using ConcatView = std::ranges::concat_view<View>;
 
   auto make_concat_view = [](auto begin, auto end) {
     View view{Iterator(begin), Sentinel(Iterator(end))};
