@@ -81,7 +81,7 @@ struct __atomic_wait_backoff_impl {
   _Poll __poll_;
   memory_order __order_;
 
-  using __waitable_traits = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
+  using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
 
   _LIBCPP_AVAILABILITY_SYNC
   _LIBCPP_HIDE_FROM_ABI bool

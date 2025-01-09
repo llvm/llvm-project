@@ -108,7 +108,7 @@ path __canonical(path const& orig_p, error_code* ec) {
 #if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
   std::unique_ptr<path::value_type, decltype(&::free)> hold(detail::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   return {hold.get()};
 #else
 #  if defined(__MVS__) && !defined(PATH_MAX)
@@ -118,7 +118,7 @@ path __canonical(path const& orig_p, error_code* ec) {
 #  endif
   path::value_type* ret;
   if ((ret = detail::realpath(p.c_str(), buff)) == nullptr)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   return {ret};
 #endif
 }
@@ -513,9 +513,9 @@ bool __create_directory(const path& p, error_code* ec) {
   if (detail::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
 
-  if (errno != EEXIST)
-    return err.report(capture_errno());
-  error_code mec = capture_errno();
+  error_code mec = detail::get_last_error();
+  if (mec != errc::file_exists)
+    return err.report(mec);
   error_code ignored_ec;
   const file_status st = status(p, ignored_ec);
   if (!is_directory(st))
@@ -537,10 +537,10 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
   if (detail::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
 
-  if (errno != EEXIST)
-    return err.report(capture_errno());
+  mec = detail::get_last_error();
+  if (mec != errc::file_exists)
+    return err.report(mec);
 
-  mec = capture_errno();
   error_code ignored_ec;
   st = status(p, ignored_ec);
   if (!is_directory(st))
@@ -551,19 +551,19 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 void __create_directory_symlink(path const& from, path const& to, error_code* ec) {
   ErrorHandler<void> err("create_directory_symlink", ec, &from, &to);
   if (detail::symlink_dir(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 void __create_hard_link(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("create_hard_link", ec, &from, &to);
   if (detail::link(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 void __create_symlink(path const& from, path const& to, error_code* ec) {
   ErrorHandler<void> err("create_symlink", ec, &from, &to);
   if (detail::symlink_file(from.c_str(), to.c_str()) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 path __current_path(error_code* ec) {
@@ -606,7 +606,7 @@ path __current_path(error_code* ec) {
 
   unique_ptr<path::value_type, Deleter> hold(detail::getcwd(ptr, size), deleter);
   if (hold.get() == nullptr)
-    return err.report(capture_errno(), "call to getcwd failed");
+    return err.report(detail::get_last_error(), "call to getcwd failed");
 
   return {hold.get()};
 }
@@ -614,7 +614,7 @@ path __current_path(error_code* ec) {
 void __current_path(const path& p, error_code* ec) {
   ErrorHandler<void> err("current_path", ec, &p);
   if (detail::chdir(p.c_str()) == -1)
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
 }
 
 bool __equivalent(const path& p1, const path& p2, error_code* ec) {
@@ -702,10 +702,10 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
     return err.report(errc::value_too_large);
   detail::WinHandle h(p.c_str(), FILE_WRITE_ATTRIBUTES, 0);
   if (!h)
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
   FILETIME last_write = timespec_to_filetime(ts);
   if (!SetFileTime(h, nullptr, nullptr, &last_write))
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
 #else
   error_code m_ec;
   array<TimeSpec, 2> tbuf;
@@ -763,7 +763,7 @@ void __permissions(const path& p, perms prms, perm_options opts, error_code* ec)
 #if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
   const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;
   if (detail::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   }
 #else
   if (set_sym_perms)
@@ -791,14 +791,14 @@ path __read_symlink(const path& p, error_code* ec) {
 #else
   StatT sb;
   if (detail::lstat(p.c_str(), &sb) == -1) {
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   }
   const size_t size = sb.st_size + 1;
   auto buff         = unique_ptr<path::value_type[]>(new path::value_type[size]);
 #endif
   detail::SSizeT ret;
   if ((ret = detail::readlink(p.c_str(), buff.get(), size)) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
   // Note that `ret` returning `0` would work, resulting in a valid empty string being returned.
   if (static_cast<size_t>(ret) >= size)
     return err.report(errc::value_too_large);
@@ -809,8 +809,9 @@ path __read_symlink(const path& p, error_code* ec) {
 bool __remove(const path& p, error_code* ec) {
   ErrorHandler<bool> err("remove", ec, &p);
   if (detail::remove(p.c_str()) == -1) {
-    if (errno != ENOENT)
-      err.report(capture_errno());
+    error_code mec = detail::get_last_error();
+    if (mec != errc::no_such_file_or_directory)
+      err.report(mec);
     return false;
   }
   return true;
@@ -963,13 +964,13 @@ uintmax_t __remove_all(const path& p, error_code* ec) {
 void __rename(const path& from, const path& to, error_code* ec) {
   ErrorHandler<void> err("rename", ec, &from, &to);
   if (detail::rename(from.c_str(), to.c_str()) == -1)
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
 }
 
 void __resize_file(const path& p, uintmax_t size, error_code* ec) {
   ErrorHandler<void> err("resize_file", ec, &p);
   if (detail::truncate(p.c_str(), static_cast< ::off_t>(size)) == -1)
-    return err.report(capture_errno());
+    return err.report(detail::get_last_error());
 }
 
 space_info __space(const path& p, error_code* ec) {
@@ -977,7 +978,7 @@ space_info __space(const path& p, error_code* ec) {
   space_info si;
   detail::StatVFS m_svfs = {};
   if (detail::statvfs(p.c_str(), &m_svfs) == -1) {
-    err.report(capture_errno());
+    err.report(detail::get_last_error());
     si.capacity = si.free = si.available = static_cast<uintmax_t>(-1);
     return si;
   }
@@ -1004,7 +1005,7 @@ path __temp_directory_path(error_code* ec) {
   wchar_t buf[MAX_PATH];
   DWORD retval = GetTempPathW(MAX_PATH, buf);
   if (!retval)
-    return err.report(detail::make_windows_error(GetLastError()));
+    return err.report(detail::get_last_error());
   if (retval > MAX_PATH)
     return err.report(errc::filename_too_long);
   // GetTempPathW returns a path with a trailing slash, which we

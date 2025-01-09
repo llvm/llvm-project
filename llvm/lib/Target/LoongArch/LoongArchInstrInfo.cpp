@@ -154,6 +154,9 @@ void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                               Register VReg) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
+  DebugLoc DL;
+  if (I != MBB.end())
+    DL = I->getDebugLoc();
 
   unsigned Opcode;
   if (LoongArch::GPRRegClass.hasSubClassEq(RC))
@@ -177,7 +180,7 @@ void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
       MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-  BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
+  BuildMI(MBB, I, DL, get(Opcode), DstReg)
       .addFrameIndex(FI)
       .addImm(0)
       .addMemOperand(MMO);

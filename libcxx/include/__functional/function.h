@@ -576,7 +576,7 @@ private:
 // Used to choose between perfect forwarding or pass-by-value. Pass-by-value is
 // faster for types that can be passed in registers.
 template <typename _Tp>
-using __fast_forward = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
+using __fast_forward _LIBCPP_NODEBUG = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
 // __policy_invoker calls an instance of __alloc_func held in __policy_storage.
 
@@ -847,7 +847,7 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
   };
 
   template <class _Fp>
-  using _EnableIfLValueCallable = __enable_if_t<__callable<_Fp&>::value>;
+  using _EnableIfLValueCallable _LIBCPP_NODEBUG = __enable_if_t<__callable<_Fp&>::value>;
 
 public:
   typedef _Rp result_type;

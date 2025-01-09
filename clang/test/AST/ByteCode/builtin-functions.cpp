@@ -1010,7 +1010,7 @@ namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
                                                        // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
-                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
+                                                       // expected-note {{comparison of addresses of potentially overlapping literals has unspecified value}}
 }
 
 namespace BuiltinInImplicitCtor {

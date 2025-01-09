@@ -3914,21 +3914,22 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
   if (isa<ConstantAggregateZero>(CV)) {
     StructType *structType;
     if (AliasList && (structType = llvm::dyn_cast<StructType>(CV->getType()))) {
-      // Handle cases of aliases to direct struct elements
-      const StructLayout *Layout = DL.getStructLayout(structType);
-      uint64_t SizeSoFar = 0;
-      for (unsigned int i = 0, n = structType->getNumElements(); i < n - 1;
-           ++i) {
-        uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
-        AP.OutStreamer->emitZeros(GapToNext);
-        SizeSoFar += GapToNext;
-        emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+      unsigned numElements = {structType->getNumElements()};
+      if (numElements != 0) {
+        // Handle cases of aliases to direct struct elements
+        const StructLayout *Layout = DL.getStructLayout(structType);
+        uint64_t SizeSoFar = 0;
+        for (unsigned int i = 0; i < numElements - 1; ++i) {
+          uint64_t GapToNext = Layout->getElementOffset(i + 1) - SizeSoFar;
+          AP.OutStreamer->emitZeros(GapToNext);
+          SizeSoFar += GapToNext;
+          emitGlobalAliasInline(AP, Offset + SizeSoFar, AliasList);
+        }
+        AP.OutStreamer->emitZeros(Size - SizeSoFar);
+        return;
       }
-      AP.OutStreamer->emitZeros(Size - SizeSoFar);
-      return;
-    } else {
-      return AP.OutStreamer->emitZeros(Size);
     }
+    return AP.OutStreamer->emitZeros(Size);
   }
 
   if (isa<UndefValue>(CV))

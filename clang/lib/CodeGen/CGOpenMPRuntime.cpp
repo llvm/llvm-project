@@ -2327,11 +2327,10 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto *OMPRegionInfo =
       dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo);
   if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-        OMPBuilder.createBarrier(CGF.Builder, Kind, ForceSimpleCall,
-                                 EmitChecks);
-    assert(AfterIP && "unexpected error creating barrier");
-    CGF.Builder.restoreIP(*AfterIP);
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createBarrier(CGF.Builder, Kind, ForceSimpleCall,
+                                          EmitChecks));
+    CGF.Builder.restoreIP(AfterIP);
     return;
   }
 
@@ -5933,10 +5932,9 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
       };
 
-  llvm::Error Err = OMPBuilder.emitTargetRegionFunction(
+  cantFail(OMPBuilder.emitTargetRegionFunction(
       EntryInfo, GenerateOutlinedFunction, IsOffloadEntry, OutlinedFn,
-      OutlinedFnID);
-  assert(!Err && "unexpected error creating target region");
+      OutlinedFnID));
 
   if (!OutlinedFn)
     return;
@@ -9409,12 +9407,11 @@ static void emitTargetCallKernelLaunch(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
         DynCGGroupMem, HasNoWait);
 
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-        OMPRuntime->getOMPBuilder().emitKernelLaunch(
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
             CGF.Builder, OutlinedFnID, EmitTargetCallFallbackCB, Args, DeviceID,
-            RTLoc, AllocaIP);
-    assert(AfterIP && "unexpected error creating kernel launch");
-    CGF.Builder.restoreIP(*AfterIP);
+            RTLoc, AllocaIP));
+    CGF.Builder.restoreIP(AfterIP);
   };
 
   if (RequiresOuterTask)
@@ -10091,12 +10088,11 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-      OMPBuilder.createTargetData(
+  llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+      cantFail(OMPBuilder.createTargetData(
           OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
-          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc);
-  assert(AfterIP && "unexpected error creating target data");
-  CGF.Builder.restoreIP(*AfterIP);
+          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc));
+  CGF.Builder.restoreIP(AfterIP);
 }
 
 void CGOpenMPRuntime::emitTargetDataStandAloneCall(

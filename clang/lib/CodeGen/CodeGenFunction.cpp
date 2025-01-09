@@ -40,7 +40,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/FPEnv.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -1617,6 +1616,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
 
+  PGO.verifyCounterMap();
+
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
@@ -1739,6 +1740,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
+  PGO.markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }
@@ -2084,29 +2086,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
-                                                   Weights, Unpredictable);
-  switch (HLSLControlFlowAttr) {
-  case HLSLControlFlowHintAttr::Microsoft_branch:
-  case HLSLControlFlowHintAttr::Microsoft_flatten: {
-    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-
-    llvm::ConstantInt *BranchHintConstant =
-        HLSLControlFlowAttr ==
-                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
-            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
-            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
-
-    SmallVector<llvm::Metadata *, 2> Vals(
-        {MDHelper.createString("hlsl.controlflow.hint"),
-         MDHelper.createConstant(BranchHintConstant)});
-    BrInst->setMetadata("hlsl.controlflow.hint",
-                        llvm::MDNode::get(CGM.getLLVMContext(), Vals));
-    break;
-  }
-  case HLSLControlFlowHintAttr::SpellingNotCalculated:
-    break;
-  }
+  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the

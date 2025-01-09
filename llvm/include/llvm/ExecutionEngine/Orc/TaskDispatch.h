@@ -122,7 +122,7 @@ public:
   void shutdown() override;
 private:
   std::mutex DispatchMutex;
-  bool Running = true;
+  bool Shutdown = false;
   size_t Outstanding = 0;
   std::condition_variable OutstandingCV;
 

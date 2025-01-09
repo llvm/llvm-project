@@ -104,6 +104,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(SClamp, sclamp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(UClamp, uclamp)
 
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
+                                   resource_getpointer)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)

@@ -924,6 +924,32 @@ define void @PR63030(ptr %p0) {
   ret void
 }
 
+define <2 x i64> @PR116815(<4 x i64> %v0, <4 x i64> %v1) {
+; CHECK-LABEL: PR116815:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vmovq {{.*#+}} xmm2 = [0,4,8,12,2,6,10,14,0,0,0,0,0,0,0,0]
+; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %tmp0 = bitcast <4 x i64> %v1 to <8 x i32>
+  %tmp1 = shl <8 x i32> %tmp0, splat (i32 16)
+  %tmp2 = bitcast <8 x i32> %tmp1 to <16 x i16>
+  %tmp3 = bitcast <4 x i64> %v0 to <16 x i16>
+  %blend = shufflevector <16 x i16> %tmp3, <16 x i16> %tmp2, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+  %tmp4 = bitcast <16 x i16> %blend to <32 x i8>
+  %tmp5 = shufflevector <32 x i8> %tmp4, <32 x i8> poison, <32 x i32> <i32 0, i32 4, i32 8, i32 12, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 16, i32 20, i32 24, i32 28, i32 18, i32 22, i32 26, i32 30, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp6 = bitcast <32 x i8> %tmp5 to <8 x i32>
+  %tmp7 = shufflevector <8 x i32> %tmp6, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp8 = bitcast <8 x i32> %tmp7 to <4 x i64>
+  %shuffle.i = shufflevector <4 x i64> %tmp8, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %shuffle.i
+}
+
 define void @packss_zext_v8i1() {
 ; X86-LABEL: packss_zext_v8i1:
 ; X86:       # %bb.0:

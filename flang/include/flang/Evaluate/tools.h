@@ -102,22 +102,26 @@ template <typename A> bool IsAssumedRank(const A *x) {
   return x && IsAssumedRank(*x);
 }
 
+// Finds the corank of an entity, possibly packaged in various ways.
+// Unlike rank, only data references have corank > 0.
+int GetCorank(const ActualArgument &);
+static inline int GetCorank(const Symbol &symbol) { return symbol.Corank(); }
+template <typename A> int GetCorank(const A &) { return 0; }
+template <typename T> int GetCorank(const Designator<T> &designator) {
+  return designator.Corank();
+}
+template <typename T> int GetCorank(const Expr<T> &expr) {
+  return common::visit([](const auto &x) { return GetCorank(x); }, expr.u);
+}
+template <typename A> int GetCorank(const std::optional<A> &x) {
+  return x ? GetCorank(*x) : 0;
+}
+template <typename A> int GetCorank(const A *x) {
+  return x ? GetCorank(*x) : 0;
+}
+
 // Predicate: true when an expression is a coarray (corank > 0)
-bool IsCoarray(const ActualArgument &);
-bool IsCoarray(const Symbol &);
-template <typename A> bool IsCoarray(const A &) { return false; }
-template <typename A> bool IsCoarray(const Designator<A> &designator) {
-  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return IsCoarray(**symbol);
-  }
-  return false;
-}
-template <typename T> bool IsCoarray(const Expr<T> &expr) {
-  return common::visit([](const auto &x) { return IsCoarray(x); }, expr.u);
-}
-template <typename A> bool IsCoarray(const std::optional<A> &x) {
-  return x && IsCoarray(*x);
-}
+template <typename A> bool IsCoarray(const A &x) { return GetCorank(x) > 0; }
 
 // Generalizing packagers: these take operations and expressions of more
 // specific types and wrap them in Expr<> containers of more abstract types.

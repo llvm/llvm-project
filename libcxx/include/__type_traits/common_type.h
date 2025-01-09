@@ -31,7 +31,7 @@ template <class... _Args>
 struct common_type;
 
 template <class... _Args>
-using __common_type_t = typename common_type<_Args...>::type;
+using __common_type_t _LIBCPP_NODEBUG = typename common_type<_Args...>::type;
 
 template <class... _Args>
 struct common_type : __builtin_common_type<__common_type_t, __type_identity, __empty, _Args...> {};
@@ -40,7 +40,7 @@ struct common_type : __builtin_common_type<__common_type_t, __type_identity, __e
 #  if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
 template <class _Tp, class _Up>
-using __cond_type = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
+using __cond_type _LIBCPP_NODEBUG = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
 
 template <class _Tp, class _Up, class = void>
 struct __common_type3 {};

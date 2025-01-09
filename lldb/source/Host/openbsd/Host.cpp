@@ -41,18 +41,7 @@ namespace lldb_private {
 class ProcessLaunchInfo;
 }
 
-Environment Host::GetEnvironment() {
-  Environment env;
-  char *v;
-  char **var = environ;
-  for (; var != NULL && *var != NULL; ++var) {
-    v = strchr(*var, (int)'-');
-    if (v == NULL)
-      continue;
-    env.insert(v);
-  }
-  return env;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 static bool
 GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,

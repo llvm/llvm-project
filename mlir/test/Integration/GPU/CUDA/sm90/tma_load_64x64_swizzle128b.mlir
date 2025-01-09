@@ -129,9 +129,9 @@ module @mymod {
           scf.for %j = %c0 to %c128 step %c1 {
             %lhs0 = memref.load %rhsShmem[%ii, %j] : !shmemrhs
             %lhs032 = arith.extf %lhs0: f16 to f32
-            gpu.printf "%.0f,   " %lhs032 : f32
+            gpu.printf "%.0f,   ", %lhs032 : f32
           }
-          gpu.printf "%d\n" %c-1_i32 : i32
+          gpu.printf "%d\n", %c-1_i32 : i32
         }
         gpu.printf "===----------------=== %d \n", %c-1_i32 : i32
       }

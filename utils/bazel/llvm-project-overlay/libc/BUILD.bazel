@@ -670,6 +670,8 @@ libc_support_library(
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_iterator",
+        ":__support_libc_assert",
+        ":string_memory_utils",
     ],
 )
 

@@ -542,6 +542,48 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -735,6 +777,9 @@ public:
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);

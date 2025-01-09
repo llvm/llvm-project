@@ -3162,6 +3162,10 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 // Convert it to a UseError with this additional location.
 static bool ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Scope &module) {
+  if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
+    ued->add_occurrence(location, module);
+    return true;
+  }
   const auto *useDetails{symbol.detailsIf<UseDetails>()};
   if (!useDetails) {
     if (auto *genericDetails{symbol.detailsIf<GenericDetails>()}) {
@@ -3319,6 +3323,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         combinedDerivedType = CreateLocalUseError();
       } else {
         ConvertToUseError(*localSymbol, location, *useModuleScope_);
+        localDerivedType = nullptr;
+        localGeneric = nullptr;
         combinedDerivedType = localSymbol;
       }
     }

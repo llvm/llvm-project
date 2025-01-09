@@ -267,7 +267,9 @@ add_header_library(
   HDRS
     fixedvector.h
   DEPENDS
+    .libc_assert
     libc.src.__support.CPP.array
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_header_library(

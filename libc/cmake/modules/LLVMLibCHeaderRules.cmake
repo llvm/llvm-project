@@ -113,6 +113,7 @@ function(add_gen_header target_name)
     COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
             --output ${out_file}
             --depfile ${dep_file}
+            --write-if-changed
             ${entry_points}
             ${yaml_file}
     DEPENDS ${yaml_file} ${fq_data_files}

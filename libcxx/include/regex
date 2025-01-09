@@ -4229,7 +4229,8 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const sub_match<_BiIter>& __x, cons
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _BiIter>
-using __sub_match_cat = compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
+using __sub_match_cat _LIBCPP_NODEBUG =
+    compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
 
 template <class _BiIter>
 _LIBCPP_HIDE_FROM_ABI auto operator<=>(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y) {

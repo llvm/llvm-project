@@ -3936,6 +3936,18 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       Result != TemplateDeductionResult::Success)
     return Result;
 
+  // C++ [temp.deduct.call]p10: [DR1391]
+  //   If deduction succeeds for all parameters that contain
+  //   template-parameters that participate in template argument deduction,
+  //   and all template arguments are explicitly specified, deduced, or
+  //   obtained from default template arguments, remaining parameters are then
+  //   compared with the corresponding arguments. For each remaining parameter
+  //   P with a type that was non-dependent before substitution of any
+  //   explicitly-specified template arguments, if the corresponding argument
+  //   A cannot be implicitly converted to P, deduction fails.
+  if (CheckNonDependent())
+    return TemplateDeductionResult::NonDependentConversionFailure;
+
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
       TemplateArgumentList::CreateCopy(Context, SugaredBuilder);
@@ -3965,39 +3977,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
-  // C++20 [temp.deduct.general]p5: [CWG2369]
-  //   If the function template has associated constraints, those constraints
-  //   are checked for satisfaction. If the constraints are not satisfied, type
-  //   deduction fails.
-  //
-  // FIXME: We haven't implemented CWG2369 for lambdas yet, because we need
-  // to figure out how to instantiate lambda captures to the scope without
-  // first instantiating the lambda.
-  bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
-  if (!IsLambda && !IsIncomplete) {
-    if (CheckFunctionTemplateConstraints(
-            Info.getLocation(),
-            FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
-            CanonicalBuilder, Info.AssociatedConstraintsSatisfaction))
-      return TemplateDeductionResult::MiscellaneousDeductionFailure;
-    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-      Info.reset(Info.takeSugared(),
-                 TemplateArgumentList::CreateCopy(Context, CanonicalBuilder));
-      return TemplateDeductionResult::ConstraintsNotSatisfied;
-    }
-  }
-  // C++ [temp.deduct.call]p10: [CWG1391]
-  //   If deduction succeeds for all parameters that contain
-  //   template-parameters that participate in template argument deduction,
-  //   and all template arguments are explicitly specified, deduced, or
-  //   obtained from default template arguments, remaining parameters are then
-  //   compared with the corresponding arguments. For each remaining parameter
-  //   P with a type that was non-dependent before substitution of any
-  //   explicitly-specified template arguments, if the corresponding argument
-  //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
-    return TemplateDeductionResult::NonDependentConversionFailure;
-
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
       /*Final=*/false);
@@ -4032,8 +4011,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.decl]), those constraints are checked for satisfaction
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
-  if (IsLambda && !IsIncomplete) {
-    if (CheckFunctionTemplateConstraints(
+  if (!IsIncomplete) {
+    if (CheckInstantiatedFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CanonicalBuilder,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;

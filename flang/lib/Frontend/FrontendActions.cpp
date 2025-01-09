@@ -566,9 +566,11 @@ void DebugMeasureParseTreeAction::executeAction() {
   // Parse. In case of failure, report and return.
   ci.getParsing().Parse(llvm::outs());
 
-  if (!ci.getParsing().messages().empty() &&
-      (ci.getInvocation().getWarnAsErr() ||
-       ci.getParsing().messages().AnyFatalError())) {
+  if ((ci.getParsing().parseTree().has_value() &&
+       !ci.getParsing().consumedWholeFile()) ||
+      (!ci.getParsing().messages().empty() &&
+       (ci.getInvocation().getWarnAsErr() ||
+        ci.getParsing().messages().AnyFatalError()))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();

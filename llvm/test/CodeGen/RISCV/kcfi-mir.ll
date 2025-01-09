@@ -30,7 +30,7 @@ define void @f2(ptr noundef %x) #0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   BUNDLE implicit-def $x6, implicit-def $x6_w, implicit-def $x6_h, implicit-def $x7, implicit-def $x7_w, implicit-def $x7_h, implicit-def $x28, implicit-def $x28_w, implicit-def $x28_h, implicit-def $x29, implicit-def $x29_w, implicit-def $x29_h, implicit-def $x30, implicit-def $x30_w, implicit-def $x30_h, implicit-def $x31, implicit-def $x31_w, implicit-def $x31_h, implicit killed $x10, implicit $x2 {
   ; CHECK-NEXT:     KCFI_CHECK $x10, 12345678, implicit-def $x6, implicit-def $x7, implicit-def $x28, implicit-def $x29, implicit-def $x30, implicit-def $x31
-  ; CHECK-NEXT:     PseudoTAILIndirect killed $x10, implicit $x2
+  ; CHECK-NEXT:     PseudoTAILIndirect killed $x10, csr_ilp32_lp64, implicit $x2
   ; CHECK-NEXT:   }
   tail call void %x() [ "kcfi"(i32 12345678) ]
   ret void

@@ -381,7 +381,7 @@ int clang_getFieldDeclBitWidth(CXCursor C) {
 
     if (const FieldDecl *FD = dyn_cast_or_null<FieldDecl>(D)) {
       if (FD->isBitField() && !FD->getBitWidth()->isValueDependent())
-        return FD->getBitWidthValue();
+        return FD->getBitWidthValue(getCursorContext(C));
     }
   }
 

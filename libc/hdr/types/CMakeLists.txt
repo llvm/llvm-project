@@ -86,6 +86,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_tm
+  HDRS
+    struct_tm.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_tm
+)
+
+add_proxy_header_library(
   size_t
   HDRS
     size_t.h

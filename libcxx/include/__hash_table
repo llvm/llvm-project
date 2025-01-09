@@ -111,8 +111,8 @@ struct __hash_node_base {
 template <class _Tp, class _VoidPtr>
 struct __hash_node : public __hash_node_base< __rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > > {
   typedef _Tp __node_value_type;
-  using _Base          = __hash_node_base<__rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > >;
-  using __next_pointer = typename _Base::__next_pointer;
+  using _Base _LIBCPP_NODEBUG          = __hash_node_base<__rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> > >;
+  using __next_pointer _LIBCPP_NODEBUG = typename _Base::__next_pointer;
 
   size_t __hash_;
 

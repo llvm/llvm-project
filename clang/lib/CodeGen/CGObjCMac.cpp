@@ -2543,7 +2543,8 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
   if (LastFieldBitfieldOrUnnamed) {
     if (LastFieldBitfieldOrUnnamed->isBitField()) {
       // Last field was a bitfield. Must update the info.
-      uint64_t BitFieldSize = LastFieldBitfieldOrUnnamed->getBitWidthValue();
+      uint64_t BitFieldSize
+        = LastFieldBitfieldOrUnnamed->getBitWidthValue(CGM.getContext());
       unsigned UnsSize = (BitFieldSize / ByteSizeInBits) +
                         ((BitFieldSize % ByteSizeInBits) != 0);
       CharUnits Size = CharUnits::fromQuantity(UnsSize);

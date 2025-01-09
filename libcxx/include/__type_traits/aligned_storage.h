@@ -34,7 +34,7 @@ struct __struct_double4 {
   double __lx[4];
 };
 
-using __all_types =
+using __all_types _LIBCPP_NODEBUG =
     __type_list<__align_type<unsigned char>,
                 __align_type<unsigned short>,
                 __align_type<unsigned int>,

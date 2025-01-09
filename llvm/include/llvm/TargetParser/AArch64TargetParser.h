@@ -36,6 +36,7 @@ struct ArchInfo;
 struct CpuInfo;
 
 #include "llvm/TargetParser/AArch64CPUFeatures.inc"
+#include "llvm/TargetParser/AArch64FeatPriorities.inc"
 
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
@@ -70,12 +71,12 @@ struct ExtensionInfo {
 
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
-  CPUFeatures Bit;               // Index of the bit in the FMV feature bitset.
+  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  unsigned Priority;             // FMV priority.
-  FMVInfo(StringRef Name, CPUFeatures Bit, std::optional<ArchExtKind> ID,
-          unsigned Priority)
-      : Name(Name), Bit(Bit), ID(ID), Priority(Priority) {};
+  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
+          std::optional<ArchExtKind> ID)
+      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
 const std::vector<FMVInfo> &getFMVInfo();
@@ -270,7 +271,7 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 bool isX18ReservedByDefault(const Triple &TT);
 
 // Return the priority for a given set of FMV features.
-unsigned getFMVPriority(ArrayRef<StringRef> Features);
+uint64_t getFMVPriority(ArrayRef<StringRef> Features);
 
 // For given feature names, return a bitmask corresponding to the entries of
 // AArch64::CPUFeatures. The values in CPUFeatures are not bitmasks themselves,

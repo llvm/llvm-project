@@ -19212,8 +19212,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // TODO: Map to an hlsl_device address space.
     llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
 
-    return Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
-                                   ArrayRef<Value *>{HandleOp, IndexOp});
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+        ArrayRef<Value *>{HandleOp, IndexOp});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

@@ -890,10 +890,10 @@ __sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
 }
 
 template <class _Type, class... _Options>
-using __is_any_of = _Or<is_same<_Type, _Options>...>;
+using __is_any_of _LIBCPP_NODEBUG = _Or<is_same<_Type, _Options>...>;
 
 template <class _Type>
-using __sort_is_specialized_in_library = __is_any_of<
+using __sort_is_specialized_in_library _LIBCPP_NODEBUG = __is_any_of<
     _Type,
     char,
 #if _LIBCPP_HAS_WIDE_CHARACTERS

@@ -21,10 +21,14 @@ module m
   subroutine s01a(x)
     real, allocatable, intent(out) :: x(:)
   end subroutine
+  subroutine s01c(x)
+    real, intent(out) :: x(:)
+  end subroutine
   subroutine s01b ! C846 - can only be caught at a call via explicit interface
     !ERROR: ALLOCATABLE coarray 'coarray' may not be associated with INTENT(OUT) dummy argument 'x='
     !ERROR: ALLOCATABLE dummy argument 'x=' has corank 0 but actual argument has corank 1
     call s01a(coarray)
+    call s01c(coarray) ! ok, dummy is not allocatable
   end subroutine
 
   subroutine s02(x) ! C846

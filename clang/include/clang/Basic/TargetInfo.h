@@ -1531,7 +1531,7 @@ public:
 
   // Return the target-specific priority for features/cpus/vendors so
   // that they can be properly sorted for checking.
-  virtual unsigned getFMVPriority(ArrayRef<StringRef> Features) const {
+  virtual uint64_t getFMVPriority(ArrayRef<StringRef> Features) const {
     return 0;
   }
 

@@ -1315,7 +1315,7 @@ constexpr bool different_in_loop(bool b = false) {
   const char *p[2] = {};
   for (const char *&r : p)
     r = "hello";
-  return p[0] == p[1]; // expected-note {{addresses of literals}}
+  return p[0] == p[1]; // expected-note {{addresses of potentially overlapping literals}}
 }
 constexpr bool check = different_in_loop();
   // expected-error@-1 {{}} expected-note@-1 {{in call}}

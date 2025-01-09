@@ -36,7 +36,7 @@ struct __copy_cvref<_From&&, _To> {
 };
 
 template <class _From, class _To>
-using __copy_cvref_t = typename __copy_cvref<_From, _To>::type;
+using __copy_cvref_t _LIBCPP_NODEBUG = typename __copy_cvref<_From, _To>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 

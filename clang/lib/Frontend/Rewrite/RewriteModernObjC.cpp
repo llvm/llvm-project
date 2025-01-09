@@ -3699,8 +3699,7 @@ void RewriteModernObjC::RewriteObjCFieldDecl(FieldDecl *fieldDecl,
     Type.getAsStringInternal(Name, Context->getPrintingPolicy());
   Result += Name;
   if (fieldDecl->isBitField()) {
-    Result += " : ";
-    Result += utostr(fieldDecl->getBitWidthValue());
+    Result += " : "; Result += utostr(fieldDecl->getBitWidthValue(*Context));
   }
   else if (EleboratedType && Type->isArrayType()) {
     const ArrayType *AT = Context->getAsArrayType(Type);

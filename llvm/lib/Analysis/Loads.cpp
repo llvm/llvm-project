@@ -25,10 +25,9 @@
 
 using namespace llvm;
 
-static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
+static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
-  Align BA = Base->getPointerAlignment(DL);
-  return BA >= Alignment && Offset.isAligned(BA);
+  return Base->getPointerAlignment(DL) >= Alignment;
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -118,8 +117,7 @@ static bool isDereferenceableAndAlignedPointer(
     // As we recursed through GEPs to get here, we've incrementally checked
     // that each step advanced by a multiple of the alignment. If our base is
     // properly aligned, then the original offset accessed must also be.
-    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-    return isAligned(V, Offset, Alignment, DL);
+    return isAligned(V, Alignment, DL);
   }
 
   /// TODO refactor this function to be able to search independently for
@@ -154,8 +152,7 @@ static bool isDereferenceableAndAlignedPointer(
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
         // must also be.
-        APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-        return isAligned(V, Offset, Alignment, DL);
+        return isAligned(V, Alignment, DL);
       }
     }
   }
