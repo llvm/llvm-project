@@ -38,8 +38,11 @@
 # CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT1]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT1]].sub0
 # CHECK-NEXT: }
-# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
-# CHECK-NEXT: [[RESTORE1:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT2]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT3]].sub0:av_512_align2 = COPY [[SPLIT2]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT3]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: [[RESTORE1:%[0-9]+]]:vreg_512_align2 = SI_SPILL_V512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub0_sub1:av_512_align2 = COPY [[RESTORE1]].sub0_sub1
 # CHECK-NEXT: [[RESTORE2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
 # CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[RESTORE2]].sub2_sub3 {
@@ -129,7 +132,10 @@ body:             |
 # CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT1]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = COPY [[SPLIT1]].sub0
 # CHECK-NEXT: }
-# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub2_sub3:av_512_align2 = COPY [[SPLIT2]].sub2_sub3 {
+# CHECK-NEXT: internal [[SPLIT3]].sub0:av_512_align2 = COPY [[SPLIT2]].sub0
+# CHECK-NEXT: }
+# CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT3]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
 # CHECK-NEXT: [[RESTORE_1:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
 # CHECK-NEXT: undef [[SPLIT3:%[0-9]+]].sub0_sub1:av_512_align2 = COPY [[RESTORE_1]].sub0_sub1
 # CHECK-NEXT: [[RESTORE_2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
@@ -142,13 +148,13 @@ body:             |
 # CHECK-NEXT: [[SPLIT3]].sub2:av_512_align2 = COPY [[SPLIT5]].sub3
 # CHECK-NEXT: undef [[SPLIT6:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT3]].sub0_sub1_sub2
 # CHECK-NEXT: undef [[SPLIT7:%[0-9]+]].sub0_sub1_sub2:av_512_align2 = COPY [[SPLIT6]].sub0_sub1_sub2
-# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0:av_512_align2 = COPY [[SPLIT5]].sub0 {
-# CHECK-NEXT: internal [[SPLIT8]].sub2:av_512_align2 = COPY [[SPLIT5]].sub2
+# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0:av_512_align2 = COPY %24.sub0 {
+# CHECK-NEXT: internal [[SPLIT8]].sub2:av_512_align2 = COPY %24.sub2
 # CHECK-NEXT: }
-# CHECK-NEXT: [[SPLIT7]].sub3:av_512_align2 = COPY [[SPLIT8]].sub2
-# CHECK-NEXT: undef [[SPLIT9:%[0-9]+]].sub0_sub1_sub2_sub3:av_512_align2 = COPY [[SPLIT7]].sub0_sub1_sub2_sub3
-# CHECK-NEXT: undef [[LAST_USE:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_512_align2 = COPY [[SPLIT9]].sub0_sub1_sub2_sub3
-# CHECK-NEXT: [[LAST_USE]].sub4:vreg_512_align2 = COPY [[SPLIT8]].sub0
+# CHECK-NEXT: [[SPLIT7]].sub3:av_512_align2 = COPY %22.sub2
+# CHECK-NEXT: undef [[SPLIT8:%[0-9]+]].sub0_sub1_sub2_sub3:av_512_align2 = COPY [[SPLIT7]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: undef [[LAST_USE:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_512_align2 = COPY [[SPLIT8]].sub0_sub1_sub2_sub3
+# CHECK-NEXT: [[LAST_USE]].sub4:vreg_512_align2 = COPY %22.sub0
 # CHECK-NEXT: [[LAST_USE]].sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
 # CHECK-NEXT: [[LAST_USE]].sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
 # CHECK-NEXT: [[LAST_USE]].sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec

@@ -1,0 +1,59 @@
+# XFAIL: *
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -simplify-mir -start-before=greedy,2 -stress-regalloc=4 -stop-before=virtregrewriter,2 -filetype=null -verify-regalloc %s
+
+# This test is similar to
+# inflated-reg-class-snippet-copy-use-after-free.mir, except it is
+# still broken when the use instruction does not read the full set of
+# lanes
+
+--- |
+  define amdgpu_kernel void @inflated_reg_class_copy_use_after_free_lane_subset() {
+    ret void
+  }
+...
+---
+name:            inflated_reg_class_copy_use_after_free_lane_subset
+tracksRegLiveness: true
+machineFunctionInfo:
+  explicitKernArgSize: 8
+  maxKernArgAlign: 8
+  isEntryFunction: true
+  memoryBound:     true
+  waveLimiter:     true
+  scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
+  stackPtrOffsetReg: '$sgpr32'
+  returnsVoid:     true
+  occupancy:       7
+  vgprForAGPRCopy: '$vgpr255'
+  sgprForEXECCopy: '$sgpr74_sgpr75'
+  longBranchReservedReg: ''
+body:             |
+  bb.0:
+    liveins: $vgpr0, $sgpr4_sgpr5
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed undef renamable $sgpr4_sgpr5, 0, 0 :: (load (s64), addrspace 4)
+    S_NOP 0, implicit-def undef %1.sub12_sub13_sub14_sub15:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub8_sub9_sub10_sub11:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub4_sub5_sub6_sub7:vreg_512_align2
+    S_NOP 0, implicit-def %1.sub0_sub1_sub2_sub3:vreg_512_align2
+    S_NOP 0, implicit-def early-clobber %2:vreg_512_align2, implicit %1.sub0_sub1_sub2_sub3, implicit %1.sub4_sub5_sub6_sub7
+    %1.sub2:vreg_512_align2 = COPY %2.sub3
+    %1.sub3:vreg_512_align2 = COPY %2.sub2
+    %1.sub4:vreg_512_align2 = COPY %2.sub0
+    %1.sub5:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub6:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub7:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub9:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub10:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub11:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub12:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub13:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub14:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    %1.sub15:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit-def %1:vreg_512_align2, implicit %1.sub0_sub1_sub2_sub3, implicit %1.sub4_sub5_sub6_sub7, implicit %1.sub8_sub9_sub10_sub11
+    GLOBAL_STORE_DWORDX4_SADDR undef %3:vgpr_32, %1.sub12_sub13_sub14_sub15, undef renamable $sgpr0_sgpr1, 96, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
