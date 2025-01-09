@@ -16,6 +16,8 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use.cppm -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use1.cpp -verify -fsyntax-only
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t -I%t %t/Use2.cpp -verify -fsyntax-only
 //
 //--- foo.h
 template<class _CharT>
@@ -40,10 +42,22 @@ inline foo_templ<char> bar()
 module;
 #include "foo.h"
 export module A;
+export using ::foo_templ;
 
 //--- Use.cppm
 // expected-no-diagnostics
 module;
 #include "foo.h"
 export module Use;
+import A;
+export using ::foo_templ;
+
+//--- Use1.cpp
+// expected-no-diagnostics
+import A;         
+#include "foo.h" 
+
+//--- Use2.cpp
+// expected-no-diagnostics
+#include "foo.h"
 import A;

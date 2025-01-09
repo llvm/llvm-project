@@ -39,6 +39,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -63,6 +64,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/CGData/CodeGenData.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -3130,72 +3132,71 @@ public:
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
   template <typename T> T *readDeclAs() { return Reader.readDeclAs<T>(); }
+
+  AttributeCommonInfo readAttributeCommonInfo() {
+    IdentifierInfo *AttrName = readIdentifier();
+    IdentifierInfo *ScopeName = readIdentifier();
+    SourceRange AttrRange = readSourceRange();
+    SourceLocation ScopeLoc = readSourceLocation();
+    unsigned ParsedKind = readInt();
+    unsigned Syntax = readInt();
+    unsigned SpellingIndex = readInt();
+    bool IsAlignas = (ParsedKind == AttributeCommonInfo::AT_Aligned &&
+                      Syntax == AttributeCommonInfo::AS_Keyword &&
+                      SpellingIndex == AlignedAttr::Keyword_alignas);
+    bool IsRegularKeywordAttribute = readBool();
+
+    AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
+                            AttributeCommonInfo::Kind(ParsedKind),
+                            {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
+                              IsAlignas, IsRegularKeywordAttribute});
+    return Info;
+  }
+
+  std::optional<attr::Kind> readAttrKind() {
+    auto V = readInt();
+    if (!V)
+      return {};
+
+    // Kind is stored as a 1-based integer because 0 is used to indicate a null
+    // Attr pointer.
+    return static_cast<attr::Kind>(V - 1);
+  }
+
+  Attr *createAttribute(attr::Kind Kind, AttributeCommonInfo Info) {
+    ASTContext &Context = Reader.getContext();
+    Attr *New = nullptr;
+    auto Record = *this;
+  #include "clang/Serialization/AttrPCHRead.inc"
+
+    assert(New && "Unable to decode attribute?");
+    return New;
+  }
 };
 }
 
+
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
-  auto V = Record.readInt();
-  if (!V)
+  attr::Kind Kind;
+  if (auto KindOpt = Record.readAttrKind(); !KindOpt)
     return nullptr;
+  else 
+    Kind = *KindOpt;
 
-  Attr *New = nullptr;
-  // Kind is stored as a 1-based integer because 0 is used to indicate a null
-  // Attr pointer.
-  auto Kind = static_cast<attr::Kind>(V - 1);
-  ASTContext &Context = getContext();
-
-  IdentifierInfo *AttrName = Record.readIdentifier();
-  IdentifierInfo *ScopeName = Record.readIdentifier();
-  SourceRange AttrRange = Record.readSourceRange();
-  SourceLocation ScopeLoc = Record.readSourceLocation();
-  unsigned ParsedKind = Record.readInt();
-  unsigned Syntax = Record.readInt();
-  unsigned SpellingIndex = Record.readInt();
-  bool IsAlignas = (ParsedKind == AttributeCommonInfo::AT_Aligned &&
-                    Syntax == AttributeCommonInfo::AS_Keyword &&
-                    SpellingIndex == AlignedAttr::Keyword_alignas);
-  bool IsRegularKeywordAttribute = Record.readBool();
-
-  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                           AttributeCommonInfo::Kind(ParsedKind),
-                           {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
-                            IsAlignas, IsRegularKeywordAttribute});
-
-#include "clang/Serialization/AttrPCHRead.inc"
-
-  assert(New && "Unable to decode attribute?");
-  return New;
+  AttributeCommonInfo Info = Record.readAttributeCommonInfo();
+  return Record.createAttribute(Kind, Info);
 }
 
 Attr *ASTRecordReader::readAttr(Decl *D) {
   AttrReader Record(*this);
-  auto V = Record.readInt();
-  if (!V)
+  attr::Kind Kind;
+  if (auto KindOpt = Record.readAttrKind(); !KindOpt)
     return nullptr;
+  else 
+    Kind = *KindOpt;
 
-  Attr *New = nullptr;
-  // Kind is stored as a 1-based integer because 0 is used to indicate a null
-  // Attr pointer.
-  auto Kind = static_cast<attr::Kind>(V - 1);
-  ASTContext &Context = getContext();
-
-  IdentifierInfo *AttrName = Record.readIdentifier();
-  IdentifierInfo *ScopeName = Record.readIdentifier();
-  SourceRange AttrRange = Record.readSourceRange();
-  SourceLocation ScopeLoc = Record.readSourceLocation();
-  unsigned ParsedKind = Record.readInt();
-  unsigned Syntax = Record.readInt();
-  unsigned SpellingIndex = Record.readInt();
-  bool IsAlignas = (ParsedKind == AttributeCommonInfo::AT_Aligned &&
-                    Syntax == AttributeCommonInfo::AS_Keyword &&
-                    SpellingIndex == AlignedAttr::Keyword_alignas);
-  bool IsRegularKeywordAttribute = Record.readBool();
-
-  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                           AttributeCommonInfo::Kind(ParsedKind),
-                           {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
-                            IsAlignas, IsRegularKeywordAttribute});
+  AttributeCommonInfo Info = Record.readAttributeCommonInfo();
   if (Kind == attr::PreferredName) {
     bool isInherited = Record.readInt();
     bool isImplicit = Record.readInt();
@@ -3208,15 +3209,12 @@ Attr *ASTRecordReader::readAttr(Decl *D) {
     return nullptr;
   }
 
-#include "clang/Serialization/AttrPCHRead.inc"
-
-  assert(New && "Unable to decode attribute?");
-  return New;
+  return Record.createAttribute(Kind, Info);
 }
 
 /// Reads attributes from the current stream position.
 void ASTRecordReader::readAttributes(AttrVec &Attrs) {
-  for (unsigned I = 0, E = readInt(); I != E; ++I)
+  for (unsigned I = 0, E = readInt(); I != E; ++I) 
     if (auto *A = readAttr())
       Attrs.push_back(A);
 }

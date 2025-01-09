@@ -9869,7 +9869,6 @@ void ASTReader::finishPendingActions() {
       TypeSourceInfo *TInfo = nullptr;
       if (!InfoTy.isNull()) {
         TInfo = getContext().CreateTypeSourceInfo(InfoTy);
-        // TODO - this piece doesn't work yet
         if (auto Loc = TInfo->getTypeLoc().getAs<ElaboratedTypeLoc>()) {
           Loc.setElaboratedKeywordLoc(PendingPreferredNameAttributes[I].ElaboratedTypedefSourceLocation);
           Loc.setQualifierLoc(PendingPreferredNameAttributes[I].NNS);
