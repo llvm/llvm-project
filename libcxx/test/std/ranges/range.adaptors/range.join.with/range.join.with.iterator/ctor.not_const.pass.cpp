@@ -31,6 +31,7 @@ constexpr bool test() {
     using JWV   = decltype(jwv);
     using Iter  = std::ranges::iterator_t<JWV>;
     using CIter = std::ranges::iterator_t<const JWV>;
+    static_assert(!std::same_as<Iter, CIter>);
     static_assert(std::convertible_to<Iter, CIter>);
     static_assert(std::constructible_from<CIter, Iter>);
 
