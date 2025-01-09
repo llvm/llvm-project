@@ -105,13 +105,9 @@ static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
       });
 }
 
-BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+BackendConsumer::BackendConsumer(const CompilerInstance &CI,
+                                 BackendAction Action,
                                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                                 const HeaderSearchOptions &HeaderSearchOpts,
-                                 const PreprocessorOptions &PPOpts,
-                                 const CodeGenOptions &CodeGenOpts,
-                                 const TargetOptions &TargetOpts,
-                                 const LangOptions &LangOpts,
                                  const CASOptions &CASOpts,
                                  const std::string &InFile,
                                  SmallVector<LinkModule, 4> LinkModules,
@@ -119,46 +115,42 @@ BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
                                  LLVMContext &C,
                                  CoverageSourceInfo *CoverageInfo,
                                  std::unique_ptr<raw_pwrite_stream> CasIDOS)
-  : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
-  CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-  CASOpts(CASOpts), AsmOutStream(std::move(OS)),
-  CasIDStream(std::move(CasIDOS)), Context(nullptr), FS(VFS),
-  LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
-  LLVMIRGenerationRefCount(0),
-  Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
-                        PPOpts, CodeGenOpts, C, CoverageInfo)),
-  LinkModules(std::move(LinkModules)) {
-    TimerIsEnabled = CodeGenOpts.TimePasses;
-    llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
-    llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+    : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
+      CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
+      LangOpts(CI.getLangOpts()), CASOpts(CASOpts), AsmOutStream(std::move(OS)),
+      CasIDStream(std::move(CasIDOS)), Context(nullptr), FS(VFS),
+      LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
+      Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
+                            CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
+                            CI.getCodeGenOpts(), C, CoverageInfo)),
+      LinkModules(std::move(LinkModules)) {
+  TimerIsEnabled = CodeGenOpts.TimePasses;
+  llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
+  llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
 }
 
 // This constructor is used in installing an empty BackendConsumer
 // to use the clang diagnostic handler for IR input files. It avoids
 // initializing the OS field.
-BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+BackendConsumer::BackendConsumer(const CompilerInstance &CI,
+                                 BackendAction Action,
                                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                                 const HeaderSearchOptions &HeaderSearchOpts,
-                                 const PreprocessorOptions &PPOpts,
-                                 const CodeGenOptions &CodeGenOpts,
-                                 const TargetOptions &TargetOpts,
-                                 const LangOptions &LangOpts,
                                  const CASOptions &CASOpts,
                                  llvm::Module *Module,
                                  SmallVector<LinkModule, 4> LinkModules,
                                  LLVMContext &C,
                                  CoverageSourceInfo *CoverageInfo)
-  : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
-  CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-  CASOpts(CASOpts), Context(nullptr), FS(VFS),
-  LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
-  LLVMIRGenerationRefCount(0),
-  Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts,
-                        PPOpts, CodeGenOpts, C, CoverageInfo)),
-  LinkModules(std::move(LinkModules)), CurLinkModule(Module) {
-    TimerIsEnabled = CodeGenOpts.TimePasses;
-    llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
-    llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+    : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
+      CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
+      LangOpts(CI.getLangOpts()), CASOpts(CASOpts), Context(nullptr), FS(VFS),
+      LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
+      Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), CI.getHeaderSearchOpts(),
+                            CI.getPreprocessorOpts(), CI.getCodeGenOpts(), C,
+                            nullptr)),
+      LinkModules(std::move(LinkModules)), CurLinkModule(Module) {
+  TimerIsEnabled = CodeGenOpts.TimePasses;
+  llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
+  llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
 }
 
 llvm::Module* BackendConsumer::getModule() const {
@@ -1037,13 +1029,11 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
-      BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
-      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      CI.getTargetOpts(), CI.getLangOpts(),
+      CI, BA, &CI.getVirtualFileSystem(),
       CI.getCASOpts(), // MCCAS
-      std::string(InFile), std::move(LinkModules), std::move(OS), *VMContext,
-      CoverageInfo, std::move(CasIDOS)));
-
+      std::string(InFile),
+      std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo,
+      std::move(CasIDOS)));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -1211,13 +1201,9 @@ void CodeGenAction::ExecuteAction() {
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.
-  BackendConsumer Result(BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
-                         CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
-                         CI.getCodeGenOpts(), CI.getTargetOpts(),
-                         CI.getLangOpts(),
-                         CI.getCASOpts(),
-                         TheModule.get(), std::move(LinkModules), *VMContext,
-                         nullptr);
+  BackendConsumer Result(CI, BA, &CI.getVirtualFileSystem(), CI.getCASOpts(),
+                         TheModule.get(),
+                         std::move(LinkModules), *VMContext, nullptr);
 
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
