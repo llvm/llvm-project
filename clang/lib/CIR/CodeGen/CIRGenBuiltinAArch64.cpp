@@ -3555,8 +3555,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
   switch (BuiltinID) {
   default:
     break;
-  case NEON::BI__builtin_neon_vabsh_f16:
-    llvm_unreachable("NEON::BI__builtin_neon_vabsh_f16 NYI");
+  case NEON::BI__builtin_neon_vabsh_f16: {
+    Ops.push_back(emitScalarExpr(E->getArg(0)));
+    return builder.create<cir::FAbsOp>(getLoc(E->getExprLoc()), Ops);
+  }
   case NEON::BI__builtin_neon_vaddq_p128: {
     llvm_unreachable("NEON::BI__builtin_neon_vaddq_p128 NYI");
   }

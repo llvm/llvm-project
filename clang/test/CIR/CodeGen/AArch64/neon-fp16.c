@@ -19,12 +19,16 @@
 
 #include <arm_fp16.h>
 
-// NYI-LABEL: test_vabsh_f16
-// NYI:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half %a)
-// NYI:  ret half [[ABS]]
-// float16_t test_vabsh_f16(float16_t a) {
-//   return vabsh_f16(a);
-// }
+// CIR-LABEL: vabsh_f16
+// CIR: {{%.*}}  = cir.fabs {{%.*}} : !cir.f16
+//
+// LLVM-LABEL: test_vabsh_f16
+// LLVM-SAME: (half [[a:%.]])
+// LLVM:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half [[a]])
+// LLVM:  ret half [[ABS]]
+float16_t test_vabsh_f16(float16_t a) {
+  return vabsh_f16(a);
+}
 
 // NYI-LABEL: test_vceqzh_f16
 // NYI:  [[TMP1:%.*]] = fcmp oeq half %a, 0xH0000
