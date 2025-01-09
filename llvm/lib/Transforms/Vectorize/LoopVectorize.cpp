@@ -8895,8 +8895,7 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
 // exit users can be handled, otherwise return false.
 static bool
 addUsersInExitBlocks(VPlan &Plan,
-                     const SetVector<VPIRInstruction *> &ExitUsersToFix,
-                     DenseMap<VPValue *, VPValue *> &IVEndValues) {
+                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
     return true;
 
@@ -9222,7 +9221,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix, IVEndValues)) {
+  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
     reportVectorizationFailure(
         "Some exit values in loop with uncountable exit not supported yet",
         "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
