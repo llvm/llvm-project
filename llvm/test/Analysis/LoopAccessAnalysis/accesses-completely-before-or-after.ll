@@ -109,21 +109,14 @@ exit:
 define void @may_overlap_stores_with_different_sizes(ptr %dst) {
 ; CHECK-LABEL: 'may_overlap_stores_with_different_sizes'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 256 bits
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i8 0, ptr %gep.dst.128.iv, align 1
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.iv = getelementptr i16, ptr %dst, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.dst.128.iv = getelementptr i8, ptr %gep.dst.128, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %dst High: (130 + %dst))
-; CHECK-NEXT:            Member: {%dst,+,2}<nw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (128 + %dst)<nuw> High: (193 + %dst))
-; CHECK-NEXT:            Member: {(128 + %dst)<nuw>,+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
