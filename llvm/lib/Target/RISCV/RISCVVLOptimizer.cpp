@@ -637,7 +637,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VMSBF_M:
   case RISCV::VMSIF_M:
   case RISCV::VMSOF_M: {
-    return 0;
+    return MILog2SEW;
   }
 
   // Vector Iota Instruction
