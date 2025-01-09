@@ -111,7 +111,7 @@ INTERCEPTOR(void *, malloc, uptr size) {
 #if SANITIZER_APPLE
 INTERCEPTOR(uptr, malloc_size, void *ptr) {
   if (DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Size(ptr);
+    return DlsymAlloc::GetSize(ptr);
   return REAL(malloc_size)(ptr);
 }
 #endif
