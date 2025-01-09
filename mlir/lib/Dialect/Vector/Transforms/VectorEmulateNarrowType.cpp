@@ -1313,26 +1313,26 @@ static Value rewriteI2ToI8Ext(PatternRewriter &rewriter, Location loc,
   Value i8Vector = bitcastSubByteVectorToI8(rewriter, loc, srcValue);
 
   // 2. Extract each i2 element
-  // Element 0 (bits 0-1)
-  Value elem0 = extFn(rewriter, loc, i8Vector, 0, 2);
-  // Element 1 (bits 2-3)
-  Value elem1 = extFn(rewriter, loc, i8Vector, 2, 2);
-  // Element 2 (bits 4-5)
-  Value elem2 = extFn(rewriter, loc, i8Vector, 4, 2);
-  // Element 3 (bits 6-7)
-  Value elem3 = extFn(rewriter, loc, i8Vector, 6, 2);
+  // Positon 0 (bits 0-1)
+  Value vec0 = extFn(rewriter, loc, i8Vector, 0, 2);
+  // Position 1 (bits 2-3)
+  Value vec1 = extFn(rewriter, loc, i8Vector, 2, 2);
+  // Position 2 (bits 4-5)
+  Value vec2 = extFn(rewriter, loc, i8Vector, 4, 2);
+  // Position 3 (bits 6-7)
+  Value vec3 = extFn(rewriter, loc, i8Vector, 6, 2);
 
   // 3. Interleave all 4 elements by first interleaving
   // even elements and then odd
-  // elem0 = [0,0,0,0]
-  // elem1 = [1,1,1,1]
-  // elem2 = [2,2,2,2]
-  // elem3 = [3,3,3,3]
-  // 02    = [0,2,0,2]
-  // 13    = [1,3,1,3]
-  // 0213  = [0,1,2,3]
-  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, elem0, elem2);
-  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, elem1, elem3);
+  // vec0  = [0,0,0,0],...
+  // vec1  = [1,1,1,1],...
+  // vec2  = [2,2,2,2],...
+  // vec3  = [3,3,3,3],...
+  // 02    = [0,2,0,2,...],...
+  // 13    = [1,3,1,3,...],...
+  // 0213  = [0,1,2,3,...],...
+  Value interleave02 = rewriter.create<vector::InterleaveOp>(loc, vec0, vec2);
+  Value interleave13 = rewriter.create<vector::InterleaveOp>(loc, vec1, vec3);
   return rewriter.create<vector::InterleaveOp>(loc, interleave02, interleave13);
 }
 
