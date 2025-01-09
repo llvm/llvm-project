@@ -551,8 +551,8 @@ Examples:
    call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v2f64_1_0_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
 
-For RawBuffer, we need two indices and we accept scalars and vectors of less
-than 4 elements. Note that we do allow vectors of 4 64-bit elements here.
+For RawBuffer, we need two indices and we accept scalars and vectors of 4 or
+fewer elements. Note that we do allow vectors of 4 64-bit elements here.
 
 Examples:
 
@@ -569,7 +569,7 @@ Examples:
      -
    * - ``%buffer``
      - 0
-     - ``target(dx.TypedBuffer, ...)``
+     - ``target(dx.RawBuffer, ...)``
      - The buffer to store into
    * - ``%index``
      - 1
@@ -591,7 +591,7 @@ Examples:
    ; float
    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f32_1_0_0t.f32(
        target("dx.RawBuffer", float, 1, 0, 0) %buffer,
-       i32 %index, i32 %offset, float %data)
+       i32 %index, i32 0, float %data)
    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(
        target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
        i32 %index, i32 0, float %data)
@@ -630,5 +630,5 @@ Examples:
    ; byteaddressbuf.Store<int64_t4>
    call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(
        target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
-       i32 %offset, i32 0, <4 x double> %data)
+       i32 %index, i32 0, <4 x double> %data)
 
