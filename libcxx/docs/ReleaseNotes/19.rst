@@ -126,6 +126,8 @@ Improvements and New Features
 
 - In C++23 and C++26 the number of transitive includes in several headers has been reduced, improving the compilation speed.
 
+- ``std::stable_sort`` uses radix sort for integral types now, which can improve the performance up to 10 times, depending
+  on type of sorted elements and the initial state of the sorted array.
 
 Deprecations and Removals
 -------------------------

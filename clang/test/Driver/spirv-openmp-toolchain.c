@@ -45,7 +45,7 @@
 // CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_PP:.+]]"
 // CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
 // CHECK-BINDINGS-TEMPS: "spirv64-intel" - "SPIR-V::Translator", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_ASM:.+]]"
-// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "SPIR-V::Translator", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_SPV:.+]]"
+// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "SPIRV::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_SPV:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_SPV]]"], output: "[[DEVICE_IMAGE:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_IMAGE]]"], output: "[[HOST_ASM:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang::as", inputs: ["[[HOST_ASM]]"], output: "[[HOST_OBJ:.+]]"

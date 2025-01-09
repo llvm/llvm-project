@@ -630,17 +630,12 @@ def ExactFPImmValues : GenericEnum {
 
 def ExactFPImmsList : GenericTable {
   let FilterClass = "ExactFPImm";
-  let Fields = ["Name", "Enum", "Repr"];
+  let Fields = ["Enum", "Repr"];
 }
 
 def lookupExactFPImmByEnum : SearchIndex {
   let Table = ExactFPImmsList;
   let Key = ["Enum"];
-}
-
-def lookupExactFPImmByRepr : SearchIndex {
-  let Table = ExactFPImmsList;
-  let Key = ["Repr"];
 }
 
 def : ExactFPImm<"zero", "0.0", 0x0>;
@@ -998,7 +993,6 @@ defm : TLBI<"VMALLWS2E1OS",  0b100, 0b1000, 0b0101, 0b010, 0>;
 class SysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
              bits<3> op2> {
   string Name = name;
-  string AltName = name;
   bits<16> Encoding;
   let Encoding{15-14} = op0;
   let Encoding{13-11} = op1;
@@ -1018,18 +1012,16 @@ def SysRegValues : GenericEnum {
 
 def SysRegsList : GenericTable {
   let FilterClass = "SysReg";
-  let Fields = ["Name", "AltName", "Encoding", "Readable", "Writeable",
-                "Requires"];
+  let Fields = ["Name", "Encoding", "Readable", "Writeable", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupSysRegByEncoding";
+  let PrimaryKeyReturnRange = true;
 }
 
 def lookupSysRegByName : SearchIndex {
   let Table = SysRegsList;
   let Key = ["Name"];
-}
-
-def lookupSysRegByEncoding : SearchIndex {
-  let Table = SysRegsList;
-  let Key = ["Encoding"];
 }
 
 class RWSysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
@@ -1317,9 +1309,7 @@ def : RWSysReg<"TTBR0_EL1",          0b11, 0b000, 0b0010, 0b0000, 0b000>;
 def : RWSysReg<"TTBR0_EL3",          0b11, 0b110, 0b0010, 0b0000, 0b000>;
 
 let Requires = [{ {AArch64::FeatureEL2VMSA} }] in {
-def : RWSysReg<"TTBR0_EL2",          0b11, 0b100, 0b0010, 0b0000, 0b000> {
-  let AltName = "VSCTLR_EL2";
-}
+def : RWSysReg<"TTBR0_EL2",          0b11, 0b100, 0b0010, 0b0000, 0b000>;
 def : RWSysReg<"VTTBR_EL2",          0b11, 0b100, 0b0010, 0b0001, 0b000>;
 }
 
@@ -1706,9 +1696,7 @@ def : RWSysReg<"ICH_LR15_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b111>;
 let Requires = [{ {AArch64::HasV8_0rOps} }] in {
 //Virtualization System Control Register
 //                                 Op0   Op1    CRn     CRm     Op2
-def : RWSysReg<"VSCTLR_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b000> {
-  let AltName = "TTBR0_EL2";
-}
+def : RWSysReg<"VSCTLR_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b000>;
 
 //MPU Type Register
 //                                 Op0   Op1    CRn     CRm     Op2

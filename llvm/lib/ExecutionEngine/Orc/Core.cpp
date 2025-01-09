@@ -1576,12 +1576,22 @@ void Platform::lookupInitSymbolsAsync(
   }
 }
 
+MaterializationTask::~MaterializationTask() {
+  // If this task wasn't run then fail materialization.
+  if (MR)
+    MR->failMaterialization();
+}
+
 void MaterializationTask::printDescription(raw_ostream &OS) {
   OS << "Materialization task: " << MU->getName() << " in "
      << MR->getTargetJITDylib().getName();
 }
 
-void MaterializationTask::run() { MU->materialize(std::move(MR)); }
+void MaterializationTask::run() {
+  assert(MU && "MU should not be null");
+  assert(MR && "MR should not be null");
+  MU->materialize(std::move(MR));
+}
 
 void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 
