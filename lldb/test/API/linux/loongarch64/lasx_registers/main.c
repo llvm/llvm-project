@@ -1,8 +1,8 @@
 #include <stdint.h>
 
 // base is added to each value. If base = 2, then
-// $vr0 = { 0x02 } * 32
-// $vr1 = { 0x03 } * 32 etc.
+// $xr0 = { 0x02 } * 32
+// $xr1 = { 0x03 } * 32 etc.
 void write_lasx_regs(unsigned base) {
 #define WRITE_LASX(NUM)                                                        \
   asm volatile("xvreplgr2vr.b $xr" #NUM ", %0\n\t" ::"r"(base + NUM))

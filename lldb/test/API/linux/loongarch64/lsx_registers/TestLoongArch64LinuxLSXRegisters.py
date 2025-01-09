@@ -47,8 +47,6 @@ class LoongArch64LinuxRegisters(TestBase):
         self.runCmd("expression write_lsx_regs(2)")
         self.check_lsx_values(2)
 
-        # Write a new set of values. The kernel will move the program back to
-        # non-streaming mode here.
         for i in range(32):
             self.runCmd(
                 'register write vr{} "{}"'.format(i, self.make_lsx_value(i + 1))
