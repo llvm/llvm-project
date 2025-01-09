@@ -1059,17 +1059,11 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> log10(const complex<_Tp>& __x) {
 
 // sqrt
 
-_LIBCPP_HIDE_FROM_ABI inline _Complex float __csqrt(_Complex float __v) {
-  return __builtin_csqrtf(__v);
-}
+_LIBCPP_HIDE_FROM_ABI inline _Complex float __csqrt(_Complex float __v) { return __builtin_csqrtf(__v); }
 
-_LIBCPP_HIDE_FROM_ABI inline _Complex double __csqrt(_Complex double __v) {
-  return __builtin_csqrt(__v);
-}
+_LIBCPP_HIDE_FROM_ABI inline _Complex double __csqrt(_Complex double __v) { return __builtin_csqrt(__v); }
 
-_LIBCPP_HIDE_FROM_ABI inline _Complex long double __csqrt(_Complex long double __v) {
-  return __builtin_csqrtl(__v);
-}
+_LIBCPP_HIDE_FROM_ABI inline _Complex long double __csqrt(_Complex long double __v) { return __builtin_csqrtl(__v); }
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> sqrt(const complex<_Tp>& __x) {
