@@ -12860,7 +12860,7 @@ This instruction requires several arguments:
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
    -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is 
-      ``true``, or the calling convention is ``tailcc``
+      ``true``, or the calling convention is ``tailcc``.
    -  `Platform-specific constraints are met. 
       <CodeGenerator.html#tail-call-optimization>`_
 
@@ -13216,8 +13216,8 @@ an extra level of indentation. As an example:
 
 .. code-block:: llvm
 
-  %inst1 = op1 %a, %b
-    #dbg_value(%inst1, !10, !DIExpression(), !11)
+      %inst1 = op1 %a, %b
+      #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
 These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
