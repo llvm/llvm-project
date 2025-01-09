@@ -18,7 +18,8 @@
 
 #include <cstdint>
 
-namespace llvm::sandboxir {
+namespace llvm {
+namespace sandboxir {
 
 class Argument;
 class BBIterator;
@@ -37,10 +38,25 @@ public:
   using MoveInstrCallback =
       std::function<void(Instruction *, const BBIterator &)>;
 
-  /// An ID for a registered callback. Used for deregistration. Using a 64-bit
-  /// integer so we don't have to worry about the unlikely case of overflowing
-  /// a 32-bit counter.
-  using CallbackID = uint64_t;
+  /// An ID for a registered callback. Used for deregistration. A dedicated type
+  /// is employed so as to keep IDs opaque to the end user; only Context should
+  /// deal with its underlying representation.
+  class CallbackID {
+  public:
+    // Uses a 64-bit integer so we don't have to worry about the unlikely case
+    // of overflowing a 32-bit counter.
+    using ReprTy = uint64_t;
+
+  private:
+    // Default initialization results in an invalid ID.
+    ReprTy Val = std::numeric_limits<ReprTy>::max();
+    explicit CallbackID(ReprTy Val) : Val{Val} {}
+
+  public:
+    CallbackID() = default;
+    friend class Context;
+    friend struct DenseMapInfo<CallbackID>;
+  };
 
 protected:
   LLVMContext &LLVMCtx;
@@ -83,7 +99,7 @@ protected:
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
   /// registration/deregistration.
-  CallbackID NextCallbackID = 0;
+  uint64_t NextCallbackID = 0;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
@@ -263,6 +279,27 @@ public:
   // TODO: Add callbacks for instructions inserted/removed if needed.
 };
 
-} // namespace llvm::sandboxir
+} // namespace sandboxir
+
+// DenseMap info for CallbackIDs
+template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
+  using CallbackID = sandboxir::Context::CallbackID;
+  using ReprInfo = DenseMapInfo<CallbackID::ReprTy>;
+
+  static CallbackID getEmptyKey() {
+    return CallbackID{ReprInfo::getEmptyKey()};
+  }
+  static CallbackID getTombstoneKey() {
+    return CallbackID{ReprInfo::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const CallbackID &ID) {
+    return ReprInfo::getHashValue(ID.Val);
+  }
+  static bool isEqual(const CallbackID &LHS, const CallbackID &RHS) {
+    return ReprInfo::isEqual(LHS.Val, RHS.Val);
+  }
+};
+
+} // namespace llvm
 
 #endif // LLVM_SANDBOXIR_CONTEXT_H
