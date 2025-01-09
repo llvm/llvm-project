@@ -9,8 +9,11 @@
 #include "UnusedParametersCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 #include <unordered_map>
@@ -27,7 +30,7 @@ bool isOverrideMethod(const FunctionDecl *Function) {
   return false;
 }
 
-bool hasAttrAfterParam(const clang::SourceManager *SourceManager,
+bool hasAttrAfterParam(const SourceManager *SourceManager,
                        const ParmVarDecl *Param) {
   for (const auto *Attr : Param->attrs()) {
     if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
