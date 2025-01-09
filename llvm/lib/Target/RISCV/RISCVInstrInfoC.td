@@ -259,9 +259,8 @@ class CStore_rri<bits<3> funct3, string OpcodeStr,
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Bcz<bits<3> funct3, string OpcodeStr,
-          RegisterClass cls>
-    : RVInst16CB<funct3, 0b01, (outs), (ins cls:$rs1, simm9_lsb0:$imm),
+class Bcz<bits<3> funct3, string OpcodeStr>
+    : RVInst16CB<funct3, 0b01, (outs), (ins GPRC:$rs1, simm9_lsb0:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -273,9 +272,9 @@ class Bcz<bits<3> funct3, string OpcodeStr,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
-                  Operand ImmOpnd>
-    : RVInst16CB<0b100, 0b01, (outs cls:$rd), (ins cls:$rs1, ImmOpnd:$imm),
+class Shift_right<bits<2> funct2, string OpcodeStr>
+    : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
+                 (ins GPRC:$rs1, uimmlog2xlennonzero:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
@@ -284,10 +283,9 @@ class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
-             RegisterClass cls>
-    : RVInst16CA<funct6, funct2, 0b01, (outs cls:$rd_wb), (ins cls:$rd, cls:$rs2),
-                 OpcodeStr, "$rd, $rs2"> {
+class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
+    : RVInst16CA<funct6, funct2, 0b01, (outs GPRC:$rd_wb),
+                 (ins GPRC:$rd, GPRC:$rs2), OpcodeStr, "$rd, $rs2"> {
   bits<3> rd;
   let Constraints = "$rd = $rd_wb";
   let Inst{9-7} = rd;
@@ -465,9 +463,9 @@ def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SRLI : Shift_right<0b00, "c.srli", GPRC, uimmlog2xlennonzero>,
+def C_SRLI : Shift_right<0b00, "c.srli">,
              Sched<[WriteShiftImm, ReadShiftImm]>;
-def C_SRAI : Shift_right<0b01, "c.srai", GPRC, uimmlog2xlennonzero>,
+def C_SRAI : Shift_right<0b01, "c.srai">,
              Sched<[WriteShiftImm, ReadShiftImm]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -480,19 +478,19 @@ def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rd), (ins GPRC:$rs1, simm6:$imm
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SUB  : CA_ALU<0b100011, 0b00, "c.sub", GPRC>,
+def C_SUB  : CA_ALU<0b100011, 0b00, "c.sub">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_XOR  : CA_ALU<0b100011, 0b01, "c.xor", GPRC>,
+def C_XOR  : CA_ALU<0b100011, 0b01, "c.xor">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_OR   : CA_ALU<0b100011, 0b10, "c.or" , GPRC>,
+def C_OR   : CA_ALU<0b100011, 0b10, "c.or">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def C_AND  : CA_ALU<0b100011, 0b11, "c.and", GPRC>,
+def C_AND  : CA_ALU<0b100011, 0b11, "c.and">,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
-def C_SUBW : CA_ALU<0b100111, 0b00, "c.subw", GPRC>,
+def C_SUBW : CA_ALU<0b100111, 0b00, "c.subw">,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
-def C_ADDW : CA_ALU<0b100111, 0b01, "c.addw", GPRC>,
+def C_ADDW : CA_ALU<0b100111, 0b01, "c.addw">,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 }
 
@@ -504,8 +502,8 @@ def C_J : RVInst16CJ<0b101, 0b01, (outs), (ins simm12_lsb0:$offset),
   let isBarrier=1;
 }
 
-def C_BEQZ : Bcz<0b110, "c.beqz", GPRC>, Sched<[WriteJmp, ReadJmp]>;
-def C_BNEZ : Bcz<0b111, "c.bnez", GPRC>, Sched<[WriteJmp, ReadJmp]>;
+def C_BEQZ : Bcz<0b110, "c.beqz">, Sched<[WriteJmp, ReadJmp]>;
+def C_BNEZ : Bcz<0b111, "c.bnez">, Sched<[WriteJmp, ReadJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
