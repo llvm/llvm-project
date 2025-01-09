@@ -120,10 +120,7 @@ TEST(TBAAMetadataTest, BasicTypes) {
       MInstruction(Instruction::Store,
         MValType(PointerType::getUnqual(Compiler.Context)),
         MMTuple(
-          MMTuple(
-            MMString("p1 void"),
-            AnyPtr,
-            MConstInt(0)),
+          AnyPtr,
           MSameAs(0),
           MConstInt(0))));
   ASSERT_TRUE(I);
