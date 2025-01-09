@@ -364,6 +364,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
 
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check to use correct template
+  type in ``std::min`` and ``std::max`` when operand is integer literal.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
