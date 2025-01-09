@@ -350,8 +350,7 @@ define float @test_fabs_select_multiuse(i1 %cond, float %x) {
 ; CHECK-LABEL: @test_fabs_select_multiuse(
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float 0x7FF0000000000000
 ; CHECK-NEXT:    call void @usef32(float [[SELECT]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[COND]], float [[TMP1]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
