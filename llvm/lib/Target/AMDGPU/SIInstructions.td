@@ -3325,7 +3325,9 @@ multiclass V_SAT_PK_Pat<Instruction inst> {
 let OtherPredicates = [NotHasTrue16BitInsts] in {
   defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
 } // End OtherPredicates = [NotHasTrue16BitInsts]
-defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_fake16_e64>;
+let True16Predicate = UseFakeTrue16Insts in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_fake16_e64>;
+}
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
