@@ -49,11 +49,14 @@ struct NonDefaultConstructiblePattern : TrivialPattern {
 };
 
 constexpr bool test() {
-  // Check if `base_` and `pattern_` are value initialised
-  {
+  { // Check if `base_` and `pattern_` are value initialised
     std::ranges::join_with_view<TrivialView, TrivialPattern> v;
     assert(std::move(v).base().val_ == 0);
     assert(std::ranges::equal(v, std::array{1, 2, 0, 3, 4, 0, 5, 6}));
+  }
+
+  { // Default constructor should not be explicit
+    [[maybe_unused]] std::ranges::join_with_view<TrivialView, TrivialPattern> v = {};
   }
 
   static_assert(std::default_initializable<std::ranges::join_with_view<TrivialView, TrivialPattern>>);
