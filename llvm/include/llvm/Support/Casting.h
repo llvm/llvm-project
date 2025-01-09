@@ -589,6 +589,10 @@ template <typename To, typename From>
 // ValueIsPresent
 //===----------------------------------------------------------------------===//
 
+template <typename T>
+constexpr bool IsNullable =
+    std::is_pointer_v<T> || std::is_constructible_v<T, std::nullptr_t>;
+
 /// ValueIsPresent provides a way to check if a value is, well, present. For
 /// pointers, this is the equivalent of checking against nullptr, for Optionals
 /// this is the equivalent of checking hasValue(). It also provides a method for
@@ -610,9 +614,10 @@ template <typename T> struct ValueIsPresent<std::optional<T>> {
   static inline decltype(auto) unwrapValue(std::optional<T> &t) { return *t; }
 };
 
-// Specialization for types convertible to bool.
+// If something is "nullable" then we just cast it to bool to see if it exists.
 template <typename T>
-struct ValueIsPresent<T, std::enable_if_t<std::is_constructible_v<bool, T>>> {
+struct ValueIsPresent<
+    T, std::enable_if_t<IsNullable<T> && std::is_constructible_v<bool, T>>> {
   using UnwrappedType = T;
   static inline bool isPresent(const T &t) { return static_cast<bool>(t); }
   static inline decltype(auto) unwrapValue(T &t) { return t; }
