@@ -1099,7 +1099,7 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(
         op, "only src bitwidth of 2 or 4 is supported at this moment");
 
-  const int numSrcElemsPerDestElem = dstElemBitwidth / srcElemBitwidth;
+  const int numSrcElemsPerDestElem = 8 / srcElemBitwidth;
   if ((subByteVecType.getShape().back() % numSrcElemsPerDestElem) != 0)
     return rewriter.notifyMatchFailure(
         op, "Not an even number of i4 elements in trailing dim");
@@ -1193,7 +1193,8 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
                                       Value subByteVec) {
   auto srcVecType = cast<VectorType>(subByteVec.getType());
   int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
-  assert(8 % srcBitwidth == 0 && "Unsupported sub-byte type (not a divisor of i8)");
+  assert(8 % srcBitwidth == 0 &&
+         "Unsupported sub-byte type (not a divisor of i8)");
   int64_t bitwidthFactor = 8 / srcBitwidth;
   SmallVector<int64_t> vecShape(srcVecType.getShape());
   // Adjust last dimension of the vector, so the total size remains the same.
@@ -1256,6 +1257,10 @@ static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
 /// mask                           = [00 00 00 11]
 /// shr    = arith.shrui(src, 2)   = [00 01 01 10]
 /// result = arith.andi(shr, mask) = [00 00 00 10]
+/// NOTE: Similarly to extractNBitsFromVectorSigned, this could be achieved by
+/// using arith::ShLIOp + arith::ShRUIOp instead of the masking. However, by
+/// using arith::ShRUIOp + arith::AndIOp, we are eliminating shift left when the
+/// index is 0.
 static Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter,
                                             Location loc, Value src, int bitIdx,
                                             int numBits) {
