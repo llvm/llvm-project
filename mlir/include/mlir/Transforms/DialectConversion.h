@@ -391,6 +391,7 @@ private:
       return callback(derivedType, results);
     };
   }
+
   /// Register a type conversion.
   void registerConversion(ConversionCallbackFn callback) {
     conversions.emplace_back(std::move(callback));
