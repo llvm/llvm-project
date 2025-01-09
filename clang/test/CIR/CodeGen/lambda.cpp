@@ -251,10 +251,8 @@ int g3() {
 // COM: LLVM: [[CALL:%.*]] =  call noundef i32 @"_ZZ2g3vENK3$_0clERKi"(ptr noundef nonnull align 1 dereferenceable(1) [[unused_capture]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0]])
 // LLVM: [[CALL:%.*]] = call i32 @"_ZZ2g3vENK3$_0clERKi"(ptr [[unused_capture]], ptr [[TMP0]])
 // LLVM: store i32 [[CALL]], ptr [[ret_val]], align 4
-// FIXME: should just return result
-// COM: LLVM: ret i32 [[ret_val]]
-// LLVM: call void @llvm.trap()
-// LLVM: unreachable
+// LLVM: %[[ret:.*]] = load i32, ptr [[ret_val]], align 4
+// LLVM: ret i32 %[[ret]]
 
 // lambda operator int (*)(int const&)()
 // LLVM-LABEL: @"_ZZ2g3vENK3$_0cvPFiRKiEEv"

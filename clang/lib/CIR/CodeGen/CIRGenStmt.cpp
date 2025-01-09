@@ -72,12 +72,18 @@ Address CIRGenFunction::emitCompoundStmt(const CompoundStmt &S, bool getLast,
   // Add local scope to track new declared variables.
   SymTableScopeTy varScope(symbolTable);
   auto scopeLoc = getLoc(S.getSourceRange());
+  mlir::OpBuilder::InsertPoint scopeInsPt;
   builder.create<cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
-        LexicalScope lexScope{*this, loc, builder.getInsertionBlock()};
-        retAlloca = emitCompoundStmtWithoutScope(S, getLast, slot);
+        scopeInsPt = b.saveInsertionPoint();
       });
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeInsPt);
+    LexicalScope lexScope{*this, scopeLoc, builder.getInsertionBlock()};
+    retAlloca = emitCompoundStmtWithoutScope(S, getLast, slot);
+  }
 
   return retAlloca;
 }
@@ -473,14 +479,25 @@ mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &S) {
 
 mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &S) {
   assert(!cir::MissingFeatures::requiresReturnValueCheck());
+  assert(!cir::MissingFeatures::isSEHTryScope());
+
   auto loc = getLoc(S.getSourceRange());
 
   // Emit the result value, even if unused, to evaluate the side effects.
   const Expr *RV = S.getRetValue();
 
-  // TODO(cir): LLVM codegen uses a RunCleanupsScope cleanupScope here, we
-  // should model this in face of dtors.
+  // Record the result expression of the return statement. The recorded
+  // expression is used to determine whether a block capture's lifetime should
+  // end at the end of the full expression as opposed to the end of the scope
+  // enclosing the block expression.
+  //
+  // This permits a small, easily-implemented exception to our over-conservative
+  // rules about not jumping to statements following block literals with
+  // non-trivial cleanups.
+  // TODO(cir): SaveRetExpr
+  // SaveRetExprRAII SaveRetExpr(RV, *this);
 
+  RunCleanupsScope cleanupScope(*this);
   bool createNewScope = false;
   if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV)) {
     RV = EWC->getSubExpr();
@@ -557,16 +574,17 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &S) {
     }
   }
 
-  // Create a new return block (if not existent) and add a branch to
-  // it. The actual return instruction is only inserted during current
-  // scope cleanup handling.
+  cleanupScope.ForceCleanup();
+
+  // In CIR we might have returns in different scopes.
+  // FIXME(cir): cleanup code is handling actual return emission, the logic
+  // should try to match traditional codegen more closely (to the extend which
+  // is possible).
   auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
-  builder.create<BrOp>(loc, retBlock);
+  emitBranchThroughCleanup(loc, returnBlock(retBlock));
 
   // Insert the new block to continue codegen after branch to ret block.
   builder.createBlock(builder.getBlock()->getParent());
-
-  // TODO(cir): LLVM codegen for a cleanup on cleanupScope here.
   return mlir::success();
 }
 
@@ -1153,5 +1171,6 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue RV,
   } else {
     llvm_unreachable("NYI");
   }
-  emitBranchThroughCleanup(loc, ReturnBlock());
+  auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
+  emitBranchThroughCleanup(loc, returnBlock(retBlock));
 }
