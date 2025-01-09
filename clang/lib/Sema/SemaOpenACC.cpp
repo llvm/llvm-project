@@ -3732,8 +3732,17 @@ bool SemaOpenACC::ActOnStartStmtDirective(
                                 OpenACCClauseKind::DeviceType,
                                 OpenACCClauseKind::If});
 
-  // TODO: OpenACC: 'Update' construct needs to have one of 'self', 'host', or
-  // 'device'.  Implement here.
+  // OpenACC3.3 2.14.4: At least one self, host, or device clause must appear on
+  // an update directive.
+  if (K == OpenACCDirectiveKind::Update &&
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCSelfClause, OpenACCHostClause,
+                                           OpenACCDeviceClause>) ==
+          Clauses.end())
+    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
+           << K
+           << GetListOfClauses({OpenACCClauseKind::Self,
+                                OpenACCClauseKind::Host,
+                                OpenACCClauseKind::Device});
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }

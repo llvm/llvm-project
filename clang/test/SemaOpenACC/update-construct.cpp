@@ -21,36 +21,38 @@ void uses() {
 #pragma acc update self(Var) device_type(I) if_present
   // expected-error@+2{{OpenACC clause 'self' may not follow a 'device_type' clause in a 'update' construct}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc update device_type(I) self(Var)
+#pragma acc update self(Var) device_type(I) self(Var)
   // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'update' construct}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc update device_type(I) host(Var)
+#pragma acc update self(Var) device_type(I) host(Var)
   // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'update' construct}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc update device_type(I) device(Var)
+#pragma acc update self(Var) device_type(I) device(Var)
   // These 2 are OK.
 #pragma acc update self(Var) device_type(I) async
 #pragma acc update self(Var) device_type(I) wait
   // Unless otherwise specified, we assume 'device_type' can happen after itself.
 #pragma acc update self(Var) device_type(I) device_type(I)
 
-  // TODO: OpenACC: These should diagnose because there isn't at least 1 of
-  // 'self', 'host', or 'device'.
+  // These diagnose because there isn't at least 1 of 'self', 'host', or
+  // 'device'.
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
 #pragma acc update async
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
 #pragma acc update wait
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
 #pragma acc update device_type(I)
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
 #pragma acc update if(true)
+  // expected-error@+1{{OpenACC 'update' construct must have at least one 'self', 'host' or 'device' clause}}
 #pragma acc update if_present
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
-#pragma acc update if (NC) device_type(I)
+#pragma acc update self(Var) if (NC) device_type(I)
 
   // expected-error@+2{{OpenACC 'if' clause cannot appear more than once on a 'update' directive}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc update if(true) if (false)
-
-  // TODO: OpenACC: There is restrictions on the contents of a 'varlist', so
-  // those should be checked here too.
+#pragma acc update self(Var) if(true) if (false)
 
   // Cannot be the body of an 'if', 'while', 'do', 'switch', or
   // 'label'.
@@ -80,34 +82,34 @@ void uses() {
 #pragma acc update device(Var)
 
   // Checking for 'async', which requires an 'int' expression.
-#pragma acc update async
+#pragma acc update self(Var) async
 
-#pragma acc update async(getI())
+#pragma acc update self(Var) async(getI())
   // expected-error@+2{{expected ')'}}
   // expected-note@+1{{to match this '('}}
-#pragma acc update async(getI(), getI())
+#pragma acc update self(Var) async(getI(), getI())
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'update' directive}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc update async(getI()) async(getI())
+#pragma acc update self(Var) async(getI()) async(getI())
   // expected-error@+1{{OpenACC clause 'async' requires expression of integer type ('struct NotConvertible' invalid)}}
-#pragma acc update async(NC)
+#pragma acc update self(Var) async(NC)
 
   // Checking for 'wait', which has a complicated set arguments.
-#pragma acc update wait
-#pragma acc update wait()
-#pragma acc update wait(getI(), getI())
-#pragma acc update wait(devnum: getI():  getI())
-#pragma acc update wait(devnum: getI(): queues: getI(), getI())
+#pragma acc update self(Var) wait
+#pragma acc update self(Var) wait()
+#pragma acc update self(Var) wait(getI(), getI())
+#pragma acc update self(Var) wait(devnum: getI():  getI())
+#pragma acc update self(Var) wait(devnum: getI(): queues: getI(), getI())
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
-#pragma acc update wait(devnum:NC : 5)
+#pragma acc update self(Var) wait(devnum:NC : 5)
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
-#pragma acc update wait(devnum:5 : NC)
+#pragma acc update self(Var) wait(devnum:5 : NC)
 
     int arr[5];
   // expected-error@+3{{OpenACC clause 'wait' requires expression of integer type ('int[5]' invalid)}}
   // expected-error@+2{{OpenACC clause 'wait' requires expression of integer type ('int[5]' invalid)}}
   // expected-error@+1{{OpenACC clause 'wait' requires expression of integer type ('struct NotConvertible' invalid)}}
-#pragma acc update wait(devnum:arr : queues: arr, NC, 5)
+#pragma acc update self(Var) wait(devnum:arr : queues: arr, NC, 5)
 }
 
 struct SomeS {
