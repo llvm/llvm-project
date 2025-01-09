@@ -148,7 +148,8 @@ define i8 @udiv_umin_extra_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z2]])
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -165,7 +166,8 @@ define i8 @udiv_smin(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -181,7 +183,8 @@ define i8 @udiv_smax(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y2]], i8 [[Z2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %y2 = shl i8 1, %y
@@ -1006,7 +1009,8 @@ define i8 @udiv_fail_shl_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_fail_shl_overflow(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 2, [[Y:%.*]]
 ; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[SHL]], i8 1)
-; CHECK-NEXT:    [[MUL:%.*]] = udiv i8 [[X:%.*]], [[MIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[MIN]], i1 true)
+; CHECK-NEXT:    [[MUL:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %shl = shl i8 2, %y
@@ -1302,7 +1306,8 @@ define i8 @udiv_if_power_of_two(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i8 [ [[TMP3]], [[BB1]] ], [ 0, [[START:%.*]] ]
@@ -1328,7 +1333,8 @@ define i8 @udiv_exact_assume_power_of_two(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[_0:%.*]] = udiv exact i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr exact i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[_0]]
 ;
 start:
@@ -1345,7 +1351,8 @@ define i7 @udiv_assume_power_of_two_illegal_type(i7 %x, i7 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i7 1, 8) i7 @llvm.ctpop.i7(i7 [[Y:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i7 [[TMP0]], 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[_0:%.*]] = udiv i7 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i7 0, 8) i7 @llvm.cttz.i7(i7 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr i7 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i7 [[_0]]
 ;
 start:
@@ -1362,7 +1369,8 @@ define i8 @udiv_assume_power_of_two_multiuse(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[Y:%.*]])
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[_0:%.*]] = udiv i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[Y]], i1 true)
+; CHECK-NEXT:    [[_0:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    call void @use(i8 [[_0]])
 ; CHECK-NEXT:    ret i8 [[_0]]
 ;
