@@ -1130,7 +1130,7 @@ AST Matchers
 
 - Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
 
-- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr.
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr or DependentNameType.
 
 clang-format
 ------------
@@ -1282,6 +1282,12 @@ Sanitizers
   fine-grained, unified control of which UBSan checks can potentially be merged
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
+
+- Changed ``-fsanitize=pointer-overflow`` to no longer report ``NULL + 0`` as
+  undefined behavior in C, in line with
+  `N3322 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3322.pdf>`_,
+  and matching the previous behavior for C++.
+  ``NULL + non_zero`` continues to be reported as undefined behavior.
 
 Python Binding Changes
 ----------------------
