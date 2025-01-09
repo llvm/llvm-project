@@ -1,4 +1,4 @@
-;;; tblgen-lsp.el --- Description -*- lexical-binding: t; -*-
+;;; tblgen-lsp-client.el --- Description -*- lexical-binding: t; -*-
 ;;
 ;; Package-Requires: ((emacs "24.3"))
 ;;
