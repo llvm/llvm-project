@@ -946,7 +946,7 @@ void Writer::appendECImportTables() {
 
   const uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
 
-  // IAT is always placed at the begining of .rdata section and its size
+  // IAT is always placed at the beginning of .rdata section and its size
   // is aligned to 4KB. Insert it here, after all merges all done.
   if (PartialSection *importAddresses = findPartialSection(".idata$5", rdata)) {
     if (!rdataSec->chunks.empty())
@@ -2560,6 +2560,8 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &v) {
   const uint32_t mask = ~uint32_t(pageSize - 1);
   uint32_t page = v[0].rva & mask;
   size_t i = 0, j = 1;
+  llvm::sort(v,
+             [](const Baserel &x, const Baserel &y) { return x.rva < y.rva; });
   for (size_t e = v.size(); j < e; ++j) {
     uint32_t p = v[j].rva & mask;
     if (p == page)

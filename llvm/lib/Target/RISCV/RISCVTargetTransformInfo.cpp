@@ -2558,16 +2558,21 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   // TODO: Enable expansion when unaligned access is not supported after we fix
   // issues in ExpandMemcmp.
-  if (!(ST->enableUnalignedScalarMem() &&
-        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+  if (!ST->enableUnalignedScalarMem())
+    return Options;
+
+  if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
-  if (ST->is64Bit())
+  if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
-  else
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
     Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
   return Options;
 }

@@ -2546,6 +2546,17 @@ Example matches T::type
   };
 </pre></td></tr>
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentTemplateSpecializationType0')"><a name="dependentTemplateSpecializationType0Anchor">dependentTemplateSpecializationType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentTemplateSpecializationType.html">DependentTemplateSpecializationType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="dependentTemplateSpecializationType0"><pre>Matches a dependent template specialization type.
+
+Example matches A<T>::template B<T>
+
+  template<typename T> struct A;
+  template<typename T> struct declToImport {
+    typename A<T>::template B<T> a;
+  };
+</pre></td></tr>
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('deducedTemplateSpecializationType0')"><a name="deducedTemplateSpecializationType0Anchor">deducedTemplateSpecializationType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DeducedTemplateSpecializationType.html">DeducedTemplateSpecializationType</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="deducedTemplateSpecializationType0"><pre>Matches C++17 deduced template specialization types, e.g. deduced class
 template types.
@@ -3435,6 +3446,34 @@ cxxDependentScopeMemberExpr(isArrow())
   matches this-&gt;m
 unresolvedMemberExpr(isArrow())
   matches this-&gt;f&lt;T&gt;, f&lt;T&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentScopeDeclRefExpr.html">DependentScopeDeclRefExpr</a>&gt;</td><td class="name" onclick="toggle('hasDependentName0')"><a name="hasDependentName0Anchor">hasDependentName</a></td><td>std::string N</td></tr>
+<tr><td colspan="4" class="doc" id="hasDependentName0"><pre>Matches the dependent name of a DependentScopeDeclRefExpr.
+
+Matches the dependent name of a DependentScopeDeclRefExpr
+
+Given:
+
+  template &lt;class T&lt; class X : T { void f() { T::v; } };
+
+dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentNameType.html">DependentNameType</a>&gt;</td><td class="name" onclick="toggle('hasDependentName1')"><a name="hasDependentName1Anchor">hasDependentName</a></td><td>std::string N</td></tr>
+<tr><td colspan="4" class="doc" id="hasDependentName1"><pre>Matches the dependent name of a DependentNameType.
+
+Matches the dependent name of a DependentNameType
+
+Given:
+
+  template &lt;typename T&lt; struct declToImport {
+    typedef typename T::type dependent_name;
+  };
+
+dependentNameType(hasDependentName("type")) matches `T::type`
 </pre></td></tr>
 
 

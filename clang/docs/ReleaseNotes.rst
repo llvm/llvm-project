@@ -553,6 +553,8 @@ Attribute Changes in Clang
 - Clang now permits the usage of the placement new operator in ``[[msvc::constexpr]]``
   context outside of the std namespace. (#GH74924)
 
+- Clang now disallows the use of attributes after the namespace name. (#GH121407)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
@@ -704,6 +706,16 @@ Improvements to Clang's diagnostics
       return ptr + index < ptr; // warning
     }
 
+- Clang now emits a ``-Wvarargs`` diagnostic when the second argument
+  to ``va_arg`` is of array type, which is an undefined behavior (#GH119360).
+
+  .. code-block:: c++
+
+    void test() {
+      va_list va;
+      va_arg(va, int[10]); // warning
+    }
+
 - Fix -Wdangling false positives on conditional operators (#120206).
 
 - Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
@@ -754,8 +766,12 @@ Bug Fixes in This Version
   the unsupported type instead of the ``register`` keyword (#GH109776).
 - Fixed a crash when emit ctor for global variant with flexible array init (#GH113187).
 - Fixed a crash when GNU statement expression contains invalid statement (#GH113468).
+- Fixed a crash when passing the variable length array type to ``va_arg`` (#GH119360).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer incorrectly diagnosing use of a deleted destructor when the
+  selected overload of ``operator delete`` for that type is a destroying delete
+  (#GH46818).
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
@@ -886,6 +902,10 @@ Bug Fixes to C++ Support
   out of a module (which is the case e.g. in MSVC's implementation of ``std`` module). (#GH118218)
 - Fixed a pack expansion issue in checking unexpanded parameter sizes. (#GH17042)
 - Fixed a bug where captured structured bindings were modifiable inside non-mutable lambda (#GH95081)
+- Passing incomplete types to ``__is_base_of`` and other builtin type traits for which the corresponding
+  standard type trait mandates a complete type is now a hard (non-sfinae-friendly) error
+  (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
+- Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 
 Bug Fixes to AST Handling
@@ -1114,6 +1134,10 @@ AST Matchers
 
 - Add ``dependentNameType`` matcher to match a dependent name type.
 
+- Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
+
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr or DependentNameType.
+
 clang-format
 ------------
 
@@ -1128,6 +1152,7 @@ clang-format
 - Adds ``AllowShortNamespacesOnASingleLine`` option.
 - Adds ``VariableTemplates`` option.
 - Adds support for bash globstar in ``.clang-format-ignore``.
+- Adds ``WrapNamespaceBodyWithEmptyLines`` option.
 
 libclang
 --------
@@ -1157,6 +1182,13 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- In loops where the loop condition is opaque (i.e. the analyzer cannot
+  determine whether it's true or false), the analyzer will no longer assume
+  execution paths that perform more that two iterations. These unjustified
+  assumptions caused false positive reports (e.g. 100+ out-of-bounds reports in
+  the FFMPEG codebase) in loops where the programmer intended only two or three
+  steps but the analyzer wasn't able to understand that the loop is limited.
 
 Improvements
 ^^^^^^^^^^^^
@@ -1257,9 +1289,17 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
+- Changed ``-fsanitize=pointer-overflow`` to no longer report ``NULL + 0`` as
+  undefined behavior in C, in line with
+  `N3322 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3322.pdf>`_,
+  and matching the previous behavior for C++.
+  ``NULL + non_zero`` continues to be reported as undefined behavior.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
+  a declaration is an anonymous union or anonymous struct.
 
 OpenMP Support
 --------------
@@ -1269,6 +1309,8 @@ OpenMP Support
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The
   ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
   always build support for AMDGPU and NVPTX targets.
+- Added support for combined masked constructs  'omp parallel masked taskloop',
+  'omp parallel masked taskloop simd','omp masked taskloop' and 'omp masked taskloop simd' directive.
 
 Improvements
 ^^^^^^^^^^^^

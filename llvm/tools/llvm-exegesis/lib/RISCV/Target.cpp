@@ -24,6 +24,8 @@
 namespace llvm {
 namespace exegesis {
 
+#include "RISCVGenExegesis.inc"
+
 namespace {
 
 // Stores constant value to a general-purpose (integer) register.
@@ -132,8 +134,7 @@ public:
 };
 
 ExegesisRISCVTarget::ExegesisRISCVTarget()
-    : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
-                     RISCV_MC::isOpcodeAvailable) {}
+    : ExegesisTarget(RISCVCpuPfmCounters, RISCV_MC::isOpcodeAvailable) {}
 
 bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
   return Arch == Triple::riscv32 || Arch == Triple::riscv64;

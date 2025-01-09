@@ -198,6 +198,7 @@ Changes to the RISC-V Backend
 * `-mcpu=syntacore-scr7` was added.
 * `-mcpu=tt-ascalon-d8` was added.
 * `-mcpu=mips-p8700` was added.
+* `-mcpu=sifive-p550` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
@@ -230,6 +231,11 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------

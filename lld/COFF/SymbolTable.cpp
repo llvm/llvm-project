@@ -536,6 +536,15 @@ void SymbolTable::initializeLoadConfig() {
   auto sym =
       dyn_cast_or_null<DefinedRegular>(findUnderscore("_load_config_used"));
   if (!sym) {
+    if (isEC()) {
+      Warn(ctx) << "EC version of '_load_config_used' is missing";
+      return;
+    }
+    if (ctx.hybridSymtab) {
+      Warn(ctx) << "native version of '_load_config_used' is missing for "
+                   "ARM64X target";
+      return;
+    }
     if (ctx.config.guardCF != GuardCFLevel::Off)
       Warn(ctx)
           << "Control Flow Guard is enabled but '_load_config_used' is missing";

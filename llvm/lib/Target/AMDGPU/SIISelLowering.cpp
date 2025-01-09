@@ -784,8 +784,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
-                       {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
+                       {MVT::v4f16, MVT::v4i16, MVT::v4bf16, MVT::v8f16,
+                        MVT::v8i16, MVT::v8bf16, MVT::v16f16, MVT::v16i16,
+                        MVT::v16bf16, MVT::v32f16, MVT::v32i16, MVT::v32bf16},
                        Custom);
 
     for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
@@ -4017,29 +4018,26 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 }
 
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
-// except for stack growth direction(default: downwards, AMDGPU: upwards) and
-// applying the wave size scale to the increment amount.
-SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+// except for:
+// 1. Stack growth direction(default: downwards, AMDGPU: upwards), and
+// 2. Scale size where, scale = wave-reduction(alloca-size) * wave-size
+SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
-  SDValue Tmp1 = Op;
-  SDValue Tmp2 = Op.getValue(1);
-  SDValue Tmp3 = Op.getOperand(2);
-  SDValue Chain = Tmp1.getOperand(0);
-
+  SDValue Chain = Op.getOperand(0);
   Register SPReg = Info->getStackPtrOffsetReg();
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
   // pointer when other instructions are using the stack.
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
-  SDValue Size = Tmp2.getOperand(1);
+  SDValue Size = Op.getOperand(1);
   SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  Align Alignment = cast<ConstantSDNode>(Tmp3)->getAlignValue();
+  Align Alignment = cast<ConstantSDNode>(Op.getOperand(2))->getAlignValue();
 
   const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   assert(TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
@@ -4057,30 +4055,36 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(SDValue Op,
                            DAG.getSignedConstant(-ScaledAlignment, dl, VT));
   }
 
-  SDValue ScaledSize = DAG.getNode(
-      ISD::SHL, dl, VT, Size,
-      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
-
-  SDValue NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
+  SDValue NewSP;
+  if (isa<ConstantSDNode>(Size)) {
+    // For constant sized alloca, scale alloca size by wave-size
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
+  } else {
+    // For dynamic sized alloca, perform wave-wide reduction to get max of
+    // alloca size(divergent) and then scale it by wave-size
+    SDValue WaveReduction =
+        DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
+    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
+                       Size, DAG.getConstant(0, dl, MVT::i32));
+    SDValue ScaledSize = DAG.getNode(
+        ISD::SHL, dl, VT, Size,
+        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    NewSP =
+        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                        NewSP);
+  }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
-  Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
+  SDValue CallSeqEnd = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
-  return DAG.getMergeValues({BaseAddr, Tmp2}, dl);
-}
-
-SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  // We only handle constant sizes here to allow non-entry block, static sized
-  // allocas. A truly dynamic value is more difficult to support because we
-  // don't know if the size value is uniform or not. If the size isn't uniform,
-  // we would need to do a wave reduction to get the maximum size to know how
-  // much to increment the uniform stack pointer.
-  SDValue Size = Op.getOperand(1);
-  if (isa<ConstantSDNode>(Size))
-    return lowerDYNAMIC_STACKALLOCImpl(Op, DAG); // Use "generic" expansion.
-
-  return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
+  return DAG.getMergeValues({BaseAddr, CallSeqEnd}, dl);
 }
 
 SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
@@ -7542,9 +7546,8 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   SDLoc SL(Op);
   EVT ResultVT = Op.getValueType();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
-
-  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  EVT EltVT = PackVT.getVectorElementType();
+  MVT EltVT = ResultVT.getVectorElementType().getSimpleVT();
+  MVT PackVT = MVT::getVectorVT(EltVT, 2);
   int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
 
   // vector_shuffle <0,1,6,7> lhs, rhs
@@ -13982,6 +13985,43 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   return Accum;
 }
 
+SDValue
+SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  SDValue RHS = N->getOperand(1);
+  auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  if (!CRHS)
+    return SDValue();
+
+  // TODO: Worth using computeKnownBits? Maybe expensive since it's so
+  // common.
+  uint64_t Val = CRHS->getZExtValue();
+  if (countr_zero(Val) >= 32) {
+    SelectionDAG &DAG = DCI.DAG;
+    SDLoc SL(N);
+    SDValue LHS = N->getOperand(0);
+
+    // Avoid carry machinery if we know the low half of the add does not
+    // contribute to the final result.
+    //
+    // add i64:x, K if computeTrailingZeros(K) >= 32
+    //  => build_pair (add x.hi, K.hi), x.lo
+
+    // Breaking the 64-bit add here with this strange constant is unlikely
+    // to interfere with addressing mode patterns.
+
+    SDValue Hi = getHiHalf64(LHS, DAG);
+    SDValue ConstHi32 = DAG.getConstant(Hi_32(Val), SL, MVT::i32);
+    SDValue AddHi =
+        DAG.getNode(N->getOpcode(), SL, MVT::i32, Hi, ConstHi32, N->getFlags());
+
+    SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+    return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, Lo, AddHi);
+  }
+
+  return SDValue();
+}
+
 // Collect the ultimate src of each of the mul node's operands, and confirm
 // each operand is 8 bytes.
 static std::optional<ByteProvider<SDValue>>
@@ -14258,6 +14298,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     return V;
   }
 
+  if (VT == MVT::i64) {
+    if (SDValue Folded = foldAddSub64WithZeroLowBitsTo32(N, DCI))
+      return Folded;
+  }
+
   if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
@@ -14442,6 +14487,11 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
+
+  if (VT == MVT::i64) {
+    if (SDValue Folded = foldAddSub64WithZeroLowBitsTo32(N, DCI))
+      return Folded;
+  }
 
   if (VT != MVT::i32)
     return SDValue();

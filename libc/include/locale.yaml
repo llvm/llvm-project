@@ -1,4 +1,5 @@
 header: locale.h
+header_template: locale.h.def
 functions:
   - name: localeconv
     standards:

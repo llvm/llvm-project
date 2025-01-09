@@ -1,4 +1,5 @@
 header: sched.h
+header_template: sched.h.def
 macros: []
 types:
   - type_name: struct_timespec
