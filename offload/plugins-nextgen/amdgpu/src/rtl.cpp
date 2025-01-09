@@ -2922,7 +2922,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             // setting default to true here appears to solve random sdma problem
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
         OMPX_ApuMaps("OMPX_APU_MAPS", false),
-        OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", false),
+        OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", true),
         OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
