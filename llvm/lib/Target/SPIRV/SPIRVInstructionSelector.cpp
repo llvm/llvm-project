@@ -3239,11 +3239,14 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   // Loops 0, 2, 4, ... but stops one loop early when ComponentCount is odd
   unsigned CurrentComponent = 0;
   for (; CurrentComponent + 1 < ComponentCount; CurrentComponent += 2) {
-    Register SubVecReg = MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
+    // This register holds the firstbitX result for each of the i64x2 vectors
+    // extracted from SrcReg
+    Register BitSetResult =
+        MRI->createVirtualRegister(GR.getRegClass(I64x2Type));
 
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpVectorShuffle))
-                   .addDef(SubVecReg)
+                   .addDef(BitSetResult)
                    .addUse(GR.getSPIRVTypeID(I64x2Type))
                    .addUse(SrcReg)
                    // Per the spec, repeat the vector if only one vec is needed
@@ -3258,7 +3261,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
     Register SubVecBitSetReg =
         MRI->createVirtualRegister(GR.getRegClass(Vec2ResType));
 
-    if (!selectFirstBitSet64(SubVecBitSetReg, Vec2ResType, I, SubVecReg,
+    if (!selectFirstBitSet64(SubVecBitSetReg, Vec2ResType, I, BitSetResult,
                              BitSetOpcode, SwapPrimarySide))
       return false;
 
