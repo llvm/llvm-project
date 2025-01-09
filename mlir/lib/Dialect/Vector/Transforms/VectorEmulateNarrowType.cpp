@@ -1219,9 +1219,9 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
 /// src     =                         [01 01 11 10]
 /// shl     = arith.shl(src, 4)    -> [11 10 00 00]
 /// result  = arith.shrsi(shl, 6)  -> [11 11 11 11]
-static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
-                                          Location loc, Value src, int bitIdx,
-                                          int numBits) {
+static Value extractNBitsPerByteAndSignExtendToI8(PatternRewriter &rewriter,
+                                                  Location loc, Value src,
+                                                  int bitIdx, int numBits) {
   assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
          "Invalid bitIdx range");
   auto srcType = cast<VectorType>(src.getType());
@@ -1261,9 +1261,9 @@ static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
 /// using arith::ShLIOp + arith::ShRUIOp instead of the masking. However, by
 /// using arith::ShRUIOp + arith::AndIOp, we are eliminating shift left when the
 /// index is 0.
-static Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter,
-                                            Location loc, Value src, int bitIdx,
-                                            int numBits) {
+static Value extractNBitsPerByteAndExtendToI8(PatternRewriter &rewriter,
+                                              Location loc, Value src,
+                                              int bitIdx, int numBits) {
   assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
          "Invalid bitIdx range");
   auto srcType = cast<VectorType>(src.getType());
@@ -1544,8 +1544,8 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 
     // Perform the rewrite.
     Location loc = conversionOp.getLoc();
-    const auto &extFn = isSigned ? extractNBitsFromVectorSigned
-                                 : extractNBitsFromVectorUnsinged;
+    const auto &extFn = isSigned ? extractNBitsPerByteAndSignExtendToI8
+                                 : extractNBitsPerByteAndExtendToI8;
     Value subByteExt;
     switch (srcVecType.getElementType().getIntOrFloatBitWidth()) {
     case 2:
