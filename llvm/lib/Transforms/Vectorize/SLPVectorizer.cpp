@@ -963,8 +963,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
   bool AnyPoison = InstCnt != VL.size();
   // Skip MainOp.
-  while (++It != VL.end()) {
-    auto *I = dyn_cast<Instruction>(*It);
+  for (Value *V : iterator_range(It + 1, VL.end())) {
+    auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
 
