@@ -225,6 +225,10 @@ bool MultilibSet::select(
   Selected.clear();
   bool AnyErrors = false;
 
+  // Determining the list of macro defines depends only on the custom flags
+  // passed in. The library variants actually selected are not relevant in
+  // this. Therefore this assignment can take place before the selection
+  // happens.
   if (CustomFlagMacroDefines)
     *CustomFlagMacroDefines = std::move(CFMacroDefines);
 
