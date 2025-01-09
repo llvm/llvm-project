@@ -32,14 +32,16 @@ func.func @gpu_gcn_raw_buffer_load_i32(%buf: memref<64xi32>, %idx: i32) -> i32 {
 
 // CHECK-LABEL: func @gpu_gcn_raw_buffer_load_i32_strided
 func.func @gpu_gcn_raw_buffer_load_i32_strided(%buf: memref<64xi32, strided<[?], offset: ?>>, %idx: i32) -> i32 {
-  // CHECK-DAG: %[[rstride:.*]] = llvm.mlir.constant(0 : i16)
-  // CHECK-DAG: %[[elem_size:.*]] = llvm.mlir.constant(4 : i32)
+  // CHECK: %[[elem_size:.*]] = llvm.mlir.constant(4 : i32)
+  // CHECK: %[[algn_ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[offset:.*]] = llvm.extractvalue %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[ptr:.*]] = llvm.getelementptr %[[algn_ptr]][%[[offset]]] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+  // CHECK: %[[rstride:.*]] = llvm.mlir.constant(0 : i16)
   // CHECK: %[[size:.*]] = llvm.extractvalue %{{.*}}[3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[size32:.*]] = llvm.trunc %[[size]] : i64 to i32
   // CHECK: %[[stride:.*]] = llvm.extractvalue %{{.*}}[4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[stride32:.*]] = llvm.trunc %[[stride]] : i64 to i32
-  // CHECK: %[[tmp:.*]] = llvm.mul %[[stride32]], %[[elem_size]] : i32
-  // CHECK: %[[numRecords:.*]] = llvm.mul %[[size32]], %[[tmp]] : i32
+  // CHECK: %[[tmp:.*]] = llvm.mul %[[size]], %[[stride]] : i64
+  // CHECK: %[[num_elem:.*]] = llvm.trunc %[[tmp]] : i64 to i32
+  // CHECK: %[[numRecords:.*]] = llvm.mul %[[num_elem]], %[[elem_size]] : i32
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(822243328 : i32)
   // CHECK: %[[resource:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %[[rstride]], %[[numRecords]], %[[flags]] : !llvm.ptr to <8>
