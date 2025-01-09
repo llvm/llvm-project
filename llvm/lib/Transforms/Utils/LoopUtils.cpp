@@ -1209,12 +1209,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *StartVal,
                                        const RecurrenceDescriptor &Desc) {
   assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
              Desc.getRecurrenceKind()) &&
          "Unexpected reduction kind");
-  assert(StartVal && "Null start value");
+  Value *StartVal = Desc.getRecurrenceStartValue();
   Value *Sentinel = Desc.getSentinelValue();
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
@@ -1321,8 +1320,9 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
-Value *llvm::createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                             Value *Src, Value *StartVal, PHINode *OrigPhi) {
+Value *llvm::createReduction(IRBuilderBase &B,
+                             const RecurrenceDescriptor &Desc, Value *Src,
+                             PHINode *OrigPhi) {
   // TODO: Support in-order reductions based on the recurrence descriptor.
   // All ops in the reduction inherit fast-math-flags from the recurrence
   // descriptor.
@@ -1333,7 +1333,7 @@ Value *llvm::createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
     return createAnyOfReduction(B, Src, Desc, OrigPhi);
   if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-    return createFindLastIVReduction(B, Src, StartVal, Desc);
+    return createFindLastIVReduction(B, Src, Desc);
 
   return createSimpleReduction(B, Src, RK);
 }
