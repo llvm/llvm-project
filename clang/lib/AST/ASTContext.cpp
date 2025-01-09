@@ -6376,7 +6376,7 @@ ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
 }
 
 QualType ASTContext::getUnconstrainedType(QualType T) const {
-  QualType CanonT = T.getCanonicalType();
+  QualType CanonT = T.getNonPackExpansionType().getCanonicalType();
 
   // Remove a type-constraint from a top-level auto or decltype(auto).
   if (auto *AT = CanonT->getAs<AutoType>()) {
@@ -14357,7 +14357,7 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 // corresponding backend features (which may contain duplicates).
 static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
-  std::vector<std::string> BackendFeats{{"+fmv"}};
+  std::vector<std::string> BackendFeats;
   llvm::AArch64::ExtensionSet FeatureBits;
   for (StringRef F : FMVFeatStrings)
     if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))

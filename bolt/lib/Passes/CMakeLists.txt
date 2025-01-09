@@ -46,6 +46,7 @@ add_llvm_library(LLVMBOLTPasses
   VeneerElimination.cpp
   RetpolineInsertion.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
   LINK_LIBS
