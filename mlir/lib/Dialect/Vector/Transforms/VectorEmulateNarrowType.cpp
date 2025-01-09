@@ -1183,32 +1183,41 @@ Value BitCastRewriter::genericRewriteStep(
   return runningResult;
 }
 
-/// takes a aligned subByte vector as Input and bitcasts it to a vector of i8.
+/// Bitcasts the aligned `subByteVec` vector to a vector of i8.
+/// Where aligned means it satisfies the alignedConversionPreconditions.
 ///
 /// Example:
 /// vector<16x16xi2> -> vector<16x2xi8>
 /// vector<16x16xi4> -> vector<16x4xi8>
 static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
-                                      Value srcValue) {
-  auto srcVecType = cast<VectorType>(srcValue.getType());
+                                      Value subByteVec) {
+  auto srcVecType = cast<VectorType>(subByteVec.getType());
   int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
   assert(8 % srcBitwidth == 0 && "Invalid source bitwidth");
   int64_t bitwidthFactor = 8 / srcBitwidth;
   SmallVector<int64_t> vecShape(srcVecType.getShape());
-  // adjust last dimension of the vector so the total size remains the same.
+  // Adjust last dimension of the vector, so the total size remains the same.
   vecShape.back() = vecShape.back() / bitwidthFactor;
   auto i8VecType = VectorType::get(vecShape, rewriter.getI8Type());
-  return rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+  return rewriter.create<vector::BitCastOp>(loc, i8VecType, subByteVec);
 }
 
 /// Extracts a signed N-bit sequence from each element of an 8-bit vector,
 /// starting at the specified bit index.
+/// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
-/// Example:
+/// Example for a single element:
 /// extract numBits=2 starting at bitIdx=2
-/// src    =               [0101|11|10]
-/// shl    = src << 4    -> [11100000]
-/// result = shl >> 6    -> [11111111]
+/// src     = [0 | 1 | 0 | 1 | 1 | 1 | 1 | 0]
+/// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
+/// target  = [.   .   .   .   ^   ^   .   .]
+///
+/// The target sequence is [11](decimal=-1) as signed 2-bit integer.
+/// So the result should be [11 11 11 11](decimal=-1) as signed 8-bit integer.
+///
+/// src     =                         [01 01 11 10]
+/// shl     = arith.shl(src, 4)    -> [11 10 00 00]
+/// result  = arith.shrsi(shl, 6)  -> [11 11 11 11]
 static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
                                           Location loc, Value src, int bitIdx,
                                           int numBits) {
@@ -1232,13 +1241,21 @@ static Value extractNBitsFromVectorSigned(PatternRewriter &rewriter,
 
 /// Extracts an unsigned N-bit sequence from each element of an 8-bit vector,
 /// starting at the specified bit index.
+/// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
-/// Example:
+/// Example for a single element:
 /// extract numBits=2 starting at bitIdx=2
-/// src                 = [0101|10|10]
-/// mask                = [00000011]
-/// shr    = src >> 6   = [00010110]
-/// result = shr & mask = [00000010]
+/// src     = [0 | 1 | 0 | 1 | 1 | 0 | 1 | 0]
+/// indices = [7 | 6 | 5 | 4 | 3 | 2 | 1 | 0]
+/// target  = [.   .   .   .   ^   ^   .   .]
+///
+/// The target sequence is [10](decimal=2) as unsigned 2-bit integer.
+/// So the result should be [00 00 00 10](decimal=2) as unsigned 8-bit integer.
+///
+/// src                            = [01 01 10 10]
+/// mask                           = [00 00 00 11]
+/// shr    = arith.shrui(src, 2)   = [00 01 01 10]
+/// result = arith.andi(shr, mask) = [00 00 00 10]
 static Value extractNBitsFromVectorUnsinged(PatternRewriter &rewriter,
                                             Location loc, Value src, int bitIdx,
                                             int numBits) {
