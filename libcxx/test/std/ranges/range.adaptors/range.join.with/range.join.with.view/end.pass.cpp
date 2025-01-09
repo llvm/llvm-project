@@ -105,8 +105,6 @@ constexpr void test_end() {
   }
 }
 
-constexpr void test_end() {}
-
 template <std::size_t Bits>
   requires(Bits < (1 << 7))
 constexpr void test_const_end() {
