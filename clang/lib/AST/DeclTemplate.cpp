@@ -853,6 +853,16 @@ void NonTypeTemplateParmDecl::setDefaultArgument(
     DefaultArgument.set(new (C) TemplateArgumentLoc(DefArg));
 }
 
+void NonTypeTemplateParmDecl::setPlaceholderTypeConstraint(Expr *E) {
+  assert(hasPlaceholderTypeConstraint() &&
+         "setPlaceholderTypeConstraint called on a NonTypeTemplateParmDecl "
+         "without constraint");
+  assert(!PlaceholderTypeConstraintInitialized && "PlaceholderTypeConstraint "
+                                                  "was already initialized!");
+  *getTrailingObjects<Expr *>() = E;
+  PlaceholderTypeConstraintInitialized = true;
+}
+
 //===----------------------------------------------------------------------===//
 // TemplateTemplateParmDecl Method Implementations
 //===----------------------------------------------------------------------===//

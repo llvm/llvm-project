@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 mod.cppm -emit-module-interface -o mod.pcm -fallow-pcm-with-compiler-errors -verify
 // RUN: %clang_cc1 -std=c++20 main.cpp -fmodule-file=mod=mod.pcm -verify -fallow-pcm-with-compiler-errors -fsyntax-only -ast-dump-all | FileCheck %s
 
+// RUN: %clang_cc1 -std=c++20 mod.cppm -emit-reduced-module-interface -o mod.pcm -fallow-pcm-with-compiler-errors -verify
+// RUN: %clang_cc1 -std=c++20 main.cpp -fmodule-file=mod=mod.pcm -verify -fallow-pcm-with-compiler-errors -fsyntax-only -ast-dump-all | FileCheck %s
+
 //--- mod.cppm
 export module mod;
 
@@ -29,7 +32,6 @@ import mod;
 
 // CHECK:      |-FunctionTemplateDecl {{.*}} <line:11:1, line:12:22> col:6 imported in mod hidden invalid cos
 // CHECK-NEXT: | |-NonTypeTemplateParmDecl {{.*}} <line:11:10, col:34> col:34 imported in mod hidden referenced invalid 'ReferenceOf<angle> auto' depth 0 index 0 R
-// CHECK-NEXT: | | `-RecoveryExpr {{.*}} <col:10, col:34> 'ReferenceOf<angle> auto' contains-errors lvalue
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} <col:37, col:46> col:46 imported in mod hidden referenced typename depth 0 index 1 Rep
 // CHECK-NEXT: | |-RequiresExpr {{.*}} <col:60, col:84> 'bool'
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} <col:69, col:73> col:73 imported in mod hidden referenced v 'Rep'
@@ -42,7 +44,6 @@ import mod;
 
 // CHECK:      |-FunctionTemplateDecl {{.*}} <line:15:1, line:16:22> col:6 imported in mod hidden invalid tan
 // CHECK-NEXT: | |-NonTypeTemplateParmDecl {{.*}} <line:15:10, col:34> col:34 imported in mod hidden referenced invalid 'ReferenceOf<angle> auto' depth 0 index 0 R
-// CHECK-NEXT: | | `-RecoveryExpr {{.*}} <col:10, col:34> 'ReferenceOf<angle> auto' contains-errors lvalue
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} <col:37, col:46> col:46 imported in mod hidden referenced typename depth 0 index 1 Rep
 // CHECK-NEXT: | |-RequiresExpr {{.*}} <col:60, col:84> 'bool'
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} <col:69, col:73> col:73 imported in mod hidden referenced v 'Rep'
