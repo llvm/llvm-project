@@ -583,3 +583,75 @@ func.func @distance_invalid_result(%arg0 : f32, %arg1 : f32) {
   %0 = spirv.GL.Distance %arg0, %arg1 : f32, f32 -> i32
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Cross
+//===----------------------------------------------------------------------===//
+
+func.func @cross(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  %2 = spirv.GL.Cross %arg0, %arg1 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Cross %{{.+}}, %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @cross_invalid_type(%arg0 : vector<3xi32>, %arg1 : vector<3xi32>) {
+  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  %0 = spirv.GL.Cross %arg0, %arg1 : vector<3xi32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Normalize
+//===----------------------------------------------------------------------===//
+
+func.func @normalize_scalar(%arg0 : f32) {
+  %2 = spirv.GL.Normalize %arg0 : f32
+  // CHECK: %{{.+}} = spirv.GL.Normalize %{{.+}} : f32
+  return
+}
+
+func.func @normalize_vector(%arg0 : vector<3xf32>) {
+  %2 = spirv.GL.Normalize %arg0 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Normalize %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @normalize_invalid_type(%arg0 : i32) {
+  // expected-error @+1 {{'spirv.GL.Normalize' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Normalize %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Reflect
+//===----------------------------------------------------------------------===//
+
+func.func @reflect_scalar(%arg0 : f32, %arg1 : f32) {
+  %2 = spirv.GL.Reflect %arg0, %arg1 : f32
+  // CHECK: %{{.+}} = spirv.GL.Reflect %{{.+}}, %{{.+}} : f32
+  return
+}
+
+func.func @reflect_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
+  %2 = spirv.GL.Reflect %arg0, %arg1 : vector<3xf32>
+  // CHECK: %{{.+}} = spirv.GL.Reflect %{{.+}}, %{{.+}} : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @reflect_invalid_type(%arg0 : i32, %arg1 : i32) {
+  // expected-error @+1 {{'spirv.GL.Reflect' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %0 = spirv.GL.Reflect %arg0, %arg1 : i32
+  return
+}
