@@ -562,7 +562,7 @@ static std::string &mtg::LibSupportInfoOutputFilename() {
 static const std::string &mtg::InfoOutputFilename() {
   return ManagedTimerGlobals->InfoOutputFilename.getValue();
 }
-static bool mtg::TrackSpace() { return ManagedTimerGlobals->TrackSpace; };
+static bool mtg::TrackSpace() { return ManagedTimerGlobals->TrackSpace; }
 static bool mtg::SortTimers() { return ManagedTimerGlobals->SortTimers; }
 static SignpostEmitter &mtg::Signposts() {
   return ManagedTimerGlobals->Signposts();
