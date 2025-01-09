@@ -26,22 +26,14 @@
 #  pragma GCC system_header
 #endif
 
-#define _CATMASK(n) ((1 << (n)) >> 1)
-#define LC_COLLATE_MASK _CATMASK(LC_COLLATE)
-#define LC_CTYPE_MASK _CATMASK(LC_CTYPE)
-#define LC_MONETARY_MASK _CATMASK(LC_MONETARY)
-#define LC_NUMERIC_MASK _CATMASK(LC_NUMERIC)
-#define LC_TIME_MASK _CATMASK(LC_TIME)
-#define LC_MESSAGES_MASK _CATMASK(6)
-#define LC_ALL_MASK                                                                                                    \
-  (LC_COLLATE_MASK | LC_CTYPE_MASK | LC_MESSAGES_MASK | LC_MONETARY_MASK | LC_NUMERIC_MASK | LC_TIME_MASK)
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
+using __lconv_t = std::lconv;
+
 class __lconv_storage {
 public:
-  __lconv_storage(const lconv* __lc_input) {
+  __lconv_storage(const __lconv_t* __lc_input) {
     __lc_ = *__lc_input;
 
     __decimal_point_     = __lc_input->decimal_point;
@@ -67,10 +59,10 @@ public:
     __lc_.negative_sign     = const_cast<char*>(__negative_sign_.c_str());
   }
 
-  std::lconv* __get() { return &__lc_; }
+  __lconv_t* __get() { return &__lc_; }
 
 private:
-  std::lconv __lc_;
+  __lconv_t __lc_;
   std::string __decimal_point_;
   std::string __thousands_sep_;
   std::string __grouping_;
@@ -86,6 +78,18 @@ private:
 //
 // Locale management
 //
+#define _CATMASK(n) ((1 << (n)) >> 1)
+#define _LIBCPP_COLLATE_MASK _CATMASK(LC_COLLATE)
+#define _LIBCPP_CTYPE_MASK _CATMASK(LC_CTYPE)
+#define _LIBCPP_MONETARY_MASK _CATMASK(LC_MONETARY)
+#define _LIBCPP_NUMERIC_MASK _CATMASK(LC_NUMERIC)
+#define _LIBCPP_TIME_MASK _CATMASK(LC_TIME)
+#define _LIBCPP_MESSAGES_MASK _CATMASK(6)
+#define _LIBCPP_ALL_MASK                                                                                               \
+  (_LIBCPP_COLLATE_MASK | _LIBCPP_CTYPE_MASK | _LIBCPP_MESSAGES_MASK | _LIBCPP_MONETARY_MASK | _LIBCPP_NUMERIC_MASK |  \
+   _LIBCPP_TIME_MASK)
+#define _LIBCPP_LC_ALL LC_ALL
+
 class __locale_t {
 public:
   __locale_t() : __locale_(nullptr), __locale_str_(nullptr), __lc_(nullptr) {}
@@ -137,7 +141,7 @@ public:
 
   operator ::_locale_t() const { return __locale_; }
 
-  std::lconv* __store_lconv(const std::lconv* __input_lc) {
+  __lconv_t* __store_lconv(const __lconv_t* __input_lc) {
     delete __lc_;
     __lc_ = new __lconv_storage(__input_lc);
     return __lc_->__get();
@@ -151,7 +155,13 @@ private:
 
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
 inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::_free_locale(__loc); }
-_LIBCPP_EXPORTED_FROM_ABI lconv* __localeconv(__locale_t& __loc);
+inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, const char* __locale) {
+  char* __new_locale = ::setlocale(__category, __locale);
+  if (__new_locale == nullptr)
+    std::__throw_bad_alloc();
+  return __new_locale;
+}
+_LIBCPP_EXPORTED_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc);
 
 //
 // Strtonum functions
@@ -292,7 +302,7 @@ struct __locale_guard {
     // Setting the locale can be expensive even when the locale given is
     // already the current locale, so do an explicit check to see if the
     // current locale is already the one we want.
-    const char* __lc = __setlocale(nullptr);
+    const char* __lc = __locale::__setlocale(LC_ALL, nullptr);
     // If every category is the same, the locale string will simply be the
     // locale name, otherwise it will be a semicolon-separated string listing
     // each category.  In the second case, we know at least one category won't
@@ -301,7 +311,7 @@ struct __locale_guard {
       __locale_all = _strdup(__lc);
       if (__locale_all == nullptr)
         __throw_bad_alloc();
-      __setlocale(__l.__get_locale());
+      __locale::__setlocale(LC_ALL, __l.__get_locale());
     }
   }
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
@@ -310,16 +320,10 @@ struct __locale_guard {
     // for the different categories in the same format as returned by
     // setlocale(LC_ALL, nullptr).
     if (__locale_all != nullptr) {
-      __setlocale(__locale_all);
+      __locale::__setlocale(LC_ALL, __locale_all);
       free(__locale_all);
     }
     _configthreadlocale(__status);
-  }
-  _LIBCPP_HIDE_FROM_ABI static const char* __setlocale(const char* __locale) {
-    const char* __new_locale = setlocale(LC_ALL, __locale);
-    if (__new_locale == nullptr)
-      __throw_bad_alloc();
-    return __new_locale;
   }
   int __status;
   char* __locale_all = nullptr;
