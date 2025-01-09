@@ -1169,11 +1169,15 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
 
   LLVM_DEBUG(dbgs() << "Instrumenting: " << O.getInsn() << "\n");
 
-  // If the pointer is statically known to be zero, it has a zero tag and the
-  // tag check will pass since the shadow memory corresponding to address 0
-  // is initialized to zero and never updated. We can therefore elide the tag
-  // check.
-  if (!llvm::isKnownNonZero(Addr, DL))
+  // If the pointer is statically known to be zero, the tag check will pass
+  // since:
+  // 1) it has a zero tag
+  // 2) the shadow memory corresponding to address 0 is initialized to zero and
+  // never updated.
+  // We can therefore elide the tag check.
+  llvm::KnownBits Known(DL.getPointerTypeSizeInBits(Addr->getType()));
+  llvm::computeKnownBits(Addr, Known, DL);
+  if (Known.getMinValue() == 0 && Known.getMaxValue() == 0)
     return false;
 
   if (O.MaybeMask)
