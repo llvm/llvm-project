@@ -365,13 +365,15 @@ private:
   void mergeInStatus(VectorizationSafetyStatus S);
 
   struct DepDistanceStrideAndSizeInfo {
-    // Strides could either be scaled (in bytes, taking the size of the
-    // underlying type into account), or unscaled (in indexing units; unscaled
-    // stride = scaled stride / size of underlying type). Here, strides are
-    // unscaled.
     const SCEV *Dist;
+
+    /// Strides could either be scaled (in bytes, taking the size of the
+    /// underlying type into account), or unscaled (in indexing units; unscaled
+    /// stride = scaled stride / size of underlying type). Here, strides are
+    /// unscaled.
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
+
     bool ShouldRetryWithRuntimeCheck;
     uint64_t TypeByteSize;
     bool AIsWrite;
