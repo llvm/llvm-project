@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -423,11 +425,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            Arg, 0,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Value *NewSqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
-                                             /*FMFSource=*/nullptr, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not

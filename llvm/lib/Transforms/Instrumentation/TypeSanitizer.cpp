@@ -70,7 +70,7 @@ namespace {
 /// violations.
 struct TypeSanitizer {
   TypeSanitizer(Module &M);
-  bool run(Function &F, const TargetLibraryInfo &TLI);
+  bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
   void instrumentGlobals(Module &M);
 
 private:
@@ -510,7 +510,8 @@ void collectMemAccessInfo(
   }
 }
 
-bool TypeSanitizer::run(Function &F, const TargetLibraryInfo &TLI) {
+bool TypeSanitizer::sanitizeFunction(Function &F,
+                                     const TargetLibraryInfo &TLI) {
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
@@ -876,15 +877,8 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   return true;
 }
 
-PreservedAnalyses TypeSanitizerPass::run(Function &F,
-                                         FunctionAnalysisManager &FAM) {
-  TypeSanitizer TySan(*F.getParent());
-  TySan.run(F, FAM.getResult<TargetLibraryAnalysis>(F));
-  return PreservedAnalyses::none();
-}
-
-PreservedAnalyses ModuleTypeSanitizerPass::run(Module &M,
-                                               ModuleAnalysisManager &AM) {
+PreservedAnalyses TypeSanitizerPass::run(Module &M,
+                                         ModuleAnalysisManager &MAM) {
   Function *TysanCtorFunction;
   std::tie(TysanCtorFunction, std::ignore) =
       createSanitizerCtorAndInitFunctions(M, kTysanModuleCtorName,
@@ -894,5 +888,12 @@ PreservedAnalyses ModuleTypeSanitizerPass::run(Module &M,
   TypeSanitizer TySan(M);
   TySan.instrumentGlobals(M);
   appendToGlobalCtors(M, TysanCtorFunction, 0);
+
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    TySan.sanitizeFunction(F, TLI);
+  }
+
   return PreservedAnalyses::none();
 }

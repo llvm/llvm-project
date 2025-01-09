@@ -476,6 +476,9 @@ cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
 Check for double-free and use-after-free problems. Traces memory managed by new/delete.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
 
@@ -484,6 +487,9 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
 Check for memory leaks. Traces memory managed by new/delete.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: cpp
 
@@ -1263,6 +1269,9 @@ You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
 :ref:`optin-taint-GenericTaint` checker for an example.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. code-block:: c
 
   void vulnerable(void) {
@@ -1857,6 +1866,9 @@ unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
 
@@ -1865,6 +1877,9 @@ Check for memory leaks, double free, and use-after-free problems. Traces memory 
 unix.MallocSizeof (C)
 """""""""""""""""""""
 Check for dubious ``malloc`` arguments involving ``sizeof``.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1880,6 +1895,9 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
