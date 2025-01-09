@@ -5,7 +5,7 @@
 
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD Native CACHE STRING "")
-set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "" FORCE)
+set(LLVM_ENABLE_RUNTIMES compiler-rt libcxx libcxxabi libunwind CACHE STRING "" FORCE)
 set(LLVM_ENABLE_PROJECTS "clang;lld" CACHE STRING "" FORCE)
 
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
