@@ -1177,7 +1177,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O,
   // We can therefore elide the tag check.
   llvm::KnownBits Known(DL.getPointerTypeSizeInBits(Addr->getType()));
   llvm::computeKnownBits(Addr, Known, DL);
-  if (Known.getMinValue() == 0 && Known.getMaxValue() == 0)
+  if (Known.isZero())
     return false;
 
   if (O.MaybeMask)
