@@ -75,20 +75,11 @@ public:
   BackendConsumer(const CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                   const CASOptions &CASOpts,
-                  const std::string &InFile,
-                  SmallVector<LinkModule, 4> LinkModules,
-                  std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr,
-                  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr);
-
-  // This constructor is used in installing an empty BackendConsumer
-  // to use the clang diagnostic handler for IR input files. It avoids
-  // initializing the OS field.
-  BackendConsumer(const CompilerInstance &CI, BackendAction Action,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                  const CASOptions &CASOpts, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
-                  CoverageSourceInfo *CoverageInfo = nullptr);
+                  llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
+                  StringRef InFile, std::unique_ptr<raw_pwrite_stream> OS,
+                  CoverageSourceInfo *CoverageInfo,
+                  std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr,
+                  llvm::Module *CurLinkModule = nullptr);
 
   llvm::Module *getModule() const;
   std::unique_ptr<llvm::Module> takeModule();
