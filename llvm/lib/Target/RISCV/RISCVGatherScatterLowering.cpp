@@ -211,10 +211,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     assert(Phi->getIncomingValue(IncrementingBlock) == Inc &&
            "Expected one operand of phi to be Inc");
 
-    // Only proceed if the step is loop invariant.
-    if (!L->isLoopInvariant(Step))
-      return false;
-
     // Step should be a splat.
     Step = getSplatValue(Step);
     if (!Step)
@@ -310,16 +306,29 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   }
   case Instruction::Mul: {
     Start = Builder.CreateMul(Start, SplatOp, "start");
-    Step = Builder.CreateMul(Step, SplatOp, "step");
     Stride = Builder.CreateMul(Stride, SplatOp, "stride");
     break;
   }
   case Instruction::Shl: {
     Start = Builder.CreateShl(Start, SplatOp, "start");
-    Step = Builder.CreateShl(Step, SplatOp, "step");
     Stride = Builder.CreateShl(Stride, SplatOp, "stride");
     break;
   }
+  }
+
+  // Adjust the step value after its definition if it's an instruction.
+  if (auto *StepI = dyn_cast<Instruction>(Step))
+    Builder.SetInsertPoint(*StepI->getInsertionPointAfterDef());
+
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Mul:
+    Step = Builder.CreateMul(Step, SplatOp, "step");
+    break;
+  case Instruction::Shl:
+    Step = Builder.CreateShl(Step, SplatOp, "step");
+    break;
   }
 
   Inc->setOperand(StepIndex, Step);
