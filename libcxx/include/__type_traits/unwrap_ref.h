@@ -30,7 +30,7 @@ struct __unwrap_reference<reference_wrapper<_Tp> > {
 };
 
 template <class _Tp>
-using __unwrap_ref_decay_t = typename __unwrap_reference<__decay_t<_Tp> >::type;
+using __unwrap_ref_decay_t _LIBCPP_NODEBUG = typename __unwrap_reference<__decay_t<_Tp> >::type;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

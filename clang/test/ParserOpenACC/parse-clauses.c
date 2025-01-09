@@ -347,14 +347,12 @@ void SelfUpdate() {
 #pragma acc update self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+4{{use of undeclared identifier 'zero'}}
-  // expected-error@+3{{expected ','}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+3{{use of undeclared identifier 'zero'}}
+  // expected-error@+2{{expected ','}}
+  // expected-error@+1{{expected expression}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 }
