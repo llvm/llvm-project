@@ -88,7 +88,9 @@ int main(int, char**) {
 
   TestEachFloatingPointType<TestDoesNotHaveIncrementDecrement>()();
 
-  TestEachPointerType<TestDoesNotHaveIncrementDecrement>()();
+  TestEachPointerType<TestDoesNotHaveIncrementDecrement>()(); // FIXME
+  TestDoesNotHaveIncrementDecrement<void*>()();
+  TestDoesNotHaveIncrementDecrement<void const*>()();
 
   TestDoesNotHaveIncrementDecrement<bool>()();
   TestDoesNotHaveIncrementDecrement<UserAtomicType>()();
