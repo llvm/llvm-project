@@ -23,7 +23,7 @@ jobs:
         runs-on:
           - hlsl-macos
 
-    uses: llvm/llvm-project/.github/workflows/hlsl-test-all.yaml@${{ github.base_ref}}
+    uses: ./.github/workflows/hlsl-test-all.yaml
     with:
       SKU: hlsl-macos
       TestTarget: check-hlsl-clang-mtl # TODO: This target changes based on SKU
