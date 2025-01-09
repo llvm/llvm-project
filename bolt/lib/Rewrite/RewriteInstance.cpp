@@ -246,11 +246,12 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::list<GadgetScannerKind> GadgetScannersToRun(
-    "scanners", cl::desc("which gadget scanners to run"),
-    cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
-               clEnumValN(GS_ALL, "all", "all")),
-    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
+cl::list<GadgetScannerKind>
+    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
+                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
+                                   clEnumValN(GS_ALL, "all", "all")),
+                        cl::ZeroOrMore, cl::CommaSeparated,
+                        cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 

@@ -31,7 +31,7 @@ struct MCInstInBBReference {
       : BB(BB), BBIndex(BBIndex) {}
   MCInstInBBReference() : BB(nullptr), BBIndex(0) {}
   static MCInstInBBReference get(const MCInst *Inst, BinaryFunction &BF) {
-    for (BinaryBasicBlock& BB : BF)
+    for (BinaryBasicBlock &BB : BF)
       for (size_t I = 0; I < BB.size(); ++I)
         if (Inst == &(BB.getInstructionAtIndex(I)))
           return MCInstInBBReference(&BB, I);
@@ -78,9 +78,7 @@ struct MCInstInBFReference {
 
   uint64_t getOffset() const { return Offset; }
 
-  uint64_t getAddress() const {
-    return BF->getAddress() + getOffset();
-  }
+  uint64_t getAddress() const { return BF->getAddress() + getOffset(); }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &);
@@ -179,7 +177,7 @@ struct NonPacProtectedRetGadget {
   }
   NonPacProtectedRetGadget(
       MCInstReference RetInst,
-      const std::vector<MCInstReference>& OverwritingRetRegInst)
+      const std::vector<MCInstReference> &OverwritingRetRegInst)
       : RetInst(RetInst), OverwritingRetRegInst(OverwritingRetRegInst) {}
 };
 
