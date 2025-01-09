@@ -33,10 +33,12 @@ constexpr bool test() {
     using Iter      = std::ranges::iterator_t<JWV>;
     using ConstIter = std::ranges::iterator_t<const JWV>;
 
-    Iter iter;
+    // Default constructor of iterator<false> should not be explicit
+    Iter iter = {};
     assert(testEquality(iter, Iter{}, true));
 
-    ConstIter citer;
+    // Default constructor of iterator<true> should not be explicit
+    ConstIter citer = {};
     assert(testEquality(citer, ConstIter{}, true));
     assert(testEquality(iter, citer, true));
 
