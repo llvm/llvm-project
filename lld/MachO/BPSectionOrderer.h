@@ -68,10 +68,6 @@ public:
 
   bool isCodeSection() const override { return macho::isCodeSection(isec); }
 
-  bool hasValidData() const override {
-    return isec && !isec->data.empty() && isec->data.data();
-  }
-
   SmallVector<std::unique_ptr<BPSymbol>> getSymbols() const override {
     SmallVector<std::unique_ptr<BPSymbol>> symbols;
     for (auto *sym : isec->symbols)

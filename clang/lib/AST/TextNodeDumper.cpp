@@ -414,6 +414,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
@@ -2930,7 +2931,6 @@ void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
-
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
@@ -2939,37 +2939,44 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
 
 void TextNodeDumper::VisitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 void TextNodeDumper::VisitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
