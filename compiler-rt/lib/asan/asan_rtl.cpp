@@ -390,12 +390,19 @@ void PrintAddressSpaceLayout() {
           kHighShadowBeg > kMidMemEnd);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dummy_atexit() {
+}
+
 static bool AsanInitInternal() {
   if (LIKELY(AsanInited()))
     return true;
   SanitizerToolName = "AddressSanitizer";
 
   CacheBinaryName();
+
+  // Get the atexit table initialized before the interception gets installed.
+  // Workaround failure in calloc in InitializeCoverage before InitializeSuppressions.
+  Atexit(__sanitizer_dummy_atexit);
 
   // Initialize flags. This must be done early, because most of the
   // initialization steps look at flags().
@@ -478,6 +485,8 @@ static bool AsanInitInternal() {
   if (flags()->start_deactivated)
     AsanDeactivate();
 
+  InitializeSuppressions();
+
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
@@ -494,8 +503,6 @@ static bool AsanInitInternal() {
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();
 #endif
-
-  InitializeSuppressions();
 
   if (CAN_SANITIZE_LEAKS) {
     // LateInitialize() calls dlsym, which can allocate an error string buffer
