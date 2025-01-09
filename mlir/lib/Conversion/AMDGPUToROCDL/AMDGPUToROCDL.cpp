@@ -61,7 +61,7 @@ static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
                                ValueRange indices, ArrayRef<int64_t> strides) {
   IntegerType i32 = rewriter.getI32Type();
   Value index;
-  for (auto &&[i, increment, stride] : llvm::enumerate(indices, strides)) {
+  for (auto [i, increment, stride] : llvm::enumerate(indices, strides)) {
     if (stride != 1) { // Skip if stride is 1.
       Value strideValue =
           ShapedType::isDynamic(stride)
