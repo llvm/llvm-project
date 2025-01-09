@@ -161,6 +161,8 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
   DIType *BaseType = nullptr;
   if (const DIDerivedType *DDTy = dyn_cast<DIDerivedType>(Ty))
     BaseType = DDTy->getBaseType();
+  else if (const DISubrangeType *SRTy = dyn_cast<DISubrangeType>(Ty))
+    BaseType = SRTy->getBaseType();
 
   if (!BaseType)
     return 0;
@@ -184,6 +186,12 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
     // right thing, and treat the constant as unsigned to preserve that value
     // (i.e. avoid sign extension).
     return true;
+  }
+
+  if (auto *SRTy = dyn_cast<DISubrangeType>(Ty)) {
+    Ty = SRTy->getBaseType();
+    if (!Ty)
+      return false;
   }
 
   if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
