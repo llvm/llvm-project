@@ -47,6 +47,31 @@ static bool isDereferenceableAndAlignedPointer(
   if (!Visited.insert(V).second)
     return false;
 
+  if (CtxI) {
+    /// Look through assumes to see if both dereferencability and alignment can
+    /// be proven by an assume if needed.
+    RetainedKnowledge AlignRK;
+    RetainedKnowledge DerefRK;
+    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
+    if (getKnowledgeForValue(
+            V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
+            [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+              if (!isValidAssumeForContext(Assume, CtxI, DT))
+                return false;
+              if (RK.AttrKind == Attribute::Alignment)
+                AlignRK = std::max(AlignRK, RK);
+              if (RK.AttrKind == Attribute::Dereferenceable)
+                DerefRK = std::max(DerefRK, RK);
+              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
+              if (IsAligned && DerefRK &&
+                  DerefRK.ArgValue >= Size.getZExtValue())
+                return true; // We have found what we needed so we stop looking
+              return false;  // Other assumes may have better information. so
+                             // keep looking
+            }))
+      return true;
+  }
+
   // Note that it is not safe to speculate into a malloc'd region because
   // malloc may return null.
 
@@ -168,31 +193,6 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI) {
-    /// Look through assumes to see if both dereferencability and alignment can
-    /// be proven by an assume if needed.
-    RetainedKnowledge AlignRK;
-    RetainedKnowledge DerefRK;
-    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
-    if (getKnowledgeForValue(
-            V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
-            [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-              if (!isValidAssumeForContext(Assume, CtxI, DT))
-                return false;
-              if (RK.AttrKind == Attribute::Alignment)
-                AlignRK = std::max(AlignRK, RK);
-              if (RK.AttrKind == Attribute::Dereferenceable)
-                DerefRK = std::max(DerefRK, RK);
-              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
-              if (IsAligned && DerefRK &&
-                  DerefRK.ArgValue >= Size.getZExtValue())
-                return true; // We have found what we needed so we stop looking
-              return false;  // Other assumes may have better information. so
-                             // keep looking
-            }))
-      return true;
-  }
-
   // If we don't know, assume the worst.
   return false;
 }
@@ -289,6 +289,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (L->isLoopInvariant(Ptr))
     return isDereferenceableAndAlignedPointer(Ptr, Alignment, EltSize, DL,
                                               HeaderFirstNonPHI, AC, &DT);
+
+  // If the load executes in a successor of the header, check if the
+  // loop-varying pointer is dereferenceable and aligned at the branch in the
+  // header. This is stricter than necessary and we could instead look for any
+  // block in the loop that executes unconditionally and post-dominates the
+  // block with the access.
+  if (LI->getParent() != L->getHeader() &&
+      L->getExitingBlock() == L->getLoopLatch() &&
+      isDereferenceableAndAlignedPointer(Ptr, Alignment, EltSize, DL,
+                                         L->getHeader()->getTerminator(), AC,
+                                         &DT)) {
+    return true;
+  }
 
   // Otherwise, check to see if we have a repeating access pattern where we can
   // prove that all accesses are well aligned and dereferenceable.
