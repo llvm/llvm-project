@@ -1297,10 +1297,13 @@ float4 lerp(float4, float4, float4);
 ///
 /// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline half length(half X) { return __detail::length_impl(X); }
 const inline float length(float X) { return __detail::length_impl(X); }
 
-template <int N> const inline half length(vector<half, N> X) {
+template <int N> 
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half length(vector<half, N> X) {
   return __detail::length_vec_impl(X);
 }
 
