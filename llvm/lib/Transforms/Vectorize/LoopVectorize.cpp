@@ -10353,6 +10353,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  if (LVL.hasStructVectorCall()) {
+    reportVectorizationFailure("Auto-vectorization of calls that return struct "
+                               "types is not yet supported",
+                               "StructCallVectorizationUnsupported", ORE, L);
+    return false;
+  }
+
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify
