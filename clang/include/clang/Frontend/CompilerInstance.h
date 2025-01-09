@@ -630,6 +630,10 @@ public:
   /// @name Frontend timer
   /// @{
 
+  llvm::TimerGroup &getFrontendTimerGroup() const {
+    return *FrontendTimerGroup;
+  }
+
   bool hasFrontendTimer() const { return (bool)FrontendTimer; }
 
   llvm::Timer &getFrontendTimer() const {

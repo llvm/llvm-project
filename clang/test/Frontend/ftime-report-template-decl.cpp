@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -ftime-report  2>&1 | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING -ftime-report  2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -mllvm -sort-timers=0 -o - -ftime-report  2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -mllvm -sort-timers=0 -o - -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING -ftime-report  2>&1 | FileCheck %s
 
 // Template function declarations
 template <typename T>
@@ -150,10 +150,8 @@ struct _Wrap_alloc {
 };
 _Wrap_alloc<int>::rebind<int> w;
 
-// CHECK: Miscellaneous Ungrouped Timers
-// CHECK-DAG: LLVM IR Generation Time
-// CHECK-DAG: Code Generation Time
-// CHECK: Total
 // CHECK: Clang front-end time report
-// CHECK: Clang front-end timer
-// CHECK: Total
+// CHECK:      Clang front-end timer
+// CHECK-NEXT: LLVM IR Generation Time
+// CHECK-NEXT: Code Generation Time
+// CHECK-NEXT: Total
