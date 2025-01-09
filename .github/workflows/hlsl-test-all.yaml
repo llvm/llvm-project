@@ -26,7 +26,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, "${{ inputs.SKU }}"]
+    runs-on: ${{ inputs.SKU }}
     steps:
       - name: Checkout DXC
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
