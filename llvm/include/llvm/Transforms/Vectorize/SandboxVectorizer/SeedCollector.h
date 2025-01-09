@@ -293,7 +293,6 @@ class SeedCollector {
   SeedContainer LoadSeeds;
   Context &Ctx;
   Context::CallbackID EraseCallbackID;
-
   /// \Returns the number of SeedBundle groups for all seed types.
   /// This is to be used for limiting compilation time.
   unsigned totalNumSeedGroups() const {
