@@ -1610,7 +1610,7 @@ void CIRGenFunction::emitNonNullArgCheck(RValue RV, QualType ArgType,
 mlir::Value CIRGenFunction::emitVAArg(VAArgExpr *VE, Address &VAListAddr) {
   assert(!VE->isMicrosoftABI() && "NYI");
   auto loc = CGM.getLoc(VE->getExprLoc());
-  auto type = ConvertType(VE->getType());
+  auto type = convertType(VE->getType());
   auto vaList = emitVAListRef(VE->getSubExpr()).getPointer();
   return builder.create<cir::VAArgOp>(loc, type, vaList);
 }

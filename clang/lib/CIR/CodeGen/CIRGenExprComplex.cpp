@@ -389,7 +389,7 @@ mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value Val,
     llvm_unreachable("unexpected src type or dest type");
 
   return Builder.createCast(CGF.getLoc(Loc), CastOpKind, Val,
-                            CGF.ConvertType(DestType));
+                            CGF.convertType(DestType));
 }
 
 mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value Val,
@@ -405,7 +405,7 @@ mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value Val,
     llvm_unreachable("unexpected src type");
 
   return Builder.createCast(CGF.getLoc(Loc), CastOpKind, Val,
-                            CGF.ConvertType(DestType));
+                            CGF.convertType(DestType));
 }
 
 mlir::Value ComplexExprEmitter::emitCast(CastKind CK, Expr *Op,
@@ -830,7 +830,7 @@ LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *E,
 mlir::Value
 ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *IL) {
   auto Loc = CGF.getLoc(IL->getExprLoc());
-  auto Ty = mlir::cast<cir::ComplexType>(CGF.getCIRType(IL->getType()));
+  auto Ty = mlir::cast<cir::ComplexType>(CGF.convertType(IL->getType()));
   auto ElementTy = Ty.getElementTy();
 
   mlir::TypedAttr RealValueAttr;
@@ -865,7 +865,7 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // Empty init list initializes to null
   assert(E->getNumInits() == 0 && "Unexpected number of inits");
   QualType Ty = E->getType()->castAs<ComplexType>()->getElementType();
-  return Builder.getZero(CGF.getLoc(E->getExprLoc()), CGF.ConvertType(Ty));
+  return Builder.getZero(CGF.getLoc(E->getExprLoc()), CGF.convertType(Ty));
 }
 
 mlir::Value CIRGenFunction::emitPromotedComplexExpr(const Expr *E,
@@ -879,7 +879,7 @@ mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
              mlir::cast<cir::ComplexType>(result.getType()).getElementTy()) &&
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
-                            ConvertType(PromotionType));
+                            convertType(PromotionType));
 }
 
 mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
@@ -888,7 +888,7 @@ mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
              mlir::cast<cir::ComplexType>(result.getType()).getElementTy()) &&
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
-                            ConvertType(UnPromotionType));
+                            convertType(UnPromotionType));
 }
 
 mlir::Value CIRGenFunction::emitComplexExpr(const Expr *E) {

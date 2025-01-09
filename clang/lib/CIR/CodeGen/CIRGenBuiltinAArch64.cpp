@@ -2133,7 +2133,7 @@ static mlir::Value emitArmLdrexNon128Intrinsic(unsigned int builtinID,
   // Get Instrinc call
   CIRGenBuilderTy &builder = cgf.getBuilder();
   QualType clangResTy = clangCallExpr->getType();
-  mlir::Type realResTy = cgf.ConvertType(clangResTy);
+  mlir::Type realResTy = cgf.convertType(clangResTy);
   // Return type of LLVM intrinsic is defined in Intrinsic<arch_type>.td,
   // which can be found under LLVM IR directory.
   mlir::Type funcResTy = builder.getSInt64Ty();
@@ -2345,7 +2345,7 @@ emitCommonNeonCallPattern0(CIRGenFunction &cgf, llvm::StringRef intrincsName,
   mlir::Value res =
       emitNeonCall(builder, std::move(argTypes), ops, intrincsName, funcResTy,
                    cgf.getLoc(e->getExprLoc()));
-  mlir::Type resultType = cgf.ConvertType(e->getType());
+  mlir::Type resultType = cgf.convertType(e->getType());
   return builder.createBitcast(res, resultType);
 }
 

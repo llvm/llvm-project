@@ -1089,7 +1089,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *E) {
   mlir::Type elementTy;
   Address result = Address::invalid();
   auto createCast = [&]() {
-    elementTy = getTypes().convertTypeForMem(allocType);
+    elementTy = convertTypeForMem(allocType);
     result = builder.createElementBitCast(getLoc(E->getSourceRange()),
                                           allocation, elementTy);
   };
@@ -1240,7 +1240,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *DeleteFD,
   // Pass the pointer itself.
   QualType ArgTy = *ParamTypeIt++;
   mlir::Value DeletePtr =
-      builder.createBitcast(Ptr.getLoc(), Ptr, ConvertType(ArgTy));
+      builder.createBitcast(Ptr.getLoc(), Ptr, convertType(ArgTy));
   DeleteArgs.add(RValue::get(DeletePtr), ArgTy);
 
   // Pass the std::destroying_delete tag if present.
@@ -1254,7 +1254,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *DeleteFD,
     QualType SizeType = *ParamTypeIt++;
     CharUnits DeleteTypeSize = getContext().getTypeSizeInChars(DeleteTy);
     assert(SizeTy && "expected cir::IntType");
-    auto Size = builder.getConstInt(*currSrcLoc, ConvertType(SizeType),
+    auto Size = builder.getConstInt(*currSrcLoc, convertType(SizeType),
                                     DeleteTypeSize.getQuantity());
 
     // For array new, multiply by the number of elements.
@@ -1297,7 +1297,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *DeleteFD,
 
 static mlir::Value emitDynamicCastToNull(CIRGenFunction &CGF,
                                          mlir::Location Loc, QualType DestTy) {
-  mlir::Type DestCIRTy = CGF.ConvertType(DestTy);
+  mlir::Type DestCIRTy = CGF.convertType(DestTy);
   assert(mlir::isa<cir::PointerType>(DestCIRTy) &&
          "result of dynamic_cast should be a ptr");
 
@@ -1351,7 +1351,7 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address ThisAddr,
   if (DCE->isAlwaysNull())
     return emitDynamicCastToNull(*this, loc, destTy);
 
-  auto destCirTy = mlir::cast<cir::PointerType>(ConvertType(destTy));
+  auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
   return CGM.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
                                          destCirTy, isRefCast, ThisAddr);
 }

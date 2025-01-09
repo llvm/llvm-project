@@ -72,7 +72,7 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
 template <typename Op>
 static RValue emitUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &CGF,
                                                       const CallExpr &E) {
-  auto ResultType = CGF.ConvertType(E.getType());
+  auto ResultType = CGF.convertType(E.getType());
   auto Src = CGF.emitScalarExpr(E.getArg(0));
 
   if (CGF.getBuilder().getIsFPConstrained())
@@ -88,7 +88,7 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
   auto Arg1 = CGF.emitScalarExpr(E.getArg(1));
 
   auto Loc = CGF.getLoc(E.getExprLoc());
-  auto Ty = CGF.ConvertType(E.getType());
+  auto Ty = CGF.convertType(E.getType());
   auto Call = CGF.getBuilder().create<Op>(Loc, Ty, Arg0, Arg1);
 
   return RValue::get(Call->getResult(0));
@@ -101,7 +101,7 @@ static mlir::Value emitBinaryMaybeConstrainedFPBuiltin(CIRGenFunction &CGF,
   auto Arg1 = CGF.emitScalarExpr(E.getArg(1));
 
   auto Loc = CGF.getLoc(E.getExprLoc());
-  auto Ty = CGF.ConvertType(E.getType());
+  auto Ty = CGF.convertType(E.getType());
 
   if (CGF.getBuilder().getIsFPConstrained()) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, &E);
@@ -122,7 +122,7 @@ emitBuiltinBitOp(CIRGenFunction &CGF, const CallExpr *E,
   else
     arg = CGF.emitScalarExpr(E->getArg(0));
 
-  auto resultTy = CGF.ConvertType(E->getType());
+  auto resultTy = CGF.convertType(E->getType());
   auto op =
       CGF.getBuilder().create<Op>(CGF.getLoc(E->getExprLoc()), resultTy, arg);
   return RValue::get(op);
@@ -415,7 +415,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // of the type. We feel it should be Ok to use expression type because
       // it is hard to imagine a builtin function evaluates to
       // a value that over/underflows its own defined type.
-      mlir::Type resTy = getCIRType(E->getType());
+      mlir::Type resTy = convertType(E->getType());
       return RValue::get(builder.getConstFP(getLoc(E->getExprLoc()), resTy,
                                             Result.Val.getFloat()));
     }
@@ -1173,7 +1173,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return emitRotate(E, true);
 
   case Builtin::BI__builtin_constant_p: {
-    mlir::Type ResultType = ConvertType(E->getType());
+    mlir::Type ResultType = convertType(E->getType());
 
     const Expr *Arg = E->getArg(0);
     QualType ArgType = Arg->getType();
@@ -1199,7 +1199,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // Convert Objective-C objects to id because we cannot distinguish between
       // LLVM types for Obj-C classes as they are opaque.
       ArgType = CGM.getASTContext().getObjCIdType();
-    ArgValue = builder.createBitcast(ArgValue, ConvertType(ArgType));
+    ArgValue = builder.createBitcast(ArgValue, convertType(ArgType));
 
     mlir::Value Result = builder.create<cir::IsConstantOp>(
         getLoc(E->getSourceRange()), ArgValue);
@@ -1215,7 +1215,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
         E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
-    auto ResType = mlir::dyn_cast<cir::IntType>(ConvertType(E->getType()));
+    auto ResType = mlir::dyn_cast<cir::IntType>(convertType(E->getType()));
     assert(ResType && "not sure what to do?");
 
     // We pass this builtin onto the optimizer so that it can figure out the
@@ -1306,7 +1306,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm_unreachable("BI__builtin_nondeterministic_value NYI");
 
   case Builtin::BI__builtin_elementwise_abs: {
-    mlir::Type cirTy = ConvertType(E->getArg(0)->getType());
+    mlir::Type cirTy = convertType(E->getArg(0)->getType());
     bool isIntTy = cir::isIntOrIntVectorTy(cirTy);
     if (!isIntTy) {
       mlir::Type eltTy = cirTy;
@@ -1851,7 +1851,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto loc = getLoc(E->getBeginLoc());
     return RValue::get(builder.createZExtOrBitCast(
         loc, emitSignBit(loc, *this, emitScalarExpr(E->getArg(0))),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__warn_memset_zero_len:
@@ -1897,8 +1897,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     auto EncompassingCIRTy = cir::IntType::get(
         &getMLIRContext(), EncompassingInfo.Width, EncompassingInfo.Signed);
-    auto ResultCIRTy =
-        mlir::cast<cir::IntType>(CGM.getTypes().ConvertType(ResultQTy));
+    auto ResultCIRTy = mlir::cast<cir::IntType>(CGM.convertType(ResultQTy));
 
     mlir::Value Left = emitScalarExpr(LeftArg);
     mlir::Value Right = emitScalarExpr(RightArg);
@@ -2008,8 +2007,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     clang::QualType ResultQTy =
         ResultArg->getType()->castAs<clang::PointerType>()->getPointeeType();
-    auto ResultCIRTy =
-        mlir::cast<cir::IntType>(CGM.getTypes().ConvertType(ResultQTy));
+    auto ResultCIRTy = mlir::cast<cir::IntType>(CGM.convertType(ResultQTy));
 
     auto Loc = getLoc(E->getSourceRange());
     auto ArithResult =
@@ -2304,7 +2302,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcNan),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_issignaling: {
@@ -2314,7 +2312,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcSNan),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_isinf: {
@@ -2326,7 +2324,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcInf),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BIfinite:
@@ -2344,7 +2342,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcFinite),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_isnormal: {
@@ -2354,7 +2352,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcNormal),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_issubnormal: {
@@ -2364,7 +2362,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcSubnormal),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_iszero: {
@@ -2374,7 +2372,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
         Loc, builder.createIsFPClass(Loc, V, FPClassTest::fcZero),
-        ConvertType(E->getType())));
+        convertType(E->getType())));
   }
 
   case Builtin::BI__builtin_isfpclass: {
@@ -2389,7 +2387,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // FIXME: We should use builder.createZExt once createZExt is available.
     return RValue::get(builder.createZExtOrBitCast(
-        Loc, builder.createIsFPClass(Loc, V, Test), ConvertType(E->getType())));
+        Loc, builder.createIsFPClass(Loc, V, Test), convertType(E->getType())));
   }
   }
 
@@ -2706,6 +2704,6 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
       Name = astContext.BuiltinInfo.getName(BuiltinID).substr(10);
   }
 
-  auto Ty = getTypes().ConvertType(FD->getType());
+  auto Ty = convertType(FD->getType());
   return GetOrCreateCIRFunction(Name, Ty, D, /*ForVTable=*/false);
 }

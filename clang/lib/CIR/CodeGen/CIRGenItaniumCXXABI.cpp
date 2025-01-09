@@ -1678,8 +1678,8 @@ CIRGenItaniumRTTIBuilder::GetAddrOfTypeName(mlir::Location loc, QualType Ty,
   // We know that the mangled name of the type starts at index 4 of the
   // mangled name of the typename, so we can just index into it in order to
   // get the mangled name of the type.
-  auto Init = builder.getString(
-      Name.substr(4), CGM.getTypes().ConvertType(CGM.getASTContext().CharTy));
+  auto Init = builder.getString(Name.substr(4),
+                                CGM.convertType(CGM.getASTContext().CharTy));
   auto Align =
       CGM.getASTContext().getTypeAlignInChars(CGM.getASTContext().CharTy);
 
@@ -1770,8 +1770,7 @@ static unsigned ComputeVMIClassTypeInfoFlags(const CXXRecordDecl *RD) {
 /// constraints, according to the Itanium C++ ABI, 2.9.5p5c.
 void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(mlir::Location loc,
                                                      const CXXRecordDecl *RD) {
-  auto UnsignedIntLTy =
-      CGM.getTypes().ConvertType(CGM.getASTContext().UnsignedIntTy);
+  auto UnsignedIntLTy = CGM.convertType(CGM.getASTContext().UnsignedIntTy);
   // Itanium C++ ABI 2.9.5p6c:
   //   __flags is a word with flags describing details about the class
   //   structure, which may be referenced by using the __flags_masks
@@ -1815,7 +1814,7 @@ void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(mlir::Location loc,
   if (TI.getTriple().isOSCygMing() &&
       TI.getPointerWidth(LangAS::Default) > TI.getLongWidth())
     OffsetFlagsTy = CGM.getASTContext().LongLongTy;
-  auto OffsetFlagsLTy = CGM.getTypes().ConvertType(OffsetFlagsTy);
+  auto OffsetFlagsLTy = CGM.convertType(OffsetFlagsTy);
 
   for (const auto &Base : RD->bases()) {
     // The __base_type member points to the RTTI for the base type.
@@ -2241,7 +2240,7 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &CGF,
   // Now allocate the exception object.
   auto &builder = CGF.getBuilder();
   QualType clangThrowType = E->getSubExpr()->getType();
-  auto throwTy = builder.getPointerTo(CGF.ConvertType(clangThrowType));
+  auto throwTy = builder.getPointerTo(CGF.convertType(clangThrowType));
   uint64_t typeSize =
       CGF.getContext().getTypeSizeInChars(clangThrowType).getQuantity();
   auto subExprLoc = CGF.getLoc(E->getSubExpr()->getSourceRange());
@@ -2407,7 +2406,7 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &CGF) {
 
   mlir::Type VoidPtrTy = CGF.VoidPtrTy;
   mlir::Type RTTIPtrTy = CGF.getBuilder().getUInt8PtrTy();
-  mlir::Type PtrDiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+  mlir::Type PtrDiffTy = CGF.convertType(CGF.getContext().getPointerDiffType());
 
   // TODO(cir): mark the function as nowind readonly.
 
@@ -2579,7 +2578,7 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &CGF,
   const CXXRecordDecl *destDecl = DestRecordTy->getAsCXXRecordDecl();
   auto offsetHint = computeOffsetHint(CGF.getContext(), srcDecl, destDecl);
 
-  mlir::Type ptrdiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+  mlir::Type ptrdiffTy = CGF.convertType(CGF.getContext().getPointerDiffType());
   auto offsetHintAttr = cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());
 
   return cir::DynamicCastInfoAttr::get(srcRtti, destRtti, runtimeFuncRef,

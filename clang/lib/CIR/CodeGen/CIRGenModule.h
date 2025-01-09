@@ -634,7 +634,7 @@ public:
                           GlobalDecl aliasGD, cir::FuncOp aliasee,
                           cir::GlobalLinkageKind linkage);
 
-  mlir::Type getCIRType(const clang::QualType &type);
+  mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
   void setGlobalVisibility(mlir::Operation *Op, const NamedDecl *D) const;

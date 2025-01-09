@@ -455,7 +455,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &S) {
         uint64_t InputSize = getContext().getTypeSize(InputTy);
         if (getContext().getTypeSize(OutputType) < InputSize) {
           // Form the asm to return the value as a larger integer or fp type.
-          ResultRegTypes.back() = ConvertType(InputTy);
+          ResultRegTypes.back() = convertType(InputTy);
         }
       }
       if (mlir::Type AdjTy = getTargetHooks().adjustInlineAsmType(
@@ -478,7 +478,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &S) {
       // Otherwise there will be a mis-match if the matrix is also an
       // input-argument which is represented as vector.
       if (isa<MatrixType>(OutExpr->getType().getCanonicalType()))
-        DestAddr = DestAddr.withElementType(ConvertType(OutExpr->getType()));
+        DestAddr = DestAddr.withElementType(convertType(OutExpr->getType()));
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());

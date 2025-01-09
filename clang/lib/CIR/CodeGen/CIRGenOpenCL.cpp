@@ -204,7 +204,7 @@ void CIRGenFunction::emitKernelMetadata(const FunctionDecl *FD,
   mlir::IntegerAttr intelReqdSubGroupSizeAttr;
 
   if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
-    mlir::Type typeHintValue = getTypes().ConvertType(A->getTypeHint());
+    mlir::Type typeHintValue = convertType(A->getTypeHint());
     vecTypeHintAttr = mlir::TypeAttr::get(typeHintValue);
     vecTypeHintSignedness =
         OpenCLKernelMetadataAttr::isSignedHint(typeHintValue);

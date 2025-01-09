@@ -107,7 +107,7 @@ public:
     return I;
   }
 
-  mlir::Type ConvertType(QualType T) { return CGF.ConvertType(T); }
+  mlir::Type convertType(QualType T) { return CGF.convertType(T); }
   LValue emitLValue(const Expr *E) { return CGF.emitLValue(E); }
   LValue emitCheckedLValue(const Expr *E, CIRGenFunction::TypeCheckKind TCK) {
     return CGF.emitCheckedLValue(E, TCK);
@@ -120,11 +120,11 @@ public:
   mlir::Value emitNullValue(QualType Ty, mlir::Location loc);
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType PromotionType) {
-    return Builder.createFloatingCast(result, ConvertType(PromotionType));
+    return Builder.createFloatingCast(result, convertType(PromotionType));
   }
 
   mlir::Value emitUnPromotedValue(mlir::Value result, QualType ExprType) {
-    return Builder.createFloatingCast(result, ConvertType(ExprType));
+    return Builder.createFloatingCast(result, convertType(ExprType));
   }
 
   mlir::Value emitPromoted(const Expr *E, QualType PromotionType);
@@ -172,7 +172,7 @@ public:
 
   // Leaves.
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
+    mlir::Type Ty = CGF.convertType(E->getType());
     return Builder.create<cir::ConstantOp>(
         CGF.getLoc(E->getExprLoc()), Ty,
         Builder.getAttr<cir::IntAttr>(Ty, E->getValue()));
@@ -182,7 +182,7 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
+    mlir::Type Ty = CGF.convertType(E->getType());
     assert(mlir::isa<cir::CIRFPTypeInterface>(Ty) &&
            "expect floating-point type");
     return Builder.create<cir::ConstantOp>(
@@ -190,7 +190,7 @@ public:
         Builder.getAttr<cir::FPAttr>(Ty, E->getValue()));
   }
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
+    mlir::Type Ty = CGF.convertType(E->getType());
     auto loc = CGF.getLoc(E->getExprLoc());
     auto init = cir::IntAttr::get(Ty, E->getValue());
     return Builder.create<cir::ConstantOp>(loc, Ty, init);
@@ -199,7 +199,7 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
-    mlir::Type Ty = CGF.getCIRType(E->getType());
+    mlir::Type Ty = CGF.convertType(E->getType());
     return Builder.create<cir::ConstantOp>(
         CGF.getLoc(E->getExprLoc()), Ty, Builder.getCIRBoolAttr(E->getValue()));
   }
@@ -323,7 +323,7 @@ public:
                                   .getSExtValue()));
       }
       return CGF.builder.create<cir::VecShuffleOp>(
-          CGF.getLoc(E->getSourceRange()), CGF.getCIRType(E->getType()), Vec1,
+          CGF.getLoc(E->getSourceRange()), CGF.convertType(E->getType()), Vec1,
           Vec2, CGF.builder.getArrayAttr(Indices));
     }
   }
@@ -420,7 +420,7 @@ public:
     // Decrement does not have this property.
     if (isInc && type->isBooleanType()) {
       value = Builder.create<cir::ConstantOp>(CGF.getLoc(E->getExprLoc()),
-                                              CGF.getCIRType(type),
+                                              CGF.convertType(type),
                                               Builder.getCIRBoolAttr(true));
     } else if (type->isIntegerType()) {
       QualType promotedType;
@@ -438,8 +438,8 @@ public:
 
         // TODO(cir): Currently, we store bitwidths in CIR types only for
         // integers. This might also be required for other types.
-        auto srcCirTy = mlir::dyn_cast<cir::IntType>(ConvertType(type));
-        auto promotedCirTy = mlir::dyn_cast<cir::IntType>(ConvertType(type));
+        auto srcCirTy = mlir::dyn_cast<cir::IntType>(convertType(type));
+        auto promotedCirTy = mlir::dyn_cast<cir::IntType>(convertType(type));
         assert(srcCirTy && promotedCirTy && "Expected integer type");
 
         assert(
@@ -948,7 +948,7 @@ public:
           // a vector.
           cir::CmpOpKind Kind = ClangCmpToCIRCmp(E->getOpcode());
           Result = Builder.create<cir::VecCmpOp>(
-              CGF.getLoc(BOInfo.Loc), CGF.getCIRType(BOInfo.FullType), Kind,
+              CGF.getLoc(BOInfo.Loc), CGF.convertType(BOInfo.FullType), Kind,
               BOInfo.LHS, BOInfo.RHS);
         }
       } else if (BOInfo.isFixedPointOp()) {
@@ -987,7 +987,7 @@ public:
     // as a logical value again.
     // TODO: optimize this common case here or leave it for later
     // CIR passes?
-    mlir::Type boolTy = CGF.getCIRType(CGF.getContext().BoolTy);
+    mlir::Type boolTy = CGF.convertType(CGF.getContext().BoolTy);
     return Builder.create<cir::CastOp>(loc, boolTy, cir::CastKind::int_to_bool,
                                        srcVal);
   }
@@ -1047,7 +1047,7 @@ public:
     if (DstType->isBooleanType())
       return emitConversionToBool(Src, SrcType, CGF.getLoc(Loc));
 
-    mlir::Type DstTy = ConvertType(DstType);
+    mlir::Type DstTy = convertType(DstType);
 
     // Cast from half through float if half isn't a native type.
     if (SrcType->isHalfType() &&
@@ -1378,17 +1378,17 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &Ops) {
     llvm_unreachable("NYI");
 
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Mul, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &Ops) {
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Div, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &Ops) {
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Rem, Ops.LHS, Ops.RHS);
 }
 
@@ -1431,7 +1431,7 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &Ops) {
     llvm_unreachable("NYI");
 
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Add, Ops.LHS, Ops.RHS);
 }
 
@@ -1474,7 +1474,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &Ops) {
       llvm_unreachable("NYI");
 
     return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                      CGF.getCIRType(Ops.FullType),
+                                      CGF.convertType(Ops.FullType),
                                       cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
   }
 
@@ -1524,7 +1524,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &Ops) {
   }
 
   return Builder.create<cir::ShiftOp>(CGF.getLoc(Ops.Loc),
-                                      CGF.getCIRType(Ops.FullType), Ops.LHS,
+                                      CGF.convertType(Ops.FullType), Ops.LHS,
                                       Ops.RHS, CGF.getBuilder().getUnitAttr());
 }
 
@@ -1548,22 +1548,22 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &Ops) {
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
   return Builder.create<cir::ShiftOp>(
-      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.FullType), Ops.LHS, Ops.RHS);
+      CGF.getLoc(Ops.Loc), CGF.convertType(Ops.FullType), Ops.LHS, Ops.RHS);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &Ops) {
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::And, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::emitXor(const BinOpInfo &Ops) {
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Xor, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::emitOr(const BinOpInfo &Ops) {
   return Builder.create<cir::BinOp>(CGF.getLoc(Ops.Loc),
-                                    CGF.getCIRType(Ops.FullType),
+                                    CGF.convertType(Ops.FullType),
                                     cir::BinOpKind::Or, Ops.LHS, Ops.RHS);
 }
 
@@ -1666,7 +1666,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     auto DestAS = CGF.builder.getAddrSpaceAttr(
         DestTy->getPointeeType().getAddressSpace());
     return CGF.CGM.getTargetCIRGenInfo().performAddrSpaceCast(
-        CGF, Visit(E), SrcAS, DestAS, ConvertType(DestTy));
+        CGF, Visit(E), SrcAS, DestAS, convertType(DestTy));
   }
   case CK_AtomicToNonAtomic:
     llvm_unreachable("NYI");
@@ -1722,7 +1722,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // FIXME: use MustVisitNullValue(E) and evaluate expr.
     // Note that DestTy is used as the MLIR type instead of a custom
     // nullptr type.
-    mlir::Type Ty = CGF.getCIRType(DestTy);
+    mlir::Type Ty = CGF.convertType(DestTy);
     return Builder.getNullPtr(Ty, CGF.getLoc(E->getExprLoc()));
   }
 
@@ -1734,11 +1734,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
     const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
     if (MPT->isMemberFunctionPointerType()) {
-      auto Ty = mlir::cast<cir::MethodType>(CGF.getCIRType(DestTy));
+      auto Ty = mlir::cast<cir::MethodType>(CGF.convertType(DestTy));
       return Builder.getNullMethodPtr(Ty, CGF.getLoc(E->getExprLoc()));
     }
 
-    auto Ty = mlir::cast<cir::DataMemberType>(CGF.getCIRType(DestTy));
+    auto Ty = mlir::cast<cir::DataMemberType>(CGF.convertType(DestTy));
     return Builder.getNullDataMemberPtr(Ty, CGF.getLoc(E->getExprLoc()));
   }
   case CK_ReinterpretMemberPointer:
@@ -1759,7 +1759,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       llvm_unreachable("NYI");
 
     mlir::Location loc = CGF.getLoc(E->getExprLoc());
-    mlir::Type resultTy = CGF.getCIRType(DestTy);
+    mlir::Type resultTy = CGF.convertType(DestTy);
     mlir::IntegerAttr offsetAttr = Builder.getIndexAttr(offset.getQuantity());
 
     if (Kind == CK_BaseToDerivedMemberPointer)
@@ -1798,7 +1798,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Visit(const_cast<Expr *>(E));
 
   case CK_IntegralToPointer: {
-    auto DestCIRTy = ConvertType(DestTy);
+    auto DestCIRTy = convertType(DestTy);
     mlir::Value Src = Visit(const_cast<Expr *>(E));
 
     // Properly resize by casting to an int of the same size as the pointer.
@@ -1820,7 +1820,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
     if (CGF.CGM.getCodeGenOpts().StrictVTablePointers)
       llvm_unreachable("NYI");
-    return Builder.createPtrToInt(Visit(E), ConvertType(DestTy));
+    return Builder.createPtrToInt(Visit(E), convertType(DestTy));
   }
   case CK_ToVoid: {
     CGF.emitIgnoredExpr(E);
@@ -1832,7 +1832,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // Create a vector object and fill all elements with the same scalar value.
     assert(DestTy->isVectorType() && "CK_VectorSplat to non-vector type");
     return CGF.getBuilder().create<cir::VecSplatOp>(
-        CGF.getLoc(E->getSourceRange()), CGF.getCIRType(DestTy), Visit(E));
+        CGF.getLoc(E->getSourceRange()), CGF.convertType(DestTy), Visit(E));
   }
   case CK_FixedPointCast:
     llvm_unreachable("NYI");
@@ -1945,14 +1945,14 @@ mlir::Value CIRGenFunction::emitComplexToScalarConversion(mlir::Value Src,
     auto Kind = ComplexElemTy->isFloatingType()
                     ? cir::CastKind::float_complex_to_bool
                     : cir::CastKind::int_complex_to_bool;
-    return builder.createCast(getLoc(Loc), Kind, Src, ConvertType(DstTy));
+    return builder.createCast(getLoc(Loc), Kind, Src, convertType(DstTy));
   }
 
   auto Kind = ComplexElemTy->isFloatingType()
                   ? cir::CastKind::float_complex_to_real
                   : cir::CastKind::int_complex_to_real;
   auto Real =
-      builder.createCast(getLoc(Loc), Kind, Src, ConvertType(ComplexElemTy));
+      builder.createCast(getLoc(Loc), Kind, Src, convertType(ComplexElemTy));
   return emitScalarConversion(Real, ComplexElemTy, DstTy, Loc);
 }
 
@@ -1984,7 +1984,7 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
            "NYI: scalable vector init");
     assert(!cir::MissingFeatures::vectorConstants() && "NYI: vector constants");
     auto VectorType =
-        mlir::dyn_cast<cir::VectorType>(CGF.getCIRType(E->getType()));
+        mlir::dyn_cast<cir::VectorType>(CGF.convertType(E->getType()));
     SmallVector<mlir::Value, 16> Elements;
     for (Expr *init : E->inits()) {
       Elements.push_back(Visit(init));
@@ -2025,7 +2025,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
   boolVal = Builder.createNot(boolVal);
 
   // ZExt result to the expr type.
-  auto dstTy = ConvertType(E->getType());
+  auto dstTy = convertType(E->getType());
   if (mlir::isa<cir::IntType>(dstTy))
     return Builder.createBoolToInt(boolVal, dstTy);
   if (mlir::isa<cir::BoolType>(dstTy))
@@ -2287,7 +2287,7 @@ mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location Loc,
     llvm_unreachable("invalid complex-to-scalar cast kind");
   }
 
-  return Builder.createCast(Loc, CastOpKind, V, CGF.ConvertType(DestTy));
+  return Builder.createCast(Loc, CastOpKind, V, CGF.convertType(DestTy));
 }
 
 mlir::Value ScalarExprEmitter::emitNullValue(QualType Ty, mlir::Location loc) {
@@ -2620,7 +2620,7 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
   }
 
   bool InstrumentRegions = CGF.CGM.getCodeGenOpts().hasProfileClangInstr();
-  mlir::Type ResTy = ConvertType(E->getType());
+  mlir::Type ResTy = convertType(E->getType());
   mlir::Location Loc = CGF.getLoc(E->getExprLoc());
 
   // If we have 0 && RHS, see if we can elide RHS, if so, just return 0.
@@ -2692,7 +2692,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
   }
 
   bool InstrumentRegions = CGF.CGM.getCodeGenOpts().hasProfileClangInstr();
-  mlir::Type ResTy = ConvertType(E->getType());
+  mlir::Type ResTy = convertType(E->getType());
   mlir::Location Loc = CGF.getLoc(E->getExprLoc());
 
   // If we have 1 || RHS, see if we can elide RHS, if so, just return 1.

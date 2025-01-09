@@ -841,7 +841,7 @@ bool ConstStructBuilder::ApplyZeroInitPadding(
 mlir::Attribute ConstStructBuilder::Finalize(QualType Type) {
   Type = Type.getNonReferenceType();
   RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
-  mlir::Type ValTy = CGM.getTypes().ConvertType(Type);
+  mlir::Type ValTy = CGM.convertType(Type);
   return Builder.build(ValTy, RD->hasFlexibleArrayMember());
 }
 
@@ -1069,7 +1069,7 @@ public:
         return {};
     }
 
-    auto desiredType = CGM.getTypes().ConvertType(T);
+    auto desiredType = CGM.convertType(T);
     // FIXME(cir): A hack to handle the emission of arrays of unions directly.
     // See clang/test/CIR/CodeGen/union-array.c and
     // clang/test/CIR/Lowering/nested-union-array.c for example. The root
@@ -1140,8 +1140,7 @@ public:
   }
 
   mlir::Attribute EmitVectorInitialization(InitListExpr *ILE, QualType T) {
-    cir::VectorType VecTy =
-        mlir::cast<cir::VectorType>(CGM.getTypes().ConvertType(T));
+    cir::VectorType VecTy = mlir::cast<cir::VectorType>(CGM.convertType(T));
     unsigned NumElements = VecTy.getSize();
     unsigned NumInits = ILE->getNumInits();
     assert(NumElements >= NumInits && "Too many initializers for a vector");
@@ -1164,7 +1163,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
                                              QualType T) {
-    return CGM.getBuilder().getZeroInitAttr(CGM.getCIRType(T));
+    return CGM.getBuilder().getZeroInitAttr(CGM.convertType(T));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ILE, QualType T) {
@@ -1215,7 +1214,7 @@ public:
       return nullptr;
     }
 
-    return CGM.getBuilder().getZeroInitAttr(CGM.getCIRType(Ty));
+    return CGM.getBuilder().getZeroInitAttr(CGM.convertType(Ty));
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *E, QualType T) {
@@ -1233,7 +1232,7 @@ public:
   }
 
   // Utility methods
-  mlir::Type ConvertType(QualType T) { return CGM.getTypes().ConvertType(T); }
+  mlir::Type convertType(QualType T) { return CGM.convertType(T); }
 };
 
 static mlir::Attribute
@@ -1695,7 +1694,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
         // be a problem for the near future.
         if (CD->isTrivial() && CD->isDefaultConstructor())
           return cir::ZeroAttr::get(CGM.getBuilder().getContext(),
-                                    CGM.getTypes().ConvertType(D.getType()));
+                                    CGM.convertType(D.getType()));
       }
   }
   InConstantContext = D.hasConstantInitialization();
@@ -1854,7 +1853,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     // 'undef'. Find out what's better for CIR.
     assert(0 && "not implemented");
   case APValue::Int: {
-    mlir::Type ty = CGM.getCIRType(DestType);
+    mlir::Type ty = CGM.convertType(DestType);
     if (mlir::isa<cir::BoolType>(ty))
       return builder.getCIRBoolAttr(Value.getInt().getZExtValue());
     assert(mlir::isa<cir::IntType>(ty) && "expected integral type");
@@ -1867,7 +1866,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
         CGM.getASTContext().getTargetInfo().useFP16ConversionIntrinsics())
       assert(0 && "not implemented");
     else {
-      mlir::Type ty = CGM.getCIRType(DestType);
+      mlir::Type ty = CGM.convertType(DestType);
       assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
              "expected floating-point type");
       return CGM.getBuilder().getAttr<cir::FPAttr>(ty, Init);
@@ -1915,7 +1914,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
       Elts.push_back(typedC);
     }
 
-    auto Desired = CGM.getTypes().ConvertType(DestType);
+    auto Desired = CGM.convertType(DestType);
 
     auto typedFiller = llvm::dyn_cast_or_null<mlir::TypedAttr>(Filler);
     if (Filler && !typedFiller)
@@ -1936,8 +1935,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
         return {};
       Elts.push_back(C);
     }
-    auto Desired =
-        mlir::cast<cir::VectorType>(CGM.getTypes().ConvertType(DestType));
+    auto Desired = mlir::cast<cir::VectorType>(CGM.convertType(DestType));
     return cir::ConstVectorAttr::get(
         Desired, mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Elts));
   }
@@ -1950,8 +1948,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     if (const auto *memberFuncDecl = dyn_cast<CXXMethodDecl>(memberDecl))
       assert(0 && "not implemented");
 
-    auto cirTy =
-        mlir::cast<cir::DataMemberType>(CGM.getTypes().ConvertType(DestType));
+    auto cirTy = mlir::cast<cir::DataMemberType>(CGM.convertType(DestType));
 
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
     return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
@@ -2002,7 +1999,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *E) {
 
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
-    auto ty = mlir::cast<cir::MethodType>(getCIRType(E->getType()));
+    auto ty = mlir::cast<cir::MethodType>(convertType(E->getType()));
     if (methodDecl->isVirtual())
       return builder.create<cir::ConstantOp>(
           loc, ty, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
@@ -2012,7 +2009,7 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *E) {
         loc, ty, builder.getMethodAttr(ty, methodFuncOp));
   }
 
-  auto ty = mlir::cast<cir::DataMemberType>(getCIRType(E->getType()));
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(E->getType()));
 
   // Otherwise, a member data pointer.
   const auto *fieldDecl = cast<FieldDecl>(decl);

@@ -112,8 +112,8 @@ class CIRGenTypes {
 
   llvm::SmallVector<const clang::RecordDecl *, 8> DeferredRecords;
 
-  /// Heper for ConvertType.
-  mlir::Type ConvertFunctionTypeInternal(clang::QualType FT);
+  /// Heper for convertType.
+  mlir::Type convertFunctionTypeInternal(clang::QualType FT);
 
 public:
   CIRGenTypes(CIRGenModule &cgm);
@@ -165,7 +165,7 @@ public:
   CIRGenCXXABI &getCXXABI() const { return TheCXXABI; }
 
   /// Convert type T into a mlir::Type.
-  mlir::Type ConvertType(clang::QualType T);
+  mlir::Type convertType(clang::QualType T);
 
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
 

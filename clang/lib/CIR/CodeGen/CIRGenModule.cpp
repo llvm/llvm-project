@@ -1211,7 +1211,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
     assert(!ASTTy->isIncompleteType() && "Unexpected incomplete type");
-    Init = builder.getZeroInitAttr(getCIRType(D->getType()));
+    Init = builder.getZeroInitAttr(convertType(D->getType()));
   } else {
     initializedGlobalDecl = GlobalDecl(D);
     emitter.emplace(*this);
@@ -1224,7 +1224,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *D,
       if (getLangOpts().CPlusPlus) {
         if (InitDecl->hasFlexibleArrayInit(astContext))
           ErrorUnsupported(D, "flexible array initializer");
-        Init = builder.getZeroInitAttr(getCIRType(T));
+        Init = builder.getZeroInitAttr(convertType(T));
         if (!IsDefinitionAvailableExternally)
           NeedsGlobalCtor = true;
       } else {
@@ -1442,12 +1442,11 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *E) {
     auto finalSize = CAT->getSize().getZExtValue();
     Str.resize(finalSize);
 
-    auto eltTy = getTypes().ConvertType(CAT->getElementType());
+    auto eltTy = convertType(CAT->getElementType());
     return builder.getString(Str, eltTy, finalSize);
   }
 
-  auto arrayTy =
-      mlir::dyn_cast<cir::ArrayType>(getTypes().ConvertType(E->getType()));
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(convertType(E->getType()));
   assert(arrayTy && "string literals must be emitted as an array type");
 
   auto arrayEltTy = mlir::dyn_cast<cir::IntType>(arrayTy.getEltType());
@@ -2182,8 +2181,8 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   setCommonAttributes(aliasGD, alias);
 }
 
-mlir::Type CIRGenModule::getCIRType(const QualType &type) {
-  return genTypes.ConvertType(type);
+mlir::Type CIRGenModule::convertType(QualType type) {
+  return genTypes.convertType(type);
 }
 
 bool CIRGenModule::verifyModule() {
@@ -2228,7 +2227,7 @@ cir::FuncOp CIRGenModule::GetAddrOfFunction(clang::GlobalDecl GD, mlir::Type Ty,
 
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
-    Ty = getTypes().ConvertType(FD->getType());
+    Ty = convertType(FD->getType());
   }
 
   // Devirtualized destructor calls may come through here instead of via

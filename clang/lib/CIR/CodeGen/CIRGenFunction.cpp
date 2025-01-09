@@ -68,10 +68,6 @@ clang::ASTContext &CIRGenFunction::getContext() const {
   return CGM.getASTContext();
 }
 
-mlir::Type CIRGenFunction::ConvertType(QualType T) {
-  return CGM.getTypes().ConvertType(T);
-}
-
 cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {
@@ -137,7 +133,7 @@ mlir::Type CIRGenFunction::convertTypeForMem(QualType T) {
 }
 
 mlir::Type CIRGenFunction::convertType(QualType T) {
-  return CGM.getTypes().ConvertType(T);
+  return CGM.getTypes().convertType(T);
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceLocation SLoc) {
@@ -248,10 +244,6 @@ bool CIRGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
 
   ResultInt = Int;
   return true;
-}
-
-mlir::Type CIRGenFunction::getCIRType(const QualType &type) {
-  return CGM.getCIRType(type);
 }
 
 /// Determine whether the function F ends with a return stmt.
@@ -606,7 +598,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl GD, cir::FuncOp Fn,
 
   FnRetQualTy = FD->getReturnType();
   if (!FnRetQualTy->isVoidType())
-    FnRetCIRTy = getCIRType(FnRetQualTy);
+    FnRetCIRTy = convertType(FnRetQualTy);
 
   FunctionArgList Args;
   QualType ResTy = buildFunctionArgList(GD, Args);
@@ -831,7 +823,7 @@ LValue CIRGenFunction::MakeNaturalAlignAddrLValue(mlir::Value val,
   LValueBaseInfo baseInfo;
   TBAAAccessInfo tbaaInfo;
   CharUnits alignment = CGM.getNaturalTypeAlignment(ty, &baseInfo, &tbaaInfo);
-  Address addr(val, getTypes().convertTypeForMem(ty), alignment);
+  Address addr(val, convertTypeForMem(ty), alignment);
   return LValue::makeAddr(addr, ty, getContext(), baseInfo, tbaaInfo);
 }
 
@@ -889,7 +881,7 @@ static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &astContext) {
 /// declared type.
 static mlir::Value emitArgumentDemotion(CIRGenFunction &CGF, const VarDecl *var,
                                         mlir::Value value) {
-  mlir::Type ty = CGF.ConvertType(var->getType());
+  mlir::Type ty = CGF.convertType(var->getType());
 
   // This can happen with promotions that actually don't change the
   // underlying type, like the enum promotions.
@@ -1494,8 +1486,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address DestPtr,
   // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  builder.createStore(loc, builder.getZero(loc, getTypes().ConvertType(Ty)),
-                      DestPtr);
+  builder.createStore(loc, builder.getZero(loc, convertType(Ty)), DestPtr);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,

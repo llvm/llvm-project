@@ -129,13 +129,13 @@ private:
       if (testIfIsVoidTy(it->type))
         it->info = cir::ABIArgInfo::getIgnore();
       else
-        it->info = cir::ABIArgInfo::getDirect(CGT.ConvertType(it->type));
+        it->info = cir::ABIArgInfo::getDirect(CGT.convertType(it->type));
     }
     auto RetTy = FI.getReturnType();
     if (testIfIsVoidTy(RetTy))
       FI.getReturnInfo() = cir::ABIArgInfo::getIgnore();
     else
-      FI.getReturnInfo() = cir::ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
+      FI.getReturnInfo() = cir::ABIArgInfo::getDirect(CGT.convertType(RetTy));
 
     return;
   }
@@ -334,13 +334,13 @@ void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
     if (testIfIsVoidTy(it->type))
       it->info = cir::ABIArgInfo::getIgnore();
     else
-      it->info = cir::ABIArgInfo::getDirect(CGT.ConvertType(it->type));
+      it->info = cir::ABIArgInfo::getDirect(CGT.convertType(it->type));
   }
   auto RetTy = FI.getReturnType();
   if (testIfIsVoidTy(RetTy))
     FI.getReturnInfo() = cir::ABIArgInfo::getIgnore();
   else
-    FI.getReturnInfo() = cir::ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
+    FI.getReturnInfo() = cir::ABIArgInfo::getDirect(CGT.convertType(RetTy));
 }
 
 /// GetINTEGERTypeAtOffset - The ABI specifies that a value should be passed in
@@ -397,7 +397,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
     ++neededInt;
 
     // Pick an 8-byte type based on the preferred type.
-    ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(Ty), 0, Ty, 0);
+    ResType = GetINTEGERTypeAtOffset(CGT.convertType(Ty), 0, Ty, 0);
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
@@ -414,7 +414,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
     // register is used, the registers are taken in the order from %xmm0 to
     // %xmm7.
   case Class::SSE: {
-    mlir::Type CIRType = CGT.ConvertType(Ty);
+    mlir::Type CIRType = CGT.convertType(Ty);
     ResType = GetSSETypeAtOffset(CIRType, 0, Ty, 0);
     ++neededSSE;
     break;
@@ -527,7 +527,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   // AMD64-ABI 3.2.3p4: Rule 3. If the class is INTEGER, the next available
   // register of the sequence %rax, %rdx is used.
   case Class::Integer:
-    ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
+    ResType = GetINTEGERTypeAtOffset(CGT.convertType(RetTy), 0, RetTy, 0);
 
     // If we have a sign or zero extended integer, make sure to return Extend so
     // that the parameter gets the right LLVM IR attributes.
@@ -547,7 +547,7 @@ cir::ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
     // AMD64-ABI 3.2.3p4: Rule 4. If the class is SSE, the next available SSE
     // register of the sequence %xmm0, %xmm1 is used.
   case Class::SSE:
-    ResType = GetSSETypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
+    ResType = GetSSETypeAtOffset(CGT.convertType(RetTy), 0, RetTy, 0);
     break;
 
   default:

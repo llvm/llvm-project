@@ -139,7 +139,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &D,
       if (isEscapingByRef)
         llvm_unreachable("NYI");
 
-      mlir::Type allocaTy = getTypes().convertTypeForMem(Ty);
+      mlir::Type allocaTy = convertTypeForMem(Ty);
       CharUnits allocaAlignment = alignment;
       // Create the temp alloca and declare variable using it.
       mlir::Value addrVal;
@@ -482,7 +482,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
   if (D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
     llvm_unreachable("CUDA is NYI");
   else if (Ty.getAddressSpace() != LangAS::opencl_local)
-    Init = builder.getZeroInitAttr(getTypes().ConvertType(Ty));
+    Init = builder.getZeroInitAttr(convertType(Ty));
 
   cir::GlobalOp GV = builder.createVersionedGlobal(
       getModule(), getLoc(D.getLocation()), Name, LTy, false, Linkage, AS);
@@ -620,7 +620,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &D,
 
   // Store into LocalDeclMap before generating initializer to handle
   // circular references.
-  mlir::Type elemTy = getTypes().convertTypeForMem(D.getType());
+  mlir::Type elemTy = convertTypeForMem(D.getType());
   setAddrOfLocalVar(&D, Address(addr, elemTy, alignment));
 
   // We can't have a VLA here, but we can have a pointer to a VLA,

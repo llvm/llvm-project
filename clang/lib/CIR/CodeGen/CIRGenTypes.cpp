@@ -251,7 +251,7 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
   assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
 
-  mlir::Type convertedType = ConvertType(qualType);
+  mlir::Type convertedType = convertType(qualType);
 
   assert(!forBitField && "Bit fields NYI");
 
@@ -267,7 +267,7 @@ mlir::MLIRContext &CIRGenTypes::getMLIRContext() const {
   return *Builder.getContext();
 }
 
-mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
+mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType QFT) {
   assert(QFT.isCanonical());
   const Type *Ty = QFT.getTypePtr();
   const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
@@ -341,8 +341,8 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
   return true;
 }
 
-/// ConvertType - Convert the specified type to its MLIR form.
-mlir::Type CIRGenTypes::ConvertType(QualType T) {
+/// convertType - Convert the specified type to its MLIR form.
+mlir::Type CIRGenTypes::convertType(QualType T) {
   T = astContext.getCanonicalType(T);
   const Type *Ty = T.getTypePtr();
 
@@ -601,7 +601,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     llvm_unreachable("Unexpected undeduced type!");
   case Type::Complex: {
     const ComplexType *CT = cast<ComplexType>(Ty);
-    auto ElementTy = ConvertType(CT->getElementType());
+    auto ElementTy = convertType(CT->getElementType());
     ResultType = cir::ComplexType::get(Builder.getContext(), ElementTy);
     break;
   }
@@ -619,7 +619,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     QualType ETy = PTy->getPointeeType();
     assert(!ETy->isConstantMatrixType() && "not implemented");
 
-    mlir::Type PointeeType = ConvertType(ETy);
+    mlir::Type PointeeType = convertType(ETy);
 
     // Treat effectively as a *i8.
     // if (PointeeType->isVoidTy())
@@ -678,7 +678,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    ResultType = ConvertFunctionTypeInternal(T);
+    ResultType = convertFunctionTypeInternal(T);
     break;
   case Type::ObjCObject:
     assert(0 && "not implemented");
@@ -697,7 +697,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   case Type::Enum: {
     const EnumDecl *ED = cast<EnumType>(Ty)->getDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
-      return ConvertType(ED->getIntegerType());
+      return convertType(ED->getIntegerType());
     // Return a placeholder 'i32' type.  This can be changed later when the
     // type is defined (see UpdateCompletedType), but is likely to be the
     // "right" answer.
@@ -713,9 +713,9 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(Ty);
 
-    auto memberTy = ConvertType(MPT->getPointeeType());
+    auto memberTy = convertType(MPT->getPointeeType());
     auto clsTy =
-        mlir::cast<cir::StructType>(ConvertType(QualType(MPT->getClass(), 0)));
+        mlir::cast<cir::StructType>(convertType(QualType(MPT->getClass(), 0)));
     if (MPT->isMemberDataPointer())
       ResultType =
           cir::DataMemberType::get(Builder.getContext(), memberTy, clsTy);
@@ -804,11 +804,11 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   // default now.
   cir::ABIArgInfo &retInfo = FI->getReturnInfo();
   if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr)
-    retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
+    retInfo.setCoerceToType(convertType(FI->getReturnType()));
 
   for (auto &I : FI->arguments())
     if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr)
-      I.info.setCoerceToType(ConvertType(I.type));
+      I.info.setCoerceToType(convertType(I.type));
 
   bool erased = FunctionsBeingProcessed.erase(FI);
   (void)erased;
@@ -841,7 +841,7 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
       // Okay, we formed some types based on this.  We speculated that the enum
       // would be lowered to i32, so we only need to flush the cache if this
       // didn't happen.
-      if (!ConvertType(ED->getIntegerType()).isInteger(32))
+      if (!convertType(ED->getIntegerType()).isInteger(32))
         TypeCache.clear();
     }
     // If necessary, provide the full definition of a type only used with a

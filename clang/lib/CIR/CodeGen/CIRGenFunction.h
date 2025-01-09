@@ -569,9 +569,9 @@ public:
 
   mlir::Type convertTypeForMem(QualType T);
 
-  mlir::Type ConvertType(clang::QualType T);
-  mlir::Type ConvertType(const TypeDecl *T) {
-    return ConvertType(getContext().getTypeDeclType(T));
+  mlir::Type convertType(clang::QualType T);
+  mlir::Type convertType(const TypeDecl *T) {
+    return convertType(getContext().getTypeDeclType(T));
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c T.
@@ -1113,8 +1113,6 @@ public:
 
   mlir::Value emitFromMemory(mlir::Value Value, clang::QualType Ty);
 
-  mlir::Type convertType(clang::QualType T);
-
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &S);
 
   std::pair<mlir::Value, mlir::Type>
@@ -1240,8 +1238,6 @@ public:
                                      QualType PromotionType);
   mlir::Value emitPromotedValue(mlir::Value result, QualType PromotionType);
   mlir::Value emitUnPromotedValue(mlir::Value result, QualType PromotionType);
-
-  mlir::Type getCIRType(const clang::QualType &type);
 
   const CaseStmt *foldCaseStmt(const clang::CaseStmt &S, mlir::Type condType,
                                mlir::ArrayAttr &value, cir::CaseOpKind &kind);

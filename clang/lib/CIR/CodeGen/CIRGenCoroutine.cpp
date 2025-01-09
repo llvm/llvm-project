@@ -262,7 +262,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // Initialize address of coroutine frame to null
   auto astVoidPtrTy = CGM.getASTContext().VoidPtrTy;
-  auto allocaTy = getTypes().convertTypeForMem(astVoidPtrTy);
+  auto allocaTy = convertTypeForMem(astVoidPtrTy);
   Address coroFrame =
       CreateTempAlloca(allocaTy, getContext().getTypeAlignInChars(astVoidPtrTy),
                        openCurlyLoc, "__coro_frame_addr",

@@ -173,8 +173,7 @@ static Address emitPointerWithAlignment(const Expr *expr,
             llvm_unreachable("NYI");
         }
 
-        auto ElemTy =
-            cgf.getTypes().convertTypeForMem(expr->getType()->getPointeeType());
+        auto ElemTy = cgf.convertTypeForMem(expr->getType()->getPointeeType());
         addr = cgf.getBuilder().createElementBitCast(
             cgf.getLoc(expr->getSourceRange()), addr, ElemTy);
         if (CE->getCastKind() == CK_AddressSpaceConversion) {
@@ -443,7 +442,7 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
                                      FieldIndex);
 
   // Make sure that the address is pointing to the right type.
-  auto memTy = getTypes().convertTypeForMem(FieldType);
+  auto memTy = convertTypeForMem(FieldType);
   V = builder.createElementBitCast(getLoc(Field->getSourceRange()), V, memTy);
 
   // TODO: Generate TBAA information that describes this access as a structure
@@ -889,7 +888,7 @@ void CIRGenFunction::emitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
     llvm_unreachable("volatile bit-field is not implemented for the AACPS");
 
   const CIRGenBitFieldInfo &info = Dst.getBitFieldInfo();
-  mlir::Type resLTy = getTypes().convertTypeForMem(Dst.getType());
+  mlir::Type resLTy = convertTypeForMem(Dst.getType());
   Address ptr = Dst.getBitFieldAddress();
 
   const bool useVolatile =
@@ -921,7 +920,7 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
   // as part of getAddrOfGlobalVar.
   auto V = CGF.CGM.getAddrOfGlobalVar(VD);
 
-  auto RealVarTy = CGF.getTypes().convertTypeForMem(VD->getType());
+  auto RealVarTy = CGF.convertTypeForMem(VD->getType());
   cir::PointerType realPtrTy = CGF.getBuilder().getPointerTo(
       RealVarTy, cast_if_present<cir::AddressSpaceAttr>(
                      cast<cir::PointerType>(V.getType()).getAddrSpace()));
@@ -988,9 +987,8 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &CGF, const Expr *E,
   mlir::Value addr = CGF.getBuilder().create<cir::GetGlobalOp>(
       loc, ptrTy, funcOp.getSymName());
 
-  if (funcOp.getFunctionType() !=
-      CGF.CGM.getTypes().ConvertType(FD->getType())) {
-    fnTy = CGF.CGM.getTypes().ConvertType(FD->getType());
+  if (funcOp.getFunctionType() != CGF.convertType(FD->getType())) {
+    fnTy = CGF.convertType(FD->getType());
     ptrTy = cir::PointerType::get(CGF.getBuilder().getContext(), fnTy);
 
     addr = CGF.getBuilder().create<cir::CastOp>(addr.getLoc(), ptrTy,
@@ -1618,7 +1616,7 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *E,
 
   mlir::Value ptr = CGM.getBuilder().maybeBuildArrayDecay(
       CGM.getLoc(E->getSourceRange()), Addr.getPointer(),
-      getTypes().convertTypeForMem(EltType));
+      convertTypeForMem(EltType));
   return Address(ptr, Addr.getAlignment());
 }
 
@@ -1759,7 +1757,7 @@ static Address emitArraySubscriptPtr(
     assert(0 && "NYI");
   }
 
-  return Address(eltPtr, CGF.getTypes().convertTypeForMem(eltType), eltAlign);
+  return Address(eltPtr, CGF.convertTypeForMem(eltType), eltAlign);
 }
 
 LValue CIRGenFunction::emitArraySubscriptExpr(const ArraySubscriptExpr *E,
@@ -1994,7 +1992,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *E) {
     if (LV.isSimple()) {
       Address V = LV.getAddress();
       if (V.isValid()) {
-        auto T = getTypes().convertTypeForMem(E->getType());
+        auto T = convertTypeForMem(E->getType());
         if (V.getElementType() != T)
           LV.setAddress(
               builder.createElementBitCast(getLoc(E->getSourceRange()), V, T));
@@ -2038,8 +2036,8 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *E) {
         builder.getAddrSpaceAttr(E->getSubExpr()->getType().getAddressSpace());
     auto DestAS = builder.getAddrSpaceAttr(E->getType().getAddressSpace());
     mlir::Value V = getTargetHooks().performAddrSpaceCast(
-        *this, LV.getPointer(), SrcAS, DestAS, ConvertType(DestTy));
-    return makeAddrLValue(Address(V, getTypes().convertTypeForMem(E->getType()),
+        *this, LV.getPointer(), SrcAS, DestAS, convertType(DestTy));
+    return makeAddrLValue(Address(V, convertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
   }
@@ -2874,7 +2872,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, QualType ty,
                                        mlir::Location loc, CharUnits alignment,
                                        bool insertIntoFnEntryBlock,
                                        mlir::Value arraySize) {
-  return emitAlloca(name, getCIRType(ty), loc, alignment,
+  return emitAlloca(name, convertType(ty), loc, alignment,
                     insertIntoFnEntryBlock, arraySize);
 }
 
@@ -3016,7 +3014,7 @@ Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
   CharUnits align =
       CGM.getNaturalTypeAlignment(pointeeType, pointeeBaseInfo, pointeeTBAAInfo,
                                   /* forPointeeType= */ true);
-  return Address(load, getTypes().convertTypeForMem(pointeeType), align);
+  return Address(load, convertTypeForMem(pointeeType), align);
 }
 
 LValue CIRGenFunction::emitLoadOfReferenceLValue(LValue RefLVal,
@@ -3051,9 +3049,8 @@ Address CIRGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
                                       mlir::Location Loc, const Twine &Name,
                                       Address *Alloca,
                                       mlir::OpBuilder::InsertPoint ip) {
-  Address Result =
-      CreateTempAlloca(getTypes().convertTypeForMem(Ty), Align, Loc, Name,
-                       /*ArraySize=*/nullptr, Alloca, ip);
+  Address Result = CreateTempAlloca(convertTypeForMem(Ty), Align, Loc, Name,
+                                    /*ArraySize=*/nullptr, Alloca, ip);
   if (Ty->isConstantMatrixType()) {
     assert(0 && "NYI");
   }
