@@ -17159,11 +17159,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     OpenMPAllocateClauseModifier Modifier1 = OMPC_ALLOCATE_unknown;
     OpenMPAllocateClauseModifier Modifier2 = OMPC_ALLOCATE_unknown;
     SourceLocation Modifier1Loc, Modifier2Loc;
-    if (auto NumModifiers = Data.AllocClauseModifiers.size()) {
+    if (!Data.AllocClauseModifiers.empty()) {
+      assert(Data.AllocClauseModifiers.size() <= 2 &&
+             "More allocate modifiers than expected");
       Modifier1 = Data.AllocClauseModifiers[0];
       Modifier1Loc = Data.AllocClauseModifiersLoc[0];
-      assert(NumModifiers <= 2 && "More allocate modifiers than expected");
-      if (NumModifiers == 2) {
+      if (Data.AllocClauseModifiers.size() == 2) {
         Modifier2 = Data.AllocClauseModifiers[1];
         Modifier2Loc = Data.AllocClauseModifiersLoc[1];
       }
