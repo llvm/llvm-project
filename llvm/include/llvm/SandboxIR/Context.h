@@ -45,12 +45,15 @@ public:
   public:
     // Uses a 64-bit integer so we don't have to worry about the unlikely case
     // of overflowing a 32-bit counter.
-    using ReprTy = uint64_t;
+    using ValTy = uint64_t;
+    static constexpr const ValTy InvalidVal = 0;
 
   private:
     // Default initialization results in an invalid ID.
-    ReprTy Val = std::numeric_limits<ReprTy>::max();
-    explicit CallbackID(ReprTy Val) : Val{Val} {}
+    ValTy Val = InvalidVal;
+    explicit CallbackID(ValTy Val) : Val{Val} {
+      assert(Val != InvalidVal && "newly-created ID is invalid!");
+    }
 
   public:
     CallbackID() = default;
@@ -99,7 +102,7 @@ protected:
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
   /// registration/deregistration.
-  CallbackID::ReprTy NextCallbackID = 0;
+  CallbackID::ValTy NextCallbackID = 1;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
@@ -284,7 +287,7 @@ public:
 // DenseMap info for CallbackIDs
 template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
   using CallbackID = sandboxir::Context::CallbackID;
-  using ReprInfo = DenseMapInfo<CallbackID::ReprTy>;
+  using ReprInfo = DenseMapInfo<CallbackID::ValTy>;
 
   static CallbackID getEmptyKey() {
     return CallbackID{ReprInfo::getEmptyKey()};
