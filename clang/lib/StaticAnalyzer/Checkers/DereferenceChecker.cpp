@@ -360,7 +360,7 @@ void ento::registerDereferenceModeling(CheckerManager &Mgr) {
   Mgr.registerChecker<DereferenceChecker>();
 }
 
-bool ento::shouldRegisterDereferenceModeling(const CheckerManager &Mgr) {
+bool ento::shouldRegisterDereferenceModeling(const CheckerManager &) {
   return true;
 }
 
@@ -380,6 +380,6 @@ void ento::registerNullDereferenceChecker(CheckerManager &Mgr) {
                                   categories::LogicError));
 }
 
-bool ento::shouldRegisterNullDereferenceChecker(const CheckerManager &Mgr) {
+bool ento::shouldRegisterNullDereferenceChecker(const CheckerManager &) {
   return true;
 }

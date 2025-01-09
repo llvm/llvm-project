@@ -208,7 +208,7 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
 
 def DereferenceModeling : Checker<"DereferenceModeling">,
   HelpText<"General support for dereference related checkers">,
-  Documentation<HasDocumentation>,
+  Documentation<NotDocumented>,
   Hidden;
 
 def NullDereferenceChecker : Checker<"NullDereference">,
