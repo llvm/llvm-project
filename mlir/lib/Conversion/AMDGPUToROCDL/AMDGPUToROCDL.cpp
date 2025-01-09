@@ -61,15 +61,14 @@ static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
                                ValueRange indices, ArrayRef<int64_t> strides) {
   IntegerType i32 = rewriter.getI32Type();
   Value index;
-  for (int i = 0, e = indices.size(); i < e; ++i) {
-    Value increment = indices[i];
-    if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride =
-          ShapedType::isDynamic(strides[i])
+  for (auto &&[i, increment, stride] : llvm::enumerate(indices, strides)) {
+    if (stride != 1) { // Skip if stride is 1.
+      Value strideValue =
+          ShapedType::isDynamic(stride)
               ? convertUnsignedToI32(rewriter, loc,
                                      memRefDescriptor.stride(rewriter, loc, i))
-              : rewriter.create<LLVM::ConstantOp>(loc, i32, strides[i]);
-      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
+              : rewriter.create<LLVM::ConstantOp>(loc, i32, stride);
+      increment = rewriter.create<LLVM::MulOp>(loc, increment, strideValue);
     }
     index =
         index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
@@ -206,9 +205,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         loc, i16, rewriter.getI16IntegerAttr(0));
     // Get the number of elements.
     Value numRecords;
-    if (memrefType.hasStaticShape() && !llvm::any_of(strides, [](int64_t v) {
-          return ShapedType::isDynamic(v);
-        })) {
+    if (memrefType.hasStaticShape() &&
+        !llvm::any_of(strides, ShapedType::isDynamic)) {
       int64_t size = memrefType.getRank() == 0 ? 1 : 0;
       ArrayRef<int64_t> shape = memrefType.getShape();
       for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
