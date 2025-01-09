@@ -3327,6 +3327,8 @@ private:
     /// reordering of operands during buildTree_rec() and vectorizeTree().
     SmallVector<ValueList, 2> Operands;
 
+    /// MainOp and AltOp are recorded inside. S should be obtained from
+    /// newTreeEntry.
     InstructionsState S = InstructionsState::invalid();
 
     /// Interleaving factor for interleaved loads Vectorize nodes.
@@ -14843,8 +14845,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
     }
     // Gather extracts after we check for full matched gathers only.
-    if (!ExtractShuffles.empty() ||
-        (!E->hasState() || E->getOpcode() != Instruction::Load) ||
+    if (!ExtractShuffles.empty() || !E->hasState() ||
+        E->getOpcode() != Instruction::Load ||
         (((E->hasState() && E->getOpcode() == Instruction::Load) ||
           any_of(E->Scalars, IsaPred<LoadInst>)) &&
          any_of(E->Scalars,
