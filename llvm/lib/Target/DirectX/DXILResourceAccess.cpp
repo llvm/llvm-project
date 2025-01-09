@@ -22,7 +22,7 @@
 using namespace llvm;
 
 static Value *calculateGEPOffset(GetElementPtrInst *GEP, Value *PrevOffset,
-                               dxil::ResourceTypeInfo &RTI) {
+                                 dxil::ResourceTypeInfo &RTI) {
   assert(!PrevOffset && "Non-constant GEP chains not handled yet");
 
   const DataLayout &DL = GEP->getDataLayout();
@@ -191,8 +191,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static void
-replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
+static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   // Process users keeping track of indexing accumulated from GEPs.
   struct AccessAndOffset {
     User *Access;
