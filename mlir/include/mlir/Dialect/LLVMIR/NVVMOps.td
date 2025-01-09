@@ -155,11 +155,7 @@ class NVVM_SpecialRangeableRegisterOp<string mnemonic> :
     void $cppClass::inferResultRanges(
         ArrayRef<::mlir::ConstantIntRanges> argRanges,
         SetIntRangeFn setResultRanges) {
-        if (auto rangeAttr = getOperation()->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-          setResultRanges(getResult(), 
-                          {rangeAttr.getLower(), rangeAttr.getUpper(),
-                          rangeAttr.getLower(), rangeAttr.getUpper()});
-        }
+        nvvmInferResultRanges(getOperation(), getResult(), argRanges, setResultRanges);
     }
   }];
 
