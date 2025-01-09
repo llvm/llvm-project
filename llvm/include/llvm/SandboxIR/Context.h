@@ -99,7 +99,7 @@ protected:
   /// A counter used for assigning callback IDs during registration. The same
   /// counter is used for all kinds of callbacks so we can detect mismatched
   /// registration/deregistration.
-  uint64_t NextCallbackID = 0;
+  CallbackID::ReprTy NextCallbackID = 0;
 
   /// Remove \p V from the maps and returns the unique_ptr.
   std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
