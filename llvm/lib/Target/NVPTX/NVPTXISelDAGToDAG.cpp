@@ -191,13 +191,13 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
       return;
     }
     break;
+  }
   case ISD::FADD:
   case ISD::FMUL:
   case ISD::FSUB:
     if (tryBF16ArithToFMA(N))
       return;
     break;
-  }
   default:
     break;
   }
@@ -2491,22 +2491,19 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
   };
 
   switch (N->getOpcode()) {
-  case ISD::FADD: {
+  case ISD::FADD:
     // add(a, b) -> fma(a, 1.0, b)
     Operands = {N0, GetConstant(1.0), N1};
     break;
-  }
-  case ISD::FSUB: {
+  case ISD::FSUB:
     // sub(a, b) -> fma(b, -1.0, a)
     Operands = {N1, GetConstant(-1.0), N0};
     break;
-  }
-  case ISD::FMUL: {
+  case ISD::FMUL:
     // mul(a, b) -> fma(a, b, -0.0)
     // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
     Operands = {N0, N1, GetConstant(-0.0)};
     break;
-  }
   default:
     llvm_unreachable("Unexpected opcode");
   };
