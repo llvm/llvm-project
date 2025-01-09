@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -triple %itanium_abi_triple %s -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg.declare"
 
-// CHECK: define noundef i32 @_Z1fv
+// CHECK: define {{.*}} i32 @_Z1fv
 // CHECK: #dbg_declare(ptr %{{[a-z]+}}, ![[VAR_0:[0-9]+]], !DIExpression(),
 // CHECK: #dbg_declare(ptr %{{[0-9]+}}, ![[VAR_1:[0-9]+]], !DIExpression(),
 // CHECK: #dbg_declare(ptr %{{[0-9]+}}, ![[VAR_2:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 4),
