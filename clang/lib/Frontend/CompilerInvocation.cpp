@@ -1809,9 +1809,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
 
   SmallVector<std::string, 4> Values;
-  serializeSanitizerMaskCutoffs(Opts.NoSanitizeTopHotCutoffs, Values);
+  serializeSanitizerMaskCutoffs(Opts.SanitizeSkipHotCutoffs, Values);
   for (std::string Sanitizer : Values)
-    GenerateArg(Consumer, OPT_fno_sanitize_top_hot_EQ, Sanitizer);
+    GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2294,10 +2294,10 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                       Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
                       Diags, Opts.SanitizeMergeHandlers);
 
-  // Parse -fno-sanitize-top-hot= arguments.
-  Opts.NoSanitizeTopHotCutoffs = parseSanitizerWeightedKinds(
-      "-fno-sanitize-top-hot=",
-      Args.getAllArgValues(OPT_fno_sanitize_top_hot_EQ), Diags);
+  // Parse -fsanitize-skip-hot-cutoff= arguments.
+  Opts.SanitizeSkipHotCutoffs = parseSanitizerWeightedKinds(
+      "-fsanitize-skip-hot-cutoff=",
+      Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

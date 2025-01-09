@@ -331,11 +331,11 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 }
 
 static SanitizerMaskCutoffs
-parseNoSanitizeHotArgs(const Driver &D, const llvm::opt::ArgList &Args,
+parseSanitizeSkipHotCutoffArgs(const Driver &D, const llvm::opt::ArgList &Args,
                        bool DiagnoseErrors) {
   SanitizerMaskCutoffs Cutoffs;
   for (const auto *Arg : Args)
-    if (Arg->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ)) {
+    if (Arg->getOption().matches(options::OPT_fsanitize_skip_hot_cutoff_EQ)) {
       Arg->claim();
       parseArgCutoffs(D, Arg, DiagnoseErrors, Cutoffs);
     }
@@ -734,7 +734,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeKinds &= Kinds;
 
   // Parse -fno-sanitize-top-hot flags
-  TopHotCutoffs = parseNoSanitizeHotArgs(D, Args, DiagnoseErrors);
+  SkipHotCutoffs = parseSanitizeSkipHotCutoffArgs(D, Args, DiagnoseErrors);
 
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
@@ -1156,8 +1156,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   MergeHandlers.Mask |= MergeKinds;
 
-  // Zero out TopHotCutoffs for unused sanitizers
-  TopHotCutoffs.clear(~Sanitizers.Mask);
+  // Zero out SkipHotCutoffs for unused sanitizers
+  SkipHotCutoffs.clear(~Sanitizers.Mask);
 }
 
 static std::string toString(const clang::SanitizerSet &Sanitizers) {
@@ -1329,10 +1329,10 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-fsanitize-merge=" + toString(MergeHandlers)));
 
-  std::string TopHotCutoffsStr = toString(TopHotCutoffs);
-  if (!TopHotCutoffsStr.empty())
+  std::string SkipHotCutoffsStr = toString(SkipHotCutoffs);
+  if (!SkipHotCutoffsStr.empty())
     CmdArgs.push_back(
-        Args.MakeArgString("-fno-sanitize-top-hot=" + TopHotCutoffsStr));
+        Args.MakeArgString("-fsanitize-skip-hot-cutoff=" + SkipHotCutoffsStr));
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
@@ -1533,7 +1533,7 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
 
 void parseArgCutoffs(const Driver &D, const llvm::opt::Arg *A,
                      bool DiagnoseErrors, SanitizerMaskCutoffs &Cutoffs) {
-  assert(A->getOption().matches(options::OPT_fno_sanitize_top_hot_EQ) &&
+  assert(A->getOption().matches(options::OPT_fsanitize_skip_hot_cutoff_EQ) &&
          "Invalid argument in parseArgCutoffs!");
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {
     const char *Value = A->getValue(i);
