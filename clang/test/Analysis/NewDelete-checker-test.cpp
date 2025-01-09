@@ -441,3 +441,31 @@ void testLeakBecauseNTTPIsNotDeallocation() {
   void* p = ::operator new(10);
   deallocate_via_nttp<not_free>(p);
 }  // leak-warning{{Potential leak of memory pointed to by 'p'}}
+
+namespace optional_union {
+  template <typename T>
+  class unique_ptr {
+    T *q;
+  public:
+    unique_ptr() : q(new T) {}
+    ~unique_ptr() {
+      delete q;
+    }
+  };
+
+  union custom_union_t {
+    unique_ptr<int> present;
+    char notpresent;
+    custom_union_t() : present(unique_ptr<int>()) {}
+    ~custom_union_t() {};
+  };
+
+  void testUnionCorrect() {
+    custom_union_t a;
+    a.present.~unique_ptr<int>();
+  }
+
+  void testUnionLeak() {
+    custom_union_t a;
+  } // leak-warning{{Potential leak of memory pointed to by 'a.present.q'}}
+}
