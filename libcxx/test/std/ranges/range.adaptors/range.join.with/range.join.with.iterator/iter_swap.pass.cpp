@@ -26,6 +26,58 @@
 template <class I>
 concept CanIterSwap = requires(I i) { iter_swap(i); };
 
+enum class SwapKind { no_swap, with_same_type, with_different_type };
+
+template <std::forward_iterator Iter>
+class IterSwapTrackingIterator {
+  template <std::forward_iterator T>
+  friend class IterSwapTrackingIterator;
+
+public:
+  using value_type      = std::iter_value_t<Iter>;
+  using difference_type = std::iter_difference_t<Iter>;
+
+  IterSwapTrackingIterator() = default;
+  constexpr explicit IterSwapTrackingIterator(Iter iter, SwapKind* flag = nullptr)
+      : iter_(std::move(iter)), flag_(flag) {}
+
+  constexpr IterSwapTrackingIterator& operator++() {
+    ++iter_;
+    return *this;
+  }
+
+  constexpr IterSwapTrackingIterator operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  constexpr decltype(auto) operator*() const { return *iter_; }
+
+  constexpr bool operator==(const IterSwapTrackingIterator& other) const { return iter_ == other.iter_; }
+
+  friend constexpr decltype(auto) iter_swap(const IterSwapTrackingIterator& lhs, const IterSwapTrackingIterator& rhs) {
+    assert(lhs.flag_ != nullptr && rhs.flag_ != nullptr);
+    *lhs.flag_ = *rhs.flag_ = SwapKind::with_same_type;
+    return std::ranges::iter_swap(lhs.iter_, rhs.iter_);
+  }
+
+  template <std::indirectly_swappable<Iter> OtherIter>
+  friend constexpr decltype(auto)
+  iter_swap(const IterSwapTrackingIterator& lhs, const IterSwapTrackingIterator<OtherIter>& rhs) {
+    assert(lhs.flag_ != nullptr && rhs.flag_ != nullptr);
+    *lhs.flag_ = *rhs.flag_ = SwapKind::with_different_type;
+    return std::ranges::iter_swap(lhs.iter_, rhs.iter_);
+  }
+
+private:
+  Iter iter_      = Iter();
+  SwapKind* flag_ = nullptr;
+};
+
+static_assert(std::forward_iterator<IterSwapTrackingIterator<int*>> &&
+              !std::bidirectional_iterator<IterSwapTrackingIterator<int*>>);
+
 constexpr bool test() {
   { // Test common usage
     using V       = std::vector<std::string>;
@@ -57,6 +109,59 @@ constexpr bool test() {
     static_assert(std::is_void_v<decltype(iter_swap(it2, it2))>);
     static_assert(!CanIterSwap<std::ranges::iterator_t<const JWV>>);
     static_assert(!CanIterSwap<const std::ranges::iterator_t<const JWV>>);
+  }
+
+  { // Make sure `iter_swap` calls underlying's iterator `iter_swap` (not `ranges::swap(*i1, *i2)`).
+    using Inner               = std::vector<int>;
+    using InnerTrackingIter   = IterSwapTrackingIterator<Inner::iterator>;
+    using TrackingInner       = std::ranges::subrange<InnerTrackingIter>;
+    using Pattern             = std::array<int, 2>;
+    using PatternTrackingIter = IterSwapTrackingIterator<Pattern::iterator>;
+    using TrackingPattern     = std::ranges::subrange<PatternTrackingIter>;
+    using JWV                 = std::ranges::join_with_view<std::span<TrackingInner>, TrackingPattern>;
+
+    std::array<Inner, 3> v{{{1, 2, 3}, {4, 5}}};
+    Pattern pat{-1, -2};
+
+    SwapKind v_swap_kind = SwapKind::no_swap;
+    std::array<TrackingInner, 2> tracking_v{
+        TrackingInner(InnerTrackingIter(v[0].begin(), &v_swap_kind), InnerTrackingIter(v[0].end())),
+        TrackingInner(InnerTrackingIter(v[1].begin(), &v_swap_kind), InnerTrackingIter(v[1].end()))};
+
+    SwapKind pat_swap_kind = SwapKind::no_swap;
+    TrackingPattern tracking_pat(PatternTrackingIter(pat.begin(), &pat_swap_kind), PatternTrackingIter(pat.end()));
+
+    JWV jwv(tracking_v, tracking_pat);
+    auto it1 = jwv.begin();
+    auto it2 = std::ranges::next(it1);
+
+    // Test calling `iter_swap` when both `it1` and `it2` point to elements of `v`.
+    assert(v_swap_kind == SwapKind::no_swap);
+    iter_swap(it1, it2);
+    assert(*it1 == 2 && *it2 == 1);
+    assert(v_swap_kind == SwapKind::with_same_type && pat_swap_kind == SwapKind::no_swap);
+
+    // Test calling `iter_swap` when `it1` points to element of `v` and `it2` points to element of `pat`.
+    std::ranges::advance(it2, 2);
+    v_swap_kind = SwapKind::no_swap;
+    assert(pat_swap_kind == SwapKind::no_swap);
+    iter_swap(it1, it2);
+    assert(*it1 == -1 && *it2 == 2);
+    assert(v_swap_kind == SwapKind::with_different_type && pat_swap_kind == SwapKind::with_different_type);
+
+    // Test calling `iter_swap` when `it1` and `it2` point to elements of `pat`.
+    std::ranges::advance(it1, 4);
+    v_swap_kind = pat_swap_kind = SwapKind::no_swap;
+    iter_swap(it1, it2);
+    assert(*it1 == 2 && *it2 == -2);
+    assert(v_swap_kind == SwapKind::no_swap && pat_swap_kind == SwapKind::with_same_type);
+
+    // Test calling `iter_swap` when `it1` points to element of `pat` and `it2` points to element of `v`.
+    std::ranges::advance(it2, 3);
+    v_swap_kind = pat_swap_kind = SwapKind::no_swap;
+    iter_swap(it1, it2);
+    assert(*it1 == 5 && *it2 == 2);
+    assert(v_swap_kind == SwapKind::with_different_type && pat_swap_kind == SwapKind::with_different_type);
   }
 
   { // InnerIter and PatternIter don't model indirectly swappable
