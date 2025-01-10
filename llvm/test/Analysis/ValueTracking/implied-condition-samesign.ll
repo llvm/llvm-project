@@ -160,9 +160,7 @@ define i32 @gt_implies_sge_dominating_cr(i32 %a, i32 %len) {
 ; CHECK-NEXT:    [[A_GT_20:%.*]] = icmp samesign ugt i32 [[A]], 20
 ; CHECK-NEXT:    br i1 [[A_GT_20]], label %[[TAKEN:.*]], label %[[END:.*]]
 ; CHECK:       [[TAKEN]]:
-; CHECK-NEXT:    [[A_SGE_10:%.*]] = icmp sge i32 [[A]], 10
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_SGE_10]], i32 30, i32 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 30
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -186,9 +184,7 @@ define i32 @sgt_implies_ge_dominating_cr(i32 %a, i32 %len) {
 ; CHECK-NEXT:    [[A_SGT_MINUS_10:%.*]] = icmp sgt i32 [[A]], -10
 ; CHECK-NEXT:    br i1 [[A_SGT_MINUS_10]], label %[[TAKEN:.*]], label %[[END:.*]]
 ; CHECK:       [[TAKEN]]:
-; CHECK-NEXT:    [[A_GE_MINUS_20:%.*]] = icmp samesign uge i32 [[A]], -20
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_GE_MINUS_20]], i32 30, i32 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 30
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 -1
 ;

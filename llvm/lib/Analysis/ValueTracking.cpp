@@ -9388,17 +9388,32 @@ isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
 /// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
 /// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondCommonOperandWithCR(
-    CmpInst::Predicate LPred, const ConstantRange &LCR,
-    CmpInst::Predicate RPred, const ConstantRange &RCR) {
-  ConstantRange DomCR = ConstantRange::makeAllowedICmpRegion(LPred, LCR);
-  // If all true values for lhs and true for rhs, lhs implies rhs
-  if (DomCR.icmp(RPred, RCR))
-    return true;
+static std::optional<bool>
+isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
+                                 CmpPredicate RPred, const ConstantRange &RCR) {
+  auto CRImpliesPred = [&](ConstantRange CR,
+                           CmpInst::Predicate Pred) -> std::optional<bool> {
+    // If all true values for lhs and true for rhs, lhs implies rhs
+    if (CR.icmp(Pred, RCR))
+      return true;
 
-  // If there is no overlap, lhs implies not rhs
-  if (DomCR.icmp(CmpInst::getInversePredicate(RPred), RCR))
-    return false;
+    // If there is no overlap, lhs implies not rhs
+    if (CR.icmp(CmpInst::getInversePredicate(Pred), RCR))
+      return false;
+
+    return std::nullopt;
+  };
+  if (auto Res = CRImpliesPred(ConstantRange::makeAllowedICmpRegion(LPred, LCR),
+                               RPred))
+    return Res;
+  if (LPred.hasSameSign() ^ RPred.hasSameSign()) {
+    LPred = LPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(LPred)
+                                : static_cast<CmpInst::Predicate>(LPred);
+    RPred = RPred.hasSameSign() ? ICmpInst::getFlippedSignednessPredicate(RPred)
+                                : static_cast<CmpInst::Predicate>(RPred);
+    return CRImpliesPred(ConstantRange::makeAllowedICmpRegion(LPred, LCR),
+                         RPred);
+  }
   return std::nullopt;
 }
 
