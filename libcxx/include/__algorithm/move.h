@@ -50,7 +50,7 @@ struct __move_impl {
 
   template <class _InIter, class _OutIter>
   struct _MoveSegment {
-    using _Traits = __segmented_iterator_traits<_InIter>;
+    using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_InIter>;
 
     _OutIter& __result_;
 

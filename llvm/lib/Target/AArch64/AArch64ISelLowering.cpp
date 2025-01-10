@@ -753,6 +753,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(Op, MVT::v8bf16, Expand);
   }
 
+  // For bf16, fpextend is custom lowered to be optionally expanded into shifts.
+  setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
+  setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
+  setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Custom);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v4f32, Custom);
+
   auto LegalizeNarrowFP = [this](MVT ScalarVT) {
     for (auto Op : {
              ISD::SETCC,
@@ -892,10 +900,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasFullFP16())
       setOperationAction(Op, MVT::f16, Legal);
   }
-
-  // Strict conversion to a larger type is legal
-  for (auto VT : {MVT::f32, MVT::f64})
-    setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
 
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
@@ -1183,6 +1187,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setMaxDivRemBitWidthSupported(128);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  if (Subtarget->hasSME())
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
 
   if (Subtarget->isNeonAvailable()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
@@ -4496,6 +4502,54 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
   if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
+  EVT Op0VT = Op0.getValueType();
+  if (VT == MVT::f64) {
+    // FP16->FP32 extends are legal for v32 and v4f32.
+    if (Op0VT == MVT::f32 || Op0VT == MVT::f16)
+      return Op;
+    // Split bf16->f64 extends into two fpextends.
+    if (Op0VT == MVT::bf16 && IsStrict) {
+      SDValue Ext1 =
+          DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {MVT::f32, MVT::Other},
+                      {Op0, Op.getOperand(0)});
+      return DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {VT, MVT::Other},
+                         {Ext1, Ext1.getValue(1)});
+    }
+    if (Op0VT == MVT::bf16)
+      return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
+                         DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, Op0));
+    return SDValue();
+  }
+
+  if (VT.getScalarType() == MVT::f32) {
+    // FP16->FP32 extends are legal for v32 and v4f32.
+    if (Op0VT.getScalarType() == MVT::f16)
+      return Op;
+    if (Op0VT.getScalarType() == MVT::bf16) {
+      SDLoc DL(Op);
+      EVT IVT = VT.changeTypeToInteger();
+      if (!Op0VT.isVector()) {
+        Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4bf16, Op0);
+        IVT = MVT::v4i32;
+      }
+
+      EVT Op0IVT = Op0.getValueType().changeTypeToInteger();
+      SDValue Ext =
+          DAG.getNode(ISD::ANY_EXTEND, DL, IVT, DAG.getBitcast(Op0IVT, Op0));
+      SDValue Shift =
+          DAG.getNode(ISD::SHL, DL, IVT, Ext, DAG.getConstant(16, DL, IVT));
+      if (!Op0VT.isVector())
+        Shift = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Shift,
+                            DAG.getConstant(0, DL, MVT::i64));
+      Shift = DAG.getBitcast(VT, Shift);
+      return IsStrict ? DAG.getMergeValues({Shift, Op.getOperand(0)}, DL)
+                      : Shift;
+    }
+    return SDValue();
+  }
+
   assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
   return SDValue();
 }
@@ -7343,6 +7397,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
+  case ISD::STRICT_FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::FRAMEADDR:
     return LowerFRAMEADDR(Op, DAG);
@@ -27427,6 +27482,15 @@ void AArch64TargetLowering::ReplaceNodeResults(
       auto V = DAG.getNode(AArch64ISD::LASTB, DL, MVT::i32,
                            N->getOperand(1), N->getOperand(2));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+      return;
+    }
+    case Intrinsic::aarch64_sme_in_streaming_mode: {
+      SDLoc DL(N);
+      SDValue Chain = DAG.getEntryNode();
+      SDValue RuntimePStateSM =
+          getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
       return;
     }
     case Intrinsic::experimental_vector_match:

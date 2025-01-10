@@ -151,8 +151,7 @@ void func() {
   // expected-error@+1{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
 #pragma acc set clause list
   for(;;){}
-  // expected-error@+2{{invalid OpenACC clause 'clause'}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+1{{invalid OpenACC clause 'clause'}}
 #pragma acc update clause list
   for(;;){}
 }

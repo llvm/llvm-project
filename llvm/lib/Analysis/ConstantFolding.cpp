@@ -45,8 +45,10 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1687,6 +1689,58 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::x86_avx512_cvttsd2usi64:
     return !Call->isStrictFP();
 
+  // NVVM float/double to int32/uint32 conversion intrinsics
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+
+  // NVVM float/double to int64/uint64 conversion intrinsics
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+
   // Sign operations are actually bitwise operations, they do not raise
   // exceptions even for SNANs.
   case Intrinsic::fabs:
@@ -1847,6 +1901,12 @@ inline bool llvm_fenv_testexcept() {
     return true;
 #endif
   return false;
+}
+
+static const APFloat FTZPreserveSign(const APFloat &V) {
+  if (V.isDenormal())
+    return APFloat::getZero(V.getSemantics(), V.isNegative());
+  return V;
 }
 
 Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
@@ -2307,6 +2367,85 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         U = APFloat::getQNaN(U.getSemantics());
       }
       return ConstantFP::get(Ty->getContext(), U);
+    }
+
+    // NVVM float/double to signed/unsigned int32/int64 conversions:
+    switch (IntrinsicID) {
+    // f2i
+    case Intrinsic::nvvm_f2i_rm:
+    case Intrinsic::nvvm_f2i_rn:
+    case Intrinsic::nvvm_f2i_rp:
+    case Intrinsic::nvvm_f2i_rz:
+    case Intrinsic::nvvm_f2i_rm_ftz:
+    case Intrinsic::nvvm_f2i_rn_ftz:
+    case Intrinsic::nvvm_f2i_rp_ftz:
+    case Intrinsic::nvvm_f2i_rz_ftz:
+    // f2ui
+    case Intrinsic::nvvm_f2ui_rm:
+    case Intrinsic::nvvm_f2ui_rn:
+    case Intrinsic::nvvm_f2ui_rp:
+    case Intrinsic::nvvm_f2ui_rz:
+    case Intrinsic::nvvm_f2ui_rm_ftz:
+    case Intrinsic::nvvm_f2ui_rn_ftz:
+    case Intrinsic::nvvm_f2ui_rp_ftz:
+    case Intrinsic::nvvm_f2ui_rz_ftz:
+    // d2i
+    case Intrinsic::nvvm_d2i_rm:
+    case Intrinsic::nvvm_d2i_rn:
+    case Intrinsic::nvvm_d2i_rp:
+    case Intrinsic::nvvm_d2i_rz:
+    // d2ui
+    case Intrinsic::nvvm_d2ui_rm:
+    case Intrinsic::nvvm_d2ui_rn:
+    case Intrinsic::nvvm_d2ui_rp:
+    case Intrinsic::nvvm_d2ui_rz:
+    // f2ll
+    case Intrinsic::nvvm_f2ll_rm:
+    case Intrinsic::nvvm_f2ll_rn:
+    case Intrinsic::nvvm_f2ll_rp:
+    case Intrinsic::nvvm_f2ll_rz:
+    case Intrinsic::nvvm_f2ll_rm_ftz:
+    case Intrinsic::nvvm_f2ll_rn_ftz:
+    case Intrinsic::nvvm_f2ll_rp_ftz:
+    case Intrinsic::nvvm_f2ll_rz_ftz:
+    // f2ull
+    case Intrinsic::nvvm_f2ull_rm:
+    case Intrinsic::nvvm_f2ull_rn:
+    case Intrinsic::nvvm_f2ull_rp:
+    case Intrinsic::nvvm_f2ull_rz:
+    case Intrinsic::nvvm_f2ull_rm_ftz:
+    case Intrinsic::nvvm_f2ull_rn_ftz:
+    case Intrinsic::nvvm_f2ull_rp_ftz:
+    case Intrinsic::nvvm_f2ull_rz_ftz:
+    // d2ll
+    case Intrinsic::nvvm_d2ll_rm:
+    case Intrinsic::nvvm_d2ll_rn:
+    case Intrinsic::nvvm_d2ll_rp:
+    case Intrinsic::nvvm_d2ll_rz:
+    // d2ull
+    case Intrinsic::nvvm_d2ull_rm:
+    case Intrinsic::nvvm_d2ull_rn:
+    case Intrinsic::nvvm_d2ull_rp:
+    case Intrinsic::nvvm_d2ull_rz: {
+      // In float-to-integer conversion, NaN inputs are converted to 0.
+      if (U.isNaN())
+        return ConstantInt::get(Ty, 0);
+
+      APFloat::roundingMode RMode = nvvm::IntrinsicGetRoundingMode(IntrinsicID);
+      bool IsFTZ = nvvm::IntrinsicShouldFTZ(IntrinsicID);
+      bool IsSigned = nvvm::IntrinsicConvertsToSignedInteger(IntrinsicID);
+
+      APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
+      auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
+
+      bool IsExact = false;
+      APFloat::opStatus Status =
+          FloatToRound.convertToInteger(ResInt, RMode, &IsExact);
+
+      if (Status != APFloat::opInvalidOp)
+        return ConstantInt::get(Ty, ResInt);
+      return nullptr;
+    }
     }
 
     /// We only fold functions with finite arguments. Folding NaN and inf is

@@ -330,6 +330,18 @@ std::optional<AllocationState> LatticePoint::get(mlir::Value val) const {
   return it->second;
 }
 
+static mlir::Value lookThroughDeclaresAndConverts(mlir::Value value) {
+  while (mlir::Operation *op = value.getDefiningOp()) {
+    if (auto declareOp = llvm::dyn_cast<fir::DeclareOp>(op))
+      value = declareOp.getMemref();
+    else if (auto convertOp = llvm::dyn_cast<fir::ConvertOp>(op))
+      value = convertOp->getOperand(0);
+    else
+      return value;
+  }
+  return value;
+}
+
 mlir::LogicalResult AllocationAnalysis::visitOperation(
     mlir::Operation *op, const LatticePoint &before, LatticePoint *after) {
   LLVM_DEBUG(llvm::dbgs() << "StackArrays: Visiting operation: " << *op
@@ -363,10 +375,10 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
     mlir::Value operand = op->getOperand(0);
 
     // Note: StackArrays is scheduled in the pass pipeline after lowering hlfir
-    // to fir. Therefore, we only need to handle `fir::DeclareOp`s.
-    if (auto declareOp =
-            llvm::dyn_cast_if_present<fir::DeclareOp>(operand.getDefiningOp()))
-      operand = declareOp.getMemref();
+    // to fir. Therefore, we only need to handle `fir::DeclareOp`s. Also look
+    // past converts in case the pointer was changed between different pointer
+    // types.
+    operand = lookThroughDeclaresAndConverts(operand);
 
     std::optional<AllocationState> operandState = before.get(operand);
     if (operandState && *operandState == AllocationState::Allocated) {
@@ -535,17 +547,12 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
 
   // remove freemem operations
   llvm::SmallVector<mlir::Operation *> erases;
-  for (mlir::Operation *user : allocmem.getOperation()->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          erases.push_back(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user))
-      erases.push_back(user);
-  }
+  mlir::Operation *parent = allocmem->getParentOp();
+  // TODO: this shouldn't need to be re-calculated for every allocmem
+  parent->walk([&](fir::FreeMemOp freeOp) {
+    if (lookThroughDeclaresAndConverts(freeOp->getOperand(0)) == allocmem)
+      erases.push_back(freeOp);
+  });
 
   // now we are done iterating the users, it is safe to mutate them
   for (mlir::Operation *erase : erases)
