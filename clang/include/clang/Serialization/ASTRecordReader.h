@@ -338,9 +338,11 @@ public:
   void readAttributes(AttrVec &Attrs);
 
   /// Reads one attribute from the current stream position, advancing Idx.
+  /// Parent Decl is provided to delay attribute deserialization.
   Attr *readAttr(Decl *D);
 
   /// Reads attributes from the current stream position, advancing Idx.
+  /// Parent Decl is provided to delay attribute deserialization.
   void readAttributes(AttrVec &Attrs, Decl *D);
 
   /// Read an BTFTypeTagAttr object.
