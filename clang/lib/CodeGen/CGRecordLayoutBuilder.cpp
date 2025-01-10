@@ -182,7 +182,7 @@ struct CGRecordLowering {
                        llvm::Type *StorageType);
   /// Lowers an ASTRecordLayout to a llvm type.
   void lower(bool NonVirtualBaseType);
-  void lowerUnion(bool isNoUniqueAddress);
+  void lowerUnion(bool isNonVirtualBaseType);
   void accumulateFields(bool isNonVirtualBaseType);
   RecordDecl::field_iterator
   accumulateBitFields(bool isNonVirtualBaseType,
@@ -310,9 +310,9 @@ void CGRecordLowering::lower(bool NVBaseType) {
   computeVolatileBitfields();
 }
 
-void CGRecordLowering::lowerUnion(bool isNoUniqueAddress) {
+void CGRecordLowering::lowerUnion(bool isNonVirtualBaseType) {
   CharUnits LayoutSize =
-      isNoUniqueAddress ? Layout.getDataSize() : Layout.getSize();
+      isNonVirtualBaseType ? Layout.getDataSize() : Layout.getSize();
   llvm::Type *StorageType = nullptr;
   bool SeenNamedMember = false;
   // Iterate through the fields setting bitFieldInfo and the Fields array. Also
