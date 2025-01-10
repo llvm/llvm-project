@@ -17,8 +17,9 @@ target triple = "dxil-pc-shadermodel6.7-library"
 define <4 x float> @multicomponent() #0 {
   %res = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %val = call <4 x float> @llvm.dx.resource.load.typedbuffer(
+  %load = call {<4 x float>, i1} @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %res, i32 0)
+  %val = extractvalue {<4 x float>, i1} %load, 0
   ret <4 x float> %val
 }
 
@@ -26,8 +27,9 @@ define <4 x float> @multicomponent() #0 {
 define float @onecomponent() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %val = call float @llvm.dx.resource.load.typedbuffer(
+  %load = call {float, i1} @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", float, 1, 0, 0) %res, i32 0)
+  %val = extractvalue {float, i1} %load, 0
   ret float %val
 }
 
