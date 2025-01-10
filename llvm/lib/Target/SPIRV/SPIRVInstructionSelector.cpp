@@ -3220,9 +3220,9 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
     Register SrcReg, unsigned BitSetOpcode, bool SwapPrimarySide) const {
 
-  // SPIR-V only allow vecs of size 2,3,4. Calling with a larger vec requires
-  // creating a param reg and return reg with an invalid vec size. If that is
-  // resolved then this function is valid for vectors of any component size.
+  // SPIR-V allow vectors of size 2,3,4 only. Calling with a larger vectors requires
+  // creating a param register and return register with an invalid vector size. If that is
+  // resolved, then this function can be used for vectors of any component size.
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
 
