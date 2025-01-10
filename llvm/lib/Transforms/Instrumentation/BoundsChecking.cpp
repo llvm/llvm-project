@@ -162,8 +162,8 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BranchInst::Create(TrapBB, Cont, Or, OldBB);
 }
 
-static std::string getRuntimeCallName(
-    const BoundsCheckingPass::BoundsCheckingOptions::Runtime &Opts) {
+static std::string
+getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
   std::string Name = "__ubsan_handle_local_out_of_bounds";
   if (Opts.MinRuntime)
     Name += "_minimal";
@@ -172,9 +172,9 @@ static std::string getRuntimeCallName(
   return Name;
 }
 
-static bool
-addBoundsChecking(Function &F, TargetLibraryInfo &TLI, ScalarEvolution &SE,
-                  const BoundsCheckingPass::BoundsCheckingOptions &Opts) {
+static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
+                              ScalarEvolution &SE,
+                              const BoundsCheckingPass::Options &Opts) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -271,7 +271,7 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, Options))
+  if (!addBoundsChecking(F, TLI, SE, Opts))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -282,16 +282,16 @@ void BoundsCheckingPass::printPipeline(
   static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
-  if (Options.Rt) {
-    if (Options.Rt->MinRuntime)
+  if (Opts.Rt) {
+    if (Opts.Rt->MinRuntime)
       OS << "min-";
     OS << "rt";
-    if (!Options.Rt->MayReturn)
+    if (!Opts.Rt->MayReturn)
       OS << "-abort";
   } else {
     OS << "trap";
   }
-  if (Options.Merge)
+  if (Opts.Merge)
     OS << ";merge";
   OS << ">";
 }
