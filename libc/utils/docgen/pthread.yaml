@@ -105,6 +105,8 @@ functions:
     in-latest-posix: ''
   pthread_mutex_clocklock:
     in-latest-posix: ''
+  pthread_mutex_consistent:
+    in-latest-posix: ''
   pthread_mutex_destroy:
     in-latest-posix: ''
   pthread_mutex_getprioceiling:
