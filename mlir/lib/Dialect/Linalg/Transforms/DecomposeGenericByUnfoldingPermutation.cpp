@@ -160,7 +160,8 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     if (!map.isProjectedPermutation(false))
       return failure();
 
-    // If we have any inputs that aren't memref or ranked tensor types, reject the pattern.
+    // If we have any inputs that aren't memref or ranked tensor types, reject
+    // the pattern.
     if (!dyn_cast<ShapedType>(opOperand.get().getType()))
       return op->emitError("Expected operand #")
              << opOperand.getOperandNumber()
