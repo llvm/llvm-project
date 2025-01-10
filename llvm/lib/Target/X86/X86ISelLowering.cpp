@@ -4144,9 +4144,20 @@ static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
 static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
                               const X86Subtarget &Subtarget, SelectionDAG &DAG,
                               const SDLoc &dl) {
-  assert(Vec.getValueSizeInBits().getFixedValue() <= VT.getFixedSizeInBits() &&
-         Vec.getValueType().getScalarType() == VT.getScalarType() &&
+  EVT VecVT = Vec.getValueType();
+  assert(VecVT.getFixedSizeInBits() <= VT.getFixedSizeInBits() &&
+         VecVT.getScalarType() == VT.getScalarType() &&
          "Unsupported vector widening type");
+  // If the upper 128-bits of a build vector are already undef/zero, then try to
+  // widen from the lower 128-bits.
+  if (Vec.getOpcode() == ISD::BUILD_VECTOR && VecVT.is256BitVector()) {
+    unsigned NumSrcElts = VecVT.getVectorNumElements();
+    ArrayRef<SDUse> Hi = Vec->ops().drop_front(NumSrcElts / 2);
+    if (all_of(Hi, [&](SDValue V) {
+          return V.isUndef() || (ZeroNewElements && X86::isZeroNode(V));
+        }))
+      Vec = extract128BitVector(Vec, 0, DAG, dl);
+  }
   SDValue Res = ZeroNewElements ? getZeroVector(VT, Subtarget, DAG, dl)
                                 : DAG.getUNDEF(VT);
   return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, Vec,

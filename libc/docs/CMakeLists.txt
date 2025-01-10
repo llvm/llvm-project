@@ -18,8 +18,9 @@ if (SPHINX_FOUND)
     # shell.
     file(MAKE_DIRECTORY
       "${CMAKE_CURRENT_BINARY_DIR}/headers/arpa/"
-      "${CMAKE_CURRENT_BINARY_DIR}/headers/sys/"
       "${CMAKE_CURRENT_BINARY_DIR}/headers/net/"
+      "${CMAKE_CURRENT_BINARY_DIR}/headers/netinet/"
+      "${CMAKE_CURRENT_BINARY_DIR}/headers/sys/"
     )
 
     # Change sphinx to build from $build_dir/libc/docs/ rather than
@@ -33,6 +34,7 @@ if (SPHINX_FOUND)
     # math.h), those should be omitted and exist statically in
     # libc/docs/headers/.
     list(APPEND docgen_list
+      aio
       arpa/inet
       assert
       ctype
@@ -42,6 +44,7 @@ if (SPHINX_FOUND)
       inttypes
       locale
       net/if
+      netinet/in
       setjmp
       signal
       stdbit

@@ -4,6 +4,7 @@ Implementation Status
 .. toctree::
    :maxdepth: 1
 
+   aio
    arpa/inet
    assert
    complex
@@ -15,6 +16,7 @@ Implementation Status
    locale
    math/index.rst
    net/if
+   netinet/in
    search
    setjmp
    signal
