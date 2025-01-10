@@ -1664,6 +1664,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
 
+  PGO.verifyCounterMap();
+
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
   if (!CurFn->doesNotThrow())
@@ -1786,6 +1788,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
+  PGO.markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }

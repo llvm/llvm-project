@@ -882,7 +882,7 @@ struct CounterCoverageMappingBuilder
     : public CoverageMappingBuilder,
       public ConstStmtVisitor<CounterCoverageMappingBuilder> {
   /// The map of statements to count values.
-  llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
 
   MCDC::State &MCDCState;
 
@@ -931,7 +931,7 @@ struct CounterCoverageMappingBuilder
   ///
   /// This should only be called on statements that have a dedicated counter.
   Counter getRegionCounter(const Stmt *S) {
-    return Counter::getCounter(CounterMap[S]);
+    return Counter::getCounter(CounterMap[S].Executed);
   }
 
   struct BranchCounterPair {
@@ -1457,7 +1457,7 @@ struct CounterCoverageMappingBuilder
 
   CounterCoverageMappingBuilder(
       CoverageMappingModuleGen &CVM,
-      llvm::DenseMap<const Stmt *, unsigned> &CounterMap,
+      llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
       MCDC::State &MCDCState, SourceManager &SM, const LangOptions &LangOpts)
       : CoverageMappingBuilder(CVM, SM, LangOpts), CounterMap(CounterMap),
         MCDCState(MCDCState), MCDCBuilder(CVM.getCodeGenModule(), MCDCState) {}
