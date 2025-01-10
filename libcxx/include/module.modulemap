@@ -1965,7 +1965,7 @@ module std [system] {
     module support_impl {
       textual header "__thread/support/c11.h"
       textual header "__thread/support/external.h"
-      textual header "__thread/support/pthread.h"
+      // textual header "__thread/support/pthread.h"
       textual header "__thread/support/windows.h"
     }
 
