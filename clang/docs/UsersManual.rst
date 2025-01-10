@@ -3035,7 +3035,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
 
-.. option:: -fprofile-generate-temporal
+.. option:: -ftemporal-profile
 
   Enables the temporal profiling extension for IRPGO to improve startup time by
   reducing ``.text`` section page faults. To do this, we instrument function
@@ -3046,23 +3046,23 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 
   .. code-block:: console
 
-    $ clang++ -O2 -fprofile-generate -fprofile-generate-temporal code.cc -o code
+    $ clang++ -O2 -fprofile-generate -ftemporal-profile code.cc -o code
     $ ./code
     $ llvm-profdata merge -o code.profdata yyy/zzz
 
-  Using the resulting profile, we can either generate a function order to pass
-  to the linker.
+  Using the resulting profile, we can generate a function order to pass to the
+  linker via `--symbol-ordering-file` for ELF or `-order_file` for Mach-O.
 
   .. code-block:: console
 
     $ llvm-profdata order code.profdata -o code.orderfile
     $ clang++ -O2 -Wl,--symbol-ordering-file=code.orderfile code.cc -o code
 
-  Or it can be passed to the linker directly.
+  Or the profile can be passed to LLD directly.
 
   .. code-block:: console
 
-    $ clang++ -O2 -Wl,--irpgo-profile=code.profdata,--bp-startup-sort=function code.cc -o code
+    $ clang++ -O2 -fuse-ld=lld -Wl,--irpgo-profile=code.profdata,--bp-startup-sort=function code.cc -o code
 
   For more information, please read the RFC:
   https://discourse.llvm.org/t/rfc-temporal-profiling-extension-for-irpgo/68068
