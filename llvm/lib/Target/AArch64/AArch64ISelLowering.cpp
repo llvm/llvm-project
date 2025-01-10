@@ -7281,9 +7281,16 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   Entry.Ty = IntPtrTy;
   Entry.Node = Trmp;
   Args.push_back(Entry);
-  Entry.Node = DAG.getConstant(20, dl, MVT::i64);
-  Args.push_back(Entry);
 
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Trmp.getNode())) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    Entry.Node =
+        DAG.getConstant(MFI.getObjectSize(FI->getIndex()), dl, MVT::i64);
+  } else
+    Entry.Node = DAG.getConstant(36, dl, MVT::i64);
+
+  Args.push_back(Entry);
   Entry.Node = FPtr;
   Args.push_back(Entry);
   Entry.Node = Nest;
