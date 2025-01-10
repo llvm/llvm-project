@@ -17343,15 +17343,15 @@ static SDValue combineScalarCTPOPToVCPOP(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                           const RISCVSubtarget &Subtarget) {
-  if (DCI.isBeforeLegalize())
-    return SDValue();
-
   // (shl (zext x), y) -> (vwsll   x, y)
   if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
     return V;
 
   // (shl (sext x), C) -> (vwmulsu x, 1u << C)
   // (shl (zext x), C) -> (vwmulu  x, 1u << C)
+
+  if (!DCI.isAfterLegalizeDAG())
+    return SDValue();
 
   SDValue LHS = N->getOperand(0);
   if (!LHS.hasOneUse())
