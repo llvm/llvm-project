@@ -186,6 +186,29 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
     fir::runtime::genDerivedTypeInitializeClone(builder, loc, newBox, moldBox);
 }
 
+static void getLengthParameters(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Value moldArg,
+                                llvm::SmallVectorImpl<mlir::Value> &lenParams) {
+  // We pass derived types unboxed and so are not self-contained entities.
+  // Assume that unboxed derived types won't need length paramters.
+  if (!hlfir::isFortranEntity(moldArg))
+    return;
+
+  hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg}, lenParams);
+  if (lenParams.empty())
+    return;
+
+  // The verifier for EmboxOp doesn't allow length parameters when the the
+  // character already has static LEN. genLengthParameters may still return them
+  // in this case.
+  mlir::Type unwrappedType =
+      fir::unwrapRefType(fir::unwrapSeqOrBoxedSeqType(moldArg.getType()));
+  if (auto strTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+    if (strTy.hasConstantLen())
+      lenParams.resize(0);
+  }
+}
+
 static bool
 isDerivedTypeNeedingInitialization(const Fortran::semantics::Symbol &sym) {
   // Fortran::lower::hasDefaultInitialization returns false for ALLOCATABLE, so
@@ -287,6 +310,9 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     builder.setInsertionPointToEnd(initBlock);
     mlir::Value boxAlloca = allocatedPrivVarArg;
 
+    moldArg = builder.loadIfRef(loc, moldArg);
+    getLengthParameters(builder, loc, moldArg, lenParams);
+
     // The initial state of a private pointer is undefined so we don't need to
     // match the mold argument (OpenMP 5.2 end of page 106).
     if (isPrivatization(kind) &&
@@ -299,19 +325,16 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
       mlir::Value nullBox;
       if (shape)
-        nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null, shape);
+        nullBox = builder.create<fir::EmboxOp>(
+            loc, boxTy, null, shape, /*slice=*/mlir::Value{}, lenParams);
       else
-        nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null);
+        nullBox = builder.create<fir::EmboxOp>(
+            loc, boxTy, null, /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{},
+            lenParams);
       builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
       yield(boxAlloca);
       return;
     }
-
-    moldArg = builder.loadIfRef(loc, moldArg);
-    // We pass derived types unboxed and so are not self-contained entities.
-    if (hlfir::isFortranEntity(moldArg))
-      hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg},
-                                 lenParams);
 
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     bool isDerived = fir::isa_derived(innerTy);
@@ -359,12 +382,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       TODO(loc, "Unsupported boxed type for reduction/privatization");
 
     moldArg = builder.loadIfRef(loc, moldArg);
-    // We pass derived types unboxed and so are not self-contained entities.
-    // Assume that if length parameters are required, they will be boxed by
-    // lowering.
-    if (hlfir::isFortranEntity(moldArg))
-      hlfir::genLengthParameters(loc, builder, hlfir::Entity{moldArg},
-                                 lenParams);
+    getLengthParameters(builder, loc, moldArg, lenParams);
 
     fir::IfOp ifUnallocated{nullptr};
     if (isAllocatableOrPointer) {
