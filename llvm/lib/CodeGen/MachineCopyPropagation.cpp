@@ -233,8 +233,10 @@ public:
 
   /// Clobber all registers which are not preserved by RegMask, removing them
   /// from the tracker's copy maps.
-  void clobberRegistersExceptMask(const MachineOperand *RegMask, const TargetRegisterInfo &TRI,
-                               const TargetInstrInfo &TII, bool UseCopyInstr) {
+  void clobberRegistersExceptMask(const MachineOperand *RegMask,
+                                  const TargetRegisterInfo &TRI,
+                                  const TargetInstrInfo &TII,
+                                  bool UseCopyInstr) {
     BitVector SafeRegUnits(TRI.getNumRegUnits());
 
     for (unsigned SafeReg = 0, E = TRI.getNumRegs(); SafeReg < E; ++SafeReg)
