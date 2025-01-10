@@ -50,8 +50,8 @@ public:
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
   }
-  unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                  unsigned Idx) const override {
+  unsigned getRawRegPressureSetLimit(const MachineFunction &MF,
+                                     unsigned Idx) const override {
     return 0;
   }
   const int *

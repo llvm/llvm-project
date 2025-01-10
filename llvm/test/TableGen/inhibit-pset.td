@@ -15,7 +15,7 @@ def X0 : Register <"x0">;
 // CHECK-NEXT:  }
 
 // CHECK:      unsigned TestTargetGenRegisterInfo::
-// CHECK-NEXT: getRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const {
+// CHECK-NEXT: getRawRegPressureSetLimit(const MachineFunction &MF, unsigned Idx) const {
 // CHECK-NEXT:  static const uint16_t PressureLimitTable[] = {
 // CHECK-NEXT:    {{[0-9]+}},        // 0: GPR32
 // CHECK-NEXT:  };

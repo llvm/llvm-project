@@ -141,16 +141,11 @@ public:
   }
 
   /// Get the register unit limit for the given pressure set index.
-  ///
-  /// RegisterClassInfo adjusts this limit for reserved registers.
   unsigned getRegPressureSetLimit(unsigned Idx) const {
     if (!PSetLimits[Idx])
-      PSetLimits[Idx] = computePSetLimit(Idx);
+      PSetLimits[Idx] = TRI->getRegPressureSetLimit(*MF, Idx);
     return PSetLimits[Idx];
   }
-
-protected:
-  unsigned computePSetLimit(unsigned Idx) const;
 };
 
 } // end namespace llvm
