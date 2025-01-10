@@ -241,7 +241,10 @@ protected:
   /// \c ConfigHandlers.
   std::optional<OptionsSource> tryReadConfigFile(llvm::StringRef Directory);
 
-  llvm::StringMap<OptionsSource> CachedOptions;
+  struct OptionsCache {
+    llvm::StringMap<size_t> Memorized;
+    llvm::SmallVector<OptionsSource, 4U> Storage;
+  } CachedOptions;
   ClangTidyOptions OverrideOptions;
   ConfigFileHandlers ConfigHandlers;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;

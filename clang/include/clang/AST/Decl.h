@@ -3115,8 +3115,20 @@ public:
 
   /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
-  unsigned getFieldIndex() const;
+  unsigned getFieldIndex() const {
+    const FieldDecl *Canonical = getCanonicalDecl();
+    if (Canonical->CachedFieldIndex == 0) {
+      Canonical->setCachedFieldIndex();
+      assert(Canonical->CachedFieldIndex != 0);
+    }
+    return Canonical->CachedFieldIndex - 1;
+  }
 
+private:
+  /// Set CachedFieldIndex to the index of this field plus one.
+  void setCachedFieldIndex() const;
+
+public:
   /// Determines whether this field is mutable (C++ only).
   bool isMutable() const { return Mutable; }
 

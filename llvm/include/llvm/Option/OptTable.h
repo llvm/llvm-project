@@ -451,7 +451,7 @@ protected:
   LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, \
                                   ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,    \
                                   VISIBILITY, PARAM, HELPTEXT,                 \
-                                  HELPTEXTSFORVARIANTS, METAVAR, VALUE)
+                                  HELPTEXTSFORVARIANTS, METAVAR, VALUES)
 
 #define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
     ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \

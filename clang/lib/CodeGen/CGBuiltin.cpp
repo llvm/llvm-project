@@ -774,18 +774,6 @@ static Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, Args, Name);
 }
 
-// Emit an intrinsic that has 4 operands of the same type as its result.
-static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
-                                    unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
-  llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
-
-  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2, Src3});
-}
-
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
 static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
                                const CallExpr *E,
@@ -2252,7 +2240,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   SanitizerScope SanScope(this);
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
+  EmitCheck(std::make_pair(Cond, SanitizerKind::SO_Builtin),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
@@ -2267,7 +2255,7 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
 
   SanitizerScope SanScope(this);
   EmitCheck(
-      std::make_pair(ArgValue, SanitizerKind::Builtin),
+      std::make_pair(ArgValue, SanitizerKind::SO_Builtin),
       SanitizerHandler::InvalidBuiltin,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
@@ -2302,7 +2290,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
 
   // TODO: support -ftrapv-handler.
   if (SanitizeOverflow) {
-    CGF.EmitCheck({{NotOverflow, SanitizerKind::SignedIntegerOverflow}},
+    CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflow}},
                   SanitizerHandler::NegateOverflow,
                   {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
                    CGF.EmitCheckTypeDescriptor(E->getType())},
@@ -11327,6 +11315,19 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   if (Builtin->LLVMIntrinsic == 0)
     return nullptr;
 
+  if (BuiltinID == SME::BI__builtin_sme___arm_in_streaming_mode) {
+    // If we already know the streaming mode, don't bother with the intrinsic
+    // and emit a constant instead
+    const auto *FD = cast<FunctionDecl>(CurFuncDecl);
+    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+      unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
+      if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
+        bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
+        return ConstantInt::getBool(Builder.getContext(), IsStreaming);
+      }
+    }
+  }
+
   // Predicates must match the main datatype.
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
@@ -19199,8 +19200,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // TODO: Map to an hlsl_device address space.
     llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
 
-    return Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
-                                   ArrayRef<Value *>{HandleOp, IndexOp});
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+        ArrayRef<Value *>{HandleOp, IndexOp});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -19331,20 +19333,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
         ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
-  }
-  case Builtin::BI__builtin_hlsl_length: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "length operand must have a float representation");
-    // if the operand is a scalar, we can use the fabs llvm intrinsic directly
-    if (!E->getArg(0)->getType()->isVectorType())
-      return EmitFAbs(*this, X);
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType()->getScalarType(),
-        CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
-        nullptr, "hlsl.length");
   }
   case Builtin::BI__builtin_hlsl_normalize: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -20429,7 +20417,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
-    return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_bitop3);
+    return emitBuiltinWithOneOverloadedType<4>(*this, E,
+                                               Intrinsic::amdgcn_bitop3);
   case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
     return emitBuiltinWithOneOverloadedType<4>(
         *this, E, Intrinsic::amdgcn_make_buffer_rsrc);

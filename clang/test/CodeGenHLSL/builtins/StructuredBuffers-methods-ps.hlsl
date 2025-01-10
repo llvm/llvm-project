@@ -28,7 +28,7 @@ export float TestLoad() {
     return ROSB1.Load(10);
 }
 
-// CHECK: define noundef float @_Z8TestLoadv()
+// CHECK: define noundef nofpclass(nan inf) float @_Z8TestLoadv()
 // CHECK: %[[PTR1:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_1t(target("dx.RawBuffer", float, 1, 1) %{{[0-9]+}}, i32 %{{[0-9]+}})
 // CHECK: %[[VALUE1:.*]] = load float, ptr %[[PTR1]]
 

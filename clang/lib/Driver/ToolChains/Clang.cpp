@@ -5064,7 +5064,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       JA.isHostOffloading(Action::OFK_SYCL) ||
       (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
        Args.hasFlag(options::OPT_offload_new_driver,
-                    options::OPT_no_offload_new_driver, false));
+                    options::OPT_no_offload_new_driver,
+                    C.isOffloadingHostKind(Action::OFK_Cuda)));
 
   bool IsRDCMode =
       Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
@@ -5109,6 +5110,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple *AuxTriple =
       (IsCuda || IsHIP) ? TC.getAuxTriple() : nullptr;
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
+  bool IsUEFI = RawTriple.isUEFI();
   bool IsIAMCU = RawTriple.isOSIAMCU();
 
   // Adjust IsWindowsXYZ for CUDA/HIP/SYCL compilations.  Even when compiling in
@@ -5418,7 +5420,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (IsUsingLTO) {
       if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
-                        options::OPT_no_offload_new_driver, false) &&
+                        options::OPT_no_offload_new_driver,
+                        C.isOffloadingHostKind(Action::OFK_Cuda)) &&
           !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Args.getLastArg(options::OPT_foffload_lto,
@@ -6895,7 +6898,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_offload_via_llvm, false)) {
     CmdArgs.append({"--offload-new-driver", "-foffload-via-llvm"});
   } else if (Args.hasFlag(options::OPT_offload_new_driver,
-                          options::OPT_no_offload_new_driver, false)) {
+                          options::OPT_no_offload_new_driver,
+                          C.isOffloadingHostKind(Action::OFK_Cuda))) {
     CmdArgs.push_back("--offload-new-driver");
   }
 
@@ -7252,7 +7256,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fms-extensions=0 is default.
   if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC))
+                   IsWindowsMSVC || IsUEFI))
     CmdArgs.push_back("-fms-extensions");
 
   // -fms-compatibility=0 is default.
@@ -9281,6 +9285,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(Args.MakeArgString(
         Twine("--offload-opt=-pass-remarks-analysis=") + A->getValue()));
+
+  if (Args.getLastArg(options::OPT_ftime_report))
+    CmdArgs.push_back("--device-compiler=-ftime-report");
+
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     CmdArgs.push_back("--save-temps");
 
