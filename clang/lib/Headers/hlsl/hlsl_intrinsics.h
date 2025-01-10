@@ -1301,7 +1301,7 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline half length(half X) { return __detail::length_impl(X); }
 const inline float length(float X) { return __detail::length_impl(X); }
 
-template <int N> 
+template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline half length(vector<half, N> X) {
   return __detail::length_vec_impl(X);
