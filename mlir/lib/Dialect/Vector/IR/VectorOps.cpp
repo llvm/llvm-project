@@ -466,7 +466,8 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 }
 
 /// Helper function to reduce a multi reduction where src and acc are splat
-/// Folds src @^times acc into OpFoldResult where @ is the reduction operation (add/max/etc.)
+/// Folds src @^times acc into OpFoldResult where @ is the reduction operation
+/// (add/max/etc.)
 template <typename T>
 OpFoldResult foldSplatReduce(T src, T acc, int64_t times, CombiningKind kind,
                              ShapedType dstType);
