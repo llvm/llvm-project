@@ -13443,14 +13443,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       for_each(SubMask, [&](int &Idx) {
         if (Idx == PoisonMaskElem)
           return;
-        Idx = (Idx % VF) - (MinElement % VF) +
+        Idx = (Idx % VF) - ((MinElement / NewVF) * NewVF) +
               (Idx >= static_cast<int>(VF) ? NewVF : 0);
       });
-      VF = NewVF;
+    } else {
+      NewVF = VF;
     }
 
     constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    auto *VecTy = getWidenedType(VL.front()->getType(), VF);
+    auto *VecTy = getWidenedType(VL.front()->getType(), NewVF);
     auto *MaskVecTy = getWidenedType(VL.front()->getType(), SubMask.size());
     auto GetShuffleCost = [&,
                            &TTI = *TTI](ArrayRef<int> Mask,
@@ -13475,7 +13476,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       APInt DemandedElts = APInt::getAllOnes(SubMask.size());
       bool IsIdentity = true;
       for (auto [I, Idx] : enumerate(FirstMask)) {
-        if (Idx >= static_cast<int>(VF)) {
+        if (Idx >= static_cast<int>(NewVF)) {
           Idx = PoisonMaskElem;
         } else {
           DemandedElts.clearBit(I);
@@ -13498,12 +13499,12 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       APInt DemandedElts = APInt::getAllOnes(SubMask.size());
       bool IsIdentity = true;
       for (auto [I, Idx] : enumerate(SecondMask)) {
-        if (Idx < static_cast<int>(VF) && Idx >= 0) {
+        if (Idx < static_cast<int>(NewVF) && Idx >= 0) {
           Idx = PoisonMaskElem;
         } else {
           DemandedElts.clearBit(I);
           if (Idx != PoisonMaskElem) {
-            Idx -= VF;
+            Idx -= NewVF;
             IsIdentity &= static_cast<int>(I) == Idx;
           }
         }
@@ -13523,12 +13524,24 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                                       /*Extract=*/false, CostKind);
     const TreeEntry *BestEntry = nullptr;
     if (FirstShuffleCost < ShuffleCost) {
-      copy(FirstMask, std::next(Mask.begin(), Part * VL.size()));
+      std::for_each(std::next(Mask.begin(), Part * VL.size()),
+                    std::next(Mask.begin(), (Part + 1) * VL.size()),
+                    [&](int &Idx) {
+                      if (Idx >= static_cast<int>(VF))
+                        Idx = PoisonMaskElem;
+                    });
       BestEntry = Entries.front();
       ShuffleCost = FirstShuffleCost;
     }
     if (SecondShuffleCost < ShuffleCost) {
-      copy(SecondMask, std::next(Mask.begin(), Part * VL.size()));
+      std::for_each(std::next(Mask.begin(), Part * VL.size()),
+                    std::next(Mask.begin(), (Part + 1) * VL.size()),
+                    [&](int &Idx) {
+                      if (Idx < static_cast<int>(VF))
+                        Idx = PoisonMaskElem;
+                      else
+                        Idx -= VF;
+                    });
       BestEntry = Entries[1];
       ShuffleCost = SecondShuffleCost;
     }
