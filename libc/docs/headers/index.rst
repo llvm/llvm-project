@@ -14,6 +14,7 @@ Implementation Status
    inttypes
    locale
    math/index.rst
+   netinet/in
    search
    setjmp
    signal
