@@ -65,8 +65,7 @@ private:
 Expected<std::unique_ptr<LazyReexportsManager>>
 createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   RedirectableSymbolManager &RSMgr,
-                                  JITDylib &PlatformJD,
-                                  LazyReexportsManager::Listener *L = nullptr);
+                                  JITDylib &PlatformJD);
 
 } // namespace llvm::orc
 
