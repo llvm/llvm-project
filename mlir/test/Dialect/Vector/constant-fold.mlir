@@ -34,7 +34,7 @@ func.func @fold_multi_reduction_f32_mul() -> vector<1xf32> {
 func.func @fold_multi_reduction_f32_maximumf() -> vector<1xf32> {
   %acc = arith.constant dense<1.000000e+00> : vector<1xf32>
   %0 = arith.constant dense<2.000000e+00> : vector<1x2x2xf32>
-  // CHECK: %{{.*}} = arith.constant dense<2.000000e+01> : vector<1xf32>
+  // CHECK: %{{.*}} = arith.constant dense<2.000000e+00> : vector<1xf32>
   %1 = vector.multi_reduction <maximumf>, %0, %acc [1, 2] : vector<1x2x2xf32> to vector<1xf32>
   return %1 : vector<1xf32>
 }
@@ -43,7 +43,7 @@ func.func @fold_multi_reduction_f32_maximumf() -> vector<1xf32> {
 func.func @fold_multi_reduction_f32_minnumf() -> vector<1xf32> {
   %acc = arith.constant dense<1.000000e+00> : vector<1xf32>
   %0 = arith.constant dense<0xFFFFFFFF> : vector<1x2x2xf32>
-  // CHECK: %{{.*}} = arith.constant dense<1.000000e+01> : vector<1xf32>
+  // CHECK: %{{.*}} = arith.constant dense<1.000000e+00> : vector<1xf32>
   %1 = vector.multi_reduction <minnumf>, %0, %acc [1, 2] : vector<1x2x2xf32> to vector<1xf32>
   return %1 : vector<1xf32>
 }
