@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 %s -emit-llvm -mllvm -sort-timers=0 -o - -ftime-report  2>&1 | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -mllvm -sort-timers=0 -o - -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING -ftime-report  2>&1 | FileCheck %s
+// REQUIRES: x86-registered-target
+// RUN: %clang_cc1 %s -S -triple=x86_64 -mllvm -sort-timers=0 -o - -ftime-report  2>&1 | FileCheck %s
+// RUN: %clang_cc1 %s -S -triple=x86_64 -mllvm -sort-timers=0 -o - -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING -ftime-report  2>&1 | FileCheck %s
 
 // Template function declarations
 template <typename T>
@@ -151,7 +152,8 @@ struct _Wrap_alloc {
 _Wrap_alloc<int>::rebind<int> w;
 
 // CHECK: Clang time report
-// CHECK:      Clang front-end
-// CHECK-NEXT: LLVM IR Generation
-// CHECK-NEXT: Backend
+// CHECK:      Front end
+// CHECK-NEXT: LLVM IR generation
+// CHECK-NEXT: Machine code generation
+// CHECK-NEXT: Optimizer
 // CHECK-NEXT: Total

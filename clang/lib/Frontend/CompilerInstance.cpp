@@ -723,8 +723,7 @@ void CompilerInstance::createCodeCompletionConsumer() {
 
 void CompilerInstance::createFrontendTimer() {
   timerGroup.reset(new llvm::TimerGroup("clang", "Clang time report"));
-  FrontendTimer.reset(
-      new llvm::Timer("frontend", "Clang front-end", *timerGroup));
+  FrontendTimer.reset(new llvm::Timer("frontend", "Front end", *timerGroup));
 }
 
 CodeCompleteConsumer *

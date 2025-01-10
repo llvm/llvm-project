@@ -564,6 +564,22 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
+
+  // Insert a 64-bit relocation for CHPEMetadataPointer in the native load
+  // config of a hybrid ARM64X image. Its value will be set in prepareLoadConfig
+  // to match the value in the EC load config, which is expected to be
+  // a relocatable pointer to the __chpe_metadata symbol.
+  COFFLinkerContext &ctx = file->symtab.ctx;
+  if (ctx.hybridSymtab && ctx.symtab.loadConfigSym &&
+      ctx.symtab.loadConfigSym->getChunk() == this &&
+      ctx.hybridSymtab->loadConfigSym &&
+      ctx.symtab.loadConfigSize >=
+          offsetof(coff_load_configuration64, CHPEMetadataPointer) +
+              sizeof(coff_load_configuration64::CHPEMetadataPointer))
+    res->emplace_back(
+        ctx.symtab.loadConfigSym->getRVA() +
+            offsetof(coff_load_configuration64, CHPEMetadataPointer),
+        IMAGE_REL_BASED_DIR64);
 }
 
 // MinGW specific.

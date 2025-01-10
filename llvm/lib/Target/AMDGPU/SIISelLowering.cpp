@@ -784,8 +784,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
-                       {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
+                       {MVT::v4f16, MVT::v4i16, MVT::v4bf16, MVT::v8f16,
+                        MVT::v8i16, MVT::v8bf16, MVT::v16f16, MVT::v16i16,
+                        MVT::v16bf16, MVT::v32f16, MVT::v32i16, MVT::v32bf16},
                        Custom);
 
     for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
@@ -5731,6 +5732,35 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
+// Refer to comments added to the MIR variant of isFMAFasterThanFMulAndFAdd for
+// specific details.
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
+                                                  Type *Ty) const {
+  switch (Ty->getScalarSizeInBits()) {
+  case 16: {
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    return Subtarget->has16BitInsts() &&
+           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
+  }
+  case 32: {
+    if (!Subtarget->hasMadMacF32Insts())
+      return Subtarget->hasFastFMAF32();
+
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
+      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
+
+    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
+  }
+  case 64:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
 bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
@@ -7545,9 +7575,8 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   SDLoc SL(Op);
   EVT ResultVT = Op.getValueType();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
-
-  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  EVT EltVT = PackVT.getVectorElementType();
+  MVT EltVT = ResultVT.getVectorElementType().getSimpleVT();
+  MVT PackVT = MVT::getVectorVT(EltVT, 2);
   int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
 
   // vector_shuffle <0,1,6,7> lhs, rhs
@@ -16990,6 +17019,33 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
+}
+
+/// Check if it is profitable to hoist instruction in then/else to if.
+bool SITargetLowering::isProfitableToHoist(Instruction *I) const {
+  if (!I->hasOneUse())
+    return true;
+
+  Instruction *User = I->user_back();
+  // TODO: Add more patterns that are not profitable to hoist and
+  // handle modifiers such as fabs and fneg
+  switch (I->getOpcode()) {
+  case Instruction::FMul: {
+    if (User->getOpcode() != Instruction::FSub &&
+        User->getOpcode() != Instruction::FAdd)
+      return true;
+
+    const TargetOptions &Options = getTargetMachine().Options;
+
+    return ((!I->hasAllowContract() || !User->hasAllowContract()) &&
+            Options.AllowFPOpFusion != FPOpFusion::Fast &&
+            !Options.UnsafeFPMath) ||
+           !isFMAFasterThanFMulAndFAdd(*I->getFunction(), User->getType());
+  }
+  default:
+    return true;
+  }
+  return true;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

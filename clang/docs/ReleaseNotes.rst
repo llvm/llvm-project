@@ -430,6 +430,10 @@ Non-comprehensive list of changes in this release
 - Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
   which allows them to be stored in STL containers.
 
+- In the ``-ftime-report`` output, the new "Clang time report" group replaces
+  the old "Clang front-end time report" and shows "Front end", "LLVM IR
+  generation", "Optimizer", and "Machine code generation".
+
 New Compiler Flags
 ------------------
 
@@ -552,6 +556,8 @@ Attribute Changes in Clang
 
 - Clang now permits the usage of the placement new operator in ``[[msvc::constexpr]]``
   context outside of the std namespace. (#GH74924)
+
+- Clang now disallows the use of attributes after the namespace name. (#GH121407)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -767,6 +773,9 @@ Bug Fixes in This Version
 - Fixed a crash when passing the variable length array type to ``va_arg`` (#GH119360).
 - Fixed a failed assertion when using ``__attribute__((noderef))`` on an
   ``_Atomic``-qualified type (#GH116124).
+- No longer incorrectly diagnosing use of a deleted destructor when the
+  selected overload of ``operator delete`` for that type is a destroying delete
+  (#GH46818).
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
@@ -1053,6 +1062,7 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a bug about overriding a constexpr pure-virtual member function with a non-constexpr virtual member function which causes compilation failure when including standard C++ header `format`.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -1130,7 +1140,7 @@ AST Matchers
 
 - Add ``dependentTemplateSpecializationType`` matcher to match a dependent template specialization type.
 
-- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr.
+- Add ``hasDependentName`` matcher to match the dependent name of a DependentScopeDeclRefExpr or DependentNameType.
 
 clang-format
 ------------
@@ -1283,9 +1293,17 @@ Sanitizers
   by the compiler (for example,
   ``-fno-sanitize-merge=bool,enum,array-bounds,local-bounds``).
 
+- Changed ``-fsanitize=pointer-overflow`` to no longer report ``NULL + 0`` as
+  undefined behavior in C, in line with
+  `N3322 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3322.pdf>`_,
+  and matching the previous behavior for C++.
+  ``NULL + non_zero`` continues to be reported as undefined behavior.
+
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
+  which allow changing the formatting of pretty-printed code.
 - Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
   a declaration is an anonymous union or anonymous struct.
 
@@ -1297,6 +1315,8 @@ OpenMP Support
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The
   ``LIBOMPTARGET_DEVICE_ARCHITECTURES`` CMake argument is now unused and will
   always build support for AMDGPU and NVPTX targets.
+- Added support for combined masked constructs  'omp parallel masked taskloop',
+  'omp parallel masked taskloop simd','omp masked taskloop' and 'omp masked taskloop simd' directive.
 
 Improvements
 ^^^^^^^^^^^^

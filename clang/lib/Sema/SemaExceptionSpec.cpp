@@ -1200,21 +1200,29 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
   case Expr::CXXDeleteExprClass: {
     auto *DE = cast<CXXDeleteExpr>(S);
-    CanThrowResult CT;
+    CanThrowResult CT = CT_Cannot;
     QualType DTy = DE->getDestroyedType();
     if (DTy.isNull() || DTy->isDependentType()) {
       CT = CT_Dependent;
     } else {
+      // C++20 [expr.delete]p6: If the value of the operand of the delete-
+      // expression is not a null pointer value and the selected deallocation
+      // function (see below) is not a destroying operator delete, the delete-
+      // expression will invoke the destructor (if any) for the object or the
+      // elements of the array being deleted.
       const FunctionDecl *OperatorDelete = DE->getOperatorDelete();
-      CT = canCalleeThrow(*this, DE, OperatorDelete);
-      if (!OperatorDelete->isDestroyingOperatorDelete()) {
-        if (const auto *RD = DTy->getAsCXXRecordDecl()) {
-          if (const CXXDestructorDecl *DD = RD->getDestructor())
-            CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, DD));
-        }
-        if (CT == CT_Can)
-          return CT;
+      if (const auto *RD = DTy->getAsCXXRecordDecl()) {
+        if (const CXXDestructorDecl *DD = RD->getDestructor();
+            DD && DD->isCalledByDelete(OperatorDelete))
+          CT = canCalleeThrow(*this, DE, DD);
       }
+
+      // We always look at the exception specification of the operator delete.
+      CT = mergeCanThrow(CT, canCalleeThrow(*this, DE, OperatorDelete));
+
+      // If we know we can throw, we're done.
+      if (CT == CT_Can)
+        return CT;
     }
     return mergeCanThrow(CT, canSubStmtsThrow(*this, DE));
   }

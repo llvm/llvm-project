@@ -2560,6 +2560,8 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &v) {
   const uint32_t mask = ~uint32_t(pageSize - 1);
   uint32_t page = v[0].rva & mask;
   size_t i = 0, j = 1;
+  llvm::sort(v,
+             [](const Baserel &x, const Baserel &y) { return x.rva < y.rva; });
   for (size_t e = v.size(); j < e; ++j) {
     uint32_t p = v[j].rva & mask;
     if (p == page)

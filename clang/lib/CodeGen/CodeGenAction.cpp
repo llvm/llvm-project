@@ -124,7 +124,7 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
   if (CodeGenOpts.TimePasses)
-    LLVMIRGeneration.init("irgen", "LLVM IR Generation", CI.getTimerGroup());
+    LLVMIRGeneration.init("irgen", "LLVM IR generation", CI.getTimerGroup());
 }
 
 llvm::Module* BackendConsumer::getModule() const {
@@ -163,17 +163,13 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  "LLVM IR generation of declaration");
 
   // Recurse.
-  if (TimerIsEnabled && !LLVMIRGenerationRefCount++) {
-    CI.getFrontendTimer().stopTimer();
-    LLVMIRGeneration.startTimer();
-  }
+  if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleTopLevelDecl(D);
 
-  if (TimerIsEnabled && !--LLVMIRGenerationRefCount) {
-    LLVMIRGeneration.stopTimer();
-    CI.getFrontendTimer().startTimer();
-  }
+  if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
   return true;
 }
@@ -182,17 +178,13 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
   PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
                                  Context->getSourceManager(),
                                  "LLVM IR generation of inline function");
-  if (TimerIsEnabled) {
-    CI.getFrontendTimer().stopTimer();
-    LLVMIRGeneration.startTimer();
-  }
+  if (TimerIsEnabled)
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleInlineFunctionDefinition(D);
 
-  if (TimerIsEnabled) {
-    LLVMIRGeneration.stopTimer();
-    CI.getFrontendTimer().startTimer();
-  }
+  if (TimerIsEnabled)
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 }
 
 void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
@@ -242,17 +234,13 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-    if (TimerIsEnabled && !LLVMIRGenerationRefCount++) {
-      CI.getFrontendTimer().stopTimer();
-      LLVMIRGeneration.startTimer();
-    }
+    if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+      CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled && !--LLVMIRGenerationRefCount) {
-      LLVMIRGeneration.stopTimer();
-      CI.getFrontendTimer().startTimer();
-    }
+    if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+      LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
     IRGenFinished = true;
   }
