@@ -183,9 +183,9 @@ def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
 // reduction_modifier enum.
 //===----------------------------------------------------------------------===//
 
-def ReductionModifierDefault : I32EnumAttrCase<"Default", 0>;
-def ReductionModifierInScan : I32EnumAttrCase<"InScan", 1>;
-def ReductionModifierTask : I32EnumAttrCase<"Task", 2>;
+def ReductionModifierDefault : I32EnumAttrCase<"defaultmod", 0>;
+def ReductionModifierInScan : I32EnumAttrCase<"inscan", 1>;
+def ReductionModifierTask : I32EnumAttrCase<"task", 2>;
 
 def ReductionModifier : OpenMP_I32EnumAttr<
     "ReductionModifier",

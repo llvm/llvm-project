@@ -1188,10 +1188,11 @@ class OpenMP_ReductionClauseSkip<
 
   // Description varies depending on the operation.
   let description = [{
-    Reductions can be performed by specifying reduction accumulator variables in
-    `reduction_vars`, symbols referring to reduction declarations in the
-    `reduction_syms` attribute, and whether the reduction variable should be
-    passed into the reduction region by value or by reference in
+    Reductions can be performed by specifying the reduction modifer
+    (`default`, `inscan` or `task`) in `reduction_mod`, reduction accumulator
+    variables in `reduction_vars`, symbols referring to reduction declarations
+    in the `reduction_syms` attribute, and whether the reduction variable
+    should be passed into the reduction region by value or by reference in
     `reduction_byref`. Each reduction is identified by the accumulator it uses
     and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the

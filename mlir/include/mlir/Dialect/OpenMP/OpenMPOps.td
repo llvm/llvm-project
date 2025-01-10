@@ -1707,7 +1707,7 @@ def CancellationPointOp : OpenMP_Op<"cancellation_point", clauses = [
 }
 
 def ScanOp : OpenMP_Op<"scan", [
-    AttrSizedOperandSegments
+    AttrSizedOperandSegments, MemoryEffects<[MemWrite]>
   ], clauses = [
     OpenMP_InclusiveClause, OpenMP_ExclusiveClause]> {
   let summary = "scan directive";

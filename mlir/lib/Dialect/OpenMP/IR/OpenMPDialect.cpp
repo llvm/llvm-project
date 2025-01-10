@@ -535,8 +535,8 @@ static ParseResult parseClauseWithRegionArgs(
   if (parser.parseLParen())
     return failure();
 
-  StringRef enumStr;
-  if (succeeded(parser.parseOptionalKeyword("mod"))) {
+  if (modifier && succeeded(parser.parseOptionalKeyword("mod"))) {
+    StringRef enumStr;
     if (parser.parseColon() || parser.parseKeyword(&enumStr) ||
         parser.parseComma())
       return failure();
@@ -3169,28 +3169,33 @@ LogicalResult ScanOp::verify() {
   }
   const OperandRange &scanVars =
       hasExclusiveVars() ? getExclusiveVars() : getInclusiveVars();
-  auto verifyScanVarsInReduction = [&scanVars](OperandRange reductionVars) {
+  auto verifyScanVarsInReduction = [&scanVars](ValueRange reductionVars) {
     for (const auto &it : scanVars)
       if (!llvm::is_contained(reductionVars, it))
         return false;
     return true;
   };
-  if (mlir::omp::WsloopOp parentOp =
+  if (mlir::omp::WsloopOp parentWsLoopOp =
           (*this)->getParentOfType<mlir::omp::WsloopOp>()) {
-    if (parentOp.getReductionModAttr() &&
-        parentOp.getReductionModAttr().getValue() ==
-            mlir::omp::ReductionModifier::InScan) {
-      if (!verifyScanVarsInReduction(parentOp.getReductionVars())) {
+    if (parentWsLoopOp.getReductionModAttr() &&
+        parentWsLoopOp.getReductionModAttr().getValue() ==
+            mlir::omp::ReductionModifier::inscan) {
+      auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          parentWsLoopOp.getOperation());
+      if (!verifyScanVarsInReduction(iface.getReductionBlockArgs())) {
         return emitError(
             "List item should appear in REDUCTION clause of the parent");
       }
       return success();
     }
-  } else if (mlir::omp::SimdOp parentOp =
+  } else if (mlir::omp::SimdOp parentSimdOp =
                  (*this)->getParentOfType<mlir::omp::SimdOp>()) {
-    if (parentOp.getReductionModAttr().getValue() ==
-        mlir::omp::ReductionModifier::InScan) {
-      if (!verifyScanVarsInReduction(parentOp.getReductionVars())) {
+    if (parentSimdOp.getReductionModAttr() &&
+        parentSimdOp.getReductionModAttr().getValue() ==
+            mlir::omp::ReductionModifier::inscan) {
+      auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(
+          parentSimdOp.getOperation());
+      if (!verifyScanVarsInReduction(iface.getReductionBlockArgs())) {
         return emitError(
             "List item should appear in REDUCTION clause of the parent");
       }

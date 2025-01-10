@@ -4591,6 +4591,10 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       .Case([&](omp::AtomicCaptureOp op) {
         return convertOmpAtomicCapture(op, builder, moduleTranslation);
       })
+      .Case([&](omp::ScanOp) {
+        return op->emitError()
+               << "not yet implemented: " << op->getName() << " operation";
+      })
       .Case([&](omp::SectionsOp) {
         return convertOmpSections(*op, builder, moduleTranslation);
       })
