@@ -102,6 +102,11 @@ public:
   FastMathFlags get(FastMathFlags Default) const {
     return FMF.value_or(Default);
   }
+  /// Intersect the FMF from two instructions.
+  static FMFSource intersect(Value *A, Value *B) {
+    return FMFSource(cast<FPMathOperator>(A)->getFastMathFlags() &
+                     cast<FPMathOperator>(B)->getFastMathFlags());
+  }
 };
 
 /// Common base class shared among various IRBuilders.

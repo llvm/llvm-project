@@ -1770,6 +1770,16 @@ class Cursor(Structure):
 
         return self._spelling
 
+    def pretty_printed(self, policy):
+        """
+        Pretty print declarations.
+        Parameters:
+        policy -- The policy to control the entities being printed.
+        """
+        return _CXString.from_result(
+            conf.lib.clang_getCursorPrettyPrinted(self, policy)
+        )
+
     @property
     def displayname(self):
         """
@@ -3699,6 +3709,72 @@ class Rewriter(ClangObject):
         conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
 
 
+class PrintingPolicyProperty(BaseEnumeration):
+
+    """
+    A PrintingPolicyProperty identifies a property of a PrintingPolicy.
+    """
+
+    Indentation = 0
+    SuppressSpecifiers = 1
+    SuppressTagKeyword = 2
+    IncludeTagDefinition = 3
+    SuppressScope = 4
+    SuppressUnwrittenScope = 5
+    SuppressInitializers = 6
+    ConstantArraySizeAsWritten = 7
+    AnonymousTagLocations = 8
+    SuppressStrongLifetime = 9
+    SuppressLifetimeQualifiers = 10
+    SuppressTemplateArgsInCXXConstructors = 11
+    Bool = 12
+    Restrict = 13
+    Alignof = 14
+    UnderscoreAlignof = 15
+    UseVoidForZeroParams = 16
+    TerseOutput = 17
+    PolishForDeclaration = 18
+    Half = 19
+    MSWChar = 20
+    IncludeNewlines = 21
+    MSVCFormatting = 22
+    ConstantsAsWritten = 23
+    SuppressImplicitBase = 24
+    FullyQualifiedName = 25
+
+
+class PrintingPolicy(ClangObject):
+    """
+    The PrintingPolicy is a wrapper class around clang::PrintingPolicy
+
+    It allows specifying how declarations, expressions, and types should be
+    pretty-printed.
+    """
+
+    @staticmethod
+    def create(cursor):
+        """
+        Creates a new PrintingPolicy
+        Parameters:
+        cursor -- Any cursor for a translation unit.
+        """
+        return PrintingPolicy(conf.lib.clang_getCursorPrintingPolicy(cursor))
+
+    def __init__(self, ptr):
+        ClangObject.__init__(self, ptr)
+
+    def __del__(self):
+        conf.lib.clang_PrintingPolicy_dispose(self)
+
+    def get_property(self, property):
+        """Get a property value for the given printing policy."""
+        return conf.lib.clang_PrintingPolicy_getProperty(self, property.value)
+
+    def set_property(self, property, value):
+        """Set a property value for the given printing policy."""
+        conf.lib.clang_PrintingPolicy_setProperty(self, property.value, value)
+
+
 # Now comes the plumbing to hook up the C library.
 
 # Register callback types
@@ -3801,6 +3877,8 @@ functionList: list[LibFunc] = [
     ("clang_getCursorExtent", [Cursor], SourceRange),
     ("clang_getCursorLexicalParent", [Cursor], Cursor),
     ("clang_getCursorLocation", [Cursor], SourceLocation),
+    ("clang_getCursorPrettyPrinted", [Cursor, PrintingPolicy], _CXString),
+    ("clang_getCursorPrintingPolicy", [Cursor], c_object_p),
     ("clang_getCursorReferenced", [Cursor], Cursor),
     ("clang_getCursorReferenceNameRange", [Cursor, c_uint, c_uint], SourceRange),
     ("clang_getCursorResultType", [Cursor], Type),
@@ -3924,6 +4002,9 @@ functionList: list[LibFunc] = [
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
     ("clang_Cursor_isBitField", [Cursor], bool),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
+    ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
+    ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),
+    ("clang_PrintingPolicy_setProperty", [PrintingPolicy, c_int, c_uint]),
     ("clang_Type_getAlignOf", [Type], c_longlong),
     ("clang_Type_getClassType", [Type], Type),
     ("clang_Type_getNumTemplateArguments", [Type], c_int),
@@ -4104,6 +4185,8 @@ __all__ = [
     "FixIt",
     "Index",
     "LinkageKind",
+    "PrintingPolicy",
+    "PrintingPolicyProperty",
     "RefQualifierKind",
     "SourceLocation",
     "SourceRange",

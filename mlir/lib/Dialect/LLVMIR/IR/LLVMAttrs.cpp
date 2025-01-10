@@ -53,6 +53,23 @@ void LLVMDialect::registerAttributes() {
 }
 
 //===----------------------------------------------------------------------===//
+// AliasScopeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute id, AliasScopeDomainAttr domain,
+                       StringAttr description) {
+  (void)domain;
+  (void)description;
+  if (!llvm::isa<StringAttr, DistinctAttr>(id))
+    return emitError()
+           << "id of an alias scope must be a StringAttr or a DistrinctAttr";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DINodeAttr
 //===----------------------------------------------------------------------===//
 

@@ -475,7 +475,7 @@ not first appear on a declaration that follows a definition of the function.
 The attribute only appertains to functions and only those that meet the
 following requirements.
 
-* Has a ``void`` return type.
+* Has a non-deduced ``void`` return type.
 * Is not a non-static member function, constructor, or destructor.
 * Is not a C variadic function.
 * Is not a coroutine.
@@ -1393,6 +1393,7 @@ def OwnershipDocs : Documentation {
   let Heading = "ownership_holds, ownership_returns, ownership_takes (Clang "
                 "Static Analyzer)";
   let Category = DocCatFunction;
+  let Label = "analyzer-ownership-attrs";
   let Content = [{
 
 .. note::

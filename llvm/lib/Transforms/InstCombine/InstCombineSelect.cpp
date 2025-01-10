@@ -1689,8 +1689,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
     return nullptr;
 
   // Check the constant we'd have with flipped-strictness predicate.
-  auto FlippedStrictness =
-      InstCombiner::getFlippedStrictnessPredicateAndConstant(Pred, C0);
+  auto FlippedStrictness = getFlippedStrictnessPredicateAndConstant(Pred, C0);
   if (!FlippedStrictness)
     return nullptr;
 
@@ -1843,92 +1842,6 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
           foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
     return Res;
 
-  // Transform (X == C) ? X : Y -> (X == C) ? C : Y
-  // specific handling for Bitwise operation.
-  // x&y -> (x|y) ^ (x^y)  or  (x|y) & ~(x^y)
-  // x|y -> (x&y) | (x^y)  or  (x&y) ^  (x^y)
-  // x^y -> (x|y) ^ (x&y)  or  (x|y) & ~(x&y)
-  Value *X, *Y;
-  if (!match(CmpLHS, m_BitwiseLogic(m_Value(X), m_Value(Y))) ||
-      !match(TrueVal, m_c_BitwiseLogic(m_Specific(X), m_Specific(Y))))
-    return nullptr;
-
-  const unsigned AndOps = Instruction::And, OrOps = Instruction::Or,
-                 XorOps = Instruction::Xor, NoOps = 0;
-  enum NotMask { None = 0, NotInner, NotRHS };
-
-  auto matchFalseVal = [&](unsigned OuterOpc, unsigned InnerOpc,
-                           unsigned NotMask) {
-    auto matchInner = m_c_BinOp(InnerOpc, m_Specific(X), m_Specific(Y));
-    if (OuterOpc == NoOps)
-      return match(CmpRHS, m_Zero()) && match(FalseVal, matchInner);
-
-    if (NotMask == NotInner) {
-      return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
-                                       m_Specific(CmpRHS)));
-    } else if (NotMask == NotRHS) {
-      return match(FalseVal, m_c_BinOp(OuterOpc, matchInner,
-                                       m_NotForbidPoison(m_Specific(CmpRHS))));
-    } else {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));
-    }
-  };
-
-  // (X&Y)==C ? X|Y : X^Y -> (X^Y)|C : X^Y  or (X^Y)^ C : X^Y
-  // (X&Y)==C ? X^Y : X|Y -> (X|Y)^C : X|Y  or (X|Y)&~C : X|Y
-  if (match(CmpLHS, m_And(m_Value(X), m_Value(Y)))) {
-    if (match(TrueVal, m_c_Or(m_Specific(X), m_Specific(Y)))) {
-      // (X&Y)==C ? X|Y : (X^Y)|C -> (X^Y)|C : (X^Y)|C -> (X^Y)|C
-      // (X&Y)==C ? X|Y : (X^Y)^C -> (X^Y)^C : (X^Y)^C -> (X^Y)^C
-      if (matchFalseVal(OrOps, XorOps, None) ||
-          matchFalseVal(XorOps, XorOps, None))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Xor(m_Specific(X), m_Specific(Y)))) {
-      // (X&Y)==C ? X^Y : (X|Y)^ C -> (X|Y)^ C : (X|Y)^ C -> (X|Y)^ C
-      // (X&Y)==C ? X^Y : (X|Y)&~C -> (X|Y)&~C : (X|Y)&~C -> (X|Y)&~C
-      if (matchFalseVal(XorOps, OrOps, None) ||
-          matchFalseVal(AndOps, OrOps, NotRHS))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
-  // (X|Y)==C ? X&Y : X^Y -> (X^Y)^C : X^Y  or  ~(X^Y)&C : X^Y
-  // (X|Y)==C ? X^Y : X&Y -> (X&Y)^C : X&Y  or  ~(X&Y)&C : X&Y
-  if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y)))) {
-    if (match(TrueVal, m_c_And(m_Specific(X), m_Specific(Y)))) {
-      // (X|Y)==C ? X&Y: (X^Y)^C -> (X^Y)^C: (X^Y)^C ->  (X^Y)^C
-      // (X|Y)==C ? X&Y:~(X^Y)&C ->~(X^Y)&C:~(X^Y)&C -> ~(X^Y)&C
-      if (matchFalseVal(XorOps, XorOps, None) ||
-          matchFalseVal(AndOps, XorOps, NotInner))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Xor(m_Specific(X), m_Specific(Y)))) {
-      // (X|Y)==C ? X^Y : (X&Y)^C ->  (X&Y)^C : (X&Y)^C ->  (X&Y)^C
-      // (X|Y)==C ? X^Y :~(X&Y)&C -> ~(X&Y)&C :~(X&Y)&C -> ~(X&Y)&C
-      if (matchFalseVal(XorOps, AndOps, None) ||
-          matchFalseVal(AndOps, AndOps, NotInner))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
-  // (X^Y)==C ? X&Y : X|Y -> (X|Y)^C : X|Y  or (X|Y)&~C : X|Y
-  // (X^Y)==C ? X|Y : X&Y -> (X&Y)|C : X&Y  or (X&Y)^ C : X&Y
-  if (match(CmpLHS, m_Xor(m_Value(X), m_Value(Y)))) {
-    if ((match(TrueVal, m_c_And(m_Specific(X), m_Specific(Y))))) {
-      // (X^Y)==C ? X&Y : (X|Y)^C -> (X|Y)^C
-      // (X^Y)==C ? X&Y : (X|Y)&~C -> (X|Y)&~C
-      if (matchFalseVal(XorOps, OrOps, None) ||
-          matchFalseVal(AndOps, OrOps, NotRHS))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    } else if (match(TrueVal, m_c_Or(m_Specific(X), m_Specific(Y)))) {
-      // (X^Y)==C ? (X|Y) : (X&Y)|C -> (X&Y)|C
-      // (X^Y)==C ? (X|Y) : (X&Y)^C -> (X&Y)^C
-      if (matchFalseVal(OrOps, AndOps, None) ||
-          matchFalseVal(XorOps, AndOps, None))
-        return IC.replaceInstUsesWith(SI, FalseVal);
-    }
-  }
-
   return nullptr;
 }
 
@@ -1970,8 +1883,7 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
   Value *RHS;
   SelectPatternFlavor SPF;
   const DataLayout &DL = BOp->getDataLayout();
-  auto Flipped =
-      InstCombiner::getFlippedStrictnessPredicateAndConstant(Predicate, C1);
+  auto Flipped = getFlippedStrictnessPredicateAndConstant(Predicate, C1);
 
   if (C3 == ConstantFoldBinaryOpOperands(Opcode, C1, C2, DL)) {
     SPF = getSelectPattern(Predicate).Flavor;

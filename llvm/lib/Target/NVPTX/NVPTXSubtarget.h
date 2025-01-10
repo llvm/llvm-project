@@ -111,7 +111,12 @@ public:
   // - 0 represents base GPU model,
   // - non-zero value identifies particular architecture-accelerated variant.
   bool hasAAFeatures() const { return getFullSmVersion() % 10; }
-  std::string getTargetName() const { return TargetName; }
+
+  // If the user did not provide a target we default to the `sm_30` target.
+  std::string getTargetName() const {
+    return TargetName.empty() ? "sm_30" : TargetName;
+  }
+  bool hasTargetName() const { return !TargetName.empty(); }
 
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
