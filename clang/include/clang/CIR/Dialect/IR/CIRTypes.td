@@ -379,27 +379,22 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
 
     ```mlir
     !cir.func<!bool ()>
-    !cir.func<!cir.void ()>
     !cir.func<!s32i (!s8i, !s8i)>
     !cir.func<!s32i (!s32i, ...)>
     ```
   }];
 
-  let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs, ArrayRefParameter<"mlir::Type">:$returnTypes,
+  let parameters = (ins ArrayRefParameter<"mlir::Type">:$inputs, "mlir::Type":$returnType,
                         "bool":$varArg);
   let assemblyFormat = [{
-    `<` custom<FuncType>($returnTypes, $inputs, $varArg) `>`
+    `<` $returnType ` ` `(` custom<FuncTypeArgs>($inputs, $varArg) `>`
   }];
 
   let builders = [
-    // Construct with an actual return type or explicit !cir.void
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<mlir::Type>":$inputs, "mlir::Type":$returnType,
       CArg<"bool", "false">:$isVarArg), [{
-      return $_get(returnType.getContext(), inputs,
-                       ::mlir::isa<::cir::VoidType>(returnType) ? llvm::ArrayRef<mlir::Type>{}
-                                                                : llvm::ArrayRef{returnType},
-                       isVarArg);
+      return $_get(returnType.getContext(), inputs, returnType, isVarArg);
     }]>
   ];
 
@@ -413,11 +408,11 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns the number of arguments to the function.
     unsigned getNumInputs() const { return getInputs().size(); }
 
-    /// Returns the result type of the function as an actual return type or
-    /// explicit !cir.void
-    mlir::Type getReturnType() const;
+    /// Returns the result type of the function as an ArrayRef, enabling better
+    /// integration with generic MLIR utilities.
+    llvm::ArrayRef<mlir::Type> getReturnTypes() const;
 
-    /// Returns whether the function returns void.
+    /// Returns whether the function is returns void.
     bool isVoid() const;
 
     /// Returns a clone of this function type with the given argument

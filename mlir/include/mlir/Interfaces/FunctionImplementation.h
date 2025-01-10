@@ -64,28 +64,6 @@ parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
                        bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
                        SmallVectorImpl<DictionaryAttr> &resultAttrs);
 
-/// Parse a function argument list using `parser`. The `allowVariadic` argument
-/// indicates whether functions with variadic arguments are supported. The
-/// trailing arguments are populated by this function with names, types,
-/// attributes and locations of the arguments.
-ParseResult
-parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
-                          SmallVectorImpl<OpAsmParser::Argument> &arguments,
-                          bool &isVariadic);
-
-/// Parse a function result list using `parser`.
-///
-///   function-result-list ::= function-result-list-parens
-///                          | non-function-type
-///   function-result-list-parens ::= `(` `)`
-///                                 | `(` function-result-list-no-parens `)`
-///   function-result-list-no-parens ::= function-result (`,` function-result)*
-///   function-result ::= type attribute-dict?
-///
-ParseResult
-parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
-                        SmallVectorImpl<DictionaryAttr> &resultAttrs);
-
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
 /// input and output types. The parser sets the `typeAttrName` attribute to the

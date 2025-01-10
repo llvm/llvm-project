@@ -922,9 +922,6 @@ public:
   /// Parse an optional keyword or string.
   virtual ParseResult parseOptionalKeywordOrString(std::string *result) = 0;
 
-  /// Parse the given exclamation-prefixed keyword if present.
-  virtual ParseResult parseOptionalExclamationKeyword(StringRef keyword) = 0;
-
   //===--------------------------------------------------------------------===//
   // Attribute/Type Parsing
   //===--------------------------------------------------------------------===//

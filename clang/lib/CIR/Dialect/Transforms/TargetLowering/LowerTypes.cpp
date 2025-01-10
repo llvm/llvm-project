@@ -109,7 +109,7 @@ FuncType LowerTypes::getFunctionType(const LowerFunctionInfo &FI) {
     }
   }
 
-  return FuncType::get(ArgTypes, resultType, FI.isVariadic());
+  return FuncType::get(getMLIRContext(), ArgTypes, resultType, FI.isVariadic());
 }
 
 /// Convert a CIR type to its ABI-specific default form.

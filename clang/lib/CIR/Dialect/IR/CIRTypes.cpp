@@ -33,7 +33,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <cassert>
 #include <optional>
 
 using cir::MissingFeatures;
@@ -43,16 +42,13 @@ using cir::MissingFeatures;
 //===----------------------------------------------------------------------===//
 
 static mlir::ParseResult
-parseFuncType(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &returnTypes,
-              llvm::SmallVector<mlir::Type> &params, bool &isVarArg);
-
-static void printFuncType(mlir::AsmPrinter &p,
-                          mlir::ArrayRef<mlir::Type> returnTypes,
-                          mlir::ArrayRef<mlir::Type> params, bool isVarArg);
+parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
+                  bool &isVarArg);
+static void printFuncTypeArgs(mlir::AsmPrinter &p,
+                              mlir::ArrayRef<mlir::Type> params, bool isVarArg);
 
 static mlir::ParseResult parsePointerAddrSpace(mlir::AsmParser &p,
                                                mlir::Attribute &addrSpaceAttr);
-
 static void printPointerAddrSpace(mlir::AsmPrinter &p,
                                   mlir::Attribute addrSpaceAttr);
 
@@ -917,46 +913,9 @@ FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   return get(llvm::to_vector(inputs), results[0], isVarArg());
 }
 
-// A special parser is needed for function returning void to consume the "!void"
-// returned type in the case there is no alias defined.
-static mlir::ParseResult
-parseFuncTypeReturn(mlir::AsmParser &p,
-                    llvm::SmallVector<mlir::Type> &returnTypes) {
-  if (p.parseOptionalExclamationKeyword("!void").succeeded())
-    // !void means no return type.
-    return p.parseLParen();
-  if (succeeded(p.parseOptionalLParen()))
-    // If we have already a '(', the function has no return type
-    return mlir::success();
-
-  mlir::Type type;
-  auto result = p.parseOptionalType(type);
-  if (!result.has_value())
-    return mlir::failure();
-  if (failed(*result) || isa<cir::VoidType>(type))
-    // No return type specified.
-    return p.parseLParen();
-  // Otherwise use the actual type.
-  returnTypes.push_back(type);
-  return p.parseLParen();
-}
-
-// A special pretty-printer for function returning void to emit a "!void"
-// returned type. Note that there is no real type used here since it does not
-// appear in the IR and thus the alias might not be defined and cannot be
-// referred to. This is why this is a pure syntactic-sugar string which is used.
-static void printFuncTypeReturn(mlir::AsmPrinter &p,
-                                mlir::ArrayRef<mlir::Type> returnTypes) {
-  if (returnTypes.empty())
-    // Pretty-print no return type as "!void"
-    p << "!void ";
-  else
-    p << returnTypes << ' ';
-}
-
-static mlir::ParseResult
-parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
-                  bool &isVarArg) {
+mlir::ParseResult parseFuncTypeArgs(mlir::AsmParser &p,
+                                    llvm::SmallVector<mlir::Type> &params,
+                                    bool &isVarArg) {
   isVarArg = false;
   // `(` `)`
   if (succeeded(p.parseOptionalRParen()))
@@ -986,10 +945,8 @@ parseFuncTypeArgs(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &params,
   return p.parseRParen();
 }
 
-static void printFuncTypeArgs(mlir::AsmPrinter &p,
-                              mlir::ArrayRef<mlir::Type> params,
-                              bool isVarArg) {
-  p << '(';
+void printFuncTypeArgs(mlir::AsmPrinter &p, mlir::ArrayRef<mlir::Type> params,
+                       bool isVarArg) {
   llvm::interleaveComma(params, p,
                         [&p](mlir::Type type) { p.printType(type); });
   if (isVarArg) {
@@ -1000,37 +957,11 @@ static void printFuncTypeArgs(mlir::AsmPrinter &p,
   p << ')';
 }
 
-static mlir::ParseResult
-parseFuncType(mlir::AsmParser &p, llvm::SmallVector<mlir::Type> &returnTypes,
-              llvm::SmallVector<mlir::Type> &params, bool &isVarArg) {
-  if (failed(parseFuncTypeReturn(p, returnTypes)))
-    return failure();
-  return parseFuncTypeArgs(p, params, isVarArg);
+llvm::ArrayRef<mlir::Type> FuncType::getReturnTypes() const {
+  return static_cast<detail::FuncTypeStorage *>(getImpl())->returnType;
 }
 
-static void printFuncType(mlir::AsmPrinter &p,
-                          mlir::ArrayRef<mlir::Type> returnTypes,
-                          mlir::ArrayRef<mlir::Type> params, bool isVarArg) {
-  printFuncTypeReturn(p, returnTypes);
-  printFuncTypeArgs(p, params, isVarArg);
-}
-
-// Return the actual return type or an explicit !cir.void if the function does
-// not return anything
-mlir::Type FuncType::getReturnType() const {
-  if (isVoid())
-    return cir::VoidType::get(getContext());
-  return static_cast<detail::FuncTypeStorage *>(getImpl())->returnTypes.front();
-}
-
-bool FuncType::isVoid() const {
-  auto rt = static_cast<detail::FuncTypeStorage *>(getImpl())->returnTypes;
-  assert(rt.empty() ||
-         !mlir::isa<cir::VoidType>(rt.front()) &&
-             "The return type for a function returning void should be empty "
-             "instead of a real !cir.void");
-  return rt.empty();
-}
+bool FuncType::isVoid() const { return mlir::isa<VoidType>(getReturnType()); }
 
 //===----------------------------------------------------------------------===//
 // MethodType Definitions

@@ -396,19 +396,6 @@ public:
     return parseOptionalString(result);
   }
 
-  /// Parse the given exclamation-prefixed keyword if present.
-  ParseResult parseOptionalExclamationKeyword(StringRef keyword) override {
-    if (parser.getToken().isCodeCompletion())
-      return parser.codeCompleteOptionalTokens(keyword);
-
-    // Check that the current token has the same spelling.
-    if (!parser.getToken().is(Token::Kind::exclamation_identifier) ||
-        parser.getTokenSpelling() != keyword)
-      return failure();
-    parser.consumeToken();
-    return success();
-  }
-
   //===--------------------------------------------------------------------===//
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
