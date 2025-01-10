@@ -2479,8 +2479,9 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 }
 
 // symbol+offset
-bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRsi_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (isAddLike(Addr)) {
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       SDValue base = Addr.getOperand(0);
@@ -2507,8 +2508,9 @@ bool NVPTXDAGToDAGISel::SelectADDRsi64(SDNode *OpNode, SDValue Addr,
 }
 
 // register+offset
-bool NVPTXDAGToDAGISel::SelectADDRri_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRri_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
     Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), mvt);
