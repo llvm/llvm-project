@@ -1203,7 +1203,7 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::BitCastOp>(loc, i8VecType, subByteVec);
 }
 
-/// Extracts a signed N-bit sequence from each element of an 8-bit vector,
+/// Extracts a signed N-bit sequence from each element of a vector of bytes,
 /// starting at the specified bit index.
 /// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
