@@ -2239,7 +2239,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_join:
-  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -5838,8 +5837,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
-    case Intrinsic::amdgcn_s_wakeup_barrier:
-      return AMDGPU::S_WAKEUP_BARRIER_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -5849,8 +5846,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
-    case Intrinsic::amdgcn_s_wakeup_barrier:
-      return AMDGPU::S_WAKEUP_BARRIER_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };

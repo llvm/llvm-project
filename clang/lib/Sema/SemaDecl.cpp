@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -12297,58 +12298,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
   }
 
-  // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled and warn user if sme locally streaming
-  // function returns or uses arguments with VL-based types.
-  if (DeclIsDefn) {
-    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
-    bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
-    bool UsesZA = Attr && Attr->isNewZA();
-    bool UsesZT0 = Attr && Attr->isNewZT0();
-
-    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
-      if (NewFD->getReturnType()->isSizelessVectorType())
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns)
-            << /*IsArg=*/false;
-      if (llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
-            return P->getOriginalType()->isSizelessVectorType();
-          }))
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns)
-            << /*IsArg=*/true;
-    }
-    if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      UsesSM |=
-          EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
-                FunctionType::ARM_None;
-      UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
-                 FunctionType::ARM_None;
-    }
-
-    if (UsesSM || UsesZA) {
-      llvm::StringMap<bool> FeatureMap;
-      Context.getFunctionFeatureMap(FeatureMap, NewFD);
-      if (!FeatureMap.contains("sme")) {
-        if (UsesSM)
-          Diag(NewFD->getLocation(),
-               diag::err_sme_definition_using_sm_in_non_sme_target);
-        else
-          Diag(NewFD->getLocation(),
-               diag::err_sme_definition_using_za_in_non_sme_target);
-      }
-    }
-    if (UsesZT0) {
-      llvm::StringMap<bool> FeatureMap;
-      Context.getFunctionFeatureMap(FeatureMap, NewFD);
-      if (!FeatureMap.contains("sme2")) {
-        Diag(NewFD->getLocation(),
-             diag::err_sme_definition_using_zt0_in_non_sme2_target);
-      }
-    }
-  }
+  if (DeclIsDefn && Context.getTargetInfo().getTriple().isAArch64())
+    ARM().CheckSMEFunctionDefAttributes(NewFD);
 
   return Redeclaration;
 }
