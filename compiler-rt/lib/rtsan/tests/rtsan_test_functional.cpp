@@ -146,8 +146,7 @@ TEST(TestRtsan, LaunchingAThreadDiesWhenRealtime) {
 namespace {
 void InvokeStdFunction(std::function<void()> &&function) { function(); }
 
-template <typename T>
-void HideMemoryFromCompiler(T* memory) {
+template <typename T> void HideMemoryFromCompiler(T *memory) {
   // Pass the pointer to an empty assembly block as an input, and inform
   // the compiler that memory is read to and possibly modified. This should not
   // be architecture specific, since the asm block is empty.
