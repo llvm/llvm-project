@@ -19393,27 +19393,32 @@ class HorizontalReduction {
   /// Creates reduction operation with the current opcode.
   static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
-    unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     switch (Kind) {
-    case RecurKind::Or:
+    case RecurKind::Or: {
       if (UseSelect &&
           LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
         return Builder.CreateSelect(LHS, Builder.getTrue(), RHS, Name);
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
-    case RecurKind::And:
+    }
+    case RecurKind::And: {
       if (UseSelect &&
           LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
         return Builder.CreateSelect(LHS, RHS, Builder.getFalse(), Name);
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
+    }
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Xor:
     case RecurKind::FAdd:
-    case RecurKind::FMul:
+    case RecurKind::FMul: {
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
+    }
     case RecurKind::FMax:
       return Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS);
     case RecurKind::FMin:
