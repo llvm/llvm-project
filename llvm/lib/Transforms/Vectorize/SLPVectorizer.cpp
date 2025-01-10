@@ -19422,13 +19422,12 @@ class HorizontalReduction {
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
-    case RecurKind::UMin: {
+    case RecurKind::UMin:
       if (UseSelect) {
         CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
-    }
       [[fallthrough]];
     case RecurKind::FMax:
     case RecurKind::FMin:
