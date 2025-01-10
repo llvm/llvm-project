@@ -251,7 +251,7 @@ FunctionSP SymbolFileBreakpad::GetOrCreateFunction(CompileUnit &comp_unit) {
     addr_t address = record->Address + base;
     SectionSP section_sp = list->FindSectionContainingFileAddress(address);
     if (section_sp) {
-      Address func_addr(section_sp, address-section_sp->GetFileAddress());
+      Address func_addr(section_sp, address - section_sp->GetFileAddress());
       // Use the CU's id because every CU has only one function inside.
       func_sp = std::make_shared<Function>(
           &comp_unit, id, 0, func_name, nullptr, func_addr,
