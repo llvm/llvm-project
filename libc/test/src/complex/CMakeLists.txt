@@ -1,6 +1,6 @@
 add_custom_target(libc-complex-unittests)
 
-add_cfp_unittest(
+add_fp_unittest(
   conj_test
   SUITE
     libc-complex-unittests
@@ -10,7 +10,7 @@ add_cfp_unittest(
     libc.src.complex.conj
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   conjf_test
   SUITE
     libc-complex-unittests
@@ -20,7 +20,7 @@ add_cfp_unittest(
     libc.src.complex.conjf
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   conjl_test
   SUITE
     libc-complex-unittests
@@ -30,7 +30,7 @@ add_cfp_unittest(
     libc.src.complex.conjl
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   conjf16_test
   SUITE
     libc-complex-unittests
@@ -40,7 +40,7 @@ add_cfp_unittest(
     libc.src.complex.conjf16
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   conjf128_test
   SUITE
     libc-complex-unittests
@@ -50,7 +50,7 @@ add_cfp_unittest(
     libc.src.complex.conjf128
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cproj_test
   SUITE
     libc-complex-unittests
@@ -60,7 +60,7 @@ add_cfp_unittest(
     libc.src.complex.cproj
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cprojf_test
   NEED_MPC
   SUITE
@@ -71,7 +71,7 @@ add_cfp_unittest(
     libc.src.complex.cprojf
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cprojl_test
   SUITE
     libc-complex-unittests
@@ -81,7 +81,7 @@ add_cfp_unittest(
     libc.src.complex.cprojl
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cprojf16_test
   SUITE
     libc-complex-unittests
@@ -91,7 +91,7 @@ add_cfp_unittest(
     libc.src.complex.cprojf16
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cprojf128_test
   SUITE
     libc-complex-unittests
@@ -101,7 +101,7 @@ add_cfp_unittest(
     libc.src.complex.cprojf128
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   creal_test
   SUITE
     libc-complex-unittests
@@ -111,7 +111,7 @@ add_cfp_unittest(
     libc.src.complex.creal
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   crealf_test
   SUITE
     libc-complex-unittests
@@ -121,7 +121,7 @@ add_cfp_unittest(
     libc.src.complex.crealf
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   creall_test
   SUITE
     libc-complex-unittests
@@ -131,7 +131,7 @@ add_cfp_unittest(
     libc.src.complex.creall
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   crealf16_test
   SUITE
     libc-complex-unittests
@@ -141,7 +141,7 @@ add_cfp_unittest(
     libc.src.complex.crealf16
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   crealf128_test
   SUITE
     libc-complex-unittests
@@ -151,7 +151,7 @@ add_cfp_unittest(
     libc.src.complex.crealf128
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cimag_test
   SUITE
     libc-complex-unittests
@@ -161,7 +161,7 @@ add_cfp_unittest(
     libc.src.complex.cimag
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cimagf_test
   SUITE
     libc-complex-unittests
@@ -171,7 +171,7 @@ add_cfp_unittest(
     libc.src.complex.cimagf
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cimagl_test
   SUITE
     libc-complex-unittests
@@ -181,7 +181,7 @@ add_cfp_unittest(
     libc.src.complex.cimagl
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cimagf16_test
   SUITE
     libc-complex-unittests
@@ -191,7 +191,7 @@ add_cfp_unittest(
     libc.src.complex.cimagf16
 )
 
-add_cfp_unittest(
+add_fp_unittest(
   cimagf128_test
   SUITE
     libc-complex-unittests

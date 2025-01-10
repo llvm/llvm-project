@@ -1,11 +1,20 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "NEED_MPFR;NEED_MPC;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+
+  if(MATH_UNITTEST_NEED_MPC)
+    set(MATH_UNITTEST_NEED_MPFR TRUE)
+    if(NOT LIBC_TESTS_CAN_USE_MPC)
+      message(VERBOSE "Complex test ${name} will be skipped as MPC library is not available.")
+      return()
+    endif()
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
+  endif()
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
@@ -45,34 +54,6 @@ function(add_fp_unittest name)
     DEPENDS "${deps}"
   )
 endfunction(add_fp_unittest)
-
-function(add_cfp_unittest name)
-  cmake_parse_arguments(
-    "COMPLEX_UNITTEST"
-    "NEED_MPC" # Optional argument
-    "SUITE;SRCS" # Single value arguments
-    "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
-    ${ARGN}
-  )
-
-  if(COMPLEX_UNITTEST_NEED_MPC)
-    if(NOT LIBC_TESTS_CAN_USE_MPC)
-      message(VERBOSE "Complex test ${name} will be skipped as MPC library is not available.")
-      return()
-    endif()
-    list(APPEND COMPLEX_UNITTEST_LINK_LIBRARIES libcMPCWrapper)
-  endif()
-
-  list(APPEND COMPLEX_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
-
-  add_libc_test(
-    ${name}
-    SUITE "${COMPLEX_UNITTEST_SUITE}"
-    SRCS "${COMPLEX_UNITTEST_SRCS}"
-    LINK_LIBRARIES "${COMPLEX_UNITTEST_LINK_LIBRARIES}"
-    DEPENDS "${COMPLEX_UNITTEST_DEPENDS}"
-  )
-endfunction(add_cfp_unittest)
 
 add_subdirectory(__support)
 add_subdirectory(complex)
