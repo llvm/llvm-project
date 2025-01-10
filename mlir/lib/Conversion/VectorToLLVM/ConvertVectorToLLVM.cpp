@@ -124,7 +124,7 @@ static Value getAsLLVMValue(OpBuilder &builder, Location loc,
     return builder.create<LLVM::ConstantOp>(loc, intAttr).getResult();
   }
 
-  return foldResult.get<Value>();
+  return cast<Value>(foldResult);
 }
 
 namespace {
