@@ -42,8 +42,10 @@ def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
 def ResRetHalfTy : DXILOpParamType;
 def ResRetFloatTy : DXILOpParamType;
+def ResRetDoubleTy : DXILOpParamType;
 def ResRetInt16Ty : DXILOpParamType;
 def ResRetInt32Ty : DXILOpParamType;
+def ResRetInt64Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
@@ -888,6 +890,23 @@ def SplitDouble :  DXILOp<102, splitDouble> {
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def RawBufferLoad : DXILOp<139, rawBufferLoad> {
+  let Doc = "reads from a raw buffer and structured buffer";
+  // Handle, Coord0, Coord1, Mask, Alignment
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_2,
+              [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,
+    Overloads<DXIL1_3,
+              [
+                ResRetHalfTy, ResRetFloatTy, ResRetDoubleTy, ResRetInt16Ty,
+                ResRetInt32Ty, ResRetInt64Ty
+              ]>
+  ];
+  let stages = [Stages<DXIL1_2, [all_stages]>];
 }
 
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {

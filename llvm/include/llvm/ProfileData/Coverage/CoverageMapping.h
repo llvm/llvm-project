@@ -34,6 +34,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -214,6 +215,14 @@ public:
   /// Return a counter that represents the expression that subtracts RHS from
   /// LHS.
   Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
+
+  /// K to V map. K will be Counter in most cases. V may be Counter or
+  /// Expression.
+  using SubstMap = std::map<Counter, Counter>;
+
+  /// \return A counter equivalent to \C, with each term in its
+  /// expression replaced with term from \p Map.
+  Counter subst(Counter C, const SubstMap &Map);
 };
 
 using LineColPair = std::pair<unsigned, unsigned>;
