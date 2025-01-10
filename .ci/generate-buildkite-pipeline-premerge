@@ -54,24 +54,6 @@ echo "$modified_dirs" >&2
 
 . ./.ci/compute-projects.sh
 
-# Project specific pipelines.
-
-# If libc++ or one of the runtimes directories changed.
-if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cmake)$"; then
-  cat <<EOF
-- trigger: "libcxx-ci"
-  build:
-    message: "${buildMessage}"
-    commit: "${BUILDKITE_COMMIT}"
-    branch: "${BUILDKITE_BRANCH}"
-EOF
-fi
-
-# Generic pipeline for projects that have not defined custom steps.
-#
-# Individual projects should instead define the pre-commit CI tests that suits their
-# needs while letting them run on the infrastructure provided by LLVM.
-
 # Figure out which projects need to be built on each platform
 all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
 modified_projects="$(keep-modified-projects ${all_projects})"
