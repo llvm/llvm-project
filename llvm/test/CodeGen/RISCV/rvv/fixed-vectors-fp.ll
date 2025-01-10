@@ -1254,12 +1254,10 @@ define void @copysign_neg_trunc_v4f16_v4f32(ptr %x, ptr %y) {
 define void @copysign_neg_trunc_v3f16_v3f32(ptr %x, ptr %y) {
 ; ZVFH-LABEL: copysign_neg_trunc_v3f16_v3f32:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
+; ZVFH-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vle32.v v8, (a1)
 ; ZVFH-NEXT:    vle16.v v9, (a0)
-; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfncvt.f.f.w v10, v8
-; ZVFH-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vfsgnjn.vv v8, v9, v10
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
@@ -1272,9 +1270,7 @@ define void @copysign_neg_trunc_v3f16_v3f32(ptr %x, ptr %y) {
 ; ZVFHMIN-NEXT:    lui a1, 8
 ; ZVFHMIN-NEXT:    addi a2, a1, -1
 ; ZVFHMIN-NEXT:    vand.vx v8, v8, a2
-; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v10, v9
-; ZVFHMIN-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vxor.vx v9, v10, a1
 ; ZVFHMIN-NEXT:    vand.vx v9, v9, a1
 ; ZVFHMIN-NEXT:    vor.vv v8, v8, v9
@@ -4013,9 +4009,10 @@ define void @trunc_v6f16(ptr %x) {
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
+; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; ZVFH-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; ZVFH-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
@@ -4197,10 +4194,11 @@ define void @ceil_v6f16(ptr %x) {
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a1, 3
+; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; ZVFH-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; ZVFH-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
@@ -4388,10 +4386,11 @@ define void @floor_v6f16(ptr %x) {
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a1, 2
+; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; ZVFH-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; ZVFH-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
@@ -4579,10 +4578,11 @@ define void @round_v6f16(ptr %x) {
 ; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a1, 4
+; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; ZVFH-NEXT:    fsrm a1
 ; ZVFH-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; ZVFH-NEXT:    vsetivli zero, 6, e16, m1, ta, mu
+; ZVFH-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; ZVFH-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; ZVFH-NEXT:    vse16.v v8, (a0)
 ; ZVFH-NEXT:    ret
