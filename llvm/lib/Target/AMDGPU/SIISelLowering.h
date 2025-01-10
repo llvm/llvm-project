@@ -365,6 +365,7 @@ public:
 
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
 
