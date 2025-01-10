@@ -25,7 +25,7 @@ static std::array<T, 1000> generate(std::uniform_int_distribution<T> distributio
 
 static void bm_gcd_random(benchmark::State& state) {
   std::array data = generate<int>();
-  while (state.KeepRunningBatch(data.size()))
+  while (state.KeepRunningBatch(data.size() * data.size()))
     for (auto v0 : data)
       for (auto v1 : data)
         benchmark::DoNotOptimize(std::gcd(v0, v1));

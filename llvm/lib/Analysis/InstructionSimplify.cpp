@@ -4275,23 +4275,25 @@ Value *llvm::simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
   return ::simplifyFCmpInst(Predicate, LHS, RHS, FMF, Q, RecursionLimit);
 }
 
-static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
-                                     const SimplifyQuery &Q,
-                                     bool AllowRefinement,
-                                     SmallVectorImpl<Instruction *> *DropFlags,
-                                     unsigned MaxRecurse) {
+static Value *simplifyWithOpsReplaced(Value *V,
+                                      ArrayRef<std::pair<Value *, Value *>> Ops,
+                                      const SimplifyQuery &Q,
+                                      bool AllowRefinement,
+                                      SmallVectorImpl<Instruction *> *DropFlags,
+                                      unsigned MaxRecurse) {
   assert((AllowRefinement || !Q.CanUseUndef) &&
          "If AllowRefinement=false then CanUseUndef=false");
+  for (const auto &OpAndRepOp : Ops) {
+    // We cannot replace a constant, and shouldn't even try.
+    if (isa<Constant>(OpAndRepOp.first))
+      return nullptr;
 
-  // Trivial replacement.
-  if (V == Op)
-    return RepOp;
+    // Trivial replacement.
+    if (V == OpAndRepOp.first)
+      return OpAndRepOp.second;
+  }
 
   if (!MaxRecurse--)
-    return nullptr;
-
-  // We cannot replace a constant, and shouldn't even try.
-  if (isa<Constant>(Op))
     return nullptr;
 
   auto *I = dyn_cast<Instruction>(V);
@@ -4303,11 +4305,6 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (isa<PHINode>(I))
     return nullptr;
 
-  // For vector types, the simplification must hold per-lane, so forbid
-  // potentially cross-lane operations like shufflevector.
-  if (Op->getType()->isVectorTy() && !isNotCrossLaneOperation(I))
-    return nullptr;
-
   // Don't fold away llvm.is.constant checks based on assumptions.
   if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
     return nullptr;
@@ -4316,12 +4313,20 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (isa<FreezeInst>(I))
     return nullptr;
 
+  for (const auto &OpAndRepOp : Ops) {
+    // For vector types, the simplification must hold per-lane, so forbid
+    // potentially cross-lane operations like shufflevector.
+    if (OpAndRepOp.first->getType()->isVectorTy() &&
+        !isNotCrossLaneOperation(I))
+      return nullptr;
+  }
+
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps;
   bool AnyReplaced = false;
   for (Value *InstOp : I->operands()) {
-    if (Value *NewInstOp = simplifyWithOpReplaced(
-            InstOp, Op, RepOp, Q, AllowRefinement, DropFlags, MaxRecurse)) {
+    if (Value *NewInstOp = simplifyWithOpsReplaced(
+            InstOp, Ops, Q, AllowRefinement, DropFlags, MaxRecurse)) {
       NewOps.push_back(NewInstOp);
       AnyReplaced = InstOp != NewInstOp;
     } else {
@@ -4372,7 +4377,8 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       // by assumption and this case never wraps, so nowrap flags can be
       // ignored.
       if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
-          NewOps[0] == RepOp && NewOps[1] == RepOp)
+          NewOps[0] == NewOps[1] &&
+          any_of(Ops, [=](const auto &Rep) { return NewOps[0] == Rep.second; }))
         return Constant::getNullValue(I->getType());
 
       // If we are substituting an absorber constant into a binop and extra
@@ -4382,10 +4388,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       // (Op == 0) ? 0 : (Op & -Op)            --> Op & -Op
       // (Op == 0) ? 0 : (Op * (binop Op, C))  --> Op * (binop Op, C)
       // (Op == -1) ? -1 : (Op | (binop C, Op) --> Op | (binop C, Op)
-      Constant *Absorber =
-          ConstantExpr::getBinOpAbsorber(Opcode, I->getType());
+      Constant *Absorber = ConstantExpr::getBinOpAbsorber(Opcode, I->getType());
       if ((NewOps[0] == Absorber || NewOps[1] == Absorber) &&
-          impliesPoison(BO, Op))
+          any_of(Ops,
+                 [=](const auto &Rep) { return impliesPoison(BO, Rep.first); }))
         return Absorber;
     }
 
@@ -4451,6 +4457,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI,
                                   /*AllowNonDeterministic=*/false);
+}
+
+static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                                     const SimplifyQuery &Q,
+                                     bool AllowRefinement,
+                                     SmallVectorImpl<Instruction *> *DropFlags,
+                                     unsigned MaxRecurse) {
+  return simplifyWithOpsReplaced(V, {{Op, RepOp}}, Q, AllowRefinement,
+                                 DropFlags, MaxRecurse);
 }
 
 Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
@@ -4595,21 +4610,20 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
 
 /// Try to simplify a select instruction when its condition operand is an
 /// integer equality or floating-point equivalence comparison.
-static Value *simplifySelectWithEquivalence(Value *CmpLHS, Value *CmpRHS,
-                                            Value *TrueVal, Value *FalseVal,
-                                            const SimplifyQuery &Q,
-                                            unsigned MaxRecurse) {
+static Value *simplifySelectWithEquivalence(
+    ArrayRef<std::pair<Value *, Value *>> Replacements, Value *TrueVal,
+    Value *FalseVal, const SimplifyQuery &Q, unsigned MaxRecurse) {
   Value *SimplifiedFalseVal =
-      simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q.getWithoutUndef(),
-                             /* AllowRefinement */ false,
-                             /* DropFlags */ nullptr, MaxRecurse);
+      simplifyWithOpsReplaced(FalseVal, Replacements, Q.getWithoutUndef(),
+                              /* AllowRefinement */ false,
+                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedFalseVal)
     SimplifiedFalseVal = FalseVal;
 
   Value *SimplifiedTrueVal =
-      simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
-                             /* AllowRefinement */ true,
-                             /* DropFlags */ nullptr, MaxRecurse);
+      simplifyWithOpsReplaced(TrueVal, Replacements, Q,
+                              /* AllowRefinement */ true,
+                              /* DropFlags */ nullptr, MaxRecurse);
   if (!SimplifiedTrueVal)
     SimplifiedTrueVal = TrueVal;
 
@@ -4707,10 +4721,10 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (Value *V = simplifySelectWithEquivalence(CmpLHS, CmpRHS, TrueVal,
+    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, TrueVal,
                                                  FalseVal, Q, MaxRecurse))
       return V;
-    if (Value *V = simplifySelectWithEquivalence(CmpRHS, CmpLHS, TrueVal,
+    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, TrueVal,
                                                  FalseVal, Q, MaxRecurse))
       return V;
 
@@ -4720,11 +4734,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_Zero())) {
       // (X | Y) == 0 implies X == 0 and Y == 0.
-      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
-        return V;
-      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(
+              {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
         return V;
     }
 
@@ -4732,11 +4743,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(CmpLHS, m_And(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_AllOnes())) {
       // (X & Y) == -1 implies X == -1 and Y == -1.
-      if (Value *V = simplifySelectWithEquivalence(X, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
-        return V;
-      if (Value *V = simplifySelectWithEquivalence(Y, CmpRHS, TrueVal, FalseVal,
-                                                   Q, MaxRecurse))
+      if (Value *V = simplifySelectWithEquivalence(
+              {{X, CmpRHS}, {Y, CmpRHS}}, TrueVal, FalseVal, Q, MaxRecurse))
         return V;
     }
   }
@@ -4765,11 +4773,11 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   // This transforms is safe if at least one operand is known to not be zero.
   // Otherwise, the select can change the sign of a zero operand.
   if (IsEquiv) {
-    if (Value *V =
-            simplifySelectWithEquivalence(CmpLHS, CmpRHS, T, F, Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence({{CmpLHS, CmpRHS}}, T, F, Q,
+                                                 MaxRecurse))
       return V;
-    if (Value *V =
-            simplifySelectWithEquivalence(CmpRHS, CmpLHS, T, F, Q, MaxRecurse))
+    if (Value *V = simplifySelectWithEquivalence({{CmpRHS, CmpLHS}}, T, F, Q,
+                                                 MaxRecurse))
       return V;
   }
 
