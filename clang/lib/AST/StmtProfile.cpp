@@ -2599,6 +2599,15 @@ void OpenACCClauseProfiler::VisitCreateClause(
   VisitClauseWithVarList(Clause);
 }
 
+void OpenACCClauseProfiler::VisitHostClause(const OpenACCHostClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitDeviceClause(
+    const OpenACCDeviceClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.isConditionExprClause()) {
     if (Clause.hasConditionExpr())
