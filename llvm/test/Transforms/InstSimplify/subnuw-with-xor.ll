@@ -52,9 +52,7 @@ define i8 @xor_w_sub_fail_not_mask(i8 range(i8 0, 16) %x) {
 define i8 @xor_w_sub_okay(i8 range(i8 0, 16) %x) {
 ; CHECK-LABEL: define i8 @xor_w_sub_okay(
 ; CHECK-SAME: i8 range(i8 0, 16) [[X:%.*]]) {
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], 31
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 31, [[XOR]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %xor = xor i8 %x, 31
   %r = sub nsw nuw i8 31, %xor
@@ -112,9 +110,7 @@ define i8 @sub_w_sub_fail_not_mask(i8 range(i8 0, 16) %x) {
 define i8 @sub_w_sub_okay(i8 range(i8 0, 16) %x) {
 ; CHECK-LABEL: define i8 @sub_w_sub_okay(
 ; CHECK-SAME: i8 range(i8 0, 16) [[X:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i8 31, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 31
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %sub = sub nsw nuw i8 31, %x
   %r = xor i8 %sub, 31
