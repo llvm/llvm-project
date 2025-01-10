@@ -12,6 +12,7 @@
 
 #include "X86TargetMachine.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86MatchJumptablePass.h"  // Include the header with the function declaration
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
@@ -464,7 +465,7 @@ MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
 
 void X86PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
-
+  addPass(llvm::createX86MatchJumptablePass());
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
   addPass(createX86LowerAMXIntrinsicsPass());

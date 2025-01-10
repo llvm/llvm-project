@@ -4,7 +4,9 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "X86MatchJumptablePass.h"
 
+#define DEBUG_TYPE "x86-my-pass"
 
 using namespace llvm;
 
@@ -38,7 +40,12 @@ namespace {
 
 char X86MatchJumptablePass::ID = 0;
 
-// Register the pass
-FunctionPass *llvm::createX86MatchJumptablePass() {
-  return new X86MatchJumptablePass();
-}
+// Ensure the function is in the llvm namespace
+namespace llvm {
+  
+  // Define the pass
+  FunctionPass *createX86MatchJumptablePass() {
+    return new X86MatchJumptablePass();
+  }
+
+} // end llvm namespace
