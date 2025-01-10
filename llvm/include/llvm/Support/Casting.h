@@ -614,12 +614,12 @@ template <typename T> struct ValueIsPresent<std::optional<T>> {
   static inline decltype(auto) unwrapValue(std::optional<T> &t) { return *t; }
 };
 
-// If something is "nullable" then we just compare it to nullptr to see if it
-// exists.
+// If something is "nullable" then we just cast it to bool to see if it exists.
 template <typename T>
-struct ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
+struct ValueIsPresent<
+    T, std::enable_if_t<IsNullable<T> && std::is_constructible_v<bool, T>>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const T &t) { return t != T(nullptr); }
+  static inline bool isPresent(const T &t) { return static_cast<bool>(t); }
   static inline decltype(auto) unwrapValue(T &t) { return t; }
 };
 

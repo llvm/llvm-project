@@ -344,17 +344,15 @@ void SelfUpdate() {
   struct Members s;
 
   // expected-error@+1{{expected '('}}
-#pragma acc update self
+#pragma acc update host(s) self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+4{{use of undeclared identifier 'zero'}}
-  // expected-error@+3{{expected ','}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+3{{use of undeclared identifier 'zero'}}
+  // expected-error@+2{{expected ','}}
+  // expected-error@+1{{expected expression}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 }
@@ -540,22 +538,18 @@ void VarListClauses() {
 #pragma acc serial link(s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+1{{expected ','}}
+#pragma acc update host(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value : 5], s.value), self
+#pragma acc update host(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+1{{expected ','}}
+#pragma acc update device(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value : 5], s.value), self
+#pragma acc update device(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+1{{expected ','}}

@@ -274,15 +274,15 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { "fmv-features"="" }
-attributes #1 = { "fmv-features"="+sve" }
-attributes #2 = { "fmv-features"="+sve2" }
-attributes #3 = { "fmv-features"="+mops" }
-attributes #4 = { "fmv-features"="+mops,+sve2" }
-attributes #5 = { "fmv-features"="+sme" }
-attributes #6 = { "fmv-features"="+aes" }
+attributes #0 = { "fmv-features" }
+attributes #1 = { "fmv-features"="sve" }
+attributes #2 = { "fmv-features"="sve2" }
+attributes #3 = { "fmv-features"="mops" }
+attributes #4 = { "fmv-features"="mops,sve2" }
+attributes #5 = { "fmv-features"="sme" }
+attributes #6 = { "fmv-features"="aes" }
 attributes #7 = { "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a" }
-attributes #8 = { "fmv-features"="+sve2-sha3" }
-attributes #9 = { "fmv-features"="+ls64,+ssbs" }
-attributes #10 = { "fmv-features"="+flagm,+lse,+rng" }
-attributes #11 = { "fmv-features"="+flagm,+ls64,+lse,+rng,+ssbs,+sve2-sha3" }
+attributes #8 = { "fmv-features"="sve2-sha3" }
+attributes #9 = { "fmv-features"="ls64,ssbs" }
+attributes #10 = { "fmv-features"="flagm,lse,rng" }
+attributes #11 = { "fmv-features"="flagm,ls64,lse,rng,ssbs,sve2-sha3" }

@@ -20,7 +20,7 @@ using namespace clang;
 bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
   return OpenACCDeviceTypeClause::classof(C) ||
          OpenACCClauseWithCondition::classof(C) ||
-         OpenACCClauseWithExprs::classof(C);
+         OpenACCClauseWithExprs::classof(C) || OpenACCSelfClause::classof(C);
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
@@ -38,10 +38,12 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCNoCreateClause::classof(C) ||
          OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
          OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
-         OpenACCReductionClause::classof(C) || OpenACCCreateClause::classof(C);
+         OpenACCReductionClause::classof(C) ||
+         OpenACCCreateClause::classof(C) || OpenACCDeviceClause::classof(C) ||
+         OpenACCHostClause::classof(C);
 }
 bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
-  return OpenACCIfClause::classof(C) || OpenACCSelfClause::classof(C);
+  return OpenACCIfClause::classof(C);
 }
 bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
   return OpenACCNumWorkersClause::classof(C) ||
@@ -87,19 +89,43 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
                                              SourceLocation LParenLoc,
                                              Expr *ConditionExpr,
                                              SourceLocation EndLoc) {
-  void *Mem = C.Allocate(sizeof(OpenACCIfClause), alignof(OpenACCIfClause));
+  void *Mem = C.Allocate(OpenACCSelfClause::totalSizeToAlloc<Expr *>(1));
   return new (Mem)
       OpenACCSelfClause(BeginLoc, LParenLoc, ConditionExpr, EndLoc);
+}
+
+OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> VarList,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCSelfClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCSelfClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
+                                     SourceLocation LParenLoc,
+                                     llvm::ArrayRef<Expr *> VarList,
+                                     SourceLocation EndLoc)
+    : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
+                              EndLoc),
+      HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
+  std::uninitialized_copy(VarList.begin(), VarList.end(),
+                          getTrailingObjects<Expr *>());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
                                      Expr *ConditionExpr, SourceLocation EndLoc)
-    : OpenACCClauseWithCondition(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
-                                 ConditionExpr, EndLoc) {
+    : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
+                              EndLoc),
+      HasConditionExpr(ConditionExpr != nullptr), NumExprs(1) {
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
+  std::uninitialized_copy(&ConditionExpr, &ConditionExpr + 1,
+                          getTrailingObjects<Expr *>());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {
@@ -382,6 +408,26 @@ OpenACCPresentClause *OpenACCPresentClause::Create(const ASTContext &C,
   return new (Mem) OpenACCPresentClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCHostClause *OpenACCHostClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> VarList,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCHostClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCHostClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCDeviceClause *OpenACCDeviceClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 ArrayRef<Expr *> VarList,
+                                                 SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCDeviceClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCDeviceClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 OpenACCCopyClause *
 OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                           SourceLocation BeginLoc, SourceLocation LParenLoc,
@@ -555,9 +601,17 @@ void OpenACCClausePrinter::VisitIfClause(const OpenACCIfClause &C) {
 
 void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
   OS << "self";
-  if (const Expr *CondExpr = C.getConditionExpr()) {
+
+  if (C.isConditionExprClause()) {
+    if (const Expr *CondExpr = C.getConditionExpr()) {
+      OS << "(";
+      printExpr(CondExpr);
+      OS << ")";
+    }
+  } else {
     OS << "(";
-    printExpr(CondExpr);
+    llvm::interleaveComma(C.getVarList(), OS,
+                          [&](const Expr *E) { printExpr(E); });
     OS << ")";
   }
 }
@@ -674,6 +728,20 @@ void OpenACCClausePrinter::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 
 void OpenACCClausePrinter::VisitPresentClause(const OpenACCPresentClause &C) {
   OS << "present(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitHostClause(const OpenACCHostClause &C) {
+  OS << "host(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDeviceClause(const OpenACCDeviceClause &C) {
+  OS << "device(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
