@@ -1479,6 +1479,16 @@ void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("_GNU_SOURCE");
 }
 
+AppleMachOARMTargetInfo::AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                                                 const TargetOptions &Opts)
+    : AppleMachOTargetInfo<ARMleTargetInfo>(Triple, Opts) {}
+
+void AppleMachOARMTargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachODefines(Builder, Opts, Triple);
+}
+
 DarwinARMTargetInfo::DarwinARMTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : DarwinTargetInfo<ARMleTargetInfo>(Triple, Opts) {
