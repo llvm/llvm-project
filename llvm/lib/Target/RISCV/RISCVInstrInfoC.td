@@ -400,7 +400,6 @@ def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">,
             Sched<[WriteNop]> {
   let rd = 0;
   let imm = 0;
-  let Inst{6-2} = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -409,7 +408,6 @@ def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                         "c.addi", "$rd, $imm">,
              Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 // Alternate syntax for c.nop. Converted to C_NOP by the assembler.
@@ -431,15 +429,12 @@ def C_ADDIW : RVInst16CI<0b001, 0b01, (outs GPRNoX0:$rd_wb),
                          "c.addiw", "$rd, $imm">,
               Sched<[WriteIALU32, ReadIALU32]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_LI : RVInst16CI<0b010, 0b01, (outs GPRNoX0:$rd), (ins simm6:$imm),
                       "c.li", "$rd, $imm">,
-           Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
-}
+           Sched<[WriteIALU]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
@@ -459,9 +454,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
                        (ins c_lui_imm:$imm),
                        "c.lui", "$rd, $imm">,
-            Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
-}
+            Sched<[WriteIALU]>;
 
 def C_SRLI : Shift_right<0b00, "c.srli">,
              Sched<[WriteShiftImm, ReadShiftImm]>;
@@ -511,26 +504,22 @@ def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
                         "c.slli", "$rd, $imm">,
              Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
 }
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FLDSP  : CStackLoad<0b001, "c.fldsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFLD64, ReadFMemBase]> {
-  let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
 
 def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00>,
              Sched<[WriteLDW, ReadMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
 let isCodeGenOnly = 1 in
 def C_LWSP_INX : CStackLoad<0b010, "c.lwsp", GPRF32NoX0, uimm8_lsb00>,
                  Sched<[WriteLDW, ReadMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
@@ -538,14 +527,12 @@ let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFLD32, ReadFMemBase]> {
-  let Inst{6-4} = imm{4-2};
   let Inst{3-2} = imm{7-6};
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000>,
              Sched<[WriteLDD, ReadMemBase]> {
-  let Inst{6-5} = imm{4-3};
   let Inst{4-2} = imm{8-6};
 }
 
@@ -634,7 +621,6 @@ let Predicates = [HasStdExtCOrZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0
 def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
                             "c.nop", "$imm">, Sched<[WriteNop]> {
   let rd = 0;
-  let Inst{6-2} = imm{4-0};
 }
 
 def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
@@ -642,15 +628,13 @@ def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
                                       "c.addi", "$rd, $imm">,
                            Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{12} = 0;
-  let Inst{6-2} = 0;
+  let imm = 0;
   let DecoderMethod = "decodeRVCInstrRdRs1ImmZero";
 }
 
 def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
                            "c.li", "$rd, $imm">,
                 Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
   let DecoderMethod = "decodeRVCInstrRdSImm";
 }
@@ -659,7 +643,6 @@ def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
                             (ins c_lui_imm:$imm),
                             "c.lui", "$rd, $imm">,
                  Sched<[WriteIALU]> {
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
   let DecoderMethod = "decodeRVCInstrRdSImm";
 }
@@ -684,7 +667,6 @@ def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
                              "c.slli", "$rd, $imm">,
                   Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = imm{4-0};
   let Inst{11-7} = 0;
   let DecoderMethod = "decodeRVCInstrRdRs1UImm";
 }
@@ -693,8 +675,7 @@ def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
                                "c.slli64", "$rd">,
                     Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
-  let Inst{6-2} = 0;
-  let Inst{12} = 0;
+  let imm = 0;
 }
 
 def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
