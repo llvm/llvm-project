@@ -115,7 +115,7 @@ constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
 constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{comparison of addresses of literals}}
+                                        // ref-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 

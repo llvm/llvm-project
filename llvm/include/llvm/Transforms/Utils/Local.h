@@ -412,19 +412,6 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
-/// DO NOT CALL EXTERNALLY.
-/// FIXME: https://github.com/llvm/llvm-project/issues/121495
-/// Once external callers of this function are removed, either inline into
-/// combineMetadataForCSE, or internalize and remove KnownIDs parameter.
-///
-/// Combine the metadata of two instructions so that K can replace J. Some
-/// metadata kinds can only be kept if K does not move, meaning it dominated
-/// J in the original IR.
-///
-/// Metadata not listed as known via KnownIDs is removed
-void combineMetadata(Instruction *K, const Instruction *J,
-                     ArrayRef<unsigned> KnownIDs, bool DoesKMove);
-
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some
 /// metadata can only be kept if K dominates J. For this to be correct,
@@ -433,6 +420,11 @@ void combineMetadata(Instruction *K, const Instruction *J,
 /// Unknown metadata is removed.
 void combineMetadataForCSE(Instruction *K, const Instruction *J,
                            bool DoesKMove);
+
+/// Combine metadata of two instructions, where instruction J is a memory
+/// access that has been merged into K. This will intersect alias-analysis
+/// metadata, while preserving other known metadata.
+void combineAAMetadata(Instruction *K, const Instruction *J);
 
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).

@@ -498,9 +498,71 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
   [(int_nvvm_cp_async_bulk_wait_group_read timm:$n)]>,
   Requires<[hasPTX<80>, hasSM<90>]>;
 
-//-----------------------------------
-// TMA Async Tensor Copy Functions
-//-----------------------------------
+//------------------------------
+// TMA Async Bulk Copy Functions
+//------------------------------
+
+class CpAsyncBulkStr<bit mc, bit ch> {
+  // Shared to Global memory
+  string S2G = "cp.async.bulk.global.shared::cta.bulk_group"
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Global to Shared cluster memory
+  string G2S = "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes"
+               # !if(mc, ".multicast::cluster", "")
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Shared CTA to Cluster memory
+  string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
+}
+
+multiclass CP_ASYNC_BULK_S2G<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins Int64Regs:$dst, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.S2G, " [$dst], [$src], $size;"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins Int64Regs:$dst, rc:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.S2G, " [$dst], [$src], $size, $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_S2G : CP_ASYNC_BULK_S2G<Int64Regs>;
+defm CP_ASYNC_BULK_S2G_SHARED32 : CP_ASYNC_BULK_S2G<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.G2S, " [$dst], [$src], $size, [$mbar];"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc),
+                  !strconcat(CpAsyncBulkStr<1, 0>.G2S, " [$dst], [$src], $size, [$mbar], $mc;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.G2S, " [$dst], [$src], $size, [$mbar], $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC_CH: NVPTXInst<(outs),
+                     (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc, Int64Regs:$ch),
+                     !strconcat(CpAsyncBulkStr<1, 1>.G2S, " [$dst], [$src], $size, [$mbar], $mc, $ch;"), []>,
+                     Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S : CP_ASYNC_BULK_G2S<Int64Regs>;
+defm CP_ASYNC_BULK_G2S_SHARED32 : CP_ASYNC_BULK_G2S<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.C2C, " [$dst], [$src], $size, [$mbar];"),
+            [(int_nvvm_cp_async_bulk_shared_cta_to_cluster rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size)]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
+
+//-------------------------------------
+// TMA Async Bulk Tensor Copy Functions
+//-------------------------------------
 
 // From Global to Shared memory (G2S)
 class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
