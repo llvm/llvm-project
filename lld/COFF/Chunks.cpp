@@ -1174,6 +1174,7 @@ size_t Arm64XDynamicRelocEntry::getSize() const {
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
     llvm_unreachable("unsupported type");
   }
+  llvm_unreachable("invalid type");
 }
 
 void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
