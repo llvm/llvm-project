@@ -250,7 +250,7 @@ Changes to the WebAssembly Backend
   `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
   `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
 
-* The support for the new standardized [Exception Handling] proposal is added.
+* Support for the new standardized [Exception Handling] proposal is added.
   The [legacy Exception Handling] proposal is still supported, and turned on by
   the newly added `-wasm-use-legacy-eh` option. Given that major web browsers
   still default to the legacy EH proposal, this option is turned on by default
