@@ -5269,8 +5269,8 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
 /// cost, at the cost of (possibly) an extra VTYPE toggle.
 static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  EVT ScalarVT = VT.getVectorElementType();
+  MVT VT = Op.getSimpleValueType();
+  MVT ScalarVT = VT.getVectorElementType();
   unsigned ElementSize = ScalarVT.getFixedSizeInBits();
   SDValue V0 = Op.getOperand(0);
   SDValue V1 = Op.getOperand(1);
@@ -5281,20 +5281,17 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
     return SDValue();
 
   SmallVector<int, 8> NewMask;
-  if (widenShuffleMaskElts(Mask, NewMask)) {
-    MVT NewEltVT = VT.isFloatingPoint()
-                       ? MVT::getFloatingPointVT(ElementSize * 2)
-                       : MVT::getIntegerVT(ElementSize * 2);
-    MVT NewVT = MVT::getVectorVT(NewEltVT, VT.getVectorNumElements() / 2);
-    if (DAG.getTargetLoweringInfo().isTypeLegal(NewVT)) {
-      V0 = DAG.getBitcast(NewVT, V0);
-      V1 = DAG.getBitcast(NewVT, V1);
-      return DAG.getBitcast(VT,
-                            DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
-    }
-  }
+  if (!widenShuffleMaskElts(Mask, NewMask))
+    return SDValue();
 
-  return SDValue();
+  MVT NewEltVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(ElementSize * 2)
+                                      : MVT::getIntegerVT(ElementSize * 2);
+  MVT NewVT = MVT::getVectorVT(NewEltVT, VT.getVectorNumElements() / 2);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(NewVT))
+    return SDValue();
+  V0 = DAG.getBitcast(NewVT, V0);
+  V1 = DAG.getBitcast(NewVT, V1);
+  return DAG.getBitcast(VT, DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
 }
 
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
