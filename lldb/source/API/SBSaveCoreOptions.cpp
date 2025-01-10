@@ -100,6 +100,19 @@ SBSaveCoreOptions::AddMemoryRegionToSave(const SBMemoryRegionInfo &region) {
   return SBError();
 }
 
+uint32_t lldb::SBSaveCoreOptions::GetNumThreads() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_up->GetNumThreads();
+}
+
+SBThread SBSaveCoreOptions::GetThreadAtIndex(uint32_t idx) const {
+  LLDB_INSTRUMENT_VA(this, idx);
+  std::optional<lldb::ThreadSP> thread_sp = m_opaque_up->GetThreadAtIndex(idx);
+  if (thread_sp)
+    return SBThread(thread_sp.value());
+  return SBThread();
+}
+
 void SBSaveCoreOptions::Clear() {
   LLDB_INSTRUMENT_VA(this);
   m_opaque_up->Clear();

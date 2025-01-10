@@ -111,6 +111,21 @@ public:
   ///   style specific regions.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
+  /// Get the number of Threads to be saved
+  ///
+  /// \returns
+  ///  The count of Threads to be saved.
+  uint32_t GetNumThreads() const;
+
+  /// Get the Thread at the specified index.
+  ///
+  /// \param [in] idx
+  ///   The index of the thread to return.
+  /// \returns
+  ///   The thread at the specified index, or an empty thread if the index is
+  ///   greater than or equal to the number of threads.
+  lldb::SBThread GetThreadAtIndex(uint32_t idx) const;
+
   /// Reset all options.
   void Clear();
 

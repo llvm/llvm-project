@@ -87,12 +87,33 @@ Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
     m_process_sp = thread_sp->GetProcess();
   }
 
-  m_threads_to_save.insert(thread_sp->GetID());
+  m_threads_to_save.insert({thread_sp->GetID(), thread_sp});
+  m_thread_indexes.push_back(thread_sp->GetID());
   return error;
 }
 
 bool SaveCoreOptions::RemoveThread(lldb::ThreadSP thread_sp) {
-  return thread_sp && m_threads_to_save.erase(thread_sp->GetID()) > 0;
+  if (!thread_sp)
+    return false;
+  if (m_threads_to_save.erase(thread_sp->GetID()) == 0)
+    return false;
+
+  auto it = std::find(m_thread_indexes.begin(), m_thread_indexes.end(),
+                      thread_sp->GetID());
+  m_thread_indexes.erase(it);
+  return true;
+}
+
+uint32_t SaveCoreOptions::GetNumThreads() const {
+  return m_threads_to_save.size();
+}
+
+std::optional<lldb::ThreadSP>
+SaveCoreOptions::GetThreadAtIndex(uint32_t idx) const {
+  if (idx >= m_thread_indexes.size())
+    return std::nullopt;
+  lldb::tid_t tid = m_thread_indexes[idx];
+  return m_threads_to_save.find(tid)->second;
 }
 
 bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
@@ -115,8 +136,8 @@ const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
 
-Status SaveCoreOptions::EnsureValidConfiguration(
-    lldb::ProcessSP process_sp) const {
+Status
+SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
@@ -132,10 +153,10 @@ Status SaveCoreOptions::EnsureValidConfiguration(
   return error;
 }
 
-void SaveCoreOptions::ClearProcessSpecificData() { 
+void SaveCoreOptions::ClearProcessSpecificData() {
   // Deliberately not following the formatter style here to indicate that
   // this method will be expanded in the future.
-  m_threads_to_save.clear(); 
+  m_threads_to_save.clear();
 }
 
 void SaveCoreOptions::Clear() {
@@ -145,4 +166,5 @@ void SaveCoreOptions::Clear() {
   m_threads_to_save.clear();
   m_process_sp.reset();
   m_regions_to_save.Clear();
+  m_thread_indexes.clear();
 }
