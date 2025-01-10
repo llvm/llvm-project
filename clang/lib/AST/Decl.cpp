@@ -4651,12 +4651,9 @@ bool FieldDecl::isPotentiallyOverlapping() const {
   return hasAttr<NoUniqueAddressAttr>() && getType()->getAsCXXRecordDecl();
 }
 
-unsigned FieldDecl::getFieldIndex() const {
-  const FieldDecl *Canonical = getCanonicalDecl();
-  if (Canonical != this)
-    return Canonical->getFieldIndex();
-
-  if (CachedFieldIndex) return CachedFieldIndex - 1;
+void FieldDecl::setCachedFieldIndex() const {
+  assert(this == getCanonicalDecl() &&
+         "should be called on the canonical decl");
 
   unsigned Index = 0;
   const RecordDecl *RD = getParent()->getDefinition();
@@ -4670,7 +4667,6 @@ unsigned FieldDecl::getFieldIndex() const {
   }
 
   assert(CachedFieldIndex && "failed to find field in parent");
-  return CachedFieldIndex - 1;
 }
 
 SourceRange FieldDecl::getSourceRange() const {
