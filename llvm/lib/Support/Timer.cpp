@@ -27,6 +27,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
+#include <optional>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -500,17 +501,17 @@ private:
   // the defaultTimerGroup uses the timerLock. Most of these also depend on the
   // options above.
   std::once_flag InitDeferredFlag;
-  std::unique_ptr<SignpostEmitter> SignpostsPtr;
-  std::unique_ptr<sys::SmartMutex<true>> TimerLockPtr;
+  std::optional<SignpostEmitter> SignpostsPtr;
+  std::optional<sys::SmartMutex<true>> TimerLockPtr;
   std::unique_ptr<TimerGroup> DefaultTimerGroupPtr;
-  std::unique_ptr<Name2PairMap> NamedGroupedTimersPtr;
+  std::optional<Name2PairMap> NamedGroupedTimersPtr;
   TimerGlobals &initDeferred() {
     std::call_once(InitDeferredFlag, [this]() {
-      SignpostsPtr = std::make_unique<SignpostEmitter>();
-      TimerLockPtr = std::make_unique<sys::SmartMutex<true>>();
+      SignpostsPtr.emplace();
+      TimerLockPtr.emplace();
       DefaultTimerGroupPtr.reset(new TimerGroup(
           "misc", "Miscellaneous Ungrouped Timers", *TimerLockPtr));
-      NamedGroupedTimersPtr = std::make_unique<Name2PairMap>();
+      NamedGroupedTimersPtr.emplace();
     });
     return *this;
   }
