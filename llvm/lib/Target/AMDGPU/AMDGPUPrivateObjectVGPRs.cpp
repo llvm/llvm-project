@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "amdgpu-private-object-vgrps"
+#define DEBUG_TYPE "amdgpu-private-object-vgprs"
 
 namespace {
 
