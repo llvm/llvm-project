@@ -476,29 +476,29 @@ OpFoldResult foldSplatReduce(FloatAttr src, FloatAttr acc, int64_t times,
   APFloat srcVal = src.getValue();
   APFloat accVal = acc.getValue();
   switch (kind) {
-    case CombiningKind::ADD:{
-      APFloat n = APFloat(srcVal.getSemantics());
-      n.convertFromAPInt(APInt(64, times, true), true,
-                             APFloat::rmNearestTiesToEven);
-      return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
+  case CombiningKind::ADD: {
+    APFloat n = APFloat(srcVal.getSemantics());
+    n.convertFromAPInt(APInt(64, times, true), true,
+                       APFloat::rmNearestTiesToEven);
+    return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
+  }
+  case CombiningKind::MUL: {
+    APFloat result = accVal;
+    for (int i = 0; i < times; ++i) {
+      result = result * srcVal;
     }
-    case CombiningKind::MUL: {
-      APFloat result = accVal;
-      for (int i = 0; i < times; ++i) {
-        result = result * srcVal;
-      }
-      return DenseElementsAttr::get(dstType, {result});
-    }
-    case CombiningKind::MINIMUMF:
-      return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
-    case CombiningKind::MAXIMUMF:
-      return DenseElementsAttr::get(dstType, {llvm::maximum(accVal, srcVal)});
-    case CombiningKind::MINNUMF:
-      return DenseElementsAttr::get(dstType, {llvm::minnum(accVal, srcVal)});
-    case CombiningKind::MAXNUMF:
-      return DenseElementsAttr::get(dstType, {llvm::maxnum(accVal, srcVal)});
-    default:
-      return {};
+    return DenseElementsAttr::get(dstType, {result});
+  }
+  case CombiningKind::MINIMUMF:
+    return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
+  case CombiningKind::MAXIMUMF:
+    return DenseElementsAttr::get(dstType, {llvm::maximum(accVal, srcVal)});
+  case CombiningKind::MINNUMF:
+    return DenseElementsAttr::get(dstType, {llvm::minnum(accVal, srcVal)});
+  case CombiningKind::MAXNUMF:
+    return DenseElementsAttr::get(dstType, {llvm::maxnum(accVal, srcVal)});
+  default:
+    return {};
   }
 }
 
@@ -508,32 +508,32 @@ OpFoldResult foldSplatReduce(IntegerAttr src, IntegerAttr acc, int64_t times,
   APInt srcVal = src.getValue();
   APInt accVal = acc.getValue();
   switch (kind) {
-    case CombiningKind::ADD:
-      return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
-    case CombiningKind::MUL: {
-      APInt result = accVal;
-      for (int i = 0; i < times; ++i) {
-        result *= srcVal;
-      }
-      return DenseElementsAttr::get(dstType, {result});
+  case CombiningKind::ADD:
+    return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
+  case CombiningKind::MUL: {
+    APInt result = accVal;
+    for (int i = 0; i < times; ++i) {
+      result *= srcVal;
     }
-    case CombiningKind::MINSI:
-      return DenseElementsAttr::get(
-          dstType, {accVal.slt(srcVal) ? accVal : srcVal});
-    case CombiningKind::MAXSI:
-      return DenseElementsAttr::get(
-          dstType, {accVal.ugt(srcVal) ? accVal : srcVal});
-    case CombiningKind::MINUI:
-      return DenseElementsAttr::get(
-          dstType, {accVal.ult(srcVal) ? accVal : srcVal});
-    case CombiningKind::MAXUI:
-      return DenseElementsAttr::get(
-          dstType, {accVal.ugt(srcVal) ? accVal : srcVal});
-    case CombiningKind::AND:
-      return DenseElementsAttr::get(dstType, {accVal & srcVal});
-    case CombiningKind::OR:
-      return DenseElementsAttr::get(dstType, {accVal | srcVal});
-    case CombiningKind::XOR:
+    return DenseElementsAttr::get(dstType, {result});
+  }
+  case CombiningKind::MINSI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.slt(srcVal) ? accVal : srcVal});
+  case CombiningKind::MAXSI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ugt(srcVal) ? accVal : srcVal});
+  case CombiningKind::MINUI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ult(srcVal) ? accVal : srcVal});
+  case CombiningKind::MAXUI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ugt(srcVal) ? accVal : srcVal});
+  case CombiningKind::AND:
+    return DenseElementsAttr::get(dstType, {accVal & srcVal});
+  case CombiningKind::OR:
+    return DenseElementsAttr::get(dstType, {accVal | srcVal});
+  case CombiningKind::XOR:
     return DenseElementsAttr::get(dstType,
                                   {times & 0x1 ? accVal ^ srcVal : accVal});
   default:
