@@ -4,11 +4,13 @@
 // RUN: | %fcheck-generic -check-prefix=CHECK_FINE
 
 // RUN: %libomptarget-compilexx-generic
-// RUN: env OMPX_DISABLE_USM_MAPS=1 HSA_XNACK=1 LIBOMPTARGET_INFO=30 %libomptarget-run-generic 2>&1 \
+// RUN: env OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS=0 OMPX_DISABLE_USM_MAPS=1 HSA_XNACK=1 LIBOMPTARGET_INFO=30 \
+// RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=CHECK_FINE
 
 // RUN: %libomptarget-compilexx-generic
-// RUN: env OMPX_DISABLE_USM_MAPS=0 HSA_XNACK=1 LIBOMPTARGET_INFO=30 %libomptarget-run-generic 2>&1 \
+// RUN: env OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS=1 OMPX_DISABLE_USM_MAPS=0 HSA_XNACK=1 LIBOMPTARGET_INFO=30 \
+// RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=CHECK
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu

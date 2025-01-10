@@ -956,10 +956,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual bool supportsUnifiedMemoryImpl() { return false; }
 
   // Returns true if coarse graining of mapped variables is
-  // disabled on MI200 GPUs.
-  // virtual bool IsFineGrainedMemoryEnabled() { return false; }
-  bool IsFineGrainedMemoryEnabled();
-  virtual bool IsFineGrainedMemoryEnabledImpl() { return false; }
+  // enabled on MI200 GPUs.
+  // virtual bool IsGfx90aCoarseGrainUsmMapEnabled() { return false; }
+  bool IsGfx90aCoarseGrainUsmMapEnabled();
+  virtual bool IsGfx90aCoarseGrainUsmMapEnabledImpl() { return false; }
 
   /// Create an event.
   Error createEvent(void **EventPtrStorage);
@@ -1446,8 +1446,9 @@ public:
   /// Returns if this device supports USM.
   bool supports_unified_memory(int32_t DeviceId);
 
-  /// Returns if fine grained memory is supported.
-  bool is_fine_grained_memory_enabled(int32_t DeviceId);
+  /// Returns if GFX90A coarse graining of OpenMP mapped
+  /// variables is enabled under unified shared memory.
+  bool is_gfx90a_coarse_grain_usm_map_enabled(int32_t DeviceId);
 
   /// Returns if managed memory is supported.
   bool is_system_supporting_managed_memory(int32_t DeviceId);

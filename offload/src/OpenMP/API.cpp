@@ -696,6 +696,11 @@ EXTERN void omp_register_coarse_grain_mem(void *ptr, size_t size, int setattr) {
     FATAL_MESSAGE(omp_get_default_device(), "%s",
                   toString(DeviceOrErr.takeError()).c_str());
 
+  if (!(DeviceOrErr->RTL->is_gfx90a(omp_get_default_device()) &&
+        DeviceOrErr->RTL->is_gfx90a_coarse_grain_usm_map_enabled(
+            omp_get_default_device())))
+    return;
+
   bool set_attr = (setattr == 1) ? true : false;
   DeviceOrErr->RTL->set_coarse_grain_mem(omp_get_default_device(), ptr, size,
                                          set_attr);

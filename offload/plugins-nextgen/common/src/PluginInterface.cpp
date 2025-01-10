@@ -1773,8 +1773,8 @@ bool GenericDeviceTy::supportsUnifiedMemory() {
   return supportsUnifiedMemoryImpl();
 }
 
-bool GenericDeviceTy::IsFineGrainedMemoryEnabled() {
-  return IsFineGrainedMemoryEnabledImpl();
+bool GenericDeviceTy::IsGfx90aCoarseGrainUsmMapEnabled() {
+  return IsGfx90aCoarseGrainUsmMapEnabledImpl();
 }
 
 Error GenericDeviceTy::prepopulatePageTable(void *ptr, int64_t size) {
@@ -2108,9 +2108,11 @@ bool GenericPluginTy::supports_unified_memory(int32_t DeviceId) {
   return R;
 }
 
-bool GenericPluginTy::is_fine_grained_memory_enabled(int32_t DeviceId) {
+bool GenericPluginTy::is_gfx90a_coarse_grain_usm_map_enabled(int32_t DeviceId) {
   auto T = logger::log<bool>(__func__, DeviceId);
-  auto R = [&]() { return getDevice(DeviceId).IsFineGrainedMemoryEnabled(); }();
+  auto R = [&]() {
+    return getDevice(DeviceId).IsGfx90aCoarseGrainUsmMapEnabled();
+  }();
   T.res(R);
   return R;
 }

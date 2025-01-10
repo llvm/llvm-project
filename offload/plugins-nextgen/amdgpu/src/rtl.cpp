@@ -2922,8 +2922,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             // setting default to true here appears to solve random sdma problem
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
         OMPX_ApuMaps("OMPX_APU_MAPS", false),
-        OMPX_DisableUsmMaps("OMPX_DISABLE_USM_MAPS", true),
-        OMPX_NoMapChecks("OMPX_DISABLE_MAPS", true),
+        OMPX_EnableGFX90ACoarseGrainUsmMaps(
+            "OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS", false),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
         OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
@@ -3195,7 +3195,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = checkIfMI300x())
       return Err;
 
-    // detect special cases for MI200 and MI300A
+    // detect special cases for MI200
     specialBehaviorHandling();
 
     // detect ROCm-specific environment variables
@@ -3758,8 +3758,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                  bool set_attr = true) override final {
     // If the table has not yet been created, check if the gpu arch is
     // MI200 and create it, but only if USM Map is enabled.
-    if (!IsEquippedWithGFX90A || OMPX_DisableUsmMaps)
-      return Plugin::success();
+    if (!IsEquippedWithGFX90A || !EnableGFX90ACoarseGrainUsmMaps)
+      return Plugin::error("Invalid request to set coarse grain mode");
     if (!CoarseGrainMemoryTable)
       CoarseGrainMemoryTable = new AMDGPUMemTypeBitFieldTable(
           AMDGPU_X86_64_SystemConfiguration::max_addressable_byte +
@@ -4336,21 +4336,13 @@ private:
   }
 
   /// Determines if
-  /// - Map checks should be disabled
-  /// - Coarse graining upon map on MI200 needs to be disabled.
-  /// - Prefaulting GPU page tables on MI300A needs to be enabled.
+  /// - Coarse graining upon USM map on MI200 needs to be enabled.
   void specialBehaviorHandling() {
-    if (OMPX_NoMapChecks.get() == false) {
-      NoUSMMapChecks = false;
-    }
-
-    if (OMPX_DisableUsmMaps.get() == true) {
-      EnableFineGrainedMemory = true;
-    }
+    EnableGFX90ACoarseGrainUsmMaps = OMPX_EnableGFX90ACoarseGrainUsmMaps;
   }
 
-  bool IsFineGrainedMemoryEnabledImpl() override final {
-    return EnableFineGrainedMemory;
+  bool IsGfx90aCoarseGrainUsmMapEnabledImpl() override final {
+    return !EnableGFX90ACoarseGrainUsmMaps;
   }
 
   bool hasAPUDeviceImpl() override final { return IsAPU; }
@@ -4457,17 +4449,16 @@ private:
   /// automatic zero-copy behavior on non-APU GPUs.
   BoolEnvar OMPX_ApuMaps;
 
-  /// Value of OMPX_DISABLE_USM_MAPS. Use on MI200
-  /// systems to disable both device memory
-  /// allocations and host-device memory copies upon
-  /// map, and coarse graining of mapped variables.
-  BoolEnvar OMPX_DisableUsmMaps;
-
-  /// Value of OMPX_DISABLE_MAPS. Turns off map table checks
-  /// in libomptarget in unified_shared_memory mode. Legacy:
-  /// never turned to false (unified_shared_memory mode is
-  /// currently always without map checks.
-  BoolEnvar OMPX_NoMapChecks;
+  /// Value of OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS.
+  /// Use on MI200 systems to enable coarse graining
+  /// of mapped variables (and other variables partially
+  /// or fully on the same memory page) under unified
+  /// shared memory.
+  ///
+  /// It was enabled by default up to Rocm6.3
+  /// and env var spelling for controlling it was
+  /// OMPX_DISABLE_USM_MAPS
+  BoolEnvar OMPX_EnableGFX90ACoarseGrainUsmMaps;
 
   /// Makes warnings turn into fatal errors
   BoolEnvar OMPX_StrictSanityChecks;
@@ -4552,14 +4543,11 @@ private:
   /// False otherwise.
   bool IsXnackEnabled = false;
 
-  // Set by OMPX_DISABLE_USM_MAPS environment variable.
-  // If set, fine graned memory is used for maps instead of coarse grained.
-  bool EnableFineGrainedMemory = false;
-
-  /// Set by OMPX_DISABLE_MAPS environment variable.
-  // If false, map checks are performed also in unified_shared_memory mode.
-  // TODO: this feature is non functional.
-  bool NoUSMMapChecks = true;
+  // Set by OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS environment variable.
+  // If set, under unified shared memory on MI200, fine grained memory page
+  // is switched to coarse grain (and stay coarse grain) if a variable
+  // residing on the page goes through implicit/explicit OpenMP map.
+  bool EnableGFX90ACoarseGrainUsmMaps = false;
 
   /// True if in multi-device mode.
   bool IsMultiDeviceEnabled = false;
@@ -5269,10 +5257,10 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     REPORT("%s\n", toString(std::move(Err)).data());
     return nullptr;
   }
-  // FIXME: Maybe this should be guarded by hasgfx90a
-  if (MemoryPool == CoarseGrainedMemoryPools[0]) {
-    // printf(" Device::allocate calling setCoarseGrainMemoryImpl(Alloc, Size,
-    // false)\n");
+  if (MemoryPool == CoarseGrainedMemoryPools[0] && IsEquippedWithGFX90A &&
+      EnableGFX90ACoarseGrainUsmMaps) {
+    // Need to register in the coarse grain usm map table
+    // if not already registered.
     if (auto Err = setCoarseGrainMemoryImpl(Alloc, Size, /*set_attr=*/false)) {
       REPORT("%s\n", toString(std::move(Err)).data());
       return nullptr;
