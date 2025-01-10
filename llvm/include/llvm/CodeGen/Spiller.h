@@ -19,10 +19,6 @@ class MachineFunction;
 class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
-class LiveIntervals;
-class LiveStacks;
-class MachineDominatorTree;
-class MachineBlockFrequencyInfo;
 
 /// Spiller interface.
 ///
@@ -45,20 +41,12 @@ public:
   virtual ArrayRef<Register> getReplacedRegs() = 0;
 
   virtual void postOptimization() {}
-
-  struct RequiredAnalyses {
-    LiveIntervals &LIS;
-    LiveStacks &LSS;
-    MachineDominatorTree &MDT;
-    const MachineBlockFrequencyInfo &MBFI;
-  };
 };
 
 /// Create and return a spiller that will insert spill code directly instead
 /// of deferring though VirtRegMap.
-Spiller *createInlineSpiller(const Spiller::RequiredAnalyses &Analyses,
-                             MachineFunction &MF, VirtRegMap &VRM,
-                             VirtRegAuxInfo &VRAI);
+Spiller *createInlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF,
+                             VirtRegMap &VRM, VirtRegAuxInfo &VRAI);
 
 } // end namespace llvm
 
