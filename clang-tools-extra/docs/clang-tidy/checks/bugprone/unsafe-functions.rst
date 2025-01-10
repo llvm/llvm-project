@@ -150,12 +150,6 @@ Options
     function, and an optional reason, separated by comma. For more information,
     see :ref:`Custom functions<CustomFunctions>`.
 
-.. option:: ShowFullyQualifiedNames
-
-    When `true`, the fully qualified name of all functions matched by the custom
-    function matchers will be shown.
-    Default is `false`.
-
 Examples
 --------
 
