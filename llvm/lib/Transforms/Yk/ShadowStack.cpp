@@ -92,6 +92,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Yk/ModuleClone.h"
 
 #include <map>
 
@@ -316,7 +317,8 @@ public:
         // skip declarations.
         continue;
       }
-      if (F.getName() == MAIN) {
+
+      if (F.getName() == MAIN || F.getName().startswith(YK_CLONE_PREFIX)) {
         // We've handled main already.
         continue;
       }

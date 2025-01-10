@@ -43,9 +43,8 @@ struct YkBasicBlockTracer : public ModulePass {
     uint32_t FunctionIndex = 0;
     for (auto &F : M) {
       uint32_t BlockIndex = 0;
-      if (F.getName().startswith(YK_CLONE_PREFIX)) {
-        continue;
-      }
+      // FIXME: Once control point transition is implemented,
+      //        only add tracing calls to unopt version.
       for (auto &BB : F) {
         builder.SetInsertPoint(&*BB.getFirstInsertionPt());
         builder.CreateCall(TraceFunc, {builder.getInt32(FunctionIndex),

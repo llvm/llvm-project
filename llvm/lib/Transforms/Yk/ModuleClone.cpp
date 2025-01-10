@@ -12,14 +12,14 @@
 //     and are not cloned.
 //
 // - **Cloned Function Naming:**
-//   - The cloned functions are renamed by adding the prefix `__yk_opt_` to
+//   - The cloned functions are renamed by adding the prefix `__yk_unopt_` to
 //     their original names. This distinguishes them from the original
 //     functions.
 //
 // - **Optimisation Intent:**
-//   - The **cloned functions** (those with the `__yk_opt_` prefix) are
-//     intended to be the **optimised versions** of the functions.
-//   - The **original functions** remain **unoptimised**.
+//   - The **cloned functions** (those with the `__yk_unopt_` prefix) are
+//     intended to be the **unoptimised versions** of the functions.
+//   - The **original functions** remain **optimised**.
 //
 //===----------------------------------------------------------------------===//
 
