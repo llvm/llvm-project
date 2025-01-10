@@ -1,17 +1,17 @@
 ; REQUIRES: asserts
-; RUN: opt -p loop-vectorize -debug %s 2>&1 | FileCheck %s
+; RUN: opt -p loop-vectorize -debug-only=loop-vectorize -S %s 2>&1 | FileCheck %s
 
 
 ; CHECK-LABEL: LV: Checking a loop in 'latch_exit_cannot_compute_btc_due_to_step'
 ; CHECK: 	   LV: Did not find one integer induction var.
-; CHECK-NEXT:  LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK-NEXT:  LV: Not vectorizing: Cannot vectorize uncountable loop.
 ; CHECK-NEXT:  LV: Interleaving disabled by the pass manager
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot prove legality.
 
 ; CHECK-LABEL: LV: Checking a loop in 'header_exit_cannot_compute_btc_due_to_step'
 ; CHECK:       LV: Found an induction variable.
 ; CHECK-NEXT:  LV: Did not find one integer induction var.
-; CHECK-NEXT:  LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK-NEXT:  LV: Not vectorizing: Cannot vectorize uncountable loop.
 ; CHECK-NEXT:  LV: Interleaving disabled by the pass manager
 ; CHECK-NEXT:  LV: Not vectorizing: Cannot prove legality.
 

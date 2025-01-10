@@ -3441,7 +3441,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBinaryOperations:
 
 **BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
-  The break constructor initializers style to use.
+  The break binary operations style to use.
 
   Possible values:
 
@@ -3764,6 +3764,7 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
+
   * No spaces inside the braced list.
   * No line break before the closing brace.
   * Indentation with the continuation indent, not with the block indent.

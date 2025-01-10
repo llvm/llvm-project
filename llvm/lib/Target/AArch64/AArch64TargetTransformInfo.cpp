@@ -4739,7 +4739,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  // A sebvector extract can be implemented with a ext (or trivial extract, if
+  // A subvector extract can be implemented with an ext (or trivial extract, if
   // from lane 0). This currently only handles low or high extracts to prevent
   // SLP vectorizer regressions.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {

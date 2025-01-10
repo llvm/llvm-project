@@ -43,7 +43,7 @@
 // Check assembly input -> object output
 // RUN: %clang -### --target=spirv64 -x assembler -c %s 2>&1 | FileCheck --check-prefix=ASM %s
 // RUN: %clang -### --target=spirv32 -x assembler -c %s 2>&1 | FileCheck --check-prefix=ASM %s
-// ASM: {{llvm-spirv.*"}} {{".*"}} "-to-binary" "-o" {{".*o"}}
+// ASM: {{spirv-as.*"}} {{".*"}} "-o" {{".*o"}}
 
 //-----------------------------------------------------------------------------
 // Check --save-temps.
@@ -56,7 +56,7 @@
 // TMP-SAME: "-o" [[BC:".*bc"]]
 // TMP-SAME: [[I]]
 // TMP: {{llvm-spirv.*"}} [[BC]] "--spirv-tools-dis" "-o" [[S:".*s"]]
-// TMP: {{llvm-spirv.*"}} [[S]] "-to-binary" "-o" {{".*o"}}
+// TMP: {{spirv-as.*"}} [[S]] "-o" {{".*o"}}
 
 //-----------------------------------------------------------------------------
 // Check linking when multiple input files are passed.

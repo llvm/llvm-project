@@ -5148,6 +5148,7 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
       // If the true case is live, we need to track its region.
       if (CondExprBool)
         CGF.incrementProfileCounter(E);
+      CGF.markStmtMaybeUsed(Dead);
       // If a throw expression we emit it and return an undefined lvalue
       // because it can't be used.
       if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Live->IgnoreParens())) {

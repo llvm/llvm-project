@@ -11731,6 +11731,30 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitHostClause(
+    const OpenACCHostClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCHostClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceClause(
+    const OpenACCDeviceClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCDeviceClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),

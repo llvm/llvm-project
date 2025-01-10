@@ -83,13 +83,35 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
+static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
+                                        cl::desc("input files"),
+                                        cl::cat(JITLinkCategory));
+
 static cl::list<bool> LazyLink("lazy",
                                cl::desc("Link the following file lazily"),
                                cl::cat(JITLinkCategory));
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                        cl::desc("input files"),
-                                        cl::cat(JITLinkCategory));
+enum class SpeculateKind { None, Simple };
+
+cl::opt<SpeculateKind> Speculate(
+    "speculate", cl::desc("Choose speculation scheme"),
+    cl::init(SpeculateKind::None),
+    cl::values(clEnumValN(SpeculateKind::None, "none", "No speculation"),
+               clEnumValN(SpeculateKind::Simple, "simple",
+                          "Simple speculation")),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> SpeculateOrder(
+    "speculate-order",
+    cl::desc("A CSV file containing (JITDylib, Function) pairs to"
+             "speculatively look up"),
+    cl::cat(JITLinkCategory));
+
+cl::opt<std::string> RecordLazyExecs(
+    "record-lazy-execs",
+    cl::desc("Write lazy-function executions to a CSV file as (JITDylib, "
+             "function) pairs"),
+    cl::cat(JITLinkCategory));
 
 static cl::opt<size_t> MaterializationThreads(
     "num-threads", cl::desc("Number of materialization threads to use"),
@@ -959,17 +981,50 @@ public:
 };
 
 Expected<std::unique_ptr<Session::LazyLinkingSupport>>
-createLazyLinkingSupport(ObjectLinkingLayer &OLL, JITDylib &PlatformJD) {
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+createLazyLinkingSupport(Session &S) {
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(S.ObjLayer);
   if (!RSMgr)
     return RSMgr.takeError();
 
-  auto LRMgr = createJITLinkLazyReexportsManager(OLL, **RSMgr, PlatformJD);
+  std::shared_ptr<SimpleLazyReexportsSpeculator> Speculator;
+  switch (Speculate) {
+  case SpeculateKind::None:
+    break;
+  case SpeculateKind::Simple:
+    SimpleLazyReexportsSpeculator::RecordExecutionFunction RecordExecs;
+
+    if (!RecordLazyExecs.empty())
+      RecordExecs = [&S](const LazyReexportsManager::CallThroughInfo &CTI) {
+        S.LazyFnExecOrder.push_back({CTI.JD->getName(), CTI.BodyName});
+      };
+
+    Speculator =
+        SimpleLazyReexportsSpeculator::Create(S.ES, std::move(RecordExecs));
+    break;
+  }
+
+  auto LRMgr = createJITLinkLazyReexportsManager(
+      S.ObjLayer, **RSMgr, *S.PlatformJD, Speculator.get());
   if (!LRMgr)
     return LRMgr.takeError();
 
-  return std::make_unique<Session::LazyLinkingSupport>(std::move(*RSMgr),
-                                                       std::move(*LRMgr), OLL);
+  return std::make_unique<Session::LazyLinkingSupport>(
+      std::move(*RSMgr), std::move(Speculator), std::move(*LRMgr), S.ObjLayer);
+}
+
+static Error writeLazyExecOrder(Session &S) {
+  if (RecordLazyExecs.empty())
+    return Error::success();
+
+  std::error_code EC;
+  raw_fd_ostream ExecOrderOut(RecordLazyExecs, EC);
+  if (EC)
+    return createFileError(RecordLazyExecs, EC);
+
+  for (auto &[JDName, FunctionName] : S.LazyFnExecOrder)
+    ExecOrderOut << JDName << ", " << FunctionName << "\n";
+
+  return Error::success();
 }
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
@@ -1017,8 +1072,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
   S->Features = std::move(Features);
 
   if (lazyLinkingRequested()) {
-    if (auto LazyLinking =
-            createLazyLinkingSupport(S->ObjLayer, *S->PlatformJD))
+    if (auto LazyLinking = createLazyLinkingSupport(*S))
       S->LazyLinking = std::move(*LazyLinking);
     else
       return LazyLinking.takeError();
@@ -1028,6 +1082,9 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 }
 
 Session::~Session() {
+  if (auto Err = writeLazyExecOrder(*this))
+    ES.reportError(std::move(Err));
+
   if (auto Err = ES.endSession())
     ES.reportError(std::move(Err));
 }
@@ -1702,6 +1759,23 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
       return make_error<StringError>(
           "Lazy linking cannot be used with -harness mode",
           inconvertibleErrorCode());
+  } else if (Speculate != SpeculateKind::None) {
+    errs() << "Warning: -speculate ignored as there are no -lazy inputs\n";
+    Speculate = SpeculateKind::None;
+  }
+
+  if (Speculate == SpeculateKind::None) {
+    if (!SpeculateOrder.empty()) {
+      errs() << "Warning: -speculate-order ignored because speculation is "
+                "disabled\n";
+      SpeculateOrder = "";
+    }
+
+    if (!RecordLazyExecs.empty()) {
+      errs() << "Warning: -record-lazy-execs ignored because speculation is "
+                "disabled\n";
+      RecordLazyExecs = "";
+    }
   }
 
   return Error::success();
@@ -2267,6 +2341,59 @@ static Error addLibraries(Session &S,
   return Error::success();
 }
 
+static Error addSpeculationOrder(Session &S) {
+
+  if (SpeculateOrder.empty())
+    return Error::success();
+
+  assert(S.LazyLinking && "SpeculateOrder set, but lazy linking not enabled");
+  assert(S.LazyLinking->Speculator && "SpeculatoOrder set, but no speculator");
+
+  auto SpecOrderBuffer = getFile(SpeculateOrder);
+  if (!SpecOrderBuffer)
+    return SpecOrderBuffer.takeError();
+
+  StringRef LineStream((*SpecOrderBuffer)->getBuffer());
+  std::vector<std::pair<std::string, SymbolStringPtr>> SpecOrder;
+
+  size_t LineNumber = 0;
+  while (!LineStream.empty()) {
+    ++LineNumber;
+
+    auto MakeSpecOrderErr = [&](StringRef Reason) {
+      return make_error<StringError>("Error in speculation order file \"" +
+                                         SpeculateOrder + "\" on line " +
+                                         Twine(LineNumber) + ": " + Reason,
+                                     inconvertibleErrorCode());
+    };
+
+    StringRef CurLine;
+    std::tie(CurLine, LineStream) = LineStream.split('\n');
+    CurLine = CurLine.trim();
+    if (CurLine.empty())
+      continue;
+
+    auto [JDName, FuncName] = CurLine.split(',');
+
+    if (FuncName.empty())
+      return MakeSpecOrderErr("missing ',' separator");
+
+    JDName = JDName.trim();
+    if (JDName.empty())
+      return MakeSpecOrderErr("no value for column 1 (JIT Dylib name)");
+
+    FuncName = FuncName.trim();
+    if (FuncName.empty())
+      return MakeSpecOrderErr("no value for column 2 (function name)");
+
+    SpecOrder.push_back({JDName.str(), S.ES.intern(FuncName)});
+  }
+
+  S.LazyLinking->Speculator->addSpeculationSuggestions(std::move(SpecOrder));
+
+  return Error::success();
+}
+
 static Error addSessionInputs(Session &S) {
   std::map<unsigned, JITDylib *> IdxToJD;
   DenseSet<unsigned> LazyLinkIdxs;
@@ -2297,6 +2424,9 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addLibraries(S, IdxToJD, LazyLinkIdxs))
+    return Err;
+
+  if (auto Err = addSpeculationOrder(S))
     return Err;
 
   return Error::success();
