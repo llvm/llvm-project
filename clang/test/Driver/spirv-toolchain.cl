@@ -71,6 +71,16 @@
 // SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
 
 //-----------------------------------------------------------------------------
+// Check bindings when linking when multiple input files are passed.
+// RUN: %clang -### -target spirv64 -ccc-print-bindings %s %s 2>&1 | FileCheck --check-prefix=SPLINK-BINDINGS %s
+
+// SPLINK-BINDINGS: "clang", inputs: [[[CL:".*cl"]]], output: [[BC1:".*bc"]]
+// SPLINK-BINDINGS: "SPIR-V::Translator", inputs: [[[BC1]]], output: [[OBJ1:".*o"]]
+// SPLINK-BINDINGS: "clang", inputs: [[[CL]]], output: [[BC2:".*bc"]]
+// SPLINK-BINDINGS: "SPIR-V::Translator", inputs: [[[BC2]]], output: [[OBJ2:".*o"]]
+// SPLINK-BINDINGS: "SPIR-V::Linker", inputs: [[[OBJ1]], [[OBJ2]]], output: "a.out"
+
+//-----------------------------------------------------------------------------
 // Check external vs internal object emission.
 // RUN: %clang -### --target=spirv64 -fno-integrated-objemitter %s 2>&1 | FileCheck --check-prefix=XTOR %s
 // RUN: %clang -### --target=spirv64 -fintegrated-objemitter %s 2>&1 | FileCheck --check-prefix=BACKEND %s
