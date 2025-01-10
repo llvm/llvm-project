@@ -3603,6 +3603,8 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
   for (int i = 0, n = Checked.size(); i < n; ++i) {
+    assert(Checked[i].second.isPowerOf2());
+
     llvm::Value *Check = Checked[i].first;
     // -fsanitize-trap= overrides -fsanitize-recover=.
     llvm::Value *&Cond =
