@@ -876,7 +876,7 @@ float4 degrees(float4);
 //===----------------------------------------------------------------------===//
 
 /// \fn K distance(T X, T Y)
-/// \brief Returns a distance scalar between two vectors of \a X and \a Y.
+/// \brief Returns a distance scalar between \a X and \a Y.
 /// \param X The X input value.
 /// \param Y The Y input value.
 
