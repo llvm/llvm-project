@@ -2204,9 +2204,9 @@ define i8 @shrink_sub_from_constant_lowbits2(i8 %x) {
 
 define <2 x i8> @shrink_sub_from_constant_lowbits3(<2 x i8> %x) {
 ; CHECK-LABEL: @shrink_sub_from_constant_lowbits3(
-; CHECK-NEXT:    [[X0000:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 4)
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> splat (i8 24), [[X0000]]
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> [[SUB]], splat (i8 3)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[SUB:%.*]] = and <2 x i8> [[TMP1]], splat (i8 30)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[SUB]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x0000 = shl <2 x i8> %x, <i8 4, i8 4>     ; 4 low bits are known zero
