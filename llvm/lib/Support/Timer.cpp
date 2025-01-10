@@ -56,7 +56,6 @@ static bool sortTimers();
 static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
 static TimerGroup &defaultTimerGroup();
-static TimerGroup *claimDefaultTimerGroup();
 static Name2PairMap &namedGroupedTimers();
 
 //===----------------------------------------------------------------------===//
@@ -467,10 +466,6 @@ void TimerGroup::constructForStatistics() {
   namedGroupedTimers();
 }
 
-std::unique_ptr<TimerGroup> TimerGroup::aquireDefaultGroup() {
-  return std::unique_ptr<TimerGroup>(claimDefaultTimerGroup());
-}
-
 //===----------------------------------------------------------------------===//
 // Timer Globals
 //
@@ -495,36 +490,27 @@ public:
   cl::opt<std::string, true> InfoOutputFilename;
   cl::opt<bool> TrackSpace;
   cl::opt<bool> SortTimers;
+  sys::SmartMutex<true> TimerLock;
+  TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
+                               TimerLock};
+  SignpostEmitter Signposts;
 
 private:
   // Order of these members and initialization below is important. For example
   // the defaultTimerGroup uses the timerLock. Most of these also depend on the
   // options above.
   std::once_flag InitDeferredFlag;
-  std::optional<SignpostEmitter> SignpostsPtr;
-  std::optional<sys::SmartMutex<true>> TimerLockPtr;
-  std::unique_ptr<TimerGroup> DefaultTimerGroupPtr;
   std::optional<Name2PairMap> NamedGroupedTimersPtr;
   TimerGlobals &initDeferred() {
-    std::call_once(InitDeferredFlag, [this]() {
-      SignpostsPtr.emplace();
-      TimerLockPtr.emplace();
-      DefaultTimerGroupPtr.reset(new TimerGroup(
-          "misc", "Miscellaneous Ungrouped Timers", *TimerLockPtr));
-      NamedGroupedTimersPtr.emplace();
-    });
+    std::call_once(InitDeferredFlag,
+                   [this]() { NamedGroupedTimersPtr.emplace(); });
     return *this;
   }
 
 public:
-  SignpostEmitter &signposts() { return *initDeferred().SignpostsPtr; }
-  sys::SmartMutex<true> &timerLock() { return *initDeferred().TimerLockPtr; }
-  TimerGroup &defaultTimerGroup() {
-    return *initDeferred().DefaultTimerGroupPtr;
-  }
-  TimerGroup *claimDefaultTimerGroup() {
-    return initDeferred().DefaultTimerGroupPtr.release();
-  }
+  SignpostEmitter &signposts() { return Signposts; }
+  sys::SmartMutex<true> &timerLock() { return TimerLock; }
+  TimerGroup &defaultTimerGroup() { return DefaultTimerGroup; }
   Name2PairMap &namedGroupedTimers() {
     return *initDeferred().NamedGroupedTimersPtr;
   }
@@ -561,11 +547,10 @@ static sys::SmartMutex<true> &timerLock() {
 static TimerGroup &defaultTimerGroup() {
   return ManagedTimerGlobals->defaultTimerGroup();
 }
-static TimerGroup *claimDefaultTimerGroup() {
-  return ManagedTimerGlobals->claimDefaultTimerGroup();
-}
 static Name2PairMap &namedGroupedTimers() {
   return ManagedTimerGlobals->namedGroupedTimers();
 }
 
 void llvm::initTimerOptions() { *ManagedTimerGlobals; }
+
+void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
