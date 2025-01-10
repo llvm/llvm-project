@@ -610,7 +610,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUndefined) {
   auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
 
   SDValue UndefBoolVT = DAG->getUNDEF(BoolVT);
-  SDValue UndefInt32VT= DAG->getUNDEF(Int32VT);
+  SDValue UndefInt32VT = DAG->getUNDEF(Int32VT);
   SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
 
   using namespace SDPatternMatch;
