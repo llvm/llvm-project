@@ -12,6 +12,7 @@
 #include <__config>
 #include <cstdlib>
 #include <cwchar>
+#include <locale.h> // uselocale & friends
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
