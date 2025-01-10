@@ -32,6 +32,7 @@ if (SPHINX_FOUND)
     # math.h), those should be omitted and exist statically in
     # libc/docs/headers/.
     list(APPEND docgen_list
+      aio
       arpa/inet
       assert
       ctype
