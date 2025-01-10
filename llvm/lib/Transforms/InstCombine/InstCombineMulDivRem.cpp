@@ -528,19 +528,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   //        (shl Op1, Log2(Op0))
   //    if Log2(Op1) folds away ->
   //        (shl Op0, Log2(Op1))
-  if (takeLog2(Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
-                          /*DoFold*/ true);
+  if (Value *Res = tryGetLog2(Op0, /*AssumeNonZero=*/false)) {
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op1, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
     return Shl;
   }
-  if (takeLog2(Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
-                          /*DoFold*/ true);
+  if (Value *Res = tryGetLog2(Op0, /*AssumeNonZero=*/false)) {
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op0, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
@@ -1506,13 +1500,9 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op1 udiv Op2 -> Op1 lshr log2(Op2), if log2() folds away.
-  if (takeLog2(Op1, /*Depth*/ 0, /*AssumeNonZero*/ true,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Op1, /*Depth*/ 0,
-                          /*AssumeNonZero*/ true, /*DoFold*/ true);
+  if (Value *Res = tryGetLog2(Op1, /*AssumeNonZero=*/true))
     return replaceInstUsesWith(
         I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
-  }
 
   return nullptr;
 }

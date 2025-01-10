@@ -201,6 +201,12 @@ public:
   // takeLog2 will succeed, otherwise it may create stray instructions.
   Value *takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero, bool DoFold);
 
+  Value *tryGetLog2(Value *Op, bool AssumeNonZero) {
+    if (takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/false))
+      return takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/true);
+    return nullptr;
+  }
+
   /// Return nonnull value if V is free to invert under the condition of
   /// WillInvertAllUses.
   /// If Builder is nonnull, it will return a simplified ~V.
