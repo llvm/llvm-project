@@ -4,6 +4,7 @@ Implementation Status
 .. toctree::
    :maxdepth: 1
 
+   aio
    arpa/inet
    assert
    complex
