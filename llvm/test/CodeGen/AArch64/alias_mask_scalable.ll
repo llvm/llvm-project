@@ -10,16 +10,57 @@ define <vscale x 16 x i1> @whilewr_8(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilewr_8:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
+; CHECK-SVE-NEXT:    mov z2.d, x8
+; CHECK-SVE-NEXT:    mov z1.d, z0.d
+; CHECK-SVE-NEXT:    mov z3.d, z0.d
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
+; CHECK-SVE-NEXT:    incd z0.d, all, mul #4
+; CHECK-SVE-NEXT:    incd z1.d
+; CHECK-SVE-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE-NEXT:    cmphi p5.d, p0/z, z2.d, z0.d
+; CHECK-SVE-NEXT:    mov z4.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p2.d, p0/z, z2.d, z1.d
+; CHECK-SVE-NEXT:    incd z1.d, all, mul #4
+; CHECK-SVE-NEXT:    cmphi p3.d, p0/z, z2.d, z3.d
+; CHECK-SVE-NEXT:    incd z3.d, all, mul #4
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE-NEXT:    cmphi p6.d, p0/z, z2.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p7.d, p0/z, z2.d, z3.d
+; CHECK-SVE-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-SVE-NEXT:    cmphi p4.d, p0/z, z2.d, z4.d
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE-NEXT:    uzp1 p2.s, p5.s, p6.s
+; CHECK-SVE-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z2.d, z4.d
+; CHECK-SVE-NEXT:    uzp1 p3.s, p3.s, p4.s
 ; CHECK-SVE-NEXT:    cmp x8, #1
-; CHECK-SVE-NEXT:    cset w9, lt
-; CHECK-SVE-NEXT:    whilelo p0.b, #0, x8
-; CHECK-SVE-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-SVE-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    cset w8, lt
+; CHECK-SVE-NEXT:    uzp1 p1.h, p1.h, p3.h
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p7.s, p0.s
+; CHECK-SVE-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-SVE-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-SVE-NEXT:    whilelo p1.b, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
+  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
   ret <vscale x 16 x i1> %0
 }
 
@@ -31,13 +72,28 @@ define <vscale x 8 x i1> @whilewr_16(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilewr_16:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-SVE-NEXT:    asr x8, x8, #1
+; CHECK-SVE-NEXT:    mov z1.d, z0.d
+; CHECK-SVE-NEXT:    mov z2.d, z0.d
+; CHECK-SVE-NEXT:    mov z3.d, x8
+; CHECK-SVE-NEXT:    incd z1.d
+; CHECK-SVE-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
+; CHECK-SVE-NEXT:    mov z4.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
 ; CHECK-SVE-NEXT:    cmp x8, #1
-; CHECK-SVE-NEXT:    cset w9, lt
-; CHECK-SVE-NEXT:    whilelo p0.h, #0, x8
-; CHECK-SVE-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-SVE-NEXT:    cset w8, lt
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p3.s, p0.s
+; CHECK-SVE-NEXT:    uzp1 p0.h, p1.h, p0.h
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
@@ -54,20 +110,27 @@ define <vscale x 4 x i1> @whilewr_32(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilewr_32:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #3
 ; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
+; CHECK-SVE-NEXT:    mov z1.d, z0.d
+; CHECK-SVE-NEXT:    mov z2.d, x8
+; CHECK-SVE-NEXT:    incd z1.d
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
 ; CHECK-SVE-NEXT:    cmp x8, #1
-; CHECK-SVE-NEXT:    cset w9, lt
-; CHECK-SVE-NEXT:    whilelo p1.s, #0, x8
-; CHECK-SVE-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-SVE-NEXT:    whilelo p0.s, xzr, x9
-; CHECK-SVE-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-SVE-NEXT:    cset w8, lt
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
+  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
   ret <vscale x 4 x i1> %0
 }
 
@@ -80,19 +143,22 @@ define <vscale x 2 x i1> @whilewr_64(i64 %a, i64 %b) {
 ; CHECK-SVE-LABEL: whilewr_64:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #7
 ; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
+; CHECK-SVE-NEXT:    mov z1.d, x8
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
 ; CHECK-SVE-NEXT:    cmp x8, #1
-; CHECK-SVE-NEXT:    cset w9, lt
-; CHECK-SVE-NEXT:    whilelo p1.d, #0, x8
-; CHECK-SVE-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-SVE-NEXT:    whilelo p0.d, xzr, x9
-; CHECK-SVE-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-SVE-NEXT:    cset w8, lt
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
+  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
   ret <vscale x 2 x i1> %0
 }
 
@@ -104,17 +170,60 @@ define <vscale x 16 x i1> @whilerw_8(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilerw_8:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    subs x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
+; CHECK-SVE-NEXT:    mov z1.d, x8
+; CHECK-SVE-NEXT:    mov z2.d, z0.d
+; CHECK-SVE-NEXT:    mov z4.d, z0.d
+; CHECK-SVE-NEXT:    mov z5.d, z0.d
+; CHECK-SVE-NEXT:    cmphi p2.d, p0/z, z1.d, z0.d
+; CHECK-SVE-NEXT:    incd z2.d
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE-NEXT:    incd z5.d, all, mul #4
+; CHECK-SVE-NEXT:    mov z3.d, z2.d
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z1.d, z2.d
+; CHECK-SVE-NEXT:    incd z2.d, all, mul #4
+; CHECK-SVE-NEXT:    cmphi p3.d, p0/z, z1.d, z4.d
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE-NEXT:    cmphi p4.d, p0/z, z1.d, z5.d
+; CHECK-SVE-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE-NEXT:    cmphi p5.d, p0/z, z1.d, z2.d
+; CHECK-SVE-NEXT:    cmphi p7.d, p0/z, z1.d, z4.d
+; CHECK-SVE-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE-NEXT:    mov z0.d, z3.d
+; CHECK-SVE-NEXT:    cmphi p6.d, p0/z, z1.d, z3.d
+; CHECK-SVE-NEXT:    uzp1 p2.s, p4.s, p5.s
+; CHECK-SVE-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    incd z0.d, all, mul #4
+; CHECK-SVE-NEXT:    uzp1 p3.s, p3.s, p6.s
+; CHECK-SVE-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
+; CHECK-SVE-NEXT:    uzp1 p1.h, p1.h, p3.h
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    cset w9, eq
-; CHECK-SVE-NEXT:    whilelo p0.b, #0, x8
-; CHECK-SVE-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-SVE-NEXT:    cset w8, eq
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p7.s, p0.s
+; CHECK-SVE-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-SVE-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-SVE-NEXT:    whilelo p1.b, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE-NEXT:    addvl sp, sp, #1
+; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
+  %0 = call <vscale x 16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
   ret <vscale x 16 x i1> %0
 }
 
@@ -126,14 +235,29 @@ define <vscale x 8 x i1> @whilerw_16(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilerw_16:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    subs x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
 ; CHECK-SVE-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-SVE-NEXT:    mov z1.d, z0.d
+; CHECK-SVE-NEXT:    mov z2.d, z0.d
 ; CHECK-SVE-NEXT:    asr x8, x8, #1
+; CHECK-SVE-NEXT:    mov z3.d, x8
+; CHECK-SVE-NEXT:    incd z1.d
+; CHECK-SVE-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
+; CHECK-SVE-NEXT:    mov z4.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
+; CHECK-SVE-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
+; CHECK-SVE-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    cset w9, eq
-; CHECK-SVE-NEXT:    whilelo p0.h, #0, x8
-; CHECK-SVE-NEXT:    sbfx x8, x9, #0, #1
+; CHECK-SVE-NEXT:    cset w8, eq
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p3.s, p0.s
+; CHECK-SVE-NEXT:    uzp1 p0.h, p1.h, p0.h
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
@@ -150,21 +274,28 @@ define <vscale x 4 x i1> @whilerw_32(i64 %a, i64 %b) {
 ;
 ; CHECK-SVE-LABEL: whilerw_32:
 ; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    subs x8, x1, x0
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
 ; CHECK-SVE-NEXT:    add x9, x8, #3
 ; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
+; CHECK-SVE-NEXT:    mov z2.d, x8
+; CHECK-SVE-NEXT:    incd z1.d
+; CHECK-SVE-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    cset w9, eq
-; CHECK-SVE-NEXT:    whilelo p1.s, #0, x8
-; CHECK-SVE-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-SVE-NEXT:    whilelo p0.s, xzr, x9
-; CHECK-SVE-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-SVE-NEXT:    cset w8, eq
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
+  %0 = call <vscale x 4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
   ret <vscale x 4 x i1> %0
 }
 
@@ -177,19 +308,22 @@ define <vscale x 2 x i1> @whilerw_64(i64 %a, i64 %b) {
 ; CHECK-SVE-LABEL: whilerw_64:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    subs x8, x1, x0
+; CHECK-SVE-NEXT:    index z0.d, #0, #1
+; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
 ; CHECK-SVE-NEXT:    add x9, x8, #7
 ; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
+; CHECK-SVE-NEXT:    mov z1.d, x8
+; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    cset w9, eq
-; CHECK-SVE-NEXT:    whilelo p1.d, #0, x8
-; CHECK-SVE-NEXT:    sbfx x9, x9, #0, #1
-; CHECK-SVE-NEXT:    whilelo p0.d, xzr, x9
-; CHECK-SVE-NEXT:    mov p0.b, p1/m, p1.b
+; CHECK-SVE-NEXT:    cset w8, eq
+; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
+  %0 = call <vscale x 2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
   ret <vscale x 2 x i1> %0
 }

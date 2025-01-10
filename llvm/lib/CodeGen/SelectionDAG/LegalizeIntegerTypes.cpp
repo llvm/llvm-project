@@ -56,6 +56,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     N->dump(&DAG); dbgs() << "\n";
 #endif
     report_fatal_error("Do not know how to promote this operator!");
+  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
+    Res = PromoteIntRes_EXPERIMENTAL_ALIAS_LANE_MASK(N);
+    break;
   case ISD::MERGE_VALUES:Res = PromoteIntRes_MERGE_VALUES(N, ResNo); break;
   case ISD::AssertSext:  Res = PromoteIntRes_AssertSext(N); break;
   case ISD::AssertZext:  Res = PromoteIntRes_AssertZext(N); break;
@@ -372,6 +375,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MERGE_VALUES(SDNode *N,
                                                      unsigned ResNo) {
   SDValue Op = DisintegrateMERGE_VALUES(N, ResNo);
   return GetPromotedInteger(Op);
+}
+
+SDValue
+DAGTypeLegalizer::PromoteIntRes_EXPERIMENTAL_ALIAS_LANE_MASK(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NewVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getNode(ISD::EXPERIMENTAL_ALIAS_LANE_MASK, SDLoc(N), NewVT,
+                     N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_AssertSext(SDNode *N) {
@@ -2104,6 +2115,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
+  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
+    Res = DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2934,6 +2948,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   default:
     llvm_unreachable("unexpected opcode");
   }
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue
+DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(SDNode *N,
+                                                            unsigned OpNo) {
+  SmallVector<SDValue, 4> NewOps(N->ops());
+  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 

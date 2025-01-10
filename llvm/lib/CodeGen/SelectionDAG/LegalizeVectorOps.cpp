@@ -138,6 +138,7 @@ class VectorLegalizer {
   SDValue ExpandVP_FNEG(SDNode *Node);
   SDValue ExpandVP_FABS(SDNode *Node);
   SDValue ExpandVP_FCOPYSIGN(SDNode *Node);
+  SDValue ExpandEXPERIMENTAL_ALIAS_LANE_MASK(SDNode *N);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -475,6 +476,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
+  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -1291,6 +1293,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::UCMP:
     Results.push_back(TLI.expandCMP(Node, DAG));
     return;
+  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
+    Results.push_back(ExpandEXPERIMENTAL_ALIAS_LANE_MASK(Node));
+    return;
 
   case ISD::FADD:
   case ISD::FMUL:
@@ -1794,6 +1799,42 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
                                    Mask, EVL, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
+}
+
+SDValue VectorLegalizer::ExpandEXPERIMENTAL_ALIAS_LANE_MASK(SDNode *N) {
+  SDLoc DL(N);
+  SDValue SourceValue = N->getOperand(0);
+  SDValue SinkValue = N->getOperand(1);
+  SDValue EltSize = N->getOperand(2);
+
+  bool IsWriteAfterRead =
+      cast<ConstantSDNode>(N->getOperand(3))->getZExtValue() != 0;
+  auto VT = N->getValueType(0);
+  auto PtrVT = SourceValue->getValueType(0);
+
+  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
+  if (!IsWriteAfterRead)
+    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+
+  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSize);
+  SDValue Zero = DAG.getTargetConstant(0, DL, PtrVT);
+
+  // If the difference is positive then some elements may alias
+  auto CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                      Diff.getValueType());
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
+                             IsWriteAfterRead ? ISD::SETLE : ISD::SETEQ);
+
+  EVT SplatTY =
+      EVT::getVectorVT(*DAG.getContext(), PtrVT, VT.getVectorElementCount());
+  SDValue DiffSplat = DAG.getSplat(SplatTY, DL, Diff);
+  SDValue VectorStep = DAG.getStepVector(DL, SplatTY);
+  SDValue DiffMask =
+      DAG.getSetCC(DL, VT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
+
+  // Splat the compare result then OR it with a lane mask
+  SDValue Splat = DAG.getSplat(VT, DL, Cmp);
+  return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

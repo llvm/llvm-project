@@ -1558,6 +1558,11 @@ enum NodeType {
   // bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  // The `llvm.experimental.get.alias.lane.mask.*` intrinsics
+  // Operands: Load pointer, Store pointer, Element size, Write after read
+  // Output: Mask
+  EXPERIMENTAL_ALIAS_LANE_MASK,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain

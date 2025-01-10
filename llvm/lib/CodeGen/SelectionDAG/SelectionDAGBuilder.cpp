@@ -8315,54 +8315,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::experimental_get_alias_lane_mask: {
-    SDValue SourceValue = getValue(I.getOperand(0));
-    SDValue SinkValue = getValue(I.getOperand(1));
-    SDValue EltSize = getValue(I.getOperand(2));
-    bool IsWriteAfterRead =
-        cast<ConstantSDNode>(getValue(I.getOperand(3)))->getZExtValue() != 0;
     auto IntrinsicVT = EVT::getEVT(I.getType());
-    auto PtrVT = SourceValue->getValueType(0);
-
-    if (!TLI.shouldExpandGetAliasLaneMask(
-            IntrinsicVT, PtrVT,
-            cast<ConstantSDNode>(EltSize)->getSExtValue())) {
-      visitTargetIntrinsic(I, Intrinsic);
-      return;
-    }
-
-    SDValue Diff = DAG.getNode(ISD::SUB, sdl, PtrVT, SinkValue, SourceValue);
-    if (!IsWriteAfterRead)
-      Diff = DAG.getNode(ISD::ABS, sdl, PtrVT, Diff);
-
-    Diff = DAG.getNode(ISD::SDIV, sdl, PtrVT, Diff, EltSize);
-    SDValue Zero = DAG.getTargetConstant(0, sdl, PtrVT);
-
-    // If the difference is positive then some elements may alias
-    auto CmpVT =
-        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), PtrVT);
-    SDValue Cmp = DAG.getSetCC(sdl, CmpVT, Diff, Zero,
-                               IsWriteAfterRead ? ISD::SETLE : ISD::SETEQ);
-
-    // Splat the compare result then OR it with a lane mask
-    SDValue Splat = DAG.getSplat(IntrinsicVT, sdl, Cmp);
-
-    SDValue DiffMask;
-    // Don't emit an active lane mask if the target doesn't support it
-    if (TLI.shouldExpandGetActiveLaneMask(IntrinsicVT, PtrVT)) {
-      EVT VecTy = EVT::getVectorVT(*DAG.getContext(), PtrVT,
-                                   IntrinsicVT.getVectorElementCount());
-      SDValue DiffSplat = DAG.getSplat(VecTy, sdl, Diff);
-      SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
-      DiffMask = DAG.getSetCC(sdl, IntrinsicVT, VectorStep, DiffSplat,
-                              ISD::CondCode::SETULT);
-    } else {
-      DiffMask = DAG.getNode(
-          ISD::INTRINSIC_WO_CHAIN, sdl, IntrinsicVT,
-          DAG.getTargetConstant(Intrinsic::get_active_lane_mask, sdl, MVT::i64),
-          Zero, Diff);
-    }
-    SDValue Or = DAG.getNode(ISD::OR, sdl, IntrinsicVT, DiffMask, Splat);
-    setValue(&I, Or);
+    SmallVector<SDValue, 4> Ops;
+    for (auto &Op : I.operands())
+      Ops.push_back(getValue(Op));
+    SDValue Mask =
+        DAG.getNode(ISD::EXPERIMENTAL_ALIAS_LANE_MASK, sdl, IntrinsicVT, Ops);
+    setValue(&I, Mask);
   }
   }
 }

@@ -900,6 +900,9 @@ void TargetLoweringBase::initActions() {
     // Masked vector extracts default to expand.
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
+    // Aliasing lanes mask default to expand
+    setOperationAction(ISD::EXPERIMENTAL_ALIAS_LANE_MASK, VT, Expand);
+
     // FP environment operations default to expand.
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
