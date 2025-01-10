@@ -1274,9 +1274,7 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << Name << "a positive";
 
-  auto Default = PositiveAnalyzerOption::create(DefaultVal);
-  assert(Default.has_value());
-  OptionField = Default.value();
+  OptionField = DefaultVal;
 }
 
 static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,

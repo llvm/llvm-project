@@ -73,6 +73,39 @@ Improvements and New Features
   optimized, resulting in a performance improvement of up to 2x for trivial element types (e.g., `std::vector<int>`),
   and up to 3.4x for non-trivial element types (e.g., `std::vector<std::vector<int>>`).
 
+- On Windows, ``<system_error>``'s ``std::system_category`` is now distinct from ``std::generic_category``. The behavior
+  on other operating systems is unchanged.
+
+  On Windows -- unlike on Unix systems -- the libc and system APIs use distinct error codes. The libc functions return
+  ``errno.h`` error codes via the ``errno`` global, while Win32 API functions return ``winerror.h`` error codes via
+  ``GetLastError()``.
+
+  The C++ standard's ``std::error_code`` and ``std::error_category`` functionality was designed to support multiple
+  error domains, precisely in order to handle situations such as this. However, libc++ formerly treated
+  ``generic_category()`` and ``system_category()`` as equivalent, even on Windows. It now implements the intended split,
+  where ``system_category`` represents native ``winerror.h`` error codes, and ``generic_category`` represents libc error
+  codes (and, equivalently, ``std::errc::*`` errors).
+
+  This change enables code like ``std::error_code(GetLastError(), std::system_category()) ==
+  std::errc::invalid_argument`` to function as desired: constructing an ``error_code`` with the Windows error number in
+  the "system" category, and then mapping it to a generic code with ``error_condition``, for comparison with the
+  ``std::errc`` constant.
+
+  This is an incompatible change: ``std::error_code(ENOSYS, std::system_category()) ==
+  std::errc::function_not_supported`` would formerly have returned true, but now returns false on Windows. Code
+  providing a number from the ``errno.h`` domain should be migrated to construct a ``generic_category`` error_code,
+  instead. (E.g., use ``std::error_code(ENOSYS, std::generic_category())``). The new behavior matches MSVC.
+
+- On Windows, the ``std::filesystem`` library now returns the Win32 ``system_category`` error codes, where it's feasible
+  to do so. This allows interrogation and reporting of the original error code, which is useful if multiple Windows
+  errors map to a single generic error (such as with ``std::errc::no_such_file_or_directory``).
+
+  This is also a slightly-incompatible API change: code inspecting the raw integer value from the returned error_code
+  expecting an integer from ``generic_category`` (e.g. ``err.value() == ENOTDIR``) will not work as desired. Instead,
+  such code should use the comparison operators which implicitly handle eror mappings, ``err ==
+  std::errc::not_a_directory``, or use ``err.default_error_condition()`` to map to an ``error_condition``, and then test
+  its ``value()`` and ``category()``.
+
 Deprecations and Removals
 -------------------------
 

@@ -11327,6 +11327,19 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   if (Builtin->LLVMIntrinsic == 0)
     return nullptr;
 
+  if (BuiltinID == SME::BI__builtin_sme___arm_in_streaming_mode) {
+    // If we already know the streaming mode, don't bother with the intrinsic
+    // and emit a constant instead
+    const auto *FD = cast<FunctionDecl>(CurFuncDecl);
+    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+      unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
+      if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
+        bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
+        return ConstantInt::getBool(Builder.getContext(), IsStreaming);
+      }
+    }
+  }
+
   // Predicates must match the main datatype.
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
@@ -19199,8 +19212,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // TODO: Map to an hlsl_device address space.
     llvm::Type *RetTy = llvm::PointerType::getUnqual(getLLVMContext());
 
-    return Builder.CreateIntrinsic(RetTy, Intrinsic::dx_resource_getpointer,
-                                   ArrayRef<Value *>{HandleOp, IndexOp});
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+        ArrayRef<Value *>{HandleOp, IndexOp});
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
