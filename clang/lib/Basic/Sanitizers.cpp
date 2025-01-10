@@ -27,7 +27,7 @@ static const double SanitizerMaskCutoffsEps = 0.000000001f;
 void SanitizerMaskCutoffs::set(SanitizerMask K, double V) {
   if (V < SanitizerMaskCutoffsEps && Cutoffs.empty())
     return;
-  for (unsigned int i = 0; i < SanitizerKind::SO_Count; i++)
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i)
     if (K & SanitizerMask::bitPosToMask(i)) {
       Cutoffs.resize(SanitizerKind::SO_Count);
       Cutoffs[i] = V;
