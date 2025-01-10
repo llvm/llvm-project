@@ -2748,7 +2748,21 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }
-
+  if (getTarget().getTriple().isAArch64()) {
+    llvm::SmallVector<StringRef, 8> Feats;
+    if (TV)
+      TV->getFeatures(Feats);
+    else if (TC)
+      TC->getFeatures(Feats, GD.getMultiVersionIndex());
+    if (!Feats.empty()) {
+      llvm::sort(Feats);
+      std::string FMVFeatures;
+      for (StringRef F : Feats)
+        FMVFeatures.append(",+" + F.str());
+      Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
+      AddedAttr = true;
+    }
+  }
   return AddedAttr;
 }
 
@@ -4227,7 +4241,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static unsigned getFMVPriority(const TargetInfo &TI,
+static uint64_t getFMVPriority(const TargetInfo &TI,
                                const CodeGenFunction::FMVResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> Features{RO.Features};
   if (RO.Architecture)

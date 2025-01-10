@@ -126,11 +126,12 @@ def Tosa_ConvOpQuantInfoBuilder : OpBuilder<
   (ins "::mlir::Type":$outputType, "::mlir::Value":$input,
        "::mlir::Value":$weight, "::mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$pad, "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$dilation),
+       "::mlir::DenseI64ArrayAttr":$dilation,
+       "::mlir::TypeAttr":$acc_type),
   [{
     buildConvOpWithQuantInfo($_builder, $_state, outputType,
                              input, weight, bias,
-                             pad, stride, dilation);
+                             pad, stride, dilation, acc_type);
   }]>;
 
 // Handles tosa.transpose_conv2d which has an outpad and output shape attribute.
@@ -139,12 +140,13 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
        "::mlir::Value":$weight, "mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$outpad,
        "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$outputShape),
+       "::mlir::DenseI64ArrayAttr":$outputShape,
+       "::mlir::TypeAttr":$acc_type),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
                                   outpad, stride,
-                                  outputShape);
+                                  outputShape, acc_type);
   }]>;
 
 // The tosa.fully_connected op has its own builder as it does not have

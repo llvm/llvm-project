@@ -769,6 +769,11 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
 
+/// The type(C_DEVPTR) is defined as the derived type with only one
+/// component of C_PTR type. Get the C address from the C_PTR component.
+mlir::Value genCDevPtrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value cDevPtr, mlir::Type ty);
+
 /// Get the C address value.
 mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Value cPtr);

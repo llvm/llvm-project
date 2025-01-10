@@ -65,7 +65,7 @@ define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 }
 
 ; COMMON-LABEL: ptr_generic
-define void @ptr_generic(ptr %out, ptr %in) {
+define ptx_kernel void @ptr_generic(ptr %out, ptr %in) {
 ; IRC:  %in3 = addrspacecast ptr %in to ptr addrspace(1)
 ; IRC:  %in4 = addrspacecast ptr addrspace(1) %in3 to ptr
 ; IRC:  %out1 = addrspacecast ptr %out to ptr addrspace(1)
@@ -87,7 +87,7 @@ define void @ptr_generic(ptr %out, ptr %in) {
 }
 
 ; COMMON-LABEL: ptr_nongeneric
-define void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
+define ptx_kernel void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 ; IR-NOT: addrspacecast
 ; PTX-NOT: cvta.to.global
 ; PTX:  ld.const.u32
@@ -98,7 +98,7 @@ define void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 }
 
 ; COMMON-LABEL: ptr_as_int
- define void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
+ define ptx_kernel void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
 ; IR:   [[P:%.*]] = inttoptr i64 %i to ptr
 ; IRC:  [[P1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
 ; IRC:  addrspacecast ptr addrspace(1) [[P1]] to ptr
@@ -121,7 +121,7 @@ define void @ptr_nongeneric(ptr addrspace(1) %out, ptr addrspace(4) %in) {
 %struct.S = type { i64 }
 
 ; COMMON-LABEL: ptr_as_int_aggr
-define void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%struct.S) align 8 %s, i32 noundef %v) {
+define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%struct.S) align 8 %s, i32 noundef %v) {
 ; IR:   [[S:%.*]] = addrspacecast ptr %s to ptr addrspace(101)
 ; IR:   [[I:%.*]] = load i64, ptr addrspace(101) [[S]], align 8
 ; IR:   [[P0:%.*]] = inttoptr i64 [[I]] to ptr
@@ -146,8 +146,3 @@ define void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%struct.S) ali
 
 ; Function Attrs: convergent nounwind
 declare dso_local ptr @escape(ptr) local_unnamed_addr
-!nvvm.annotations = !{!0, !1, !2, !3}
-!0 = !{ptr @ptr_generic, !"kernel", i32 1}
-!1 = !{ptr @ptr_nongeneric, !"kernel", i32 1}
-!2 = !{ptr @ptr_as_int, !"kernel", i32 1}
-!3 = !{ptr @ptr_as_int_aggr, !"kernel", i32 1}
