@@ -75,7 +75,6 @@ RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::desc("Restrict remat for statepoint operands"));
 
 namespace {
-
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
   LiveIntervals &LIS;
@@ -128,15 +127,11 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
                       DenseMap<MachineBasicBlock *, unsigned> &SpillsToIns);
 
 public:
-  HoistSpillHelper(MachineFunctionPass &pass, MachineFunction &mf,
-                   VirtRegMap &vrm)
-      : MF(mf), LIS(pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
-        MDT(pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
+  HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
+                   MachineFunction &mf, VirtRegMap &vrm)
+      : MF(mf), LIS(Analyses.LIS), LSS(Analyses.LSS), MDT(Analyses.MDT),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
-        TRI(*mf.getSubtarget().getRegisterInfo()),
-        MBFI(
-            pass.getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()),
+        TRI(*mf.getSubtarget().getRegisterInfo()), MBFI(Analyses.MBFI),
         IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
@@ -150,12 +145,10 @@ class InlineSpiller : public Spiller {
   MachineFunction &MF;
   LiveIntervals &LIS;
   LiveStacks &LSS;
-  MachineDominatorTree &MDT;
   VirtRegMap &VRM;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
-  const MachineBlockFrequencyInfo &MBFI;
 
   // Variables that are valid during spill(), but used by multiple methods.
   LiveRangeEdit *Edit = nullptr;
@@ -190,16 +183,12 @@ class InlineSpiller : public Spiller {
   ~InlineSpiller() override = default;
 
 public:
-  InlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF, VirtRegMap &VRM,
-                VirtRegAuxInfo &VRAI)
-      : MF(MF), LIS(Pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
-        LSS(Pass.getAnalysis<LiveStacksWrapperLegacy>().getLS()),
-        MDT(Pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
-        VRM(VRM), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
-        TRI(*MF.getSubtarget().getRegisterInfo()),
-        MBFI(
-            Pass.getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()),
-        HSpiller(Pass, MF, VRM), VRAI(VRAI) {}
+  InlineSpiller(const Spiller::RequiredAnalyses &Analyses, MachineFunction &MF,
+                VirtRegMap &VRM, VirtRegAuxInfo &VRAI)
+      : MF(MF), LIS(Analyses.LIS), LSS(Analyses.LSS), VRM(VRM),
+        MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
+        TRI(*MF.getSubtarget().getRegisterInfo()), HSpiller(Analyses, MF, VRM),
+        VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &) override;
   ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
@@ -237,10 +226,11 @@ Spiller::~Spiller() = default;
 
 void Spiller::anchor() {}
 
-Spiller *llvm::createInlineSpiller(MachineFunctionPass &Pass,
-                                   MachineFunction &MF, VirtRegMap &VRM,
-                                   VirtRegAuxInfo &VRAI) {
-  return new InlineSpiller(Pass, MF, VRM, VRAI);
+Spiller *
+llvm::createInlineSpiller(const InlineSpiller::RequiredAnalyses &Analyses,
+                          MachineFunction &MF, VirtRegMap &VRM,
+                          VirtRegAuxInfo &VRAI) {
+  return new InlineSpiller(Analyses, MF, VRM, VRAI);
 }
 
 //===----------------------------------------------------------------------===//
