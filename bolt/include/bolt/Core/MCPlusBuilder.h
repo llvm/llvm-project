@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -552,16 +553,16 @@ public:
 
   virtual MCPhysReg getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
-    return false;
+    return getNoRegister();
   }
 
   virtual bool isAuthenticationOfReg(const MCInst &Inst,
-                                     const unsigned RegAuthenticated) const {
+                                     MCPhysReg AuthenticatedReg) const {
     llvm_unreachable("not implemented");
     return false;
   }
 
-  virtual llvm::MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const {
+  virtual MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }

@@ -51,6 +51,9 @@ struct MCInstInBBReference {
   }
   uint64_t getAddress() const {
     // 4 bytes per instruction on AArch64;
+    // FIXME: the assumption of 4 byte per instruction needs to be fixed before
+    // this method gets used on any non-AArch64 binaries (but should be fine for
+    // pac-ret analysis, as that is an AArch64-specific feature).
     return BB->getFunction()->getAddress() + BB->getOffset() + BBIndex * 4;
   }
 };
@@ -84,8 +87,8 @@ struct MCInstInBFReference {
 raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &);
 
 struct MCInstReference {
-  enum StoredIn { _BinaryFunction, _BinaryBasicBlock };
-  StoredIn CurrentLocation;
+  enum ParentKind { BinaryFunction, BinaryBasicBlock };
+  ParentKind CurrentLocation;
   union U {
     MCInstInBBReference BBRef;
     MCInstInBFReference BFRef;
@@ -93,21 +96,21 @@ struct MCInstReference {
     U(MCInstInBFReference BFRef) : BFRef(BFRef) {}
   } U;
   MCInstReference(MCInstInBBReference BBRef)
-      : CurrentLocation(_BinaryBasicBlock), U(BBRef) {}
+      : CurrentLocation(BinaryBasicBlock), U(BBRef) {}
   MCInstReference(MCInstInBFReference BFRef)
-      : CurrentLocation(_BinaryFunction), U(BFRef) {}
-  MCInstReference(BinaryBasicBlock *BB, int64_t BBIndex)
+      : CurrentLocation(BinaryFunction), U(BFRef) {}
+  MCInstReference(class BinaryBasicBlock *BB, int64_t BBIndex)
       : MCInstReference(MCInstInBBReference(BB, BBIndex)) {}
-  MCInstReference(BinaryFunction *BF, uint32_t Offset)
+  MCInstReference(class BinaryFunction *BF, uint32_t Offset)
       : MCInstReference(MCInstInBFReference(BF, Offset)) {}
 
   bool operator<(const MCInstReference &RHS) const {
     if (CurrentLocation != RHS.CurrentLocation)
       return CurrentLocation < RHS.CurrentLocation;
     switch (CurrentLocation) {
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef < RHS.U.BBRef;
-    case _BinaryFunction:
+    case BinaryFunction:
       return U.BFRef < RHS.U.BFRef;
     }
     llvm_unreachable("");
@@ -117,9 +120,9 @@ struct MCInstReference {
     if (CurrentLocation != RHS.CurrentLocation)
       return false;
     switch (CurrentLocation) {
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef == RHS.U.BBRef;
-    case _BinaryFunction:
+    case BinaryFunction:
       return U.BFRef == RHS.U.BFRef;
     }
     llvm_unreachable("");
@@ -127,9 +130,9 @@ struct MCInstReference {
 
   operator MCInst &() const {
     switch (CurrentLocation) {
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef;
-    case _BinaryFunction:
+    case BinaryFunction:
       return U.BFRef;
     }
     llvm_unreachable("");
@@ -137,29 +140,29 @@ struct MCInstReference {
 
   uint64_t getAddress() const {
     switch (CurrentLocation) {
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef.getAddress();
-    case _BinaryFunction:
+    case BinaryFunction:
       return U.BFRef.getAddress();
     }
     llvm_unreachable("");
   }
 
-  BinaryFunction *getFunction() const {
+  class BinaryFunction *getFunction() const {
     switch (CurrentLocation) {
-    case _BinaryFunction:
+    case BinaryFunction:
       return U.BFRef.BF;
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef.BB->getFunction();
     }
     llvm_unreachable("");
   }
 
-  BinaryBasicBlock *getBasicBlock() const {
+  class BinaryBasicBlock *getBasicBlock() const {
     switch (CurrentLocation) {
-    case _BinaryFunction:
+    case BinaryFunction:
       return nullptr;
-    case _BinaryBasicBlock:
+    case BinaryBasicBlock:
       return U.BBRef.BB;
     }
     llvm_unreachable("");

@@ -48,10 +48,10 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &Ref) {
 
 raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
   switch (Ref.CurrentLocation) {
-  case MCInstReference::_BinaryBasicBlock:
+  case MCInstReference::BinaryBasicBlock:
     OS << Ref.U.BBRef;
     return OS;
-  case MCInstReference::_BinaryFunction:
+  case MCInstReference::BinaryFunction:
     OS << Ref.U.BFRef;
     return OS;
   }
@@ -173,7 +173,7 @@ void PacStatePrinter::print(raw_ostream &OS, const State &S) const {
 }
 
 class PacRetAnalysis
-    : public DataflowAnalysis<PacRetAnalysis, State, false /*Backward*/,
+    : public DataflowAnalysis<PacRetAnalysis, State, /*Backward=*/false,
                               PacStatePrinter> {
   using Parent =
       DataflowAnalysis<PacRetAnalysis, State, false, PacStatePrinter>;
@@ -187,16 +187,12 @@ public:
         TrackingLastInsts(RegsToTrackInstsFor.size() != 0),
         Reg2StateIdx(RegsToTrackInstsFor.size() == 0
                          ? 0
-                         : *std::max_element(RegsToTrackInstsFor.begin(),
-                                             RegsToTrackInstsFor.end()) +
-                               1,
+                         : *llvm::max_element(RegsToTrackInstsFor) + 1,
                      -1) {
     for (unsigned I = 0; I < RegsToTrackInstsFor.size(); ++I)
       Reg2StateIdx[RegsToTrackInstsFor[I]] = I;
   }
   virtual ~PacRetAnalysis() {}
-
-  void run() { Parent::run(); }
 
 protected:
   const uint16_t NumRegs;
@@ -208,7 +204,7 @@ protected:
   /// track which instructions last wrote to this register.
   std::vector<uint16_t> Reg2StateIdx;
 
-  bool trackReg(MCPhysReg Reg) {
+  bool doTrackReg(MCPhysReg Reg) const {
     for (auto R : RegsToTrackInstsFor)
       if (R == Reg)
         return true;
@@ -269,7 +265,7 @@ protected:
     // need to track that for:
     if (TrackingLastInsts) {
       for (auto WrittenReg : Written.set_bits()) {
-        if (trackReg(WrittenReg)) {
+        if (doTrackReg(WrittenReg)) {
           Next.LastInstWritingReg[reg2StateIdx(WrittenReg)] = {};
           Next.LastInstWritingReg[reg2StateIdx(WrittenReg)].insert(&Point);
         }
@@ -280,7 +276,7 @@ protected:
     if (AutReg != BC.MIB->getNoRegister()) {
       Next.NonAutClobRegs.reset(
           BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true));
-      if (TrackingLastInsts && trackReg(AutReg))
+      if (TrackingLastInsts && doTrackReg(AutReg))
         Next.LastInstWritingReg[reg2StateIdx(AutReg)] = {};
     }
 
@@ -394,8 +390,8 @@ void NonPacProtectedRetAnalysis::runOnFunction(
   LLVM_DEBUG({
     dbgs() << "Analyzing in function " << BF.getPrintName() << ", AllocatorId "
            << AllocatorId << "\n";
+    BF.dump();
   });
-  LLVM_DEBUG({ BF.dump(); });
 
   if (BF.hasCFG()) {
     PacRetAnalysis PRA(BF, AllocatorId, {});
@@ -421,6 +417,9 @@ void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
     EndIndex = BB->size() - 1;
   const BinaryFunction *BF = BB->getFunction();
   for (unsigned I = StartIndex; I <= EndIndex; ++I) {
+    // FIXME: this assumes all instructions are 4 bytes in size. This is true
+    // for AArch64, but it might be good to extract this function so it can be
+    // used elsewhere and for other targets too.
     uint64_t Address = BB->getOffset() + BF->getAddress() + 4 * I;
     const MCInst &Inst = BB->getInstructionAtIndex(I);
     if (BC.MIB->isCFI(Inst))
@@ -433,8 +432,8 @@ void reportFoundGadgetInSingleBBSingleOverwInst(const BinaryContext &BC,
                                                 const MCInstReference OverwInst,
                                                 const MCInstReference RetInst) {
   BinaryBasicBlock *BB = RetInst.getBasicBlock();
-  assert(OverwInst.CurrentLocation == MCInstReference::_BinaryBasicBlock);
-  assert(RetInst.CurrentLocation == MCInstReference::_BinaryBasicBlock);
+  assert(OverwInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
+  assert(RetInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
   MCInstInBBReference OverwInstBB = OverwInst.U.BBRef;
   if (BB == OverwInstBB.BB) {
     // overwriting inst and ret instruction are in the same basic block.
@@ -463,11 +462,10 @@ void reportFoundGadget(const BinaryContext &BC, const MCInst &Inst,
          << " instructions that write to the return register after any "
             "authentication are:\n";
   // Sort by address to ensure output is deterministic.
-  std::sort(std::begin(NPPRG.OverwritingRetRegInst),
-            std::end(NPPRG.OverwritingRetRegInst),
-            [](const MCInstReference &A, const MCInstReference &B) {
-              return A.getAddress() < B.getAddress();
-            });
+  llvm::sort(NPPRG.OverwritingRetRegInst,
+             [](const MCInstReference &A, const MCInstReference &B) {
+               return A.getAddress() < B.getAddress();
+             });
   for (unsigned I = 0; I < NPPRG.OverwritingRetRegInst.size(); ++I) {
     MCInstReference InstRef = NPPRG.OverwritingRetRegInst[I];
     outs() << "  " << (I + 1) << ". ";
@@ -481,7 +479,7 @@ void reportFoundGadget(const BinaryContext &BC, const MCInst &Inst,
   });
   if (NPPRG.OverwritingRetRegInst.size() == 1) {
     const MCInstReference OverwInst = NPPRG.OverwritingRetRegInst[0];
-    assert(OverwInst.CurrentLocation == MCInstReference::_BinaryBasicBlock);
+    assert(OverwInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
     reportFoundGadgetInSingleBBSingleOverwInst(BC, OverwInst, RetInst);
   }
 }
@@ -505,8 +503,7 @@ Error NonPacProtectedRetAnalysis::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getAllBinaryFunctions())
     if (BF->hasCFG()) {
       for (BinaryBasicBlock &BB : *BF) {
-        for (int64_t I = BB.size() - 1; I >= 0; --I) {
-          MCInst &Inst = BB.getInstructionAtIndex(I);
+        for (MCInst &Inst : BB) {
           if (BC.MIB->hasAnnotation(Inst, GadgetAnnotationIndex)) {
             reportFoundGadget(BC, Inst, GadgetAnnotationIndex);
           }

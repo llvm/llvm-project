@@ -23,6 +23,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
@@ -172,7 +173,6 @@ public:
     case AArch64::AUTIZB:
     case AArch64::AUTDZA:
     case AArch64::AUTDZB:
-      assert(Inst.getOperand(0).isReg());
       return Inst.getOperand(0).getReg();
 
     default:
@@ -181,13 +181,13 @@ public:
   }
 
   bool isAuthenticationOfReg(const MCInst &Inst,
-                             const unsigned RegAuthenticated) const override {
-    if (RegAuthenticated == getNoRegister())
+                             MCPhysReg AuthenticatedReg) const override {
+    if (AuthenticatedReg == getNoRegister())
       return false;
-    return getAuthenticatedReg(Inst) == RegAuthenticated;
+    return getAuthenticatedReg(Inst) == AuthenticatedReg;
   }
 
-  llvm::MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const override {
+  MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const override {
     assert(isReturn(Inst));
     switch (Inst.getOpcode()) {
     case AArch64::RET:
