@@ -534,7 +534,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       if ((Add & SanitizerKind::Memory) && TC.getTriple().isAndroid()) {
         if (DiagnoseErrors) {
           D.Diag(diag::warn_drv_unsupported_option_for_target)
-                  << "-fsanitize=memory" << Triple.str();
+              << "-fsanitize=memory" << Triple.str();
         }
         DiagnosedKinds |= SanitizerKind::Memory;
         Add &= ~SanitizerKind::Memory;
