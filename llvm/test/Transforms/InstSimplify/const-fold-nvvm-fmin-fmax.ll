@@ -35,7 +35,7 @@ define float @test_fmax_1_25_neg_2_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmax_1_25_neg_2_ftz_nan_f() {
 ; CHECK-NEXT:    ret float 1.250000e+00
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.f(float 1.25, float -2.0)
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 1.25, float -2.0)
   ret float %res
 }
 
@@ -109,9 +109,9 @@ define float @test_fmax_pos_subnorm_nan_ftz_f() {
 
 define float @test_fmax_pos_subnorm_nan_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmax_pos_subnorm_nan_ftz_nan_f() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float 0x7FFFFFFFE0000000
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.f(float 0x380FFFFFC0000000, float 0x7fff444400000000)
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 0x380FFFFFC0000000, float 0x7fff444400000000)
   ret float %res
 }
 
@@ -187,7 +187,7 @@ define float @test_fmax_subnorm_undef_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmax_subnorm_undef_ftz_nan_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.f(float 0x380FFFFFC0000000, float undef)
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 0x380FFFFFC0000000, float undef)
   ret float %res
 }
 
@@ -264,7 +264,7 @@ define float @test_fmax_nan_undef_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmax_nan_undef_ftz_nan_f() {
 ; CHECK-NEXT:    ret float 0x7FFFFFFFE0000000
 ;
-  %res = call float @llvm.nvvm.fmax.ftz.f(float 0x7fff444400000000, float undef)
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 0x7fff444400000000, float undef)
   ret float %res
 }
 
@@ -340,7 +340,7 @@ define float @test_fmin_1_25_neg_2_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmin_1_25_neg_2_ftz_nan_f() {
 ; CHECK-NEXT:    ret float -2.000000e+00
 ;
-  %res = call float @llvm.nvvm.fmin.ftz.f(float 1.25, float -2.0)
+  %res = call float @llvm.nvvm.fmin.ftz.nan.f(float 1.25, float -2.0)
   ret float %res
 }
 
@@ -414,9 +414,9 @@ define float @test_fmin_pos_subnorm_nan_ftz_f() {
 
 define float @test_fmin_pos_subnorm_nan_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmin_pos_subnorm_nan_ftz_nan_f() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float 0x7FFFFFFFE0000000
 ;
-  %res = call float @llvm.nvvm.fmin.ftz.f(float 0x380FFFFFC0000000, float 0x7fff444400000000)
+  %res = call float @llvm.nvvm.fmin.ftz.nan.f(float 0x380FFFFFC0000000, float 0x7fff444400000000)
   ret float %res
 }
 
@@ -492,7 +492,7 @@ define float @test_fmin_subnorm_undef_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmin_subnorm_undef_ftz_nan_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fmin.ftz.f(float 0x380FFFFFC0000000, float undef)
+  %res = call float @llvm.nvvm.fmin.ftz.nan.f(float 0x380FFFFFC0000000, float undef)
   ret float %res
 }
 
@@ -569,7 +569,7 @@ define float @test_fmin_nan_undef_ftz_nan_f() {
 ; CHECK-LABEL: define float @test_fmin_nan_undef_ftz_nan_f() {
 ; CHECK-NEXT:    ret float 0x7FFFFFFFE0000000
 ;
-  %res = call float @llvm.nvvm.fmin.ftz.f(float 0x7fff444400000000, float undef)
+  %res = call float @llvm.nvvm.fmin.ftz.nan.f(float 0x7fff444400000000, float undef)
   ret float %res
 }
 
