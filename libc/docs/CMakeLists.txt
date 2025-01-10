@@ -19,6 +19,7 @@ if (SPHINX_FOUND)
     file(MAKE_DIRECTORY
       "${CMAKE_CURRENT_BINARY_DIR}/headers/arpa/"
       "${CMAKE_CURRENT_BINARY_DIR}/headers/sys/"
+      "${CMAKE_CURRENT_BINARY_DIR}/headers/net/"
     )
 
     # Change sphinx to build from $build_dir/libc/docs/ rather than
@@ -40,6 +41,7 @@ if (SPHINX_FOUND)
       float
       inttypes
       locale
+      net/if
       setjmp
       signal
       stdbit
