@@ -681,7 +681,7 @@ public:
 template <typename T, typename... Args>
 const T *SymbolManager::acquire(Args &&...args) {
   llvm::FoldingSetNodeID profile;
-  T::Profile(profile, std::forward<Args>(args)...);
+  T::Profile(profile, args...);
   void *InsertPos;
   SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
   if (!SD) {
