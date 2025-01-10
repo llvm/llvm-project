@@ -72,7 +72,6 @@ public:
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.
     kDynamicBranch,       /// Jit instruction patched at runtime.
-    kUnkownSign,          /// Signed state not determined yet
     kSigning,             /// Inst is a signing instruction (paciasp, etc.)
     kSigned,              /// Inst is in a range where RA is signed
     kAuthenticating,      /// Authenticating inst (e.g. autiasp)
