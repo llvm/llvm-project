@@ -118,8 +118,7 @@ Deprecations and Removals
   update to ``-std=c++20``.
 
 - The relational operators for ``std::chrono::weekday`` has been removed entirely, and the
-  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension is ignored in
-  LLVM 20.
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro is now ignored.
 
 - The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
