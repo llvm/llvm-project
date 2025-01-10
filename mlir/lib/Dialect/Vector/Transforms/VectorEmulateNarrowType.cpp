@@ -1099,10 +1099,11 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(
         op, "only src bitwidth of 2 or 4 is supported at this moment");
 
-  const int numSrcElemsPerDestElem = 8 / srcElemBitwidth;
-  if ((subByteVecType.getShape().back() % numSrcElemsPerDestElem) != 0)
+  const int numSrcElemsPerByte = 8 / srcElemBitwidth;
+  if ((subByteVecType.getShape().back() % numSrcElemsPerByte) != 0)
     return rewriter.notifyMatchFailure(
-        op, "Not an even number of i4 elements in trailing dim");
+        op, "the trailing dimension of subByteVecType must be a multiple of "
+            "the srcElemBitwidth / 8");
 
   return success();
 }
@@ -1195,10 +1196,10 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
   int64_t srcBitwidth = srcVecType.getElementType().getIntOrFloatBitWidth();
   assert(8 % srcBitwidth == 0 &&
          "Unsupported sub-byte type (not a divisor of i8)");
-  int64_t bitwidthFactor = 8 / srcBitwidth;
+  int64_t numSrcElemsPerByte = 8 / srcBitwidth;
   SmallVector<int64_t> vecShape(srcVecType.getShape());
   // Adjust last dimension of the vector, so the total size remains the same.
-  vecShape.back() = vecShape.back() / bitwidthFactor;
+  vecShape.back() = vecShape.back() / numSrcElemsPerByte;
   auto i8VecType = VectorType::get(vecShape, rewriter.getI8Type());
   return rewriter.create<vector::BitCastOp>(loc, i8VecType, subByteVec);
 }
