@@ -117,6 +117,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as strictfp.
   bool isStrictFP = false;
 
+  /// True if the intrinsic is a floation-point operation.
+  bool isFPOperation = false;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,

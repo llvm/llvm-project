@@ -573,5 +573,5 @@ declare <4 x float> @llvm.tan.v4f32(<4 x float>)
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { fpoperation nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

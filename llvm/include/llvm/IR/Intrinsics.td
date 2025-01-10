@@ -178,6 +178,10 @@ def IntrSpeculatable : IntrinsicProperty;
 // defined by the hasSideEffects property of the TableGen Instruction class.
 def IntrHasSideEffects : IntrinsicProperty;
 
+/// This property indicates that the intrinsic represents a floating-point
+/// operation, and it may have floating-point operand bundles.
+def IntrFPOperation : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
@@ -1020,7 +1024,7 @@ def int_experimental_memset_pattern
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 
-let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn, IntrFPOperation] in {
   def int_fma  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -1089,27 +1093,27 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
 
 def int_minnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 def int_maxnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 def int_minimum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 def int_minimumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 def int_maximumnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative, IntrFPOperation]
 >;
 
 // Internal interface for object size checking

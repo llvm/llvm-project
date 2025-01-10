@@ -51,4 +51,22 @@ entry:
   ret double %fadd
 }
 
+; Test "fpe.except" operand bundle attached to the call that may not have such.
+; CHECK-NEXT: This function call may not have fpe.except bundle
+; CHECK-NEXT:   %add = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b) [ "fpe.except"(metadata !"strict") ]
+define i32 @f6(i32 %a, i32 %b) {
+entry:
+  %add = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b) [ "fpe.except"(metadata !"strict") ]
+  ret i32 %add
+}
+
+; Test "fpe.control" operand bundle attached to the call that may not have such.
+; CHECK-NEXT: This function call may not have fpe.control bundle
+; CHECK-NEXT:   %add = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b) [ "fpe.control"(metadata !"rte") ]
+define i32 @f7(i32 %a, i32 %b) {
+entry:
+  %add = call i32 @llvm.sadd.sat.i32(i32 %a, i32 %b) [ "fpe.control"(metadata !"rte") ]
+  ret i32 %add
+}
+
 attributes #0 = { strictfp }

@@ -308,6 +308,9 @@ def StackProtectStrong : EnumAttr<"sspstrong", IntersectPreserve, [FnAttr]>;
 /// Function was called in a scope requiring strict floating point semantics.
 def StrictFP : EnumAttr<"strictfp", IntersectPreserve, [FnAttr]>;
 
+/// Function is a floating point operation.
+def FPOperation : EnumAttr<"fpoperation", IntersectPreserve, [FnAttr]>;
+
 /// Hidden pointer to structure to return.
 def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr]>;
 
