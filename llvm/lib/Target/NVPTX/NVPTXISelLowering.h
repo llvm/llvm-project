@@ -261,9 +261,6 @@ public:
     return true;
   }
 
-  bool isFAbsFree(EVT VT) const override { return true; }
-  bool isFNegFree(EVT VT) const override { return true; }
-
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;

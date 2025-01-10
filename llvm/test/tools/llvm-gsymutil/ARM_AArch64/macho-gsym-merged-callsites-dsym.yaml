@@ -3,8 +3,8 @@
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/merged_callsites.dSYM.yaml -o %t/merged_callsites.dSYM
 
-# RUN: llvm-gsymutil --convert=%t/merged_callsites.dSYM --merged-functions --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_dSYM.gsym
-# RUN: llvm-gsymutil --convert=%t/merged_callsites.dSYM --merged-functions --dwarf-callsites -o %t/dwarf_call_sites_dSYM.gsym
+# RUN: llvm-gsymutil --num-threads=1 --convert=%t/merged_callsites.dSYM --merged-functions --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_dSYM.gsym
+# RUN: llvm-gsymutil --num-threads=1 --convert=%t/merged_callsites.dSYM --merged-functions --dwarf-callsites -o %t/dwarf_call_sites_dSYM.gsym
 
 # Dump the GSYM file and check the output for callsite information
 # RUN: llvm-gsymutil %t/call_sites_dSYM.gsym | FileCheck --check-prefix=CHECK-MERGED-CALLSITES %s
