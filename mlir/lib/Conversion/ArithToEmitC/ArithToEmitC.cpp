@@ -743,7 +743,7 @@ public:
   LogicalResult
   matchAndRewrite(CastOp castOp, typename CastOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Vectors in particular are not supported
+    // Vectors in particular are not supported.
     Type operandType = adaptor.getIn().getType();
     if (!emitc::isSupportedFloatType(operandType))
       return rewriter.notifyMatchFailure(castOp,
