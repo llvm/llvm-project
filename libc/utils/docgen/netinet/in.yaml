@@ -13,6 +13,8 @@ macros:
     in-latest-posix: ''
   INADDR_ANY:
     in-latest-posix: ''
+  INET6_ADDRSTRLEN:
+    in-latest-posix: ''
   INADDR_BROADCAST:
     in-latest-posix: ''
   INET_ADDRSTRLEN:
