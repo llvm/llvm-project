@@ -62,6 +62,8 @@ public:
   void emitDirectiveOptionNoPIC() override;
   void emitDirectiveOptionRVC() override;
   void emitDirectiveOptionNoRVC() override;
+  void emitDirectiveOptionAutoCompress() override;
+  void emitDirectiveOptionNoAutoCompress() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveVariantCC(MCSymbol &Symbol) override;
