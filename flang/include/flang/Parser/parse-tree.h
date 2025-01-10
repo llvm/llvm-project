@@ -3480,6 +3480,18 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
 inline namespace traits {
 // trait-property-name ->
 //    identifier | string-literal
+//
+// This is a bit of a problematic case. The spec says that a word in quotes,
+// and the same word without quotes are equivalent. We currently parse both
+// as a string, but it's likely just a temporary solution.
+//
+// The problem is that trait-property can be (among other things) a
+// trait-property-name or a trait-property-expression. A simple identifier
+// can be either, there is no reasonably simple way of telling them apart
+// in the parser. There is a similar issue with extensions. Some of that
+// disambiguation may need to be done in the "canonicalization" pass and
+// then some of those AST nodes would be rewritten into different ones.
+//
 struct OmpTraitPropertyName {
   CharBlock source;
   WRAPPER_CLASS_BOILERPLATE(OmpTraitPropertyName, std::string);
