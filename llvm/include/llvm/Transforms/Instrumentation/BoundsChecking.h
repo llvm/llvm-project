@@ -20,7 +20,7 @@ class Function;
 class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
 
 public:
-  struct BoundsCheckingOptions {
+  struct Options {
     struct Runtime {
       Runtime(bool MinRuntime, bool MayReturn)
           : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
@@ -31,14 +31,14 @@ public:
     bool Merge = false;
   };
 
-  BoundsCheckingPass(BoundsCheckingOptions Options) : Options(Options) {}
+  BoundsCheckingPass(Options Opts) : Opts(Opts) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
-  BoundsCheckingOptions Options;
+  Options Opts;
 };
 
 } // end namespace llvm
