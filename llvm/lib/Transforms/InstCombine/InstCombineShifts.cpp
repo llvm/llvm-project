@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -978,6 +979,76 @@ Instruction *InstCombinerImpl::foldLShrOverflowBit(BinaryOperator &I) {
   return new ZExtInst(Overflow, Ty);
 }
 
+// Various folds for (shl/lshr C, (cttz/ctlz X_P2))
+static Instruction *foldLogicalShiftWithCtzOfP2(BinaryOperator &I,
+                                                InstCombinerImpl &IC) {
+  assert(I.getOpcode() == Instruction::Shl ||
+         I.getOpcode() == Instruction::LShr && "Operator is not logical shift");
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *CtzOp = nullptr;
+  Value *CtzMode = nullptr;
+  Intrinsic::ID ID;
+  if (I.getOpcode() == Instruction::Shl &&
+      match(Op1,
+            m_Intrinsic<Intrinsic::cttz>(m_Value(CtzOp), m_Value(CtzMode))))
+    ID = Intrinsic::cttz;
+  else if (I.getOpcode() == Instruction::LShr &&
+           match(Op1, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtzOp),
+                                                   m_Value(CtzMode))))
+    ID = Intrinsic::ctlz;
+  else
+    return nullptr;
+
+  const APInt *C;
+  if (!match(Op0, m_APInt(C)))
+    return nullptr;
+
+  // TODO: We could extend to handle count trailing/leading ones by handling if
+  // CtzOp is (xor X, -1).
+
+  // (shl C_P2, (cttz X_P2)) -> (shl X_P2, (cttz C_P2))
+  // (lshr C_P2, (ctlz X_P2)) -> (lshr X_P2, (ctlz C_P2))
+  if (C->isPowerOf2() && IC.isKnownToBeAPowerOfTwo(CtzOp, /*OrZero=*/true)) {
+    Value *NewShAmt = ConstantInt::get(
+        CtzOp->getType(), ID == Intrinsic::cttz ? C->countTrailingZeros()
+                                                : C->countLeadingZeros());
+    if (I.getOpcode() == Instruction::Shl) {
+      BinaryOperator *NewBO = BinaryOperator::CreateShl(CtzOp, NewShAmt);
+      NewBO->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+      return NewBO;
+    }
+    BinaryOperator *NewBO = BinaryOperator::CreateLShr(CtzOp, NewShAmt);
+    NewBO->setIsExact(I.isExact());
+    return NewBO;
+  }
+  // (shl -C_P2, (cttz X_P2)) -> (shl -X_P2, (cttz -C_P2))
+  if (I.getOpcode() == Instruction::Shl && C->isNegatedPowerOf2() &&
+      CtzOp->hasOneUse() && IC.isKnownToBeAPowerOfTwo(CtzOp, /*OrZero=*/true)) {
+    Value *NewShAmt =
+        ConstantInt::get(CtzOp->getType(), C->countTrailingZeros());
+    BinaryOperator *NewBO = BinaryOperator::CreateShl(CtzOp, NewShAmt);
+    NewBO->setHasNoSignedWrap(I.hasNoSignedWrap());
+    return NewBO;
+  }
+  // (lshr C_Mask, (ctlz X_P2))
+  //   if C_Mask != -1:
+  //     (lshr (sub X_P2, 1), (cttz ~C_Mask))
+  //   if C_Mask == -1:
+  //	 (or disjoint (sub X_P2, 1), X_P2)
+  if (I.getOpcode() == Instruction::LShr && C->isMask() && CtzOp->hasOneUse() &&
+      IC.isKnownToBeAPowerOfTwo(CtzOp, /*OrZero=*/true)) {
+    Value *CtzOpMask = IC.Builder.CreateAdd(
+        CtzOp, Constant::getAllOnesValue(CtzOp->getType()));
+    if (C->isAllOnes())
+      return BinaryOperator::CreateDisjointOr(CtzOp, CtzOpMask);
+    Value *NewShAmt =
+        ConstantInt::get(CtzOp->getType(), C->countTrailingOnes());
+    return BinaryOperator::CreateLShr(CtzOpMask, NewShAmt);
+  }
+  return nullptr;
+}
+
 // Try to set nuw/nsw flags on shl or exact flag on lshr/ashr using knownbits.
 static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   assert(I.isShift() && "Expected a shift as input");
@@ -1265,6 +1336,9 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(NegX, X);
     }
   }
+
+  if (auto *R = foldLogicalShiftWithCtzOfP2(I, *this))
+    return R;
 
   return nullptr;
 }
@@ -1612,6 +1686,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   if (Instruction *Overflow = foldLShrOverflowBit(I))
     return Overflow;
+
+  if (auto *R = foldLogicalShiftWithCtzOfP2(I, *this))
+    return R;
 
   return nullptr;
 }
