@@ -419,7 +419,7 @@ static void GetDeclContextImpl(DWARFDIE die,
       push_ctx(CompilerContextKind::Function, die.GetName());
       break;
     case DW_TAG_variable:
-      push_ctx(CompilerContextKind::Variable, die.GetPubname());
+      push_ctx(CompilerContextKind::Variable, die.GetName());
       break;
     case DW_TAG_typedef:
       push_ctx(CompilerContextKind::Typedef, die.GetName());
@@ -464,7 +464,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       push_ctx(CompilerContextKind::Enum, die.GetName());
       break;
     case DW_TAG_variable:
-      push_ctx(CompilerContextKind::Variable, die.GetPubname());
+      push_ctx(CompilerContextKind::Variable, die.GetName());
       break;
     case DW_TAG_typedef:
       push_ctx(CompilerContextKind::Typedef, die.GetName());
