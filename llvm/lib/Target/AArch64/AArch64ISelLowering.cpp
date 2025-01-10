@@ -13723,44 +13723,6 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
   return DAG.getNode(Opcode, dl, VT, V, DAG.getConstant(Lane, dl, MVT::i64));
 }
 
-// Return true if we can get a new shuffle mask by checking the parameter mask
-// array to test whether every two adjacent mask values are continuous and
-// starting from an even number.
-static bool isWideTypeMask(ArrayRef<int> M, EVT VT,
-                           SmallVectorImpl<int> &NewMask) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-
-  NewMask.clear();
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    int M0 = M[i];
-    int M1 = M[i + 1];
-
-    // If both elements are undef, new mask is undef too.
-    if (M0 == -1 && M1 == -1) {
-      NewMask.push_back(-1);
-      continue;
-    }
-
-    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
-      NewMask.push_back(M1 / 2);
-      continue;
-    }
-
-    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
-      NewMask.push_back(M0 / 2);
-      continue;
-    }
-
-    NewMask.clear();
-    return false;
-  }
-
-  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
-  return true;
-}
-
 // Try to widen element type to get a new mask value for a better permutation
 // sequence, so that we can use NEON shuffle instructions, such as zip1/2,
 // UZP1/2, TRN1/2, REV, INS, etc.
@@ -13787,7 +13749,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
     return SDValue();
 
   SmallVector<int, 8> NewMask;
-  if (isWideTypeMask(Mask, VT, NewMask)) {
+  if (widenShuffleMaskElts(Mask, NewMask)) {
     MVT NewEltVT = VT.isFloatingPoint()
                        ? MVT::getFloatingPointVT(ElementSize * 2)
                        : MVT::getIntegerVT(ElementSize * 2);
