@@ -82,6 +82,7 @@ static bool isReal8OrLarger(const Fortran::semantics::DeclTypeSpec *type) {
 // type, the alignment is computed accordingly.
 std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
   size_t max_align{0};
+  constexpr size_t fourByteAlign{4};
   bool contain_double{false};
   auto derivedTypeSpec{sym.GetType()->AsDerived()};
   DirectComponentIterator directs{*derivedTypeSpec};
@@ -89,7 +90,7 @@ std::optional<size_t> ComputeOffsetsHelper::CompAlignment(const Symbol &sym) {
     auto type{it->GetType()};
     auto s{GetSizeAndAlignment(*it, true)};
     if (isReal8OrLarger(type)) {
-      max_align = std::max(max_align, 4UL);
+      max_align = std::max(max_align, fourByteAlign);
       contain_double = true;
     } else if (type->AsDerived()) {
       if (const auto newAlgin{CompAlignment(*it)}) {
