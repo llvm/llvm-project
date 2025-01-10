@@ -784,8 +784,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
-                       {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
+                       {MVT::v4f16, MVT::v4i16, MVT::v4bf16, MVT::v8f16,
+                        MVT::v8i16, MVT::v8bf16, MVT::v16f16, MVT::v16i16,
+                        MVT::v16bf16, MVT::v32f16, MVT::v32i16, MVT::v32bf16},
                        Custom);
 
     for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
@@ -7545,9 +7546,8 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   SDLoc SL(Op);
   EVT ResultVT = Op.getValueType();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
-
-  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  EVT EltVT = PackVT.getVectorElementType();
+  MVT EltVT = ResultVT.getVectorElementType().getSimpleVT();
+  MVT PackVT = MVT::getVectorVT(EltVT, 2);
   int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
 
   // vector_shuffle <0,1,6,7> lhs, rhs
