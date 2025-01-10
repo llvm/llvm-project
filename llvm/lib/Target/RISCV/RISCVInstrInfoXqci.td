@@ -171,19 +171,19 @@ class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
     : RVInst16CI<0b000, 0b10, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1"> {
-    bits<5> rs1;
+  bits<5> rs1;
 
-    let Inst{12} = 0b1;
-    let Inst{11-7} = rs1;
-    let Inst{6-2} = funct5{4-0};
+  let Inst{12} = 0b1;
+  let Inst{11-7} = rs1;
+  let Inst{6-2} = funct5{4-0};
 }
 
 let hasSideEffects = 1 in
 class QCIRVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
     : RVInst16CI<0b000, 0b10, (outs), (ins), OpcodeStr, ""> {
-    let Inst{12} = 0b1;
-    let Inst{11-7} = funct5;
-    let Inst{6-2} = 0b00100;
+  let Inst{12} = 0b1;
+  let Inst{11-7} = funct5;
+  let Inst{6-2} = 0b00100;
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
@@ -345,7 +345,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 } // Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm"
 
 let Predicates = [HasVendorXqciint, IsRV32], DecoderNamespace = "Xqciint" in {
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+  let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
   def QC_C_DIR : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd), (ins),
                             "qc.c.dir", "$rd"> {
     bits<5> rd;
@@ -362,17 +362,17 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
   def QC_C_SETINT : QCIRVInst16CI_RS1<0b00010, "qc.c.setint">;
   def QC_C_CLRINT : QCIRVInst16CI_RS1<0b00011, "qc.c.clrint">;
 
-let mayLoad = 0, mayStore = 0 in {
+  let mayLoad = 0, mayStore = 0 in {
   def QC_C_DI     : QCIRVInst16CI_NONE<0b10110, "qc.c.di">;
   def QC_C_EI     : QCIRVInst16CI_NONE<0b10111, "qc.c.ei">;
-}
+  } // mayLoad =0, mayStore = 0
 
-let mayLoad = 1, mayStore = 1 in {
+  let mayLoad = 1, mayStore = 1 in {
   def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
   def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
-}
+  } // mayLoad = 1, mayStore = 1
 
-let mayLoad = 1, mayStore = 1, isReturn = 1, isTerminator = 1 in
+  let mayLoad = 1, mayStore = 1, isReturn = 1, isTerminator = 1 in
   def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 } // Predicates = [HasVendorXqciint, IsRV32], DecoderNamespace = "Xqciint"
 
