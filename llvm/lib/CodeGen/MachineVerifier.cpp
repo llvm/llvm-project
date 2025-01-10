@@ -1276,8 +1276,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
           report("load memory size cannot exceed result size", MI);
 
         if (MMO.getRanges()) {
-          ConstantInt *i = mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
-          if (i->getIntegerType()->getBitWidth() != ValTy.getScalarType().getSizeInBits()) {
+          ConstantInt *i =
+              mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
+          if (i->getIntegerType()->getBitWidth() !=
+              ValTy.getScalarType().getSizeInBits()) {
             report("range is incompatible with the value it gets assigned to",
                    MI);
           }
