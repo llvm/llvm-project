@@ -2135,7 +2135,6 @@ DeclResult Sema::CheckClassTemplate(
     NewClass->startDefinition();
 
   ProcessDeclAttributeList(S, NewClass, Attr);
-  ProcessAPINotes(NewClass);
 
   if (PrevClassTemplate)
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
