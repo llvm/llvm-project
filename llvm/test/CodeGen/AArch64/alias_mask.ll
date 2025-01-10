@@ -48,10 +48,12 @@ define <16 x i1> @whilewr_8(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
 ; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
 ; CHECK-NOSVE-NEXT:    dup v1.16b, w8
+; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
+  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 1)
   ret <16 x i1> %0
 }
 
@@ -88,6 +90,8 @@ define <8 x i1> @whilewr_16(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NOSVE-NEXT:    dup v1.8b, w8
 ; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NOSVE-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NOSVE-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
@@ -125,7 +129,7 @@ define <4 x i1> @whilewr_32(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
+  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 1)
   ret <4 x i1> %0
 }
 
@@ -155,7 +159,7 @@ define <2 x i1> @whilewr_64(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
+  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 1)
   ret <2 x i1> %0
 }
 
@@ -206,10 +210,12 @@ define <16 x i1> @whilerw_8(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
 ; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
 ; CHECK-NOSVE-NEXT:    dup v1.16b, w8
+; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
+  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v16i1.i64.i64(i64 %a, i64 %b, i64 1, i1 0)
   ret <16 x i1> %0
 }
 
@@ -247,6 +253,8 @@ define <8 x i1> @whilerw_16(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NOSVE-NEXT:    dup v1.8b, w8
 ; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NOSVE-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NOSVE-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
@@ -285,7 +293,7 @@ define <4 x i1> @whilerw_32(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
+  %0 = call <4 x i1> @llvm.experimental.get.alias.lane.mask.v4i1.i64.i64(i64 %a, i64 %b, i64 4, i1 0)
   ret <4 x i1> %0
 }
 
@@ -316,106 +324,6 @@ define <2 x i1> @whilerw_64(i64 %a, i64 %b) {
 ; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NOSVE-NEXT:    ret
 entry:
-  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
-  ret <2 x i1> %0
-}
-
-define <16 x i1> @not_whilewr_wrong_eltsize(i64 %a, i64 %b) {
-; CHECK-SVE-LABEL: not_whilewr_wrong_eltsize:
-; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    sub x8, x1, x0
-; CHECK-SVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-SVE-NEXT:    asr x8, x8, #1
-; CHECK-SVE-NEXT:    cmp x8, #1
-; CHECK-SVE-NEXT:    cset w9, lt
-; CHECK-SVE-NEXT:    whilelo p0.b, #0, x8
-; CHECK-SVE-NEXT:    dup v0.16b, w9
-; CHECK-SVE-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-SVE-NEXT:    ret
-;
-; CHECK-NOSVE-LABEL: not_whilewr_wrong_eltsize:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_1
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI8_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_2
-; CHECK-NOSVE-NEXT:    ldr q2, [x9, :lo12:.LCPI8_2]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_4
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI8_1]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #1
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x9, :lo12:.LCPI8_4]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_6
-; CHECK-NOSVE-NEXT:    ldr q3, [x10, :lo12:.LCPI8_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_5
-; CHECK-NOSVE-NEXT:    dup v4.2d, x8
-; CHECK-NOSVE-NEXT:    ldr q7, [x9, :lo12:.LCPI8_6]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_7
-; CHECK-NOSVE-NEXT:    ldr q6, [x10, :lo12:.LCPI8_5]
-; CHECK-NOSVE-NEXT:    ldr q16, [x9, :lo12:.LCPI8_7]
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
-entry:
-  %0 = call <16 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i64.i64(i64 %a, i64 %b, i64 2, i1 1)
-  ret <16 x i1> %0
-}
-
-define <2 x i1> @not_whilerw_ptr32(i32 %a, i32 %b) {
-; CHECK-SVE-LABEL: not_whilerw_ptr32:
-; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    subs w8, w1, w0
-; CHECK-SVE-NEXT:    cneg w8, w8, mi
-; CHECK-SVE-NEXT:    add w9, w8, #7
-; CHECK-SVE-NEXT:    cmp w8, #0
-; CHECK-SVE-NEXT:    csel w8, w9, w8, lt
-; CHECK-SVE-NEXT:    asr w8, w8, #3
-; CHECK-SVE-NEXT:    cmp w8, #0
-; CHECK-SVE-NEXT:    cset w9, eq
-; CHECK-SVE-NEXT:    whilelo p0.s, #0, w8
-; CHECK-SVE-NEXT:    dup v0.2s, w9
-; CHECK-SVE-NEXT:    mov z1.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    orr v0.8b, v1.8b, v0.8b
-; CHECK-SVE-NEXT:    ret
-;
-; CHECK-NOSVE-LABEL: not_whilerw_ptr32:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    subs w9, w1, w0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NOSVE-NEXT:    cneg w9, w9, mi
-; CHECK-NOSVE-NEXT:    ldr d1, [x8, :lo12:.LCPI9_0]
-; CHECK-NOSVE-NEXT:    add w10, w9, #7
-; CHECK-NOSVE-NEXT:    cmp w9, #0
-; CHECK-NOSVE-NEXT:    csel w9, w10, w9, lt
-; CHECK-NOSVE-NEXT:    asr w9, w9, #3
-; CHECK-NOSVE-NEXT:    dup v0.2s, w9
-; CHECK-NOSVE-NEXT:    cmp w9, #0
-; CHECK-NOSVE-NEXT:    cset w8, eq
-; CHECK-NOSVE-NEXT:    dup v2.2s, w8
-; CHECK-NOSVE-NEXT:    cmhi v0.2s, v0.2s, v1.2s
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v2.8b
-; CHECK-NOSVE-NEXT:    ret
-entry:
-  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v8i1.i32.i32(i32 %a, i32 %b, i32 8, i1 0)
+  %0 = call <2 x i1> @llvm.experimental.get.alias.lane.mask.v2i1.i64.i64(i64 %a, i64 %b, i64 8, i1 0)
   ret <2 x i1> %0
 }
