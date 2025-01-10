@@ -50,6 +50,7 @@ body: |
     ; CHECK-LABEL: name: test2
     ; CHECK: liveins: $q14, $d29, $x0, $x1
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $d8 = COPY killed renamable $d29
     ; CHECK-NEXT: BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: renamable $b0 = SMAXVv8i8v killed renamable $d8, implicit-def $q0
     ; CHECK-NEXT: RET_ReallyLR implicit $b0
