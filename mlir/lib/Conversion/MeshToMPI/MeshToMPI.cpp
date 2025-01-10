@@ -240,13 +240,12 @@ struct ConvertUpdateHaloOp
     auto loc = op.getLoc();
 
     // convert a OpFoldResult into a Value
-    auto toValue = [&rewriter, &loc](OpFoldResult &v) {
-      return isa<Value>(v)
-                 ? cast<Value>(v)
-                 : rewriter.create<::mlir::arith::ConstantOp>(
-                       loc,
-                       rewriter.getIndexAttr(
-                           cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
+    auto toValue = [&rewriter, &loc](OpFoldResult &v) -> Value {
+      if (auto value = dyn_cast<Value>(v))
+        return value;
+      return rewriter.create<::mlir::arith::ConstantOp>(
+          loc, rewriter.getIndexAttr(
+                   cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
     };
 
     auto dest = op.getDestination();
