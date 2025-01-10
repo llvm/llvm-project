@@ -1202,7 +1202,7 @@ unsigned getVGPRReductionToEliminateSpilling(const MCSubtargetInfo *STI,
                                              unsigned NumVGPRs) {
   unsigned Granule = getVGPRAllocGranule(STI);
   unsigned TotalNumVGPRs = getTotalNumVGPRs(STI);
-  if (alignTo(NumVGPRs, Granule) < TotalNumVGPRs)
+  if (alignTo(NumVGPRs, Granule) <= TotalNumVGPRs)
     return 0;
   return NumVGPRs - alignDown(TotalNumVGPRs, Granule);
 }

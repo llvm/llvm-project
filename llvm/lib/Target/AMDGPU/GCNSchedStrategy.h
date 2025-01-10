@@ -203,6 +203,11 @@ public:
   }
 };
 
+/// A region's boundaries i.e. a pair of instruction bundle iterators. The lower
+/// boundary is inclusive, the upper boundary is exclusive.
+using RegionBoundaries =
+    std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>;
+
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
@@ -223,8 +228,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   unsigned MinOccupancy;
 
   // Vector of regions recorder for later rescheduling
-  SmallVector<std::pair<MachineBasicBlock::iterator,
-                        MachineBasicBlock::iterator>, 32> Regions;
+  SmallVector<RegionBoundaries, 32> Regions;
 
   // Records if a region is not yet scheduled, or schedule has been reverted,
   // or we generally desire to reschedule it.
@@ -280,10 +284,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   /// For an MI removal, this must be called before the MI is actually erased
   /// from its parent MBB. If a region is left empty by a removal, both
   /// boundaries are set to the last removed MI's MBB's end.
-  void updateRegionBoundaries(
-      SmallVectorImpl<std::pair<MachineBasicBlock::iterator,
-                                MachineBasicBlock::iterator>> &RegionBoundaries,
-      MachineBasicBlock::iterator MI, MachineInstr *NewMI);
+  void
+  updateRegionBoundaries(SmallVectorImpl<RegionBoundaries> &RegionBoundaries,
+                         MachineBasicBlock::iterator MI, MachineInstr *NewMI);
 
   void runSchedStages();
 
@@ -437,10 +440,13 @@ private:
   /// rematerialize it.
   struct RematInstruction {
     /// Trivially rematerializable instruction.
-    MachineInstr *RematMI;
+    MachineInstr *DefMI;
     /// Single use of the rematerializable instruction's defined register,
     /// located in a different block.
     MachineInstr *UseMI;
+    /// Rematerialized version of \p DefMI, set in sinkTriviallyRematInsts. Used
+    /// for reverting rematerializations.
+    MachineInstr *RematMI;
     /// Set of regions in which the rematerializable instruction's defined
     /// register is a live-in.
     SmallDenseSet<unsigned, 4> LiveInRegions;
@@ -449,25 +455,44 @@ private:
 
     RematInstruction(MachineInstr *RematMI, unsigned DefRegion,
                      MachineInstr *UseMI)
-        : RematMI(RematMI), UseMI(UseMI), DefRegion(DefRegion) {}
+        : DefMI(RematMI), UseMI(UseMI), DefRegion(DefRegion) {}
   };
 
-  /// Determines whether we can increase function occupancy by 1 and/or
-  /// reduce spilling through rematerialization. If we can, returns true and
-  /// fill \p RematInstructions with a list of rematerializable instructions
-  /// whose sinking would result in increased occupancy and/or reduced spilling;
-  /// returns false otherwise.
-  bool canIncreaseOccupancyOrReduceSpill(
-      SmallVectorImpl<RematInstruction> &RematInstructions);
+  /// Collect instructions to rematerialize to increase occupancy and/or reduce
+  /// spilling.
+  SmallVector<RematInstruction> Rematerializations;
+  /// Collect regions whose live-ins or register pressure will change due to
+  /// rematerializations.
+  DenseMap<unsigned, GCNRegPressure> ImpactedRegions;
+  /// In case we need to rollback rematerializations, save lane masks for all
+  /// rematerialized registers in all regions in which they are live-ins.
+  DenseMap<std::pair<unsigned, Register>, LaneBitmask> RegMasks;
+  /// Target occupancy the stage estimates is reachable through
+  /// rematerialization. Greater than or equal to the pre-stage min occupancy.
+  unsigned TargetOcc;
+  /// Achieved occupancy *only* through rematerializations (pre-rescheduling).
+  /// Smaller than or equal to the target occupancy.
+  unsigned AchievedOcc;
+
+  /// Returns whether remat can increase function occupancy by 1 and/or reduce
+  /// spilling through rematerialization. If it can do at least one, collects
+  /// rematerializable instructions in PreRARematStage::Rematerializations and
+  /// sets the target occupancy in PreRARematStage::TargetOccupancy.
+  bool canIncreaseOccupancyOrReduceSpill();
 
   /// Whether the MI is trivially rematerializable and does not have any virtual
   /// register use.
   bool isTriviallyReMaterializable(const MachineInstr &MI);
 
-  /// Sinks all instructions in \p RematInstructions to increase function
-  /// occupancy. Modified regions are tagged for rescheduling.
-  void sinkTriviallyRematInsts(ArrayRef<RematInstruction> RematInstructions,
-                               const GCNSubtarget &ST, const SIInstrInfo *TII);
+  /// Rematerializes all instructions in PreRARematStage::Rematerializations
+  /// and stores the achieved occupancy after remat in
+  /// PreRARematStage::AchievedOcc.
+  void rematerialize();
+
+  /// If remat alone did not increase occupancy to the target one, rollbacks all
+  /// rematerializations and resets live-ins/RP in all regions impacted by the
+  /// stage to their pre-stage values.
+  void finalizeGCNSchedStage() override;
 
 public:
   bool initGCNSchedStage() override;
