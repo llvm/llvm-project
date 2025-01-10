@@ -266,7 +266,7 @@ enum EdgeKind_loongarch : Edge::Kind {
   /// ULEB128 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (*{16}Fixup + Target + Addend) : uleb128
+  ///   Fixup <- (Fixup + Target + Addend) : uleb128
   ///
   AddUleb128,
 
@@ -308,7 +308,7 @@ enum EdgeKind_loongarch : Edge::Kind {
   /// ULEB128 bits label subtraction
   ///
   /// Fixup expression:
-  ///   Fixup <- (*{16}Fixup - Target - Addend) : uleb128
+  ///   Fixup <- (Fixup - Target - Addend) : uleb128
   ///
   SubUleb128,
 
