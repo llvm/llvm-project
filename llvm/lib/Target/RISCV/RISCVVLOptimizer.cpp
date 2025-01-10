@@ -550,10 +550,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWCVT_RTZ_X_F_V:
   case RISCV::VFWCVT_F_XU_V:
   case RISCV::VFWCVT_F_X_V:
-  case RISCV::VFWCVT_F_F_V: {
-    unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
-  }
+  case RISCV::VFWCVT_F_F_V:
+    return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
   case RISCV::VWADDU_WV:
@@ -571,8 +569,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWSUB_WV: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Integer Extension
@@ -613,8 +610,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFNCVT_ROD_F_F_W: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Mask Instructions
@@ -728,8 +724,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
     bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   default:
