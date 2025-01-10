@@ -34,7 +34,7 @@ SUBST = {
 }
 
 
-def get_line2func_list(args, clang_args, global_underscores):
+def get_line2func_list(args, clang_args, globals_name_prefix):
     ret = collections.defaultdict(list)
     # Use clang's JSON AST dump to get the mangled name
     json_dump_args = [args.clang] + clang_args + ["-fsyntax-only", "-o", "-"]
@@ -122,10 +122,13 @@ def get_line2func_list(args, clang_args, global_underscores):
         if search is None:
             search = spell
         mangled = node.get("mangledName", spell)
-        # Strip leading underscore from globals, so the name matches the LLVM one
-        if global_underscores:
+        # Clang's AST dump includes the globals prefix, but when Clang emits
+        # LLVM IR this is not included and instead added as part of the asm
+        # output. Strip it from the mangled name of globals when needed
+        # (see DataLayout::getGlobalPrefix()).
+        if globals_name_prefix:
             storage = node.get("storageClass", None)
-            if storage != "static" and mangled[0] == "_":
+            if storage != "static" and mangled[0] == globals_name_prefix:
                 mangled = mangled[1:]
         ret[int(line) - 1].append((spell, mangled, search))
 
@@ -403,7 +406,7 @@ def main():
             # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
             # mangled names. Forward all clang args for now.
             for k, v in get_line2func_list(
-                ti.args, clang_args, common.get_global_underscores(raw_tool_output)
+                ti.args, clang_args, common.get_globals_name_prefix(raw_tool_output)
             ).items():
                 line2func_list[k].extend(v)
 

@@ -655,16 +655,16 @@ def get_triple_from_march(march):
     return "x86"
 
 
-def get_global_underscores(raw_tool_output):
+def get_globals_name_prefix(raw_tool_output):
     m = DATA_LAYOUT_RE.search(raw_tool_output)
     if not m:
-        return False
+        return None
     data_layout = m.group("layout")
     idx = data_layout.find("m:")
     if idx < 0:
-        return False
+        return None
     ch = data_layout[idx + 2]
-    return ch == "o" or ch == "x"
+    return "_" if ch == "o" or ch == "x" else None
 
 
 def apply_filters(line, filters):
