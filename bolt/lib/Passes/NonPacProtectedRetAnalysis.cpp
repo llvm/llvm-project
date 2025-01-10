@@ -204,7 +204,7 @@ protected:
   /// track which instructions last wrote to this register.
   std::vector<uint16_t> Reg2StateIdx;
 
-  bool doTrackReg(MCPhysReg Reg) const {
+  bool isTrackingReg(MCPhysReg Reg) const {
     for (auto R : RegsToTrackInstsFor)
       if (R == Reg)
         return true;
@@ -265,7 +265,7 @@ protected:
     // need to track that for:
     if (TrackingLastInsts) {
       for (auto WrittenReg : Written.set_bits()) {
-        if (doTrackReg(WrittenReg)) {
+        if (isTrackingReg(WrittenReg)) {
           Next.LastInstWritingReg[reg2StateIdx(WrittenReg)] = {};
           Next.LastInstWritingReg[reg2StateIdx(WrittenReg)].insert(&Point);
         }
@@ -276,7 +276,7 @@ protected:
     if (AutReg != BC.MIB->getNoRegister()) {
       Next.NonAutClobRegs.reset(
           BC.MIB->getAliases(AutReg, /*OnlySmaller=*/true));
-      if (TrackingLastInsts && doTrackReg(AutReg))
+      if (TrackingLastInsts && isTrackingReg(AutReg))
         Next.LastInstWritingReg[reg2StateIdx(AutReg)] = {};
     }
 
