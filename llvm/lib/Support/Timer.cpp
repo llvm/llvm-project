@@ -495,27 +495,17 @@ public:
                                TimerLock};
   SignpostEmitter Signposts;
 
-private:
   // Order of these members and initialization below is important. For example
   // the defaultTimerGroup uses the timerLock. Most of these also depend on the
   // options above.
   std::once_flag InitDeferredFlag;
   std::optional<Name2PairMap> NamedGroupedTimersPtr;
+
   TimerGlobals &initDeferred() {
     std::call_once(InitDeferredFlag,
                    [this]() { NamedGroupedTimersPtr.emplace(); });
     return *this;
   }
-
-public:
-  SignpostEmitter &signposts() { return Signposts; }
-  sys::SmartMutex<true> &timerLock() { return TimerLock; }
-  TimerGroup &defaultTimerGroup() { return DefaultTimerGroup; }
-  Name2PairMap &namedGroupedTimers() {
-    return *initDeferred().NamedGroupedTimersPtr;
-  }
-
-public:
   TimerGlobals()
       : InfoOutputFilename(
             "info-output-file", cl::value_desc("filename"),
@@ -540,15 +530,15 @@ static std::string &libSupportInfoOutputFilename() {
 }
 static bool trackSpace() { return ManagedTimerGlobals->TrackSpace; }
 static bool sortTimers() { return ManagedTimerGlobals->SortTimers; }
-static SignpostEmitter &signposts() { return ManagedTimerGlobals->signposts(); }
+static SignpostEmitter &signposts() { return ManagedTimerGlobals->Signposts; }
 static sys::SmartMutex<true> &timerLock() {
-  return ManagedTimerGlobals->timerLock();
+  return ManagedTimerGlobals->TimerLock;
 }
 static TimerGroup &defaultTimerGroup() {
-  return ManagedTimerGlobals->defaultTimerGroup();
+  return ManagedTimerGlobals->DefaultTimerGroup;
 }
 static Name2PairMap &namedGroupedTimers() {
-  return ManagedTimerGlobals->namedGroupedTimers();
+  return *ManagedTimerGlobals->initDeferred().NamedGroupedTimersPtr;
 }
 
 void llvm::initTimerOptions() { *ManagedTimerGlobals; }
