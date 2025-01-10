@@ -431,7 +431,7 @@ Non-comprehensive list of changes in this release
   which allows them to be stored in STL containers.
 
 - In the ``-ftime-report`` output, the new "Clang time report" group replaces
-  the old "Clang front-end time report" and shows "Front end", "LLVM IR
+  the old "Clang front-end time report" and includes "Front end", "LLVM IR
   generation", "Optimizer", and "Machine code generation".
 
 New Compiler Flags

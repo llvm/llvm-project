@@ -175,7 +175,6 @@ void Timer::clear() {
 }
 
 void Timer::yieldTo(Timer &O) {
-  assert(Running && "Cannot stop a paused timer");
   stopTimer();
   O.startTimer();
 }
