@@ -70,10 +70,10 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const LookupResult &LR) {
   }
 
   if (!LR.CallSiteFuncRegex.empty()) {
-    OS << "\n      +CallSites:";
+    OS << "\n      CallSites: ";
     for (size_t i = 0; i < LR.CallSiteFuncRegex.size(); ++i) {
       if (i > 0)
-        OS << ",";
+        OS << ", ";
       OS << LR.CallSiteFuncRegex[i];
     }
   }

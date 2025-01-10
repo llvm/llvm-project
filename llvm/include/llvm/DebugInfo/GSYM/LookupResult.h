@@ -49,7 +49,31 @@ struct LookupResult {
   /// deepest inline function will appear at index zero in the source locations
   /// array, and the concrete function will appear at the end of the array.
   SourceLocations Locations;
-  ///< Function name regex patterns for call site
+
+  /// Function name regex patterns associated with a call site at the lookup
+  /// address. This vector will be populated when:
+  /// 1. The lookup address matches a call site's return address in a function
+  /// 2. The call site has associated regex patterns that describe what
+  /// functions can be called from that location
+  ///
+  /// The regex patterns can be used to validate function calls during runtime
+  /// checking or symbolication. For example:
+  /// - Patterns like "^foo$" indicate the call site can only call function
+  /// "foo"
+  /// - Patterns like "^std::" indicate the call site can call any function in
+  ///   the std namespace
+  /// - Multiple patterns allow matching against a set of allowed functions
+  ///
+  /// The patterns are stored as string references into the GSYM string table.
+  /// This information is typically loaded from:
+  /// - DWARF debug info call site entries
+  /// - External YAML files specifying call site patterns
+  /// - Other debug info formats that encode call site constraints
+  ///
+  /// The patterns will be empty if:
+  /// - The lookup address is not at the return address of a call site
+  /// - The call site has no associated function name constraints
+  /// - Call site info was not included when creating the GSYM file
   std::vector<StringRef> CallSiteFuncRegex;
 
   std::string getSourceFile(uint32_t Index) const;
