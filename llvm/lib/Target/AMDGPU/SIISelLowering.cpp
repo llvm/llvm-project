@@ -1486,7 +1486,7 @@ void SITargetLowering::CollectTargetIntrinsicOperands(
   }
 }
 
-bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
+bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             SmallVectorImpl<Value *> &Ops,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
@@ -5732,6 +5732,35 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
+// Refer to comments added to the MIR variant of isFMAFasterThanFMulAndFAdd for
+// specific details.
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
+                                                  Type *Ty) const {
+  switch (Ty->getScalarSizeInBits()) {
+  case 16: {
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    return Subtarget->has16BitInsts() &&
+           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
+  }
+  case 32: {
+    if (!Subtarget->hasMadMacF32Insts())
+      return Subtarget->hasFastFMAF32();
+
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
+      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
+
+    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
+  }
+  case 64:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
 bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
@@ -7429,7 +7458,8 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       DAG.getNode(ISD::AND, SL, IntVT, DAG.getNOT(SL, BFM, IntVT), BCVec);
 
   // 4. Get (2) and (3) ORed into the target vector.
-  SDValue BFI = DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS);
+  SDValue BFI =
+      DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
 }
@@ -7637,7 +7667,8 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
     Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
 
-    SDValue Or = DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi);
+    SDValue Or =
+        DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi, SDNodeFlags::Disjoint);
     return DAG.getNode(ISD::BITCAST, SL, VT, Or);
   }
 
@@ -10076,8 +10107,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
-  case Intrinsic::amdgcn_s_barrier_join:
-  case Intrinsic::amdgcn_s_wakeup_barrier: {
+  case Intrinsic::amdgcn_s_barrier_join: {
     // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
@@ -10086,32 +10116,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     if (isa<ConstantSDNode>(BarOp)) {
       uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
-      switch (IntrinsicID) {
-      default:
-        return SDValue();
-      case Intrinsic::amdgcn_s_barrier_join:
-        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
-        break;
-      case Intrinsic::amdgcn_s_wakeup_barrier:
-        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
-        break;
-      }
+      Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+
       // extract the BarrierID from bits 4-9 of the immediate
       unsigned BarID = (BarVal >> 4) & 0x3F;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
-      switch (IntrinsicID) {
-      default:
-        return SDValue();
-      case Intrinsic::amdgcn_s_barrier_join:
-        Opc = AMDGPU::S_BARRIER_JOIN_M0;
-        break;
-      case Intrinsic::amdgcn_s_wakeup_barrier:
-        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
-        break;
-      }
+      Opc = AMDGPU::S_BARRIER_JOIN_M0;
+
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
@@ -16990,6 +17004,33 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
+}
+
+/// Check if it is profitable to hoist instruction in then/else to if.
+bool SITargetLowering::isProfitableToHoist(Instruction *I) const {
+  if (!I->hasOneUse())
+    return true;
+
+  Instruction *User = I->user_back();
+  // TODO: Add more patterns that are not profitable to hoist and
+  // handle modifiers such as fabs and fneg
+  switch (I->getOpcode()) {
+  case Instruction::FMul: {
+    if (User->getOpcode() != Instruction::FSub &&
+        User->getOpcode() != Instruction::FAdd)
+      return true;
+
+    const TargetOptions &Options = getTargetMachine().Options;
+
+    return ((!I->hasAllowContract() || !User->hasAllowContract()) &&
+            Options.AllowFPOpFusion != FPOpFusion::Fast &&
+            !Options.UnsafeFPMath) ||
+           !isFMAFasterThanFMulAndFAdd(*I->getFunction(), User->getType());
+  }
+  default:
+    return true;
+  }
+  return true;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

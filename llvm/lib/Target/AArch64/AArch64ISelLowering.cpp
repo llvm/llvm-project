@@ -7281,9 +7281,16 @@ SDValue AArch64TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   Entry.Ty = IntPtrTy;
   Entry.Node = Trmp;
   Args.push_back(Entry);
-  Entry.Node = DAG.getConstant(20, dl, MVT::i64);
-  Args.push_back(Entry);
 
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Trmp.getNode())) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    Entry.Node =
+        DAG.getConstant(MFI.getObjectSize(FI->getIndex()), dl, MVT::i64);
+  } else
+    Entry.Node = DAG.getConstant(36, dl, MVT::i64);
+
+  Args.push_back(Entry);
   Entry.Node = FPtr;
   Args.push_back(Entry);
   Entry.Node = Nest;
@@ -10757,37 +10764,30 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   //  FMOV    D0, X0        // copy 64-bit int to vector, high bits zero'd
   //  CNT     V0.8B, V0.8B  // 8xbyte pop-counts
   //  ADDV    B0, V0.8B     // sum 8xbyte pop-counts
-  //  UMOV    X0, V0.B[0]   // copy byte result back to integer reg
+  //  FMOV    X0, D0        // copy result back to integer reg
   if (VT == MVT::i32 || VT == MVT::i64) {
     if (VT == MVT::i32)
       Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v8i8, Val);
-    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
-    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
+    SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v8i8, CtPop);
+    if (VT == MVT::i32)
+      AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, AddV,
                          DAG.getConstant(0, DL, MVT::i64));
-
+    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
     if (IsParity)
-      UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-    if (VT == MVT::i64)
-      UaddLV = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, UaddLV);
-    return UaddLV;
+      AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
+    return AddV;
   } else if (VT == MVT::i128) {
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
-    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
-    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
-                         DAG.getConstant(0, DL, MVT::i64));
-
+    SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
+    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
     if (IsParity)
-      UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i128, UaddLV);
+      AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
+    return AddV;
   }
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
@@ -13723,44 +13723,6 @@ static SDValue constructDup(SDValue V, int Lane, SDLoc dl, EVT VT,
   return DAG.getNode(Opcode, dl, VT, V, DAG.getConstant(Lane, dl, MVT::i64));
 }
 
-// Return true if we can get a new shuffle mask by checking the parameter mask
-// array to test whether every two adjacent mask values are continuous and
-// starting from an even number.
-static bool isWideTypeMask(ArrayRef<int> M, EVT VT,
-                           SmallVectorImpl<int> &NewMask) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-
-  NewMask.clear();
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    int M0 = M[i];
-    int M1 = M[i + 1];
-
-    // If both elements are undef, new mask is undef too.
-    if (M0 == -1 && M1 == -1) {
-      NewMask.push_back(-1);
-      continue;
-    }
-
-    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
-      NewMask.push_back(M1 / 2);
-      continue;
-    }
-
-    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
-      NewMask.push_back(M0 / 2);
-      continue;
-    }
-
-    NewMask.clear();
-    return false;
-  }
-
-  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
-  return true;
-}
-
 // Try to widen element type to get a new mask value for a better permutation
 // sequence, so that we can use NEON shuffle instructions, such as zip1/2,
 // UZP1/2, TRN1/2, REV, INS, etc.
@@ -13787,7 +13749,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
     return SDValue();
 
   SmallVector<int, 8> NewMask;
-  if (isWideTypeMask(Mask, VT, NewMask)) {
+  if (widenShuffleMaskElts(Mask, NewMask)) {
     MVT NewEltVT = VT.isFloatingPoint()
                        ? MVT::getFloatingPointVT(ElementSize * 2)
                        : MVT::getIntegerVT(ElementSize * 2);
