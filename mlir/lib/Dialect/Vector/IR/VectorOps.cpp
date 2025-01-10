@@ -551,16 +551,16 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
     return {};
   if (!srcAttr.isSplat() || !accAttr.isSplat())
     return {};
-  auto reductionDims = getReductionDims();
+  ArrayRef<int64_t> reductionDims = getReductionDims();
   auto srcType = mlir::cast<ShapedType>(getSourceVectorType());
-  auto srcDims = srcType.getShape();
+  ArrayRef<int64_t> srcDims = srcType.getShape();
   int64_t times = 1;
   for (auto dim : reductionDims) {
     times *= srcDims[dim];
   }
   CombiningKind kind = getKind();
   auto dstType = mlir::cast<ShapedType>(getDestType());
-  auto eltype = dstType.getElementType();
+  Type eltype = dstType.getElementType();
   if (mlir::dyn_cast_or_null<FloatType>(eltype)) {
     return foldSplatReduce<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
                                       accAttr.getSplatValue<FloatAttr>(), times,
