@@ -152,6 +152,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
   void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                      std::string String, bool Override) override {
+
     // AArch64 build attributes for assembly attribute form:
     // .aeabi_attribute tag, value
     if (unsigned(-1) == Value && "" == String) {
@@ -469,7 +470,11 @@ void AArch64TargetELFStreamer::emitAtributesSubsection(
 void AArch64TargetELFStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                                              unsigned Value, std::string String,
                                              bool Override) {
-  AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "", Override);
+  if (unsigned(-1) != Value)
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "", Override);
+  if ("" != String)
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1), String,
+                                         Override);
 }
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {

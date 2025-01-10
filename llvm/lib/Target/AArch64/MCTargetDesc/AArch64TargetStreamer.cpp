@@ -185,6 +185,7 @@ AArch64TargetStreamer::getActiveAtributesSubsection() {
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                                           unsigned Value, std::string String,
                                           bool Override) {
+
   if (unsigned(-1) == Value && "" == String) {
     assert(0 && "Arguments error");
     return;
@@ -226,7 +227,7 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
             MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
       if ("" != String)
         SubSection.Content.push_back(MCELFStreamer::AttributeItem(
-            MCELFStreamer::AttributeItem::NumericAttribute, Tag, unsigned(-1),
+            MCELFStreamer::AttributeItem::TextAttribute, Tag, unsigned(-1),
             String));
       return;
     }
