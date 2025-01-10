@@ -100,6 +100,29 @@ func.func @test_add_0d(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
 
 // -----
 
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1) -> (d0, 0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (0, 0)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+
+// CHECK-LABEL:   func.func @test_add_0d_broadcast(
+// CHECK-SAME:                                     %[[ARG0:.*]]: tensor<2x1xf32>,
+// CHECK-SAME:                                     %[[ARG1:.*]]: tensor<f32>) -> tensor<2x1xf32> {
+// CHECK:           %[[EXPANDED:.*]] = tensor.expand_shape %[[ARG1]] [] output_shape [1, 1] : tensor<f32> into tensor<1x1xf32>
+// CHECK:           %[[EMPTY_TENSOR:.*]] = tensor.empty() : tensor<2x1xf32>
+// CHECK:           %[[RESULT:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]], %[[EXPANDED]] : tensor<2x1xf32>, tensor<1x1xf32>) outs(%[[EMPTY_TENSOR]] : tensor<2x1xf32>) {
+// CHECK:           ^bb0(%[[IN0:.*]]: f32, %[[IN1:.*]]: f32, %[[OUT:.*]]: f32):
+// CHECK:             %[[ADD:.*]] = arith.addf %[[IN0]], %[[IN1]] : f32
+// CHECK:             linalg.yield %[[ADD]] : f32
+// CHECK:           } -> tensor<2x1xf32>
+// CHECK:           return %[[RESULT]] : tensor<2x1xf32>
+// CHECK:         }
+func.func @test_add_0d_broadcast(%arg0: tensor<2x1xf32>, %arg1: tensor<f32>) -> tensor<2x1xf32> {
+  %0 = tosa.add %arg0, %arg1 : (tensor<2x1xf32>, tensor<f32>) -> tensor<2x1xf32>
+  return %0 : tensor<2x1xf32>
+}
+
+// -----
+
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @test_add_1d_all_dynamic

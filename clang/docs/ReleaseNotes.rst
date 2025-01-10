@@ -1058,6 +1058,7 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a bug about overriding a constexpr pure-virtual member function with a non-constexpr virtual member function which causes compilation failure when including standard C++ header `format`.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -1297,6 +1298,8 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
+- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
+  which allow changing the formatting of pretty-printed code.
 - Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
   a declaration is an anonymous union or anonymous struct.
 

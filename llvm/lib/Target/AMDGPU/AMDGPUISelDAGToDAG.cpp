@@ -4398,7 +4398,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   // register.
 
   Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh || isExtractHiElt(Src, Src)) {
+  if (IsExtractHigh ||
+      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
     Mods |= SISrcMods::OP_SEL_0;
 
     // TODO: Should we try to look for neg/abs here?
