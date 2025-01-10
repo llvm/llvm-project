@@ -110,7 +110,7 @@ define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
   %src0.clamp = call i16 @llvm.smin.i16(i16 %src0.max, i16 255)
   %src1.max = call i16 @llvm.smax.i16(i16 %src1, i16 0)
   %src1.clamp = call i16 @llvm.smin.i16(i16 %src1.max, i16 255)
-  %insert.0 = insertelement <2 x i16> undef, i16 %src0.clamp, i32 0
+  %insert.0 = insertelement <2 x i16> poison, i16 %src0.clamp, i32 0
   %vec = insertelement <2 x i16> %insert.0, i16 %src1.clamp, i32 1
   ret <2 x i16> %vec
 }
