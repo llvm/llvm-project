@@ -36,6 +36,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <stack>
 #include <string>
