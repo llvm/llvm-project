@@ -17,8 +17,15 @@ subroutine s1()
   intCoVar = 343
   ! OK
   rVar1 = rCoarray[1,2,3]
+  associate (x => rCoarray)
+    rVar1 = x[1,2,3] ! also ok
+  end associate
   !ERROR: 'rcoarray' has corank 3, but coindexed reference has 2 cosubscripts
   rVar1 = rCoarray[1,2]
+  associate (x => rCoarray)
+  !ERROR: 'x' has corank 3, but coindexed reference has 2 cosubscripts
+    rVar1 = x[1,2]
+  end associate
   !ERROR: Must have INTEGER type, but is REAL(4)
   rVar1 = rCoarray[1,2,3.4]
   !ERROR: Must have INTEGER type, but is REAL(4)

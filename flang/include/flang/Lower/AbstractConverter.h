@@ -62,7 +62,7 @@ struct SymbolBox;
 namespace pft {
 struct Variable;
 struct FunctionLikeUnit;
-}
+} // namespace pft
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
@@ -295,7 +295,7 @@ public:
   /// Get the OpBuilder
   virtual fir::FirOpBuilder &getFirOpBuilder() = 0;
   /// Get the ModuleOp
-  virtual mlir::ModuleOp &getModuleOp() = 0;
+  virtual mlir::ModuleOp getModuleOp() = 0;
   /// Get the MLIRContext
   virtual mlir::MLIRContext &getMLIRContext() = 0;
   /// Unique a symbol (add a containing scope specific prefix)

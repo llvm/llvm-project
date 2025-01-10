@@ -35,6 +35,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
                                                cl::init(true), cl::Hidden);
 
+static cl::opt<bool> SVEPreferFixedOverScalableIfEqualCost(
+    "sve-prefer-fixed-over-scalable-if-equal", cl::Hidden);
+
 static cl::opt<unsigned> SVEGatherOverhead("sve-gather-overhead", cl::init(10),
                                            cl::Hidden);
 
@@ -256,12 +259,13 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CalleeAttrs.set(SMEAttrs::SM_Enabled, true);
   }
 
-  if (CalleeAttrs.isNewZA())
+  if (CalleeAttrs.isNewZA() || CalleeAttrs.isNewZT0())
     return false;
 
   if (CallerAttrs.requiresLazySave(CalleeAttrs) ||
       CallerAttrs.requiresSMChange(CalleeAttrs) ||
-      CallerAttrs.requiresPreservingZT0(CalleeAttrs)) {
+      CallerAttrs.requiresPreservingZT0(CalleeAttrs) ||
+      CallerAttrs.requiresPreservingAllZAState(CalleeAttrs)) {
     if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
@@ -1634,10 +1638,8 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
       !match(OpPredicate, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
                               m_ConstantInt<AArch64SVEPredPattern::all>())))
     return std::nullopt;
-  IRBuilderBase::FastMathFlagGuard FMFGuard(IC.Builder);
-  IC.Builder.setFastMathFlags(II.getFastMathFlags());
-  auto BinOp =
-      IC.Builder.CreateBinOp(BinOpCode, II.getOperand(1), II.getOperand(2));
+  auto BinOp = IC.Builder.CreateBinOpFMF(
+      BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
   return IC.replaceInstUsesWith(II, BinOp);
 }
 
@@ -2759,6 +2761,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
+  static const TypeConversionCostTblEntry BF16Tbl[] = {
+      {ISD::FP_ROUND, MVT::bf16, MVT::f32, 1},     // bfcvt
+      {ISD::FP_ROUND, MVT::bf16, MVT::f64, 1},     // bfcvt
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f32, 1}, // bfcvtn
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f32, 2}, // bfcvtn+bfcvtn2
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 2}, // bfcvtn+fcvtn
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 3}, // fcvtn+fcvtl2+bfcvtn
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+bfcvtn
+  };
+
+  if (ST->hasBF16())
+    if (const auto *Entry = ConvertCostTableLookup(
+            BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
+      return AdjustCost(Entry->Cost);
+
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
       {ISD::TRUNCATE, MVT::v2i16, MVT::v2i64, 1},   // xtn
@@ -2846,6 +2863,14 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::v2f64, MVT::v2f16, 2}, // fcvtl+fcvtl
       {ISD::FP_EXTEND, MVT::v4f64, MVT::v4f16, 3}, // fcvtl+fcvtl2+fcvtl
       {ISD::FP_EXTEND, MVT::v8f64, MVT::v8f16, 6}, // 2 * fcvtl+fcvtl2+fcvtl
+      //   BF16 (uses shift)
+      {ISD::FP_EXTEND, MVT::f32, MVT::bf16, 1},     // shl
+      {ISD::FP_EXTEND, MVT::f64, MVT::bf16, 2},     // shl+fcvt
+      {ISD::FP_EXTEND, MVT::v4f32, MVT::v4bf16, 1}, // shll
+      {ISD::FP_EXTEND, MVT::v8f32, MVT::v8bf16, 2}, // shll+shll2
+      {ISD::FP_EXTEND, MVT::v2f64, MVT::v2bf16, 2}, // shll+fcvtl
+      {ISD::FP_EXTEND, MVT::v4f64, MVT::v4bf16, 3}, // shll+fcvtl+fcvtl2
+      {ISD::FP_EXTEND, MVT::v8f64, MVT::v8bf16, 6}, // 2 * shll+fcvtl+fcvtl2
       // FP Ext and trunc
       {ISD::FP_ROUND, MVT::f32, MVT::f64, 1},     // fcvt
       {ISD::FP_ROUND, MVT::v2f32, MVT::v2f64, 1}, // fcvtn
@@ -2858,6 +2883,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::v2f16, MVT::v2f64, 2}, // fcvtn+fcvtn
       {ISD::FP_ROUND, MVT::v4f16, MVT::v4f64, 3}, // fcvtn+fcvtn2+fcvtn
       {ISD::FP_ROUND, MVT::v8f16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+fcvtn
+      //   BF16 (more complex, with +bf16 is handled above)
+      {ISD::FP_ROUND, MVT::bf16, MVT::f32, 8}, // Expansion is ~8 insns
+      {ISD::FP_ROUND, MVT::bf16, MVT::f64, 9}, // fcvtn + above
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f32, 8},
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f32, 8},
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f32, 15},
+      {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 9},
+      {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 10},
+      {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 19},
 
       // LowerVectorINT_TO_FP:
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
@@ -4085,51 +4119,86 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Try to unroll small, single block loops, if they have load/store
   // dependencies, to expose more parallel memory access streams.
-  if (L->getHeader() != L->getLoopLatch() || Size > 8)
-    return;
+  BasicBlock *Header = L->getHeader();
+  if (Header == L->getLoopLatch()) {
+    if (Size > 8)
+      return;
 
-  SmallPtrSet<Value *, 8> LoadedValues;
-  SmallVector<StoreInst *> Stores;
-  for (auto *BB : L->blocks()) {
-    for (auto &I : *BB) {
-      Value *Ptr = getLoadStorePointerOperand(&I);
-      if (!Ptr)
-        continue;
-      const SCEV *PtrSCEV = SE.getSCEV(Ptr);
-      if (SE.isLoopInvariant(PtrSCEV, L))
-        continue;
-      if (isa<LoadInst>(&I))
-        LoadedValues.insert(&I);
-      else
-        Stores.push_back(cast<StoreInst>(&I));
+    SmallPtrSet<Value *, 8> LoadedValues;
+    SmallVector<StoreInst *> Stores;
+    for (auto *BB : L->blocks()) {
+      for (auto &I : *BB) {
+        Value *Ptr = getLoadStorePointerOperand(&I);
+        if (!Ptr)
+          continue;
+        const SCEV *PtrSCEV = SE.getSCEV(Ptr);
+        if (SE.isLoopInvariant(PtrSCEV, L))
+          continue;
+        if (isa<LoadInst>(&I))
+          LoadedValues.insert(&I);
+        else
+          Stores.push_back(cast<StoreInst>(&I));
+      }
     }
+
+    // Try to find an unroll count that maximizes the use of the instruction
+    // window, i.e. trying to fetch as many instructions per cycle as possible.
+    unsigned MaxInstsPerLine = 16;
+    unsigned UC = 1;
+    unsigned BestUC = 1;
+    unsigned SizeWithBestUC = BestUC * Size;
+    while (UC <= 8) {
+      unsigned SizeWithUC = UC * Size;
+      if (SizeWithUC > 48)
+        break;
+      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
+          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+        BestUC = UC;
+        SizeWithBestUC = BestUC * Size;
+      }
+      UC++;
+    }
+
+    if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
+          return LoadedValues.contains(SI->getOperand(0));
+        }))
+      return;
+
+    UP.Runtime = true;
+    UP.DefaultUnrollRuntimeCount = BestUC;
+    return;
   }
 
-  // Try to find an unroll count that maximizes the use of the instruction
-  // window, i.e. trying to fetch as many instructions per cycle as possible.
-  unsigned MaxInstsPerLine = 16;
-  unsigned UC = 1;
-  unsigned BestUC = 1;
-  unsigned SizeWithBestUC = BestUC * Size;
-  while (UC <= 8) {
-    unsigned SizeWithUC = UC * Size;
-    if (SizeWithUC > 48)
-      break;
-    if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-        (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
-      BestUC = UC;
-      SizeWithBestUC = BestUC * Size;
-    }
-    UC++;
-  }
-
-  if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
-        return LoadedValues.contains(SI->getOperand(0));
-      }))
+  // Try to runtime-unroll loops with early-continues depending on loop-varying
+  // loads; this helps with branch-prediction for the early-continues.
+  auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
+  auto *Latch = L->getLoopLatch();
+  SmallVector<BasicBlock *> Preds(predecessors(Latch));
+  if (!Term || !Term->isConditional() || Preds.size() == 1 ||
+      none_of(Preds, [Header](BasicBlock *Pred) { return Header == Pred; }) ||
+      none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
-  UP.Runtime = true;
-  UP.DefaultUnrollRuntimeCount = BestUC;
+  std::function<bool(Instruction *, unsigned)> DependsOnLoopLoad =
+      [&](Instruction *I, unsigned Depth) -> bool {
+    if (isa<PHINode>(I) || L->isLoopInvariant(I) || Depth > 8)
+      return false;
+
+    if (isa<LoadInst>(I))
+      return true;
+
+    return any_of(I->operands(), [&](Value *V) {
+      auto *I = dyn_cast<Instruction>(V);
+      return I && DependsOnLoopLoad(I, Depth + 1);
+    });
+  };
+  CmpPredicate Pred;
+  Instruction *I;
+  if (match(Term, m_Br(m_ICmp(Pred, m_Instruction(I), m_Value()), m_Value(),
+                       m_Value())) &&
+      DependsOnLoopLoad(I, 0)) {
+    UP.Runtime = true;
+  }
 }
 
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
@@ -4669,10 +4738,21 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   }
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
-  // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  if (IsExtractSubvector && LT.second.isFixedLengthVector())
+  // A subvector extract can be implemented with an ext (or trivial extract, if
+  // from lane 0). This currently only handles low or high extracts to prevent
+  // SLP vectorizer regressions.
+  if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
+    if (LT.second.is128BitVector() &&
+        cast<FixedVectorType>(SubTp)->getNumElements() ==
+            LT.second.getVectorNumElements() / 2) {
+      if (Index == 0)
+        return 0;
+      if (Index == (int)LT.second.getVectorNumElements() / 2)
+        return 1;
+    }
     Kind = TTI::SK_PermuteSingleSrc;
+  }
 
   // Check for broadcast loads, which are supported by the LD1R instruction.
   // In terms of code-size, the shuffle vector is free when a load + dup get
@@ -4881,6 +4961,12 @@ static bool containsDecreasingPointers(Loop *TheLoop,
     }
   }
   return false;
+}
+
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
+  if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
+    return SVEPreferFixedOverScalableIfEqualCost;
+  return ST->useFixedOverScalableIfEqualCost();
 }
 
 unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
@@ -5247,11 +5333,17 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
   }
 
-  // Sink vscales closer to uses for better isel
+  auto ShouldSinkCondition = [](Value *Cond) -> bool {
+    auto *II = dyn_cast<IntrinsicInst>(Cond);
+    return II && II->getIntrinsicID() == Intrinsic::vector_reduce_or &&
+           isa<ScalableVectorType>(II->getOperand(0)->getType());
+  };
+
   switch (I->getOpcode()) {
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:
+    // Sink vscales closer to uses for better isel
     for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
       if (shouldSinkVScale(I->getOperand(Op), Ops)) {
         Ops.push_back(&I->getOperandUse(Op));
@@ -5259,6 +5351,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
       }
     }
     break;
+  case Instruction::Select: {
+    if (!ShouldSinkCondition(I->getOperand(0)))
+      return false;
+
+    Ops.push_back(&I->getOperandUse(0));
+    return true;
+  }
+  case Instruction::Br: {
+    if (cast<BranchInst>(I)->isUnconditional())
+      return false;
+
+    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition()))
+      return false;
+
+    Ops.push_back(&I->getOperandUse(0));
+    return true;
+  }
   default:
     break;
   }
@@ -5405,7 +5514,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
-      Ops.push_back(&Insert->getOperandUse(1));
+      // And(Load) is excluded to prevent CGP getting stuck in a loop of sinking
+      // the And, just to hoist it again back to the load.
+      if (!match(OperandInstr, m_And(m_Load(m_Value()), m_Value())))
+        Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }
