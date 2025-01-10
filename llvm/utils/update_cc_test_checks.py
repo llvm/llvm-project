@@ -400,7 +400,7 @@ def main():
                 clang_args,
                 extra_commands,
                 prefixes,
-                raw_tool_output
+                raw_tool_output,
             )
 
             # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
