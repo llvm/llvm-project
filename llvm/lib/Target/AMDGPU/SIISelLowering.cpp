@@ -7458,7 +7458,8 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       DAG.getNode(ISD::AND, SL, IntVT, DAG.getNOT(SL, BFM, IntVT), BCVec);
 
   // 4. Get (2) and (3) ORed into the target vector.
-  SDValue BFI = DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS);
+  SDValue BFI =
+      DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
 }
@@ -7666,7 +7667,8 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
     Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
 
-    SDValue Or = DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi);
+    SDValue Or =
+        DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi, SDNodeFlags::Disjoint);
     return DAG.getNode(ISD::BITCAST, SL, VT, Or);
   }
 
