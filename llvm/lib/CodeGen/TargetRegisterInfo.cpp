@@ -738,13 +738,12 @@ unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
   }
   assert(RC && "Failed to find register class");
 
-  unsigned NReserved = 0;
-  const BitVector Reserved = MF.getRegInfo().getReservedRegs();
+  unsigned NAllocatableRegs = 0;
+  const BitVector &Reserved = MF.getRegInfo().getReservedRegs();
   for (MCPhysReg PhysReg : RC->getRawAllocationOrder(MF))
-    if (Reserved.test(PhysReg))
-      NReserved++;
+    if (!Reserved.test(PhysReg))
+      NAllocatableRegs++;
 
-  unsigned NAllocatableRegs = RC->getNumRegs() - NReserved;
   unsigned RegPressureSetLimit = getRawRegPressureSetLimit(MF, Idx);
   // If all the regs are reserved, return raw RegPressureSetLimit.
   // One example is VRSAVERC in PowerPC.
@@ -755,6 +754,7 @@ unsigned TargetRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                       << " are reserved!\n";);
     return RegPressureSetLimit;
   }
+  unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
   return RegPressureSetLimit - getRegClassWeight(RC).RegWeight * NReserved;
 }
 
