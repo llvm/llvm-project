@@ -7,8 +7,8 @@
 
 #include <@HEADER_NAME@>
 
-#ifdef __cplusplus
-extern "C" int main() { return 0; }
-#else
-int main(void) { return 0; }
-#endif
+int main(int argc, char **argv) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}
