@@ -218,9 +218,9 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     } else {
       Value maxIndex;
       for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
-        Value maxThisDim = rewriter.create<LLVM::MulOp>(
-            loc, memrefDescriptor.size(rewriter, loc, i),
-            memrefDescriptor.stride(rewriter, loc, i));
+        Value size = memrefDescriptor.size(rewriter, loc, i);
+        Value stride = memrefDescriptor.stride(rewriter, loc, i);
+        Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
         maxIndex =
             maxIndex ? rewriter.create<LLVM::UMaxOp>(loc, maxIndex, maxThisDim)
                      : maxThisDim;
