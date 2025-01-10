@@ -461,11 +461,6 @@ const char *TimerGroup::printAllJSONValues(raw_ostream &OS, const char *delim) {
   return delim;
 }
 
-void TimerGroup::constructForStatistics() {
-  libSupportInfoOutputFilename();
-  namedGroupedTimers();
-}
-
 //===----------------------------------------------------------------------===//
 // Timer Globals
 //
@@ -487,9 +482,20 @@ void TimerGroup::constructForStatistics() {
 class llvm::TimerGlobals {
 public:
   std::string LibSupportInfoOutputFilename;
-  cl::opt<std::string, true> InfoOutputFilename;
-  cl::opt<bool> TrackSpace;
-  cl::opt<bool> SortTimers;
+  cl::opt<std::string, true> InfoOutputFilename{
+      "info-output-file", cl::value_desc("filename"),
+      cl::desc("File to append -stats and -timer output to"), cl::Hidden,
+      cl::location(LibSupportInfoOutputFilename)};
+  cl::opt<bool> TrackSpace{
+      "track-memory",
+      cl::desc("Enable -time-passes memory tracking (this may be slow)"),
+      cl::Hidden};
+  cl::opt<bool> SortTimers{
+      "sort-timers",
+      cl::desc("In the report, sort the timers in each group in wall clock"
+               " time order"),
+      cl::init(true), cl::Hidden};
+
   sys::SmartMutex<true> TimerLock;
   TimerGroup DefaultTimerGroup{"misc", "Miscellaneous Ungrouped Timers",
                                TimerLock};
@@ -506,21 +512,6 @@ public:
                    [this]() { NamedGroupedTimersPtr.emplace(); });
     return *this;
   }
-  TimerGlobals()
-      : InfoOutputFilename(
-            "info-output-file", cl::value_desc("filename"),
-            cl::desc("File to append -stats and -timer output to"), cl::Hidden,
-            cl::location(LibSupportInfoOutputFilename)),
-        TrackSpace(
-            "track-memory",
-            cl::desc("Enable -time-passes memory tracking (this may be slow)"),
-            cl::Hidden),
-        SortTimers(
-            "sort-timers",
-            cl::desc(
-                "In the report, sort the timers in each group in wall clock"
-                " time order"),
-            cl::init(true), cl::Hidden) {}
 };
 
 static ManagedStatic<TimerGlobals> ManagedTimerGlobals;
@@ -542,5 +533,8 @@ static Name2PairMap &namedGroupedTimers() {
 }
 
 void llvm::initTimerOptions() { *ManagedTimerGlobals; }
+void TimerGroup::constructForStatistics() {
+  ManagedTimerGlobals->initDeferred();
+}
 
 void *TimerGroup::acquireTimerGlobals() { return ManagedTimerGlobals.claim(); }
