@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
+#include "sized_allocator.h"
 #include "test_iterators.h"
 
 struct NotEqualityComparable {};
@@ -122,6 +123,33 @@ public:
   TEST_CONSTEXPR TriviallyComparable(ElementT el) : el_(el) {}
   bool operator==(const TriviallyComparable&) const = default;
 };
+
+constexpr void test_bititer_with_custom_sized_types() {
+  {
+    using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+    std::vector<bool, Alloc> in(100, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+  {
+    using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+    std::vector<bool, Alloc> in(200, false, Alloc(1));
+    in[in.size() - 2] = true;
+    assert(std::ranges::find(in, true) == in.end() - 2);
+  }
+}
 
 constexpr bool test() {
   types::for_each(types::type_list<char, wchar_t, int, long, TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
@@ -216,6 +244,8 @@ constexpr bool test() {
       }
     }
   }
+
+  test_bititer_with_custom_sized_types();
 
   return true;
 }
