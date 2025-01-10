@@ -33,7 +33,7 @@ let TargetPrefix = "spv" in {
   def int_spv_ptrcast : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
   def int_spv_switch : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_loop_merge : Intrinsic<[], [llvm_vararg_ty]>;
-  def int_spv_selection_merge : Intrinsic<[], [llvm_any_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
+  def int_spv_selection_merge : Intrinsic<[], [llvm_vararg_ty]>;
   def int_spv_cmpxchg : Intrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_unreachable : Intrinsic<[], []>;
   def int_spv_alloca : Intrinsic<[llvm_any_ty], [llvm_i8_ty], [ImmArg<ArgIndex<0>>]>;
@@ -117,6 +117,10 @@ let TargetPrefix = "spv" in {
   def int_spv_resource_updatecounter
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                               [IntrInaccessibleMemOrArgMemOnly]>;
+
+  def int_spv_resource_getpointer
+      : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_i32_ty],
+                              [IntrNoMem]>;
 
   // Read a value from the image buffer. It does not translate directly to a
   // single OpImageRead because the result type is not necessarily a 4 element

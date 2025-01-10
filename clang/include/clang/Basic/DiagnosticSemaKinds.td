@@ -5878,7 +5878,7 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %select{|at least }3%4))">;
+  "lengths (%2 vs. %select{|at least }3%4)">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
@@ -12428,6 +12428,33 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+
+// SYCL kernel entry point diagnostics
+def err_sycl_entry_point_invalid : Error<
+  "'sycl_kernel_entry_point' attribute cannot be applied to a"
+  " %select{non-static member function|variadic function|deleted function|"
+           "defaulted function|constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|coroutine}0">;
+def err_sycl_entry_point_invalid_redeclaration : Error<
+  "'sycl_kernel_entry_point' kernel name argument does not match prior"
+  " declaration%diff{: $ vs $|}0,1">;
+def err_sycl_kernel_name_conflict : Error<
+  "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
+  " declaration">;
+def warn_sycl_kernel_name_not_a_class_type : Warning<
+  "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
+  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+def warn_sycl_entry_point_redundant_declaration : Warning<
+  "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;
+def err_sycl_entry_point_after_definition : Error<
+  "'sycl_kernel_entry_point' attribute cannot be added to a function after the"
+  " function is defined">;
+def err_sycl_entry_point_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " 'void' return type">;
+def err_sycl_entry_point_deduced_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " non-deduced 'void' return type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

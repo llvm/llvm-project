@@ -615,10 +615,6 @@ public:
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
 
-  /// HLSL Branch attribute.
-  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
-      HLSLControlFlowHintAttr::SpellingNotCalculated;
-
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
@@ -1624,6 +1620,13 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
+  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
+
+  void markStmtAsUsed(bool Skipped, const Stmt *S) {
+    PGO.markStmtAsUsed(Skipped, S);
+  }
+  void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
@@ -3871,6 +3874,8 @@ public:
   EmitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &S);
   void EmitOMPParallelMasterTaskLoopDirective(
       const OMPParallelMasterTaskLoopDirective &S);
+  void EmitOMPParallelMaskedTaskLoopDirective(
+      const OMPParallelMaskedTaskLoopDirective &S);
   void EmitOMPParallelMasterTaskLoopSimdDirective(
       const OMPParallelMasterTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);
