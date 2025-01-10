@@ -344,7 +344,7 @@ void SelfUpdate() {
   struct Members s;
 
   // expected-error@+1{{expected '('}}
-#pragma acc update self
+#pragma acc update host(s) self
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+3{{use of undeclared identifier 'zero'}}
