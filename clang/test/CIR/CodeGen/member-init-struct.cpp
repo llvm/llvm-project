@@ -34,7 +34,7 @@ C a, b(x), c(0, 2);
 // CHECK:   %[[VAL_8:.*]] = cir.get_member %[[VAL_2]][2] {name = "d"} : !cir.ptr<!ty_C> -> !cir.ptr<!cir.array<!s32i x 10>>
 // CHECK:   %[[VAL_9:.*]] = cir.const {{.*}} : !cir.array<!s32i x 10>
 // CHECK:   cir.store %[[VAL_9]], %[[VAL_8]] : !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>
-// CHECK:   %[[VAL_10:.*]] = cir.get_member %[[VAL_2]][4] {name = "e"} : !cir.ptr<!ty_C> -> !cir.ptr<!cir.method<!cir.func<!void ()> in !ty_C>>
-// CHECK:   %[[VAL_11:.*]] = cir.const #cir.method<null> : !cir.method<!cir.func<!void ()> in !ty_C>
-// CHECK:   cir.store %[[VAL_11]], %[[VAL_10]] : !cir.method<!cir.func<!void ()> in !ty_C>, !cir.ptr<!cir.method<!cir.func<!void ()> in !ty_C>>
+// CHECK:   %[[VAL_10:.*]] = cir.get_member %[[VAL_2]][4] {name = "e"} : !cir.ptr<!ty_C> -> !cir.ptr<!cir.method<!cir.func<()> in !ty_C>>
+// CHECK:   %[[VAL_11:.*]] = cir.const #cir.method<null> : !cir.method<!cir.func<()> in !ty_C>
+// CHECK:   cir.store %[[VAL_11]], %[[VAL_10]] : !cir.method<!cir.func<()> in !ty_C>, !cir.ptr<!cir.method<!cir.func<()> in !ty_C>>
 // CHECK:   cir.return

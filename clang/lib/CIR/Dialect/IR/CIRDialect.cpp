@@ -2490,13 +2490,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   p.printSymbolName(getSymName());
   auto fnType = getFunctionType();
   llvm::SmallVector<Type, 1> resultTypes;
-  if (!fnType.isVoid())
-    function_interface_impl::printFunctionSignature(
-        p, *this, fnType.getInputs(), fnType.isVarArg(),
-        fnType.getReturnTypes());
-  else
-    function_interface_impl::printFunctionSignature(
-        p, *this, fnType.getInputs(), fnType.isVarArg(), {});
+  function_interface_impl::printFunctionSignature(
+      p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getReturnTypes());
 
   if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
     p << ' ';
@@ -2565,6 +2560,11 @@ LogicalResult cir::FuncOp::verifyType() {
   if (!getNoProto() && type.isVarArg() && type.getNumInputs() == 0)
     return emitError()
            << "prototyped function must have at least one non-variadic input";
+  if (auto rt = type.getReturnTypes();
+      !rt.empty() && mlir::isa<cir::VoidType>(rt.front()))
+    return emitOpError("The return type for a function returning void should "
+                       "be empty instead of an explicit !cir.void");
+
   return success();
 }
 

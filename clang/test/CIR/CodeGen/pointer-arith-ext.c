@@ -50,9 +50,9 @@ void *f4_1(void *a, int b) { return (a -= b); }
 
 FP f5(FP a, int b) { return a + b; }
 // CIR-LABEL: f5
-// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!cir.func<!void ()>>>, !cir.ptr<!cir.func<!void ()>>
+// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!cir.func<()>>
 // CIR: %[[STRIDE:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
-// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!cir.func<!void ()>>, %[[STRIDE]] : !s32i)
+// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!cir.func<()>>, %[[STRIDE]] : !s32i)
 
 // LLVM-LABEL: f5
 // LLVM: %[[PTR:.*]] = load ptr, ptr {{.*}}, align 8
@@ -67,10 +67,10 @@ FP f6_1(int a, FP b) { return (a += b); }
 
 FP f7(FP a, int b) { return a - b; }
 // CIR-LABEL: f7
-// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!cir.func<!void ()>>>, !cir.ptr<!cir.func<!void ()>>
+// CIR: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!cir.func<()>>
 // CIR: %[[STRIDE:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR: %[[SUB:.*]] = cir.unary(minus, %[[STRIDE]]) : !s32i, !s32i
-// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!cir.func<!void ()>>, %[[SUB]] : !s32i)
+// CIR: cir.ptr_stride(%[[PTR]] : !cir.ptr<!cir.func<()>>, %[[SUB]] : !s32i)
 
 // LLVM-LABEL: f7
 // LLVM: %[[PTR:.*]] = load ptr, ptr {{.*}}, align 8

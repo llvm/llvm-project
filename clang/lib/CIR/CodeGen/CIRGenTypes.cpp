@@ -271,7 +271,7 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType QFT) {
   assert(QFT.isCanonical());
   const Type *Ty = QFT.getTypePtr();
   const FunctionType *FT = cast<FunctionType>(QFT.getTypePtr());
-  // First, check whether we can build the full fucntion type. If the function
+  // First, check whether we can build the full function type. If the function
   // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
   // the function type.
   assert(isFuncTypeConvertible(FT) && "NYI");

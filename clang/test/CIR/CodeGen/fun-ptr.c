@@ -55,10 +55,10 @@ int foo(Data* d) {
     return f(d);
 }
 
-// CIR:  cir.func private {{@.*test.*}}() -> !cir.ptr<!cir.func<!void ()>>
+// CIR:  cir.func private {{@.*test.*}}() -> !cir.ptr<!cir.func<()>>
 // CIR:  cir.func {{@.*bar.*}}()
-// CIR:    [[RET:%.*]] = cir.call {{@.*test.*}}() : () -> !cir.ptr<!cir.func<!void ()>>
-// CIR:    cir.call [[RET]]() : (!cir.ptr<!cir.func<!void ()>>) -> ()
+// CIR:    [[RET:%.*]] = cir.call {{@.*test.*}}() : () -> !cir.ptr<!cir.func<()>>
+// CIR:    cir.call [[RET]]() : (!cir.ptr<!cir.func<()>>) -> ()
 // CIR:    cir.return
 
 // LLVM: declare ptr {{@.*test.*}}()

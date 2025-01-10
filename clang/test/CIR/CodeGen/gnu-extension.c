@@ -15,5 +15,5 @@ void bar(void) {
 }
 
 //CHECK:  cir.func @bar()
-//CHECK:    {{.*}} = cir.get_global @bar : !cir.ptr<!cir.func<!void ()>>
+//CHECK:    {{.*}} = cir.get_global @bar : !cir.ptr<!cir.func<()>>
 //CHECK:    cir.return
