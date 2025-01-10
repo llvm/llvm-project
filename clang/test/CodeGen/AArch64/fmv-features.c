@@ -139,8 +139,8 @@ __attribute__((target_version("sve2-sm4"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Mwfxt() #[[wfxt:[0-9]+]] {
 __attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 
-// CHECK: define dso_local i32 @fmv._MaesMbf16MbtiMcrc() #[[multiple_features:[0-9]+]] {
-__attribute__((target_version("aes+bf16+bti+crc"))) int fmv(void) { return 0; }
+// CHECK: define dso_local i32 @fmv._MaesMbf16MbtiMcrc() #[[unordered_features_with_duplicates:[0-9]+]] {
+__attribute__((target_version("crc+bti+bti+bti+aes+aes+bf16"))) int fmv(void) { return 0; }
 
 // CHECK-NOT: define dso_local i32 @fmv._M{{.*}}
 __attribute__((target_version("non_existent_extension"))) int fmv(void);
@@ -198,5 +198,5 @@ int caller() {
 // CHECK: attributes #[[sve2_sha3]] = {{.*}} "fmv-features"="sve2-sha3"
 // CHECK: attributes #[[sve2_sm4]] = {{.*}} "fmv-features"="sve2-sm4"
 // CHECK: attributes #[[wfxt]] = {{.*}} "fmv-features"="wfxt"
-// CHECK: attributes #[[multiple_features]] = {{.*}} "fmv-features"="aes,bf16,bti,crc"
+// CHECK: attributes #[[unordered_features_with_duplicates]] = {{.*}} "fmv-features"="aes,bf16,bti,crc"
 // CHECK: attributes #[[default]] = {{.*}} "fmv-features"
