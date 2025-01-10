@@ -201,6 +201,7 @@ entry:
 }
 
 declare i32 @test_non_fmv_caller._Maes() #6
+declare i32 @test_non_fmv_caller._Msm4() #7
 declare i32 @test_non_fmv_caller.default() #0
 
 define weak_odr ptr @test_non_fmv_caller.resolver() comdat {
@@ -214,7 +215,7 @@ resolver_entry:
   ret ptr %test_non_fmv_caller._Maes.test_non_fmv_caller.default
 }
 
-define i32 @caller4() #7 {
+define i32 @caller4() #8 {
 ; CHECK-LABEL: define i32 @caller4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_non_fmv_caller._Maes()
@@ -224,9 +225,19 @@ entry:
   ret i32 %call
 }
 
-declare i32 @test_priority._Msve2-sha3() #8
-declare i32 @test_priority._Mls64Mssbs() #9
-declare i32 @test_priority._MflagmMlseMrng() #10
+define i32 @caller5() #9 {
+; CHECK-LABEL: define i32 @caller5(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR8:[0-9]+]] {
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_non_fmv_caller()
+;
+entry:
+  %call = tail call i32 @test_non_fmv_caller()
+  ret i32 %call
+}
+
+declare i32 @test_priority._Msve2-sha3() #10
+declare i32 @test_priority._Mls64Mssbs() #11
+declare i32 @test_priority._MflagmMlseMrng() #12
 declare i32 @test_priority.default() #0
 
 define weak_odr ptr @test_priority.resolver() comdat {
@@ -254,9 +265,9 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @caller5._MflagmMls64MlseMrngMssbsMsve2-sha3() #11 {
-; CHECK-LABEL: define i32 @caller5._MflagmMls64MlseMrngMssbsMsve2-sha3(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR11:[0-9]+]] {
+define i32 @caller6._MflagmMls64MlseMrngMssbsMsve2-sha3() #13 {
+; CHECK-LABEL: define i32 @caller6._MflagmMls64MlseMrngMssbsMsve2-sha3(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR12:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_priority._Mls64Mssbs()
 ;
 entry:
@@ -264,9 +275,9 @@ entry:
   ret i32 %call
 }
 
-declare i32 @test_alternative_names._Mdpb2Mfrintts() #12
-declare i32 @test_alternative_names._Mflagm2Mfrintts() #13
-declare i32 @test_alternative_names._Mrcpc2() #14
+declare i32 @test_alternative_names._Mdpb2Mfrintts() #14
+declare i32 @test_alternative_names._Mflagm2Mfrintts() #15
+declare i32 @test_alternative_names._Mrcpc2() #16
 declare i32 @test_alternative_names.default() #0
 
 define weak_odr ptr @test_alternative_names.resolver() comdat {
@@ -294,9 +305,9 @@ resolver_else2:                                   ; preds = %resolver_else
   br label %common.ret
 }
 
-define i32 @caller6._Mdpb2Mfrintts() #12 {
-; CHECK-LABEL: define i32 @caller6._Mdpb2Mfrintts(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR12:[0-9]+]] {
+define i32 @caller7._Mdpb2Mfrintts() #14 {
+; CHECK-LABEL: define i32 @caller7._Mdpb2Mfrintts(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR13:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_alternative_names._Mdpb2Mfrintts()
 ;
 entry:
@@ -304,9 +315,9 @@ entry:
   ret i32 %call
 }
 
-define i32 @caller6._Mfrintts() #15 {
-; CHECK-LABEL: define i32 @caller6._Mfrintts(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR15:[0-9]+]] {
+define i32 @caller7._Mfrintts() #17 {
+; CHECK-LABEL: define i32 @caller7._Mfrintts(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR16:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_alternative_names()
 ;
 entry:
@@ -314,9 +325,9 @@ entry:
   ret i32 %call
 }
 
-define i32 @caller6._Mrcpc2() #14 {
-; CHECK-LABEL: define i32 @caller6._Mrcpc2(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR14:[0-9]+]] {
+define i32 @caller7._Mrcpc2() #16 {
+; CHECK-LABEL: define i32 @caller7._Mrcpc2(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR15:[0-9]+]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_alternative_names._Mrcpc2()
 ;
 entry:
@@ -324,8 +335,8 @@ entry:
   ret i32 %call
 }
 
-define i32 @caller6.default() #0 {
-; CHECK-LABEL: define i32 @caller6.default(
+define i32 @caller7.default() #0 {
+; CHECK-LABEL: define i32 @caller7.default(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK:    [[CALL:%.*]] = tail call i32 @test_alternative_names.default()
 ;
@@ -341,12 +352,14 @@ attributes #3 = { "fmv-features"="mops" }
 attributes #4 = { "fmv-features"="mops,sve2" }
 attributes #5 = { "fmv-features"="sme" }
 attributes #6 = { "fmv-features"="aes" }
-attributes #7 = { "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a" }
-attributes #8 = { "fmv-features"="sve2-sha3" }
-attributes #9 = { "fmv-features"="ls64,ssbs" }
-attributes #10 = { "fmv-features"="flagm,lse,rng" }
-attributes #11 = { "fmv-features"="flagm,ls64,lse,rng,ssbs,sve2-sha3" }
-attributes #12 = { "fmv-features"="dpb2,frintts" }
-attributes #13 = { "fmv-features"="flagm2,frintts" }
-attributes #14 = { "fmv-features"="rcpc2" }
-attributes #15 = { "fmv-features"="frintts" }
+attributes #7 = { "fmv-features"="sm4" }
+attributes #8 = { "target-features"="+aes,+fp-armv8,+neon,+outline-atomics,+v8a" }
+attributes #9 = { "target-features"="+fp-armv8,+neon,+outline-atomics,+v8a,+sm4" }
+attributes #10 = { "fmv-features"="sve2-sha3" }
+attributes #11 = { "fmv-features"="ls64,ssbs" }
+attributes #12 = { "fmv-features"="flagm,lse,rng" }
+attributes #13 = { "fmv-features"="flagm,ls64,lse,rng,ssbs,sve2-sha3" }
+attributes #14 = { "fmv-features"="dpb2,frintts" }
+attributes #15 = { "fmv-features"="flagm2,frintts" }
+attributes #16 = { "fmv-features"="rcpc2" }
+attributes #17 = { "fmv-features"="frintts" }

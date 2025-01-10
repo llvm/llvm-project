@@ -2761,20 +2761,32 @@ static bool OptimizeNonTrivialIFuncs(
       Function *Callee = Callees[I];
       uint64_t CallerBits = FeatureMask[Caller];
       uint64_t CalleeBits = FeatureMask[Callee];
-      // If the feature set of the caller implies the feature set of the
-      // highest priority candidate then it shall be picked. In case of
-      // identical sets advance the candidate index one position.
-      if (CallerBits == CalleeBits)
-        ++I;
-      else if (!implies(CallerBits, CalleeBits)) {
-        // Keep advancing the candidate index as long as the caller's
-        // features are a subset of the current candidate's.
-        while (implies(CalleeBits, CallerBits)) {
-          if (++I == Callees.size())
-            break;
-          CalleeBits = FeatureMask[Callees[I]];
+
+      // In the case of FMV callers, we know that all higher priority callers
+      // than the current one did not get selected at runtime, which helps
+      // reason about the callees (if they have versions that mandate presence
+      // of the features which we already know are unavailable on this target).
+      if (TTI.isMultiversionedFunction(*Caller)) {
+        // If the feature set of the caller implies the feature set of the
+        // highest priority candidate then it shall be picked. In case of
+        // identical sets advance the candidate index one position.
+        if (CallerBits == CalleeBits)
+          ++I;
+        else if (!implies(CallerBits, CalleeBits)) {
+          // Keep advancing the candidate index as long as the caller's
+          // features are a subset of the current candidate's.
+          while (implies(CalleeBits, CallerBits)) {
+            if (++I == Callees.size())
+              break;
+            CalleeBits = FeatureMask[Callees[I]];
+          }
+          continue;
         }
-        continue;
+      } else {
+        // We can't reason much about non-FMV callers. Just pick the highest
+        // priority callee if it matches, otherwise bail.
+        if (I > 0 || !implies(CallerBits, CalleeBits))
+          continue;
       }
       auto &Calls = CallSites[Caller];
       for (CallBase *CS : Calls)
