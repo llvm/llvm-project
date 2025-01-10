@@ -91,6 +91,25 @@ functions:
     arguments:
       - type: const struct timespec *
       - type: struct timespec *
+  - name: strftime
+    standard:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: const struct tm *__restrict
+  - name: strftime_l
+    standard:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: size_t
+      - type: const char *__restrict
+      - type: const struct tm *__restrict
+      - type: locale_t
   - name: time
     standard:
       - stdc
