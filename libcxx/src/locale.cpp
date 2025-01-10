@@ -1109,11 +1109,11 @@ ctype_byname<wchar_t>::ctype_byname(const string& name, size_t refs)
 ctype_byname<wchar_t>::~ctype_byname() { __locale::__freelocale(__l_); }
 
 bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
+  wint_t ch = static_cast<wint_t>(c);
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-  return static_cast<bool>(iswctype_l(c, m, __l_));
+  return static_cast<bool>(__locale::__iswctype(ch, m, __l_));
 #  else
   bool result = false;
-  wint_t ch   = static_cast<wint_t>(c);
   if ((m & space) == space)
     result |= (__locale::__iswspace(ch, __l_) != 0);
   if ((m & print) == print)
@@ -1179,7 +1179,7 @@ const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_typ
 const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low) {
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-    if (iswctype_l(*low, m, __l_))
+    if (__locale::__iswctype(static_cast<wint_t>(*low), m, __l_))
       break;
 #  else
     wint_t ch = static_cast<wint_t>(*low);
@@ -1210,11 +1210,11 @@ const wchar_t* ctype_byname<wchar_t>::do_scan_is(mask m, const char_type* low, c
 
 const wchar_t* ctype_byname<wchar_t>::do_scan_not(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low) {
+    wint_t ch = static_cast<wint_t>(*low);
 #  ifdef _LIBCPP_WCTYPE_IS_MASK
-    if (!iswctype_l(*low, m, __l_))
+    if (!__locale::__iswctype(ch, m, __l_))
       break;
 #  else
-    wint_t ch = static_cast<wint_t>(*low);
     if ((m & space) == space && __locale::__iswspace(ch, __l_))
       continue;
     if ((m & print) == print && __locale::__iswprint(ch, __l_))
