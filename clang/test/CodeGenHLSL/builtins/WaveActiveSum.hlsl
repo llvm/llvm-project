@@ -33,8 +33,8 @@ uint64_t test_uint64_t(uint64_t expr) {
 
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr) {
-  // CHECK-SPIRV:  %[[RET1:.*]] = call spir_func [[TY1:.*]] @llvm.spv.wave.reduce.sum.v4f32([[TY1]] %[[#]]
-  // CHECK-DXIL:  %[[RET1:.*]] = call [[TY1:.*]] @llvm.dx.wave.reduce.sum.v4f32([[TY1]] %[[#]])
+  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY1:.*]] @llvm.spv.wave.reduce.sum.v4f32([[TY1]] %[[#]]
+  // CHECK-DXIL:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.dx.wave.reduce.sum.v4f32([[TY1]] %[[#]])
   // CHECK:  ret [[TY1]] %[[RET1]]
   return WaveActiveSum(expr);
 }
