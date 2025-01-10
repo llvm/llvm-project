@@ -250,7 +250,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
                                                         eSymbolContextSymbol);
 
         if (sc.function) {
-          func_start_address = sc.function->GetAddressRange().GetBaseAddress();
+          func_start_address = sc.function->GetAddress();
           if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
             bytes_to_skip = sc.function->GetPrologueByteSize();
         } else if (sc.symbol) {

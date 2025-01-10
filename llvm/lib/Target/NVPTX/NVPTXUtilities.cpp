@@ -311,11 +311,13 @@ std::optional<unsigned> getMaxNReg(const Function &F) {
 }
 
 bool isKernelFunction(const Function &F) {
+  if (F.getCallingConv() == CallingConv::PTX_Kernel)
+    return true;
+
   if (const auto X = findOneNVVMAnnotation(&F, "kernel"))
     return (*X == 1);
 
-  // There is no NVVM metadata, check the calling convention
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
+  return false;
 }
 
 MaybeAlign getAlign(const Function &F, unsigned Index) {

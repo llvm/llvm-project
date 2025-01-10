@@ -68,10 +68,6 @@ public:
 
   bool isCodeSection() const override { return macho::isCodeSection(isec); }
 
-  bool hasValidData() const override {
-    return isec && !isec->data.empty() && isec->data.data();
-  }
-
   SmallVector<std::unique_ptr<BPSymbol>> getSymbols() const override {
     SmallVector<std::unique_ptr<BPSymbol>> symbols;
     for (auto *sym : isec->symbols)
@@ -149,9 +145,8 @@ private:
 ///
 /// It is important that .subsections_via_symbols is used to ensure functions
 /// and data are in their own sections and thus can be reordered.
-llvm::DenseMap<const lld::macho::InputSection *, size_t>
-runBalancedPartitioning(size_t &highestAvailablePriority,
-                        llvm::StringRef profilePath,
+llvm::DenseMap<const lld::macho::InputSection *, int>
+runBalancedPartitioning(llvm::StringRef profilePath,
                         bool forFunctionCompression, bool forDataCompression,
                         bool compressionSortStartupFunctions, bool verbose);
 

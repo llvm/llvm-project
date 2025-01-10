@@ -329,8 +329,9 @@ static void generateUnrolledLoop(
   // 'forOp'.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
+  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = [](unsigned, Operation *, OpBuilder) {};
+    annotateFn = defaultAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
@@ -360,7 +361,7 @@ static void generateUnrolledLoop(
 
     // Update yielded values.
     for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
-      lastYielded[i] = operandMap.lookup(yieldedValues[i]);
+      lastYielded[i] = operandMap.lookupOrDefault(yieldedValues[i]);
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that

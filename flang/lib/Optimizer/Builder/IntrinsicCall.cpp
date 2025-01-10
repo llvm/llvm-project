@@ -167,6 +167,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genCAssociatedCPtr,
      {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"c_devloc", &I::genCDevLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_f_pointer",
      &I::genCFPointer,
      {{{"cptr", asValue},
@@ -2867,11 +2868,14 @@ static mlir::Value getAddrFromBox(fir::FirOpBuilder &builder,
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
-                 bool isFunc = false) {
+                 bool isFunc = false, bool isDevLoc = false) {
   assert(args.size() == 1);
   mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
-  mlir::Value resAddr =
-      fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
+  mlir::Value resAddr;
+  if (isDevLoc)
+    resAddr = fir::factory::genCDevPtrAddr(builder, loc, res, resultType);
+  else
+    resAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
   assert(fir::isa_box_type(fir::getBase(args[0]).getType()) &&
          "argument must have been lowered to box type");
   mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
@@ -2926,6 +2930,14 @@ fir::ExtendedValue
 IntrinsicLibrary::genCAssociatedCPtr(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args) {
   return genCAssociated(builder, loc, resultType, args);
+}
+
+// C_DEVLOC
+fir::ExtendedValue
+IntrinsicLibrary::genCDevLoc(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genCLocOrCFunLoc(builder, loc, resultType, args, /*isFunc=*/false,
+                          /*isDevLoc=*/true);
 }
 
 // C_F_POINTER

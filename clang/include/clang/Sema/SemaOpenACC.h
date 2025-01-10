@@ -297,6 +297,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -349,6 +350,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Gang ||
               ClauseKind == OpenACCClauseKind::Worker ||
@@ -407,6 +409,10 @@ public:
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
 
@@ -486,6 +492,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -498,6 +505,7 @@ public:
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::DeviceNum ||
+              ClauseKind == OpenACCClauseKind::DefaultAsync ||
               ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::Worker ||
               ClauseKind == OpenACCClauseKind::Vector ||
@@ -547,6 +555,10 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
@@ -586,6 +598,10 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||

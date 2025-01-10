@@ -89,6 +89,9 @@ class SPIRVGlobalRegistry {
   // Intrinsic::spv_assign_ptr_type instructions.
   DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
 
+  // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
+  DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
+
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AQ =
@@ -151,14 +154,16 @@ public:
     return DT.find(F, MF);
   }
 
-  void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
-                      const SPIRVInstrInfo *TII,
-                      MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, TII, MMI);
-  }
-
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
+
+  void addGlobalObject(const Value *V, const MachineFunction *MF, Register R) {
+    Reg2GO[std::make_pair(MF, R)] = V;
+  }
+  const Value *getGlobalObject(const MachineFunction *MF, Register R) {
+    auto It = Reg2GO.find(std::make_pair(MF, R));
+    return It == Reg2GO.end() ? nullptr : It->second;
+  }
 
   // Add a record to the map of function return pointer types.
   void addReturnType(const Function *ArgF, TypedPointerType *DerivedTy) {

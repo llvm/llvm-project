@@ -193,6 +193,7 @@ public:
 
   Error preDispatch(TelemetryInfo *Entry) override {
     Entry->SessionId = SessionId;
+    (void)CurrentContext;
     return Error::success();
   }
 

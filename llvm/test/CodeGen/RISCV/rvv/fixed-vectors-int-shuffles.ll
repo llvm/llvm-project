@@ -603,10 +603,8 @@ define <8 x i8> @concat_4xi8_start_undef(<8 x i8> %v, <8 x i8> %w) {
 define <8 x i8> @concat_4xi8_start_undef_at_start(<8 x i8> %v, <8 x i8> %w) {
 ; CHECK-LABEL: concat_4xi8_start_undef_at_start:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, -32
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vslideup.vi v8, v9, 4, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i8> %v, <8 x i8> %w, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 9, i32 10, i32 11>
   ret <8 x i8> %res
@@ -704,8 +702,8 @@ define <8 x i32> @shuffle_v8i32_2(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: shuffle_v8i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, -13
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 13
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %s = shufflevector <8 x i32> %x, <8 x i32> %y, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
@@ -756,9 +754,9 @@ define <8 x i16> @shuffle_compress_singlesrc_e16(<8 x i16> %v) {
 define <8 x i32> @shuffle_compress_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_compress_singlesrc_e32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 115
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v12, a0
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 13
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vcompress.vm v10, v8, v12
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -832,26 +830,16 @@ define <8 x i32> @shuffle_spread2_singlesrc_e32_index2(<8 x i32> %v) {
 }
 
 define <8 x i32> @shuffle_spread3_singlesrc_e32(<8 x i32> %v) {
-; RV32-LABEL: shuffle_spread3_singlesrc_e32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, %hi(.LCPI57_0)
-; RV32-NEXT:    addi a0, a0, %lo(.LCPI57_0)
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vle16.v v12, (a0)
-; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV32-NEXT:    vmv.v.v v8, v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: shuffle_spread3_singlesrc_e32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 32769
-; RV64-NEXT:    slli a0, a0, 21
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
-; RV64-NEXT:    vmv.v.v v8, v10
-; RV64-NEXT:    ret
+; CHECK-LABEL: shuffle_spread3_singlesrc_e32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    vslide1down.vx v12, v10, a0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
   %out = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 0, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 2, i32 undef>
   ret <8 x i32> %out
 }
@@ -1140,4 +1128,238 @@ define <16 x i32> @shuffle_disjoint_lanes_one_splat(i32 %v, <16 x i32> %w) {
   %splat = shufflevector <16 x i32> %head, <16 x i32> poison, <16 x i32> zeroinitializer
   %out = shufflevector <16 x i32> %splat, <16 x i32> %w, <16 x i32> <i32 11, i32 15, i32 7, i32 3, i32 26, i32 30, i32 22, i32 18, i32 9, i32 13, i32 5, i32 1, i32 24, i32 28, i32 20, i32 16>
   ret <16 x i32> %out
+}
+
+define <4 x i128> @shuffle_i128(<4 x i128> %a) {
+; RV32-LABEL: shuffle_i128:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lw a3, 4(a1)
+; RV32-NEXT:    lw a4, 8(a1)
+; RV32-NEXT:    lw a5, 12(a1)
+; RV32-NEXT:    lw a6, 48(a1)
+; RV32-NEXT:    lw a7, 52(a1)
+; RV32-NEXT:    lw t0, 56(a1)
+; RV32-NEXT:    lw t1, 60(a1)
+; RV32-NEXT:    lw t2, 32(a1)
+; RV32-NEXT:    lw t3, 36(a1)
+; RV32-NEXT:    lw t4, 40(a1)
+; RV32-NEXT:    lw a1, 44(a1)
+; RV32-NEXT:    sw t2, 48(a0)
+; RV32-NEXT:    sw t3, 52(a0)
+; RV32-NEXT:    sw t4, 56(a0)
+; RV32-NEXT:    sw a1, 60(a0)
+; RV32-NEXT:    sw a6, 32(a0)
+; RV32-NEXT:    sw a7, 36(a0)
+; RV32-NEXT:    sw t0, 40(a0)
+; RV32-NEXT:    sw t1, 44(a0)
+; RV32-NEXT:    sw a2, 16(a0)
+; RV32-NEXT:    sw a3, 20(a0)
+; RV32-NEXT:    sw a4, 24(a0)
+; RV32-NEXT:    sw a5, 28(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a3, 4(a0)
+; RV32-NEXT:    sw a4, 8(a0)
+; RV32-NEXT:    sw a5, 12(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shuffle_i128:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a2, 48(a1)
+; RV64-NEXT:    ld a3, 56(a1)
+; RV64-NEXT:    ld a4, 0(a1)
+; RV64-NEXT:    ld a5, 8(a1)
+; RV64-NEXT:    ld a6, 32(a1)
+; RV64-NEXT:    ld a1, 40(a1)
+; RV64-NEXT:    sd a2, 32(a0)
+; RV64-NEXT:    sd a3, 40(a0)
+; RV64-NEXT:    sd a6, 48(a0)
+; RV64-NEXT:    sd a1, 56(a0)
+; RV64-NEXT:    sd a4, 0(a0)
+; RV64-NEXT:    sd a5, 8(a0)
+; RV64-NEXT:    sd a4, 16(a0)
+; RV64-NEXT:    sd a5, 24(a0)
+; RV64-NEXT:    ret
+  %res = shufflevector <4 x i128> %a, <4 x i128> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
+  ret <4 x i128> %res
+}
+
+define void @shuffle_i128_ldst(ptr %p) {
+; RV32-LABEL: shuffle_i128_ldst:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 48(a0)
+; RV32-NEXT:    lw a2, 52(a0)
+; RV32-NEXT:    lw a3, 56(a0)
+; RV32-NEXT:    lw a4, 60(a0)
+; RV32-NEXT:    lw a5, 0(a0)
+; RV32-NEXT:    lw a6, 4(a0)
+; RV32-NEXT:    lw a7, 8(a0)
+; RV32-NEXT:    lw t0, 12(a0)
+; RV32-NEXT:    lw t1, 32(a0)
+; RV32-NEXT:    lw t2, 36(a0)
+; RV32-NEXT:    lw t3, 40(a0)
+; RV32-NEXT:    lw t4, 44(a0)
+; RV32-NEXT:    sw t1, 48(a0)
+; RV32-NEXT:    sw t2, 52(a0)
+; RV32-NEXT:    sw t3, 56(a0)
+; RV32-NEXT:    sw t4, 60(a0)
+; RV32-NEXT:    sw a5, 16(a0)
+; RV32-NEXT:    sw a6, 20(a0)
+; RV32-NEXT:    sw a7, 24(a0)
+; RV32-NEXT:    sw t0, 28(a0)
+; RV32-NEXT:    sw a1, 32(a0)
+; RV32-NEXT:    sw a2, 36(a0)
+; RV32-NEXT:    sw a3, 40(a0)
+; RV32-NEXT:    sw a4, 44(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shuffle_i128_ldst:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a1, 0(a0)
+; RV64-NEXT:    ld a2, 8(a0)
+; RV64-NEXT:    ld a3, 32(a0)
+; RV64-NEXT:    ld a4, 40(a0)
+; RV64-NEXT:    ld a5, 48(a0)
+; RV64-NEXT:    ld a6, 56(a0)
+; RV64-NEXT:    sd a3, 48(a0)
+; RV64-NEXT:    sd a4, 56(a0)
+; RV64-NEXT:    sd a1, 16(a0)
+; RV64-NEXT:    sd a2, 24(a0)
+; RV64-NEXT:    sd a5, 32(a0)
+; RV64-NEXT:    sd a6, 40(a0)
+; RV64-NEXT:    ret
+  %a = load <4 x i128>, ptr %p
+  %res = shufflevector <4 x i128> %a, <4 x i128> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
+  store <4 x i128> %res, ptr %p
+  ret void
+}
+
+define void @shuffle_i256_ldst(ptr %p) {
+; RV32-LABEL: shuffle_i256_ldst:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -48
+; RV32-NEXT:    .cfi_def_cfa_offset 48
+; RV32-NEXT:    sw s0, 44(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 40(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 36(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 32(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s4, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s5, 24(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s6, 20(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s7, 16(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s8, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s9, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
+; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_offset s3, -16
+; RV32-NEXT:    .cfi_offset s4, -20
+; RV32-NEXT:    .cfi_offset s5, -24
+; RV32-NEXT:    .cfi_offset s6, -28
+; RV32-NEXT:    .cfi_offset s7, -32
+; RV32-NEXT:    .cfi_offset s8, -36
+; RV32-NEXT:    .cfi_offset s9, -40
+; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
+; RV32-NEXT:    lw a3, 8(a0)
+; RV32-NEXT:    lw a4, 12(a0)
+; RV32-NEXT:    lw a5, 16(a0)
+; RV32-NEXT:    lw a6, 20(a0)
+; RV32-NEXT:    lw a7, 24(a0)
+; RV32-NEXT:    lw t0, 28(a0)
+; RV32-NEXT:    lw t1, 96(a0)
+; RV32-NEXT:    lw t2, 100(a0)
+; RV32-NEXT:    lw t3, 104(a0)
+; RV32-NEXT:    lw t4, 108(a0)
+; RV32-NEXT:    lw t5, 112(a0)
+; RV32-NEXT:    lw t6, 116(a0)
+; RV32-NEXT:    lw s0, 120(a0)
+; RV32-NEXT:    lw s1, 124(a0)
+; RV32-NEXT:    lw s2, 64(a0)
+; RV32-NEXT:    lw s3, 68(a0)
+; RV32-NEXT:    lw s4, 72(a0)
+; RV32-NEXT:    lw s5, 76(a0)
+; RV32-NEXT:    lw s6, 80(a0)
+; RV32-NEXT:    lw s7, 84(a0)
+; RV32-NEXT:    lw s8, 88(a0)
+; RV32-NEXT:    lw s9, 92(a0)
+; RV32-NEXT:    sw s6, 112(a0)
+; RV32-NEXT:    sw s7, 116(a0)
+; RV32-NEXT:    sw s8, 120(a0)
+; RV32-NEXT:    sw s9, 124(a0)
+; RV32-NEXT:    sw s2, 96(a0)
+; RV32-NEXT:    sw s3, 100(a0)
+; RV32-NEXT:    sw s4, 104(a0)
+; RV32-NEXT:    sw s5, 108(a0)
+; RV32-NEXT:    sw t5, 80(a0)
+; RV32-NEXT:    sw t6, 84(a0)
+; RV32-NEXT:    sw s0, 88(a0)
+; RV32-NEXT:    sw s1, 92(a0)
+; RV32-NEXT:    sw t1, 64(a0)
+; RV32-NEXT:    sw t2, 68(a0)
+; RV32-NEXT:    sw t3, 72(a0)
+; RV32-NEXT:    sw t4, 76(a0)
+; RV32-NEXT:    sw a5, 48(a0)
+; RV32-NEXT:    sw a6, 52(a0)
+; RV32-NEXT:    sw a7, 56(a0)
+; RV32-NEXT:    sw t0, 60(a0)
+; RV32-NEXT:    sw a1, 32(a0)
+; RV32-NEXT:    sw a2, 36(a0)
+; RV32-NEXT:    sw a3, 40(a0)
+; RV32-NEXT:    sw a4, 44(a0)
+; RV32-NEXT:    lw s0, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 40(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 36(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 32(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s4, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s5, 24(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s6, 20(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s7, 16(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s8, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s9, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore s1
+; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
+; RV32-NEXT:    .cfi_restore s4
+; RV32-NEXT:    .cfi_restore s5
+; RV32-NEXT:    .cfi_restore s6
+; RV32-NEXT:    .cfi_restore s7
+; RV32-NEXT:    .cfi_restore s8
+; RV32-NEXT:    .cfi_restore s9
+; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shuffle_i256_ldst:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ld a1, 96(a0)
+; RV64-NEXT:    ld a2, 104(a0)
+; RV64-NEXT:    ld a3, 112(a0)
+; RV64-NEXT:    ld a4, 120(a0)
+; RV64-NEXT:    ld a5, 0(a0)
+; RV64-NEXT:    ld a6, 8(a0)
+; RV64-NEXT:    ld a7, 16(a0)
+; RV64-NEXT:    ld t0, 24(a0)
+; RV64-NEXT:    ld t1, 64(a0)
+; RV64-NEXT:    ld t2, 72(a0)
+; RV64-NEXT:    ld t3, 80(a0)
+; RV64-NEXT:    ld t4, 88(a0)
+; RV64-NEXT:    sd t1, 96(a0)
+; RV64-NEXT:    sd t2, 104(a0)
+; RV64-NEXT:    sd t3, 112(a0)
+; RV64-NEXT:    sd t4, 120(a0)
+; RV64-NEXT:    sd a5, 32(a0)
+; RV64-NEXT:    sd a6, 40(a0)
+; RV64-NEXT:    sd a7, 48(a0)
+; RV64-NEXT:    sd t0, 56(a0)
+; RV64-NEXT:    sd a1, 64(a0)
+; RV64-NEXT:    sd a2, 72(a0)
+; RV64-NEXT:    sd a3, 80(a0)
+; RV64-NEXT:    sd a4, 88(a0)
+; RV64-NEXT:    ret
+  %a = load <4 x i256>, ptr %p
+  %res = shufflevector <4 x i256> %a, <4 x i256> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
+  store <4 x i256> %res, ptr %p
+  ret void
 }

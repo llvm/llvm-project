@@ -80,16 +80,16 @@ std::vector<int*> pointers;
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (int *const &)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'int *const &'
-// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NOT:               LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (int *&&)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'int *&&'
-// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NOT:               LifetimeCaptureByAttr
 
 // CHECK:       CXXMethodDecl {{.*}} insert 'void (iterator, int *&&)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'iterator'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'int *&&'
-// CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+// CHECK-NOT:               LifetimeCaptureByAttr
 
 std::vector<int> ints;
 // CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition implicit_instantiation
