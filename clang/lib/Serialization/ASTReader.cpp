@@ -12387,9 +12387,18 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Self: {
     SourceLocation LParenLoc = readSourceLocation();
-    Expr *CondExpr = readBool() ? readSubExpr() : nullptr;
-    return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc,
-                                     CondExpr, EndLoc);
+    bool isConditionExprClause = readBool();
+    if (isConditionExprClause) {
+      Expr *CondExpr = readBool() ? readSubExpr() : nullptr;
+      return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       CondExpr, EndLoc);
+    }
+    unsigned NumVars = readInt();
+    llvm::SmallVector<Expr *> VarList;
+    for (unsigned I = 0; I < NumVars; ++I)
+      VarList.push_back(readSubExpr());
+    return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
   }
   case OpenACCClauseKind::NumGangs: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12412,6 +12421,12 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCDeviceNumClause::Create(getContext(), BeginLoc, LParenLoc,
                                            IntExpr, EndLoc);
   }
+  case OpenACCClauseKind::DefaultAsync: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *IntExpr = readSubExpr();
+    return OpenACCDefaultAsyncClause::Create(getContext(), BeginLoc, LParenLoc,
+                                             IntExpr, EndLoc);
+  }
   case OpenACCClauseKind::VectorLength: {
     SourceLocation LParenLoc = readSourceLocation();
     Expr *IntExpr = readSubExpr();
@@ -12423,6 +12438,18 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
                                         VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Host: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCHostClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
+  }
+  case OpenACCClauseKind::Device: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDeviceClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VarList, EndLoc);
   }
   case OpenACCClauseKind::FirstPrivate: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12596,12 +12623,9 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

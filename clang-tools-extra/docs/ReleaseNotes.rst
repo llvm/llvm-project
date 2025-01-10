@@ -233,9 +233,17 @@ Changes in existing checks
   `bsl::optional` and `bdlb::NullableValue` from
   <https://github.com/bloomberg/bde>_.
 
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
+  pointer check against std::unique_ptr type.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional functions to match.
+
+- Improved :doc:`bugprone-unused-local-non-trivial-variable
+  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check to avoid
+  false positives when using name-independent variables after C++26.
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` to avoid triggering on
@@ -278,9 +286,9 @@ Changes in existing checks
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check to insert ``static``
-  keyword before type qualifiers such as ``const`` and ``volatile`` and fix
-  false positives for function declaration without body and fix false positives
-  for C++20 export declarations and fix false positives for global scoped
+  keyword before type qualifiers such as ``const`` and ``volatile``. Also, fix
+  false positives for function declaration without body, C++20 consteval
+  functions, C++20 export declarations, and global scoped
   overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
@@ -342,6 +350,10 @@ Changes in existing checks
   file path for anonymous enums in the diagnostic, and by fixing a typo in the
   diagnostic.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check to
+  validate ``namespace`` aliases.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check
   by adding the option `UseUpperCaseLiteralSuffix` to select the
@@ -351,10 +363,6 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
-
-- Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check to
-  validate ``namespace`` aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^
