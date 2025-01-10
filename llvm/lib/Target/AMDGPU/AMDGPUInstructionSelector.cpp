@@ -3417,11 +3417,8 @@ Register AMDGPUInstructionSelector::matchZeroExtendFromS32(Register Reg) const {
   if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
     return Register();
 
-  // Add changes to whole macro so ifdef insertion doesn't insert ifdef
-  // inside macro
-  // TODO: remove this when upstreamed
-  assert(Def->getNumOperands() == 3 &&                                  // w/a
-         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64)); // w/a
+  assert(Def->getNumOperands() == 3 &&
+         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
   if (mi_match(Def->getOperand(2).getReg(), *MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
   }

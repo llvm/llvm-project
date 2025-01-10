@@ -2557,24 +2557,17 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     }
 
     // Bits [22-30].
-    // Add changes to whole macro so ifdef insertion doesn't insert ifdef
-    // inside macro
-    // TODO: remove this when upstreamed
-    CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED5, // w/a
-                                 "COMPUTE_PGM_RSRC3",                    // w/a
-                                 "must be zero on gfx10+");              // w/a
+    CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED5,
+                                 "COMPUTE_PGM_RSRC3", "must be zero on gfx10+");
 
     // Bits [31].
     if (isGFX11Plus()) {
       PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
                                      COMPUTE_PGM_RSRC3_GFX11_PLUS_IMAGE_OP);
     } else {
-      // Add changes to whole macro so ifdef insertion doesn't insert ifdef
-      // inside macro
-      // TODO: remove this when upstreamed
-      CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_RESERVED6, // w/a
-                                   "COMPUTE_PGM_RSRC3",               // w/a
-                                   "must be zero on gfx10");          // w/a
+      CHECK_RESERVED_BITS_DESC_MSG(COMPUTE_PGM_RSRC3_GFX10_RESERVED6,
+                                   "COMPUTE_PGM_RSRC3",
+                                   "must be zero on gfx10");
     }
   } else if (FourByteBuffer) {
     return createStringError(

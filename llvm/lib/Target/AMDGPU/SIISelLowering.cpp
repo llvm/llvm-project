@@ -6599,17 +6599,13 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
                                              SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  // Mark the whole assert with a change to force ifdef guards to treat the
-  // assert as a single change (otherwise there are issues with macros inside
-  // another macro)
-  // TODO: remove this when upstreaming
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||    // w/a
-         VT == MVT::v6i16 || VT == MVT::v6f16 || VT == MVT::v8i16 ||    // w/a
-         VT == MVT::v8f16 || VT == MVT::v10i16 || VT == MVT::v10f16 ||  // w/a
-         VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v18i16 || // w/a
-         VT == MVT::v18f16 || VT == MVT::v36i16 || VT == MVT::v36f16 || // w/a
-         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32 ||  // w/a
-         VT == MVT::v32i16 || VT == MVT::v32f16);                       // w/a
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
+         VT == MVT::v6i16 || VT == MVT::v6f16 || VT == MVT::v8i16 ||
+         VT == MVT::v8f16 || VT == MVT::v10i16 || VT == MVT::v10f16 ||
+         VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v18i16 ||
+         VT == MVT::v18f16 || VT == MVT::v36i16 || VT == MVT::v36f16 ||
+         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32 ||
+         VT == MVT::v32i16 || VT == MVT::v32f16);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
