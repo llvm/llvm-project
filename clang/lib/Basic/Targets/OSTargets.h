@@ -447,7 +447,6 @@ public:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
-    case llvm::Triple::riscv32:
     case llvm::Triple::riscv64:
       break;
     }
