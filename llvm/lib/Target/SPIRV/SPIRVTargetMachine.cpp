@@ -48,6 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -218,6 +219,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
   addPass(createSPIRVPreLegalizerPass());
+  addPass(createSPIRVPreLegalizerCombiner());
 }
 
 // Use the default legalizer.
