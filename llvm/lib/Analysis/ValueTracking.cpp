@@ -9405,36 +9405,34 @@ static std::optional<bool> isImpliedCondCommonOperandWithCR(
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
-                                              CmpInst::Predicate RPred,
-                                              const Value *R0, const Value *R1,
-                                              const DataLayout &DL,
-                                              bool LHSIsTrue) {
+static std::optional<bool>
+isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
+                   const Value *R1, const DataLayout &DL, bool LHSIsTrue) {
   Value *L0 = LHS->getOperand(0);
   Value *L1 = LHS->getOperand(1);
 
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
-  CmpInst::Predicate LPred =
-      LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
+  CmpPredicate LPred =
+      LHSIsTrue ? LHS->getCmpPredicate() : LHS->getInverseCmpPredicate();
 
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
   if (L0 == R1) {
     std::swap(R0, R1);
-    RPred = ICmpInst::getSwappedPredicate(RPred);
+    RPred = ICmpInst::getSwappedCmpPredicate(RPred);
   }
   if (R0 == L1) {
     std::swap(L0, L1);
-    LPred = ICmpInst::getSwappedPredicate(LPred);
+    LPred = ICmpInst::getSwappedCmpPredicate(LPred);
   }
   if (L1 == R1) {
     // If we have L0 == R0 and L1 == R1, then make L1/R1 the constants.
     if (L0 != R0 || match(L0, m_ImmConstant())) {
       std::swap(L0, L1);
-      LPred = ICmpInst::getSwappedPredicate(LPred);
+      LPred = ICmpInst::getSwappedCmpPredicate(LPred);
       std::swap(R0, R1);
-      RPred = ICmpInst::getSwappedPredicate(RPred);
+      RPred = ICmpInst::getSwappedCmpPredicate(RPred);
     }
   }
 
@@ -9493,8 +9491,8 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
       match(L0, m_c_Add(m_Specific(L1), m_Specific(R1))))
     return CmpPredicate::getMatching(LPred, RPred).has_value();
 
-  if (LPred == RPred)
-    return isImpliedCondOperands(LPred, L0, L1, R0, R1);
+  if (auto P = CmpPredicate::getMatching(LPred, RPred))
+    return isImpliedCondOperands(*P, L0, L1, R0, R1);
 
   return std::nullopt;
 }
