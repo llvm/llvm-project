@@ -33,18 +33,15 @@ static inline cpp::string str(RoundingMode mode) {
   switch (mode) {
   case RoundingMode::Upward:
     return "MPFR_RNDU";
-    break;
   case RoundingMode::Downward:
     return "MPFR_RNDD";
-    break;
   case RoundingMode::TowardZero:
     return "MPFR_RNDZ";
-    break;
   case RoundingMode::Nearest:
     return "MPFR_RNDN";
-    break;
+  default:
+    __builtin_unreachable();
   }
-  __builtin_unreachable();
 }
 
 class MPCNumber {
