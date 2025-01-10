@@ -1,104 +1,172 @@
-;; -stats requires asserts
+; -stats requires asserts
 ; requires: asserts
 
-; RUN: llc -stop-after=block-placement %s -o - | llc --run-pass=static-data-splitter -stats -x mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
+; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
+; jump table entries so 'switch' needs fewer cases to generate a jump table.
+; RUN: llc -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
+; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
-; `func_with_hot_jumptable` contains a hot jump table and `func_with_cold_jumptable` contains a cold one. 
-; `func_without_entry_count` simulates the functions without profile information (e.g., not instrumented or not profiled),
-; it's jump table hotness is unknown and regarded as hot conservatively.
-;
 ; Tests stat messages are expected.
 ; TODO: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
-;
-; STAT-DAG: 1 static-data-splitter - Number of cold jump tables seen
-; STAT-DAG: 1 static-data-splitter - Number of hot jump tables seen
+; TODO: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
+ 
+; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
+; STAT-DAG: 3 static-data-splitter - Number of hot jump tables seen
 ; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
+
+; @foo has four jump tables, jt0, jt1, jt2 and jt3 in the input basic block
+; order; jt0 and jt2 are hot, and jt1 and jt3 are cold.
+;
+; @func_with_hot_jt is a function with one entry count, and a hot loop using a
+; jump table.
+
+; @func_without_entry_count simulates the functions without profile information
+; (e.g., not instrumented or not profiled), it's jump table hotness is unknown
+; and regarded as hot conservatively.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@.str.2 = private constant [7 x i8] c"case 3\00"
-@.str.3 = private constant [7 x i8] c"case 4\00"
-@.str.4 = private constant [7 x i8] c"case 5\00"
-@str.9 = private constant [7 x i8] c"case 2\00"
-@str.10 = private constant [7 x i8] c"case 1\00"
-@str.11 = private constant [8 x i8] c"default\00"
+@str.9 = private constant [7 x i8] c".str.9\00"
+@str.10 = private constant [8 x i8] c".str.10\00"
+@str.11 = private constant [8 x i8] c".str.11\00"
 
-define i32 @func_with_hot_jumptable(i32 %num) !prof !13 {
+@case2 = private constant [7 x i8] c"case 2\00"
+@case1 = private constant [7 x i8] c"case 1\00"
+@default = private constant [8 x i8] c"default\00"
+@jt3 = private constant [3 x i8] c"jt\00"
+
+; jt0 and jt2 are hot. jt1 and jt3 are cold.
+define i32 @foo(i32 %num) !prof !13 {
 entry:
-  switch i32 %num, label %sw.default [
-    i32 1, label %sw.bb
-    i32 2, label %sw.bb1
-    i32 3, label %sw.bb3
-    i32 4, label %sw.bb5
-    i32 5, label %sw.bb7
+  %mod3 = sdiv i32 %num, 3
+  switch i32 %mod3, label %jt0.default [
+    i32 1, label %jt0.bb1
+    i32 2, label %jt0.bb2
   ], !prof !14
 
-sw.bb:                                            ; preds = %entry
-  %puts11 = tail call i32 @puts(ptr @str.10)
-  br label %sw.epilog
+jt0.bb1:
+  call i32 @puts(ptr @case1)
+  br label %jt0.epilog
 
-sw.bb1:                                           ; preds = %entry
-  %puts = tail call i32 @puts(ptr @str.9)
-  br label %sw.epilog
+jt0.bb2:
+  call i32 @puts(ptr @case2)
+  br label %jt0.epilog
 
-sw.bb3:                                           ; preds = %entry
-  %call4 = tail call i32 (ptr, ...) @printf(ptr @.str.2)
-  br label %sw.bb5
+jt0.default:
+  call i32 @puts(ptr @default)
+  br label %jt0.epilog
 
-sw.bb5:                                           ; preds = %entry, %sw.bb3
-  %call6 = tail call i32 (ptr, ...) @printf(ptr @.str.3)
-  br label %sw.bb7
+jt0.epilog:
+  %zero = icmp eq i32 %num, 0
+  br i1 %zero, label %cold, label %hot, !prof !17
 
-sw.bb7:                                           ; preds = %entry, %sw.bb5
-  %call8 = tail call i32 (ptr, ...) @printf(ptr @.str.4)
-  br label %sw.epilog
+cold:
+  %c1 = call i32 @compute(i32 %num)
+  switch i32 %c1, label %jt1.default [
+    i32 1, label %jt1.bb1
+    i32 2, label %jt1.bb2
+  ], !prof !14
 
-sw.default:                                       ; preds = %entry
-  %puts12 = tail call i32 @puts(ptr @str.11)
-  br label %sw.epilog
+jt1.bb1:
+  call i32 @puts(ptr @case1)
+  br label %jt1.epilog
 
-sw.epilog:                                        ; preds = %sw.default, %sw.bb7, %sw.bb1, %sw.bb
-  %div = sdiv i32 %num, 3
-  ret i32 %div
+jt1.bb2:
+  call i32 @puts(ptr @case2)
+  br label %jt1.epilog
+
+jt1.default:
+  call i32 @puts(ptr @default)
+  br label %jt1.epilog
+
+jt1.epilog:
+  br label %return
+
+hot:
+ %c2 = call i32 @transform(i32 %num)
+  switch i32 %c2, label %jt2.default [
+    i32 1, label %jt2.bb1
+    i32 2, label %jt2.bb2
+  ], !prof !14
+
+jt2.bb1:
+  call i32 @puts(ptr @case1)
+  br label %jt1.epilog
+
+jt2.bb2:
+  call i32 @puts(ptr @case2)
+  br label %jt1.epilog
+
+jt2.default:
+  call i32 @puts(ptr @default)
+  br label %jt2.epilog
+
+jt2.epilog:
+  %c2cmp = icmp ne i32 %c2, 0
+  br i1 %c2cmp, label %return, label %jt3.prologue, !prof !18
+
+jt3.prologue:
+  %c3 = call i32 @cleanup(i32 %num)
+  switch i32 %c3, label %jt3.default [
+    i32 1, label %jt3.bb1
+    i32 2, label %jt3.bb2
+  ], !prof !14
+
+jt3.bb1:
+  call i32 @puts(ptr @case1)
+  br label %jt3.epilog
+
+jt3.bb2:
+  call i32 @puts(ptr @case2)
+  br label %jt3.epilog
+
+jt3.default:
+  call i32 @puts(ptr @default)
+  br label %jt3.epilog
+
+jt3.epilog:
+  call i32 @puts(ptr @jt3)
+  br label %return
+
+return:
+  ret i32 %mod3
 }
 
-define void @func_with_cold_jumptable(i32 %num) !prof !15 {
+define i32 @func_with_hot_jt() !prof !15 {
 entry:
-  switch i32 %num, label %sw.default [
-    i32 1, label %sw.bb
-    i32 2, label %sw.bb1
-    i32 3, label %sw.bb3
-    i32 4, label %sw.bb5
-    i32 5, label %sw.bb7
-  ], !prof !16
+  br label %for.body
 
-sw.bb:                                            ; preds = %entry
-  %puts10 = tail call i32 @puts(ptr @str.10)
-  br label %sw.epilog
+for.cond.cleanup:
+  ret i32 0
 
-sw.bb1:                                           ; preds = %entry
-  %puts = tail call i32 @puts(ptr @str.9)
-  br label %sw.epilog
+for.body:
+  %lsr.iv = phi i32 [ 100000, %entry ], [ %lsr.iv.next, %loop.exit ]
+  %i.04 = phi i32 [ 0, %entry ], [ %inc, %loop.exit ]
+  %0 = urem i32 %i.04, 100
+  switch i32 %0, label %sw.default [
+    i32 1, label %loop.exit
+    i32 2, label %sw.bb1.i
+    i32 3, label %sw.bb3.i
+  ], !prof !19
 
-sw.bb3:                                           ; preds = %entry
-  %call4 = tail call i32 (ptr, ...) @printf(ptr @.str.2)
-  br label %sw.bb5
+sw.bb1.i:
+  br label %loop.exit
 
-sw.bb5:                                           ; preds = %entry, %sw.bb3
-  %call6 = tail call i32 (ptr, ...) @printf(ptr @.str.3)
-  br label %sw.bb7
+sw.bb3.i: 
+  call i32 (ptr, ...) @printf(ptr @case1)
+  br label %sw.default
 
-sw.bb7:                                           ; preds = %entry, %sw.bb5
-  %call8 = tail call i32 (ptr, ...) @printf(ptr @.str.4)
-  br label %sw.epilog
+sw.default:
+  br label %loop.exit
 
-sw.default:                                       ; preds = %entry
-  %puts11 = tail call i32 @puts(ptr @str.11)
-  br label %sw.epilog
-
-sw.epilog:                                        ; preds = %sw.default, %sw.bb7, %sw.bb1, %sw.bb
-  ret void
+loop.exit:
+  %str.5.sink.i = phi ptr [ @str.10, %sw.default ], [ @str.9, %sw.bb1.i ], [ @case2, %for.body ]
+  call i32 @puts(ptr %str.5.sink.i)
+  %inc = add i32 %i.04, 1
+  %lsr.iv.next = add i32 %lsr.iv, -1
+  %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !prof !17
 }
 
 define void @func_without_entry_count(i32 %num) {
@@ -106,41 +174,29 @@ entry:
   switch i32 %num, label %sw.default [
     i32 1, label %sw.bb
     i32 2, label %sw.bb1
-    i32 3, label %sw.bb3
-    i32 4, label %sw.bb5
-    i32 5, label %sw.bb7
   ]
 
-sw.bb:                                            ; preds = %entry
-  %puts10 = tail call i32 @puts(ptr @str.10)
+sw.bb:
+  call i32 @puts(ptr @str.10)
   br label %sw.epilog
 
-sw.bb1:                                           ; preds = %entry
-  %puts = tail call i32 @puts(ptr @str.9)
+sw.bb1: 
+  call i32 @puts(ptr @str.9)
   br label %sw.epilog
 
-sw.bb3:                                           ; preds = %entry
-  %call4 = tail call i32 (ptr, ...) @printf(ptr @.str.2)
-  br label %sw.bb5
-
-sw.bb5:                                           ; preds = %entry, %sw.bb3
-  %call6 = tail call i32 (ptr, ...) @printf(ptr @.str.3)
-  br label %sw.bb7
-
-sw.bb7:                                           ; preds = %entry, %sw.bb5
-  %call8 = tail call i32 (ptr, ...) @printf(ptr @.str.4)
+sw.default:
+  call i32 @puts(ptr @str.11)
   br label %sw.epilog
 
-sw.default:                                       ; preds = %entry
-  %puts11 = tail call i32 @puts(ptr @str.11)
-  br label %sw.epilog
-
-sw.epilog:                                        ; preds = %sw.default, %sw.bb7, %sw.bb1, %sw.bb
+sw.epilog:                                       
   ret void
 }
 
 declare i32 @puts(ptr)
 declare i32 @printf(ptr, ...)
+declare i32 @compute(i32)
+declare i32 @transform(i32)
+declare i32 @cleanup(i32)
 
 !llvm.module.flags = !{!0}
 
@@ -158,6 +214,9 @@ declare i32 @printf(ptr, ...)
 !11 = !{i32 990000, i64 10000, i32 7}
 !12 = !{i32 999999, i64 1, i32 9}
 !13 = !{!"function_entry_count", i64 100000}
-!14 = !{!"branch_weights", i32 50000, i32 10000, i32 10000, i32 10000, i32 10000, i32 10000}
+!14 = !{!"branch_weights", i32 60000, i32 20000, i32 20000}
 !15 = !{!"function_entry_count", i64 1}
 !16 = !{!"branch_weights", i32 1, i32 0, i32 0, i32 0, i32 0, i32 0}
+!17 = !{!"branch_weights", i32 1, i32 99999}
+!18 = !{!"branch_weights", i32 99998, i32 1}
+!19 = !{!"branch_weights", i32 97000, i32 1000, i32 1000, i32 1000}

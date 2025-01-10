@@ -1293,7 +1293,7 @@ const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 
 MachineJumpTableEntry::MachineJumpTableEntry(
     const std::vector<MachineBasicBlock *> &MBBs)
-    : MBBs(MBBs), Hotness(DataHotness::Unknown) {}
+    : MBBs(MBBs), Hotness(MachineFunctionDataHotness::Unknown) {}
 
 /// Return the size of each entry in the jump table.
 unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
@@ -1344,13 +1344,17 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
   return JumpTables.size()-1;
 }
 
-void MachineJumpTableInfo::updateJumpTableHotness(size_t JTI,
-                                                  DataHotness Hotness) {
+bool MachineJumpTableInfo::updateJumpTableEntryHotness(
+    size_t JTI, MachineFunctionDataHotness Hotness) {
   assert(JTI < JumpTables.size() && "Invalid JTI!");
   // Note record the largest hotness is important for mergable data (constant
   // pools). Even if jump table instances are not merged, record the largest
   // value seen fwiw.
-  JumpTables[JTI].Hotness = std::max(JumpTables[JTI].Hotness, Hotness);
+  if (Hotness <= JumpTables[JTI].Hotness)
+    return false;
+
+  JumpTables[JTI].Hotness = Hotness;
+  return true;
 }
 
 /// If Old is the target of any jump tables, update the jump tables to branch
