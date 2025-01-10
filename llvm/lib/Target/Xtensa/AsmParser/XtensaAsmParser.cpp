@@ -857,18 +857,15 @@ ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
 
 // Verify Special Register
 bool XtensaAsmParser::checkRegister(MCRegister RegNo) {
-  bool Res = true;
-
   switch (RegNo) {
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
-    Res = hasWindowed();
-    break;
+    return hasWindowed();
   case Xtensa::NoRegister:
-    Res = false;
+    return false;
   }
 
-  return Res;
+  return true;
 }
 
 // Force static initialization.

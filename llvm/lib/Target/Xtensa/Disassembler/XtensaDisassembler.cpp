@@ -74,20 +74,19 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 
 // Verify SR
-bool CheckRegister(unsigned RegNo, MCSubtargetInfo STI) {
-  bool Res = true;
+bool checkRegister(unsigned RegNo, const MCDisassembler *Decoder) {
+  const FeatureBitset &FeatureBits =
+      Decoder->getSubtargetInfo().getFeatureBits();
 
   switch (RegNo) {
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
-    Res = STI.getFeatureBits()[Xtensa::FeatureWindowed];
-    break;
+    return FeatureBits[Xtensa::FeatureWindowed];
   default:
-    Res = false;
-    break;
+    return false;
   }
 
-  return Res;
+  return true;
 }
 
 static const unsigned SRDecoderTable[] = {
@@ -95,10 +94,7 @@ static const unsigned SRDecoderTable[] = {
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
-                                          const void *Decoder) {
-  const llvm::MCSubtargetInfo STI =
-      ((const MCDisassembler *)Decoder)->getSubtargetInfo();
-
+                                          const MCDisassembler *Decoder) {
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
@@ -106,7 +102,7 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
     if (SRDecoderTable[i + 1] == RegNo) {
       unsigned Reg = SRDecoderTable[i];
 
-      if (!CheckRegister(Reg, STI))
+      if (!checkRegister(Reg, Decoder))
         return MCDisassembler::Fail;
 
       Inst.addOperand(MCOperand::createReg(Reg));

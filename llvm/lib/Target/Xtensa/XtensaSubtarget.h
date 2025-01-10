@@ -36,7 +36,7 @@ private:
   SelectionDAGTargetInfo TSInfo;
   XtensaFrameLowering FrameLowering;
 
-  // Enabled Xtensa Density extension
+  // Enabled Xtensa Density Option
   bool HasDensity;
 
   // Enabled Xtensa Windowed Register Option
