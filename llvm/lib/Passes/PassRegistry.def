@@ -526,7 +526,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
     "no-pre;pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
-    "split-backedge-load-pre;no-memdep;memdep")
+    "split-backedge-load-pre;no-memdep;memdep;no-memoryssa;memoryssa")
 FUNCTION_PASS_WITH_PARAMS(
     "hardware-loops", "HardwareLoopsPass",
     [](HardwareLoopOptions Opts) { return HardwareLoopsPass(Opts); },
