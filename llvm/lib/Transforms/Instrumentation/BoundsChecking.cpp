@@ -43,10 +43,6 @@ STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
 using BuilderTy = IRBuilder<TargetFolder>;
 
-BoundsCheckingPass::BoundsCheckingOptions::BoundsCheckingOptions(
-    ReportingMode Mode, bool Merge)
-    : Mode(Mode), Merge(Merge) {}
-
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///
 /// \p Ptr is the pointer that will be read/written, and \p InstVal is either
@@ -166,42 +162,19 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
   BranchInst::Create(TrapBB, Cont, Or, OldBB);
 }
 
-struct ReportingOpts {
-  bool MayReturn = false;
-  bool UseTrap = false;
-  bool MinRuntime = false;
-  bool MayMerge = true;
-  StringRef Name;
-
-  ReportingOpts(BoundsCheckingPass::ReportingMode Mode, bool Merge) {
-    switch (Mode) {
-    case BoundsCheckingPass::ReportingMode::Trap:
-      UseTrap = true;
-      break;
-    case BoundsCheckingPass::ReportingMode::MinRuntime:
-      Name = "__ubsan_handle_local_out_of_bounds_minimal";
-      MinRuntime = true;
-      MayReturn = true;
-      break;
-    case BoundsCheckingPass::ReportingMode::MinRuntimeAbort:
-      Name = "__ubsan_handle_local_out_of_bounds_minimal_abort";
-      MinRuntime = true;
-      break;
-    case BoundsCheckingPass::ReportingMode::FullRuntime:
-      Name = "__ubsan_handle_local_out_of_bounds";
-      MayReturn = true;
-      break;
-    case BoundsCheckingPass::ReportingMode::FullRuntimeAbort:
-      Name = "__ubsan_handle_local_out_of_bounds_abort";
-      break;
-    }
-
-    MayMerge = Merge;
-  }
-};
+static std::string
+getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
+  std::string Name = "__ubsan_handle_local_out_of_bounds";
+  if (Opts.MinRuntime)
+    Name += "_minimal";
+  if (!Opts.MayReturn)
+    Name += "_abort";
+  return Name;
+}
 
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
-                              ScalarEvolution &SE, const ReportingOpts &Opts) {
+                              ScalarEvolution &SE,
+                              const BoundsCheckingPass::Options &Opts) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -239,11 +212,16 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
       TrapInfo.push_back(std::make_pair(&I, Or));
   }
 
+  std::string Name;
+  if (Opts.Rt)
+    Name = getRuntimeCallName(*Opts.Rt);
+
   // Create a trapping basic block on demand using a callback. Depending on
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
   BasicBlock *ReuseTrapBB = nullptr;
-  auto GetTrapBB = [&ReuseTrapBB, &Opts](BuilderTy &IRB, BasicBlock *Cont) {
+  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name](BuilderTy &IRB,
+                                                BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
@@ -257,23 +235,24 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     BasicBlock *TrapBB = BasicBlock::Create(Fn->getContext(), "trap", Fn);
     IRB.SetInsertPoint(TrapBB);
 
-    bool DebugTrapBB = !Opts.MayMerge;
-    CallInst *TrapCall = Opts.UseTrap
-                             ? InsertTrap(IRB, DebugTrapBB)
-                             : InsertCall(IRB, Opts.MayReturn, Opts.Name);
+    bool DebugTrapBB = !Opts.Merge;
+    CallInst *TrapCall = Opts.Rt ? InsertCall(IRB, Opts.Rt->MayReturn, Name)
+                                 : InsertTrap(IRB, DebugTrapBB);
     if (DebugTrapBB)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
 
     TrapCall->setDoesNotThrow();
     TrapCall->setDebugLoc(DebugLoc);
-    if (Opts.MayReturn) {
+
+    bool MayReturn = Opts.Rt && Opts.Rt->MayReturn;
+    if (MayReturn) {
       IRB.CreateBr(Cont);
     } else {
       TrapCall->setDoesNotReturn();
       IRB.CreateUnreachable();
     }
 
-    if (!Opts.MayReturn && SingleTrapBB && !DebugTrapBB)
+    if (!MayReturn && SingleTrapBB && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
 
     return TrapBB;
@@ -292,8 +271,7 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE,
-                         ReportingOpts(Options.Mode, Options.Merge)))
+  if (!addBoundsChecking(F, TLI, SE, Opts))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -303,24 +281,17 @@ void BoundsCheckingPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<BoundsCheckingPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  switch (Options.Mode) {
-  case ReportingMode::Trap:
-    OS << "<trap";
-    break;
-  case ReportingMode::MinRuntime:
-    OS << "<min-rt";
-    break;
-  case ReportingMode::MinRuntimeAbort:
-    OS << "<min-rt-abort";
-    break;
-  case ReportingMode::FullRuntime:
-    OS << "<rt";
-    break;
-  case ReportingMode::FullRuntimeAbort:
-    OS << "<rt-abort";
-    break;
+  OS << "<";
+  if (Opts.Rt) {
+    if (Opts.Rt->MinRuntime)
+      OS << "min-";
+    OS << "rt";
+    if (!Opts.Rt->MayReturn)
+      OS << "-abort";
+  } else {
+    OS << "trap";
   }
-  if (Options.Merge)
+  if (Opts.Merge)
     OS << ";merge";
   OS << ">";
 }

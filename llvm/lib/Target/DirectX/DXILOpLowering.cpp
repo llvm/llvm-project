@@ -415,8 +415,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -528,6 +536,48 @@ public:
       if (Error E = OpCall.takeError())
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, HasCheckBit))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
         return E;
 
       return Error::success();
@@ -723,13 +773,13 @@ public:
         HasErrors |= lowerGetPointer(F);
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
-        break;
-      case Intrinsic::dx_resource_loadchecked_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerTypedBufferStore(F);
+        break;
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);

@@ -212,6 +212,9 @@ private:
   unsigned getFusedOpcode(const SelectionDAG &DAG,
                           const SDNode *N0, const SDNode *N1) const;
   SDValue tryFoldToMad64_32(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue foldAddSub64WithZeroLowBitsTo32(SDNode *N,
+                                          DAGCombinerInfo &DCI) const;
+
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -312,9 +315,9 @@ public:
                                       SmallVectorImpl<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-  bool getAddrModeArguments(IntrinsicInst * /*I*/,
-                            SmallVectorImpl<Value*> &/*Ops*/,
-                            Type *&/*AccessTy*/) const override;
+  bool getAddrModeArguments(const IntrinsicInst *I,
+                            SmallVectorImpl<Value *> &Ops,
+                            Type *&AccessTy) const override;
 
   bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace) const;
   bool isLegalGlobalAddressingMode(const AddrMode &AM) const;
@@ -456,6 +459,7 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
@@ -534,6 +538,8 @@ public:
                                  const TargetRegisterInfo *TRI,
                                  const TargetInstrInfo *TII, unsigned &PhysReg,
                                  int &Cost) const override;
+
+  bool isProfitableToHoist(Instruction *I) const override;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,

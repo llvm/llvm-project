@@ -112,7 +112,7 @@ private:
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
   // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
+  // config.machine has been set.
   void addWinSysRootLibSearchPaths();
 
   // Symbol names are mangled by prepending "_" on x86.

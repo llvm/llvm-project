@@ -1170,7 +1170,9 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NOESCAPE
 #  endif
 
-#  define _LIBCPP_NODEBUG [[__gnu__::__nodebug__]]
+// FIXME: Expand this to [[__gnu__::__nodebug__]] again once the testcase reported in
+// https://github.com/llvm/llvm-project/pull/118710 has been analyzed
+#  define _LIBCPP_NODEBUG
 
 #  if __has_attribute(__standalone_debug__)
 #    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))

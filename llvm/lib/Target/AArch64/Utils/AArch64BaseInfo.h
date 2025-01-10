@@ -564,11 +564,10 @@ LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
                              /* LargestValue */ (long)TailFoldingOpts::Reverse);
 
 namespace AArch64ExactFPImm {
-  struct ExactFPImm {
-    const char *Name;
-    int Enum;
-    const char *Repr;
-  };
+struct ExactFPImm {
+  int Enum;
+  const char *Repr;
+};
 #define GET_ExactFPImmValues_DECL
 #define GET_ExactFPImmsList_DECL
 #include "AArch64GenSystemOperands.inc"
@@ -602,7 +601,6 @@ namespace AArch64PSBHint {
 namespace AArch64PHint {
 struct PHint {
   const char *Name;
-  const char *AltName;
   unsigned Encoding;
   FeatureBitset FeaturesRequired;
 
@@ -720,7 +718,6 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 namespace AArch64SysReg {
   struct SysReg {
     const char Name[32];
-    const char AltName[32];
     unsigned Encoding;
     bool Readable;
     bool Writeable;
@@ -735,9 +732,6 @@ namespace AArch64SysReg {
 #define GET_SysRegsList_DECL
 #define GET_SysRegValues_DECL
 #include "AArch64GenSystemOperands.inc"
-
-  const SysReg *lookupSysRegByName(StringRef);
-  const SysReg *lookupSysRegByEncoding(uint16_t);
 
   uint32_t parseGenericRegister(StringRef Name);
   std::string genericRegisterString(uint32_t Bits);

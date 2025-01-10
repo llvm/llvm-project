@@ -18385,7 +18385,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
     // Bail if we might break a sh{1,2,3}add pattern.
-    if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
+    if (Subtarget.hasStdExtZba() && C2 && C2->getZExtValue() >= 1 &&
         C2->getZExtValue() <= 3 && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&
@@ -20273,13 +20273,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  if (!IsTailCall) {
-    // Add a register mask operand representing the call-preserved registers.
-    const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-    const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
-    assert(Mask && "Missing call preserved mask for calling convention");
-    Ops.push_back(DAG.getRegisterMask(Mask));
-  }
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
 
   // Glue the call to the argument copies, if any.
   if (Glue.getNode())

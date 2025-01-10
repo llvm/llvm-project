@@ -605,6 +605,15 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+
+  // The HWASan pass won't emit a CHECK_MEMACCESS intrinsic with a pointer
+  // statically known to be zero. However, conceivably, the HWASan pass may
+  // encounter a "cannot currently statically prove to be null" pointer (and is
+  // therefore unable to omit the intrinsic) that later optimization passes
+  // convert into a statically known-null pointer.
+  if (Reg == AArch64::XZR)
+    return;
+
   bool IsShort =
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) ||
        (MI.getOpcode() ==
