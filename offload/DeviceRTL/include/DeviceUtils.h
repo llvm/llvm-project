@@ -60,32 +60,35 @@ struct remove_addrspace<T [[clang::address_space(N)]]> : type_identity<T> {};
 template <class T>
 using remove_addrspace_t = typename remove_addrspace<T>::type;
 
-template <typename To, typename From> inline To bitCast(From V) {
+template <typename To, typename From> OMP_ATTRS inline To bitCast(From V) {
   static_assert(sizeof(To) == sizeof(From), "Bad conversion");
   return __builtin_bit_cast(To, V);
 }
 
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread
 /// is identified by \p Mask.
-int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width);
+OMP_ATTRS int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane,
+                          int32_t Width);
 
-int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width);
+OMP_ATTRS int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,
+                              int32_t Width);
 
-int64_t shuffleDown(uint64_t Mask, int64_t Var, uint32_t Delta, int32_t Width);
+OMP_ATTRS int64_t shuffleDown(uint64_t Mask, int64_t Var, uint32_t Delta,
+                              int32_t Width);
 
-uint64_t ballotSync(uint64_t Mask, int32_t Pred);
+OMP_ATTRS uint64_t ballotSync(uint64_t Mask, int32_t Pred);
 
 /// Return \p LowBits and \p HighBits packed into a single 64 bit value.
-uint64_t pack(uint32_t LowBits, uint32_t HighBits);
+OMP_ATTRS uint64_t pack(uint32_t LowBits, uint32_t HighBits);
 
 /// Unpack \p Val into \p LowBits and \p HighBits.
-void unpack(uint64_t Val, uint32_t &LowBits, uint32_t &HighBits);
+OMP_ATTRS void unpack(uint64_t Val, uint32_t &LowBits, uint32_t &HighBits);
 
 /// Return true iff \p Ptr is pointing into shared (local) memory (AS(3)).
-bool isSharedMemPtr(void *Ptr);
+OMP_ATTRS bool isSharedMemPtr(void *Ptr);
 
 /// Return true iff \p Ptr is pointing into (thread) local memory (AS(5)).
-bool isThreadLocalMemPtr(void *Ptr);
+OMP_ATTRS bool isThreadLocalMemPtr(void *Ptr);
 
 /// A  pointer variable that has by design an `undef` value. Use with care.
 [[clang::loader_uninitialized]] static void *const UndefPtr;

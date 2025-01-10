@@ -12,6 +12,8 @@
 #ifndef OMPTARGET_WORKSHARE_H
 #define OMPTARGET_WORKSHARE_H
 
+#include "DeviceTypes.h"
+
 #pragma omp begin declare target device_type(nohost)
 
 namespace ompx {
@@ -19,7 +21,7 @@ namespace ompx {
 namespace workshare {
 
 /// Initialize the worksharing machinery.
-void init(bool IsSPMD);
+OMP_ATTRS void init(bool IsSPMD);
 
 } // namespace workshare
 

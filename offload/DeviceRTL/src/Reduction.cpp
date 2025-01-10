@@ -24,15 +24,17 @@ namespace {
 
 #pragma omp begin declare target device_type(nohost)
 
-void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
+OMP_ATTRS void gpu_regular_warp_reduce(void *reduce_data,
+                                       ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
             /*Offset = */ mask, /*AlgoVersion=*/0);
   }
 }
 
-void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
-                               uint32_t size, uint32_t tid) {
+OMP_ATTRS void gpu_irregular_warp_reduce(void *reduce_data,
+                                         ShuffleReductFnTy shflFct,
+                                         uint32_t size, uint32_t tid) {
   uint32_t curr_size;
   uint32_t mask;
   curr_size = size;
@@ -44,8 +46,8 @@ void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   }
 }
 
-static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
-                                          ShuffleReductFnTy shflFct) {
+OMP_ATTRS static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
+                                                    ShuffleReductFnTy shflFct) {
   uint32_t size, remote_id, physical_lane_id;
   physical_lane_id = mapping::getThreadIdInBlock() % mapping::getWarpSize();
   __kmpc_impl_lanemask_t lanemask_lt = mapping::lanemaskLT();
@@ -63,9 +65,9 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
   return (logical_lane_id == 0);
 }
 
-static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
-                                            ShuffleReductFnTy shflFct,
-                                            InterWarpCopyFnTy cpyFct) {
+OMP_ATTRS static int32_t
+nvptx_parallel_reduce_nowait(void *reduce_data, ShuffleReductFnTy shflFct,
+                             InterWarpCopyFnTy cpyFct) {
   uint32_t BlockThreadId = mapping::getThreadIdInBlock();
   if (mapping::isMainThreadInGenericMode(/*IsSPMD=*/false))
     BlockThreadId = 0;
@@ -73,16 +75,16 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   if (NumThreads == 1)
     return 1;
 
-    //
-    // This reduce function handles reduction within a team. It handles
-    // parallel regions in both L1 and L2 parallelism levels. It also
-    // supports Generic, SPMD, and NoOMP modes.
-    //
-    // 1. Reduce within a warp.
-    // 2. Warp master copies value to warp 0 via shared memory.
-    // 3. Warp 0 reduces to a single value.
-    // 4. The reduced value is available in the thread that returns 1.
-    //
+  //
+  // This reduce function handles reduction within a team. It handles
+  // parallel regions in both L1 and L2 parallelism levels. It also
+  // supports Generic, SPMD, and NoOMP modes.
+  //
+  // 1. Reduce within a warp.
+  // 2. Warp master copies value to warp 0 via shared memory.
+  // 3. Warp 0 reduces to a single value.
+  // 4. The reduced value is available in the thread that returns 1.
+  //
 
 #if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700) {
@@ -157,26 +159,24 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   return BlockThreadId == 0;
 }
 
-uint32_t roundToWarpsize(uint32_t s) {
+OMP_ATTRS uint32_t roundToWarpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
   return (s & ~(unsigned)(mapping::getWarpSize() - 1));
 }
 
-uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
+OMP_ATTRS uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
 } // namespace
 
 extern "C" {
-int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
-                                               uint64_t reduce_data_size,
-                                               void *reduce_data,
-                                               ShuffleReductFnTy shflFct,
-                                               InterWarpCopyFnTy cpyFct) {
+OMP_ATTRS int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
+    IdentTy *Loc, uint64_t reduce_data_size, void *reduce_data,
+    ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
   return nvptx_parallel_reduce_nowait(reduce_data, shflFct, cpyFct);
 }
 
-int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
+OMP_ATTRS int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
     uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
     InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
@@ -313,7 +313,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 }
 }
 
-void *__kmpc_reduction_get_fixed_buffer() {
+OMP_ATTRS void *__kmpc_reduction_get_fixed_buffer() {
   return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
 

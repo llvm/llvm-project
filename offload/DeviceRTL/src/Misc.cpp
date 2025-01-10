@@ -22,23 +22,23 @@
 namespace ompx {
 namespace impl {
 
-double getWTick();
+OMP_ATTRS double getWTick();
 
-double getWTime();
+OMP_ATTRS double getWTime();
 
 /// AMDGCN Implementation
 ///
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-double getWTick() {
+OMP_ATTRS double getWTick() {
   // The number of ticks per second for the AMDGPU clock varies by card and can
   // only be retrived by querying the driver. We rely on the device environment
   // to inform us what the proper frequency is.
   return 1.0 / config::getClockFrequency();
 }
 
-double getWTime() {
+OMP_ATTRS double getWTime() {
   return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
 }
 
@@ -51,12 +51,12 @@ double getWTime() {
         device = {arch(nvptx, nvptx64)},                                       \
             implementation = {extension(match_any)})
 
-double getWTick() {
+OMP_ATTRS double getWTick() {
   // Timer precision is 1ns
   return ((double)1E-9);
 }
 
-double getWTime() {
+OMP_ATTRS double getWTime() {
   uint64_t nsecs = __nvvm_read_ptx_sreg_globaltimer();
   return static_cast<double>(nsecs) * getWTick();
 }
@@ -66,7 +66,7 @@ double getWTime() {
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
 /// device pointers sorted on the value of the host pointer.
-void *indirectCallLookup(void *HstPtr) {
+OMP_ATTRS void *indirectCallLookup(void *HstPtr) {
   if (!HstPtr)
     return nullptr;
 
@@ -111,7 +111,8 @@ void *indirectCallLookup(void *HstPtr) {
 [[gnu::visibility("protected"), gnu::weak,
   gnu::retain]] rpc::Client Client asm("__llvm_rpc_client");
 #else
-[[gnu::visibility("protected"), gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
+[[gnu::visibility("protected"),
+  gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
 #endif
 
 } // namespace impl
@@ -122,19 +123,21 @@ void *indirectCallLookup(void *HstPtr) {
 ///{
 
 extern "C" {
-int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) { return 0; }
+OMP_ATTRS int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) {
+  return 0;
+}
 
-int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
+OMP_ATTRS int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
 
-double omp_get_wtick(void) { return ompx::impl::getWTick(); }
+OMP_ATTRS double omp_get_wtick(void) { return ompx::impl::getWTick(); }
 
-double omp_get_wtime(void) { return ompx::impl::getWTime(); }
+OMP_ATTRS double omp_get_wtime(void) { return ompx::impl::getWTime(); }
 
-void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
+OMP_ATTRS void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
 }
 
-void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
+OMP_ATTRS void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   switch (allocator) {
   case omp_default_mem_alloc:
   case omp_large_cap_mem_alloc:
@@ -147,7 +150,7 @@ void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   }
 }
 
-void omp_free(void *ptr, omp_allocator_handle_t allocator) {
+OMP_ATTRS void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   switch (allocator) {
   case omp_default_mem_alloc:
   case omp_large_cap_mem_alloc:
@@ -161,7 +164,8 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   }
 }
 
-unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
+OMP_ATTRS unsigned long long __llvm_omp_host_call(void *fn, void *data,
+                                                  size_t size) {
   rpc::Client::Port Port = ompx::impl::Client.open<OFFLOAD_HOST_CALL>();
   Port.send_n(data, size);
   Port.send([=](rpc::Buffer *buffer, uint32_t) {

@@ -26,22 +26,23 @@ namespace allocator {
 static uint64_t constexpr ALIGNMENT = 16;
 
 /// Initialize the allocator according to \p KernelEnvironment
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
+OMP_ATTRS void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
 
 /// Allocate \p Size bytes.
-[[gnu::alloc_size(1), gnu::assume_aligned(ALIGNMENT), gnu::malloc]] void *
+[[gnu::alloc_size(1), gnu::assume_aligned(ALIGNMENT),
+  gnu::malloc]] OMP_ATTRS void *
 alloc(uint64_t Size);
 
 /// Free the allocation pointed to by \p Ptr.
-void free(void *Ptr);
+OMP_ATTRS void free(void *Ptr);
 
 } // namespace allocator
 
 } // namespace ompx
 
 extern "C" {
-[[gnu::weak]] void *malloc(size_t Size);
-[[gnu::weak]] void free(void *Ptr);
+[[gnu::weak]] OMP_ATTRS void *malloc(size_t Size);
+[[gnu::weak]] OMP_ATTRS void free(void *Ptr);
 }
 
 #pragma omp end declare target

@@ -24,17 +24,19 @@ using namespace ompx;
 #pragma omp begin declare target device_type(nohost)
 
 extern "C" {
-void __assert_assume(bool condition) { __builtin_assume(condition); }
+OMP_ATTRS void __assert_assume(bool condition) { __builtin_assume(condition); }
 
 #ifndef OMPTARGET_HAS_LIBC
-[[gnu::weak]] void __assert_fail(const char *expr, const char *file,
-                                 unsigned line, const char *function) {
+[[gnu::weak]] OMP_ATTRS void __assert_fail(const char *expr, const char *file,
+                                           unsigned line,
+                                           const char *function) {
   __assert_fail_internal(expr, nullptr, file, line, function);
 }
 #endif
 
-void __assert_fail_internal(const char *expr, const char *msg, const char *file,
-                            unsigned line, const char *function) {
+OMP_ATTRS void __assert_fail_internal(const char *expr, const char *msg,
+                                      const char *file, unsigned line,
+                                      const char *function) {
   if (msg) {
     PRINTF("%s:%u: %s: Assertion %s (`%s`) failed.\n", file, line, function,
            msg, expr);

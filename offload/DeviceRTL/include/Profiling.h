@@ -12,10 +12,12 @@
 #ifndef OMPTARGET_DEVICERTL_PROFILING_H
 #define OMPTARGET_DEVICERTL_PROFILING_H
 
+#include "DeviceTypes.h"
+
 extern "C" {
-void __llvm_profile_register_function(void *Ptr);
-void __llvm_profile_register_names_function(void *Ptr, long int I);
-void __llvm_profile_instrument_memop(long int I, void *Ptr, int I2);
+OMP_ATTRS void __llvm_profile_register_function(void *Ptr);
+OMP_ATTRS void __llvm_profile_register_names_function(void *Ptr, long int I);
+OMP_ATTRS void __llvm_profile_instrument_memop(long int I, void *Ptr, int I2);
 }
 
 #endif

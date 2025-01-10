@@ -27,7 +27,7 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-static void
+OMP_ATTRS static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
                     KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   // Order is important here.
@@ -39,7 +39,7 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
 }
 
 /// Simple generic state machine for worker threads.
-static void genericStateMachine(IdentTy *Ident) {
+OMP_ATTRS static void genericStateMachine(IdentTy *Ident) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   do {
@@ -73,8 +73,9 @@ extern "C" {
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
-                           KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
+OMP_ATTRS int32_t
+__kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
+                   KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode &
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
@@ -130,7 +131,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit() {
+OMP_ATTRS void __kmpc_target_deinit() {
   bool IsSPMD = mapping::isSPMDMode();
   if (IsSPMD)
     return;
@@ -153,7 +154,7 @@ void __kmpc_target_deinit() {
   }
 }
 
-int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
+OMP_ATTRS int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }
 
 #pragma omp end declare target

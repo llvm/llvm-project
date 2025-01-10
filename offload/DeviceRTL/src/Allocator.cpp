@@ -32,7 +32,7 @@ using namespace ompx;
 /// directly.
 struct BumpAllocatorTy final {
 
-  void *alloc(uint64_t Size) {
+  OMP_ATTRS void *alloc(uint64_t Size) {
     Size = utils::roundUp(Size, uint64_t(allocator::ALIGNMENT));
 
     if (config::isDebugMode(DeviceDebugKind::AllocationTracker)) {
@@ -58,7 +58,7 @@ struct BumpAllocatorTy final {
     return reinterpret_cast<void *>(OldData);
   }
 
-  void free(void *) {}
+  OMP_ATTRS void free(void *) {}
 };
 
 BumpAllocatorTy BumpAllocator;
@@ -67,14 +67,17 @@ BumpAllocatorTy BumpAllocator;
 ///
 ///{
 
-void allocator::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
+OMP_ATTRS void allocator::init(bool IsSPMD,
+                               KernelEnvironmentTy &KernelEnvironment) {
   // TODO: Check KernelEnvironment for an allocator choice as soon as we have
   // more than one.
 }
 
-void *allocator::alloc(uint64_t Size) { return BumpAllocator.alloc(Size); }
+OMP_ATTRS void *allocator::alloc(uint64_t Size) {
+  return BumpAllocator.alloc(Size);
+}
 
-void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
+OMP_ATTRS void allocator::free(void *Ptr) { BumpAllocator.free(Ptr); }
 
 ///}
 

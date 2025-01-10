@@ -98,7 +98,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nogpuinc -nostdlibinc
-             -fopenmp -fopenmp-cuda-mode
+             -fopenmp -fopenmp-cuda-mode -Wno-unknown-assumption
              -Wno-unknown-cuda-version -Wno-openmp-target
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}

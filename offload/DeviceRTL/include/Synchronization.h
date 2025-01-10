@@ -43,39 +43,40 @@ enum MemScopeTy {
 };
 
 /// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
-uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
-             MemScopeTy MemScope = MemScopeTy::all);
+OMP_ATTRS uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
+                       MemScopeTy MemScope = MemScopeTy::all);
 
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
 /// {
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-bool cas(Ty *Address, V ExpectedV, V DesiredV, atomic::OrderingTy OrderingSucc,
-         atomic::OrderingTy OrderingFail) {
+OMP_ATTRS bool cas(Ty *Address, V ExpectedV, V DesiredV,
+                   atomic::OrderingTy OrderingSucc,
+                   atomic::OrderingTy OrderingFail) {
   return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
                                           OrderingSucc, OrderingFail,
                                           __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V add(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS V add(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_add(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V load(Ty *Address, atomic::OrderingTy Ordering) {
+OMP_ATTRS V load(Ty *Address, atomic::OrderingTy Ordering) {
   return add(Address, Ty(0), Ordering);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-void store(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS void store(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V mul(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS V mul(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   Ty TypedCurrentVal, TypedResultVal, TypedNewVal;
   bool Success;
   do {
@@ -88,14 +89,14 @@ V mul(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<!utils::is_floating_point_v<V>, V>
+OMP_ATTRS utils::enable_if_t<!utils::is_floating_point_v<V>, V>
 max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_max(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<utils::is_same_v<V, float>, V>
+OMP_ATTRS utils::enable_if_t<utils::is_same_v<V, float>, V>
 max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
     return utils::bitCast<float>(
@@ -105,7 +106,7 @@ max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<utils::is_same_v<V, double>, V>
+OMP_ATTRS utils::enable_if_t<utils::is_same_v<V, double>, V>
 max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
     return utils::bitCast<double>(
@@ -115,7 +116,7 @@ max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<!utils::is_floating_point_v<V>, V>
+OMP_ATTRS utils::enable_if_t<!utils::is_floating_point_v<V>, V>
 min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_min(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
@@ -123,7 +124,7 @@ min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<utils::is_same_v<V, float>, V>
+OMP_ATTRS utils::enable_if_t<utils::is_same_v<V, float>, V>
 min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   if (Val >= 0)
     return utils::bitCast<float>(
@@ -134,7 +135,7 @@ min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-utils::enable_if_t<utils::is_same_v<V, double>, V>
+OMP_ATTRS utils::enable_if_t<utils::is_same_v<V, double>, V>
 min(Ty *Address, utils::remove_addrspace_t<Ty> Val,
     atomic::OrderingTy Ordering) {
   if (Val >= 0)
@@ -145,25 +146,25 @@ min(Ty *Address, utils::remove_addrspace_t<Ty> Val,
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_or(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS V bit_or(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_or(Address, Val, Ordering,
                                   __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_and(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS V bit_and(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_and(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_xor(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+OMP_ATTRS V bit_xor(Ty *Address, V Val, atomic::OrderingTy Ordering) {
   return __scoped_atomic_fetch_xor(Address, Val, Ordering,
                                    __MEMORY_SCOPE_DEVICE);
 }
 
-static inline uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
-                                      atomic::OrderingTy Ordering) {
+OMP_ATTRS static inline uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
+                                                atomic::OrderingTy Ordering) {
   uint32_t R;
   __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
   return R;
@@ -176,15 +177,15 @@ static inline uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
 namespace synchronize {
 
 /// Initialize the synchronization machinery. Must be called by all threads.
-void init(bool IsSPMD);
+OMP_ATTRS void init(bool IsSPMD);
 
 /// Synchronize all threads in a warp identified by \p Mask.
-void warp(LaneMaskTy Mask);
+OMP_ATTRS void warp(LaneMaskTy Mask);
 
 /// Synchronize all threads in a block and perform a fence before and after the
 /// barrier according to \p Ordering. Note that the fence might be part of the
 /// barrier.
-void threads(atomic::OrderingTy Ordering);
+OMP_ATTRS void threads(atomic::OrderingTy Ordering);
 
 /// Synchronizing threads is allowed even if they all hit different instances of
 /// `synchronize::threads()`. However, `synchronize::threadsAligned()` is more
@@ -192,15 +193,14 @@ void threads(atomic::OrderingTy Ordering);
 /// noinline is removed by the openmp-opt pass and helps to preserve the
 /// information till then.
 ///{
-#pragma omp begin assumes ext_aligned_barrier
 
 /// Synchronize all threads in a block, they are reaching the same instruction
 /// (hence all threads in the block are "aligned"). Also perform a fence before
 /// and after the barrier according to \p Ordering. Note that the
 /// fence might be part of the barrier if the target offers this.
-[[gnu::noinline]] void threadsAligned(atomic::OrderingTy Ordering);
+[[gnu::noinline, omp::assume("ext_aligned_barrier")]] OMP_ATTRS void
+threadsAligned(atomic::OrderingTy Ordering);
 
-#pragma omp end assumes
 ///}
 
 } // namespace synchronize
@@ -208,13 +208,13 @@ void threads(atomic::OrderingTy Ordering);
 namespace fence {
 
 /// Memory fence with \p Ordering semantics for the team.
-void team(atomic::OrderingTy Ordering);
+OMP_ATTRS void team(atomic::OrderingTy Ordering);
 
 /// Memory fence with \p Ordering semantics for the contention group.
-void kernel(atomic::OrderingTy Ordering);
+OMP_ATTRS void kernel(atomic::OrderingTy Ordering);
 
 /// Memory fence with \p Ordering semantics for the system.
-void system(atomic::OrderingTy Ordering);
+OMP_ATTRS void system(atomic::OrderingTy Ordering);
 
 } // namespace fence
 

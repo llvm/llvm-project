@@ -20,9 +20,7 @@
 // another function but only inline assembly that performs some operation or
 // side-effect and then continues execution with something on the existing call
 // stack.
-//
-// TODO: Find a good place for this
-#pragma omp assumes ext_no_call_asm
+#define OMP_ATTRS [[omp::assume("ext_no_call_asm"), gnu::visibility("hidden")]]
 
 enum omp_proc_bind_t {
   omp_proc_bind_false = 0,

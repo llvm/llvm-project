@@ -31,21 +31,21 @@ namespace memory {
 /// Alloca \p Size bytes in shared memory, if possible, for \p Reason.
 ///
 /// Note: See the restrictions on __kmpc_alloc_shared for proper usage.
-void *allocShared(uint64_t Size, const char *Reason);
+OMP_ATTRS void *allocShared(uint64_t Size, const char *Reason);
 
 /// Free \p Ptr, alloated via allocShared, for \p Reason.
 ///
 /// Note: See the restrictions on __kmpc_free_shared for proper usage.
-void freeShared(void *Ptr, uint64_t Bytes, const char *Reason);
+OMP_ATTRS void freeShared(void *Ptr, uint64_t Bytes, const char *Reason);
 
 /// Alloca \p Size bytes in global memory, if possible, for \p Reason.
-void *allocGlobal(uint64_t Size, const char *Reason);
+OMP_ATTRS void *allocGlobal(uint64_t Size, const char *Reason);
 
 /// Return a pointer to the dynamic shared memory buffer.
-void *getDynamicBuffer();
+OMP_ATTRS void *getDynamicBuffer();
 
 /// Free \p Ptr, alloated via allocGlobal, for \p Reason.
-void freeGlobal(void *Ptr, const char *Reason);
+OMP_ATTRS void freeGlobal(void *Ptr, const char *Reason);
 
 } // namespace memory
 
@@ -62,17 +62,17 @@ struct ICVStateTy {
   uint32_t RunSchedVar;
   uint32_t RunSchedChunkVar;
 
-  bool operator==(const ICVStateTy &Other) const;
+  OMP_ATTRS bool operator==(const ICVStateTy &Other) const;
 
-  void assertEqual(const ICVStateTy &Other) const;
+  OMP_ATTRS void assertEqual(const ICVStateTy &Other) const;
 };
 
 struct TeamStateTy {
-  void init(bool IsSPMD);
+  OMP_ATTRS void init(bool IsSPMD);
 
-  bool operator==(const TeamStateTy &) const;
+  OMP_ATTRS bool operator==(const TeamStateTy &) const;
 
-  void assertEqual(TeamStateTy &Other) const;
+  OMP_ATTRS void assertEqual(TeamStateTy &Other) const;
 
   /// ICVs
   ///
@@ -104,12 +104,12 @@ struct ThreadStateTy {
 
   ThreadStateTy *PreviousThreadState;
 
-  void init() {
+  OMP_ATTRS void init() {
     ICVState = TeamState.ICVState;
     PreviousThreadState = nullptr;
   }
 
-  void init(ThreadStateTy *PreviousTS) {
+  OMP_ATTRS void init(ThreadStateTy *PreviousTS) {
     ICVState = PreviousTS ? PreviousTS->ICVState : TeamState.ICVState;
     PreviousThreadState = PreviousTS;
   }
@@ -119,15 +119,15 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
-          KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
+OMP_ATTRS void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                    KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
 
 /// Return the kernel and kernel launch environment associated with the current
 /// kernel. The former is static and contains compile time information that
 /// holds for all instances of the kernel. The latter is dynamic and provides
 /// per-launch information.
-KernelEnvironmentTy &getKernelEnvironment();
-KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
+OMP_ATTRS KernelEnvironmentTy &getKernelEnvironment();
+OMP_ATTRS KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
 
 /// TODO
 enum ValueKind {
@@ -144,22 +144,23 @@ enum ValueKind {
 };
 
 /// TODO
-void enterDataEnvironment(IdentTy *Ident);
+OMP_ATTRS void enterDataEnvironment(IdentTy *Ident);
 
 /// TODO
-void exitDataEnvironment();
+OMP_ATTRS void exitDataEnvironment();
 
 /// TODO
 struct DateEnvironmentRAII {
-  DateEnvironmentRAII(IdentTy *Ident) { enterDataEnvironment(Ident); }
-  ~DateEnvironmentRAII() { exitDataEnvironment(); }
+  OMP_ATTRS DateEnvironmentRAII(IdentTy *Ident) { enterDataEnvironment(Ident); }
+  OMP_ATTRS ~DateEnvironmentRAII() { exitDataEnvironment(); }
 };
 
 /// TODO
-void resetStateForThread(uint32_t TId);
+OMP_ATTRS void resetStateForThread(uint32_t TId);
 
-inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
-                                       IdentTy *Ident, bool ForceTeamState) {
+OMP_ATTRS inline uint32_t &
+lookupForModify32Impl(uint32_t state::ICVStateTy::*Var, IdentTy *Ident,
+                      bool ForceTeamState) {
   if (OMP_LIKELY(ForceTeamState || !config::mayUseThreadStates() ||
                  !TeamState.HasThreadState))
     return TeamState.ICVState.*Var;
@@ -174,8 +175,8 @@ inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
   return ThreadStates[TId]->ICVState.*Var;
 }
 
-inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
-                            bool ForceTeamState) {
+OMP_ATTRS inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
+                                      bool ForceTeamState) {
   auto TId = mapping::getThreadIdInBlock();
   if (OMP_UNLIKELY(!ForceTeamState && config::mayUseThreadStates() &&
                    TeamState.HasThreadState && ThreadStates[TId]))
@@ -183,7 +184,7 @@ inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
   return TeamState.ICVState.*Var;
 }
 
-[[gnu::always_inline, gnu::flatten]] inline uint32_t &
+[[gnu::always_inline, gnu::flatten]] OMP_ATTRS inline uint32_t &
 lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_NThreads:
@@ -225,7 +226,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   __builtin_unreachable();
 }
 
-[[gnu::always_inline, gnu::flatten]] inline void *&
+[[gnu::always_inline, gnu::flatten]] OMP_ATTRS inline void *&
 lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:
@@ -239,45 +240,48 @@ lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
 /// A class without actual state used to provide a nice interface to lookup and
 /// update ICV values we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct Value {
-  [[gnu::flatten, gnu::always_inline]] operator Ty() {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS operator Ty() {
     return lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
                   /*ForceTeamState=*/false);
   }
 
-  [[gnu::flatten, gnu::always_inline]] Value &operator=(const Ty &Other) {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Value &
+  operator=(const Ty &Other) {
     set(Other, /*IdentTy=*/nullptr);
     return *this;
   }
 
-  [[gnu::flatten, gnu::always_inline]] Value &operator++() {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Value &operator++() {
     inc(1, /*IdentTy=*/nullptr);
     return *this;
   }
 
-  [[gnu::flatten, gnu::always_inline]] Value &operator--() {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Value &operator--() {
     inc(-1, /*IdentTy=*/nullptr);
     return *this;
   }
 
-  [[gnu::flatten, gnu::always_inline]] void
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
     ASSERT(lookup(/*IsReadonly=*/true, Ident, ForceTeamState) == V, nullptr);
   }
 
 private:
-  [[gnu::flatten, gnu::always_inline]] Ty &
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Ty &
   lookup(bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
     Ty &t = lookup32(Kind, IsReadonly, Ident, ForceTeamState);
     return t;
   }
 
-  [[gnu::flatten, gnu::always_inline]] Ty &inc(int UpdateVal, IdentTy *Ident) {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Ty &inc(int UpdateVal,
+                                                         IdentTy *Ident) {
     return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) +=
             UpdateVal);
   }
 
-  [[gnu::flatten, gnu::always_inline]] Ty &set(Ty UpdateVal, IdentTy *Ident) {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS Ty &set(Ty UpdateVal,
+                                                         IdentTy *Ident) {
     return (lookup(/*IsReadonly=*/false, Ident, /*ForceTeamState=*/false) =
                 UpdateVal);
   }
@@ -289,22 +293,23 @@ private:
 /// a nice interface to lookup and update ICV values
 /// we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct PtrValue {
-  [[gnu::flatten, gnu::always_inline]] operator Ty() {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS operator Ty() {
     return lookup(/*IsReadonly=*/true, /*IdentTy=*/nullptr,
                   /*ForceTeamState=*/false);
   }
 
-  [[gnu::flatten, gnu::always_inline]] PtrValue &operator=(const Ty Other) {
+  [[gnu::flatten, gnu::always_inline]] OMP_ATTRS PtrValue &
+  operator=(const Ty Other) {
     set(Other);
     return *this;
   }
 
 private:
-  Ty &lookup(bool IsReadonly, IdentTy *, bool ForceTeamState) {
+  OMP_ATTRS Ty &lookup(bool IsReadonly, IdentTy *, bool ForceTeamState) {
     return lookupPtr(Kind, IsReadonly, ForceTeamState);
   }
 
-  Ty &set(Ty UpdateVal) {
+  OMP_ATTRS Ty &set(Ty UpdateVal) {
     return (lookup(/*IsReadonly=*/false, /*IdentTy=*/nullptr,
                    /*ForceTeamState=*/false) = UpdateVal);
   }
@@ -313,8 +318,8 @@ private:
 };
 
 template <typename VTy, typename Ty> struct ValueRAII {
-  ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active, IdentTy *Ident,
-            bool ForceTeamState = false)
+  OMP_ATTRS ValueRAII(VTy &V, Ty NewValue, Ty OldValue, bool Active,
+                      IdentTy *Ident, bool ForceTeamState = false)
       : Ptr(Active ? &V.lookup(/*IsReadonly=*/false, Ident, ForceTeamState)
                    : (Ty *)utils::UndefPtr),
         Val(OldValue), Active(Active) {
@@ -323,7 +328,7 @@ template <typename VTy, typename Ty> struct ValueRAII {
     ASSERT(*Ptr == OldValue, "ValueRAII initialization with wrong old value!");
     *Ptr = NewValue;
   }
-  ~ValueRAII() {
+  OMP_ATTRS ~ValueRAII() {
     if (Active)
       *Ptr = Val;
   }
@@ -347,12 +352,12 @@ inline state::Value<uint32_t, state::VK_HasThreadState> HasThreadState;
 inline state::PtrValue<ParallelRegionFnTy, state::VK_ParallelRegionFn>
     ParallelRegionFn;
 
-void runAndCheckState(void(Func(void)));
+OMP_ATTRS void runAndCheckState(void(Func(void)));
 
-void assumeInitialState(bool IsSPMD);
+OMP_ATTRS void assumeInitialState(bool IsSPMD);
 
 /// Return the value of the ParallelTeamSize ICV.
-int getEffectivePTeamSize();
+OMP_ATTRS int getEffectivePTeamSize();
 
 } // namespace state
 

@@ -19,11 +19,12 @@
 ///
 /// {
 extern "C" {
-void __assert_assume(bool condition);
-void __assert_fail(const char *expr, const char *file, unsigned line,
-                   const char *function);
-void __assert_fail_internal(const char *expr, const char *msg, const char *file,
-                            unsigned line, const char *function);
+OMP_ATTRS void __assert_assume(bool condition);
+OMP_ATTRS void __assert_fail(const char *expr, const char *file, unsigned line,
+                             const char *function);
+OMP_ATTRS void __assert_fail_internal(const char *expr, const char *msg,
+                                      const char *file, unsigned line,
+                                      const char *function);
 }
 
 #define ASSERT(expr, msg)                                                      \
