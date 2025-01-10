@@ -88,10 +88,10 @@ __partial_sum_max(_InputIterator __first, _InputIterator __last, _OutputIterator
 
 template <class _Value, class _Map, class _Radix>
 struct __radix_sort_traits {
-  using __image_type = decay_t<typename __invoke_of<_Map, _Value>::type>;
+  using __image_type _LIBCPP_NODEBUG = decay_t<typename __invoke_of<_Map, _Value>::type>;
   static_assert(is_unsigned<__image_type>::value);
 
-  using __radix_type = decay_t<typename __invoke_of<_Radix, __image_type>::type>;
+  using __radix_type _LIBCPP_NODEBUG = decay_t<typename __invoke_of<_Radix, __image_type>::type>;
   static_assert(is_integral<__radix_type>::value);
 
   static constexpr auto __radix_value_range = numeric_limits<__radix_type>::max() + 1;
@@ -101,7 +101,7 @@ struct __radix_sort_traits {
 
 template <class _Value, class _Map>
 struct __counting_sort_traits {
-  using __image_type = decay_t<typename __invoke_of<_Map, _Value>::type>;
+  using __image_type _LIBCPP_NODEBUG = decay_t<typename __invoke_of<_Map, _Value>::type>;
   static_assert(is_unsigned<__image_type>::value);
 
   static constexpr const auto __value_range = numeric_limits<__image_type>::max() + 1;

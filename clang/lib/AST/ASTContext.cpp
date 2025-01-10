@@ -14502,6 +14502,19 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
       std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
 }
 
+const SYCLKernelInfo &ASTContext::getSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  return SYCLKernels.at(KernelNameType);
+}
+
+const SYCLKernelInfo *ASTContext::findSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  auto IT = SYCLKernels.find(KernelNameType);
+  if (IT != SYCLKernels.end())
+    return &IT->second;
+  return nullptr;
+}
+
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
   OMPTraitInfoVector.emplace_back(new OMPTraitInfo());
   return *OMPTraitInfoVector.back();

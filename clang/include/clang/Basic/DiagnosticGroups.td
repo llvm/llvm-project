@@ -648,6 +648,7 @@ def PoundPragmaMessage : DiagGroup<"#pragma-messages">,
 def : DiagGroup<"redundant-decls">;
 def RedeclaredClassMember : DiagGroup<"redeclared-class-member">;
 def GNURedeclaredEnum : DiagGroup<"gnu-redeclared-enum">;
+def RedundantAttribute : DiagGroup<"redundant-attribute">;
 def RedundantMove : DiagGroup<"redundant-move">;
 def Register : DiagGroup<"register", [DeprecatedRegister]>;
 def ReturnTypeCLinkage : DiagGroup<"return-type-c-linkage">;

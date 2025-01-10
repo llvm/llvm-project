@@ -1,4 +1,4 @@
-//===-- Implementation header for RPC functions -----------------*- C++ -*-===//
+//===-- Implementation header for writev ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
-#define LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
+#ifndef LLVM_LIBC_SRC_SYS_UIO_WRITEV_H
+#define LLVM_LIBC_SRC_SYS_UIO_WRITEV_H
 
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_iovec.h"
 #include "src/__support/macros/config.h"
-#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 
-unsigned long long rpc_host_call(void *fn, void *buffer, size_t size);
+ssize_t writev(int fd, const iovec *iov, int iovcnt);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
+#endif // LLVM_LIBC_SRC_SYS_UIO_WRITEV_H
