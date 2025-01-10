@@ -1357,8 +1357,8 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
-  auto getPriority = [](StringRef Feature) -> unsigned {
+uint64_t X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  auto getPriority = [](StringRef Feature) -> uint64_t {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
     using namespace llvm::X86;
@@ -1372,7 +1372,7 @@ unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return getFeaturePriority(getFeature(Feature)) << 1;
   };
 
-  unsigned Priority = 0;
+  uint64_t Priority = 0;
   for (StringRef Feature : Features)
     if (!Feature.empty())
       Priority = std::max(Priority, getPriority(Feature));

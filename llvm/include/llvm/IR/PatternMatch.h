@@ -2870,7 +2870,7 @@ template <typename Opnd_t> struct Signum_match {
       return false;
 
     unsigned ShiftWidth = TypeSize - 1;
-    Value *OpL = nullptr, *OpR = nullptr;
+    Value *Op;
 
     // This is the representation of signum we match:
     //
@@ -2882,11 +2882,11 @@ template <typename Opnd_t> struct Signum_match {
     //
     // for i1 values.
 
-    auto LHS = m_AShr(m_Value(OpL), m_SpecificInt(ShiftWidth));
-    auto RHS = m_LShr(m_Neg(m_Value(OpR)), m_SpecificInt(ShiftWidth));
-    auto Signum = m_Or(LHS, RHS);
+    auto LHS = m_AShr(m_Value(Op), m_SpecificInt(ShiftWidth));
+    auto RHS = m_LShr(m_Neg(m_Deferred(Op)), m_SpecificInt(ShiftWidth));
+    auto Signum = m_c_Or(LHS, RHS);
 
-    return Signum.match(V) && OpL == OpR && Val.match(OpL);
+    return Signum.match(V) && Val.match(Op);
   }
 };
 
