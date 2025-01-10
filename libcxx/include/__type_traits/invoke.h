@@ -44,12 +44,12 @@ template <class _Fp,
           class _DecayFp = __decay_t<_Fp>,
           class _DecayA0 = __decay_t<_A0>,
           class _ClassT  = typename __member_pointer_class_type<_DecayFp>::type>
-using __enable_if_bullet1 =
+using __enable_if_bullet1 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_function_pointer<_DecayFp>::value &&
                   (is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value)>;
 
 template <class _Fp, class _A0, class _DecayFp = __decay_t<_Fp>, class _DecayA0 = __decay_t<_A0> >
-using __enable_if_bullet2 =
+using __enable_if_bullet2 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_function_pointer<_DecayFp>::value && __is_reference_wrapper<_DecayA0>::value>;
 
 template <class _Fp,
@@ -57,7 +57,7 @@ template <class _Fp,
           class _DecayFp = __decay_t<_Fp>,
           class _DecayA0 = __decay_t<_A0>,
           class _ClassT  = typename __member_pointer_class_type<_DecayFp>::type>
-using __enable_if_bullet3 =
+using __enable_if_bullet3 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_function_pointer<_DecayFp>::value &&
                   !(is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value) &&
                   !__is_reference_wrapper<_DecayA0>::value>;
@@ -67,12 +67,12 @@ template <class _Fp,
           class _DecayFp = __decay_t<_Fp>,
           class _DecayA0 = __decay_t<_A0>,
           class _ClassT  = typename __member_pointer_class_type<_DecayFp>::type>
-using __enable_if_bullet4 =
+using __enable_if_bullet4 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_object_pointer<_DecayFp>::value &&
                   (is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value)>;
 
 template <class _Fp, class _A0, class _DecayFp = __decay_t<_Fp>, class _DecayA0 = __decay_t<_A0> >
-using __enable_if_bullet5 =
+using __enable_if_bullet5 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_object_pointer<_DecayFp>::value && __is_reference_wrapper<_DecayA0>::value>;
 
 template <class _Fp,
@@ -80,7 +80,7 @@ template <class _Fp,
           class _DecayFp = __decay_t<_Fp>,
           class _DecayA0 = __decay_t<_A0>,
           class _ClassT  = typename __member_pointer_class_type<_DecayFp>::type>
-using __enable_if_bullet6 =
+using __enable_if_bullet6 _LIBCPP_NODEBUG =
     __enable_if_t<is_member_object_pointer<_DecayFp>::value &&
                   !(is_same<_ClassT, _DecayA0>::value || is_base_of<_ClassT, _DecayA0>::value) &&
                   !__is_reference_wrapper<_DecayA0>::value>;
@@ -159,7 +159,7 @@ struct __invokable_r {
 
   // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
   // or incomplete array types as required by the standard.
-  using _Result = decltype(__try_call<_Fp, _Args...>(0));
+  using _Result _LIBCPP_NODEBUG = decltype(__try_call<_Fp, _Args...>(0));
 
   using type              = __conditional_t<_IsNotSame<_Result, __nat>::value,
                                             __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
@@ -167,7 +167,7 @@ struct __invokable_r {
   static const bool value = type::value;
 };
 template <class _Fp, class... _Args>
-using __invokable = __invokable_r<void, _Fp, _Args...>;
+using __invokable _LIBCPP_NODEBUG = __invokable_r<void, _Fp, _Args...>;
 
 template <bool _IsInvokable, bool _IsCVVoid, class _Ret, class _Fp, class... _Args>
 struct __nothrow_invokable_r_imp {
@@ -199,11 +199,12 @@ struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...> {
 };
 
 template <class _Ret, class _Fp, class... _Args>
-using __nothrow_invokable_r =
+using __nothrow_invokable_r _LIBCPP_NODEBUG =
     __nothrow_invokable_r_imp<__invokable_r<_Ret, _Fp, _Args...>::value, is_void<_Ret>::value, _Ret, _Fp, _Args...>;
 
 template <class _Fp, class... _Args>
-using __nothrow_invokable = __nothrow_invokable_r_imp<__invokable<_Fp, _Args...>::value, true, void, _Fp, _Args...>;
+using __nothrow_invokable _LIBCPP_NODEBUG =
+    __nothrow_invokable_r_imp<__invokable<_Fp, _Args...>::value, true, void, _Fp, _Args...>;
 
 template <class _Fp, class... _Args>
 struct __invoke_of

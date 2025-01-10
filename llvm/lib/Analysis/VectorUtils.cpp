@@ -479,6 +479,41 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::widenShuffleMaskElts(ArrayRef<int> M,
+                                SmallVectorImpl<int> &NewMask) {
+  unsigned NumElts = M.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  NewMask.clear();
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    int M0 = M[i];
+    int M1 = M[i + 1];
+
+    // If both elements are undef, new mask is undef too.
+    if (M0 == -1 && M1 == -1) {
+      NewMask.push_back(-1);
+      continue;
+    }
+
+    if (M0 == -1 && M1 != -1 && (M1 % 2) == 1) {
+      NewMask.push_back(M1 / 2);
+      continue;
+    }
+
+    if (M0 != -1 && (M0 % 2) == 0 && ((M0 + 1) == M1 || M1 == -1)) {
+      NewMask.push_back(M0 / 2);
+      continue;
+    }
+
+    NewMask.clear();
+    return false;
+  }
+
+  assert(NewMask.size() == NumElts / 2 && "Incorrect size for mask!");
+  return true;
+}
+
 bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &ScaledMask) {
   unsigned NumSrcElts = Mask.size();

@@ -42,9 +42,9 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f16(<vscale x 2 x half> %va, <vscal
 ;
 ; ZVFHMIN-LABEL: vfptosi_nxv2i1_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9, v0.t
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; ZVFHMIN-NEXT:    ret
@@ -62,9 +62,9 @@ define <vscale x 2 x i1> @vfptosi_nxv2i1_nxv2f16_unmasked(<vscale x 2 x half> %v
 ;
 ; ZVFHMIN-LABEL: vfptosi_nxv2i1_nxv2f16_unmasked:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfcvt.rtz.x.f.v v8, v9
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret

@@ -8321,9 +8321,16 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Self: {
     const auto *SC = cast<OpenACCSelfClause>(C);
     writeSourceLocation(SC->getLParenLoc());
-    writeBool(SC->hasConditionExpr());
-    if (SC->hasConditionExpr())
-      AddStmt(const_cast<Expr*>(SC->getConditionExpr()));
+    writeBool(SC->isConditionExprClause());
+    if (SC->isConditionExprClause()) {
+      writeBool(SC->hasConditionExpr());
+      if (SC->hasConditionExpr())
+        AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
+    } else {
+      writeUInt32(SC->getVarList().size());
+      for (Expr *E : SC->getVarList())
+        AddStmt(E);
+    }
     return;
   }
   case OpenACCClauseKind::NumGangs: {
@@ -8362,6 +8369,18 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *PC = cast<OpenACCPrivateClause>(C);
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::Host: {
+    const auto *HC = cast<OpenACCHostClause>(C);
+    writeSourceLocation(HC->getLParenLoc());
+    writeOpenACCVarList(HC);
+    return;
+  }
+  case OpenACCClauseKind::Device: {
+    const auto *DC = cast<OpenACCDeviceClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeOpenACCVarList(DC);
     return;
   }
   case OpenACCClauseKind::FirstPrivate: {
@@ -8537,9 +8556,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:

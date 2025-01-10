@@ -3257,15 +3257,27 @@ AST_MATCHER_P(CXXDependentScopeMemberExpr, memberHasSameNameAsBoundNode,
       });
 }
 
-/// Matches the dependent name of a DependentScopeDeclRefExpr
+/// Matches the dependent name of a DependentScopeDeclRefExpr or
+/// DependentNameType
 ///
 /// Given:
 /// \code
 ///  template <class T> class X : T { void f() { T::v; } };
 /// \endcode
 /// \c dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
-AST_MATCHER_P(DependentScopeDeclRefExpr, hasDependentName, std::string, N) {
-  return Node.getDeclName().getAsString() == N;
+///
+/// Given:
+/// \code
+///  template <typename T> struct declToImport {
+///    typedef typename T::type dependent_name;
+///  };
+/// \endcode
+/// \c dependentNameType(hasDependentName("type")) matches `T::type`
+AST_POLYMORPHIC_MATCHER_P(hasDependentName,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              DependentScopeDeclRefExpr, DependentNameType),
+                          std::string, N) {
+  return internal::getDependentName(Node) == N;
 }
 
 /// Matches C++ classes that are directly or indirectly derived from a class
@@ -7724,7 +7736,7 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
 
 /// Matches a dependent name type
 ///
-/// Example matches  T::type
+/// Example matches T::type
 /// \code
 ///  template <typename T> struct declToImport {
 ///    typedef typename T::type dependent_name;
