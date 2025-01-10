@@ -2240,7 +2240,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   SanitizerScope SanScope(this);
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
+  EmitCheck(std::make_pair(Cond, SanitizerKind::SO_Builtin),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
@@ -2255,7 +2255,7 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
 
   SanitizerScope SanScope(this);
   EmitCheck(
-      std::make_pair(ArgValue, SanitizerKind::Builtin),
+      std::make_pair(ArgValue, SanitizerKind::SO_Builtin),
       SanitizerHandler::InvalidBuiltin,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
@@ -2290,7 +2290,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
 
   // TODO: support -ftrapv-handler.
   if (SanitizeOverflow) {
-    CGF.EmitCheck({{NotOverflow, SanitizerKind::SignedIntegerOverflow}},
+    CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflow}},
                   SanitizerHandler::NegateOverflow,
                   {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
                    CGF.EmitCheckTypeDescriptor(E->getType())},
