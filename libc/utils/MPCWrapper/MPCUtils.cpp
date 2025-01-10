@@ -199,7 +199,7 @@ bool compare_unary_operation_single_output_same_type(Operation op,
   mpc_clear(mpc_result_val);
   mpfr_clear(real);
   mpfr_clear(imag);
-  return ((ulp_real <= ulp_tolerance) && (ulp_imag <= ulp_tolerance));
+  return (ulp_real <= ulp_tolerance) && (ulp_imag <= ulp_tolerance);
 }
 
 template bool compare_unary_operation_single_output_same_type(
