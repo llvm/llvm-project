@@ -1042,8 +1042,6 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
       Result.setMemDep(Enable);
-    } else if (ParamName == "memoryssa") {
-      Result.setMemorySSA(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{0}' ", ParamName).str(),
