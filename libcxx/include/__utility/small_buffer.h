@@ -68,7 +68,7 @@ public:
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
-      byte* __allocation = static_cast<byte*>(std::__libcpp_allocate<_Stored>(__element_count(1)));
+      byte* __allocation = reinterpret_cast<byte*>(std::__libcpp_allocate<_Stored>(__element_count(1)));
       std::construct_at(reinterpret_cast<byte**>(__buffer_), __allocation);
       return std::launder(reinterpret_cast<_Stored*>(__allocation));
     }
