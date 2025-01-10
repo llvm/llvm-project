@@ -1516,11 +1516,22 @@ def SYCLKernel : InheritableAttr {
 
 def SYCLKernelEntryPoint : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel_entry_point">];
-  let Args = [TypeArgument<"KernelName">];
+  let Args = [
+    // KernelName is required and specifies the kernel name type.
+    TypeArgument<"KernelName">,
+    // InvalidAttr is a fake argument used to track whether the
+    // semantic requirements of the attribute have been satisified.
+    // A fake argument is used to enable serialization support.
+    DefaultBoolArgument<"Invalid", /*default=*/0, /*fake=*/1>
+  ];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let TemplateDependent = 1;
   let LangOpts = [SYCLHost, SYCLDevice];
   let Documentation = [SYCLKernelEntryPointDocs];
+  let AdditionalMembers = [{
+    void setInvalidAttr() { invalid = true; }
+    bool isInvalidAttr() const { return invalid; }
+  }];
 }
 
 def SYCLSpecialClass: InheritableAttr {
