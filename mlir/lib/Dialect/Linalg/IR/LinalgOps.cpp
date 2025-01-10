@@ -3479,7 +3479,18 @@ static bool isValidBatchDim(AffineMap bcastMap) {
   return exp.isFunctionOfDim(0);
 }
 
-/// Verifies the broadcast and transpose semantic sepecified by the explicit
+/// Checks if the given AffineMap's result dimensions are valid output result
+/// dimensions.
+static bool isValidOutputResultDim(AffineMap outputMap) {
+  enum Indices { batchPos, mPos, nPos };
+  AffineExpr exp0 = outputMap.getResult(batchPos);
+  AffineExpr exp1 = outputMap.getResult(mPos);
+  AffineExpr exp2 = outputMap.getResult(nPos);
+  return exp0.isFunctionOfDim(batchPos) && exp1.isFunctionOfDim(mPos) &&
+         exp2.isFunctionOfDim(nPos);
+}
+
+/// Verifies the broadcast and transpose semantic specified by the explicit
 /// indexing map for the BatchMatmulOp \p op for each operand specified by \p
 /// opIndex.
 static LogicalResult
@@ -3493,19 +3504,35 @@ verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
   // Check general validity of indexing map results.
-  if (!isValidResultDimExprs(opIndexingMap, defaultIndexingMap))
-    return batchMatmulOp->emitOpError()
-           << "Unexpected dim expression in map result.";
-  // Check if the requested broadcast is valid.
-  if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
-    if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, opIndex == 0)) {
-      return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
+  if (opIndex < 2) {
+    if (!isValidResultDimExprs(opIndexingMap, defaultIndexingMap))
+      return batchMatmulOp->emitOpError()
+             << "Unexpected dim expression in map result.";
+    // Check if the requested broadcast is valid.
+    if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
+      if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap,
+                                                   opIndex == 0)) {
+        return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
+      }
+    } else {
+      // Check for valid number of result dims of input maps.
+      if (opIndexingMap.getNumResults() != 3)
+        return batchMatmulOp->emitOpError()
+               << "no. of result dim expression cannot exceed 3.";
+
+      if (!isValidBatchDim(opIndexingMap))
+        return batchMatmulOp->emitOpError()
+               << "Invalid batch dimension expression.";
     }
   } else {
-    if (!isValidBatchDim(opIndexingMap)) {
+    // Check for valid number of result dims of output map.
+    if (opIndexingMap.getNumResults() != 3)
       return batchMatmulOp->emitOpError()
-             << "Invalid batch dimension expression.";
-    }
+             << "no. of result dim expression cannot exceed 3.";
+
+    if (!isValidOutputResultDim(opIndexingMap))
+      return batchMatmulOp->emitOpError()
+             << "Invalid output map result dimension.";
   }
   return success();
 }
@@ -3910,7 +3937,7 @@ bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
 
 void BatchMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                                   ArrayRef<NamedAttribute> attrs) {
-  assert(3 > 0 && block.getNumArguments() == 3 &&
+  assert(block.getNumArguments() == 3 &&
          "BatchMatmulOp regionBuilder expects 3 (>=0) args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
@@ -3992,7 +4019,7 @@ LogicalResult BatchMatmulOp::verify() {
   if (!hasUserDefinedMaps())
     return success();
 
-  for (unsigned opIndex = 0; opIndex < 2; opIndex++) {
+  for (unsigned opIndex = 0; opIndex < 3; opIndex++) {
     if (failed(verifyExtendedBatchMatmulSemantic(*this, opIndex)))
       return failure();
   }
