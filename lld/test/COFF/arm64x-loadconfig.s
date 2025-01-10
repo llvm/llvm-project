@@ -118,10 +118,14 @@
 // BASERELOC:      BaseReloc [
 // BASERELOC-NEXT:   Entry {
 // BASERELOC-NEXT:     Type: DIR64
+// BASERELOC-NEXT:     Address: 0x10C8
+// BASERELOC-NEXT:   }
+// BASERELOC-NEXT:   Entry {
+// BASERELOC-NEXT:     Type: DIR64
 // BASERELOC-NEXT:     Address: 0x1208
 // BASERELOC-NEXT:   }
 // BASERELOC-NEXT:   Entry {
-// BASERELOC:          Type: DIR64
+// BASERELOC-NEXT:     Type: DIR64
 // BASERELOC-NEXT:     Address: 0x2074
 // BASERELOC-NEXT:   }
 
