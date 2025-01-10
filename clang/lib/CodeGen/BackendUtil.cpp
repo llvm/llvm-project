@@ -131,8 +131,8 @@ std::string getDefaultProfileGenName() {
 }
 
 class EmitAssemblyHelper {
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
-  const HeaderSearchOptions &HSOpts;
   const CodeGenOptions &CodeGenOpts;
   const clang::TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
@@ -208,18 +208,14 @@ class EmitAssemblyHelper {
   }
 
 public:
-  EmitAssemblyHelper(DiagnosticsEngine &_Diags,
-                     const HeaderSearchOptions &HeaderSearchOpts,
-                     const CodeGenOptions &CGOpts,
-                     const clang::TargetOptions &TOpts,
-                     const LangOptions &LOpts,
-                     const CASOptions &CASOpts, // MCCAS
-                     llvm::Module *M,
+  EmitAssemblyHelper(CompilerInstance &CI,
+		     const CASOptions &CASOpts, // MCCAS
+		     llvm::Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-      : Diags(_Diags), HSOpts(HeaderSearchOpts), CodeGenOpts(CGOpts),
-        TargetOpts(TOpts), LangOpts(LOpts), CASOpts(CASOpts), // MCCAS
+      : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
+        TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
+	CASOpts(CASOpts), // MCCAS
         TheModule(M), VFS(std::move(VFS)),
-        CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
   ~EmitAssemblyHelper() {
@@ -230,8 +226,8 @@ public:
   std::unique_ptr<TargetMachine> TM;
 
   // Emit output using the new pass manager for the optimization pipeline.
-  void EmitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
-                    std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr,
+  void emitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
+		    std::unique_ptr<raw_pwrite_stream> CasIDOS = nullptr,
                     BackendConsumer *BC = nullptr);
 };
 } // namespace
@@ -360,13 +356,15 @@ static std::string flattenClangCommandLine(ArrayRef<std::string> Args,
   return FlatCmdLine;
 }
 
-static bool initTargetOptions(DiagnosticsEngine &Diags,
+static bool initTargetOptions(const CompilerInstance &CI,
+                              DiagnosticsEngine &Diags,
                               llvm::TargetOptions &Options,
-                              const CodeGenOptions &CodeGenOpts,
-                              const clang::TargetOptions &TargetOpts,
-                              const LangOptions &LangOpts,
-                              const CASOptions &CASOpts, // MCCAS
-                              const HeaderSearchOptions &HSOpts) {
+			      const CASOptions &CASOpts // MCCAS
+			      ) {
+  const auto &CodeGenOpts = CI.getCodeGenOpts();
+  const auto &TargetOpts = CI.getTargetOpts();
+  const auto &LangOpts = CI.getLangOpts();
+  const auto &HSOpts = CI.getHeaderSearchOpts();
   switch (LangOpts.getThreadModel()) {
   case LangOptions::ThreadModelKind::POSIX:
     Options.ThreadModel = llvm::ThreadModel::POSIX;
@@ -616,9 +614,7 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   CodeGenOptLevel OptLevel = *OptLevelOrNone;
 
   llvm::TargetOptions Options;
-  if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
-                         CASOpts, // MCCAS
-                         HSOpts))
+  if (!initTargetOptions(CI, Diags, Options, CASOpts))
     return;
   TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                           Options, RM, CM, OptLevel));
@@ -1235,9 +1231,10 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 }
 
-void EmitAssemblyHelper::EmitAssembly(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
-    std::unique_ptr<raw_pwrite_stream> CasIDOS, BackendConsumer *BC) {
+void EmitAssemblyHelper::emitAssembly(BackendAction Action,
+                                      std::unique_ptr<raw_pwrite_stream> OS,
+				      std::unique_ptr<raw_pwrite_stream> CasIDOS,
+                                      BackendConsumer *BC) {
   TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
@@ -1263,14 +1260,15 @@ void EmitAssemblyHelper::EmitAssembly(
 }
 
 static void
-runThinLTOBackend(DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
-                  llvm::Module *M, const HeaderSearchOptions &HeaderOpts,
-                  const CodeGenOptions &CGOpts,
-                  const clang::TargetOptions &TOpts, const LangOptions &LOpts,
-                  const CASOptions &CASOpts, // MCCAS
-                  std::unique_ptr<raw_pwrite_stream> OS,
+runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
+                  llvm::Module *M,
+                  const CASOptions &CASOpts, // MCCAS 
+		  std::unique_ptr<raw_pwrite_stream> OS,
                   std::string SampleProfile, std::string ProfileRemapping,
                   BackendAction Action) {
+  DiagnosticsEngine &Diags = CI.getDiagnostics();
+  const auto &CGOpts = CI.getCodeGenOpts();
+  const auto &TOpts = CI.getTargetOpts();
   DenseMap<StringRef, DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
   CombinedIndex->collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
@@ -1308,9 +1306,7 @@ runThinLTOBackend(DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts,
-                    CASOpts, // MCCAS
-                    HeaderOpts);
+  initTargetOptions(CI, Diags, Conf.Options, CASOpts/* MCCAS */);
   Conf.SampleProfile = std::move(SampleProfile);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
@@ -1373,17 +1369,17 @@ runThinLTOBackend(DiagnosticsEngine &Diags, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
-void clang::EmitBackendOutput(
-    DiagnosticsEngine &Diags, const HeaderSearchOptions &HeaderOpts,
-    const CodeGenOptions &CGOpts, const clang::TargetOptions &TOpts,
-    const LangOptions &LOpts,
-    const CASOptions &CASOpts, // MCCAS
-    StringRef TDesc, llvm::Module *M, BackendAction Action,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-    std::unique_ptr<raw_pwrite_stream> OS,
-    std::unique_ptr<raw_pwrite_stream> CasIDOS, BackendConsumer *BC) {
-
+void clang::emitBackendOutput(CompilerInstance &CI,
+                              const CASOptions &CASOpts, // MCCAS
+                              StringRef TDesc,
+                              llvm::Module *M, BackendAction Action,
+                              IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                              std::unique_ptr<raw_pwrite_stream> OS,
+                              std::unique_ptr<raw_pwrite_stream> CasIDOS,
+                              BackendConsumer *BC) {
   llvm::TimeTraceScope TimeScope("Backend");
+  DiagnosticsEngine &Diags = CI.getDiagnostics();
+  const auto &CGOpts = CI.getCodeGenOpts();
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
@@ -1406,10 +1402,10 @@ void clang::EmitBackendOutput(
     // of an error).
     if (CombinedIndex) {
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
-        runThinLTOBackend(Diags, CombinedIndex.get(), M, HeaderOpts, CGOpts,
-                          TOpts, LOpts, CASOpts, // MCCAS
-                          std::move(OS), CGOpts.SampleProfileFile,
-                          CGOpts.ProfileRemappingFile, Action);
+        runThinLTOBackend(CI, CombinedIndex.get(), M, CASOpts/* MCCAS */,
+                          std::move(OS),
+                          CGOpts.SampleProfileFile, CGOpts.ProfileRemappingFile,
+                          Action);
         return;
       }
       // Distributed indexing detected that nothing from the module is needed
@@ -1424,10 +1420,8 @@ void clang::EmitBackendOutput(
     }
   }
 
-  EmitAssemblyHelper AsmHelper(Diags, HeaderOpts, CGOpts, TOpts, LOpts,
-                               CASOpts, // MCCAS
-                               M, VFS);
-  AsmHelper.EmitAssembly(Action, std::move(OS), std::move(CasIDOS), BC);
+  EmitAssemblyHelper AsmHelper(CI, CASOpts/* MCCAS */, M, VFS);
+  AsmHelper.emitAssembly(Action, std::move(OS), std::move(CasIDOS), BC);
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.

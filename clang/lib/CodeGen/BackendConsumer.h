@@ -28,8 +28,8 @@ class BackendConsumer : public ASTConsumer {
   using LinkModule = CodeGenAction::LinkModule;
 
   virtual void anchor();
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
-  const HeaderSearchOptions &HeaderSearchOpts;
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
@@ -72,7 +72,7 @@ class BackendConsumer : public ASTConsumer {
   llvm::Module *CurLinkModule = nullptr;
 
 public:
-  BackendConsumer(const CompilerInstance &CI, BackendAction Action,
+  BackendConsumer(CompilerInstance &CI, BackendAction Action,
                   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                   const CASOptions &CASOpts,
                   llvm::LLVMContext &C, SmallVector<LinkModule, 4> LinkModules,
