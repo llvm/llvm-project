@@ -21,11 +21,13 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
@@ -44,6 +46,7 @@
 #include "llvm/ADT/bit.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <numeric>
 
@@ -463,10 +466,111 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   build(builder, result, kind, source, acc, reductionDims);
 }
 
+template <typename T>
+OpFoldResult foldSplatReduce(T src, T acc, int64_t times, CombiningKind kind,
+                             ShapedType dstType);
+
+template <>
+OpFoldResult foldSplatReduce(FloatAttr src, FloatAttr acc, int64_t times,
+                             CombiningKind kind, ShapedType dstType) {
+  APFloat srcVal = src.getValue();
+  APFloat accVal = acc.getValue();
+  switch (kind) {
+    case CombiningKind::ADD:{
+      APFloat n = APFloat(srcVal.getSemantics());
+      n.convertFromAPInt(APInt(64, times, true), true,
+                             APFloat::rmNearestTiesToEven);
+      return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
+    }
+    case CombiningKind::MUL: {
+      APFloat result = accVal;
+      for (int i = 0; i < times; ++i) {
+        result = result * srcVal;
+      }
+      return DenseElementsAttr::get(dstType, {result});
+    }
+    case CombiningKind::MINIMUMF:
+      return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
+    case CombiningKind::MAXIMUMF:
+      return DenseElementsAttr::get(dstType, {llvm::maximum(accVal, srcVal)});
+    case CombiningKind::MINNUMF:
+      return DenseElementsAttr::get(dstType, {llvm::minnum(accVal, srcVal)});
+    case CombiningKind::MAXNUMF:
+      return DenseElementsAttr::get(dstType, {llvm::maxnum(accVal, srcVal)});
+    default:
+      return {};
+  }
+}
+
+template <>
+OpFoldResult foldSplatReduce(IntegerAttr src, IntegerAttr acc, int64_t times,
+                             CombiningKind kind, ShapedType dstType) {
+  APInt srcVal = src.getValue();
+  APInt accVal = acc.getValue();
+  switch (kind) {
+    case CombiningKind::ADD:
+      return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
+    case CombiningKind::MUL: {
+      APInt result = accVal;
+      for (int i = 0; i < times; ++i) {
+        result *= srcVal;
+      }
+      return DenseElementsAttr::get(dstType, {result});
+    }
+    case CombiningKind::MINSI:
+      return DenseElementsAttr::get(
+          dstType, {accVal.slt(srcVal) ? accVal : srcVal});
+    case CombiningKind::MAXSI:
+      return DenseElementsAttr::get(
+          dstType, {accVal.ugt(srcVal) ? accVal : srcVal});
+    case CombiningKind::MINUI:
+      return DenseElementsAttr::get(
+          dstType, {accVal.ult(srcVal) ? accVal : srcVal});
+    case CombiningKind::MAXUI:
+      return DenseElementsAttr::get(
+          dstType, {accVal.ugt(srcVal) ? accVal : srcVal});
+    case CombiningKind::AND:
+      return DenseElementsAttr::get(dstType, {accVal & srcVal});
+    case CombiningKind::OR:
+      return DenseElementsAttr::get(dstType, {accVal | srcVal});
+    case CombiningKind::XOR:
+    return DenseElementsAttr::get(dstType,
+                                  {times & 0x1 ? accVal ^ srcVal : accVal});
+  default:
+    return {};
+  }
+}
+
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   // Single parallel dim, this is a noop.
   if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
     return getSource();
+  auto srcAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getSource());
+  auto accAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getAcc());
+  if (!srcAttr || !accAttr)
+    return {};
+  if (!srcAttr.isSplat() || !accAttr.isSplat())
+    return {};
+  auto reductionDims = getReductionDims();
+  auto srcType = mlir::cast<ShapedType>(getSourceVectorType());
+  auto srcDims = srcType.getShape();
+  int64_t times = 1;
+  for (auto dim : reductionDims) {
+    times *= srcDims[dim];
+  }
+  CombiningKind kind = getKind();
+  auto dstType = mlir::cast<ShapedType>(getDestType());
+  auto eltype = dstType.getElementType();
+  if (mlir::dyn_cast_or_null<FloatType>(eltype)) {
+    return foldSplatReduce<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
+                                      accAttr.getSplatValue<FloatAttr>(), times,
+                                      kind, dstType);
+  }
+  if (mlir::dyn_cast_or_null<IntegerType>(eltype)) {
+    return foldSplatReduce<IntegerAttr>(srcAttr.getSplatValue<IntegerAttr>(),
+                                        accAttr.getSplatValue<IntegerAttr>(),
+                                        times, kind, dstType);
+  }
   return {};
 }
 
