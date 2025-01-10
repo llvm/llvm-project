@@ -534,7 +534,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     Shl->setHasNoUnsignedWrap(HasNUW);
     return Shl;
   }
-  if (Value *Res = tryGetLog2(Op0, /*AssumeNonZero=*/false)) {
+  if (Value *Res = tryGetLog2(Op1, /*AssumeNonZero=*/false)) {
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op0, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
