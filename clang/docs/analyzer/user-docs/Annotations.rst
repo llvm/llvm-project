@@ -59,6 +59,8 @@ Running ``scan-build`` over this source produces the following output:
 
 .. image:: ../images/example_attribute_nonnull.png
 
+.. _custom_assertion_handlers:
+
 Custom Assertion Handlers
 #########################
 
@@ -163,6 +165,8 @@ the use of preprocessor macros.
 
 Mac OS X API Annotations
 ________________________
+
+.. _cocoa_mem:
 
 Cocoa & Core Foundation Memory Management Annotations
 #####################################################

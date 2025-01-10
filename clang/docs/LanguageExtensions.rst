@@ -2137,8 +2137,8 @@ method; it specifies that the method expects its ``self`` parameter to have a
   - (void) bar __attribute__((ns_consumes_self));
   - (void) baz:(id) __attribute__((ns_consumed)) x;
 
-Further examples of these attributes are available in the static analyzer's `list of annotations for analysis
-<https://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
+Further examples of these attributes are available in the static analyzer's
+`list of annotations for analysis <analyzer/user-docs/Annotations.html#cocoa-mem>`__.
 
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
@@ -4792,8 +4792,8 @@ Extensions for Static Analysis
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the `Clang Static
 Analyzer <https://clang-analyzer.llvm.org/>`_. These attributes are documented
-in the analyzer's `list of source-level annotations
-<https://clang-analyzer.llvm.org/annotations.html>`_.
+in the analyzer's `list of annotations for analysis
+<analyzer/user-docs/Annotations.html>`__.
 
 
 Extensions for Dynamic Analysis
