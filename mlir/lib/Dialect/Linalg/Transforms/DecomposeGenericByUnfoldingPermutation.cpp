@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <map>
 #include <optional>
 #include <utility>
@@ -163,11 +164,12 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     // If we have any inputs that aren't memref or ranked tensor types, reject
     // the pattern.
     if (!dyn_cast<ShapedType>(opOperand.get().getType()))
-      return op->emitError("Expected operand #")
-             << opOperand.getOperandNumber()
-             << " to be memref of any type values or ranked tensor of any type "
-                "values, but got "
-             << opOperand.get().getType();
+      return rewriter.notifyMatchFailure(
+          opOperand.get().getLoc(),
+          llvm::formatv("Expected operand #{0} to be memref of any type values "
+                        "or ranked tensor of any type values, but got {1}",
+                        opOperand.getOperandNumber(),
+                        opOperand.get().getType()));
   }
 
   // Decomposing linalg.generic involves creating `tensor.empty`

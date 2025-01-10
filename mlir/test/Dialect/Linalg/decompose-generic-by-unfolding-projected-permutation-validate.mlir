@@ -1,13 +1,12 @@
 // RUN: mlir-opt %s -linalg-specialize-generic-ops -verify-diagnostics
 
-// Fixes issue: 122094. Verify that the following code causes an error to be produced.
+// Fixes issue: 122094. Verify that the following code compiles without issue.
 
 func.func @test_broadcast_scalar_across_single_tensor() -> tensor<2x2xi32> {
 
   %a = arith.constant dense<2> : tensor<2x2xi32>
   %b = arith.constant 42 : i32
   %c = tensor.empty() : tensor<2x2xi32>
-  // expected-error @+1 {{Expected operand #1 to be memref of any type values or ranked tensor of any type values, but got 'i32'}}
   %res = linalg.generic
     {
       indexing_maps = [
