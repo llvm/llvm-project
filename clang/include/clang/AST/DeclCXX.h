@@ -4230,13 +4230,6 @@ public:
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
-  /// Visit the variables (if any) that hold the values of evaluating the
-  /// binding. Only present for user-defined bindings for tuple-like types.
-  void VisitHoldingVars(llvm::function_ref<void(VarDecl *)> F) const;
-
-  // Visit the concrete bindings.
-  void VisitBindings(llvm::function_ref<void(BindingDecl *)> F) const;
-
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
 };
@@ -4245,8 +4238,8 @@ public:
 class DecompositionDecl::flat_binding_iterator {
   friend class DecompositionDecl;
 
-  using ItrTy = llvm::ArrayRef<BindingDecl *>::const_iterator;
-  using PackItrTy = llvm::ArrayRef<Expr *>::const_iterator;
+  using ItrTy = llvm::ArrayRef<BindingDecl *>::iterator;
+  using PackItrTy = llvm::ArrayRef<Expr *>::iterator;
 
   llvm::ArrayRef<BindingDecl *> Bindings;
   llvm::ArrayRef<Expr *> PackExprs;
@@ -4256,22 +4249,17 @@ class DecompositionDecl::flat_binding_iterator {
   explicit flat_binding_iterator(llvm::ArrayRef<BindingDecl *> Bindings,
                                  ItrTy Itr, llvm::ArrayRef<Expr *> PackExprs,
                                  PackItrTy PackItr)
-      : Bindings(Bindings), PackExprs(PackExprs), Itr(Itr), PackItr(PackItr) {
-    // If Itr is not a parameter pack then PackItr should not be set.
-    assert(((!(*Itr)->isParameterPack() && PackItr == nullptr) ||
-            PackItr != PackExprs.end()) &&
-           "pack must have initial iterator within the range");
-  }
+      : Bindings(Bindings), PackExprs(PackExprs), Itr(Itr), PackItr(PackItr) {}
 
 public:
   flat_binding_iterator() = default;
 
   using value_type = BindingDecl *;
-  using reference = BindingDecl *;
-  using pointer = BindingDecl *;
+  using reference = BindingDecl *&;
+  using pointer = BindingDecl **;
   using iterator_category = std::forward_iterator_tag;
 
-  reference operator*() const {
+  BindingDecl *operator*() {
     if (!(*Itr)->isParameterPack())
       return *Itr;
 

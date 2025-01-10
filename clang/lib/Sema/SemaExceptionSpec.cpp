@@ -1068,9 +1068,9 @@ static CanThrowResult canVarDeclThrow(Sema &Self, const VarDecl *VD) {
 
   // If this is a decomposition declaration, bindings might throw.
   if (auto *DD = dyn_cast<DecompositionDecl>(VD))
-    DD->VisitHoldingVars([&](VarDecl *HD) {
-      CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
-    });
+    for (auto *B : DD->flat_bindings())
+      if (auto *HD = B->getHoldingVar())
+        CT = mergeCanThrow(CT, canVarDeclThrow(Self, HD));
 
   return CT;
 }

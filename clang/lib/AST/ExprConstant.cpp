@@ -5155,7 +5155,9 @@ static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
     OK &= EvaluateVarDecl(Info, VD);
 
   if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D))
-    DD->VisitHoldingVars([&](VarDecl *HD) { OK &= EvaluateDecl(Info, HD); });
+    for (auto *BD : DD->flat_bindings())
+      if (auto *VD = BD->getHoldingVar())
+        OK &= EvaluateDecl(Info, VD);
 
   return OK;
 }

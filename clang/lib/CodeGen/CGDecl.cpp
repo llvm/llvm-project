@@ -162,7 +162,10 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
     if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      DD->VisitHoldingVars([&](VarDecl *HD) { EmitVarDecl(*HD); });
+      for (auto *B : DD->flat_bindings())
+        if (auto *HD = B->getHoldingVar())
+          EmitVarDecl(*HD);
+
     return;
   }
 
