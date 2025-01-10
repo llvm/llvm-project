@@ -13424,6 +13424,10 @@ public:
   // FIXME: Should we have a similar limit for other forms of synthesis?
   unsigned NonInstantiationEntries;
 
+  /// The number of \p CodeSynthesisContexts that are not constraint
+  /// substitution.
+  unsigned NonConstraintSubstitutionEntries;
+
   /// The depth of the context stack at the point when the most recent
   /// error or warning was produced.
   ///
@@ -13750,6 +13754,11 @@ public:
   /// Determine whether we are currently performing template instantiation.
   bool inTemplateInstantiation() const {
     return CodeSynthesisContexts.size() > NonInstantiationEntries;
+  }
+
+  /// Determine whether we are currently performing constraint substitution.
+  bool inConstraintSubstitution() const {
+    return CodeSynthesisContexts.size() > NonConstraintSubstitutionEntries;
   }
 
   using EntityPrinter = llvm::function_ref<void(llvm::raw_ostream &)>;

@@ -5833,8 +5833,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     savedContext.pop();
   }
 
-  DeclGroupRef DG(Function);
-  Consumer.HandleTopLevelDecl(DG);
+  // With CWG2369, we substitute constraints before instantiating the associated
+  // function template. This helps prevent potential code generation for
+  // dependent types, particularly under the MS ABI.
+  if (!inConstraintSubstitution() ||
+      !getLambdaAwareParentOfDeclContext(Function)->isDependentContext()) {
+    DeclGroupRef DG(Function);
+    Consumer.HandleTopLevelDecl(DG);
+  }
 
   // This class may have local implicit instantiations that need to be
   // instantiation within this scope.
