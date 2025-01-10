@@ -1445,6 +1445,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   removeRedundantInductionCasts(Plan);
 
   simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
+  removeDeadRecipes(Plan);
   legalizeAndOptimizeInductions(Plan);
   removeRedundantExpandSCEVRecipes(Plan);
   simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
