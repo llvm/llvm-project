@@ -5185,14 +5185,17 @@ public:
   /// Create a basic block that will either trap or call a handler function in
   /// the UBSan runtime with the provided arguments, and create a conditional
   /// branch to it.
-  void EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerMask>> Checked,
-                 SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-                 ArrayRef<llvm::Value *> DynamicArgs);
+  void
+  EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
+                Checked,
+            SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
+            ArrayRef<llvm::Value *> DynamicArgs);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
-  void EmitCfiSlowPathCheck(SanitizerMask Kind, llvm::Value *Cond,
-                            llvm::ConstantInt *TypeId, llvm::Value *Ptr,
+  void EmitCfiSlowPathCheck(SanitizerKind::SanitizerOrdinal Ordinal,
+                            llvm::Value *Cond, llvm::ConstantInt *TypeId,
+                            llvm::Value *Ptr,
                             ArrayRef<llvm::Constant *> StaticArgs);
 
   /// Emit a reached-unreachable diagnostic if \p Loc is valid and runtime
