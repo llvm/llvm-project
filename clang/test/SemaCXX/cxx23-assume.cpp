@@ -129,12 +129,12 @@ constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while che
 
 static_assert(f5<int>() == 1);
 static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
-                             // expected-note@-1 3 {{in instantiation of}}
+                             // expected-note@-1 3 {{while substituting deduced template arguments}}
                              // expected-error@-2 {{no matching function for call}}
 
 static_assert(f5<double>() == 2);
-static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
-static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
+static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
+static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
 
 // Do not validate assumptions whose evaluation would have side-effects.
 constexpr int foo() {
