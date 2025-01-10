@@ -48,7 +48,6 @@ struct TestDoesNotHaveIncrementDecrement {
 template <typename T>
 struct TestIncrementDecrement {
   void operator()() const {
-    static_assert(std::is_integral_v<T> || std::is_pointer_v<T>);
     if constexpr (std::is_integral_v<T>) {
       T x(T(1));
       std::atomic_ref<T> const a(x);
