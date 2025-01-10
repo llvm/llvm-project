@@ -4985,5 +4985,22 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
+  // (xor BitWidth - 1, (ctlz X_Pow2)) -> (cttz X_Pow2)
+  // (xor BitWidth - 1, (cttz X_Pow2)) -> (ctlz X_Pow2)
+  if (match(Op1, m_SpecificInt(Op0->getType()->getScalarSizeInBits() - 1)) &&
+      Op0->hasOneUse()) {
+    Intrinsic::ID ID = Intrinsic::not_intrinsic;
+    if (match(Op0, m_Intrinsic<Intrinsic::ctlz>(m_Value(X), m_Value(Y))))
+      ID = Intrinsic::cttz;
+    else if (match(Op0, m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value(Y))))
+      ID = Intrinsic::ctlz;
+
+    if (ID != Intrinsic::not_intrinsic &&
+        isKnownToBeAPowerOfTwo(X, match(Y, m_One())))
+      return replaceInstUsesWith(
+          I, Builder.CreateBinaryIntrinsic(ID, X,
+                                           ConstantInt::getTrue(Y->getType())));
+  }
+
   return nullptr;
 }
