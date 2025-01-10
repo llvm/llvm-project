@@ -120,10 +120,10 @@ public:
   /// Get the Thread at the specified index.
   ///
   /// \param [in] idx
-  ///   The index of the thread to return.
+  ///   The zero based index of the thread to return.
   /// \returns
-  ///   The thread at the specified index, or an empty thread if the index is
-  ///   greater than or equal to the number of threads.
+  ///   The thread at the specified index, or an invalid SBThread if the index
+  ///   is greater than or equal to the number of threads.
   lldb::SBThread GetThreadAtIndex(uint32_t idx) const;
 
   /// Reset all options.
