@@ -3867,7 +3867,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
-                                 mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
+                                 mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
           converter, modBuilder, copyinClause,
           Fortran::parser::AccDataModifier::Modifier::ReadOnly,
           mlir::acc::DataClause::acc_copyin,
