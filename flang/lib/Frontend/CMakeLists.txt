@@ -38,6 +38,7 @@ add_flang_library(flangFrontend
   HLFIRDialect
   HLFIRTransforms
   flangPasses
+  FIROpenACCSupport
   FlangOpenMPTransforms
   MLIRTransforms
   MLIRBuiltinToLLVMIRTranslation
