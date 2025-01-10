@@ -35,6 +35,15 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+enum class DeclOperationKind { Private, FirstPrivate, Reduction };
+inline bool isPrivatization(DeclOperationKind kind) {
+  return (kind == DeclOperationKind::FirstPrivate) ||
+         (kind == DeclOperationKind::Private);
+}
+inline bool isReduction(DeclOperationKind kind) {
+  return kind == DeclOperationKind::Reduction;
+}
+
 /// Generate init and cleanup regions suitable for reduction or privatizer
 /// declarations. `scalarInitValue` may be nullptr if there is no default
 /// initialization (for privatization). If this is for a privatizer, set
@@ -43,7 +52,7 @@ void populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, bool isPrivate = false,
+    mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym = nullptr);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.

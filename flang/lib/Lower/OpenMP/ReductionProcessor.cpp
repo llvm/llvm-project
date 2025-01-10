@@ -442,7 +442,8 @@ static void createReductionAllocAndInitRegions(
     populateByRefInitAndCleanupRegions(builder, loc, type, initValue, initBlock,
                                        reductionDecl.getInitializerAllocArg(),
                                        reductionDecl.getInitializerMoldArg(),
-                                       reductionDecl.getCleanupRegion());
+                                       reductionDecl.getCleanupRegion(),
+                                       DeclOperationKind::Reduction);
   }
 
   if (fir::isa_trivial(ty)) {

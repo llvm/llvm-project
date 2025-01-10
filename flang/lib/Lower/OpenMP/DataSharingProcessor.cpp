@@ -168,7 +168,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
   if (needInitClone()) {
     Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
-    callsInitClone = true;
+    mightHaveReadMoldArg = true;
   }
 }
 
@@ -220,7 +220,8 @@ bool DataSharingProcessor::needBarrier() {
   // Emit implicit barrier for linear clause. Maybe on somewhere else.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
-        (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) || callsInitClone))
+        (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
+         mightHaveReadMoldArg))
       return true;
   }
   return false;
@@ -578,7 +579,14 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       populateByRefInitAndCleanupRegions(
           firOpBuilder, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
           result.getInitPrivateArg(), result.getInitMoldArg(),
-          result.getDeallocRegion(), /*isPrivate=*/true, sym);
+          result.getDeallocRegion(),
+          isFirstPrivate ? DeclOperationKind::FirstPrivate
+                         : DeclOperationKind::Private,
+          sym);
+      // TODO: currently there are false positives from dead uses of the mold
+      // arg
+      if (!result.getInitMoldArg().getUses().empty())
+        mightHaveReadMoldArg = true;
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

@@ -122,6 +122,58 @@ fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(fir::FirOpBuilder &builder,
   return shapeShift;
 }
 
+// Initialize box newBox using moldBox. These should both have the same type and
+// be boxes containing derived types e.g.
+// fir.box<!fir.type<>>
+// fir.box<!fir.heap<!fir.type<>>
+// fir.box<!fir.heap<!fir.array<fir.type<>>>
+// fir.class<...<!fir.type<>>>
+// If the type doesn't match , this does nothing
+static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value newBox,
+                                       mlir::Value moldBox, bool hasInitializer,
+                                       bool isFirstPrivate) {
+  fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(newBox.getType());
+  fir::ClassType classTy = mlir::dyn_cast<fir::ClassType>(newBox.getType());
+  if (!boxTy && !classTy)
+    return;
+
+  // remove pointer and array types in the middle
+  mlir::Type eleTy;
+  if (boxTy)
+    eleTy = boxTy.getElementType();
+  if (classTy)
+    eleTy = classTy.getEleTy();
+  mlir::Type derivedTy = fir::unwrapRefType(eleTy);
+  if (auto array = mlir::dyn_cast<fir::SequenceType>(derivedTy))
+    derivedTy = array.getElementType();
+
+  if (!fir::isa_derived(derivedTy))
+    return;
+  assert(moldBox.getType() == newBox.getType());
+
+  if (hasInitializer)
+    fir::runtime::genDerivedTypeInitialize(builder, loc, newBox);
+
+  if (hlfir::mayHaveAllocatableComponent(derivedTy) && !isFirstPrivate)
+    fir::runtime::genDerivedTypeInitializeClone(builder, loc, newBox, moldBox);
+}
+
+static bool
+isDerivedTypeNeedingInitialization(const Fortran::semantics::Symbol &sym) {
+  // Fortran::lower::hasDefaultInitialization returns false for ALLOCATABLE, so
+  // re-implement here.
+  // ignorePointer=true because either the pointer points to the same target as
+  // the original variable, or it is uninitialized.
+  if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+    if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+            declTypeSpec->AsDerived())
+      if (derivedTypeSpec->HasDefaultInitialization(
+              /*ignoreAllocatable=*/false, /*ignorePointer=*/true))
+        return true;
+  return false;
+}
+
 static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
                                             mlir::Location loc,
                                             mlir::Value moldArg) {
@@ -145,7 +197,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
-    mlir::Region &cleanupRegion, bool isPrivate,
+    mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym) {
   mlir::Type ty = fir::unwrapRefType(argType);
   builder.setInsertionPointToEnd(initBlock);
@@ -153,11 +205,10 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     builder.create<mlir::omp::YieldOp>(loc, ret);
   };
 
-  if (isPrivate)
+  if (isPrivatization(kind))
     assert(sym && "Symbol information is needed to privatize derived types");
   bool needsInitialization =
-      sym ? Fortran::lower::hasDefaultInitialization(sym->GetUltimate())
-          : false;
+      sym ? isDerivedTypeNeedingInitialization(sym->GetUltimate()) : false;
 
   if (fir::isa_trivial(ty)) {
     builder.setInsertionPointToEnd(initBlock);
@@ -210,7 +261,8 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
 
     // The initial state of a private pointer is undefined so we don't need to
     // match the mold argument (OpenMP 5.2 end of page 106).
-    if (isPrivate && mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
+    if (isPrivatization(kind) &&
+        mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
       // we need a shape with the right rank so that the embox op is lowered
       // to an llvm struct of the right type. This returns nullptr if the types
       // aren't right.
@@ -242,7 +294,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
         TODO(loc, "Reduction/Privatization of non-allocatable trivial or "
                   "character typed box");
 
-      if ((isDerived || isChar) && (!isPrivate || scalarInitValue))
+      if ((isDerived || isChar) && (isReduction(kind) || scalarInitValue))
         TODO(loc, "Reduction of an unsupported boxed type");
 
       fir::IfOp ifUnallocated{nullptr};
@@ -259,8 +311,9 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       mlir::Value box = builder.create<fir::EmboxOp>(
           loc, ty, valAlloc, /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{},
           lenParams);
-      if (needsInitialization)
-        fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+      initializeIfDerivedTypeBox(
+          builder, loc, box, moldArg, needsInitialization,
+          /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
       fir::StoreOp lastOp = builder.create<fir::StoreOp>(loc, box, boxAlloca);
 
       createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
@@ -335,8 +388,10 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
 
     if (scalarInitValue)
       builder.create<hlfir::AssignOp>(loc, scalarInitValue, box);
-    if (needsInitialization)
-      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+
+    initializeIfDerivedTypeBox(builder, loc, box, moldArg, needsInitialization,
+                               /*isFirstPrivate=*/kind ==
+                                   DeclOperationKind::FirstPrivate);
 
     builder.create<fir::StoreOp>(loc, box, boxAlloca);
     if (ifUnallocated)
@@ -371,13 +426,15 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
   }
 
   if (fir::isa_derived(ty)) {
-    if (needsInitialization) {
-      builder.setInsertionPointToStart(initBlock);
-      mlir::Type boxedTy = fir::BoxType::get(ty);
-      mlir::Value box =
-          builder.create<fir::EmboxOp>(loc, boxedTy, allocatedPrivVarArg);
-      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
-    }
+    builder.setInsertionPointToStart(initBlock);
+    mlir::Type boxedTy = fir::BoxType::get(ty);
+    mlir::Value newBox =
+        builder.create<fir::EmboxOp>(loc, boxedTy, allocatedPrivVarArg);
+    mlir::Value moldBox = builder.create<fir::EmboxOp>(loc, boxedTy, moldArg);
+    initializeIfDerivedTypeBox(
+        builder, loc, newBox, moldBox, needsInitialization,
+        /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
+
     if (sym && hasFinalization(*sym))
       createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
 
