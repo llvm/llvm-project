@@ -10764,37 +10764,30 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   //  FMOV    D0, X0        // copy 64-bit int to vector, high bits zero'd
   //  CNT     V0.8B, V0.8B  // 8xbyte pop-counts
   //  ADDV    B0, V0.8B     // sum 8xbyte pop-counts
-  //  UMOV    X0, V0.B[0]   // copy byte result back to integer reg
+  //  FMOV    X0, D0        // copy result back to integer reg
   if (VT == MVT::i32 || VT == MVT::i64) {
     if (VT == MVT::i32)
       Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v8i8, Val);
-    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
-    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
+    SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v8i8, CtPop);
+    if (VT == MVT::i32)
+      AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, AddV,
                          DAG.getConstant(0, DL, MVT::i64));
-
+    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
     if (IsParity)
-      UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-    if (VT == MVT::i64)
-      UaddLV = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, UaddLV);
-    return UaddLV;
+      AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
+    return AddV;
   } else if (VT == MVT::i128) {
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, Val);
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
-    SDValue UaddLV = DAG.getNode(AArch64ISD::UADDLV, DL, MVT::v4i32, CtPop);
-    UaddLV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, UaddLV,
-                         DAG.getConstant(0, DL, MVT::i64));
-
+    SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
+    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
     if (IsParity)
-      UaddLV = DAG.getNode(ISD::AND, DL, MVT::i32, UaddLV,
-                           DAG.getConstant(1, DL, MVT::i32));
-
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i128, UaddLV);
+      AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
+    return AddV;
   }
 
   assert(!IsParity && "ISD::PARITY of vector types not supported");
