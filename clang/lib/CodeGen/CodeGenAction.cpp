@@ -105,15 +105,17 @@ static void reportOptRecordError(Error E, DiagnosticsEngine &Diags,
       });
 }
 
-BackendConsumer::BackendConsumer(
-    const CompilerInstance &CI, BackendAction Action,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, LLVMContext &C,
-    SmallVector<LinkModule, 4> LinkModules, StringRef InFile,
-    std::unique_ptr<raw_pwrite_stream> OS, CoverageSourceInfo *CoverageInfo,
-    llvm::Module *CurLinkModule)
-    : Diags(CI.getDiagnostics()), HeaderSearchOpts(CI.getHeaderSearchOpts()),
-      CodeGenOpts(CI.getCodeGenOpts()), TargetOpts(CI.getTargetOpts()),
-      LangOpts(CI.getLangOpts()), AsmOutStream(std::move(OS)), FS(VFS),
+BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
+                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                                 LLVMContext &C,
+                                 SmallVector<LinkModule, 4> LinkModules,
+                                 StringRef InFile,
+                                 std::unique_ptr<raw_pwrite_stream> OS,
+                                 CoverageSourceInfo *CoverageInfo,
+                                 llvm::Module *CurLinkModule)
+    : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
+      TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
+      AsmOutStream(std::move(OS)), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
                             CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
@@ -321,8 +323,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
 
   EmbedBitcode(getModule(), CodeGenOpts, llvm::MemoryBufferRef());
 
-  EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
-                    C.getTargetInfo().getDataLayoutString(), getModule(),
+  emitBackendOutput(CI, C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), this);
 
   Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
@@ -1183,10 +1184,9 @@ void CodeGenAction::ExecuteAction() {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
       std::move(*OptRecordFileOrErr);
 
-  EmitBackendOutput(
-      Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts, TargetOpts,
-      CI.getLangOpts(), CI.getTarget().getDataLayoutString(), TheModule.get(),
-      BA, CI.getFileManager().getVirtualFileSystemPtr(), std::move(OS));
+  emitBackendOutput(CI, CI.getTarget().getDataLayoutString(), TheModule.get(),
+                    BA, CI.getFileManager().getVirtualFileSystemPtr(),
+                    std::move(OS));
   if (OptRecordFile)
     OptRecordFile->keep();
 }

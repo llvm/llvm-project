@@ -333,3 +333,12 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.uid_t
 )
+
+add_proxy_header_library(
+  struct_iovec
+  HDRS
+    struct_iovec.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_iovec
+    libc.include.sys_uio
+)
