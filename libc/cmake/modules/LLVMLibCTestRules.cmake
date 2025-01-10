@@ -359,8 +359,8 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
-function(_get_hermetic_test_compile_options output_var flags)
-  _get_common_test_compile_options(compile_options "" "${flags}")
+function(_get_hermetic_test_compile_options output_var)
+  _get_common_test_compile_options(compile_options "" "")
 
   list(APPEND compile_options "-fpie")
   list(APPEND compile_options "-ffreestanding")
@@ -377,8 +377,6 @@ function(_get_hermetic_test_compile_options output_var flags)
          "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
          -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
-  # elseif(explicit_target_triple AND NOT CMAKE_COMPILER_IS_GNUCXX)
-  #   list(APPEND compile_options "--target=${explicit_target_triple}")
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
