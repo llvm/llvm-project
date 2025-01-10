@@ -9,9 +9,9 @@ define spir_func noundef i32 @_Z7processv() #0 {
 
 ; CHECK-DAG:    %[[#int_0:]] = OpConstant %[[#]] 0
 ; CHECK-DAG:    %[[#int_1:]] = OpConstant %[[#]] 1
+; CHECK-DAG:      %[[#var:]] = OpVariable %[[#]] Private
 
 ; CHECK: %[[#entry:]] = OpLabel
-; CHECK:   %[[#var:]] = OpVariable %[[#]] Function
 ; CHECK:                OpSelectionMerge %[[#merge:]] None
 ; CHECK:                OpBranchConditional %[[#]] %[[#left:]] %[[#right:]]
 entry:

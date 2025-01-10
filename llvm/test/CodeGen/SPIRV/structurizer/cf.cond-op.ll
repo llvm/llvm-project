@@ -9,16 +9,25 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 ; CHECK-DAG: OpName %[[#fn1:]] "_Z3fn1v"
 ; CHECK-DAG: OpName %[[#fn2:]] "_Z3fn2v"
 
-; CHECK-DAG: OpName %[[#r2m_a:]] ".reg2mem3"
-; CHECK-DAG: OpName %[[#r2m_b:]] ".reg2mem1"
-; CHECK-DAG: OpName %[[#r2m_c:]] ".reg2mem"
+; CHECK-DAG: OpName %[[#local_0:]] "_Z7processv.local"
+; CHECK-DAG: OpName %[[#local_2:]] "_Z7processv.local.2"
+; CHECK-DAG: OpName %[[#local_3:]] "_Z7processv.local.3"
+; CHECK-DAG: OpName %[[#local_4:]] "_Z7processv.local.4"
 
-; CHECK-DAG: %[[#int_ty:]] = OpTypeInt 32 0
+; CHECK-DAG:      %[[#int_ty:]] = OpTypeInt 32 0
+; CHECK-DAG:     %[[#bool_ty:]] = OpTypeBool
+; CHECK-DAG: %[[#ptr_bool_ty:]] = OpTypePointer Private %[[#bool_ty]]
+; CHECK-DAG:  %[[#ptr_int_ty:]] = OpTypePointer Private %[[#int_ty]]
 
 ; CHECK-DAG: %[[#int_0:]] = OpConstant %[[#]] 0
 ; CHECK-DAG: %[[#int_1:]] = OpConstant %[[#]] 1
-; CHECK-DAG: %[[#true:]] = OpConstantTrue
+; CHECK-DAG:  %[[#true:]] = OpConstantTrue
 ; CHECK-DAG: %[[#false:]] = OpConstantFalse
+
+; CHECK-DAG:  %[[#local_0]] = OpVariable %[[#ptr_int_ty]] Private
+; CHECK-DAG:  %[[#local_2]] = OpVariable %[[#ptr_int_ty]] Private
+; CHECK-DAG:  %[[#local_3]] = OpVariable %[[#ptr_int_ty]] Private
+; CHECK-DAG:  %[[#local_4]] = OpVariable %[[#ptr_bool_ty]] Private
 
 declare token @llvm.experimental.convergence.entry() #1
 
@@ -47,7 +56,6 @@ entry:
 define spir_func noundef i32 @_Z7processv() #0 {
 
 ; CHECK:         %[[#entry:]] = OpLabel
-; CHECK-DAG:      %[[#r2m_a]] = OpVariable %[[#]] Function
 ; CHECK:                        OpSelectionMerge %[[#a_merge:]]
 ; CHECK:                        OpBranchConditional %[[#]] %[[#a_true:]] %[[#a_false:]]
 entry:
@@ -56,19 +64,19 @@ entry:
   br i1 true, label %a_true, label %a_false
 
 ; CHECK: %[[#a_false]] = OpLabel
-; CHECK:                 OpStore %[[#r2m_a]] %[[#false]]
+; CHECK:                 OpStore %[[#local_4]] %[[#false]]
 ; CHECK:                 OpBranch %[[#a_merge]]
 a_false:
   br label %a_merge
 
 ; CHECK: %[[#a_true]] = OpLabel
-; CHECK:                OpStore %[[#r2m_a]] %[[#true]]
+; CHECK:                OpStore %[[#local_4]] %[[#true]]
 ; CHECK:                OpBranch %[[#a_merge]]
 a_true:
   br label %a_merge
 
 ; CHECK: %[[#a_merge]] = OpLabel
-; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_a]]
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#local_4]]
 ; CHECK:                 OpSelectionMerge %[[#b_merge:]]
 ; CHECK:                 OpBranchConditional %[[#]] %[[#b_true:]] %[[#b_merge]]
 a_merge:
@@ -90,8 +98,8 @@ b_merge:
   br i1 true, label %c_true, label %c_false
 
 ; CHECK: %[[#c_false]] = OpLabel
-; CHECK:        %[[#]] = OpFunctionCall
-; CHECK:                 OpStore %[[#r2m_b]] %[[#]]
+; CHECK:    %[[#tmp:]] = OpFunctionCall
+; CHECK:                 OpStore %[[#local_2]] %[[#tmp]]
 ; CHECK:                 OpBranch %[[#c_merge]]
 c_false:
   %f3 = call spir_func noundef i32 @_Z3fn2v() #4 [ "convergencectrl"(token %0) ]
@@ -99,7 +107,7 @@ c_false:
 
 ; CHECK: %[[#c_true]] = OpLabel
 ; CHECK:       %[[#]] = OpFunctionCall
-; CHECK:                OpStore %[[#r2m_b]] %[[#]]
+; CHECK:                OpStore %[[#local_3]] %[[#]]
 ; CHECK:                OpBranch %[[#c_merge]]
 c_true:
   %f2 = call spir_func noundef i32 @_Z3fn1v() #4 [ "convergencectrl"(token %0) ]
@@ -107,8 +115,8 @@ c_true:
 
 
 ; CHECK: %[[#c_merge]] = OpLabel
-; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_b]]
-; CHECK:                 OpStore %[[#r2m_c]] %[[#tmp:]]
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#local_3]]
+; CHECK:                 OpStore %[[#local_0]] %[[#tmp:]]
 ; CHECK:                 OpSelectionMerge %[[#d_merge:]]
 ; CHECK:                 OpBranchConditional %[[#]] %[[#d_true:]] %[[#d_merge]]
 c_merge:
@@ -122,7 +130,7 @@ d_true:
   br label %d_merge
 
 ; CHECK: %[[#d_merge]] = OpLabel
-; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#r2m_c]]
+; CHECK:    %[[#tmp:]] = OpLoad %[[#]] %[[#local_0]]
 ; CHECK:                 OpReturnValue %[[#tmp]]
 d_merge:
   ret i32 %5

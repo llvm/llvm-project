@@ -34,6 +34,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
   SPIRVStructurizer.cpp
+  SPIRVFixAddressSpace.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPreLegalizerCombiner.cpp
   SPIRVPostLegalizer.cpp
