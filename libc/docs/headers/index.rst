@@ -15,6 +15,7 @@ Implementation Status
    inttypes
    locale
    math/index.rst
+   net/if
    netinet/in
    search
    setjmp
