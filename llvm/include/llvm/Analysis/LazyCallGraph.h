@@ -1081,12 +1081,15 @@ public:
 
   /// Add new ref-recursive functions split/outlined from an existing function.
   ///
-  /// The new functions may only reference the original function or other
-  /// functions that the original function did. New functions must not call
-  /// other new functions.
+  /// The new functions may only reference other functions that the original
+  /// function did. The new functions may reference the original function. New
+  /// functions must not call other new functions or the original function.
   ///
-  /// Mark the original function as referencing all new functions.
-  /// Mark all new functions as referencing each other.
+  /// Marks the original function as referencing all new functions.
+  ///
+  /// The CG must be updated following the use of this helper, for example with
+  /// updateCGAndAnalysisManagerForCGSCCPass(), to ensure the RefSCCs and SCCs
+  /// are correctly identified.
   void addSplitRefRecursiveFunctions(Function &OriginalFunction,
                                      ArrayRef<Function *> NewFunctions);
 
