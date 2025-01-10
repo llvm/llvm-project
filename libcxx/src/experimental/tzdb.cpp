@@ -107,7 +107,7 @@ static void __matches(istream& __input, char __expected) {
 
 static void __matches(istream& __input, string_view __expected) {
   for (auto __c : __expected) {
-    _LIBCPP_ASSERT_INTERNAL(!std::isalpha(__expected) || std::islower(__c), "lowercase strings only here!");
+    _LIBCPP_ASSERT_INTERNAL(!std::isalpha(__c) || std::islower(__c), "lowercase strings only here!");
     char __actual = __input.get();
     if (std::tolower(__actual) != __c)
       std::__throw_runtime_error(
