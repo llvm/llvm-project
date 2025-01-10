@@ -507,11 +507,11 @@ private:
   // Order of these members and initialization below is important. For example
   // the DefaultTimerGroup uses the TimerLock. Most of these also depend on the
   // options above.
+  std::once_flag InitDeferredFlag;
   std::unique_ptr<SignpostEmitter> SignpostsPtr;
   std::unique_ptr<sys::SmartMutex<true>> TimerLockPtr;
   std::unique_ptr<TimerGroup> DefaultTimerGroupPtr;
   std::unique_ptr<Name2PairMap> NamedGroupedTimersPtr;
-  std::once_flag InitDeferredFlag;
   TimerGlobals &initDeferred() {
     std::call_once(InitDeferredFlag, [this]() {
       SignpostsPtr = std::make_unique<SignpostEmitter>();
