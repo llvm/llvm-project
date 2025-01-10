@@ -101,7 +101,3 @@ func.func @test_broadcast_scalar_across_single_tensor() -> tensor<2x2xi32> {
 // CHECK:     %[[E0:.+]] = arith.addi %in, %in_0 : i32
 // CHECK:     linalg.yield %2 : i32
 // CHECK:   } -> tensor<2x2xi32>
-
-
-
-
