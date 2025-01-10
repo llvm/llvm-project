@@ -159,6 +159,14 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     auto map = op.getMatchingIndexingMap(&opOperand);
     if (!map.isProjectedPermutation(false))
       return failure();
+
+    // If we have any inputs that aren't memref or ranked tensor types, reject the pattern.
+    if (!dyn_cast<ShapedType>(opOperand.get().getType()))
+      return op->emitError("Expected operand #")
+             << opOperand.getOperandNumber()
+             << " to be memref of any type values or ranked tensor of any type "
+                "values, but got "
+             << opOperand.get().getType();
   }
 
   // Decomposing linalg.generic involves creating `tensor.empty`
