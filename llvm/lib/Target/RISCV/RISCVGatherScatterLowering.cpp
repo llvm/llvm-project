@@ -492,7 +492,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     StoreVal = nullptr;
     Ptr = II->getArgOperand(0);
     MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
-    Mask = II->getOperand(2);
+    Mask = II->getArgOperand(2);
     EVL = nullptr;
     break;
   case Intrinsic::vp_gather:
@@ -501,25 +501,25 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     Ptr = II->getArgOperand(0);
     MA = II->getParamAlign(0).value_or(
         DL->getABITypeAlign(DataType->getElementType()));
-    Mask = II->getOperand(1);
-    EVL = II->getOperand(2);
+    Mask = II->getArgOperand(1);
+    EVL = II->getArgOperand(2);
     break;
   case Intrinsic::masked_scatter:
     DataType = cast<VectorType>(II->getArgOperand(0)->getType());
-    StoreVal = II->getOperand(0);
-    Ptr = II->getOperand(1);
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
     MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
-    Mask = II->getOperand(3);
+    Mask = II->getArgOperand(3);
     EVL = nullptr;
     break;
   case Intrinsic::vp_scatter:
     DataType = cast<VectorType>(II->getArgOperand(0)->getType());
-    StoreVal = II->getOperand(0);
-    Ptr = II->getOperand(1);
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
     MA = II->getParamAlign(1).value_or(
         DL->getABITypeAlign(DataType->getElementType()));
-    Mask = II->getOperand(2);
-    EVL = II->getOperand(3);
+    Mask = II->getArgOperand(2);
+    EVL = II->getArgOperand(3);
     break;
   default:
     llvm_unreachable("Unexpected intrinsic");
@@ -553,8 +553,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
 
   if (!EVL)
     EVL = Builder.CreateElementCount(
-        IntegerType::get(Ctx, 32),
-        cast<VectorType>(DataType)->getElementCount());
+        Builder.getInt32Ty(), cast<VectorType>(DataType)->getElementCount());
 
   CallInst *Call;
 
