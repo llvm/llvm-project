@@ -33,14 +33,14 @@ CXDiagnosticSeverity CXStoredDiagnostic::getSeverity() const {
     case DiagnosticsEngine::Error:   return CXDiagnostic_Error;
     case DiagnosticsEngine::Fatal:   return CXDiagnostic_Fatal;
   }
-  
+
   llvm_unreachable("Invalid diagnostic level");
 }
 
 CXSourceLocation CXStoredDiagnostic::getLocation() const {
   if (Diag.getLocation().isInvalid())
     return clang_getNullLocation();
-  
+
   return translateSourceLocation(Diag.getLocation().getManager(),
                                  LangOpts, Diag.getLocation());
 }
@@ -57,7 +57,7 @@ CXString CXStoredDiagnostic::getDiagnosticOption(CXString *Disable) const {
       *Disable = cxstring::createDup((Twine("-Wno-") + Option).str());
     return cxstring::createDup((Twine("-W") + Option).str());
   }
-  
+
   if (ID == diag::fatal_too_many_errors) {
     if (Disable)
       *Disable = cxstring::createRef("-ferror-limit=0");
@@ -79,7 +79,7 @@ CXString CXStoredDiagnostic::getCategoryText() const {
 unsigned CXStoredDiagnostic::getNumRanges() const {
   if (Diag.getLocation().isInvalid())
     return 0;
-  
+
   return Diag.range_size();
 }
 
@@ -92,12 +92,12 @@ CXSourceRange CXStoredDiagnostic::getRange(unsigned int Range) const {
 
 unsigned CXStoredDiagnostic::getNumFixIts() const {
   if (Diag.getLocation().isInvalid())
-    return 0;    
+    return 0;
   return Diag.fixit_size();
 }
 
 CXString CXStoredDiagnostic::getFixIt(unsigned FixIt,
-                                      CXSourceRange *ReplacementRange) const {  
+                                      CXSourceRange *ReplacementRange) const {
   const FixItHint &Hint = Diag.fixit_begin()[FixIt];
   if (ReplacementRange) {
     // Create a range that covers the entire replacement (or
@@ -108,4 +108,3 @@ CXString CXStoredDiagnostic::getFixIt(unsigned FixIt,
   }
   return cxstring::createDup(Hint.CodeToInsert);
 }
-

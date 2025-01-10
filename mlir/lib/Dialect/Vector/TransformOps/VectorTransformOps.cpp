@@ -67,6 +67,7 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
@@ -82,6 +83,11 @@ void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
 void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateDropUnitDimWithShapeCastPatterns(patterns);
 }
 
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
@@ -212,6 +218,8 @@ class VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           VectorTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
   VectorTransformDialectExtension() {
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();

@@ -22,19 +22,12 @@ def host_triple_EQ : Joined<["--"], "host-triple=">,
 def opt_level : Joined<["--"], "opt-level=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<O0, O1, O2, or O3>">,
   HelpText<"Optimization level for LTO">;
-def bitcode_library_EQ : Joined<["--"], "bitcode-library=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<kind>-<triple>-<arch>=<path>">,
-  HelpText<"Extra bitcode library to link">;
-def builtin_bitcode_EQ : Joined<["--"], "builtin-bitcode=">,
-  Flags<[WrapperOnlyOption]>, MetaVarName<"<triple>=<path>">,
-  HelpText<"Perform a special internalizing link on the bitcode file. "
-           "This is necessary for some vendor libraries to be linked correctly">;
 def device_linker_args_EQ : Joined<["--"], "device-linker=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
   HelpText<"Arguments to pass to the device linker invocation">;
-def clang_backend : Flag<["--"], "clang-backend">,
-  Flags<[WrapperOnlyOption]>,
-  HelpText<"Run the backend using clang rather than the LTO backend">;
+def device_compiler_args_EQ : Joined<["--"], "device-compiler=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<value> or <triple>=<value>">,
+  HelpText<"Arguments to pass to the device compiler invocation">;
 def dry_run : Flag<["--"], "dry-run">,
   Flags<[WrapperOnlyOption]>,
   HelpText<"Print program arguments without running">;
@@ -91,6 +84,9 @@ def whole_program : Flag<["--"], "whole-program">,
 def linker_arg_EQ : Joined<["--"], "linker-arg=">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"An extra argument to be passed to the linker">;
+def compiler_arg_EQ : Joined<["--"], "compiler-arg=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>,
+  HelpText<"An extra argument to be passed to the compiler">;
 
 // Arguments for the LLVM backend.
 def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
@@ -98,7 +94,7 @@ def mllvm : Separate<["-"], "mllvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Arguments passed to LLVM, including Clang invocations, for which "
            "the '-mllvm' prefix is preserved. Use '-mllvm --help' for a list "
            "of options.">;
-def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=-">, Flags<[HelpHidden, WrapperOnlyOption]>,
+def offload_opt_eq_minus : Joined<["--", "-"], "offload-opt=">, Flags<[HelpHidden, WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--offload-opt=--help' for a list of options.">;
 

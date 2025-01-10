@@ -13,10 +13,12 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
+#include "LogChannelDWARF.h"
 #include "lldb/Symbol/Type.h"
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -25,9 +27,9 @@ using namespace lldb_private::plugin::dwarf;
 namespace {
 
 /// Iterate through all DIEs elaborating (i.e. reachable by a chain of
-/// DW_AT_specification and DW_AT_abstract_origin attributes) a given DIE. For
-/// convenience, the starting die is included in the sequence as the first
-/// item.
+/// DW_AT_specification, DW_AT_abstract_origin and/or DW_AT_signature
+/// attributes) a given DIE. For convenience, the starting die is included in
+/// the sequence as the first item.
 class ElaboratingDIEIterator
     : public llvm::iterator_facade_base<
           ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
@@ -50,7 +52,8 @@ class ElaboratingDIEIterator
     m_worklist.pop_back();
 
     // And add back any items that elaborate it.
-    for (dw_attr_t attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    for (dw_attr_t attr :
+         {DW_AT_specification, DW_AT_abstract_origin, DW_AT_signature}) {
       if (DWARFDIE d = die.GetReferencedDIE(attr))
         if (m_seen.insert(die.GetDIE()).second)
           m_worklist.push_back(d);
@@ -129,10 +132,10 @@ DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
     DWARFUnit *cu = GetCU();
-    const bool check_specification_or_abstract_origin = true;
+    const bool check_elaborating_dies = true;
     DWARFFormValue form_value;
     if (m_die->GetAttributeValue(cu, attr, form_value, nullptr,
-                                 check_specification_or_abstract_origin))
+                                 check_elaborating_dies))
       return form_value.Reference();
   }
   return DWARFDIE();
@@ -171,21 +174,27 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   }
 
   if (match_addr_range) {
-    DWARFRangeList ranges =
-        m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true);
-    if (ranges.FindEntryThatContains(address)) {
-      check_children = true;
-      switch (Tag()) {
-      default:
-        break;
+    if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
+            m_die->GetAttributeAddressRanges(m_cu, /*check_hi_lo_pc=*/true)) {
+      bool addr_in_range =
+          llvm::any_of(*ranges, [&](const llvm::DWARFAddressRange &r) {
+            return r.LowPC <= address && address < r.HighPC;
+          });
+      if (addr_in_range) {
+        switch (Tag()) {
+        default:
+          break;
 
-      case DW_TAG_inlined_subroutine: // Inlined Function
-      case DW_TAG_lexical_block:      // Block { } in code
-        result = *this;
-        break;
+        case DW_TAG_inlined_subroutine: // Inlined Function
+        case DW_TAG_lexical_block:      // Block { } in code
+          result = *this;
+          break;
+        }
       }
+      check_children = addr_in_range;
     } else {
-      check_children = false;
+      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                     "DIE({1:x}): {0}", GetID());
     }
   }
 
@@ -198,9 +207,9 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
-const char *DWARFDIE::GetMangledName() const {
+const char *DWARFDIE::GetMangledName(bool substitute_name_allowed) const {
   if (IsValid())
-    return m_die->GetMangledName(m_cu);
+    return m_die->GetMangledName(m_cu, substitute_name_allowed);
   else
     return nullptr;
 }
@@ -377,11 +386,6 @@ static void GetDeclContextImpl(DWARFDIE die,
       die = spec;
       continue;
     }
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
 
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
@@ -434,18 +438,6 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
   while (die && seen.insert(die.GetID()).second) {
-    // To find the name of a type in a type unit, we must follow the signature.
-    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
-      die = spec;
-      continue;
-    }
-
-    // If there is no name, then there is no need to look anything up for this
-    // DIE.
-    const char *name = die.GetName();
-    if (!name || !name[0])
-      return;
-
     // Add this DIE's contribution at the end of the chain.
     auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
       context.push_back({kind, ConstString(name)});
@@ -471,7 +463,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
       push_ctx(CompilerContextKind::Typedef, die.GetName());
       break;
     case DW_TAG_base_type:
-      push_ctx(CompilerContextKind::Builtin, name);
+      push_ctx(CompilerContextKind::Builtin, die.GetName());
       break;
     // If any of the tags below appear in the parent chain, stop the decl
     // context and return. Prior to these being in here, if a type existed in a
@@ -575,10 +567,11 @@ bool DWARFDIE::IsMethod() const {
 }
 
 bool DWARFDIE::GetDIENamesAndRanges(
-    const char *&name, const char *&mangled, DWARFRangeList &ranges,
-    std::optional<int> &decl_file, std::optional<int> &decl_line,
-    std::optional<int> &decl_column, std::optional<int> &call_file,
-    std::optional<int> &call_line, std::optional<int> &call_column,
+    const char *&name, const char *&mangled,
+    llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column,
     lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
@@ -588,6 +581,43 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
+// The following methods use LLVM naming convension in order to be are used by
+// LLVM libraries.
 llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
   return llvm::make_range(child_iterator(*this), child_iterator());
+}
+
+DWARFDIE::child_iterator DWARFDIE::begin() const {
+  return child_iterator(*this);
+}
+
+DWARFDIE::child_iterator DWARFDIE::end() const { return child_iterator(); }
+
+std::optional<DWARFFormValue> DWARFDIE::find(const dw_attr_t attr) const {
+  DWARFFormValue form_value;
+  if (m_die->GetAttributeValue(m_cu, attr, form_value, nullptr, false))
+    return form_value;
+  return std::nullopt;
+}
+
+std::optional<uint64_t> DWARFDIE::getLanguage() const {
+  if (IsValid())
+    return m_cu->GetDWARFLanguageType();
+  return std::nullopt;
+}
+
+DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
+  return GetReferencedDIE(attr);
+}
+
+DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
+  if (IsValid())
+    return v.Reference();
+  return {};
+}
+
+DWARFDIE DWARFDIE::resolveTypeUnitReference() const {
+  if (DWARFDIE reference = GetReferencedDIE(DW_AT_signature))
+    return reference;
+  return *this;
 }

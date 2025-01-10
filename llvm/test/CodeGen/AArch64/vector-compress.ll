@@ -36,37 +36,37 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
 define <4 x i32> @test_compress_v4i32_with_passthru(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: test_compress_v4i32_with_passthru:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str q2, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
 ; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    mov w15, #3 ; =0x3
 ; CHECK-NEXT:    shl.4s v1, v1, #31
 ; CHECK-NEXT:    cmlt.4s v1, v1, #0
 ; CHECK-NEXT:    and.16b v3, v1, v3
-; CHECK-NEXT:    str q2, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov.s w8, v1[1]
 ; CHECK-NEXT:    fmov w16, s1
-; CHECK-NEXT:    mov x12, sp
 ; CHECK-NEXT:    mov.s w11, v1[2]
-; CHECK-NEXT:    addv.4s s2, v3
-; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    mov.s w13, v1[3]
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    addv.4s s2, v3
 ; CHECK-NEXT:    bfi x12, x16, #2, #1
 ; CHECK-NEXT:    and x16, x16, #0x1
-; CHECK-NEXT:    mov w15, #3 ; =0x3
 ; CHECK-NEXT:    and x8, x8, #0x1
 ; CHECK-NEXT:    add x8, x16, x8
-; CHECK-NEXT:    fmov w16, s2
 ; CHECK-NEXT:    and x11, x11, #0x1
 ; CHECK-NEXT:    and x13, x13, #0x1
+; CHECK-NEXT:    fmov w16, s2
 ; CHECK-NEXT:    add x11, x8, x11
 ; CHECK-NEXT:    orr x8, x9, x8, lsl #2
 ; CHECK-NEXT:    add x13, x11, x13
 ; CHECK-NEXT:    bfi x14, x11, #2, #2
+; CHECK-NEXT:    cmp x13, #3
 ; CHECK-NEXT:    bfi x10, x16, #2, #2
 ; CHECK-NEXT:    mov.s w16, v0[3]
-; CHECK-NEXT:    cmp x13, #3
 ; CHECK-NEXT:    csel x11, x13, x15, lo
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    str s0, [sp]

@@ -102,9 +102,9 @@ public:
 
   virtual bool RegisterIsVolatile(const RegisterInfo *reg_info) = 0;
 
-  virtual bool
-  GetFallbackRegisterLocation(const RegisterInfo *reg_info,
-                              UnwindPlan::Row::RegisterLocation &unwind_regloc);
+  virtual bool GetFallbackRegisterLocation(
+      const RegisterInfo *reg_info,
+      UnwindPlan::Row::AbstractRegisterLocation &unwind_regloc);
 
   // Should take a look at a call frame address (CFA) which is just the stack
   // pointer value upon entry to a function. ABIs usually impose alignment

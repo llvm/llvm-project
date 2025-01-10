@@ -18,6 +18,7 @@ include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -139,6 +140,17 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let hasVerifier = 1;
 }
 
+def cuf_SyncDescriptorOp : cuf_Op<"sync_descriptor", []> {
+  let summary =
+      "Synchronize the host and device descriptor of a Fortran pointer";
+
+  let arguments = (ins SymbolRefAttr:$globalName);
+
+  let assemblyFormat = [{
+    $globalName attr-dict
+  }];
+}
+
 def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   let summary = "Represent a data transfer between host and device memory";
 
@@ -161,10 +173,11 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
                        Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+                       Optional<AnyShapeOrShiftType>:$shape,
                        cuf_DataTransferKindAttr:$transfer_kind);
 
   let assemblyFormat = [{
-    $src `to` $dst attr-dict `:` type(operands)
+    $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
   }];
 
   let hasVerifier = 1;
@@ -285,6 +298,40 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
+  let summary = "Register a CUDA module";
+
+  let arguments = (ins
+    SymbolRefAttr:$name
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `->` type($modulePtr)
+  }];
+
+  let results = (outs LLVM_AnyPointer:$modulePtr);
+}
+
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+  let summary = "Register a CUDA kernel";
+
+  let arguments = (ins
+    SymbolRefAttr:$name,
+    LLVM_AnyPointer:$modulePtr
+  );
+
+  let assemblyFormat = [{
+    $name `(` $modulePtr `:` type($modulePtr) `)`attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::StringAttr getKernelName();
+    mlir::StringAttr getKernelModuleName();
+  }];
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

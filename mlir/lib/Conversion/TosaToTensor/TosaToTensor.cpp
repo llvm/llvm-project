@@ -144,7 +144,7 @@ TensorType inferReshapeCollapsedType(TensorType lhsType, TensorType rhsType) {
   for (; currRhsDim < rhsShape.size(); currRhsDim++) {
     assert(rhsShape[currRhsDim] == 1);
   }
-  
+
   return lhsType.clone(intermediateShape);
 }
 
@@ -264,7 +264,7 @@ public:
   matchAndRewrite(tosa::SliceOp sliceOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     Location loc = sliceOp.getLoc();
-    Value input = adaptor.getInput();
+    Value input = adaptor.getInput1();
     ShapedType resultType = cast<ShapedType>(sliceOp.getType());
     if (llvm::isa<UnrankedTensorType>(resultType))
       return failure();
@@ -338,11 +338,6 @@ public:
           padOp, "tosa.pad was unable to determine the pad constant value.");
     }
 
-    Value lowIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
-    Value highIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
-
     SmallVector<OpFoldResult, 3> lowValues;
     SmallVector<OpFoldResult, 3> highValues;
 
@@ -350,11 +345,12 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value inputIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
+      Value lowIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i);
+      Value highIndex = rewriter.create<arith::ConstantIndexOp>(loc, 2 * i + 1);
       Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, lowIndex}));
+          loc, padding, ValueRange({lowIndex}));
       Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, highIndex}));
+          loc, padding, ValueRange({highIndex}));
 
       lowVal = rewriter.createOrFold<arith::IndexCastOp>(
           loc, rewriter.getIndexType(), lowVal);
@@ -438,7 +434,7 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToTensorConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
   patterns
       ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
           converter, patterns->getContext());

@@ -13,17 +13,23 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/iterator_operations.h>
+#include <__algorithm/radix_sort.h>
 #include <__algorithm/sort.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__debug_utils/strict_weak_ordering_check.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
 #include <__memory/unique_ptr.h>
+#include <__memory/unique_temporary_buffer.h>
+#include <__type_traits/desugars_to.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -189,6 +195,28 @@ struct __stable_sort_switch {
   static const unsigned value = 128 * is_trivially_copy_assignable<_Tp>::value;
 };
 
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
+  static_assert(is_integral<_Tp>::value);
+  if constexpr (sizeof(_Tp) == 1) {
+    return 1 << 8;
+  }
+
+  return 1 << 10;
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_max_bound() {
+  static_assert(is_integral<_Tp>::value);
+  if constexpr (sizeof(_Tp) >= 8) {
+    return 1 << 15;
+  }
+
+  return 1 << 16;
+}
+#endif // _LIBCPP_STD_VER >= 17
+
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 void __stable_sort(_RandomAccessIterator __first,
                    _RandomAccessIterator __last,
@@ -211,6 +239,22 @@ void __stable_sort(_RandomAccessIterator __first,
     std::__insertion_sort<_AlgPolicy, _Compare>(__first, __last, __comp);
     return;
   }
+
+#if _LIBCPP_STD_VER >= 17
+  constexpr auto __default_comp =
+      __desugars_to_v<__totally_ordered_less_tag, __remove_cvref_t<_Compare>, value_type, value_type >;
+  constexpr auto __integral_value =
+      is_integral_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
+  constexpr auto __allowed_radix_sort = __default_comp && __integral_value;
+  if constexpr (__allowed_radix_sort) {
+    if (__len <= __buff_size && __len >= static_cast<difference_type>(__radix_sort_min_bound<value_type>()) &&
+        __len <= static_cast<difference_type>(__radix_sort_max_bound<value_type>())) {
+      std::__radix_sort(__first, __last, __buff);
+      return;
+    }
+  }
+#endif // _LIBCPP_STD_VER >= 17
+
   typename iterator_traits<_RandomAccessIterator>::difference_type __l2 = __len / 2;
   _RandomAccessIterator __m                                             = __first + __l2;
   if (__len <= __buff_size) {
@@ -241,14 +285,12 @@ __stable_sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, 
   using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
 
   difference_type __len = __last - __first;
+  __unique_temporary_buffer<value_type> __unique_buf;
   pair<value_type*, ptrdiff_t> __buf(0, 0);
-  unique_ptr<value_type, __return_temporary_buffer> __h;
   if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value)) {
-    // TODO: Remove the use of std::get_temporary_buffer
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    __buf = std::get_temporary_buffer<value_type>(__len);
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
-    __h.reset(__buf.first);
+    __unique_buf = std::__allocate_unique_temporary_buffer<value_type>(__len);
+    __buf.first  = __unique_buf.get();
+    __buf.second = __unique_buf.get_deleter().__count_;
   }
 
   std::__stable_sort<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __last, __comp, __len, __buf.first, __buf.second);

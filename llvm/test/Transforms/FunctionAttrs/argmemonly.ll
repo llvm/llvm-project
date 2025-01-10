@@ -101,7 +101,7 @@ entry:
 define void @test_only_write_arg(ptr %ptr) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define void @test_only_write_arg
-; FNATTRS-SAME: (ptr nocapture writeonly [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 4)) [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; FNATTRS-NEXT:    ret void
@@ -156,7 +156,7 @@ declare i32 @fn_readnone() readnone
 define void @test_call_readnone(ptr %ptr) {
 ; FNATTRS: Function Attrs: memory(argmem: write)
 ; FNATTRS-LABEL: define void @test_call_readnone
-; FNATTRS-SAME: (ptr nocapture writeonly [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 4)) [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[C:%.*]] = call i32 @fn_readnone()
 ; FNATTRS-NEXT:    store i32 [[C]], ptr [[PTR]], align 4
@@ -221,7 +221,7 @@ entry:
 define void @test_memcpy_argonly(ptr %dst, ptr %src) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define void @test_memcpy_argonly
-; FNATTRS-SAME: (ptr nocapture writeonly [[DST:%.*]], ptr nocapture readonly [[SRC:%.*]]) #[[ATTR9:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 32)) [[DST:%.*]], ptr nocapture readonly [[SRC:%.*]]) #[[ATTR9:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 32, i1 false)
 ; FNATTRS-NEXT:    ret void
@@ -245,7 +245,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 define void @test_memcpy_src_global(ptr %dst) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 ; FNATTRS-LABEL: define void @test_memcpy_src_global
-; FNATTRS-SAME: (ptr nocapture writeonly [[DST:%.*]]) #[[ATTR11:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 32)) [[DST:%.*]]) #[[ATTR11:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr @arr, i64 32, i1 false)
 ; FNATTRS-NEXT:    ret void
@@ -370,7 +370,7 @@ define void @test_inaccessibleorargmemonly_readonly(ptr %arg) {
 define void @test_inaccessibleorargmemonly_readwrite(ptr %arg) {
 ; FNATTRS: Function Attrs: memory(argmem: write, inaccessiblemem: read)
 ; FNATTRS-LABEL: define void @test_inaccessibleorargmemonly_readwrite
-; FNATTRS-SAME: (ptr nocapture writeonly [[ARG:%.*]]) #[[ATTR15:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 4)) [[ARG:%.*]]) #[[ATTR15:[0-9]+]] {
 ; FNATTRS-NEXT:    store i32 0, ptr [[ARG]], align 4
 ; FNATTRS-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR19]]
 ; FNATTRS-NEXT:    ret void

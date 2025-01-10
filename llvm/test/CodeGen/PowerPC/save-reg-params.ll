@@ -609,7 +609,6 @@ define void @mixed_2(<2 x double> %a, <4 x i32> %b, i64 %c) #0 {
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    li 3, 64
 ; 32BIT-NEXT:    lxvd2x 1, 1, 3 # 16-byte Folded Reload
-; 32BIT-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; 32BIT-NEXT:    bl .consume_f64[PR]
 ; 32BIT-NEXT:    nop
 ; 32BIT-NEXT:    addi 1, 1, 80
@@ -635,7 +634,6 @@ define void @mixed_2(<2 x double> %a, <4 x i32> %b, i64 %c) #0 {
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    li 3, 128
 ; 64BIT-NEXT:    lxvd2x 1, 1, 3 # 16-byte Folded Reload
-; 64BIT-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; 64BIT-NEXT:    bl .consume_f64[PR]
 ; 64BIT-NEXT:    nop
 ; 64BIT-NEXT:    addi 1, 1, 144

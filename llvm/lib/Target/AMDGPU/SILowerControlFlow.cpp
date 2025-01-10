@@ -41,9 +41,9 @@
 /// %sgpr0 = S_OR_SAVEEXEC_B64 %sgpr0  // Restore the exec mask for the Then
 ///                                    // block
 /// %exec = S_XOR_B64 %sgpr0, %exec    // Update the exec mask
-/// S_BRANCH_EXECZ label1              // Use our branch optimization
+/// S_CBRANCH_EXECZ label1             // Use our branch optimization
 ///                                    // instruction again.
-/// %vgpr0 = V_SUB_F32 %vgpr0, %vgpr   // Do the THEN block
+/// %vgpr0 = V_SUB_F32 %vgpr0, %vgpr   // Do the ELSE block
 /// label1:
 /// %exec = S_OR_B64 %exec, %sgpr0     // Re-enable saved exec mask bits
 //===----------------------------------------------------------------------===//
@@ -270,7 +270,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   I = skipToUncondBrOrEnd(MBB, I);
 
   // Insert the S_CBRANCH_EXECZ instruction which will be optimized later
-  // during SIRemoveShortExecBranches.
+  // during SIPreEmitPeephole.
   MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
                             .add(MI.getOperand(2));
 

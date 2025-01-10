@@ -26,7 +26,7 @@
 using namespace llvm;
 
 bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
   GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Sext->getSrcReg(), MRI));
 
@@ -59,7 +59,7 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
-                                      BuildFnTy &MatchInfo) {
+                                      BuildFnTy &MatchInfo) const {
   GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
   GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Zext->getSrcReg(), MRI));
 
@@ -94,7 +94,7 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
 }
 
 bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
-                                     BuildFnTy &MatchInfo) {
+                                     BuildFnTy &MatchInfo) const {
   GZext *Zext = cast<GZext>(MRI.getVRegDef(MO.getReg()));
 
   Register Dst = Zext->getReg(0);
@@ -116,7 +116,7 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
 
 bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
                                         const MachineInstr &ExtMI,
-                                        BuildFnTy &MatchInfo) {
+                                        BuildFnTy &MatchInfo) const {
   const GTrunc *Trunc = cast<GTrunc>(&Root);
   const GExtOp *Ext = cast<GExtOp>(&ExtMI);
 
@@ -164,15 +164,14 @@ bool CombinerHelper::matchTruncateOfExt(const MachineInstr &Root,
 
 bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
   const TargetLowering &TLI = getTargetLowering();
-  const DataLayout &DL = getDataLayout();
   LLVMContext &Ctx = getContext();
 
   switch (Opcode) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_ZEXT:
-    return TLI.isZExtFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isZExtFree(FromTy, ToTy, Ctx);
   case TargetOpcode::G_TRUNC:
-    return TLI.isTruncateFree(FromTy, ToTy, DL, Ctx);
+    return TLI.isTruncateFree(FromTy, ToTy, Ctx);
   default:
     return false;
   }
@@ -180,7 +179,7 @@ bool CombinerHelper::isCastFree(unsigned Opcode, LLT ToTy, LLT FromTy) const {
 
 bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
                                        const MachineInstr &SelectMI,
-                                       BuildFnTy &MatchInfo) {
+                                       BuildFnTy &MatchInfo) const {
   const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
   const GSelect *Select = cast<GSelect>(&SelectMI);
 
@@ -208,4 +207,154 @@ bool CombinerHelper::matchCastOfSelect(const MachineInstr &CastMI,
   };
 
   return true;
+}
+
+bool CombinerHelper::matchExtOfExt(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI,
+                                   BuildFnTy &MatchInfo) const {
+  const GExtOp *First = cast<GExtOp>(&FirstMI);
+  const GExtOp *Second = cast<GExtOp>(&SecondMI);
+
+  Register Dst = First->getReg(0);
+  Register Src = Second->getSrcReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
+    return false;
+
+  // ext of ext -> later ext
+  if (First->getOpcode() == Second->getOpcode() &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    // not zext -> no flags
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildInstr(Second->getOpcode(), {Dst}, {Src});
+    };
+    return true;
+  }
+
+  // anyext of sext/zext  -> sext/zext
+  // -> pick anyext as second ext, then ext of ext
+  if (First->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({Second->getOpcode(), {DstTy, SrcTy}})) {
+    if (Second->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (Second->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  // sext/zext of anyext -> sext/zext
+  // -> pick anyext as first ext, then ext of ext
+  if (Second->getOpcode() == TargetOpcode::G_ANYEXT &&
+      isLegalOrBeforeLegalizer({First->getOpcode(), {DstTy, SrcTy}})) {
+    if (First->getOpcode() == TargetOpcode::G_ZEXT) {
+      MachineInstr::MIFlag Flag = MachineInstr::MIFlag::NoFlags;
+      if (First->getFlag(MachineInstr::MIFlag::NonNeg))
+        Flag = MachineInstr::MIFlag::NonNeg;
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildZExt(Dst, Src, Flag); };
+      return true;
+    }
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchCastOfBuildVector(const MachineInstr &CastMI,
+                                            const MachineInstr &BVMI,
+                                            BuildFnTy &MatchInfo) const {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+  const GBuildVector *BV = cast<GBuildVector>(&BVMI);
+
+  if (!MRI.hasOneNonDBGUse(BV->getReg(0)))
+    return false;
+
+  Register Dst = Cast->getReg(0);
+  // The type of the new build vector.
+  LLT DstTy = MRI.getType(Dst);
+  // The scalar or element type of the new build vector.
+  LLT ElemTy = DstTy.getScalarType();
+  // The scalar or element type of the old build vector.
+  LLT InputElemTy = MRI.getType(BV->getReg(0)).getElementType();
+
+  // Check legality of new build vector, the scalar casts, and profitability of
+  // the many casts.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_BUILD_VECTOR, {DstTy, ElemTy}}) ||
+      !isLegalOrBeforeLegalizer({Cast->getOpcode(), {ElemTy, InputElemTy}}) ||
+      !isCastFree(Cast->getOpcode(), ElemTy, InputElemTy))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    SmallVector<Register> Casts;
+    unsigned Elements = BV->getNumSources();
+    for (unsigned I = 0; I < Elements; ++I) {
+      auto CastI =
+          B.buildInstr(Cast->getOpcode(), {ElemTy}, {BV->getSourceReg(I)});
+      Casts.push_back(CastI.getReg(0));
+    }
+
+    B.buildBuildVector(Dst, Casts);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchNarrowBinop(const MachineInstr &TruncMI,
+                                      const MachineInstr &BinopMI,
+                                      BuildFnTy &MatchInfo) const {
+  const GTrunc *Trunc = cast<GTrunc>(&TruncMI);
+  const GBinOp *BinOp = cast<GBinOp>(&BinopMI);
+
+  if (!MRI.hasOneNonDBGUse(BinOp->getReg(0)))
+    return false;
+
+  Register Dst = Trunc->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  // Is narrow binop legal?
+  if (!isLegalOrBeforeLegalizer({BinOp->getOpcode(), {DstTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto LHS = B.buildTrunc(DstTy, BinOp->getLHSReg());
+    auto RHS = B.buildTrunc(DstTy, BinOp->getRHSReg());
+    B.buildInstr(BinOp->getOpcode(), {Dst}, {LHS, RHS});
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
+                                        APInt &MatchInfo) const {
+  const GExtOrTruncOp *Cast = cast<GExtOrTruncOp>(&CastMI);
+
+  APInt Input = getIConstantFromReg(Cast->getSrcReg(), MRI);
+
+  LLT DstTy = MRI.getType(Cast->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  switch (Cast->getOpcode()) {
+  case TargetOpcode::G_TRUNC: {
+    MatchInfo = Input.trunc(DstTy.getScalarSizeInBits());
+    return true;
+  }
+  default:
+    return false;
+  }
 }

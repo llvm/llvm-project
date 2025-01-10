@@ -5,7 +5,7 @@
 define half @reduction_half4(<4 x half> %a) {
 ; GCN-LABEL: @reduction_half4(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[A:%.*]])
+; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[A:%.*]])
 ; GCN-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -24,7 +24,7 @@ entry:
 define half @reduction_half8(<8 x half> %vec8) {
 ; GCN-LABEL: @reduction_half8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[VEC8:%.*]])
+; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8:%.*]])
 ; GCN-NEXT:    ret half [[TMP0]]
 ;
 entry:
@@ -51,15 +51,15 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 ; GFX9-LABEL: @reduction_half16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[VEC16:%.*]])
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH0000, <16 x half> [[VEC16:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half16(
 ; VI-NEXT:  entry:
 ; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VI-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[TMP0]])
+; VI-NEXT:    [[TMP1:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP0]])
 ; VI-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; VI-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[TMP2]])
+; VI-NEXT:    [[TMP3:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[TMP2]])
 ; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[TMP1]], [[TMP3]]
 ; VI-NEXT:    ret half [[OP_RDX]]
 ;

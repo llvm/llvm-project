@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -314,40 +315,6 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
   return false;
 }
 
-// Get the valid immediate range for the specified NEON type code.
-static unsigned RFT(unsigned t, bool shift = false, bool ForceQuad = false) {
-  NeonTypeFlags Type(t);
-  int IsQuad = ForceQuad ? true : Type.isQuad();
-  switch (Type.getEltType()) {
-  case NeonTypeFlags::Int8:
-  case NeonTypeFlags::Poly8:
-    return shift ? 7 : (8 << IsQuad) - 1;
-  case NeonTypeFlags::Int16:
-  case NeonTypeFlags::Poly16:
-    return shift ? 15 : (4 << IsQuad) - 1;
-  case NeonTypeFlags::Int32:
-    return shift ? 31 : (2 << IsQuad) - 1;
-  case NeonTypeFlags::Int64:
-  case NeonTypeFlags::Poly64:
-    return shift ? 63 : (1 << IsQuad) - 1;
-  case NeonTypeFlags::Poly128:
-    return shift ? 127 : (1 << IsQuad) - 1;
-  case NeonTypeFlags::Float16:
-    assert(!shift && "cannot shift float types!");
-    return (4 << IsQuad) - 1;
-  case NeonTypeFlags::Float32:
-    assert(!shift && "cannot shift float types!");
-    return (2 << IsQuad) - 1;
-  case NeonTypeFlags::Float64:
-    assert(!shift && "cannot shift float types!");
-    return (1 << IsQuad) - 1;
-  case NeonTypeFlags::BFloat16:
-    assert(!shift && "cannot shift float types!");
-    return (4 << IsQuad) - 1;
-  }
-  llvm_unreachable("Invalid NeonTypeFlag!");
-}
-
 /// getNeonEltType - Return the QualType corresponding to the elements of
 /// the vector type specified by the NeonTypeFlags.  This is used to check
 /// the pointer arguments for Neon load/store intrinsics.
@@ -403,142 +370,171 @@ enum ArmSMEState : unsigned {
   ArmZT0Mask = 0b11 << 2
 };
 
-bool SemaARM::ParseSVEImmChecks(
-    CallExpr *TheCall, SmallVector<std::tuple<int, int, int>, 3> &ImmChecks) {
-  // Perform all the immediate checks for this builtin call.
-  bool HasError = false;
-  for (auto &I : ImmChecks) {
-    int ArgNum, CheckTy, ElementSizeInBits;
-    std::tie(ArgNum, CheckTy, ElementSizeInBits) = I;
-
-    typedef bool (*OptionSetCheckFnTy)(int64_t Value);
-
-    // Function that checks whether the operand (ArgNum) is an immediate
-    // that is one of the predefined values.
-    auto CheckImmediateInSet = [&](OptionSetCheckFnTy CheckImm,
-                                   int ErrDiag) -> bool {
-      // We can't check the value of a dependent argument.
-      Expr *Arg = TheCall->getArg(ArgNum);
-      if (Arg->isTypeDependent() || Arg->isValueDependent())
-        return false;
-
-      // Check constant-ness first.
-      llvm::APSInt Imm;
-      if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Imm))
-        return true;
-
-      if (!CheckImm(Imm.getSExtValue()))
-        return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
+bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
+                                unsigned ArgIdx, unsigned EltBitWidth,
+                                unsigned ContainerBitWidth) {
+  // Function that checks whether the operand (ArgIdx) is an immediate
+  // that is one of a given set of values.
+  auto CheckImmediateInSet = [&](std::initializer_list<int64_t> Set,
+                                 int ErrDiag) -> bool {
+    // We can't check the value of a dependent argument.
+    Expr *Arg = TheCall->getArg(ArgIdx);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
       return false;
-    };
 
-    switch ((SVETypeFlags::ImmCheckType)CheckTy) {
-    case SVETypeFlags::ImmCheck0_31:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 31))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_13:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 13))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck1_16:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 16))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_7:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 7))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck1_1:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck1_3:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 3))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck1_7:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1, 7))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckExtract:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                          (2048 / ElementSizeInBits) - 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckShiftRight:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
-                                          ElementSizeInBits))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckShiftRightNarrow:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 1,
-                                          ElementSizeInBits / 2))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckShiftLeft:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                          ElementSizeInBits - 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckLaneIndex:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                          (128 / (1 * ElementSizeInBits)) - 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckLaneIndexCompRotate:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                          (128 / (2 * ElementSizeInBits)) - 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckLaneIndexDot:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0,
-                                          (128 / (4 * ElementSizeInBits)) - 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckComplexRot90_270:
-      if (CheckImmediateInSet([](int64_t V) { return V == 90 || V == 270; },
-                              diag::err_rotation_argument_to_cadd))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheckComplexRotAll90:
-      if (CheckImmediateInSet(
-              [](int64_t V) {
-                return V == 0 || V == 90 || V == 180 || V == 270;
-              },
-              diag::err_rotation_argument_to_cmla))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_1:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 1))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_2:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 2))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_3:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 3))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_0:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 0))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_15:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 15))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck0_255:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
-        HasError = true;
-      break;
-    case SVETypeFlags::ImmCheck2_4_Mul2:
-      if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 2, 4) ||
-          SemaRef.BuiltinConstantArgMultiple(TheCall, ArgNum, 2))
-        HasError = true;
-      break;
-    }
+    // Check constant-ness first.
+    llvm::APSInt Imm;
+    if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
+      return true;
+
+    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+      return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
+    return false;
+  };
+
+  switch ((ImmCheckType)CheckTy) {
+  case ImmCheckType::ImmCheck0_31:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 31))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_13:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 13))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_63:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 63))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_16:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 16))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_7:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 7))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_1:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_3:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 3))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_7:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 7))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckExtract:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
+                                        (2048 / EltBitWidth) - 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckCvt:
+  case ImmCheckType::ImmCheckShiftRight:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, EltBitWidth))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckShiftRightNarrow:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, EltBitWidth / 2))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckShiftLeft:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, EltBitWidth - 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckLaneIndex:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
+                                        (ContainerBitWidth / EltBitWidth) - 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckLaneIndexCompRotate:
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (2 * EltBitWidth)) - 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckLaneIndexDot:
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (4 * EltBitWidth)) - 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckComplexRot90_270:
+    if (CheckImmediateInSet({90, 270}, diag::err_rotation_argument_to_cadd))
+      return true;
+    break;
+  case ImmCheckType::ImmCheckComplexRotAll90:
+    if (CheckImmediateInSet({0, 90, 180, 270},
+                            diag::err_rotation_argument_to_cmla))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_1:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 1))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_2:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 2))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_3:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 3))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_0:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 0))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_15:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 15))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck0_255:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0, 255))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_32:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 32))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck1_64:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 1, 64))
+      return true;
+    break;
+  case ImmCheckType::ImmCheck2_4_Mul2:
+    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 2, 4) ||
+        SemaRef.BuiltinConstantArgMultiple(TheCall, ArgIdx, 2))
+      return true;
+    break;
+  }
+  return false;
+}
+
+bool SemaARM::PerformNeonImmChecks(
+    CallExpr *TheCall,
+    SmallVectorImpl<std::tuple<int, int, int, int>> &ImmChecks,
+    int OverloadType) {
+  bool HasError = false;
+
+  for (const auto &I : ImmChecks) {
+    auto [ArgIdx, CheckTy, ElementBitWidth, VecBitWidth] = I;
+
+    if (OverloadType >= 0)
+      ElementBitWidth = NeonTypeFlags(OverloadType).getEltSizeInBits();
+
+    HasError |= CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth,
+                                  VecBitWidth);
+  }
+
+  return HasError;
+}
+
+bool SemaARM::PerformSVEImmChecks(
+    CallExpr *TheCall, SmallVectorImpl<std::tuple<int, int, int>> &ImmChecks) {
+  bool HasError = false;
+
+  for (const auto &I : ImmChecks) {
+    auto [ArgIdx, CheckTy, ElementBitWidth] = I;
+    HasError |=
+        CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth, 128);
   }
 
   return HasError;
@@ -571,15 +567,9 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
-      for (StringRef K : Map.keys())
-        if (K.starts_with(S))
-          Map[K] = false;
-    };
-
     llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
+    CallerFeatureMapWithoutSVE["sve"] = false;
 
     // Avoid emitting diagnostics for a function that can never compile.
     if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
@@ -587,7 +577,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 
     llvm::StringMap<bool> CallerFeatureMapWithoutSME;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    DisableFeatures(CallerFeatureMapWithoutSME, "sme");
+    CallerFeatureMapWithoutSME["sme"] = false;
 
     // We know the builtin requires either some combination of SVE flags, or
     // some combination of SME flags, but we need to figure out which part
@@ -693,7 +683,7 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  return PerformSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
@@ -721,7 +711,7 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_IMMEDIATE_CHECK
   }
 
-  return ParseSVEImmChecks(TheCall, ImmChecks);
+  return PerformSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
@@ -748,7 +738,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   llvm::APSInt Result;
   uint64_t mask = 0;
-  unsigned TV = 0;
+  int TV = -1;
   int PtrArgNum = -1;
   bool HasConstPtr = false;
   switch (BuiltinID) {
@@ -794,13 +784,14 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (RHS.isInvalid())
       return true;
     if (SemaRef.DiagnoseAssignmentResult(ConvTy, Arg->getBeginLoc(), LHSTy,
-                                         RHSTy, RHS.get(), Sema::AA_Assigning))
+                                         RHSTy, RHS.get(),
+                                         AssignmentAction::Assigning))
       return true;
   }
 
   // For NEON intrinsics which take an immediate value as part of the
   // instruction, range check them here.
-  unsigned i = 0, l = 0, u = 0;
+  SmallVector<std::tuple<int, int, int, int>, 2> ImmChecks;
   switch (BuiltinID) {
   default:
     return false;
@@ -810,7 +801,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #undef GET_NEON_IMMEDIATE_CHECK
   }
 
-  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
+  return PerformNeonImmChecks(TheCall, ImmChecks, TV);
 }
 
 bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,
@@ -916,11 +907,11 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
 
   // Issue a warning if the cast is dodgy.
   CastKind CastNeeded = CK_NoOp;
-  if (!AddrType.isAtLeastAsQualifiedAs(ValType)) {
+  if (!AddrType.isAtLeastAsQualifiedAs(ValType, getASTContext())) {
     CastNeeded = CK_BitCast;
     Diag(DRE->getBeginLoc(), diag::ext_typecheck_convert_discards_qualifiers)
         << PointerArg->getType() << Context.getPointerType(AddrType)
-        << Sema::AA_Passing << PointerArg->getSourceRange();
+        << AssignmentAction::Passing << PointerArg->getSourceRange();
   }
 
   // Finally, do the cast and replace the argument with the corrected version.

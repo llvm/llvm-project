@@ -1139,6 +1139,43 @@ let AdditionalPredicates = [NotInMicroMips] in {
                 ISA_MIPS32R6;
 }
 
+// llvm.is_fpclass operations.
+def to_fclass_mask: SDNodeXForm<imm, [{
+  unsigned Check = N->getZExtValue();
+  unsigned Mask = 0;
+  if (Check & fcSNan)
+    Mask |= Mips::FClassMaskSignalingNaN;
+  if (Check & fcQNan)
+    Mask |= Mips::FClassMaskQuietNaN;
+  if (Check & fcPosInf)
+    Mask |= Mips::FClassMaskPositiveInfinity;
+  if (Check & fcNegInf)
+    Mask |= Mips::FClassMaskNegativeInfinity;
+  if (Check & fcPosNormal)
+    Mask |= Mips::FClassMaskPositiveNormal;
+  if (Check & fcNegNormal)
+    Mask |= Mips::FClassMaskNegativeNormal;
+  if (Check & fcPosSubnormal)
+    Mask |= Mips::FClassMaskPositiveSubnormal;
+  if (Check & fcNegSubnormal)
+    Mask |= Mips::FClassMaskNegativeSubnormal;
+  if (Check & fcPosZero)
+    Mask |= Mips::FClassMaskPositiveZero;
+  if (Check & fcNegZero)
+    Mask |= Mips::FClassMaskNegativeZero;
+  return CurDAG->getTargetConstant(Mask, SDLoc(N), MVT::i32);
+}]>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(is_fpclass f32:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1 (CLASS_S f32:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
+  def : MipsPat<(is_fpclass f64:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1_D64 (CLASS_D f64:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
+}
+
 // Pseudo instructions
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
     hasExtraSrcRegAllocReq = 1, isCTI = 1, Defs = [AT], hasPostISelHook = 1 in {

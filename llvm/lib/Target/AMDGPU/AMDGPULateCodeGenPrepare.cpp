@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -42,40 +41,26 @@ static cl::opt<bool>
 namespace {
 
 class AMDGPULateCodeGenPrepare
-    : public FunctionPass,
-      public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
-  Module *Mod = nullptr;
-  const DataLayout *DL = nullptr;
+    : public InstVisitor<AMDGPULateCodeGenPrepare, bool> {
+  Function &F;
+  const DataLayout &DL;
+  const GCNSubtarget &ST;
 
-  AssumptionCache *AC = nullptr;
-  UniformityInfo *UA = nullptr;
+  AssumptionCache *const AC;
+  UniformityInfo &UA;
 
   SmallVector<WeakTrackingVH, 8> DeadInsts;
 
 public:
-  static char ID;
-
-  AMDGPULateCodeGenPrepare() : FunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "AMDGPU IR late optimizations";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetPassConfig>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
-
+  AMDGPULateCodeGenPrepare(Function &F, const GCNSubtarget &ST,
+                           AssumptionCache *AC, UniformityInfo &UA)
+      : F(F), DL(F.getDataLayout()), ST(ST), AC(AC), UA(UA) {}
+  bool run();
   bool visitInstruction(Instruction &) { return false; }
 
   // Check if the specified value is at least DWORD aligned.
   bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, *DL, 0, AC);
+    KnownBits Known = computeKnownBits(V, DL, 0, AC);
     return Known.countMinTrailingZeros() >= 2;
   }
 
@@ -87,11 +72,11 @@ using ValueToValueMap = DenseMap<const Value *, Value *>;
 
 class LiveRegOptimizer {
 private:
-  Module *Mod = nullptr;
-  const DataLayout *DL = nullptr;
-  const GCNSubtarget *ST;
+  Module &Mod;
+  const DataLayout &DL;
+  const GCNSubtarget &ST;
   /// The scalar type to convert to
-  Type *ConvertToScalar;
+  Type *const ConvertToScalar;
   /// The set of visited Instructions
   SmallPtrSet<Instruction *, 4> Visited;
   /// Map of Value -> Converted Value
@@ -125,7 +110,7 @@ public:
     if (!VTy)
       return false;
 
-    auto TLI = ST->getTargetLowering();
+    const auto *TLI = ST.getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
     // If the element size is not less than the convert to scalar size, then we
@@ -140,31 +125,14 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  LiveRegOptimizer(Module *Mod, const GCNSubtarget *ST) : Mod(Mod), ST(ST) {
-    DL = &Mod->getDataLayout();
-    ConvertToScalar = Type::getInt32Ty(Mod->getContext());
-  }
+  LiveRegOptimizer(Module &Mod, const GCNSubtarget &ST)
+      : Mod(Mod), DL(Mod.getDataLayout()), ST(ST),
+        ConvertToScalar(Type::getInt32Ty(Mod.getContext())) {}
 };
 
 } // end anonymous namespace
 
-bool AMDGPULateCodeGenPrepare::doInitialization(Module &M) {
-  Mod = &M;
-  DL = &Mod->getDataLayout();
-  return false;
-}
-
-bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-
+bool AMDGPULateCodeGenPrepare::run() {
   // "Optimize" the virtual regs that cross basic block boundaries. When
   // building the SelectionDAG, vectors of illegal types that cross basic blocks
   // will be scalarized and widened, with each scalar living in its
@@ -172,7 +140,7 @@ bool AMDGPULateCodeGenPrepare::runOnFunction(Function &F) {
   // vectors to equivalent vectors of legal type (which are converted back
   // before uses in subsequent blocks), to pack the bits into fewer physical
   // registers (used in CopyToReg/CopyFromReg pairs).
-  LiveRegOptimizer LRO(Mod, &ST);
+  LiveRegOptimizer LRO(*F.getParent(), ST);
 
   bool Changed = false;
 
@@ -194,15 +162,15 @@ Type *LiveRegOptimizer::calculateConvertType(Type *OriginalType) {
 
   FixedVectorType *VTy = cast<FixedVectorType>(OriginalType);
 
-  TypeSize OriginalSize = DL->getTypeSizeInBits(VTy);
-  TypeSize ConvertScalarSize = DL->getTypeSizeInBits(ConvertToScalar);
+  TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
+  TypeSize ConvertScalarSize = DL.getTypeSizeInBits(ConvertToScalar);
   unsigned ConvertEltCount =
       (OriginalSize + ConvertScalarSize - 1) / ConvertScalarSize;
 
   if (OriginalSize <= ConvertScalarSize)
-    return IntegerType::get(Mod->getContext(), ConvertScalarSize);
+    return IntegerType::get(Mod.getContext(), ConvertScalarSize);
 
-  return VectorType::get(Type::getIntNTy(Mod->getContext(), ConvertScalarSize),
+  return VectorType::get(Type::getIntNTy(Mod.getContext(), ConvertScalarSize),
                          ConvertEltCount, false);
 }
 
@@ -211,8 +179,8 @@ Value *LiveRegOptimizer::convertToOptType(Instruction *V,
   FixedVectorType *VTy = cast<FixedVectorType>(V->getType());
   Type *NewTy = calculateConvertType(V->getType());
 
-  TypeSize OriginalSize = DL->getTypeSizeInBits(VTy);
-  TypeSize NewSize = DL->getTypeSizeInBits(NewTy);
+  TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
+  TypeSize NewSize = DL.getTypeSizeInBits(NewTy);
 
   IRBuilder<> Builder(V->getParent(), InsertPt);
   // If there is a bitsize match, we can fit the old vector into a new vector of
@@ -241,8 +209,8 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
                                             BasicBlock *InsertBB) {
   FixedVectorType *NewVTy = cast<FixedVectorType>(ConvertType);
 
-  TypeSize OriginalSize = DL->getTypeSizeInBits(V->getType());
-  TypeSize NewSize = DL->getTypeSizeInBits(NewVTy);
+  TypeSize OriginalSize = DL.getTypeSizeInBits(V->getType());
+  TypeSize NewSize = DL.getTypeSizeInBits(NewVTy);
 
   IRBuilder<> Builder(InsertBB, InsertPt);
   // If there is a bitsize match, we simply convert back to the original type.
@@ -255,14 +223,14 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   // For wide scalars, we can just truncate the value.
   if (!V->getType()->isVectorTy()) {
     Instruction *Trunc = cast<Instruction>(
-        Builder.CreateTrunc(V, IntegerType::get(Mod->getContext(), NewSize)));
+        Builder.CreateTrunc(V, IntegerType::get(Mod.getContext(), NewSize)));
     return cast<Instruction>(Builder.CreateBitCast(Trunc, NewVTy));
   }
 
   // For wider vectors, we must strip the MSBs to convert back to the original
   // type.
   VectorType *ExpandedVT = VectorType::get(
-      Type::getIntNTy(Mod->getContext(), NewVTy->getScalarSizeInBits()),
+      Type::getIntNTy(Mod.getContext(), NewVTy->getScalarSizeInBits()),
       (OriginalSize / NewVTy->getScalarSizeInBits()), false);
   Instruction *Converted =
       cast<Instruction>(Builder.CreateBitCast(V, ExpandedVT));
@@ -326,9 +294,8 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!Defs.count(II) && !isa<PHINode>(II)) {
+        if (!isa<PHINode>(II))
           Defs.insert(II);
-        }
       }
     }
   }
@@ -360,8 +327,8 @@ bool LiveRegOptimizer::optimizeLiveType(
         Type *NewType = calculateConvertType(Phi->getType());
         NewPhi->addIncoming(ConstantInt::get(NewType, 0, false),
                             Phi->getIncomingBlock(I));
-      } else if (ValMap.contains(IncVal) && ValMap[IncVal])
-        NewPhi->addIncoming(ValMap[IncVal], Phi->getIncomingBlock(I));
+      } else if (Value *Val = ValMap.lookup(IncVal))
+        NewPhi->addIncoming(Val, Phi->getIncomingBlock(I));
       else
         MissingIncVal = true;
     }
@@ -442,15 +409,15 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
   // Skip aggregate types.
   if (Ty->isAggregateType())
     return false;
-  unsigned TySize = DL->getTypeStoreSize(Ty);
+  unsigned TySize = DL.getTypeStoreSize(Ty);
   // Only handle sub-DWORD loads.
   if (TySize >= 4)
     return false;
   // That load must be at least naturally aligned.
-  if (LI.getAlign() < DL->getABITypeAlign(Ty))
+  if (LI.getAlign() < DL.getABITypeAlign(Ty))
     return false;
   // It should be uniform, i.e. a scalar load.
-  return UA->isUniform(&LI);
+  return UA.isUniform(&LI);
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
@@ -467,7 +434,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
 
   int64_t Offset = 0;
   auto *Base =
-      GetPointerBaseWithConstantOffset(LI.getPointerOperand(), Offset, *DL);
+      GetPointerBaseWithConstantOffset(LI.getPointerOperand(), Offset, DL);
   // If that base is not DWORD aligned, it's not safe to perform the following
   // transforms.
   if (!isDWORDAligned(Base))
@@ -484,8 +451,8 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
-  unsigned LdBits = DL->getTypeStoreSizeInBits(LI.getType());
-  auto IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
+  unsigned LdBits = DL.getTypeStoreSizeInBits(LI.getType());
+  auto *IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
 
   auto *NewPtr = IRB.CreateConstGEP1_64(
       IRB.getInt8Ty(),
@@ -505,16 +472,68 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   return true;
 }
 
-INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+PreservedAnalyses
+AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
+  UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
+
+  bool Changed = AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+class AMDGPULateCodeGenPrepareLegacy : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPULateCodeGenPrepareLegacy() : FunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "AMDGPU IR late optimizations";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override;
+};
+
+bool AMDGPULateCodeGenPrepareLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  AssumptionCache &AC =
+      getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+
+  return AMDGPULateCodeGenPrepare(F, ST, &AC, UI).run();
+}
+
+INITIALIZE_PASS_BEGIN(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                       "AMDGPU IR late optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPULateCodeGenPrepare, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 
-char AMDGPULateCodeGenPrepare::ID = 0;
+char AMDGPULateCodeGenPrepareLegacy::ID = 0;
 
-FunctionPass *llvm::createAMDGPULateCodeGenPreparePass() {
-  return new AMDGPULateCodeGenPrepare();
+FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass() {
+  return new AMDGPULateCodeGenPrepareLegacy();
 }

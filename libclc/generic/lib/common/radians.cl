@@ -21,8 +21,7 @@
  */
 
 #include <clc/clc.h>
-
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_OVERLOAD _CLC_DEF float radians(float degrees) {
   // pi/180 = ~0.01745329251994329577 or 0x1.1df46a2529d39p-6 or 0x1.1df46ap-6F

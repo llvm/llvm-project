@@ -50,7 +50,7 @@ DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
 }
 
 template <typename T, typename... U>
-std::tuple<bool, DynTypedNodeList, const T *, const U *...>
+static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
 matchParents(const DynTypedNodeList &NodeList,
              ParentMapContext::ParentMap *ParentMap);
 
@@ -107,7 +107,7 @@ class ParentMapContext::ParentMap {
       return DynTypedNode::create(*D);
     if (const auto *S = U.dyn_cast<const Stmt *>())
       return DynTypedNode::create(*S);
-    return *U.get<DynTypedNode *>();
+    return *cast<DynTypedNode *>(U);
   }
 
   template <typename NodeTy, typename MapTy>
@@ -127,17 +127,17 @@ public:
   ParentMap(ASTContext &Ctx);
   ~ParentMap() {
     for (const auto &Entry : PointerParents) {
-      if (Entry.second.is<DynTypedNode *>()) {
-        delete Entry.second.get<DynTypedNode *>();
-      } else if (Entry.second.is<ParentVector *>()) {
-        delete Entry.second.get<ParentVector *>();
+      if (auto *DTN = dyn_cast<DynTypedNode *>(Entry.second)) {
+        delete DTN;
+      } else if (auto *PV = dyn_cast<ParentVector *>(Entry.second)) {
+        delete PV;
       }
     }
     for (const auto &Entry : OtherParents) {
-      if (Entry.second.is<DynTypedNode *>()) {
-        delete Entry.second.get<DynTypedNode *>();
-      } else if (Entry.second.is<ParentVector *>()) {
-        delete Entry.second.get<ParentVector *>();
+      if (auto *DTN = dyn_cast<DynTypedNode *>(Entry.second)) {
+        delete DTN;
+      } else if (auto *PV = dyn_cast<ParentVector *>(Entry.second)) {
+        delete PV;
       }
     }
   }
@@ -392,14 +392,14 @@ private:
       else
         NodeOrVector = new DynTypedNode(ParentStack.back());
     } else {
-      if (!NodeOrVector.template is<ParentVector *>()) {
+      if (!isa<ParentVector *>(NodeOrVector)) {
         auto *Vector = new ParentVector(
             1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
         delete NodeOrVector.template dyn_cast<DynTypedNode *>();
         NodeOrVector = Vector;
       }
 
-      auto *Vector = NodeOrVector.template get<ParentVector *>();
+      auto *Vector = cast<ParentVector *>(NodeOrVector);
       // Skip duplicates for types that have memoization data.
       // We must check that the type has memoization data before calling
       // llvm::is_contained() because DynTypedNode::operator== can't compare all

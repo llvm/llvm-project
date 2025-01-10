@@ -470,4 +470,4 @@ void call_nonnull_variadic(int a, int *b) {
 
 // CHECK-UBSAN: ![[WEIGHT_MD]] = !{!"branch_weights", i32 1048575, i32 1}
 
-// CHECK-TRAP: attributes [[NR_NUW]] = { noreturn nounwind }
+// CHECK-TRAP: attributes [[NR_NUW]] = { nomerge noreturn nounwind }

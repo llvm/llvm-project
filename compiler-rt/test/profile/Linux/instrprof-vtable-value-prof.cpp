@@ -141,7 +141,6 @@
 // RUN:    -g -flto=thin -fwhole-program-vtables -fno-split-lto-unit -O2 \
 // RUN:    -mllvm -enable-vtable-value-profiling -Wl,-mllvm,-enable-vtable-value-profiling \
 // RUN:    -mllvm -enable-vtable-profile-use \
-// RUN:    -Wl,-plugin-opt,-import-assume-unique-local \
 // RUN:    -Wl,-mllvm,-enable-vtable-profile-use -Rpass=pgo-icall-prom \
 // RUN:    -Wl,-mllvm,-print-after=pgo-icall-prom \
 // RUN:    -Wl,-mllvm,-filter-print-funcs=main lib.cpp main.cpp 2>&1 \

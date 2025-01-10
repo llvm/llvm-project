@@ -17,6 +17,7 @@
 
 // CHECK2-NOT: _ZTVN5test31SIiEE
 // CHECK2-NOT: _ZTSN5test31SIiEE
+// CHECK2:  !{!"p1 _ZTSN5test31SIiEE",
 
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(ptr {{[^,]*}} %this) unnamed_addr
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiE6foobarIdEEvT_(

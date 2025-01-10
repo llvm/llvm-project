@@ -51,7 +51,7 @@ foreach(archive IN ZIP_LISTS
       PROPERTIES
         OUTPUT_NAME ${archive_1}.bc
     )
-    list(APPEND added_gpu_bitcode_targets ${archive_1}bitcode)
+    list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()
 
@@ -61,24 +61,13 @@ install(
   COMPONENT libc
 )
 
-if(LIBC_TARGET_OS_IS_GPU)
-  set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX})
-  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-    set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX}/${LLVM_HOST_TRIPLE})
-  endif()
-  install(
-    TARGETS ${added_gpu_archive_targets}
-    ARCHIVE DESTINATION ${gpu_install_dir}
-    COMPONENT libc
+foreach(file ${added_bitcode_targets})
+  install(FILES $<TARGET_FILE:${file}>
+          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+          RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
+          COMPONENT libc
   )
-  foreach(file ${added_gpu_bitcode_targets})
-    install(FILES $<TARGET_PROPERTY:${file},TARGET_OBJECT>
-            DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-            RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
-            COMPONENT libc
-    )
-  endforeach()
-endif()
+endforeach()
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   # For now we will disable libc-startup installation for baremetal. The
@@ -93,6 +82,7 @@ endif()
 
 add_custom_target(install-libc
                   DEPENDS ${added_archive_targets}
+                          ${added_bitcode_targets}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
@@ -100,6 +90,7 @@ add_custom_target(install-libc
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 add_custom_target(install-libc-stripped
                   DEPENDS ${added_archive_targets}
+                          ${added_bitcode_targets}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"

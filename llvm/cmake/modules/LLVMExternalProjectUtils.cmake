@@ -156,6 +156,32 @@ function(llvm_ExternalProject_Add name source_dir)
     set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
   endif ()
 
+  set(DEFAULT_PASSTHROUGH_VARIABLES
+    LibEdit_INCLUDE_DIRS
+    LibEdit_LIBRARIES
+    ZLIB_INCLUDE_DIR
+    ZLIB_LIBRARY
+    zstd_INCLUDE_DIR
+    zstd_LIBRARY
+    LIBXML2_LIBRARY
+    LIBXML2_INCLUDE_DIR
+    CURL_INCLUDE_DIR
+    CURL_LIBRARY
+    HTTPLIB_INCLUDE_DIR
+    HTTPLIB_HEADER_PATH
+    Python3_EXECUTABLE
+    Python3_LIBRARIES
+    Python3_INCLUDE_DIRS
+    Python3_RPATH
+    )
+  foreach(variable ${DEFAULT_PASSTHROUGH_VARIABLES})
+    get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+    if(${is_value_set})
+      get_property(value CACHE ${variable} PROPERTY VALUE)
+      list(APPEND CMAKE_CACHE_DEFAULT_ARGS "-D${variable}:STRING=${value}")
+    endif()
+  endforeach()
+
   # Find all variables that start with a prefix and propagate them through
   get_cmake_property(variableNames VARIABLES)
 
@@ -363,6 +389,7 @@ function(llvm_ExternalProject_Add name source_dir)
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}
+    CMAKE_CACHE_DEFAULT_ARGS ${CMAKE_CACHE_DEFAULT_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1

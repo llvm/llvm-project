@@ -35,9 +35,9 @@ define float @PR35982_emms(<1 x i64>) nounwind {
   %2 = bitcast <1 x i64> %0 to <2 x i32>
   %3 = extractelement <2 x i32> %2, i32 0
   %4 = extractelement <1 x i64> %0, i32 0
-  %5 = bitcast i64 %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx %5, x86_mmx %5)
-  %7 = bitcast x86_mmx %6 to <2 x i32>
+  %5 = bitcast i64 %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64> %5, <1 x i64> %5)
+  %7 = bitcast <1 x i64> %6 to <2 x i32>
   %8 = extractelement <2 x i32> %7, i32 0
   tail call void @llvm.x86.mmx.emms()
   %9 = sitofp i32 %3 to float
@@ -46,5 +46,5 @@ define float @PR35982_emms(<1 x i64>) nounwind {
   ret float %11
 }
 
-declare x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64>, <1 x i64>)
 declare void @llvm.x86.mmx.emms()

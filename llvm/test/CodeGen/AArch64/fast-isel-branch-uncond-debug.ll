@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
-; RUN: llc --try-experimental-debuginfo-iterators -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
+; RUN: llc --preserve-input-debuginfo-format=true -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
 
 define dso_local i32 @a() #0 !dbg !7 {
 entry:

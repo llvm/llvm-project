@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
 namespace llvm {
@@ -29,6 +30,10 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
 
   {
     std::lock_guard<std::mutex> Lock(DispatchMutex);
+
+    // Reject new tasks if they're dispatched after a call to shutdown.
+    if (Shutdown)
+      return;
 
     if (IsMaterializationTask) {
 
@@ -53,6 +58,14 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
       // Run the task.
       T->run();
 
+      // Reset the task to free any resources. We need this to happen *before*
+      // we notify anyone (via Outstanding) that this thread is done to ensure
+      // that we don't proceed with JIT shutdown while still holding resources.
+      // (E.g. this was causing "Dangling SymbolStringPtr" assertions).
+      T.reset();
+
+      // Check the work queue state and either proceed with the next task or
+      // end this thread.
       std::lock_guard<std::mutex> Lock(DispatchMutex);
       if (!MaterializationTaskQueue.empty()) {
         // If there are any materialization tasks running then steal that work.
@@ -63,11 +76,11 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
           IsMaterializationTask = true;
         }
       } else {
-        // Otherwise decrement work counters.
         if (IsMaterializationTask)
           --NumMaterializationThreads;
         --Outstanding;
-        OutstandingCV.notify_all();
+        if (Outstanding == 0)
+          OutstandingCV.notify_all();
         return;
       }
     }
@@ -76,7 +89,7 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
 
 void DynamicThreadPoolTaskDispatcher::shutdown() {
   std::unique_lock<std::mutex> Lock(DispatchMutex);
-  Running = false;
+  Shutdown = true;
   OutstandingCV.wait(Lock, [this]() { return Outstanding == 0; });
 }
 #endif

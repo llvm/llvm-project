@@ -94,6 +94,12 @@ static cl::opt<bool>
                 cl::desc("Prefer hex format for immediate values"),
                 cl::cat(MCCategory));
 
+static cl::opt<bool>
+    HexBytes("hex",
+             cl::desc("Take raw hexadecimal bytes as input for disassembly. "
+                      "Whitespace is ignored"),
+             cl::cat(MCCategory));
+
 static cl::list<std::string>
     DefineSymbol("defsym",
                  cl::desc("Defines a symbol to be an integer constant"),
@@ -103,6 +109,10 @@ static cl::opt<bool>
     PreserveComments("preserve-comments",
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::cat(MCCategory));
+
+static cl::opt<unsigned> CommentColumn("comment-column",
+                                       cl::desc("Asm comments indentation"),
+                                       cl::init(40));
 
 enum OutputFileType {
   OFT_Null,
@@ -405,6 +415,7 @@ int main(int argc, char **argv) {
     }
   }
   MAI->setPreserveAsmComments(PreserveComments);
+  MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
   std::string FeaturesStr;
@@ -558,7 +569,9 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->initSections(true, *STI);
+      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
+                              VersionTuple());
   }
 
   int Res = 1;
@@ -585,7 +598,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, MCOptions);
+                                    SrcMgr, Ctx, MCOptions, HexBytes);
 
   // Keep output if no errors.
   if (Res == 0) {

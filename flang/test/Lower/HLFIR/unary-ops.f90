@@ -69,9 +69,9 @@ subroutine test_negate_complex(res, x)
   res = -x
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_negate_complex(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_5:.*]] = fir.negc %[[VAL_4]] : !fir.complex<4>
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_5:.*]] = fir.negc %[[VAL_4]] : complex<f32>
 
 subroutine test_complex_component_real(res, x)
   real :: res
@@ -79,9 +79,9 @@ subroutine test_complex_component_real(res, x)
   res = real(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_complex_component_real(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_5:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (!fir.complex<4>) -> f32
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_5:.*]] = fir.extract_value %[[VAL_4]], [0 : index] : (complex<f32>) -> f32
 
 subroutine test_complex_component_imag(res, x)
   real :: res
@@ -89,6 +89,6 @@ subroutine test_complex_component_imag(res, x)
   res = aimag(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_complex_component_imag(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_5:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (!fir.complex<4>) -> f32
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}x"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<complex<f32>>
+! CHECK:  %[[VAL_5:.*]] = fir.extract_value %[[VAL_4]], [1 : index] : (complex<f32>) -> f32

@@ -107,6 +107,10 @@ protected:
                              mlir::Value box,
                              mlir::ConversionPatternRewriter &rewriter) const;
 
+  mlir::Value getExtraFromBox(mlir::Location loc, TypePair boxTy,
+                              mlir::Value box,
+                              mlir::ConversionPatternRewriter &rewriter) const;
+
   // Get the element type given an LLVM type that is of the form
   // (array|struct|vector)+ and the provided indexes.
   mlir::Type getBoxEleTy(mlir::Type type,
@@ -191,6 +195,8 @@ template <typename SourceOp>
 class FIROpConversion : public ConvertFIRToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
+  using OneToNOpAdaptor = typename SourceOp::template GenericAdaptor<
+      mlir::ArrayRef<mlir::ValueRange>>;
 
   explicit FIROpConversion(const LLVMTypeConverter &typeConverter,
                            const fir::FIRToLLVMPassOptions &options,
@@ -205,6 +211,12 @@ public:
     rewrite(mlir::cast<SourceOp>(op),
             OpAdaptor(operands, mlir::cast<SourceOp>(op)), rewriter);
   }
+  void rewrite(mlir::Operation *op, mlir::ArrayRef<mlir::ValueRange> operands,
+               mlir::ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = llvm::cast<SourceOp>(op);
+    rewrite(llvm::cast<SourceOp>(op), OneToNOpAdaptor(operands, sourceOp),
+            rewriter);
+  }
   llvm::LogicalResult match(mlir::Operation *op) const final {
     return match(mlir::cast<SourceOp>(op));
   }
@@ -215,7 +227,14 @@ public:
                            OpAdaptor(operands, mlir::cast<SourceOp>(op)),
                            rewriter);
   }
-
+  llvm::LogicalResult
+  matchAndRewrite(mlir::Operation *op,
+                  mlir::ArrayRef<mlir::ValueRange> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = mlir::cast<SourceOp>(op);
+    return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
+                           rewriter);
+  }
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
   virtual llvm::LogicalResult match(SourceOp op) const {
@@ -225,6 +244,12 @@ public:
                        mlir::ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override rewrite or matchAndRewrite");
   }
+  virtual void rewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                       mlir::ConversionPatternRewriter &rewriter) const {
+    llvm::SmallVector<mlir::Value> oneToOneOperands =
+        getOneToOneAdaptorOperands(adaptor.getOperands());
+    rewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+  }
   virtual llvm::LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const {
@@ -232,6 +257,13 @@ public:
       return mlir::failure();
     rewrite(op, adaptor, rewriter);
     return mlir::success();
+  }
+  virtual llvm::LogicalResult
+  matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const {
+    llvm::SmallVector<mlir::Value> oneToOneOperands =
+        getOneToOneAdaptorOperands(adaptor.getOperands());
+    return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
   }
 
 private:

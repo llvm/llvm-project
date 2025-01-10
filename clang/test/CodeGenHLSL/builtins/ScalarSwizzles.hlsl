@@ -20,7 +20,7 @@ float4 ToFourFloats(float V){
 
 // CHECK-LABEL: FillOne
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x i32>, align 4
-// CHECK: store <1 x i32> <i32 1>, ptr [[vec1Ptr]], align 4
+// CHECK: store <1 x i32> splat (i32 1), ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x i32>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec2:%.*]] = shufflevector <1 x i32> [[vec1]], <1 x i32> poison, <2 x i32> zeroinitializer
 // CHECK: ret <2 x i32> [[vec2]]
@@ -30,7 +30,7 @@ int2 FillOne(){
 
 // CHECK-LABEL: FillOneUnsigned
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x i32>, align 4
-// CHECK: store <1 x i32> <i32 1>, ptr [[vec1Ptr]], align 4
+// CHECK: store <1 x i32> splat (i32 1), ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x i32>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec3:%.*]] = shufflevector <1 x i32> [[vec1]], <1 x i32> poison, <3 x i32> zeroinitializer
 // CHECK: ret <3 x i32> [[vec3]]
@@ -40,7 +40,7 @@ uint3 FillOneUnsigned(){
 
 // CHECK-LABEL: FillOneUnsignedLong
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x i64>, align 8
-// CHECK: store <1 x i64> <i64 1>, ptr [[vec1Ptr]], align 8
+// CHECK: store <1 x i64> splat (i64 1), ptr [[vec1Ptr]], align 8
 // CHECK: [[vec1:%.*]] = load <1 x i64>, ptr [[vec1Ptr]], align 8
 // CHECK: [[vec4:%.*]] = shufflevector <1 x i64> [[vec1]], <1 x i64> poison, <4 x i32> zeroinitializer
 // CHECK: ret <4 x i64> [[vec4]]
@@ -50,7 +50,7 @@ vector<uint64_t,4> FillOneUnsignedLong(){
 
 // CHECK-LABEL: FillTwoPointFive
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x double>, align 8
-// CHECK: store <1 x double> <double 2.500000e+00>, ptr [[vec1Ptr]], align 8
+// CHECK: store <1 x double> splat (double 2.500000e+00), ptr [[vec1Ptr]], align 8
 // CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[vec1Ptr]], align 8
 // CHECK: [[vec2:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <2 x i32> zeroinitializer
 // CHECK: ret <2 x double> [[vec2]]
@@ -60,7 +60,7 @@ double2 FillTwoPointFive(){
 
 // CHECK-LABEL: FillOneHalf
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x double>, align 8
-// CHECK: store <1 x double> <double 5.000000e-01>, ptr [[vec1Ptr]], align 8
+// CHECK: store <1 x double> splat (double 5.000000e-01), ptr [[vec1Ptr]], align 8
 // CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[vec1Ptr]], align 8
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
 // CHECK: ret <3 x double> [[vec3]]
@@ -70,7 +70,7 @@ double3 FillOneHalf(){
 
 // CHECK-LABEL: FillTwoPointFiveFloat
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
-// CHECK: store <1 x float> <float 2.500000e+00>, ptr [[vec1Ptr]], align 4
+// CHECK: store <1 x float> splat (float 2.500000e+00), ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec4:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <4 x i32> zeroinitializer
 // CHECK: ret <4 x float> [[vec4]]
@@ -83,7 +83,7 @@ float4 FillTwoPointFiveFloat(){
 
 // CHECK-LABEL: FillOneHalfFloat
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
-// CHECK: store <1 x float> <float 5.000000e-01>, ptr [[vec1Ptr]], align 4
+// CHECK: store <1 x float> splat (float 5.000000e-01), ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
 // CHECK: [[el0:%.*]] = extractelement <1 x float> [[vec1]], i32 0
 // CHECK: [[vec1Splat:%.*]] = insertelement <1 x float> poison, float [[el0]], i64 0
@@ -116,10 +116,10 @@ float2 HowManyFloats(float V) {
 
 // CHECK-LABEL: AllRighty
 // CHECK: [[Tmp:%.*]] = alloca <1 x double>, align 8
-// CHECK: store <1 x double> <double 1.000000e+00>, ptr [[Tmp]], align 8
+// CHECK: store <1 x double> splat (double 1.000000e+00), ptr [[Tmp]], align 8
 // CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[Tmp]], align 8
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
-// CHECK: [[vec3f:%.*]] = fptrunc <3 x double> [[vec3]] to <3 x float>
+// CHECK: [[vec3f:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn <3 x double> [[vec3]] to <3 x float>
 // CHECK: ret <3 x float> [[vec3f]]
 
 float3 AllRighty() {
@@ -128,7 +128,7 @@ float3 AllRighty() {
 
 // CHECK-LABEL: AllRighty2
 // CHECK: [[vec1Ptr:%.*]] = alloca <1 x float>, align 4
-// CHECK: store <1 x float> <float 1.000000e+00>, ptr [[vec1Ptr]], align 4
+// CHECK: store <1 x float> splat (float 1.000000e+00), ptr [[vec1Ptr]], align 4
 // CHECK: [[vec1:%.*]] = load <1 x float>, ptr [[vec1Ptr]], align 4
 // CHECK: [[vec3:%.*]] = shufflevector <1 x float> [[vec1]], <1 x float> poison, <3 x i32>
 // CHECK: ret <3 x float> [[vec3]]

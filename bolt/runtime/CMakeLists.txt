@@ -61,7 +61,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_SYSTEM_NAME STREQUAL "Da
     instr.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
-  set_target_properties(bolt_rt_instr_osx PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_DIR}")
+  set_target_properties(bolt_rt_instr_osx PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_INSTALL_LIBDIR}${LLVM_LIBDIR_SUFFIX}")
   target_include_directories(bolt_rt_instr_osx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
   target_compile_options(bolt_rt_instr_osx PRIVATE
     -target x86_64-apple-darwin19.6.0

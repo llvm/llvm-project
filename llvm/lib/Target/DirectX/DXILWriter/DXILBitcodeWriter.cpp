@@ -749,8 +749,8 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
-    if (FPMO->hasAllowReassoc())
-      Flags |= bitc::AllowReassoc;
+    if (FPMO->hasAllowReassoc() || FPMO->hasAllowContract())
+      Flags |= bitc::UnsafeAlgebra;
     if (FPMO->hasNoNaNs())
       Flags |= bitc::NoNaNs;
     if (FPMO->hasNoInfs())
@@ -759,10 +759,6 @@ uint64_t DXILBitcodeWriter::getOptimizationFlags(const Value *V) {
       Flags |= bitc::NoSignedZeros;
     if (FPMO->hasAllowReciprocal())
       Flags |= bitc::AllowReciprocal;
-    if (FPMO->hasAllowContract())
-      Flags |= bitc::AllowContract;
-    if (FPMO->hasApproxFunc())
-      Flags |= bitc::ApproxFunc;
   }
 
   return Flags;
@@ -1345,7 +1341,7 @@ void DXILBitcodeWriter::writeValueAsMetadata(
     Ty = TypedPointerType::get(F->getFunctionType(), F->getAddressSpace());
   else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
     Ty = TypedPointerType::get(GV->getValueType(), GV->getAddressSpace());
-  Record.push_back(getTypeID(Ty));
+  Record.push_back(getTypeID(Ty, V));
   Record.push_back(VE.getValueID(V));
   Stream.EmitRecord(bitc::METADATA_VALUE, Record, 0);
   Record.clear();

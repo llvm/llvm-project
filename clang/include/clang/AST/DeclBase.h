@@ -271,16 +271,12 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
-  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
+  bool isInSemaDC() const { return isa<DeclContext *>(DeclCtx); }
+  bool isOutOfSemaDC() const { return isa<MultipleDC *>(DeclCtx); }
 
-  MultipleDC *getMultipleDC() const {
-    return DeclCtx.get<MultipleDC*>();
-  }
+  MultipleDC *getMultipleDC() const { return cast<MultipleDC *>(DeclCtx); }
 
-  DeclContext *getSemanticDC() const {
-    return DeclCtx.get<DeclContext*>();
-  }
+  DeclContext *getSemanticDC() const { return cast<DeclContext *>(DeclCtx); }
 
   /// Loc - The location of this decl.
   SourceLocation Loc;
@@ -324,6 +320,7 @@ private:
   static bool StatisticsEnabled;
 
 protected:
+  friend class ASTDeclMerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -670,11 +667,24 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
+  /// Whether this declaration comes from global module.
+  bool isFromGlobalModule() const;
+
   /// Whether this declaration comes from a named module.
   bool isInNamedModule() const;
+
+  /// Whether this declaration comes from a header unit.
+  bool isFromHeaderUnit() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -1326,7 +1336,7 @@ public:
       assert(Ptr && "dereferencing end() iterator");
       if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
         return CurNode->D;
-      return Ptr.get<NamedDecl*>();
+      return cast<NamedDecl *>(Ptr);
     }
     void operator->() const { } // Unsupported.
     bool operator==(const iterator &X) const { return Ptr == X.Ptr; }

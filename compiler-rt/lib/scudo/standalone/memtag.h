@@ -122,9 +122,12 @@ inline NORETURN void enableSystemMemoryTaggingTestOnly() {
 
 class ScopedDisableMemoryTagChecks {
   uptr PrevTCO;
+  bool active;
 
 public:
-  ScopedDisableMemoryTagChecks() {
+  ScopedDisableMemoryTagChecks(bool cond = true) : active(cond) {
+    if (!active)
+      return;
     __asm__ __volatile__(
         R"(
         .arch_extension memtag
@@ -135,6 +138,8 @@ public:
   }
 
   ~ScopedDisableMemoryTagChecks() {
+    if (!active)
+      return;
     __asm__ __volatile__(
         R"(
         .arch_extension memtag
@@ -269,7 +274,7 @@ inline NORETURN void enableSystemMemoryTaggingTestOnly() {
 }
 
 struct ScopedDisableMemoryTagChecks {
-  ScopedDisableMemoryTagChecks() {}
+  ScopedDisableMemoryTagChecks(UNUSED bool cond = true) {}
 };
 
 inline NORETURN uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {

@@ -161,7 +161,7 @@ class NamespaceTestCase(TestBase):
         # On Mac OS X, gcc 4.2 emits the wrong debug info with respect to
         # types.
         slist = ["(int) a = 12", "anon_uint", "a_uint", "b_uint", "y_uint"]
-        if self.platformIsDarwin() and self.getCompiler() in ["clang", "llvm-gcc"]:
+        if self.platformIsDarwin() and self.getCompiler() in ["clang"]:
             slist = [
                 "(int) a = 12",
                 "::my_uint_t",
@@ -207,6 +207,12 @@ class NamespaceTestCase(TestBase):
             startstr="(int) (anonymous namespace)::i = 3",
             patterns=[" = 3"],
         )
+
+        # Search for a type in an anonymous namespace, both with and without the
+        # namespace prefix.
+        self.expect("type lookup -- my_uint_t", substrs=["unsigned int"])
+        self.expect("type lookup -- (anonymous namespace)::my_uint_t",
+                    substrs=["unsigned int"])
 
         # rdar://problem/8660275
         # test/namespace: 'expression -- i+j' not working

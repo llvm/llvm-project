@@ -13,11 +13,11 @@
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "Clauses.h"
-#include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -53,11 +53,12 @@ public:
       : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
+  bool processBare(mlir::omp::BareClauseOps &result) const;
+  bool processBind(mlir::omp::BindClauseOps &result) const;
   bool
   processCollapse(mlir::Location currentLocation, lower::pft::Evaluation &eval,
-                  mlir::omp::CollapseClauseOps &result,
+                  mlir::omp::LoopRelatedClauseOps &result,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
-  bool processDefault() const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -69,9 +70,7 @@ public:
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
       mlir::omp::HasDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSymbols) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
@@ -92,6 +91,7 @@ public:
                           mlir::omp::ThreadLimitClauseOps &result) const;
   bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
+  bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
@@ -105,43 +105,35 @@ public:
                  mlir::omp::IfClauseOps &result) const;
   bool processIsDevicePtr(
       mlir::omp::IsDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSymbols) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
   // This method is used to process a map clause.
-  // The optional parameters - mapSymTypes, mapSymLocs & mapSyms are used to
-  // store the original type, location and Fortran symbol for the map operands.
-  // They may be used later on to create the block_arguments for some of the
-  // target directives that require it.
-  bool processMap(
-      mlir::Location currentLocation, lower::StatementContext &stmtCtx,
-      mlir::omp::MapClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms = nullptr,
-      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
-  bool processReduction(
-      mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *reductionSyms =
-          nullptr) const;
-  bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
-  bool processUseDeviceAddr(
-      mlir::omp::UseDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
-  bool processUseDevicePtr(
-      mlir::omp::UseDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-      llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
-
-  template <typename T>
+  // The optional parameter mapSyms is used to store the original Fortran symbol
+  // for the map operands. It may be used later on to create the block_arguments
+  // for some of the directives that require it.
+  bool processMap(mlir::Location currentLocation,
+                  lower::StatementContext &stmtCtx,
+                  mlir::omp::MapClauseOps &result,
+                  llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
+                      nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,
                             mlir::omp::MapClauseOps &result);
+  bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
+  bool processReduction(
+      mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
+  bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool processUseDeviceAddr(
+      lower::StatementContext &stmtCtx,
+      mlir::omp::UseDeviceAddrClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
+  bool processUseDevicePtr(
+      lower::StatementContext &stmtCtx,
+      mlir::omp::UseDevicePtrClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const;
+
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
   // clauses is found.
@@ -173,77 +165,18 @@ private:
   template <typename T>
   bool markClauseOccurrence(mlir::UnitAttr &result) const;
 
+  void processMapObjects(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+      llvm::SmallVectorImpl<mlir::Value> &mapVars,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
+
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   List<Clause> clauses;
 };
-
-template <typename T>
-bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
-                                           mlir::omp::MapClauseOps &result) {
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
-  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
-
-  bool clauseFound = findRepeatableClause<T>(
-      [&](const T &clause, const parser::CharBlock &source) {
-        mlir::Location clauseLocation = converter.genLocation(source);
-        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-        static_assert(std::is_same_v<T, omp::clause::To> ||
-                      std::is_same_v<T, omp::clause::From>);
-
-        // TODO Support motion modifiers: present, mapper, iterator.
-        constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-            std::is_same_v<T, omp::clause::To>
-                ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
-                : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-
-        auto &objects = std::get<ObjectList>(clause.t);
-        for (const omp::Object &object : objects) {
-          llvm::SmallVector<mlir::Value> bounds;
-          std::stringstream asFortran;
-
-          lower::AddrAndBoundsInfo info =
-              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
-                                                    mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
-                  object.ref(), clauseLocation, asFortran, bounds,
-                  treatIndexAsSection);
-
-          auto origSymbol = converter.getSymbolAddress(*object.sym());
-          mlir::Value symAddr = info.addr;
-          if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
-            symAddr = origSymbol;
-
-          // Explicit map captures are captured ByRef by default,
-          // optimisation passes may alter this to ByCopy or other capture
-          // types to optimise
-          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr,
-              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
-              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
-              static_cast<
-                  std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                  mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
-
-          if (object.sym()->owner().IsDerivedType()) {
-            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
-                                        semaCtx);
-          } else {
-            result.mapVars.push_back(mapOp);
-            mapSymbols.push_back(object.sym());
-          }
-        }
-      });
-
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               mapSymbols,
-                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
-  return clauseFound;
-}
 
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,

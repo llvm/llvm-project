@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -130,13 +131,8 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // the file could also have been removed during processing. Since we can't
   // really deal with this situation, just create an empty buffer.
   if (!BufferOrError) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_cannot_open_file,
-                                ContentsEntry->getName(),
-                                BufferOrError.getError().message());
-    else
-      Diag.Report(Loc, diag::err_cannot_open_file)
-          << ContentsEntry->getName() << BufferOrError.getError().message();
+    Diag.Report(Loc, diag::err_cannot_open_file)
+        << ContentsEntry->getName() << BufferOrError.getError().message();
 
     return std::nullopt;
   }
@@ -153,12 +149,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // ContentsEntry::getSize() could have the wrong size. Use
   // MemoryBuffer::getBufferSize() instead.
   if (Buffer->getBufferSize() >= std::numeric_limits<unsigned>::max()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_too_large,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_too_large)
-        << ContentsEntry->getName();
+    Diag.Report(Loc, diag::err_file_too_large) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -166,14 +157,12 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Unless this is a named pipe (in which case we can handle a mismatch),
   // check that the file's size is the same as in the file entry (which may
   // have come from a stat cache).
+  // The buffer will always be larger than the file size on z/OS in the presence
+  // of characters outside the base character set.
+  assert(Buffer->getBufferSize() >= (size_t)ContentsEntry->getSize());
   if (!ContentsEntry->isNamedPipe() &&
-      Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
-    if (Diag.isDiagnosticInFlight())
-      Diag.SetDelayedDiagnostic(diag::err_file_modified,
-                                ContentsEntry->getName());
-    else
-      Diag.Report(Loc, diag::err_file_modified)
-        << ContentsEntry->getName();
+      Buffer->getBufferSize() < (size_t)ContentsEntry->getSize()) {
+    Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
 
     return std::nullopt;
   }
@@ -350,6 +339,7 @@ void SourceManager::clearIDTables() {
   LastLineNoContentCache = nullptr;
   LastFileIDLookup = FileID();
 
+  IncludedLocMap.clear();
   if (LineTable)
     LineTable->clear();
 
@@ -597,6 +587,17 @@ SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
 					  FileCharacter);
 }
 
+/// Helper function to determine if an input file requires conversion
+bool needConversion(StringRef Filename) {
+#ifdef __MVS__
+  llvm::ErrorOr<bool> NeedConversion =
+      llvm::needzOSConversion(Filename.str().c_str());
+  return NeedConversion && *NeedConversion;
+#else
+  return false;
+#endif
+}
+
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -616,6 +617,20 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
+  bool NeedConversion = needConversion(Filename);
+  if (NeedConversion) {
+    // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
+    // conversion.
+    if (std::optional<llvm::MemoryBufferRef> Buffer =
+            File.getBufferOrNone(Diag, getFileManager())) {
+      unsigned BufSize = Buffer->getBufferSize();
+      if (BufSize > FileSize) {
+        if (File.ContentsEntry.has_value())
+          File.ContentsEntry->updateFileEntryBufferSize(BufSize);
+        FileSize = BufSize;
+      }
+    }
+  }
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
     Diag.Report(IncludePos, diag::err_sloc_space_too_large);
@@ -679,7 +694,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    Diag.Report(diag::err_sloc_space_too_large);
     // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
     // use a source location from `Info` to point at an error.
     // Currently, both cause Clang to run indefinitely, this needs to be fixed.
@@ -2038,8 +2053,7 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
   if (InSameTU.first)
     return InSameTU.second;
-  // TODO: This should be unreachable, but some clients are calling this
-  //       function before making sure LHS and RHS are in the same TU.
+  // This case is used by libclang: clang_isBeforeInTranslationUnit
   return LOffs.first < ROffs.first;
 }
 
@@ -2310,8 +2324,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
   uint64_t LoadedUsage = MaxLoadedOffset - CurrentLoadedOffset;
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
-  Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-    << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage) << UsagePercent;
+  Diag.Report(diag::note_total_sloc_usage)
+      << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
+      << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;
@@ -2325,7 +2340,7 @@ void SourceManager::noteSLocAddressSpaceUsage(
 
   // Describe any remaining usage not reported in the per-file usage.
   if (ReportedSize != CountedSize) {
-    Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
+    Diag.Report(diag::note_file_misc_sloc_usage)
         << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
   }
 }

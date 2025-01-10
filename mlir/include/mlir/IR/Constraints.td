@@ -93,6 +93,12 @@ class Or<list<Pred> children> : CombinedPred<PredCombinerOr, children>;
 // A predicate that holds if its child does not.
 class Neg<Pred child> : CombinedPred<PredCombinerNot, [child]>;
 
+// A predicate that is always true.
+defvar TruePred = And<[]>;
+
+// A predicate that is always false.
+defvar False = Or<[]>;
+
 // A predicate that substitutes "pat" with "repl" in predicate calls of the
 // leaves of the predicate tree (i.e., not CombinedPred).
 //
@@ -149,10 +155,14 @@ class Constraint<Pred pred, string desc = ""> {
 
 // Subclass for constraints on a type.
 class TypeConstraint<Pred predicate, string summary = "",
-                     string cppClassNameParam = "::mlir::Type"> :
+                     string cppTypeParam = "::mlir::Type",
+                     string cppFunctionNameParam = ""> :
     Constraint<predicate, summary> {
   // The name of the C++ Type class if known, or Type if not.
-  string cppClassName = cppClassNameParam;
+  string cppType = cppTypeParam;
+  // The name of the C++ function that is generated for this type constraint.
+  // If empty, no C++ function is generated.
+  string cppFunctionName = cppFunctionNameParam;
 }
 
 // Subclass for constraints on an attribute.

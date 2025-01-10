@@ -46,9 +46,9 @@ int main() {
 // CHECK-NEXT: br i1 %
 // CHECK: call void @llvm.memset.p0.i64(ptr align 8 [[DIMS]], i8 0, i64 24, i1 false)
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
 // CHECK: store i64 %{{.+}}, ptr %
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
 // CHECK: store i64 1, ptr %
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
 // CHECK-NORMAL: call void @__kmpc_doacross_init(ptr [[IDENT]], i32 [[GTID]], i32 1, ptr [[DIM]])
@@ -101,9 +101,9 @@ int main1() {
 // CHECK-NEXT: br i1 %
 // CHECK: call void @llvm.memset.p0.i64(ptr align 8 [[DIMS]], i8 0, i64 24, i1 false)
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
 // CHECK: store i64 %{{.+}}, ptr %
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
 // CHECK: store i64 1, ptr %
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [1 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
 // CHECK-NORMAL: call void @__kmpc_doacross_init(ptr [[IDENT]], i32 [[GTID]], i32 1, ptr [[DIM]])
@@ -165,14 +165,14 @@ struct TestStruct {
 // CHECK-NORMAL: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[IDENT:@.+]])
 // CHECK: call void @llvm.memset.p0.i64(ptr align 8 [[DIMS]], i8 0, i64 48, i1 false)
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [2 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
 // CHECK: store i64 10, ptr %
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
 // CHECK: store i64 1, ptr %
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [2 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 1
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 1
 // CHECK: store i64 %{{.+}}, ptr %
-// CHECK: getelementptr inbounds [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
+// CHECK: getelementptr inbounds nuw [[KMP_DIM]], ptr [[DIM]], i32 0, i32 2
 // CHECK: store i64 1, ptr %
 // CHECK: [[DIM:%.+]] = getelementptr inbounds [2 x [[KMP_DIM]]], ptr [[DIMS]], i64 0, i64 0
 // CHECK-NORMAL: call void @__kmpc_doacross_init(ptr [[IDENT]], i32 [[GTID]], i32 2, ptr [[DIM]])

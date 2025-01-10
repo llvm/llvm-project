@@ -26,10 +26,7 @@ MachineModuleInfoImpl::~MachineModuleInfoImpl() = default;
 
 void MachineModuleInfo::initialize() {
   ObjFileMMI = nullptr;
-  CurCallSite = 0;
   NextFnNum = 0;
-  UsesMSVCFloatingPoint = false;
-  DbgInfoAvailable = false;
 }
 
 void MachineModuleInfo::finalize() {
@@ -47,12 +44,11 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
-  CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
   TheModule = MMI.TheModule;
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
                        nullptr, &TM->Options.MCOptions, false) {
@@ -60,7 +56,7 @@ MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
   initialize();
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
@@ -90,7 +86,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
   if (I.second) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
-    MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF = new MachineFunction(F, TM, STI, getContext(), NextFnNum++);
     MF->initTargetMachineFunctionInfo(STI);
 
     // MRI callback for target specific initializations.
@@ -155,13 +151,13 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM)
+    const TargetMachine *TM)
     : ImmutablePass(ID), MMI(TM) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM, MCContext *ExtContext)
+    const TargetMachine *TM, MCContext *ExtContext)
     : ImmutablePass(ID), MMI(TM, ExtContext) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
@@ -210,7 +206,6 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return false;
 }
 
@@ -235,6 +230,5 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return Result(MMI);
 }

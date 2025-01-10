@@ -587,6 +587,10 @@ func.func @arith_float_to_int_cast_ops(%arg0: f32, %arg1: f64) {
   // CHECK: emitc.cast %[[CAST0]] : ui32 to i32
   %4 = arith.fptoui %arg0 : f32 to i32
 
+  // CHECK: %[[CAST0:.*]] = emitc.cast %arg0 : f32 to ui16
+  // CHECK: emitc.cast %[[CAST0]] : ui16 to i16
+  %5 = arith.fptoui %arg0 : f32 to i16
+
   return
 }
 
@@ -716,4 +720,22 @@ func.func @arith_index_castui(%arg0: i32) -> i32 {
   %bool = arith.index_castui %idx : index to i1
 
   return %int : i32
+}
+
+// -----
+
+func.func @arith_divui_remui(%arg0: i32, %arg1: i32) -> i32 {
+  // CHECK-LABEL: arith_divui_remui
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32, %[[Arg1:[^ ]*]]: i32)
+  // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv1:.*]] = emitc.cast %[[Arg1]] : i32 to ui32
+  // CHECK: %[[Div:.*]] = emitc.div %[[Conv0]], %[[Conv1]] : (ui32, ui32) -> ui32
+  %div = arith.divui %arg0, %arg1 : i32
+
+  // CHECK: %[[Conv2:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv3:.*]] = emitc.cast %[[Arg1]] : i32 to ui32
+  // CHECK: %[[Rem:.*]] = emitc.rem %[[Conv2]], %[[Conv3]] : (ui32, ui32) -> ui32
+  %rem = arith.remui %arg0, %arg1 : i32
+
+  return %div : i32
 }

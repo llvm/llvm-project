@@ -506,7 +506,7 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
-  TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
+  TempLoopID = MDNode::getTemporary(Header->getContext(), {});
 }
 
 void LoopInfo::finish() {
@@ -811,7 +811,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   // Identify loop attribute 'code_align' from Attrs.
   // For attribute code_align:
   // n - 'llvm.loop.align i32 n' metadata will be emitted.
-  if (const auto *CodeAlign = getSpecificAttr<const CodeAlignAttr>(Attrs)) {
+  if (const auto *CodeAlign = getSpecificAttr<CodeAlignAttr>(Attrs)) {
     const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
     llvm::APSInt ArgVal = CE->getResultAsAPSInt();
     setCodeAlign(ArgVal.getSExtValue());

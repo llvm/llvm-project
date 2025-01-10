@@ -43,8 +43,12 @@ define void @widget(float %arg) nounwind {
 ; FRAME-NEXT:    xorl %r8d, %r8d
 ; FRAME-NEXT:    callq *%rsi
 ; FRAME-NEXT:    movss %xmm6, 0
+; FRAME-NEXT:    pushq %rbp
+; FRAME-NEXT:    pushq %rax
 ; FRAME-NEXT:    #APP
 ; FRAME-NEXT:    #NO_APP
+; FRAME-NEXT:    popq %rax
+; FRAME-NEXT:    popq %rbp
 ; FRAME-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; FRAME-NEXT:    addq $48, %rsp
 ; FRAME-NEXT:    pop2 %r15, %rsi

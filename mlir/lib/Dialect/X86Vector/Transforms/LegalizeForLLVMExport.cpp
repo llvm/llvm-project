@@ -37,7 +37,7 @@ namespace {
 /// results of multi-result intrinsic ops.
 template <typename OpTy, typename Intr32OpTy, typename Intr64OpTy>
 struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
-  explicit LowerToIntrinsic(LLVMTypeConverter &converter)
+  explicit LowerToIntrinsic(const LLVMTypeConverter &converter)
       : OpConversionPattern<OpTy>(converter, &converter.getContext()) {}
 
   const LLVMTypeConverter &getTypeConverter() const {
@@ -135,7 +135,7 @@ template <typename... Args>
 struct RegistryImpl {
   /// Registers the patterns specializing the "main" op to one of the
   /// "intrinsic" ops depending on elemental type.
-  static void registerPatterns(LLVMTypeConverter &converter,
+  static void registerPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns) {
     patterns
         .add<LowerToIntrinsic<typename Args::MainOp, typename Args::Intr32Op,
@@ -159,7 +159,7 @@ using Registry = RegistryImpl<
 
 /// Populate the given list with patterns that convert from X86Vector to LLVM.
 void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
   patterns.add<MaskCompressOpConversion, RsqrtOpConversion, DotOpConversion>(
       converter);

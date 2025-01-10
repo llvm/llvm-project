@@ -267,3 +267,34 @@ namespace ns {}
 void TestCallNonValue() {
   [[clang::musttail]] return ns; // expected-error {{unexpected namespace name 'ns': expected expression}}
 }
+
+// Test diagnostics for lifetimes of local variables, which end earlier for a
+// musttail call than for a nowmal one.
+
+void TakesIntAndPtr(int, int *);
+void PassAddressOfLocal(int a, int *b) {
+  int c;
+  [[clang::musttail]] return TakesIntAndPtr(0, &c); // expected-warning {{address of stack memory associated with local variable 'c' passed to musttail function}}
+}
+void PassAddressOfParam(int a, int *b) {
+  [[clang::musttail]] return TakesIntAndPtr(0, &a); // expected-warning {{address of stack memory associated with parameter 'a' passed to musttail function}}
+}
+void PassValues(int a, int *b) {
+  [[clang::musttail]] return TakesIntAndPtr(a, b);
+}
+
+void TakesIntAndRef(int, const int &);
+void PassRefOfLocal(int a, const int &b) {
+  int c;
+  [[clang::musttail]] return TakesIntAndRef(0, c); // expected-warning {{address of stack memory associated with local variable 'c' passed to musttail function}}
+}
+void PassRefOfParam(int a, const int &b) {
+  [[clang::musttail]] return TakesIntAndRef(0, a); // expected-warning {{address of stack memory associated with parameter 'a' passed to musttail function}}
+}
+int ReturnInt();
+void PassRefOfTemporary(int a, const int &b) {
+  [[clang::musttail]] return TakesIntAndRef(0, ReturnInt()); // expected-warning {{passing address of local temporary object to musttail function}}
+}
+void PassValuesRef(int a, const int &b) {
+  [[clang::musttail]] return TakesIntAndRef(a, b);
+}

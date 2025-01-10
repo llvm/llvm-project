@@ -4,7 +4,7 @@
 ! default one, causing a CHECKSUM error.
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
 ! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 ! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN

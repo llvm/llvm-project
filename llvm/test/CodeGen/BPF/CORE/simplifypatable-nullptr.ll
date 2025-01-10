@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpf -mcpu=v3 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpf -mcpu=v3 < %s | FileCheck %s
 ; Source code:
 ;   struct t3 {
 ;     int i;

@@ -174,9 +174,9 @@ func.func @placement3() {
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
 // CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:     %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK-NEXT:     fir.call @llvm.stackrestore.p0(%[[SP]])
+// CHECK-NEXT:     llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:     fir.result
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
@@ -206,9 +206,9 @@ func.func @placement4(%arg0 : i1) {
 // CHECK-NEXT:   cf.br ^bb1
 // CHECK-NEXT: ^bb1:
 // CHECK-NEXT:   %[[C3:.*]] = arith.constant 3 : index
-// CHECK-NEXT:   %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK-NEXT:   %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[C3]]
-// CHECK-NEXT:   fir.call @llvm.stackrestore.p0(%[[SP]]) : (!fir.ref<i8>) -> ()
+// CHECK-NEXT:   llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:   cf.cond_br %arg0, ^bb1, ^bb2
 // CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   return
@@ -379,7 +379,8 @@ func.func @placement_loop_declare() {
     %3 = arith.addi %c1, %c2 : index
     // operand is now available
     %4 = fir.allocmem !fir.array<?xi32>, %3
-    %5 = fir.declare %4 {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+    %shape = fir.shape %3 : (index) -> !fir.shape<1>
+    %5 = fir.declare %4(%shape) {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
     // ...
     fir.freemem %5 : !fir.heap<!fir.array<?xi32>>
     fir.result %3, %c1_i32 : index, i32
@@ -393,10 +394,27 @@ func.func @placement_loop_declare() {
 // CHECK-NEXT:   %[[C10:.*]] = arith.constant 10 : index
 // CHECK-NEXT:   fir.do_loop
 // CHECK-NEXT:     %[[SUM:.*]] = arith.addi %[[C1]], %[[C2]] : index
-// CHECK-NEXT:     %[[SP:.*]] = fir.call @llvm.stacksave.p0() : () -> !fir.ref<i8>
+// CHECK-NEXT:     %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-NEXT:     %[[MEM:.*]] = fir.alloca !fir.array<?xi32>, %[[SUM]]
-// CHECK:          fir.call @llvm.stackrestore.p0(%[[SP]])
+// CHECK:          llvm.intr.stackrestore %[[SP]] : !llvm.ptr
 // CHECK-NEXT:     fir.result
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
+
+// Can we look through fir.convert and fir.declare?
+func.func @lookthrough() {
+  %0 = fir.allocmem !fir.array<42xi32>
+  %c42 = arith.constant 42 : index
+  %shape = fir.shape %c42 : (index) -> !fir.shape<1>
+  %1 = fir.declare %0(%shape) {uniq_name = "name"} : (!fir.heap<!fir.array<42xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<42xi32>>
+  %2 = fir.convert %1 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
+  // use the ref so the converts aren't folded
+  %3 = fir.load %2 : !fir.ref<!fir.array<42xi32>>
+  %4 = fir.convert %2 : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
+  fir.freemem %4 : !fir.heap<!fir.array<42xi32>>
+  return
+}
+// CHECK: func.func @lookthrough() {
+// CHECK:     fir.alloca !fir.array<42xi32>
+// CHECK-NOT: fir.freemem

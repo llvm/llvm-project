@@ -678,7 +678,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
                                           vectorOperand, fmf);
 }
 
-/// Overloaded methods to lower a *predicated* reduction to an llvm instrinsic
+/// Overloaded methods to lower a *predicated* reduction to an llvm intrinsic
 /// that requires a start value. This start value format spans across fp
 /// reductions without mask and all the masked reduction intrinsics.
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
@@ -994,7 +994,7 @@ public:
     auto v2Type = shuffleOp.getV2VectorType();
     auto vectorType = shuffleOp.getResultVectorType();
     Type llvmType = typeConverter->convertType(vectorType);
-    auto maskArrayAttr = shuffleOp.getMask();
+    ArrayRef<int64_t> mask = shuffleOp.getMask();
 
     // Bail if result type cannot be lowered.
     if (!llvmType)
@@ -1015,7 +1015,7 @@ public:
     if (rank <= 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
           loc, adaptor.getV1(), adaptor.getV2(),
-          LLVM::convertArrayToIndices<int32_t>(maskArrayAttr));
+          llvm::to_vector_of<int32_t>(mask));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
       return success();
     }
@@ -1029,8 +1029,7 @@ public:
       eltType = cast<VectorType>(llvmType).getElementType();
     Value insert = rewriter.create<LLVM::UndefOp>(loc, llvmType);
     int64_t insPos = 0;
-    for (const auto &en : llvm::enumerate(maskArrayAttr)) {
-      int64_t extPos = cast<IntegerAttr>(en.value()).getInt();
+    for (int64_t extPos : mask) {
       Value value = adaptor.getV1();
       if (extPos >= v1Dim) {
         extPos -= v1Dim;
@@ -1097,40 +1096,55 @@ public:
     SmallVector<OpFoldResult> positionVec = getMixedValues(
         adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
-    // Extract entire vector. Should be handled by folder, but just to be safe.
-    ArrayRef<OpFoldResult> position(positionVec);
-    if (position.empty()) {
-      rewriter.replaceOp(extractOp, adaptor.getVector());
-      return success();
+    // The Vector -> LLVM lowering models N-D vectors as nested aggregates of
+    // 1-d vectors. This nesting is modeled using arrays. We do this conversion
+    // from a N-d vector extract to a nested aggregate vector extract in two
+    // steps:
+    //  - Extract a member from the nested aggregate. The result can be
+    //    a lower rank nested aggregate or a vector (1-D). This is done using
+    //    `llvm.extractvalue`.
+    //  - Extract a scalar out of the vector if needed. This is done using
+    //   `llvm.extractelement`.
+
+    // Determine if we need to extract a member out of the aggregate. We
+    // always need to extract a member if the input rank >= 2.
+    bool extractsAggregate = extractOp.getSourceVectorType().getRank() >= 2;
+    // Determine if we need to extract a scalar as the result. We extract
+    // a scalar if the extract is full rank, i.e., the number of indices is
+    // equal to source vector rank.
+    bool extractsScalar = static_cast<int64_t>(positionVec.size()) ==
+                          extractOp.getSourceVectorType().getRank();
+
+    // Since the LLVM type converter converts 0-d vectors to 1-d vectors, we
+    // need to add a position for this change.
+    if (extractOp.getSourceVectorType().getRank() == 0) {
+      Type idxType = typeConverter->convertType(rewriter.getIndexType());
+      positionVec.push_back(rewriter.getZeroAttr(idxType));
     }
 
-    // One-shot extraction of vector from array (only requires extractvalue).
-    if (isa<VectorType>(resultType)) {
-      if (extractOp.hasDynamicPosition())
-        return failure();
-
-      Value extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, adaptor.getVector(), getAsIntegers(position));
-      rewriter.replaceOp(extractOp, extracted);
-      return success();
-    }
-
-    // Potential extraction of 1-D vector from array.
     Value extracted = adaptor.getVector();
-    if (position.size() > 1) {
-      if (extractOp.hasDynamicPosition())
+    if (extractsAggregate) {
+      ArrayRef<OpFoldResult> position(positionVec);
+      if (extractsScalar) {
+        // If we are extracting a scalar from the extracted member, we drop
+        // the last index, which will be used to extract the scalar out of the
+        // vector.
+        position = position.drop_back();
+      }
+      // llvm.extractvalue does not support dynamic dimensions.
+      if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
-
-      SmallVector<int64_t> nMinusOnePosition =
-          getAsIntegers(position.drop_back());
-      extracted = rewriter.create<LLVM::ExtractValueOp>(loc, extracted,
-                                                        nMinusOnePosition);
+      }
+      extracted = rewriter.create<LLVM::ExtractValueOp>(
+          loc, extracted, getAsIntegers(position));
     }
 
-    Value lastPosition = getAsLLVMValue(rewriter, loc, position.back());
-    // Remaining extraction of element from 1-D LLVM vector.
-    rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(extractOp, extracted,
-                                                        lastPosition);
+    if (extractsScalar) {
+      extracted = rewriter.create<LLVM::ExtractElementOp>(
+          loc, extracted, getAsLLVMValue(rewriter, loc, positionVec.back()));
+    }
+
+    rewriter.replaceOp(extractOp, extracted);
     return success();
   }
 };
@@ -1461,16 +1475,17 @@ public:
 
 /// Conversion pattern for a `vector.create_mask` (1-D scalable vectors only).
 /// Non-scalable versions of this operation are handled in Vector Transforms.
-class VectorCreateMaskOpRewritePattern
-    : public OpRewritePattern<vector::CreateMaskOp> {
+class VectorCreateMaskOpConversion
+    : public OpConversionPattern<vector::CreateMaskOp> {
 public:
-  explicit VectorCreateMaskOpRewritePattern(MLIRContext *context,
-                                            bool enableIndexOpt)
-      : OpRewritePattern<vector::CreateMaskOp>(context),
+  explicit VectorCreateMaskOpConversion(MLIRContext *context,
+                                        bool enableIndexOpt)
+      : OpConversionPattern<vector::CreateMaskOp>(context),
         force32BitVectorIndices(enableIndexOpt) {}
 
-  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
     auto dstType = op.getType();
     if (dstType.getRank() != 1 || !cast<VectorType>(dstType).isScalable())
       return failure();
@@ -1481,7 +1496,7 @@ public:
         loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 op.getOperand(0));
+                                                 adaptor.getOperands()[0]);
     Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
     Value comp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                 indices, bounds);
@@ -1863,12 +1878,17 @@ struct VectorFromElementsLowering
 };
 
 /// Conversion pattern for vector.step.
-struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
+struct VectorScalableStepOpLowering
+    : public ConvertOpToLLVMPattern<vector::StepOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(vector::StepOp stepOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto resultType = cast<VectorType>(stepOp.getType());
+    if (!resultType.isScalable()) {
+      return failure();
+    }
     Type llvmType = typeConverter->convertType(stepOp.getType());
     rewriter.replaceOpWithNewOp<LLVM::StepVectorOp>(stepOp, llvmType);
     return success();
@@ -1877,15 +1897,19 @@ struct VectorStepOpLowering : public ConvertOpToLLVMPattern<vector::StepOp> {
 
 } // namespace
 
+void mlir::vector::populateVectorRankReducingFMAPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<VectorFMAOpNDRewritePattern>(patterns.getContext());
+}
+
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices) {
+  // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
-  patterns.add<VectorFMAOpNDRewritePattern>(ctx);
-  populateVectorInsertExtractStridedSliceTransforms(patterns);
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
-  patterns.add<VectorCreateMaskOpRewritePattern>(ctx, force32BitVectorIndices);
+  patterns.add<VectorCreateMaskOpConversion>(ctx, force32BitVectorIndices);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractElementOpConversion, VectorExtractOpConversion,
                VectorFMAOp1DConversion, VectorInsertElementOpConversion,
@@ -1901,13 +1925,11 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorStepOpLowering>(converter);
-  // Transfer ops with rank > 1 are handled by VectorToSCF.
-  populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
+               VectorScalableStepOpLowering>(converter);
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<VectorMatmulOpConversion>(converter);
   patterns.add<VectorFlatTransposeOpConversion>(converter);
 }

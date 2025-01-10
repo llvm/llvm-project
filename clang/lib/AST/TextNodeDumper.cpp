@@ -381,6 +381,11 @@ void TextNodeDumper::Visit(const OMPClause *C) {
     OS << " <implicit>";
 }
 
+void TextNodeDumper::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *E) {
+  // Nothing to do here, only location exists, and that is printed elsewhere.
+}
+
 void TextNodeDumper::Visit(const OpenACCClause *C) {
   if (!C) {
     ColorScope Color(OS, ShowColors, NullColor);
@@ -403,9 +408,17 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+    case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Detach:
+    case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::Device:
+    case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
@@ -414,11 +427,32 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
     case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Tile:
+    case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::UseDevice:
+    case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
       break;
+    case OpenACCClauseKind::Gang: {
+      OS << " clause";
+      // print the list of all GangKinds, so that there is some sort of
+      // relationship to the expressions listed afterwards.
+      auto *GC = cast<OpenACCGangClause>(C);
+
+      for (unsigned I = 0; I < GC->getNumExprs(); ++I) {
+        OS << " " << GC->getExpr(I).first;
+      }
+      break;
+    }
+    case OpenACCClauseKind::Collapse:
+      OS << " clause";
+      if (cast<OpenACCCollapseClause>(C)->hasForce())
+        OS << ": force";
+      break;
+
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
@@ -1198,6 +1232,18 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
     dumpTemplateName(STS->getReplacement(), "replacement");
     return;
   }
+  case TemplateName::DeducedTemplate: {
+    OS << " deduced";
+    const DeducedTemplateStorage *DTS = TN.getAsDeducedTemplateName();
+    dumpTemplateName(DTS->getUnderlying(), "underlying");
+    AddChild("defaults", [=] {
+      auto [StartPos, Args] = DTS->getDefaultArguments();
+      OS << " start " << StartPos;
+      for (const TemplateArgument &Arg : Args)
+        AddChild([=] { Visit(Arg, SourceRange()); });
+    });
+    return;
+  }
   // FIXME: Implement these.
   case TemplateName::OverloadedTemplate:
     OS << " overloaded";
@@ -1859,6 +1905,9 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
     OS << " fixed-length rvv data vector";
     break;
   case VectorKind::RVVFixedLengthMask:
+  case VectorKind::RVVFixedLengthMask_1:
+  case VectorKind::RVVFixedLengthMask_2:
+  case VectorKind::RVVFixedLengthMask_4:
     OS << " fixed-length rvv mask vector";
     break;
   }
@@ -2694,6 +2743,8 @@ void TextNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *D) {
 void TextNodeDumper::VisitFriendDecl(const FriendDecl *D) {
   if (TypeSourceInfo *T = D->getFriendType())
     dumpType(T->getType());
+  if (D->isPackExpansion())
+    OS << "...";
 }
 
 void TextNodeDumper::VisitObjCIvarDecl(const ObjCIvarDecl *D) {
@@ -2874,18 +2925,67 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   dumpName(D);
 }
 
+void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
+  OS << (E->isInOut() ? " inout" : " out");
+}
+
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
-
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
-    OS << " parent: " << S->getParentComputeConstruct();
+    OS << " parent: " << S->getParentComputeConstructKind();
+}
+
+void TextNodeDumper::VisitOpenACCCombinedConstruct(
+    const OpenACCCombinedConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCEnterDataConstruct(
+    const OpenACCEnterDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCExitDataConstruct(
+    const OpenACCExitDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCHostDataConstruct(
+    const OpenACCHostDataConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
   AddChild("begin", [=] { OS << S->getStartingElementPos(); });
   AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
+}
+
+void TextNodeDumper::VisitAtomicExpr(const AtomicExpr *AE) {
+  OS << ' ' << AE->getOpAsString();
 }

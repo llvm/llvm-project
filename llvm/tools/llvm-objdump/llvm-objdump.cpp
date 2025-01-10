@@ -27,12 +27,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
@@ -40,7 +38,6 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -50,7 +47,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -59,7 +55,6 @@
 #include "llvm/Object/FaultMapParser.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
@@ -99,10 +94,11 @@ namespace {
 
 class CommonOptTable : public opt::GenericOptTable {
 public:
-  CommonOptTable(ArrayRef<Info> OptionInfos, const char *Usage,
+  CommonOptTable(const char *StrTable, ArrayRef<unsigned> PrefixesTable,
+                 ArrayRef<Info> OptionInfos, const char *Usage,
                  const char *Description)
-      : opt::GenericOptTable(OptionInfos), Usage(Usage),
-        Description(Description) {
+      : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
+        Usage(Usage), Description(Description) {
     setGroupedShortOptions(true);
   }
 
@@ -121,12 +117,13 @@ private:
 
 // ObjdumpOptID is in ObjdumpOptID.h
 namespace objdump_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "ObjdumpOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "ObjdumpOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -139,9 +136,10 @@ static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(objdump_opt::ObjdumpInfoTable,
-                       " [options] <input object files>",
-                       "llvm object file dumper") {}
+      : CommonOptTable(
+            objdump_opt::OptionStrTable, objdump_opt::OptionPrefixesTable,
+            objdump_opt::ObjdumpInfoTable, " [options] <input object files>",
+            "llvm object file dumper") {}
 };
 
 enum OtoolOptID {
@@ -152,12 +150,13 @@ enum OtoolOptID {
 };
 
 namespace otool {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "OtoolOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "OtoolOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info OtoolInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OTOOL_, __VA_ARGS__),
@@ -169,7 +168,8 @@ static constexpr opt::OptTable::Info OtoolInfoTable[] = {
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::OptionStrTable, otool::OptionPrefixesTable,
+                       otool::OtoolInfoTable, " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -305,11 +305,11 @@ bool objdump::ArchiveHeaders;
 bool objdump::Demangle;
 bool objdump::Disassemble;
 bool objdump::DisassembleAll;
+std::vector<std::string> objdump::DisassemblerOptions;
 bool objdump::SymbolDescription;
 bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
-static std::vector<std::string> DisassemblerOptions;
 static ColorOutput DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
@@ -1484,9 +1484,11 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           const MCSubtargetInfo *STI, uint64_t SectionAddr,
                           uint64_t Start, uint64_t End,
                           std::unordered_map<uint64_t, std::string> &Labels) {
-  // So far only supports PowerPC and X86.
+  // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
-  if (!isPPC && !STI->getTargetTriple().isX86())
+  const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isBPF = STI->getTargetTriple().isBPF();
+  if (!isPPC && !isX86 && !isBPF)
     return;
 
   if (MIA)
@@ -2242,27 +2244,28 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           return false;
         };
 
+        // When -z or --disassemble-zeroes are given we always dissasemble
+        // them. Otherwise we might want to skip zero bytes we see.
+        if (!DisassembleZeroes) {
+          uint64_t MaxOffset = End - Index;
+          // For --reloc: print zero blocks patched by relocations, so that
+          // relocations can be shown in the dump.
+          if (InlineRelocs && RelCur != RelEnd)
+            MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
+                                 MaxOffset);
+
+          if (size_t N =
+                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+            FOS << "\t\t..." << '\n';
+            Index += N;
+            continue;
+          }
+        }
+
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
                                 MappingSymbols, *DT->SubtargetInfo, FOS);
         } else {
-          // When -z or --disassemble-zeroes are given we always dissasemble
-          // them. Otherwise we might want to skip zero bytes we see.
-          if (!DisassembleZeroes) {
-            uint64_t MaxOffset = End - Index;
-            // For --reloc: print zero blocks patched by relocations, so that
-            // relocations can be shown in the dump.
-            if (InlineRelocs && RelCur != RelEnd)
-              MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
-                                   MaxOffset);
-
-            if (size_t N =
-                    countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
-              FOS << "\t\t..." << '\n';
-              Index += N;
-              continue;
-            }
-          }
 
           if (DumpTracebackTableForXCOFFFunction &&
               doesXCOFFTracebackTableBegin(Bytes.slice(Index, 4))) {
@@ -2553,7 +2556,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   if (!MAttrs.empty()) {
     for (unsigned I = 0; I != MAttrs.size(); ++I)
       Features.AddFeature(MAttrs[I]);
-  } else if (MCPU.empty() && Obj->getArch() == llvm::Triple::aarch64) {
+  } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
   }
 
@@ -2883,16 +2886,6 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     reportUniqueWarning(AddrOrErr.takeError());
     return;
   }
-  uint64_t Address = *AddrOrErr;
-  section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
-  if (SecI != O.section_end() && shouldAdjustVA(*SecI))
-    Address += AdjustVMA;
-  if ((Address < StartAddress) || (Address > StopAddress))
-    return;
-  SymbolRef::Type Type =
-      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
-  uint32_t Flags =
-      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   // Don't ask a Mach-O STAB symbol for its section unless you know that
   // STAB symbol's section field refers to a valid section index. Otherwise
@@ -2910,6 +2903,16 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
                                  ? O.section_end()
                                  : unwrapOrError(Symbol.getSection(), FileName,
                                                  ArchiveName, ArchitectureName);
+
+  uint64_t Address = *AddrOrErr;
+  if (Section != O.section_end() && shouldAdjustVA(*Section))
+    Address += AdjustVMA;
+  if ((Address < StartAddress) || (Address > StopAddress))
+    return;
+  SymbolRef::Type Type =
+      unwrapOrError(Symbol.getType(), FileName, ArchiveName, ArchitectureName);
+  uint32_t Flags =
+      unwrapOrError(Symbol.getFlags(), FileName, ArchiveName, ArchitectureName);
 
   StringRef Name;
   if (Type == SymbolRef::ST_Debug && Section != O.section_end()) {

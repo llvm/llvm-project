@@ -6,7 +6,7 @@
 ; can be added to call sites.
 define internal i32 @callee(i32 %x) {
 ; CHECK-LABEL: define internal range(i32 0, 21) i32 @callee(
-; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-SAME: i32 range(i32 0, 21) [[X:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   ret i32 %x
@@ -133,7 +133,7 @@ define void @caller_cb3() {
 ; should be added at call sites.
 define internal i32 @callee5(i32 %x, i32 %y) {
 ; CHECK-LABEL: define internal i32 @callee5(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-SAME: i32 range(i32 10, 21) [[X:%.*]], i32 range(i32 100, 201) [[Y:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 15
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:

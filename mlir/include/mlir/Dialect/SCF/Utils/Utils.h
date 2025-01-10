@@ -111,11 +111,18 @@ LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
-/// Unrolls this for operation by the specified unroll factor. Returns failure
-/// if the loop cannot be unrolled either due to restrictions or due to invalid
-/// unroll factors. Requires positive loop bounds and step. If specified,
-/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
-LogicalResult loopUnrollByFactor(
+struct UnrolledLoopInfo {
+  std::optional<scf::ForOp> mainLoopOp = std::nullopt;
+  std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
+};
+
+/// Unrolls this for operation by the specified unroll factor. Returns the
+/// unrolled main loop and the eplilog loop, if the loop is unrolled. Otherwise
+/// returns failure if the loop cannot be unrolled either due to restrictions or
+/// due to invalid unroll factors. Requires positive loop bounds and step. If
+/// specified, annotates the Ops in each unrolled iteration by applying
+/// `annotateFn`.
+FailureOr<UnrolledLoopInfo> loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
@@ -194,6 +201,14 @@ scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
 /// fuse.
 scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
                                           RewriterBase &rewriter);
+
+/// Normalize an `scf.forall` operation. Returns `failure()`if normalization
+/// fails.
+// On `success()` returns the
+/// newly created operation with all uses of the original operation replaced
+/// with results of the new operation.
+FailureOr<scf::ForallOp> normalizeForallOp(RewriterBase &rewriter,
+                                           scf::ForallOp forallOp);
 
 } // namespace mlir
 

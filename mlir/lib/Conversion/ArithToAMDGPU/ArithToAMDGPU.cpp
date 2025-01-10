@@ -9,8 +9,11 @@
 #include "mlir/Conversion/ArithToAMDGPU/ArithToAMDGPU.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -24,6 +27,7 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::amdgpu;
 
 namespace {
 struct ArithToAMDGPUConversionPass final
@@ -43,12 +47,25 @@ struct ExtFOnFloat8RewritePattern final : OpRewritePattern<arith::ExtFOp> {
 
 struct TruncFToFloat8RewritePattern final : OpRewritePattern<arith::TruncFOp> {
   bool saturateFP8 = false;
-  TruncFToFloat8RewritePattern(MLIRContext *ctx, bool saturateFP8)
-      : OpRewritePattern::OpRewritePattern(ctx), saturateFP8(saturateFP8) {}
+  TruncFToFloat8RewritePattern(MLIRContext *ctx, bool saturateFP8,
+                               Chipset chipset)
+      : OpRewritePattern::OpRewritePattern(ctx), saturateFP8(saturateFP8),
+        chipset(chipset) {}
+  Chipset chipset;
 
   LogicalResult match(arith::TruncFOp op) const override;
   void rewrite(arith::TruncFOp op, PatternRewriter &rewriter) const override;
 };
+
+struct TruncfToFloat16RewritePattern final
+    : public OpRewritePattern<arith::TruncFOp> {
+
+  using OpRewritePattern<arith::TruncFOp>::OpRewritePattern;
+
+  LogicalResult match(arith::TruncFOp op) const override;
+  void rewrite(arith::TruncFOp op, PatternRewriter &rewriter) const override;
+};
+
 } // end namespace
 
 static Value castF32To(Type elementType, Value f32, Location loc,
@@ -272,17 +289,102 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
   rewriter.replaceOp(op, result);
 }
 
+LogicalResult TruncfToFloat16RewritePattern::match(arith::TruncFOp op) const {
+  Type outType = op.getOut().getType();
+  Type inputType = getElementTypeOrSelf(op.getIn());
+  if (auto outVecType = dyn_cast<VectorType>(outType)) {
+    if (outVecType.isScalable())
+      return failure();
+    outType = outVecType.getElementType();
+  }
+  return success(outType.isF16() && inputType.isF32());
+}
+
+void TruncfToFloat16RewritePattern::rewrite(arith::TruncFOp op,
+                                            PatternRewriter &rewriter) const {
+  Location loc = op.getLoc();
+  Value in = op.getIn();
+  Type outElemType = getElementTypeOrSelf(op.getOut().getType());
+  VectorType truncResType = VectorType::get(2, outElemType);
+  auto inVectorTy = dyn_cast<VectorType>(in.getType());
+
+  // Handle the case where input type is not a vector type
+  if (!inVectorTy) {
+    auto sourceB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
+    Value asF16s =
+        rewriter.create<ROCDL::CvtPkRtz>(loc, truncResType, in, sourceB);
+    Value result = rewriter.create<vector::ExtractOp>(loc, asF16s, 0);
+    return rewriter.replaceOp(op, result);
+  }
+  VectorType outType = cast<VectorType>(op.getOut().getType());
+  int64_t numElements = outType.getNumElements();
+  Value zero = rewriter.createOrFold<arith::ConstantOp>(
+      loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
+  Value result = rewriter.createOrFold<vector::SplatOp>(loc, outType, zero);
+
+  if (inVectorTy.getRank() > 1) {
+    inVectorTy = VectorType::get(SmallVector<int64_t>{numElements},
+                                 inVectorTy.getElementType());
+    in = rewriter.create<vector::ShapeCastOp>(loc, inVectorTy, in);
+  }
+
+  // Handle the vector case. We also handle the (uncommon) case where the vector
+  // length is odd
+  for (int64_t i = 0; i < numElements; i += 2) {
+    int64_t elemsThisOp = std::min(numElements, i + 2) - i;
+    Value thisResult = nullptr;
+    Value elemA = rewriter.create<vector::ExtractOp>(loc, in, i);
+    Value elemB = rewriter.create<LLVM::PoisonOp>(loc, rewriter.getF32Type());
+
+    if (elemsThisOp == 2) {
+      elemB = rewriter.create<vector::ExtractOp>(loc, in, i + 1);
+    }
+
+    thisResult =
+        rewriter.create<ROCDL::CvtPkRtz>(loc, truncResType, elemA, elemB);
+    // Place back the truncated result into the possibly larger vector. If we
+    // are operating on a size 2 vector, these operations should be folded away
+    thisResult = rewriter.create<vector::ExtractStridedSliceOp>(
+        loc, thisResult, 0, elemsThisOp, 1);
+    result = rewriter.create<vector::InsertStridedSliceOp>(loc, thisResult,
+                                                           result, i, 1);
+  }
+
+  if (inVectorTy.getRank() != outType.getRank()) {
+    result = rewriter.create<vector::ShapeCastOp>(loc, outType, result);
+  }
+
+  rewriter.replaceOp(op, result);
+}
+
 void mlir::arith::populateArithToAMDGPUConversionPatterns(
-    RewritePatternSet &patterns, bool saturateFP8TruncF) {
-  patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext());
-  patterns.add<TruncFToFloat8RewritePattern>(patterns.getContext(),
-                                             saturateFP8TruncF);
+    RewritePatternSet &patterns, bool convertFP8Arithmetic,
+    bool saturateFP8Truncf, bool allowPackedF16Rtz, Chipset chipset) {
+
+  if (convertFP8Arithmetic) {
+    patterns.add<ExtFOnFloat8RewritePattern>(patterns.getContext());
+    patterns.add<TruncFToFloat8RewritePattern>(patterns.getContext(),
+                                               saturateFP8Truncf, chipset);
+  }
+  if (allowPackedF16Rtz)
+    patterns.add<TruncfToFloat16RewritePattern>(patterns.getContext());
 }
 
 void ArithToAMDGPUConversionPass::runOnOperation() {
   Operation *op = getOperation();
+  MLIRContext *ctx = &getContext();
   RewritePatternSet patterns(op->getContext());
-  arith::populateArithToAMDGPUConversionPatterns(patterns, saturateFP8Truncf);
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+  FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+  if (failed(maybeChipset)) {
+    emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+    return signalPassFailure();
+  }
+
+  bool convertFP8Arithmetic =
+      maybeChipset->majorVersion == 9 && *maybeChipset >= Chipset(9, 4, 0);
+  arith::populateArithToAMDGPUConversionPatterns(
+      patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
+      *maybeChipset);
+  if (failed(applyPatternsGreedily(op, std::move(patterns))))
     return signalPassFailure();
 }

@@ -44,6 +44,17 @@ RT_OFFLOAD_VAR_GROUP_END
 #endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 RT_OFFLOAD_API_GROUP_BEGIN
+
+std::size_t MeasurePreviousUTF8Bytes(const char *end, std::size_t limit) {
+  // Scan back over UTF-8 continuation bytes, if any
+  for (std::size_t n{1}; n <= limit; ++n) {
+    if ((end[-n] & 0xc0) != 0x80) {
+      return n;
+    }
+  }
+  return limit;
+}
+
 // Non-minimal encodings are accepted.
 Fortran::common::optional<char32_t> DecodeUTF8(const char *p0) {
   const std::uint8_t *p{reinterpret_cast<const std::uint8_t *>(p0)};

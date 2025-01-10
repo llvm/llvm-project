@@ -10,7 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_REMOVE_EXTENT_H
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,7 +25,7 @@ struct remove_extent {
 };
 
 template <class _Tp>
-using __remove_extent_t = __remove_extent(_Tp);
+using __remove_extent_t _LIBCPP_NODEBUG = __remove_extent(_Tp);
 #else
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS remove_extent {

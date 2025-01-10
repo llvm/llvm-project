@@ -118,10 +118,16 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
-static cl::opt<bool>
+static cl::opt<DropTestKind>
     ClDropTypeTests("lowertypetests-drop-type-tests",
-                    cl::desc("Simply drop type test assume sequences"),
-                    cl::Hidden, cl::init(false));
+                    cl::desc("Simply drop type test sequences"),
+                    cl::values(clEnumValN(DropTestKind::None, "none",
+                                          "Do not drop any type tests"),
+                               clEnumValN(DropTestKind::Assume, "assume",
+                                          "Drop type test assume sequences"),
+                               clEnumValN(DropTestKind::All, "all",
+                                          "Drop all type test sequences")),
+                    cl::Hidden, cl::init(DropTestKind::None));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -399,7 +405,7 @@ class LowerTypeTestsModule {
   const ModuleSummaryIndex *ImportSummary;
   // Set when the client has invoked this to simply drop all type test assume
   // sequences.
-  bool DropTypeTests;
+  DropTestKind DropTypeTests;
 
   Triple::ArchType Arch;
   Triple::OSType OS;
@@ -542,7 +548,7 @@ public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary,
-                       bool DropTypeTests);
+                       DropTestKind DropTypeTests);
 
   bool lower();
 
@@ -1658,8 +1664,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        ".cfi.jumptable", &M);
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
-  auto JumpTable =
-      ConstantExpr::getPointerCast(JumpTableFn, JumpTableType->getPointerTo(0));
+  auto JumpTable = ConstantExpr::getPointerCast(
+      JumpTableFn, PointerType::getUnqual(M.getContext()));
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
@@ -1828,9 +1834,10 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
-    const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
+    const ModuleSummaryIndex *ImportSummary, DropTestKind DropTypeTests)
     : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(DropTypeTests || ClDropTypeTests) {
+      DropTypeTests(ClDropTypeTests > DropTypeTests ? ClDropTypeTests
+                                                    : DropTypeTests) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -1869,8 +1876,8 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   if (!ClReadSummary.empty()) {
     ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
                           ": ");
-    auto ReadSummaryFile =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
+    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
+        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
 
     yaml::Input In(ReadSummaryFile->getBuffer());
     In >> Summary;
@@ -1882,7 +1889,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
           M, AM,
           ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
           ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
-          /*DropTypeTests*/ false)
+          /*DropTypeTests=*/DropTestKind::None)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -1949,7 +1956,8 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
-static void dropTypeTests(Module &M, Function &TypeTestFunc) {
+static void dropTypeTests(Module &M, Function &TypeTestFunc,
+                          bool ShouldDropAll) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
     auto *CI = cast<CallInst>(U.getUser());
     // Find and erase llvm.assume intrinsics for this llvm.type.test call.
@@ -1959,9 +1967,13 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc) {
     // If the assume was merged with another assume, we might have a use on a
     // phi (which will feed the assume). Simply replace the use on the phi
     // with "true" and leave the merged assume.
+    //
+    // If ShouldDropAll is set, then we  we need to update any remaining uses,
+    // regardless of the instruction type.
     if (!CI->use_empty()) {
-      assert(
-          all_of(CI->users(), [](User *U) -> bool { return isa<PHINode>(U); }));
+      assert(ShouldDropAll || all_of(CI->users(), [](User *U) -> bool {
+               return isa<PHINode>(U);
+             }));
       CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
     }
     CI->eraseFromParent();
@@ -1970,18 +1982,19 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc) {
 
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
 
-  if (DropTypeTests) {
+  if (DropTypeTests != DropTestKind::None) {
+    bool ShouldDropAll = DropTypeTests == DropTestKind::All;
     if (TypeTestFunc)
-      dropTypeTests(M, *TypeTestFunc);
+      dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
     // Normally we'd have already removed all @llvm.public.type.test calls,
     // except for in the case where we originally were performing ThinLTO but
     // decided not to in the backend.
     Function *PublicTypeTestFunc =
-        M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
     if (PublicTypeTestFunc)
-      dropTypeTests(M, *PublicTypeTestFunc);
+      dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
     if (TypeTestFunc || PublicTypeTestFunc) {
       // We have deleted the type intrinsics, so we no longer have enough
       // information to reason about the liveness of virtual function pointers
@@ -2002,7 +2015,7 @@ bool LowerTypeTestsModule::lower() {
     return false;
 
   Function *ICallBranchFunnelFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::icall_branch_funnel));
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::icall_branch_funnel);
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
       (!ICallBranchFunnelFunc || ICallBranchFunnelFunc->use_empty()) &&
       !ExportSummary && !ImportSummary)
@@ -2024,10 +2037,9 @@ bool LowerTypeTestsModule::lower() {
       // have the same name, but it's not the one we are looking for.
       if (F.hasLocalLinkage())
         continue;
-      if (ImportSummary->cfiFunctionDefs().count(std::string(F.getName())))
+      if (ImportSummary->cfiFunctionDefs().count(F.getName()))
         Defs.push_back(&F);
-      else if (ImportSummary->cfiFunctionDecls().count(
-                   std::string(F.getName())))
+      else if (ImportSummary->cfiFunctionDecls().count(F.getName()))
         Decls.push_back(&F);
     }
 
@@ -2078,16 +2090,19 @@ bool LowerTypeTestsModule::lower() {
   };
   MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
-    // A set of all functions that are address taken by a live global object.
-    DenseSet<GlobalValue::GUID> AddressTaken;
-    for (auto &I : *ExportSummary)
-      for (auto &GVS : I.second.SummaryList)
-        if (GVS->isLive())
-          for (const auto &Ref : GVS->refs())
-            AddressTaken.insert(Ref.getGUID());
-
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
+      // A set of all functions that are address taken by a live global object.
+      DenseSet<GlobalValue::GUID> AddressTaken;
+      for (auto &I : *ExportSummary)
+        for (auto &GVS : I.second.SummaryList)
+          if (GVS->isLive())
+            for (const auto &Ref : GVS->refs()) {
+              AddressTaken.insert(Ref.getGUID());
+              for (auto &RefGVS : Ref.getSummaryList())
+                if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
+                  AddressTaken.insert(Alias->getAliaseeGUID());
+            }
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =

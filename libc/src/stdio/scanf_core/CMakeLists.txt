@@ -92,21 +92,31 @@ add_object_library(
     libc.src.__support.str_to_float
 )
 
-if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
-  # Not all platforms have a file implementation. If file is unvailable, and a
-  # full build is requested, then we must skip all file based printf sections.
-  return()
+if(LIBC_TARGET_OS_IS_GPU)
+  add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.include.stdio
+      libc.src.__support.arg_list
+      libc.src.stdio.getc
+      libc.src.stdio.ungetc
+      libc.src.stdio.ferror
+  )
+elseif(TARGET libc.src.__support.File.file OR (NOT LLVM_LIBC_FULL_BUILD))
+  add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.include.stdio
+      libc.src.__support.File.file
+      libc.src.__support.arg_list
+    ${use_system_file}
+  )
 endif()
-
-add_header_library(
-  vfscanf_internal
-  HDRS
-    vfscanf_internal.h
-  DEPENDS
-    .reader
-    .scanf_main
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.arg_list
-  ${use_system_file}
-)

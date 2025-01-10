@@ -134,7 +134,7 @@ AMDGPUPostLegalizerCombinerImpl::AMDGPUPostLegalizerCombinerImpl(
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
       TII(*STI.getInstrInfo()),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI, STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -499,7 +499,11 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
-
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
   AMDGPUPostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
                                        RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();

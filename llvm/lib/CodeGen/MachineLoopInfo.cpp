@@ -77,7 +77,7 @@ bool MachineLoopInfo::invalidate(
 
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  analyze(MDT.getBase());
+  analyze(MDT);
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -212,7 +212,7 @@ MDNode *MachineLoop::getLoopID() const {
           }
         }
         if (!MD)
-          return nullptr;
+          continue;
         if (!LoopID)
           LoopID = MD;
         else if (MD != LoopID)

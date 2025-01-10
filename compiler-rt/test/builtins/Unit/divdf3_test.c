@@ -113,5 +113,9 @@ int main()
     if (test__divdf3(0x1.0p-1022, 0x1.0028p+52, UINT64_C(0x1)))
       return 1;
 
+    // test 1 / (1 - eps(0.5)) = 1 + eps(1)
+    if (test__divdf3(1.0, 0x1.fffffffffffffp-1, UINT64_C(0x3ff0000000000001)))
+      return 1;
+
     return 0;
 }

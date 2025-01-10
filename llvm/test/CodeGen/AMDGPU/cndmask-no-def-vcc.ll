@@ -33,6 +33,7 @@ bb2:
 
 ; GCN-LABEL: {{^}}preserve_condition_undef_flag:
 ; GCN-NOT: vcc
+; GCN: s_endpgm
 define amdgpu_kernel void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
-#include "config/linux/app.h"
+#include "config/app.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
@@ -22,7 +22,7 @@
 #include <arm_acle.h>
 #endif
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <linux/prctl.h> // For PR_SET_NAME
 #include <linux/sched.h> // For CLONE_* flags.
@@ -517,7 +517,5 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
     LIBC_NAMESPACE::syscall_impl<long>(SYS_exit, retval.stdc_retval);
   __builtin_unreachable();
 }
-
-pid_t Thread::get_uncached_tid() { return syscall_impl<pid_t>(SYS_gettid); }
 
 } // namespace LIBC_NAMESPACE_DECL

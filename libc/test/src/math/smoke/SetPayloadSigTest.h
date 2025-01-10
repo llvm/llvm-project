@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class SetPayloadSigTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -35,7 +37,13 @@ public:
     EXPECT_EQ(1, func(&res, T(-1.0)));
     EXPECT_EQ(1, func(&res, T(0x42.1p+0)));
     EXPECT_EQ(1, func(&res, T(-0x42.1p+0)));
-    EXPECT_EQ(1, func(&res, T(StorageType(1) << (FPBits::FRACTION_LEN - 1))));
+
+    FPBits default_snan_payload_bits = FPBits::one();
+    default_snan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 1 +
+                                                  FPBits::EXP_BIAS);
+    T default_snan_payload = default_snan_payload_bits.get_val();
+
+    EXPECT_EQ(1, func(&res, default_snan_payload));
   }
 
   void testValidPayloads(SetPayloadSigFunc func) {
@@ -56,7 +64,12 @@ public:
     EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x123).uintval(),
               FPBits(res).uintval());
 
-    EXPECT_EQ(0, func(&res, T(FPBits::FRACTION_MASK >> 1)));
+    FPBits nan_payload_bits = FPBits::one();
+    nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +
+                                         FPBits::EXP_BIAS);
+    nan_payload_bits.set_mantissa(FPBits::SIG_MASK - 3);
+    T nan_payload = nan_payload_bits.get_val();
+    EXPECT_EQ(0, func(&res, nan_payload));
     EXPECT_TRUE(FPBits(res).is_signaling_nan());
     EXPECT_EQ(
         FPBits::signaling_nan(Sign::POS, FPBits::FRACTION_MASK >> 1).uintval(),

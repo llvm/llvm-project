@@ -80,14 +80,9 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
-  void addWinSysRootLibSearchPaths();
+  void addFile(InputFile *file);
 
   void addClangLibSearchPaths(const std::string &argv0);
-
-  // Used by the resolver to parse .drectve section contents.
-  void parseDirectives(InputFile *file);
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -100,6 +95,8 @@ public:
   void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
+
+  void pullArm64ECIcallHelper();
 
 private:
   // Searches a file from search paths.
@@ -114,9 +111,14 @@ private:
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
+  // Adds various search paths based on the sysroot.  Must only be called once
+  // config.machine has been set.
+  void addWinSysRootLibSearchPaths();
+
   // Symbol names are mangled by prepending "_" on x86.
   StringRef mangle(StringRef sym);
 
+  void setMachine(llvm::COFF::MachineTypes machine);
   llvm::Triple::ArchType getArch();
 
   uint64_t getDefaultImageBase();
@@ -139,6 +141,9 @@ private:
   std::string getImportName(bool asLib);
 
   void createImportLibrary(bool asLib);
+
+  // Used by the resolver to parse .drectve section contents.
+  void parseDirectives(InputFile *file);
 
   void parseModuleDefs(StringRef path);
 
@@ -168,7 +173,9 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  Symbol *addUndefined(StringRef sym);
+  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
+
+  void addUndefinedGlob(StringRef arg);
 
   StringRef mangleMaybe(Symbol *s);
 
@@ -191,7 +198,6 @@ private:
   bool run();
 
   std::list<std::function<void()>> taskQueue;
-  std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
   llvm::DenseSet<StringRef> directivesExports;
@@ -270,6 +276,12 @@ private:
   // Convert Windows resource files (.res files) to a .obj file.
   MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> mbs,
                                    ArrayRef<ObjFile *> objs);
+
+  // Create export thunks for exported and patchable Arm64EC function symbols.
+  void createECExportThunks();
+  void maybeCreateECExportThunk(StringRef name, Symbol *&sym);
+
+  bool ltoCompilationDone = false;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td

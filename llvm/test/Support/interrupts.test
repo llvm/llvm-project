@@ -1,9 +1,9 @@
 ## Show that SIGINT and similar signals don't cause crash messages to be
 ## reported.
 # RUN: %python %s wrapper llvm-symbolizer 2> %t.err
-# RUN: FileCheck --input-file=%t.err %s
+# RUN: FileCheck -DMSG=%errc_ENOENT --input-file=%t.err %s
 
-# CHECK: {{.*}} error: 'foo': {{[Nn]}}o such file or directory
+# CHECK: {{.*}} error: 'foo': [[MSG]]
 # CHECK-NOT: {{.+}}
 
 import os

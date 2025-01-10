@@ -216,11 +216,8 @@ getOpAndSymbolNames(Operation *op, StringRef passName,
   SmallVector<std::pair<std::string, StringRef>> pathElements;
   SmallVector<unsigned> countPrefix;
 
-  if (!counters.contains(op))
-    counters[op] = -1;
-
   Operation *iter = op;
-  ++counters[op];
+  ++counters.try_emplace(op, -1).first->second;
   while (iter) {
     countPrefix.push_back(counters[iter]);
     StringAttr symbolName =

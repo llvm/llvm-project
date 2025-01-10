@@ -9,9 +9,9 @@
 
 declare void @fun2(i32) #0
 
-define void @fun(i32 %x) {
+define void @fun(i32 %x, i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
   ret void

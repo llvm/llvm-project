@@ -17,7 +17,6 @@
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +37,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -64,9 +64,17 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace clang;
 
-static llvm::TimerGroup
-    ClangOffloadBundlerTimerGroup("Clang Offload Bundler Timer Group",
-                                  "Timer group for clang offload bundler");
+namespace {
+struct CreateClangOffloadBundlerTimerGroup {
+  static void *call() {
+    return new TimerGroup("Clang Offload Bundler Timer Group",
+                          "Timer group for clang offload bundler");
+  }
+};
+} // namespace
+static llvm::ManagedStatic<llvm::TimerGroup,
+                           CreateClangOffloadBundlerTimerGroup>
+    ClangOffloadBundlerTimerGroup;
 
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
@@ -988,7 +996,7 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
                              "Compression not supported");
 
   llvm::Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
-                        ClangOffloadBundlerTimerGroup);
+                        *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     HashTimer.startTimer();
   llvm::MD5 Hash;
@@ -1005,7 +1013,7 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
       Input.getBuffer().size());
 
   llvm::Timer CompressTimer("Compression Timer", "Compression time",
-                            ClangOffloadBundlerTimerGroup);
+                            *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     CompressTimer.startTimer();
   llvm::compression::compress(P, BufferUint8, CompressedBuffer);
@@ -1120,7 +1128,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                              "Unknown compressing method");
 
   llvm::Timer DecompressTimer("Decompression Timer", "Decompression time",
-                              ClangOffloadBundlerTimerGroup);
+                              *ClangOffloadBundlerTimerGroup);
   if (Verbose)
     DecompressTimer.startTimer();
 
@@ -1142,7 +1150,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     // Recalculate MD5 hash for integrity check
     llvm::Timer HashRecalcTimer("Hash Recalculation Timer",
                                 "Hash recalculation time",
-                                ClangOffloadBundlerTimerGroup);
+                                *ClangOffloadBundlerTimerGroup);
     HashRecalcTimer.startTimer();
     llvm::MD5 Hash;
     llvm::MD5::MD5Result Result;
@@ -1192,7 +1200,7 @@ Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFileName);
+      MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(InputFileName, EC);
 
@@ -1324,7 +1332,7 @@ Error OffloadBundler::BundleFiles() {
   InputBuffers.reserve(BundlerConfig.InputFileNames.size());
   for (auto &I : BundlerConfig.InputFileNames) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(I);
+        MemoryBuffer::getFileOrSTDIN(I, /*IsText=*/true);
     if (std::error_code EC = CodeOrErr.getError())
       return createFileError(I, EC);
     InputBuffers.emplace_back(std::move(*CodeOrErr));
@@ -1392,7 +1400,8 @@ Error OffloadBundler::BundleFiles() {
 Error OffloadBundler::UnbundleFiles() {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      MemoryBuffer::getFileOrSTDIN(BundlerConfig.InputFileNames.front());
+      MemoryBuffer::getFileOrSTDIN(BundlerConfig.InputFileNames.front(),
+                                   /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(BundlerConfig.InputFileNames.front(), EC);
 
@@ -1760,16 +1769,8 @@ Error OffloadBundler::UnbundleArchive() {
 
           // For inserting <CompatibleTarget, list<CodeObject>> entry in
           // OutputArchivesMap.
-          if (!OutputArchivesMap.contains(CompatibleTarget)) {
-
-            std::vector<NewArchiveMember> ArchiveMembers;
-            ArchiveMembers.push_back(NewArchiveMember(MemBufRef));
-            OutputArchivesMap.insert_or_assign(CompatibleTarget,
-                                               std::move(ArchiveMembers));
-          } else {
-            OutputArchivesMap[CompatibleTarget].push_back(
-                NewArchiveMember(MemBufRef));
-          }
+          OutputArchivesMap[CompatibleTarget].push_back(
+              NewArchiveMember(MemBufRef));
         }
       }
 

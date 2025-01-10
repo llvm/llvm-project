@@ -32,8 +32,8 @@ entry:
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 %x
   call void @llvm.dbg.assign(metadata i32 %x, metadata !34, metadata !DIExpression(), metadata !19, metadata ptr %arrayidx2, metadata !DIExpression()), !dbg !16
 ;; Variadic DIExpressions for dbg.assign address component is not supported -
-;; set undef.
-; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr undef, !DIExpression(),
+;; set poison.
+; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr poison, !DIExpression(),
 
   ret void
 }

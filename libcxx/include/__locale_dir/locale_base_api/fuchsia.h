@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
+#ifndef _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FUCHSIA_H
+#define _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FUCHSIA_H
 
 #include <__support/xlocale/__posix_l_fallback.h>
 #include <__support/xlocale/__strtonum_fallback.h>
 #include <cstdlib>
 #include <cwchar>
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_FUCHSIA_H
+#endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_FUCHSIA_H

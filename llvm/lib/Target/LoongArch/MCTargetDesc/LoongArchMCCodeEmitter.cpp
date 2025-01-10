@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchFixupKinds.h"
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -286,6 +285,18 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       break;
     case LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12_R:
       FixupKind = LoongArch::fixup_loongarch_tls_le_lo12_r;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_LD_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_ld_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_GD_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_gd_pcrel20_s2;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PCREL20_S2:
+      FixupKind = LoongArch::fixup_loongarch_tls_desc_pcrel20_s2;
       break;
     }
   } else if (Kind == MCExpr::SymbolRef &&

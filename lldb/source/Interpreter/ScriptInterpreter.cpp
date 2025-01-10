@@ -53,7 +53,7 @@ bool ScriptInterpreter::LoadScriptingModule(const char *filename,
                                             lldb_private::Status &error,
                                             StructuredData::ObjectSP *module_sp,
                                             FileSpec extra_search_dir) {
-  error.SetErrorString(
+  error = Status::FromErrorString(
       "This script interpreter does not support importing modules.");
   return false;
 }
@@ -96,7 +96,7 @@ lldb::ProcessLaunchInfoSP ScriptInterpreter::GetOpaqueTypeFromSBLaunchInfo(
 Status
 ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   if (error.m_opaque_up)
-    return *error.m_opaque_up;
+    return error.m_opaque_up->Clone();
 
   return Status();
 }
@@ -123,6 +123,12 @@ ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
   if (!mem_region.m_opaque_up)
     return std::nullopt;
   return *mem_region.m_opaque_up.get();
+}
+
+lldb::ExecutionContextRefSP
+ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
+    const lldb::SBExecutionContext &exe_ctx) const {
+  return exe_ctx.m_exe_ctx_sp;
 }
 
 lldb::ScriptLanguage

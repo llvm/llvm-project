@@ -1,4 +1,4 @@
-# RUN: llc -march=mips -start-before=finalize-isel \
+# RUN: llc -mtriple=mips -start-before=finalize-isel \
 # RUN:     -stop-after=finalize-isel -relocation-model=pic \
 # RUN:     -o /dev/null %s
 

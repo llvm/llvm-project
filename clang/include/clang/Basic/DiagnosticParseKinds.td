@@ -113,9 +113,12 @@ def ext_cxx11_enum_fixed_underlying_type : Extension<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
-def ext_clang_c_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a Clang extension">,
-  InGroup<DiagGroup<"fixed-enum-extension">>;
+def ext_c23_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a C23 extension">,
+  InGroup<C23>;
+def warn_c17_compat_enum_fixed_underlying_type : Warning<
+  "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -200,8 +203,13 @@ def err_expected_equal_designator : Error<"expected '=' or another designator">;
 def ext_gnu_old_style_field_designator : ExtWarn<
   "use of GNU old-style field designator extension">,
   InGroup<GNUDesignator>;
-def ext_gnu_case_range : Extension<"use of GNU case range extension">,
-  InGroup<GNUCaseRange>;
+def ext_gnu_case_range : Extension<
+  "case ranges are a GNU extension">, InGroup<GNUCaseRange>;
+def warn_c23_compat_case_range : Warning<
+  "case ranges are incompatible with C standards before C2y">,
+  DefaultIgnore, InGroup<CPre2yCompat>;
+def ext_c2y_case_range : Extension<
+  "case ranges are a C2y extension">, InGroup<C2y>;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -405,6 +413,9 @@ def err_function_scope_depth_exceeded : Error<
   "function scope depth exceeded maximum of %0">, DefaultFatal;
 def err_missing_comma_before_ellipsis : Error<
   "C requires a comma prior to the ellipsis in a variadic function type">;
+def warn_deprecated_missing_comma_before_ellipsis : Warning<
+  "declaration of a variadic function without a comma before '...' is deprecated">,
+  InGroup<DeprecatedMissingCommaVariadicParam>;
 def err_unexpected_typedef_ident : Error<
   "unexpected type name %0: expected identifier">;
 def warn_cxx98_compat_decltype : Warning<
@@ -470,6 +481,12 @@ def warn_c17_compat_static_assert_no_message : Warning<
   "'_Static_assert' with no message is incompatible with C standards before "
   "C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def ext_cxx_static_assert_user_generated_message : ExtWarn<
+  "'static_assert' with a user-generated message is a C++26 extension">,
+  InGroup<CXX26>;
+def warn_cxx20_compat_static_assert_user_generated_message : Warning<
+  "'static_assert' with a user-generated message is incompatible with "
+  "C++ standards before C++26">, DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -480,6 +497,9 @@ def err_expected_coloncolon_after_super : Error<
 def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
+
+def err_function_parameter_limit_exceeded : Error<
+  "too many function parameters; subsequent parameters will be ignored">;
 
 // C++26 structured bindings
 def ext_decl_attrs_on_binding : ExtWarn<
@@ -701,6 +721,9 @@ def warn_empty_init_statement : Warning<
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 def err_keyword_as_parameter : Error <
   "invalid parameter name: '%0' is a keyword">;
+def warn_pre_cxx26_ambiguous_pack_indexing_type : Warning<
+  "%0 is no longer a pack expansion but a pack "
+  "indexing type; add a name to specify a pack expansion">, InGroup<CXXPre26Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -959,11 +982,20 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-def ext_delete_with_message : ExtWarn<
+def ext_delete_with_message : Extension<
   "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
 def warn_cxx23_delete_with_message : Warning<
   "'= delete' with a message is incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def ext_variadic_friends : ExtWarn<
+  "variadic 'friend' declarations are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_variadic_friends : Warning<
+  "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
@@ -1055,7 +1087,10 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
+def ext_lambda : ExtWarn<"lambdas are a %select{C++11|clang HLSL}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_lambda : ExtWarn<ext_lambda.Summary>,
+  InGroup<HLSLExtension>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1260,9 +1295,6 @@ def warn_pragma_intrinsic_builtin : Warning<
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
   InGroup<IgnoredPragmas>;
-// - #pragma mc_func
-def err_pragma_mc_func_not_supported :
-   Error<"#pragma mc_func is not supported">;
 // - #pragma init_seg
 def warn_pragma_init_seg_unsupported_target : Warning<
   "'#pragma init_seg' is only supported when targeting a "
@@ -1379,8 +1411,6 @@ def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
   "taking address of function is not allowed">;
-def err_opencl_logical_exclusive_or : Error<
-  "^^ is a reserved operator in OpenCL">;
 
 // C++ for OpenCL.
 def err_openclcxx_virtual_function : Error<

@@ -98,9 +98,8 @@ public:
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
-      if (std::find_if(allocas.begin(), allocas.end(), [alloca](auto x) {
-            return x.first == alloca;
-          }) == allocas.end()) {
+      if (llvm::none_of(allocas,
+                        [alloca](auto x) { return x.first == alloca; })) {
         allocas.push_back(std::make_pair(alloca, store));
       }
 
@@ -127,10 +126,10 @@ public:
       newResultTypes.append(callOp.getResultTypes().begin(),
                             callOp.getResultTypes().end());
       fir::CallOp newOp = builder.create<fir::CallOp>(
-          loc, newResultTypes,
+          loc,
           callOp.getCallee().has_value() ? callOp.getCallee().value()
                                          : mlir::SymbolRefAttr{},
-          newOperands);
+          newResultTypes, newOperands);
       // Copy all the attributes from the old to new op.
       newOp->setAttrs(callOp->getAttrs());
       rewriter.replaceOp(callOp, newOp);
@@ -174,8 +173,8 @@ public:
     config.strictMode = mlir::GreedyRewriteStrictness::ExistingOps;
 
     patterns.insert<CallOpRewriter>(context, *di);
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            mod, std::move(patterns), config))) {
+    if (mlir::failed(
+            mlir::applyPatternsGreedily(mod, std::move(patterns), config))) {
       mlir::emitError(mod.getLoc(),
                       "error in constant globalisation optimization\n");
       signalPassFailure();

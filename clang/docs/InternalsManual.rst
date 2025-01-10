@@ -160,6 +160,10 @@ wording a diagnostic.
   named in a diagnostic message. e.g., prefer wording like ``'this' pointer
   cannot be null in well-defined C++ code`` over wording like ``this pointer
   cannot be null in well-defined C++ code``.
+* Prefer diagnostic wording without contractions whenever possible. The single
+  quote in a contraction can be visually distracting due to its use with
+  syntactic constructs and contractions can be harder to understand for non-
+  native English speakers.
 
 The Format String
 ^^^^^^^^^^^^^^^^^
@@ -314,6 +318,17 @@ Description:
   value ``1`` becomes ``1st``, ``3`` becomes ``3rd``, and so on.  Values less
   than ``1`` are not supported.  This formatter is currently hard-coded to use
   English ordinals.
+
+**"human" format**
+
+Example:
+  ``"total size is %human0 bytes"``
+Class:
+  Integers
+Description:
+  This is a formatter which represents the argument number in a human readable
+  format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
+  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
 
 **"objcclass" format**
 
@@ -3200,7 +3215,7 @@ are similar.
    always involve two functions: an ``ActOnXXX`` function that will be called
    directly from the parser, and a ``BuildXXX`` function that performs the
    actual semantic analysis and will (eventually!) build the AST node.  It's
-   fairly common for the ``ActOnCXX`` function to do very little (often just
+   fairly common for the ``ActOnXXX`` function to do very little (often just
    some minor translation from the parser's representation to ``Sema``'s
    representation of the same thing), but the separation is still important:
    C++ template instantiation, for example, should always call the ``BuildXXX``

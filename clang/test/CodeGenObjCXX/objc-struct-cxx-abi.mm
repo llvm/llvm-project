@@ -121,7 +121,7 @@ void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 
 // CHECK: define{{.*}} void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_STRONG]], align 8
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[A]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[A]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[A_COERCE]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongD1Ev(ptr {{[^,]*}} %[[A]])
@@ -138,7 +138,7 @@ void testParamStrong(Strong a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(8) %[[V0]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V1]] to i64
 // CHECK: call void @_Z15testParamStrong6Strong(i64 %[[COERCE_VAL_PI]])
@@ -154,7 +154,7 @@ void testCallStrong(Strong *a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN6StrongC1ERKS_(ptr {{[^,]*}} %[[RETVAL]], ptr noundef nonnull align 8 dereferenceable(8) %[[V0]])
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V1]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -190,10 +190,10 @@ namespace testThunk {
 // CHECK-LABEL: define{{.*}} i64 @_ZThn8_N9testThunk2D02m0Ev(
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = tail call i64 @_ZN9testThunk2D02m0Ev(
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[CALL]] to ptr
 // CHECK: store ptr %[[COERCE_VAL_IP]], ptr %[[COERCE_DIVE]], align 8
-// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE2:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V3:.*]] = load ptr, ptr %[[COERCE_DIVE2]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V3]] to i64
 // CHECK: ret i64 %[[COERCE_VAL_PI]]
@@ -220,7 +220,7 @@ namespace testNullReceiver {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: br i1
 
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V7:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint ptr %[[V7]] to i64
 // CHECK: call void @objc_msgSend({{.*}}, i64 %[[COERCE_VAL_PI]])

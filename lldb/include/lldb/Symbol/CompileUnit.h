@@ -19,11 +19,13 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
+
 /// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
 /// A class that describes a compilation unit.
 ///
@@ -389,10 +391,15 @@ public:
   ///     A SymbolContext list class that will get any matching
   ///     entries appended to.
   ///
+  /// \param[in] realpath_prefixes
+  ///     Paths that start with one of the prefixes in this list will be
+  ///     realpath'ed to resolve any symlinks.
+  ///
   /// \see enum SymbolContext::Scope
   void ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                             lldb::SymbolContextItem resolve_scope,
-                            SymbolContextList &sc_list);
+                            SymbolContextList &sc_list,
+                            RealpathPrefixes *realpath_prefixes = nullptr);
 
   /// Get whether compiler optimizations were enabled for this compile unit
   ///

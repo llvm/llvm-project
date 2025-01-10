@@ -14,12 +14,12 @@ tablegen(LLVM SPIRVGenTables.inc -gen-searchable-tables)
 add_public_tablegen_target(SPIRVCommonTableGen)
 
 add_llvm_target(SPIRVCodeGen
+  SPIRVAPI.cpp
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
-  SPIRVDuplicatesTracker.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
@@ -31,6 +31,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
+  SPIRVStructurizer.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
@@ -40,6 +41,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVUtils.cpp
+  SPIRVEmitNonSemanticDI.cpp
 
   LINK_COMPONENTS
   Analysis
@@ -53,6 +55,7 @@ add_llvm_target(SPIRVCodeGen
   MC
   SPIRVDesc
   SPIRVInfo
+  ScalarOpts
   SelectionDAG
   Support
   Target

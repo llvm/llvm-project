@@ -1,7 +1,7 @@
 // Note: the run lines follow their respective tests, since line/column
 // matter in this test.
 
-// pcherror-error@* {{PCH file contains compiler errors}}
+// pcherror-error-re@* {{module file '{{.*}}use_error_a.pcm' contains compiler errors}}
 @import use_error_a; // notallowerror-error {{could not build module 'use_error_a'}}
 @import use_error_b;
 // expected-no-diagnostics
@@ -61,7 +61,7 @@ void test(Error *x) {
 // RUN:   -fmodule-file=%t/prebuilt/use_error_a.pcm \
 // RUN:   -fmodule-file=%t/prebuilt/use_error_b.pcm \
 // RUN:   -fmodules-cache-path=%t 2>&1 | \
-// RUN: grep "PCH file contains compiler errors"
+// RUN: grep "module file .* contains compiler errors"
 
 // Shouldn't build the cached modules (that have errors) when not allowing
 // errors

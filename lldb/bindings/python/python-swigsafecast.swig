@@ -23,6 +23,11 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::ProcessSP process_sp) {
                       SWIGTYPE_p_lldb__SBProcess);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::ModuleSP module_sp) {
+  return ToSWIGHelper(new lldb::SBModule(std::move(module_sp)),
+                      SWIGTYPE_p_lldb__SBModule);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp) {
   return ToSWIGHelper(new lldb::SBThreadPlan(std::move(thread_plan_sp)),
                       SWIGTYPE_p_lldb__SBThreadPlan);
@@ -33,8 +38,8 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp) {
                       SWIGTYPE_p_lldb__SBBreakpoint);
 }
 
-PythonObject SWIGBridge::ToSWIGWrapper(const Status& status) {
-  return ToSWIGHelper(new lldb::SBError(status), SWIGTYPE_p_lldb__SBError);
+PythonObject SWIGBridge::ToSWIGWrapper(Status&& status) {
+  return ToSWIGHelper(new lldb::SBError(std::move(status)), SWIGTYPE_p_lldb__SBError);
 }
 
 PythonObject SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb) {

@@ -59,8 +59,8 @@ constexpr bool test() {
                                 : std::strong_ordering::greater)));
 
   //  same month, different years
-  for (int i = 1000; i < 20; ++i)
-    for (int j = 1000; j < 20; ++j)
+  for (int i = 1000; i < 1010; ++i)
+    for (int j = 1000; j < 1010; ++j)
       assert((testOrder(year_month_day_last{year{i}, month_day_last{January}},
                         year_month_day_last{year{j}, month_day_last{January}},
                         i == j  ? std::strong_ordering::equal

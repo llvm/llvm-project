@@ -79,13 +79,11 @@ class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
-  /// This enum is used to hold the constants we needed for APInt.
-  enum : unsigned {
-    /// Byte size of a word.
-    APINT_WORD_SIZE = sizeof(WordType),
-    /// Bits in a word.
-    APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
-  };
+  /// Byte size of a word.
+  static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
+
+  /// Bits in a word.
+  static constexpr unsigned APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT;
 
   enum class Rounding {
     DOWN,
@@ -108,11 +106,33 @@ public:
   /// \param numBits the bit width of the constructed APInt
   /// \param val the initial value of the APInt
   /// \param isSigned how to treat signedness of val
-  APInt(unsigned numBits, uint64_t val, bool isSigned = false)
+  /// \param implicitTrunc allow implicit truncation of non-zero/sign bits of
+  ///                      val beyond the range of numBits
+  APInt(unsigned numBits, uint64_t val, bool isSigned = false,
+        bool implicitTrunc = false)
       : BitWidth(numBits) {
+    if (!implicitTrunc) {
+      if (isSigned) {
+        if (BitWidth == 0) {
+          assert((val == 0 || val == uint64_t(-1)) &&
+                 "Value must be 0 or -1 for signed 0-bit APInt");
+        } else {
+          assert(llvm::isIntN(BitWidth, val) &&
+                 "Value is not an N-bit signed value");
+        }
+      } else {
+        if (BitWidth == 0) {
+          assert(val == 0 && "Value must be zero for unsigned 0-bit APInt");
+        } else {
+          assert(llvm::isUIntN(BitWidth, val) &&
+                 "Value is not an N-bit unsigned value");
+        }
+      }
+    }
     if (isSingleWord()) {
       U.VAL = val;
-      clearUnusedBits();
+      if (implicitTrunc || isSigned)
+        clearUnusedBits();
     } else {
       initSlowCase(val, isSigned);
     }
@@ -492,7 +512,7 @@ public:
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
-    return (Ones + LeadZ + countr_zero()) == BitWidth;
+    return (Ones + LeadZ + countTrailingZerosSlowCase()) == BitWidth;
   }
 
   /// Return true if this APInt value contains a non-empty sequence of ones with

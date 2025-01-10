@@ -13,12 +13,12 @@
 #ifndef OMPTARGET_SHARED_ENVIRONMENT_H
 #define OMPTARGET_SHARED_ENVIRONMENT_H
 
+#include <stdint.h>
+
 #ifdef OMPTARGET_DEVICE_RUNTIME
-#include "Types.h"
+#include "DeviceTypes.h"
 #else
 #include "SourceInfo.h"
-
-#include <cstdint>
 
 using IdentTy = ident_t;
 #endif

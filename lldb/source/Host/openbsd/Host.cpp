@@ -30,28 +30,11 @@
 
 #include "llvm/TargetParser/Host.h"
 
-extern "C" {
-extern char **environ;
-}
-
 using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
 class ProcessLaunchInfo;
-}
-
-Environment Host::GetEnvironment() {
-  Environment env;
-  char *v;
-  char **var = environ;
-  for (; var != NULL && *var != NULL; ++var) {
-    v = strchr(*var, (int)'-');
-    if (v == NULL)
-      continue;
-    env.insert(v);
-  }
-  return env;
 }
 
 static bool
@@ -127,7 +110,7 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
         process_info.SetUserID(proc_kinfo.p_ruid);
         process_info.SetGroupID(proc_kinfo.p_rgid);
         process_info.SetEffectiveUserID(proc_kinfo.p_uid);
-	process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
+        process_info.SetEffectiveGroupID(proc_kinfo.p_gid);
         return true;
       }
     }
@@ -215,5 +198,5 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }

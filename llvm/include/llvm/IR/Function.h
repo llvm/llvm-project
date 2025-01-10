@@ -60,8 +60,7 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
-                                          public ilist_node<Function> {
+class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -73,8 +72,17 @@ public:
   using const_arg_iterator = const Argument *;
 
 private:
+  constexpr static HungOffOperandsAllocMarker AllocMarker{};
+
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
+
+  // Basic blocks need to get their number when added to a function.
+  friend void BasicBlock::setParent(Function *);
+  unsigned NextBlockNum = 0;
+  /// Epoch of block numbers. (Could be shrinked to uint8_t if required.)
+  unsigned BlockNumEpoch = 0;
+
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
@@ -165,13 +173,14 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           unsigned AddrSpace, const Twine &N = "",
                           Module *M = nullptr) {
-    return new Function(Ty, Linkage, AddrSpace, N, M);
+    return new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   }
 
   // TODO: remove this once all users have been updated to pass an AddrSpace
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
-    return new Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
+    return new (AllocMarker)
+        Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
   }
 
   /// Creates a new function and attaches it to a module.
@@ -246,10 +255,6 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
-  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
-  /// certain target. If it is a generic intrinsic false is returned.
-  static bool isTargetIntrinsic(Intrinsic::ID IID);
-
   /// isTargetIntrinsic - Returns true if this function is an intrinsic and the
   /// intrinsic is specific to a certain target. If this is not an intrinsic
   /// or a generic intrinsic, false is returned.
@@ -259,8 +264,6 @@ public:
   /// Intrinsics". Returns false if not, and returns false when
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
-
-  static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).
@@ -430,11 +433,17 @@ public:
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Check if an attribute is in the list of attributes.
+  bool hasParamAttribute(unsigned ArgNo, StringRef Kind) const;
+
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const;
 
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
+
+  /// Check if attribute of the given kind is set at the given index.
+  bool hasAttributeAtIndex(unsigned Idx, Attribute::AttrKind Kind) const;
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const;
@@ -811,6 +820,34 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Block number functions
+
+  /// Return a value larger than the largest block number. Intended to allocate
+  /// a vector that is sufficiently large to hold all blocks indexed by their
+  /// number.
+  unsigned getMaxBlockNumber() const { return NextBlockNum; }
+
+  /// Renumber basic blocks into a dense value range starting from 0. Be aware
+  /// that other data structures and analyses (e.g., DominatorTree) may depend
+  /// on the value numbers and need to be updated or invalidated.
+  void renumberBlocks();
+
+  /// Return the "epoch" of current block numbers. This will return a different
+  /// value after every renumbering. The intention is: if something (e.g., an
+  /// analysis) uses block numbers, it also stores the number epoch and then
+  /// can assert later on that the epoch didn't change (indicating that the
+  /// numbering is still valid). If the epoch changed, blocks might have been
+  /// assigned new numbers and previous uses of the numbers needs to be
+  /// invalidated. This is solely intended as a debugging feature.
+  unsigned getBlockNumberEpoch() const { return BlockNumEpoch; }
+
+private:
+  /// Assert that all blocks have unique numbers within 0..NextBlockNum. This
+  /// has O(n) runtime complexity.
+  void validateBlockNumbers() const;
+
+public:
+  //===--------------------------------------------------------------------===//
   // BasicBlock iterator forwarding functions
   //
   iterator                begin()       { return BasicBlocks.begin(); }
@@ -905,9 +942,14 @@ public:
   ///
   void viewCFG() const;
 
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFG(), but generates the dot file with the given file name.
+  void viewCFG(const char *OutputFileName) const;
+
   /// Extended form to print edge weights.
   void viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
-               const BranchProbabilityInfo *BPI) const;
+               const BranchProbabilityInfo *BPI,
+               const char *OutputFileName = nullptr) const;
 
   /// viewCFGOnly - This function is meant for use from the debugger.  It works
   /// just like viewCFG, but it does not include the contents of basic blocks
@@ -915,6 +957,10 @@ public:
   /// this can make the graph smaller.
   ///
   void viewCFGOnly() const;
+
+  /// viewCFG - This function is meant for use from the debugger. It works just
+  /// like viewCFGOnly(), but generates the dot file with the given file name.
+  void viewCFGOnly(const char *OutputFileName) const;
 
   /// Extended form to print edge weights.
   void viewCFGOnly(const BlockFrequencyInfo *BFI,
@@ -1003,8 +1049,7 @@ private:
 /// Return value: true =>  null pointer dereference is not undefined.
 bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
-template <>
-struct OperandTraits<Function> : public HungoffOperandTraits<3> {};
+template <> struct OperandTraits<Function> : public HungoffOperandTraits {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(Function, Value)
 

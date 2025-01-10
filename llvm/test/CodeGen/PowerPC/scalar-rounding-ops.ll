@@ -214,6 +214,48 @@ entry:
 
 declare i64 @llvm.lround.i64.f64(double)
 
+define dso_local i32 @test_lroundi32f64(double %d) local_unnamed_addr {
+; BE-LABEL: test_lroundi32f64:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 112
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    bl lround
+; BE-NEXT:    nop
+; BE-NEXT:    addi r1, r1, 112
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: test_lroundi32f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl lround
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: test_lroundi32f64:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    xsrdpi f0, f1
+; FAST-NEXT:    fctiw f0, f0
+; FAST-NEXT:    mffprwz r3, f0
+; FAST-NEXT:    blr
+entry:
+  %0 = tail call i32 @llvm.lround.i32.f64(double %d)
+  ret i32 %0
+}
+
+declare i32 @llvm.lround.i32.f64(double)
+
 define dso_local i64 @test_lroundf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_lroundf:
 ; BE:       # %bb.0: # %entry
@@ -255,6 +297,48 @@ entry:
 }
 
 declare i64 @llvm.lround.i64.f32(float)
+
+define dso_local i32 @test_lroundi32f32(float %d) local_unnamed_addr {
+; BE-LABEL: test_lroundi32f32:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 112
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    bl lroundf
+; BE-NEXT:    nop
+; BE-NEXT:    addi r1, r1, 112
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: test_lroundi32f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl lroundf
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: test_lroundi32f32:
+; FAST:       # %bb.0: # %entry
+; FAST-NEXT:    xsrdpi f0, f1
+; FAST-NEXT:    fctiw f0, f0
+; FAST-NEXT:    mffprwz r3, f0
+; FAST-NEXT:    blr
+entry:
+  %0 = tail call i32 @llvm.lround.i32.f32(float %d)
+  ret i32 %0
+}
+
+declare i32 @llvm.lround.i32.f32(float)
 
 define dso_local i64 @test_llround(double %d) local_unnamed_addr {
 ; BE-LABEL: test_llround:

@@ -53,8 +53,6 @@ class Pass;
   static void *initialize##passName##PassOnce(PassRegistry &Registry) {
 
 #define INITIALIZE_PASS_DEPENDENCY(depName) initialize##depName##Pass(Registry);
-#define INITIALIZE_AG_DEPENDENCY(depName)                                      \
-  initialize##depName##AnalysisGroup(Registry);
 
 #define INITIALIZE_PASS_END(passName, arg, name, cfg, analysis)                \
   PassInfo *PI = new PassInfo(                                                 \
@@ -116,95 +114,6 @@ template <typename passName> struct RegisterPass : public PassInfo {
     PassRegistry::getPassRegistry()->registerPass(*this);
   }
 };
-
-/// RegisterAnalysisGroup - Register a Pass as a member of an analysis _group_.
-/// Analysis groups are used to define an interface (which need not derive from
-/// Pass) that is required by passes to do their job.  Analysis Groups differ
-/// from normal analyses because any available implementation of the group will
-/// be used if it is available.
-///
-/// If no analysis implementing the interface is available, a default
-/// implementation is created and added.  A pass registers itself as the default
-/// implementation by specifying 'true' as the second template argument of this
-/// class.
-///
-/// In addition to registering itself as an analysis group member, a pass must
-/// register itself normally as well.  Passes may be members of multiple groups
-/// and may still be "required" specifically by name.
-///
-/// The actual interface may also be registered as well (by not specifying the
-/// second template argument).  The interface should be registered to associate
-/// a nice name with the interface.
-class RegisterAGBase : public PassInfo {
-public:
-  RegisterAGBase(StringRef Name, const void *InterfaceID,
-                 const void *PassID = nullptr, bool isDefault = false);
-};
-
-template <typename Interface, bool Default = false>
-struct RegisterAnalysisGroup : public RegisterAGBase {
-  explicit RegisterAnalysisGroup(PassInfo &RPB)
-      : RegisterAGBase(RPB.getPassName(), &Interface::ID, RPB.getTypeInfo(),
-                       Default) {}
-
-  explicit RegisterAnalysisGroup(const char *Name)
-      : RegisterAGBase(Name, &Interface::ID) {}
-};
-
-#define INITIALIZE_ANALYSIS_GROUP(agName, name, defaultPass)                   \
-  static void *initialize##agName##AnalysisGroupOnce(PassRegistry &Registry) { \
-    initialize##defaultPass##Pass(Registry);                                   \
-    PassInfo *AI = new PassInfo(name, &agName::ID);                            \
-    Registry.registerAnalysisGroup(&agName::ID, 0, *AI, false, true);          \
-    return AI;                                                                 \
-  }                                                                            \
-  static llvm::once_flag Initialize##agName##AnalysisGroupFlag;                \
-  void llvm::initialize##agName##AnalysisGroup(PassRegistry &Registry) {       \
-    llvm::call_once(Initialize##agName##AnalysisGroupFlag,                     \
-                    initialize##agName##AnalysisGroupOnce,                     \
-                    std::ref(Registry));                                       \
-  }
-
-#define INITIALIZE_AG_PASS(passName, agName, arg, name, cfg, analysis, def)    \
-  static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
-    if (!def)                                                                  \
-      initialize##agName##AnalysisGroup(Registry);                             \
-    PassInfo *PI = new PassInfo(                                               \
-        name, arg, &passName::ID,                                              \
-        PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis);     \
-    Registry.registerPass(*PI, true);                                          \
-                                                                               \
-    PassInfo *AI = new PassInfo(name, &agName::ID);                            \
-    Registry.registerAnalysisGroup(&agName::ID, &passName::ID, *AI, def,       \
-                                   true);                                      \
-    return AI;                                                                 \
-  }                                                                            \
-  static llvm::once_flag Initialize##passName##PassFlag;                       \
-  void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    llvm::call_once(Initialize##passName##PassFlag,                            \
-                    initialize##passName##PassOnce, std::ref(Registry));       \
-  }
-
-#define INITIALIZE_AG_PASS_BEGIN(passName, agName, arg, n, cfg, analysis, def) \
-  static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
-    if (!def)                                                                  \
-      initialize##agName##AnalysisGroup(Registry);
-
-#define INITIALIZE_AG_PASS_END(passName, agName, arg, n, cfg, analysis, def)   \
-  PassInfo *PI = new PassInfo(                                                 \
-      n, arg, &passName::ID,                                                   \
-      PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis);       \
-  Registry.registerPass(*PI, true);                                            \
-                                                                               \
-  PassInfo *AI = new PassInfo(n, &agName::ID);                                 \
-  Registry.registerAnalysisGroup(&agName::ID, &passName::ID, *AI, def, true);  \
-  return AI;                                                                   \
-  }                                                                            \
-  static llvm::once_flag Initialize##passName##PassFlag;                       \
-  void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    llvm::call_once(Initialize##passName##PassFlag,                            \
-                    initialize##passName##PassOnce, std::ref(Registry));       \
-  }
 
 //===---------------------------------------------------------------------------
 /// PassRegistrationListener class - This class is meant to be derived from by

@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 #include <optional>
 
@@ -28,6 +29,7 @@ const APInt &ConstantIntRanges::smin() const { return sminVal; }
 const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
+  type = getElementTypeOrSelf(type);
   if (type.isIndex())
     return IndexType::kInternalStorageBitWidth;
   if (auto integerType = dyn_cast<IntegerType>(type))

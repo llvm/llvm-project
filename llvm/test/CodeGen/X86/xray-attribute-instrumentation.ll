@@ -3,12 +3,12 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown                          < %s | FileCheck %s --check-prefixes=CHECK,CHECK-MACOS
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_0:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
   ret i32 0
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_1:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
@@ -38,7 +38,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; We test multiple returns in a single function to make sure we're getting all
 ; of them with XRay instrumentation.
 define i32 @bar(i32 %i) nounwind noinline uwtable "function-instrument"="xray-always" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_2:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
@@ -47,13 +47,13 @@ Test:
   br i1 %cond, label %IsEqual, label %NotEqual
 IsEqual:
   ret i32 0
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_3:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)
 NotEqual:
   ret i32 1
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_4:
 ; CHECK:       retq
 ; CHECK-NEXT:  nopw %cs:512(%rax,%rax)

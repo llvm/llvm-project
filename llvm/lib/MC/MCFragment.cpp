@@ -18,16 +18,15 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cstdint>
 #include <utility>
 
 using namespace llvm;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
+    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
+      LinkerRelaxable(false), AllowAutoPadding(false) {}
 
 void MCFragment::destroy() {
   switch (Kind) {
@@ -36,9 +35,6 @@ void MCFragment::destroy() {
       return;
     case FT_Data:
       cast<MCDataFragment>(this)->~MCDataFragment();
-      return;
-    case FT_CompactEncodedInst:
-      cast<MCCompactEncodedInstFragment>(this)->~MCCompactEncodedInstFragment();
       return;
     case FT_Fill:
       cast<MCFillFragment>(this)->~MCFillFragment();
@@ -107,8 +103,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
-  case MCFragment::FT_CompactEncodedInst:
-    OS << "MCCompactEncodedInstFragment"; break;
   case MCFragment::FT_Fill:  OS << "MCFillFragment"; break;
   case MCFragment::FT_Nops:
     OS << "MCFNopsFragment";
@@ -156,29 +150,12 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     }
     OS << "] (" << Contents.size() << " bytes)";
 
-    if (DF->fixup_begin() != DF->fixup_end()) {
+    if (DF->getFixups().size()) {
       OS << ",\n       ";
       OS << " Fixups:[";
-      for (MCDataFragment::const_fixup_iterator it = DF->fixup_begin(),
-             ie = DF->fixup_end(); it != ie; ++it) {
-        if (it != DF->fixup_begin()) OS << ",\n                ";
-        OS << *it;
-      }
+      interleave(DF->getFixups(), OS, ",\n                ");
       OS << "]";
     }
-    break;
-  }
-  case MCFragment::FT_CompactEncodedInst: {
-    const auto *CEIF =
-      cast<MCCompactEncodedInstFragment>(this);
-    OS << "\n       ";
-    OS << " Contents:[";
-    const SmallVectorImpl<char> &Contents = CEIF->getContents();
-    for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
-      if (i) OS << ",";
-      OS << hexdigit((Contents[i] >> 4) & 0xF) << hexdigit(Contents[i] & 0xF);
-    }
-    OS << "] (" << Contents.size() << " bytes)";
     break;
   }
   case MCFragment::FT_Fill:  {

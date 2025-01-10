@@ -228,6 +228,11 @@ FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
 ///   } else {
 ///     scf.yield %pre_val : i64
 ///   }
+///
+/// Failure mechanism is not implemented for this function, so it currently
+/// always returns a `WhileOp` operation: a new one if the transformation took
+/// place or the input `whileOp` if the loop was already in a `do-while` form
+/// and `forceCreateCheck` is `false`.
 FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
                                                 RewriterBase &rewriter,
                                                 bool forceCreateCheck = false);

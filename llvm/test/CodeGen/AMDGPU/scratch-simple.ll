@@ -51,11 +51,16 @@
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 
-; MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
-; MUBUF-DAG: s_mov_b32 s1, SCRATCH_RSRC_DWORD1
-; MUBUF-DAG: s_mov_b32 s2, -1
-; SI-DAG: s_mov_b32 s3, 0xe8f000
-; VI-DAG: s_mov_b32 s3, 0xe80000
+; SIVI-DAG: s_mov_b32 s4, SCRATCH_RSRC_DWORD0
+; SIVI-DAG: s_mov_b32 s5, SCRATCH_RSRC_DWORD1
+; SIVI-DAG: s_mov_b32 s6, -1
+
+; GFX9-MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9-MUBUF-DAG: s_mov_b32 s1, SCRATCH_RSRC_DWORD1
+; GFX9-MUBUF-DAG: s_mov_b32 s2, -1
+
+; SI-DAG: s_mov_b32 s7, 0xe8f000
+; VI-DAG: s_mov_b32 s7, 0xe80000
 ; GFX9-MUBUF-DAG: s_mov_b32 s3, 0xe00000
 ; GFX10_W32-MUBUF-DAG: s_mov_b32 s3, 0x31c16000
 ; GFX10_W64-MUBUF-DAG: s_mov_b32 s3, 0x31e16000
@@ -74,10 +79,9 @@
 ; GFX11-FLATSCR: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, v0
 
 ; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[HI_OFF:v[0-9]+]],{{.*}} 0x200, [[CLAMP_IDX]]
-; MUBUF-DAG: v_add{{_|_nc_}}{{i|u}}32_e32 [[LO_OFF:v[0-9]+]],{{.*}} {{v2|0}}, [[CLAMP_IDX]]
-; FLATSCR: v_add{{_|_nc_}}{{u32|b32}}_e32 [[LO_OFF:v[0-9]+]],{{.*}} {{v2|0}}, [[CLAMP_IDX]]
+; FLATSCR:  v_mov_b32_e32 [[LO_OFF:v[0-9]+]], [[CLAMP_IDX]]
 
-; MUBUF: buffer_load_dword {{v[0-9]+}}, [[LO_OFF]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
+; MUBUF: buffer_load_dword {{v[0-9]+}}, [[CLAMP_IDX]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; MUBUF: buffer_load_dword {{v[0-9]+}}, [[HI_OFF]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; FLATSCR: scratch_load_dword {{v[0-9]+}}, [[LO_OFF]], off
 ; GFX11-FLATSCR: scratch_load_b32 {{v[0-9]+}}, [[CLAMP_IDX]], off{{$}}
@@ -118,7 +122,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 
-; MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; MUBUF-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 
 ; FLATSCR-NOT: SCRATCH_RSRC_DWORD
 
@@ -171,7 +175,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s2
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s3
 
-; MUBUF-DAG: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; MUBUF-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 
 ; FLATSCR-NOT: SCRATCH_RSRC_DWORD
 
@@ -200,8 +204,8 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10-FLATSCR: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-FLATSCR: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 
-; SIVI: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
-; SIVI-NOT: s_mov_b32 s0
+; SIVI: s_mov_b32 s4, SCRATCH_RSRC_DWORD0
+; SIVI-NOT: s_mov_b32 s4
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 
@@ -253,11 +257,11 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s0
 ; GFX10-FLATSCR-PAL: s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 
-; SIVI: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; SIVI: s_mov_b32 s4, SCRATCH_RSRC_DWORD0
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; SIVI: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 
-; GFX9_10-MUBUF: s_mov_b32 s0, SCRATCH_RSRC_DWORD0
+; GFX9_10-MUBUF: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX9_10-MUBUF: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 ; GFX9_10-MUBUF: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
 

@@ -209,8 +209,9 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (const CXXRecordDecl *RecordDecl = ArgType->getAsCXXRecordDecl();
-        RecordDecl && !(RecordDecl->hasMoveConstructor() &&
-                        RecordDecl->hasMoveAssignment())) {
+        RecordDecl && RecordDecl->hasDefinition() &&
+        !(RecordDecl->hasMoveConstructor() &&
+          RecordDecl->hasMoveAssignment())) {
       const bool MissingMoveAssignment = !RecordDecl->hasMoveAssignment();
       const bool MissingMoveConstructor = !RecordDecl->hasMoveConstructor();
       const bool MissingBoth = MissingMoveAssignment && MissingMoveConstructor;

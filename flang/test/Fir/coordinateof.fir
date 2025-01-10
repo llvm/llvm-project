@@ -62,7 +62,7 @@ func.func @foo5(%box : !fir.box<!fir.ptr<!fir.array<?xi32>>>, %i : index) -> i32
 }
 
 // CHECK-LABEL: @foo6
-// CHECK-SAME: (ptr %[[box:.*]], i64 %{{.*}}, ptr %{{.*}}) 
+// CHECK-SAME: (ptr %[[box:.*]], i64 %{{.*}}, ptr nocapture %{{.*}}) 
 func.func @foo6(%box : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, %i : i64 , %res : !fir.ref<!fir.char<1>>) {
   // CHECK: %[[addr_gep:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[box]], i32 0, i32 0
   // CHECK: %[[addr:.*]] = load ptr, ptr %[[addr_gep]]

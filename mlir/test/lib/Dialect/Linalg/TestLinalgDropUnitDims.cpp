@@ -25,7 +25,13 @@ LogicalResult dropOutermostUnitDims(RewriterBase &rewriter,
                                     linalg::GenericOp genericOp) {
   linalg::ControlDropUnitDims options;
   options.controlFn = [](Operation *op) { return SmallVector<unsigned>{0}; };
-  return linalg::dropUnitDims(rewriter, genericOp, options);
+  FailureOr<linalg::DropUnitDimsResult> result =
+      linalg::dropUnitDims(rewriter, genericOp, options);
+  if (failed(result)) {
+    return failure();
+  }
+  rewriter.replaceOp(genericOp, result->replacements);
+  return success();
 }
 
 struct TestLinalgDropUnitDims

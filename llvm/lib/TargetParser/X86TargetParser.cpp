@@ -138,6 +138,14 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureWAITPKG;
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
+constexpr FeatureBitset FeaturesDiamondRapids =
+    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
+    FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
+    FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
+    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
+    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -237,6 +245,10 @@ static constexpr FeatureBitset FeaturesZNVER4 =
     FeatureAVX512VBMI | FeatureAVX512VBMI2 | FeatureAVX512VNNI |
     FeatureAVX512BITALG | FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 |
     FeatureGFNI | FeatureSHSTK;
+
+static constexpr FeatureBitset FeaturesZNVER5 =
+    FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
+    FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI;
 
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
@@ -377,6 +389,8 @@ constexpr ProcInfo Processors[] = {
   { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512FP16, FeaturesSapphireRapids, 'n', false },
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
+  // Diamond Rapids microarchitecture based processors.
+  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
@@ -417,6 +431,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2, '\0', false },
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
+  { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
   { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
@@ -593,6 +608,12 @@ constexpr FeatureBitset ImpliedFeaturesAMX_BF16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
+    FeatureAMX_TILE | FeatureAVX10_2_512;
+constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
@@ -620,6 +641,9 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512FP16;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
     FeatureAVX10_1 | FeatureEVEX512;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
+constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 =
+    FeatureAVX10_2 | FeatureAVX10_1_512;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
@@ -630,6 +654,8 @@ constexpr FeatureBitset ImpliedFeaturesCCMP = {};
 constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
+
+constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},

@@ -1,8 +1,7 @@
 ; Specifically exercise the cost modeling for non-trivial loop unswitching.
 ;
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
-; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
-; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -unswitch-threshold=5 -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S -verify-memoryssa < %s | FileCheck %s
 
 declare void @a()
 declare void @b()

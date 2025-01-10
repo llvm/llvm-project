@@ -621,7 +621,8 @@ void ScheduleDAGInstrs::initSUnits() {
   }
 }
 
-class ScheduleDAGInstrs::Value2SUsMap : public MapVector<ValueType, SUList> {
+class ScheduleDAGInstrs::Value2SUsMap
+    : public SmallMapVector<ValueType, SUList, 4> {
   /// Current total number of SUs in map.
   unsigned NumNodes = 0;
 
@@ -656,7 +657,7 @@ public:
 
   /// Clears map from all contents.
   void clear() {
-    MapVector<ValueType, SUList>::clear();
+    SmallMapVector<ValueType, SUList, 4>::clear();
     NumNodes = 0;
   }
 
@@ -907,7 +908,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       BarrierChain = SU;
 
       LLVM_DEBUG(dbgs() << "Global memory object and new barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
 
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);
@@ -928,7 +929,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       FPExceptions.insert(SU, UnknownValue);
 
       if (FPExceptions.size() >= HugeRegion) {
-        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n";);
+        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n");
         Value2SUsMap empty;
         reduceHugeMemNodeMaps(FPExceptions, empty, getReductionSize());
       }
@@ -1011,12 +1012,11 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 
     // Reduce maps if they grow huge.
     if (Stores.size() + Loads.size() >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Reducing Stores and Loads maps.\n";);
+      LLVM_DEBUG(dbgs() << "Reducing Stores and Loads maps.\n");
       reduceHugeMemNodeMaps(Stores, Loads, getReductionSize());
     }
     if (NonAliasStores.size() + NonAliasLoads.size() >= HugeRegion) {
-      LLVM_DEBUG(
-          dbgs() << "Reducing NonAliasStores and NonAliasLoads maps.\n";);
+      LLVM_DEBUG(dbgs() << "Reducing NonAliasStores and NonAliasLoads maps.\n");
       reduceHugeMemNodeMaps(NonAliasStores, NonAliasLoads, getReductionSize());
     }
   }
@@ -1089,11 +1089,11 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
       BarrierChain->addPredBarrier(newBarrierChain);
       BarrierChain = newBarrierChain;
       LLVM_DEBUG(dbgs() << "Inserting new barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
     }
     else
       LLVM_DEBUG(dbgs() << "Keeping old barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
   }
   else
     BarrierChain = newBarrierChain;
@@ -1209,7 +1209,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   return s;
 }
 
-/// Return the basic block label. It is not necessarilly unique because a block
+/// Return the basic block label. It is not necessarily unique because a block
 /// contains multiple scheduling regions. But it is fine for visualization.
 std::string ScheduleDAGInstrs::getDAGName() const {
   return "dag." + BB->getFullName();

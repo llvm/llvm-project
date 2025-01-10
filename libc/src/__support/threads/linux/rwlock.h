@@ -19,11 +19,11 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/linux/raw_mutex.h"
 #include "src/__support/threads/sleep.h"
-#include "src/__support/threads/tid.h"
 
 #ifndef LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT
 #define LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT 100
@@ -162,7 +162,7 @@ public:
   LIBC_INLINE constexpr bool has_active_reader() const {
     return state >= ACTIVE_READER_COUNT_UNIT;
   }
-  LIBC_INLINE constexpr bool has_acitve_owner() const {
+  LIBC_INLINE constexpr bool has_active_owner() const {
     return has_active_reader() || has_active_writer();
   }
   LIBC_INLINE constexpr bool has_last_reader() const {
@@ -193,7 +193,7 @@ public:
       }
       __builtin_unreachable();
     } else
-      return !has_acitve_owner();
+      return !has_active_owner();
   }
 
   // This function check if it is possible to grow the reader count without
@@ -358,7 +358,7 @@ private:
         if (LIBC_LIKELY(old.compare_exchange_weak_with(
                 state, old.set_writer_bit(), cpp::MemoryOrder::ACQUIRE,
                 cpp::MemoryOrder::RELAXED))) {
-          writer_tid.store(gettid_inline(), cpp::MemoryOrder::RELAXED);
+          writer_tid.store(internal::gettid(), cpp::MemoryOrder::RELAXED);
           return LockResult::Success;
         }
         // Notice that old is updated by the compare_exchange_weak_with
@@ -393,7 +393,7 @@ private:
             unsigned spin_count = LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT) {
     // Phase 1: deadlock detection.
     // A deadlock happens if this is a RAW/WAW lock in the same thread.
-    if (writer_tid.load(cpp::MemoryOrder::RELAXED) == gettid_inline())
+    if (writer_tid.load(cpp::MemoryOrder::RELAXED) == internal::gettid())
       return LockResult::Deadlock;
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
@@ -519,7 +519,7 @@ public:
     if (old.has_active_writer()) {
       // The lock is held by a writer.
       // Check if we are the owner of the lock.
-      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != gettid_inline())
+      if (writer_tid.load(cpp::MemoryOrder::RELAXED) != internal::gettid())
         return LockResult::PermissionDenied;
       // clear writer tid.
       writer_tid.store(0, cpp::MemoryOrder::RELAXED);
@@ -548,7 +548,7 @@ public:
   [[nodiscard]]
   LIBC_INLINE LockResult check_for_destroy() {
     RwState old = RwState::load(state, cpp::MemoryOrder::RELAXED);
-    if (old.has_acitve_owner())
+    if (old.has_active_owner())
       return LockResult::Busy;
     return LockResult::Success;
   }

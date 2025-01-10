@@ -12,8 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpenMP/OMPT/Interface.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/omp.h"
 #include "PluginManager.h"
+#include "omptarget.h"
 #include "private.h"
 
 #include "Shared/EnvironmentVar.h"
@@ -31,6 +34,43 @@
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
 #endif
+
+// If offload is enabled, ensure that device DeviceID has been initialized.
+//
+// The return bool indicates if the offload is to the host device
+// There are three possible results:
+// - Return false if the taregt device is ready for offload
+// - Return true without reporting a runtime error if offload is
+//   disabled, perhaps because the initial device was specified.
+// - Report a runtime error and return true.
+//
+// If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
+// This step might be skipped if offload is disabled.
+bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED) {
+    DP("Offload is disabled\n");
+    return true;
+  }
+
+  if (DeviceID == OFFLOAD_DEVICE_DEFAULT) {
+    DeviceID = omp_get_default_device();
+    DP("Use default device id %" PRId64 "\n", DeviceID);
+  }
+
+  // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
+  if (omp_get_num_devices() == 0) {
+    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    handleTargetOutcome(false, Loc);
+    return true;
+  }
+
+  if (DeviceID == omp_get_initial_device()) {
+    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
+       DeviceID);
+    return true;
+  }
+  return false;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
@@ -85,7 +125,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
 
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return;
   }
@@ -244,13 +284,24 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
     LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 0;
-    LocalKernelArgs.NumTeams[2] = 0;
+    LocalKernelArgs.NumTeams[1] = 1;
+    LocalKernelArgs.NumTeams[2] = 1;
     LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 0;
-    LocalKernelArgs.ThreadLimit[2] = 0;
+    LocalKernelArgs.ThreadLimit[1] = 1;
+    LocalKernelArgs.ThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
+
+  // FIXME: This is a WA to "calibrate" the bad work done in the front end.
+  // Delete this ugly code after the front end emits proper values.
+  auto CorrectMultiDim = [](uint32_t(&Val)[3]) {
+    if (Val[1] == 0)
+      Val[1] = 1;
+    if (Val[2] == 0)
+      Val[2] = 1;
+  };
+  CorrectMultiDim(KernelArgs->ThreadLimit);
+  CorrectMultiDim(KernelArgs->NumTeams);
 
   return KernelArgs;
 }
@@ -266,7 +317,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
      "\n",
      DeviceId, DPxPTR(HostPtr));
 
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }
@@ -280,12 +331,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   KernelArgs =
       upgradeKernelArgs(KernelArgs, LocalKernelArgs, NumTeams, ThreadLimit);
 
-  assert(KernelArgs->NumTeams[0] == static_cast<uint32_t>(NumTeams) &&
-         !KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
-         "OpenMP interface should not use multiple dimensions");
-  assert(KernelArgs->ThreadLimit[0] == static_cast<uint32_t>(ThreadLimit) &&
-         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
-         "OpenMP interface should not use multiple dimensions");
   TIMESCOPE_WITH_DETAILS_AND_IDENT(
       "Runtime: target exe",
       "NumTeams=" + std::to_string(NumTeams) +
@@ -404,7 +449,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
                                       uint64_t LoopTripCount) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
+  if (checkDevice(DeviceId, Loc)) {
     DP("Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }

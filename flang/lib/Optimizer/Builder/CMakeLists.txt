@@ -5,6 +5,7 @@ add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp
+  CUFCommon.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
   HLFIRTools.cpp
@@ -35,15 +36,20 @@ add_flang_library(FIRBuilder
   TemporaryStorage.cpp
 
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   HLFIRDialect
   ${dialect_libs}
   ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranEvaluate
   HLFIRDialect
   ${dialect_libs}
   ${extension_libs}

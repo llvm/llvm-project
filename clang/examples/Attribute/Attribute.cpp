@@ -94,6 +94,54 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
     }
     return AttributeApplied;
   }
+
+  bool diagAppertainsToStmt(Sema &S, const ParsedAttr &Attr,
+                            const Stmt *St) const override {
+    // This attribute appertains to for loop statements only.
+    if (!isa<ForStmt>(St)) {
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+          << Attr << Attr.isRegularKeywordAttribute() << "for loop statements";
+      return false;
+    }
+    return true;
+  }
+
+  AttrHandling handleStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &Attr,
+                                   class Attr *&Result) const override {
+    // We make some rules here:
+    // 1. Only accept at most 3 arguments here.
+    // 2. The first argument must be a string literal if it exists.
+    if (Attr.getNumArgs() > 3) {
+      unsigned ID = S.getDiagnostics().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "'example' attribute only accepts at most three arguments");
+      S.Diag(Attr.getLoc(), ID);
+      return AttributeNotApplied;
+    }
+    // If there are arguments, the first argument should be a string literal.
+    if (Attr.getNumArgs() > 0) {
+      auto *Arg0 = Attr.getArgAsExpr(0);
+      StringLiteral *Literal =
+          dyn_cast<StringLiteral>(Arg0->IgnoreParenCasts());
+      if (!Literal) {
+        unsigned ID = S.getDiagnostics().getCustomDiagID(
+            DiagnosticsEngine::Error, "first argument to the 'example' "
+                                      "attribute must be a string literal");
+        S.Diag(Attr.getLoc(), ID);
+        return AttributeNotApplied;
+      }
+      SmallVector<Expr *, 16> ArgsBuf;
+      for (unsigned i = 0; i < Attr.getNumArgs(); i++) {
+        ArgsBuf.push_back(Attr.getArgAsExpr(i));
+      }
+      Result = AnnotateAttr::Create(S.Context, "example", ArgsBuf.data(),
+                                    ArgsBuf.size(), Attr.getRange());
+    } else {
+      Result = AnnotateAttr::Create(S.Context, "example", nullptr, 0,
+                                    Attr.getRange());
+    }
+    return AttributeApplied;
+  }
 };
 
 } // namespace

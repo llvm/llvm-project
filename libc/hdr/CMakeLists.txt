@@ -33,6 +33,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  math_function_macros
+  HDRS
+    math_function_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.include.math
+)
+
+add_proxy_header_library(
   errno_macros
   HDRS
     errno_macros.h
@@ -42,10 +51,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
 
+add_header_library(fcntl_overlay HDRS fcntl_overlay.h)
 add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h
+  DEPENDS
+    .fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fcntl_macros
     libc.include.fcntl
@@ -69,10 +81,27 @@ add_proxy_header_library(
     libc.include.signal
 )
 
+add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
+
+add_proxy_header_library(
+  stdlib_macros
+  HDRS
+    stdlib_macros.h
+  DEPENDS
+    .stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+    libc.include.llvm-libc-macros.stdlib_macros
+)
+
+add_header_library(stdio_overlay HDRS stdio_overlay.h)
+
 add_proxy_header_library(
   stdio_macros
   HDRS
     stdio_macros.h
+  DEPENDS
+    .stdio_overlay
   FULL_BUILD_DEPENDS
     libc.include.stdio
     libc.include.llvm-libc-macros.stdio_macros
@@ -97,19 +126,30 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_stat_macros
 )
 
+add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
   HDRS
     unistd_macros.h
+  DEPENDS
+    .unistd_overlay
   FULL_BUILD_DEPENDS
     libc.include.unistd
     libc.include.llvm-libc-macros.unistd_macros
 )
 
+if (WIN32)
+  set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
+else()
+  set(windows_addtional_time_macros "")
+endif()
+
 add_proxy_header_library(
   time_macros
   HDRS
     time_macros.h
+  DEPENDS
+    ${windows_addtional_time_macros}
   FULL_BUILD_DEPENDS
     libc.include.time
     libc.include.llvm-libc-macros.time_macros
@@ -134,4 +174,36 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.limits_macros
 )
 
+add_proxy_header_library(
+  link_macros
+  HDRS
+    link_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.link_macros
+    libc.include.link
+)
+
+add_proxy_header_library(
+  sys_auxv_macros
+  HDRS
+    sys_auxv_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_auxv_macros
+    libc.include.sys_auxv
+)
+
+add_header_library(wchar_overlay HDRS wchar_overlay.h)
+
+add_proxy_header_library(
+  wchar_macros
+  HDRS
+    wchar_macros.h
+  DEPENDS
+    .wchar_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.wchar_macros
+    libc.include.wchar
+)
+
 add_subdirectory(types)
+add_subdirectory(func)

@@ -68,9 +68,7 @@ private:
                           lower::pft::Evaluation &eval) const;
   };
 
-  bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
-  mlir::OpBuilder::InsertPoint insPt;
   llvm::SmallVector<mlir::Value> loopIVs;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
@@ -88,7 +86,8 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  lower::SymMap *symTable;
+  bool callsInitClone = false;
+  lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
 
   bool needBarrier();
@@ -106,12 +105,6 @@ private:
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
   void privatize(mlir::omp::PrivateClauseOps *clauseOps);
-  void defaultPrivatize(
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
-  void implicitPrivatize(
-      mlir::omp::PrivateClauseOps *clauseOps,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void doPrivatize(const semantics::Symbol *sym,
                    mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
@@ -130,8 +123,7 @@ public:
                        const List<Clause> &clauses,
                        lower::pft::Evaluation &eval,
                        bool shouldCollectPreDeterminedSymbols,
-                       bool useDelayedPrivatization = false,
-                       lower::SymMap *symTable = nullptr);
+                       bool useDelayedPrivatization, lower::SymMap &symTable);
 
   // Privatisation is split into two steps.
   // Step1 performs cloning of all privatisation clauses and copying for
@@ -152,6 +144,12 @@ public:
   const llvm::SetVector<const semantics::Symbol *> &
   getAllSymbolsToPrivatize() const {
     return allPrivatizedSymbols;
+  }
+
+  llvm::ArrayRef<const semantics::Symbol *> getDelayedPrivSymbols() const {
+    return useDelayedPrivatization
+               ? allPrivatizedSymbols.getArrayRef()
+               : llvm::ArrayRef<const semantics::Symbol *>();
   }
 };
 

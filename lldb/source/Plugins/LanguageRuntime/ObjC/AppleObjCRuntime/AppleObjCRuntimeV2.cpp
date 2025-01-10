@@ -14,8 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
@@ -48,6 +46,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "AppleObjCClassDescriptorV2.h"
@@ -692,12 +692,12 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
                            uint64_t default_value = LLDB_INVALID_ADDRESS,
                            SymbolType sym_type = lldb::eSymbolTypeData) {
   if (!process) {
-    error.SetErrorString("no process");
+    error = Status::FromErrorString("no process");
     return default_value;
   }
 
   if (!module_sp) {
-    error.SetErrorString("no module");
+    error = Status::FromErrorString("no module");
     return default_value;
   }
 
@@ -707,14 +707,14 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
       module_sp->FindFirstSymbolWithNameAndType(name, lldb::eSymbolTypeData);
 
   if (!symbol || !symbol->ValueIsAddress()) {
-    error.SetErrorString("no symbol");
+    error = Status::FromErrorString("no symbol");
     return default_value;
   }
 
   lldb::addr_t symbol_load_addr =
       symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
   if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
-    error.SetErrorString("symbol address invalid");
+    error = Status::FromErrorString("symbol address invalid");
     return default_value;
   }
 
@@ -869,8 +869,8 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
+        error = Status::FromErrorStringWithFormat(
+            "unrecognized short option '%c'", short_option);
         break;
       }
 
@@ -2685,7 +2685,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   }
   os << ". This will likely reduce debugging performance.\n";
 
-  Debugger::ReportWarning(os.str(), debugger.GetID(),
+  Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
 }
 
@@ -3278,7 +3278,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       }
 
       // If the index is still out of range then this isn't a pointer.
-      if (index > m_indexed_isa_cache.size())
+      if (index >= m_indexed_isa_cache.size())
         return false;
 
       LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",
@@ -3398,6 +3398,14 @@ std::optional<uint64_t> AppleObjCRuntimeV2::GetSharedCacheImageHeaderVersion() {
   return std::nullopt;
 }
 
+StructuredData::ObjectSP
+AppleObjCRuntimeV2::GetLanguageSpecificData(SymbolContext sc) {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  dict_up->AddItem("Objective-C runtime version",
+                   std::make_unique<StructuredData::UnsignedInteger>(2));
+  return dict_up;
+}
+
 #pragma mark Frame recognizers
 
 class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
@@ -3465,6 +3473,6 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols,
+      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

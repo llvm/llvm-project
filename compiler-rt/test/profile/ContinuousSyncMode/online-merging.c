@@ -1,4 +1,4 @@
-// REQUIRES: darwin
+// REQUIRES: continuous-mode
 
 // Test the online merging mode (%m) along with continuous mode (%c).
 //
@@ -8,9 +8,9 @@
 // Create two DSOs and a driver program that uses them.
 // RUN: echo "void dso1(void) {}" > dso1.c
 // RUN: echo "void dso2(void) {}" > dso2.c
-// RUN: %clang_pgogen -dynamiclib -o %t.dir/dso1.dylib dso1.c -mllvm -instrprof-atomic-counter-update-all=1
-// RUN: %clang_pgogen -dynamiclib -o %t.dir/dso2.dylib dso2.c -mllvm -instrprof-atomic-counter-update-all=1
-// RUN: %clang_pgogen -o main.exe %s %t.dir/dso1.dylib %t.dir/dso2.dylib -mllvm -instrprof-atomic-counter-update-all=1
+// RUN: %clang_pgogen_cont %shared_lib_flag -o %t.dir/dso1.dylib dso1.c -fprofile-update=atomic
+// RUN: %clang_pgogen_cont %shared_lib_flag -o %t.dir/dso2.dylib dso2.c -fprofile-update=atomic
+// RUN: %clang_pgogen_cont -o main.exe %s %t.dir/dso1.dylib %t.dir/dso2.dylib -fprofile-update=atomic
 //
 // === Round 1 ===
 // Test merging+continuous mode without any file contention.
