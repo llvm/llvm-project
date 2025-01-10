@@ -79,7 +79,15 @@ code bases.
   Undefined behavior due to pointer addition overflow can be reliably detected
   using ``-fsanitize=pointer-overflow``. It is also possible to use
   ``-fno-strict-overflow`` to opt-in to a language dialect where signed integer
-  and pointer overflow are well-defined.
+  and pointer overflow are well-defined. Since Clang 20, it is also possible
+  to use ``-fwrapv-pointer`` to only make pointer overflow well-defined, while
+  not affecting the behavior of signed integer overflow.
+
+- The ``-fwrapv`` flag now only makes signed integer overflow well-defined,
+  without affecting pointer overflow, which is controlled by a new
+  ``-fwrapv-pointer`` flag. The ``-fno-strict-overflow`` flag now implies
+  both ``-fwrapv`` and ``-fwrapv-pointer`` and as such retains its old meaning.
+  The new behavior matches GCC.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -499,6 +507,11 @@ New Compiler Flags
 
 - clang-cl and clang-dxc now support ``-fdiagnostics-color=[auto|never|always]``
   in addition to ``-f[no-]color-diagnostics``.
+
+- The new ``-fwrapv-pointer`` flag opts-in to a language dialect where pointer
+  overflow is well-defined. The ``-fwrapv`` flag previously implied
+  ``-fwrapv-pointer`` as well, but no longer does. ``-fno-strict-overflow``
+  implies ``-fwrapv -fwrapv-pointer``. The flags now match GCC.
 
 Deprecated Compiler Flags
 -------------------------

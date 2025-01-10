@@ -22051,7 +22051,7 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
     // By adding the mask, we ensure that align_up on an already aligned
     // value will not change the value.
     if (Args.Src->getType()->isPointerTy()) {
-      if (getLangOpts().isSignedOverflowDefined())
+      if (getLangOpts().PointerOverflowDefined)
         SrcForMask =
             Builder.CreateGEP(Int8Ty, SrcForMask, Args.Mask, "over_boundary");
       else
