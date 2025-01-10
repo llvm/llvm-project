@@ -172,10 +172,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_barrier_wait 1
 ; GFX12-SDAG-NEXT:    s_barrier_leave
-; GFX12-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX12-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX12-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s3, m0
 ; GFX12-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX12-SDAG-NEXT:    s_get_barrier_state s2, m0
@@ -236,8 +232,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX12-GISEL-NEXT:    s_barrier_join m0
 ; GFX12-GISEL-NEXT:    s_barrier_wait 1
 ; GFX12-GISEL-NEXT:    s_barrier_leave
-; GFX12-GISEL-NEXT:    s_wakeup_barrier 2
-; GFX12-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, 2
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_get_barrier_state s0, m0
@@ -301,10 +295,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX13-SDAG-NEXT:    s_barrier_wait 1
 ; GFX13-SDAG-NEXT:    s_barrier_leave 1
-; GFX13-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
-; GFX13-SDAG-NEXT:    s_wakeup_barrier m0
-; GFX13-SDAG-NEXT:    s_mov_b32 m0, 2
 ; GFX13-SDAG-NEXT:    s_get_barrier_state s3, m0
 ; GFX13-SDAG-NEXT:    s_mov_b32 m0, s2
 ; GFX13-SDAG-NEXT:    s_get_barrier_state s2, m0
@@ -354,8 +344,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ; GFX13-GISEL-NEXT:    s_barrier_join m0
 ; GFX13-GISEL-NEXT:    s_barrier_wait 1
 ; GFX13-GISEL-NEXT:    s_barrier_leave 1
-; GFX13-GISEL-NEXT:    s_wakeup_barrier 2
-; GFX13-GISEL-NEXT:    s_wakeup_barrier m0
 ; GFX13-GISEL-NEXT:    s_get_barrier_state s0, 2
 ; GFX13-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-GISEL-NEXT:    s_get_barrier_state s0, m0
@@ -387,8 +375,6 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %in)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
     call void @llvm.amdgcn.s.barrier.leave(i16 1)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) @bar)
-    call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %in)
     %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar)
     %state2 = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %in)
     call void @llvm.amdgcn.s.barrier()
@@ -504,7 +490,6 @@ declare i1 @llvm.amdgcn.s.barrier.signal.isfirst(i32) #1
 declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(3), i32) #1
 declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3)) #1
 declare void @llvm.amdgcn.s.barrier.leave(i16) #1
-declare void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3)) #1
 declare i32 @llvm.amdgcn.s.get.barrier.state(i32) #1
 declare i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3)) #1
 
