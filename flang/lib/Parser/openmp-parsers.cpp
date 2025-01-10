@@ -155,9 +155,11 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 
 // --- Parsers for context traits -------------------------------------
 
+static std::string nameToString(Name &&name) { return name.ToString(); }
+
 TYPE_PARSER(sourced(construct<OmpTraitPropertyName>( //
     (space >> charLiteralConstantWithoutKind) ||
-    applyMem(&Name::ToString, Parser<Name>{}))))
+    applyFunction(nameToString, Parser<Name>{}))))
 
 TYPE_PARSER(sourced(construct<OmpTraitScore>( //
     "SCORE" >> parenthesized(scalarIntExpr))))
