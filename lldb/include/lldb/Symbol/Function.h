@@ -428,7 +428,7 @@ public:
   ///     The section offset based address for this function.
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, AddressRanges ranges);
+           Type *func_type, Address address, AddressRanges ranges);
 
   /// Destructor.
   ~Function() override;
