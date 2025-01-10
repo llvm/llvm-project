@@ -1858,7 +1858,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
 float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//
-// D3DCOLORtoUBYTE4 builtins
+// D3DCOLORtoUBYTE4 builtin
 //===----------------------------------------------------------------------===//
 
 /// \fn T D3DCOLORtoUBYTE4(T x)
@@ -1871,7 +1871,7 @@ float3 cross(float3, float3);
 /// function to compensate for the lack of UBYTE4 support in some hardware.
 
 constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
-  return __detail::d3d_color_to_ubyte4(V);
+  return __detail::d3d_color_to_ubyte4_impl(V);
 }
 
 //===----------------------------------------------------------------------===//

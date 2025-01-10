@@ -33,7 +33,7 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
 
-constexpr vector<uint, 4> d3d_color_to_ubyte4(vector<float, 4> V) {
+constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
   // Use the same scaling factor used by FXC (i.e., 255.001953)
   // Excerpt from stackoverflow discussion:
   // "Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5"
