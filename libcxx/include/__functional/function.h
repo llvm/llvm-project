@@ -518,13 +518,13 @@ struct __policy {
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
     static constexpr __policy __policy = {
-      nullptr,
-      nullptr,
-      true,
+        nullptr,
+        nullptr,
+        true,
 #  if _LIBCPP_HAS_RTTI
-      &typeid(void)
+        &typeid(void)
 #  else
-      nullptr
+        nullptr
 #  endif
     };
     return &__policy;
@@ -545,13 +545,13 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
     static constexpr __policy __policy = {
-      &__large_clone<_Fun>,
-      &__large_destroy<_Fun>,
-      false,
+        &__large_clone<_Fun>,
+        &__large_destroy<_Fun>,
+        false,
 #  if _LIBCPP_HAS_RTTI
-      &typeid(typename _Fun::_Target)
+        &typeid(typename _Fun::_Target)
 #  else
-      nullptr
+        nullptr
 #  endif
     };
     return &__policy;
@@ -560,13 +560,13 @@ private:
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
     static constexpr __policy __policy = {
-      nullptr,
-      nullptr,
-      false,
+        nullptr,
+        nullptr,
+        false,
 #  if _LIBCPP_HAS_RTTI
-      &typeid(typename _Fun::_Target)
+        &typeid(typename _Fun::_Target)
 #  else
-      nullptr
+        nullptr
 #  endif
     };
     return &__policy;
