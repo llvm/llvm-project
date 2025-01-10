@@ -983,7 +983,7 @@ static Type *getIntrinsicParamType(LLVMContext &C,
   case AMDGPULibFunc::DUMMY:
     return nullptr;
   }
-  if (T && P.VectorSize > 1)
+  if (P.VectorSize > 1)
     T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = PointerType::get(
