@@ -8,8 +8,7 @@
 #include <@HEADER_NAME@>
 
 #ifdef __cplusplus
-extern "C"
+extern "C" int main() { return 0; }
+#else
+int main(void) { return 0; }
 #endif
-int main(void) {
-  return 0;
-}
