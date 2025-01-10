@@ -359,6 +359,31 @@ if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
+function(_get_hermetic_test_compile_options output_var flags)
+  _get_common_test_compile_options(compile_options "" "${flags}")
+
+  list(APPEND compile_options "-fpie")
+  list(APPEND compile_options "-ffreestanding")
+  list(APPEND compile_options "-fno-exceptions")
+  list(APPEND compile_options "-fno-rtti")
+
+  # The GPU build requires overriding the default CMake triple and architecture.
+  if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+    list(APPEND compile_options
+         -Wno-multi-gpu -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+         -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    list(APPEND compile_options
+         "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
+         -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
+         -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
+  # elseif(explicit_target_triple AND NOT CMAKE_COMPILER_IS_GNUCXX)
+  #   list(APPEND compile_options "--target=${explicit_target_triple}")
+  endif()
+
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
 # DEPRECATED: Use add_hermetic_test instead.
 #
 # Rule to add an integration test. An integration test is like a unit test
