@@ -17359,14 +17359,13 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   unsigned Opcode;
   switch (LHS.getOpcode()) {
   case ISD::SIGN_EXTEND:
+  case RISCVISD::VSEXT_VL:
     Opcode = RISCVISD::VWMULSU_VL;
     break;
   case ISD::ZERO_EXTEND:
+  case RISCVISD::VZEXT_VL:
     Opcode = RISCVISD::VWMULU_VL;
     break;
-  // TODO:
-  // case RISCVISD::VSEXT_VL:
-  // case RISCVISD::VZEXT_VL:
   default:
     return SDValue();
   }
