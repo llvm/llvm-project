@@ -1981,7 +1981,7 @@ ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
 ResolvedUnexpandedPackExpr *
 ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
                                                unsigned NumExprs) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs),
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
                            alignof(ResolvedUnexpandedPackExpr));
   return new (Mem)
       ResolvedUnexpandedPackExpr(SourceLocation(), QualType(), NumExprs);
@@ -1990,12 +1990,12 @@ ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
 ResolvedUnexpandedPackExpr *
 ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
                                    QualType T, unsigned NumExprs) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs),
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
                            alignof(ResolvedUnexpandedPackExpr));
   ResolvedUnexpandedPackExpr *New =
       new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
 
-  auto Exprs = llvm::MutableArrayRef(New->getExprs(), New->getNumExprs());
+  auto Exprs = New->getExprs();
   std::fill(Exprs.begin(), Exprs.end(), nullptr);
 
   return New;
@@ -2005,7 +2005,7 @@ ResolvedUnexpandedPackExpr *
 ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
                                    QualType T, ArrayRef<Expr *> Exprs) {
   auto *New = Create(Ctx, BL, T, Exprs.size());
-  std::copy(Exprs.begin(), Exprs.end(), New->getExprs());
+  std::copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
   return New;
 }
 

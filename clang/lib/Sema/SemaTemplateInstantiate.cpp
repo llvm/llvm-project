@@ -2675,7 +2675,7 @@ ExprResult TemplateInstantiator::TransformResolvedUnexpandedPackExpr(
     return E;
 
   SmallVector<Expr *, 12> NewExprs;
-  if (TransformExprs(E->getExprs(), E->getNumExprs(),
+  if (TransformExprs(E->getExprs().begin(), E->getNumExprs(),
                      /*IsCall=*/false, NewExprs))
     return ExprError();
 

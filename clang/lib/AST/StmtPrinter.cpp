@@ -2562,7 +2562,7 @@ void StmtPrinter::VisitResolvedUnexpandedPackExpr(
     ResolvedUnexpandedPackExpr *E) {
   OS << "<<resolved pack(";
   llvm::interleave(
-      E->getExprs(), E->getExprs() + E->getNumExprs(),
+      E->getExprs().begin(), E->getExprs().end(),
       [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
   OS << ")>>";
 }

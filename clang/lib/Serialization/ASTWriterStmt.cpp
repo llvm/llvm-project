@@ -2207,8 +2207,7 @@ void ASTStmtWriter::VisitResolvedUnexpandedPackExpr(
   VisitExpr(E);
   Record.push_back(E->getNumExprs());
   Record.AddSourceLocation(E->getBeginLoc());
-  auto SubExprs = llvm::ArrayRef(E->getExprs(), E->getNumExprs());
-  for (Expr *Sub : SubExprs)
+  for (Expr *Sub : E->getExprs())
     Record.AddStmt(Sub);
   Code = serialization::EXPR_RESOLVED_UNEXPANDED_PACK;
 }

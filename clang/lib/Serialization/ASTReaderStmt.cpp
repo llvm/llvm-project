@@ -2206,7 +2206,7 @@ void ASTStmtReader::VisitResolvedUnexpandedPackExpr(
   VisitExpr(E);
   E->NumExprs = Record.readInt();
   E->BeginLoc = readSourceLocation();
-  auto **Exprs = E->getExprs();
+  auto **Exprs = E->getTrailingObjects<Expr *>();
   for (unsigned I = 0; I < E->NumExprs; ++I)
     Exprs[I] = Record.readExpr();
 }

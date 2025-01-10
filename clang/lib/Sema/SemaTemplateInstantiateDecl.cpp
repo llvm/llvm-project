@@ -1202,8 +1202,8 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
         [](BindingDecl *D) -> bool { return D->isParameterPack(); });
     auto *NewResolvedPack =
         cast<ResolvedUnexpandedPackExpr>((*BPack)->getBinding());
-    Expr **OldExprs = OldResolvedPack->getExprs();
-    Expr **NewExprs = NewResolvedPack->getExprs();
+    auto OldExprs = OldResolvedPack->getExprs();
+    auto NewExprs = NewResolvedPack->getExprs();
     for (unsigned I = 0; I < OldResolvedPack->getNumExprs(); I++) {
       DeclRefExpr *OldDRE = cast<DeclRefExpr>(OldExprs[I]);
       BindingDecl *OldNestedBD = cast<BindingDecl>(OldDRE->getDecl());

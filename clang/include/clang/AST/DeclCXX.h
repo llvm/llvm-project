@@ -4165,6 +4165,8 @@ public:
   /// Set the decomposed variable for this BindingDecl.
   void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
 
+  /// Get the variable (if any) that holds the value of evaluating the binding.
+  /// Only present for user-defined bindings for tuple-like types.
   VarDecl *getHoldingVar() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -4213,9 +4215,18 @@ public:
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
 
-  ArrayRef<BindingDecl *> bindings() const {
-    return llvm::ArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
+  // Provide the range of bindings which may have a nested pack.
+  llvm::ArrayRef<BindingDecl *> bindings() const {
+    return {getTrailingObjects<BindingDecl *>(), NumBindings};
   }
+
+  // Provide a flattened range to visit each binding directly.
+  class flat_binding_iterator;
+  using flat_binding_range = llvm::iterator_range<flat_binding_iterator>;
+
+  flat_binding_range flat_bindings() const;
+  flat_binding_iterator flat_bindings_begin() const;
+  flat_binding_iterator flat_bindings_end() const;
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
@@ -4229,6 +4240,76 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
 };
+
+/// Iterate bindings that may be contain a nested pack of bindings.
+class DecompositionDecl::flat_binding_iterator {
+  friend class DecompositionDecl;
+
+  using ItrTy = llvm::ArrayRef<BindingDecl *>::const_iterator;
+  using PackItrTy = llvm::ArrayRef<Expr *>::const_iterator;
+
+  llvm::ArrayRef<BindingDecl *> Bindings;
+  llvm::ArrayRef<Expr *> PackExprs;
+  ItrTy Itr = nullptr;
+  PackItrTy PackItr = nullptr;
+
+  explicit flat_binding_iterator(llvm::ArrayRef<BindingDecl *> Bindings,
+                                 ItrTy Itr, llvm::ArrayRef<Expr *> PackExprs,
+                                 PackItrTy PackItr)
+      : Bindings(Bindings), PackExprs(PackExprs), Itr(Itr), PackItr(PackItr) {
+    // If Itr is not a parameter pack then PackItr should not be set.
+    assert(((!(*Itr)->isParameterPack() && PackItr == nullptr) ||
+            PackItr != PackExprs.end()) &&
+           "pack must have initial iterator within the range");
+  }
+
+public:
+  flat_binding_iterator() = default;
+
+  using value_type = BindingDecl *;
+  using reference = BindingDecl *;
+  using pointer = BindingDecl *;
+  using iterator_category = std::forward_iterator_tag;
+
+  reference operator*() const {
+    if (!(*Itr)->isParameterPack())
+      return *Itr;
+
+    auto *DRE = cast<DeclRefExpr>(*PackItr);
+    return cast<BindingDecl>(DRE->getDecl());
+  }
+
+  flat_binding_iterator &operator++() {
+    if ((*Itr)->isParameterPack()) {
+      ++PackItr;
+      if (PackItr != PackExprs.end())
+        return *this;
+      else
+        PackItr = nullptr;
+    }
+    ++Itr;
+    return *this;
+  }
+
+  flat_binding_iterator operator++(int) {
+    flat_binding_iterator Temp = *this;
+    ++*this;
+    return Temp;
+  }
+
+  bool operator==(const flat_binding_iterator &Other) const {
+    return Itr == Other.Itr && PackItr == Other.PackItr;
+  }
+
+  bool operator!=(const flat_binding_iterator &Other) const {
+    return Itr != Other.Itr || PackItr != Other.PackItr;
+  }
+};
+
+inline DecompositionDecl::flat_binding_range
+DecompositionDecl::flat_bindings() const {
+  return flat_binding_range(flat_bindings_begin(), flat_bindings_end());
+}
 
 /// An instance of this class represents the declaration of a property
 /// member.  This is a Microsoft extension to C++, first introduced in

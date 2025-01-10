@@ -3436,17 +3436,38 @@ void DecompositionDecl::VisitHoldingVars(
 void DecompositionDecl::VisitBindings(
     llvm::function_ref<void(BindingDecl *)> F) const {
   for (BindingDecl *B : bindings()) {
-    llvm::ArrayRef<Expr *> Exprs;
     if (B->isParameterPack()) {
       auto *RP = cast<ResolvedUnexpandedPackExpr>(B->getBinding());
-      Exprs = llvm::ArrayRef(RP->getExprs(), RP->getNumExprs());
-      for (Expr *E : Exprs) {
+      for (Expr *E : RP->getExprs()) {
         auto *DRE = cast<DeclRefExpr>(E);
         F(cast<BindingDecl>(DRE->getDecl()));
       }
     } else
       F(B);
   }
+}
+
+DecompositionDecl::flat_binding_iterator
+DecompositionDecl::flat_bindings_begin() const {
+  auto Bindings = bindings();
+  BindingDecl *First = *Bindings.begin();
+  llvm::ArrayRef<Expr *> PackExprs;
+
+  if (First->isParameterPack()) {
+    auto *RP = cast<ResolvedUnexpandedPackExpr>(First->getBinding());
+    PackExprs = RP->getExprs();
+  }
+
+  return flat_binding_iterator(Bindings, Bindings.begin(), PackExprs,
+                               PackExprs.begin());
+}
+
+DecompositionDecl::flat_binding_iterator
+DecompositionDecl::flat_bindings_end() const {
+  auto Bindings = bindings();
+  llvm::ArrayRef<Expr *> PackExprs;
+
+  return flat_binding_iterator(Bindings, Bindings.end(), PackExprs, nullptr);
 }
 
 void DecompositionDecl::anchor() {}

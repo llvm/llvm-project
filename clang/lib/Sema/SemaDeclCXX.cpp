@@ -1032,8 +1032,7 @@ struct BindingInitWalker {
         isa_and_nonnull<ResolvedUnexpandedPackExpr>(B->getBinding());
     if (IsPackExpr && !PackExpr) {
       PackExpr = cast<ResolvedUnexpandedPackExpr>(B->getBinding());
-      PackExprNodes =
-          llvm::MutableArrayRef(PackExpr->getExprs(), PackExpr->getNumExprs());
+      PackExprNodes = PackExpr->getExprs();
       PackExprItr = PackExprNodes.begin();
     }
 

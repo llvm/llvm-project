@@ -5325,7 +5325,7 @@ public:
 // known. These are used when structured bindings introduce a pack.
 class ResolvedUnexpandedPackExpr final
     : public Expr,
-      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Stmt *> {
+      private llvm::TrailingObjects<ResolvedUnexpandedPackExpr, Expr *> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
@@ -5346,11 +5346,12 @@ public:
 
   unsigned getNumExprs() const { return NumExprs; }
 
-  Expr **getExprs() {
-    return reinterpret_cast<Expr **>(getTrailingObjects<Stmt *>());
+  llvm::MutableArrayRef<Expr *> getExprs() {
+    return {getTrailingObjects<Expr *>(), NumExprs};
   }
-  Expr *const *getExprs() const {
-    return reinterpret_cast<Expr *const *>(getTrailingObjects<Stmt *>());
+
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
   }
 
   Expr *getExpansion(unsigned Idx) { return getExprs()[Idx]; }
@@ -5358,8 +5359,8 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(getTrailingObjects<Stmt *>(),
-                       getTrailingObjects<Stmt *>() + getNumExprs());
+    return child_range((Stmt **)getTrailingObjects<Expr *>(),
+                       (Stmt **)getTrailingObjects<Expr *>() + getNumExprs());
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return BeginLoc; }
