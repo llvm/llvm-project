@@ -35,31 +35,18 @@ concurrency:
 
 jobs:
   buildkite:
-    uses: "buildkite/trigger-pipeline-action@v2.3.0"
-    with:
-      buildkite_api_access_token: ${{ secrets.LIBCXX_CI_BUILDKITE_PIPELINE_ACCESS_TOKEN }}
-      pipeline: "llvm-project/libcxx-ci"
-      branch: "main"
-      commit: "HEAD"
-      message:  ":github: Triggered from a GitHub Action"
-      ignore_pipeline_branch_filter: true
-      send_pull_request: true
-      wait: true
-      wait_interval: 10
-      wait_timeout: 300
-
-    # runs-on: ubuntu:latest # Just triggering the pipeline, this doesn't matter
-    # steps:
-    #   - name: "Trigger a Buildkite Build"
-    #     uses: "buildkite/trigger-pipeline-action@v2.3.0"
-    #     with:
-    #       buildkite_api_access_token: ${{ secrets.LIBCXX_CI_BUILDKITE_PIPELINE_ACCESS_TOKEN }}
-    #       pipeline: "llvm-project/libcxx-ci"
-    #       branch: "main"
-    #       commit: "HEAD"
-    #       message:  ":github: Triggered from a GitHub Action"
-    #       ignore_pipeline_branch_filter: true
-    #       send_pull_request: true
-    #       wait: true
-    #       wait_interval: 10
-    #       wait_timeout: 300
+    runs-on: ubuntu-latest # Just triggering the pipeline, this doesn't matter
+    steps:
+      - name: "Trigger a Buildkite Build"
+        uses: "buildkite/trigger-pipeline-action@v2.3.0"
+        with:
+          buildkite_api_access_token: ${{ secrets.LIBCXX_CI_BUILDKITE_PIPELINE_ACCESS_TOKEN }}
+          pipeline: "llvm-project/libcxx-ci"
+          branch: "main"
+          commit: "HEAD"
+          message:  ":github: Triggered from a GitHub Action"
+          ignore_pipeline_branch_filter: true
+          send_pull_request: true
+          wait: true
+          wait_interval: 10
+          wait_timeout: 300
