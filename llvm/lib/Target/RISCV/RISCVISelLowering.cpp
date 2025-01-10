@@ -3517,20 +3517,22 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   MVT EltTy = VT.getVectorElementType();
-  if (EltTy == MVT::i1 ||
-      EltTy != Vec.getSimpleValueType().getVectorElementType())
+  MVT VecVT = Vec.getSimpleValueType();
+  if (EltTy == MVT::i1 || EltTy != VecVT.getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
-  // Check that Index lies within VT
-  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    if (VT.getVectorElementCount().getKnownMinValue() <= CIdx->getZExtValue())
+  // If the search vector is smaller than the vector of elements we are searching for,
+  // try to extract the subvector from it
+  if (VT.getVectorMinNumElements() < VecVT.getVectorMinNumElements()) {
+    if (!(VT.isFixedLengthVector() || VecVT.isScalableVector()))
       return SDValue();
-  } else if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
-    return SDValue();
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  }
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
