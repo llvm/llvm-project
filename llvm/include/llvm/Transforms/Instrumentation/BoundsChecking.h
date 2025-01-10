@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_BOUNDSCHECKING_H
 
 #include "llvm/IR/PassManager.h"
+#include <optional>
 
 namespace llvm {
 class Function;
@@ -19,19 +20,15 @@ class Function;
 class BoundsCheckingPass : public PassInfoMixin<BoundsCheckingPass> {
 
 public:
-  enum class ReportingMode {
-    Trap,
-    MinRuntime,
-    MinRuntimeAbort,
-    FullRuntime,
-    FullRuntimeAbort,
-  };
-
   struct BoundsCheckingOptions {
-    BoundsCheckingOptions(ReportingMode Mode, bool Merge);
-
-    ReportingMode Mode;
-    bool Merge;
+    struct Runtime {
+      Runtime(bool MinRuntime, bool MayReturn)
+          : MinRuntime(MinRuntime), MayReturn(MayReturn) {}
+      bool MinRuntime;
+      bool MayReturn;
+    };
+    std::optional<Runtime> Rt; // Trap if empty.
+    bool Merge = false;
   };
 
   BoundsCheckingPass(BoundsCheckingOptions Options) : Options(Options) {}
