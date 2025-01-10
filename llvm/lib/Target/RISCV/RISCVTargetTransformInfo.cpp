@@ -1536,15 +1536,31 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   Type *ElementTy = Ty->getElementType();
   if (ElementTy->isIntegerTy(1)) {
+    // Example sequences:
+    //   vfirst.m a0, v0
+    //   seqz a0, a0
+    if (LT.second == MVT::v1i1)
+      return getRISCVInstructionCost(RISCV::VFIRST_M, LT.second, CostKind) +
+             getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
+                                CmpInst::ICMP_EQ, CostKind);
+
     if (ISD == ISD::AND) {
       // Example sequences:
-      //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmand.mm v8, v9, v8 ; needed every time type is split
-      //   vmnot.m v8, v0
+      //   vmnot.m v8, v0      ; alias for vmnand
       //   vcpop.m a0, v8
       //   seqz a0, a0
-      return LT.first * getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second,
-                                                CostKind) +
+
+      // See the discussion: https://github.com/llvm/llvm-project/pull/119160
+      // For LMUL <= 8, there is no splitting,
+      //   the sequences are vmnot, vcpop and seqz.
+      // When LMUL > 8 and split = 1,
+      //   the sequences are vmnand, vcpop and seqz.
+      // When LMUL > 8 and split > 1,
+      //   the sequences are (LT.first-2) * vmand, vmnand, vcpop and seqz.
+      return ((LT.first > 2) ? (LT.first - 2) : 0) *
+                 getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
+             getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_EQ, CostKind);
