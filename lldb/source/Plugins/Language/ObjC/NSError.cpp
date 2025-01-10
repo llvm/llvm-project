@@ -67,7 +67,7 @@ bool lldb_private::formatters::NSError_SummaryProvider(
 
   Status error;
   int64_t code = process_sp->ReadSignedIntegerFromMemory(code_location,
-                                                            ptr_size, 0, error);
+                                                         ptr_size, 0, error);
   if (error.Fail())
     return false;
 
