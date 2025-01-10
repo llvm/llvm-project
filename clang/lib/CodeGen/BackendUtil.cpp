@@ -1027,7 +1027,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
       PB.registerScalarOptimizerLateEPCallback([this](FunctionPassManager &FPM,
                                                       OptimizationLevel Level) {
-        BoundsCheckingPass::BoundsCheckingOptions Options;
+        BoundsCheckingPass::Options Options;
         Options.Merge =
             CodeGenOpts.SanitizeMergeHandlers.has(SanitizerKind::LocalBounds);
         if (!CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
