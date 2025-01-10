@@ -9,10 +9,7 @@
 define i32 @add_sext_icmp(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -25,10 +22,7 @@ define i32 @add_sext_icmp(i32 %A) {
 define i32 @add_sext_icmp_commutative(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_commutative(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -77,10 +71,7 @@ define i32 @add_sext_icmp_negative_pred(i32 %A) {
 define i32 @add_sext_icmp_multi_use_add2(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_add2(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    call void @use(i32 [[ADD2]])
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
@@ -133,9 +124,7 @@ define i32 @add_sext_icmp_multi_use_add1(i32 %A) {
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    call void @use(i32 [[ADD1]])
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
