@@ -856,7 +856,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     [[maybe_unused]] int64_t PGMRSrc3;
     assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
-            static_cast<uint64_t>(PGMRSrc3) == 0)); // Dummy comment
+            static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
