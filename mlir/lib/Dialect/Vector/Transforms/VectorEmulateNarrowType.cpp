@@ -1187,8 +1187,8 @@ Value BitCastRewriter::genericRewriteStep(
 /// Where aligned means it satisfies the alignedConversionPreconditions.
 ///
 /// Example:
-/// vector<16x16xi2> -> vector<16x2xi8>
-/// vector<16x16xi4> -> vector<16x4xi8>
+/// vector<16x16xi2> -> vector<16x4xi8>
+/// vector<16x16xi4> -> vector<16x8xi8>
 static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
                                       Value subByteVec) {
   auto srcVecType = cast<VectorType>(subByteVec.getType());
