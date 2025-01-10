@@ -516,6 +516,8 @@ protected:
 };
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_isascii(int __c) { return (__c & ~0x7F) == 0; }
+
 template <>
 class _LIBCPP_EXPORTED_FROM_ABI ctype<char> : public locale::facet, public ctype_base {
   const mask* __tab_;
@@ -527,25 +529,25 @@ public:
   explicit ctype(const mask* __tab = nullptr, bool __del = false, size_t __refs = 0);
 
   _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const {
-    return isascii(__c) ? (__tab_[static_cast<int>(__c)] & __m) != 0 : false;
+    return std::__libcpp_isascii(__c) ? (__tab_[static_cast<int>(__c)] & __m) != 0 : false;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* is(const char_type* __low, const char_type* __high, mask* __vec) const {
     for (; __low != __high; ++__low, ++__vec)
-      *__vec = isascii(*__low) ? __tab_[static_cast<int>(*__low)] : 0;
+      *__vec = std::__libcpp_isascii(*__low) ? __tab_[static_cast<int>(*__low)] : 0;
     return __low;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* scan_is(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
-      if (isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m))
+      if (std::__libcpp_isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
-      if (!isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
+      if (!std::__libcpp_isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
