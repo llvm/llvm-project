@@ -1486,7 +1486,7 @@ void SITargetLowering::CollectTargetIntrinsicOperands(
   }
 }
 
-bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
+bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             SmallVectorImpl<Value *> &Ops,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
