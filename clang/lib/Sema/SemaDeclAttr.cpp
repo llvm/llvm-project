@@ -1868,8 +1868,8 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     // This form is not allowed to be written on a member function (static or
     // nonstatic) when in Microsoft compatibility mode.
     if (S.getLangOpts().MSVCCompat && isa<CXXMethodDecl>(D)) {
-      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
-          << AL << AL.isRegularKeywordAttribute() << "non-member functions";
+      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type)
+          << AL << AL.isRegularKeywordAttribute() << ExpectedNonMemberFunction;
       return;
     }
   }
@@ -2761,9 +2761,9 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
     // The standard attribute cannot be applied to variable declarations such
     // as a function pointer.
     if (isa<VarDecl>(D))
-      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+      S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
           << AL << AL.isRegularKeywordAttribute()
-          << "functions, classes, or enumerations";
+          << ExpectedFunctionOrClassOrEnum;
 
     // If this is spelled as the standard C++17 attribute, but not in C++17,
     // warn about using it as an extension. If there are attribute arguments,
@@ -5555,8 +5555,8 @@ static void handleNullableTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (auto *CRD = dyn_cast<CXXRecordDecl>(D);
       !CRD || !(CRD->isClass() || CRD->isStruct())) {
-    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "classes";
+    S.Diag(AL.getRange().getBegin(), diag::err_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedClass;
     return;
   }
 

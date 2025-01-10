@@ -24,6 +24,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
@@ -3708,9 +3709,9 @@ void Parser::ParseDeclarationSpecifiers(
             continue;
 
           if (PA.getKind() == ParsedAttr::AT_LifetimeBound)
-            Diag(PA.getLoc(), diag::err_attribute_wrong_decl_type_str)
+            Diag(PA.getLoc(), diag::err_attribute_wrong_decl_type)
                 << PA << PA.isRegularKeywordAttribute()
-                << "parameters and implicit object parameters";
+                << ExpectedParameterOrImplicitObjectParameter;
           else
             Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
                 << PA << PA.isRegularKeywordAttribute();

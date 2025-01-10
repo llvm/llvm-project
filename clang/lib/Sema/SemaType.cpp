@@ -7941,8 +7941,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (!FnTy) {
       // SME ACLE attributes are not supported on K&R-style unprototyped C
       // functions.
-      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
-        attr << attr.isRegularKeywordAttribute() << ExpectedFunctionWithProtoType;
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
       attr.setInvalid();
       return false;
     }
@@ -8630,9 +8631,9 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
         CurType, CurType);
     return;
   }
-  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type_str)
+  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
       << Attr << Attr.isRegularKeywordAttribute()
-      << "parameters and implicit object parameters";
+      << ExpectedParameterOrImplicitObjectParameter;
 }
 
 static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
