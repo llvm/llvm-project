@@ -1924,8 +1924,7 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
-  Triple::ArchType Arch = TM.getTargetTriple().getArch();
-  if (RemoveIncompatibleFunctions && Arch == Triple::amdgcn)
+  if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
     addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
 
   addPass(AMDGPUPrintfRuntimeBindingPass());

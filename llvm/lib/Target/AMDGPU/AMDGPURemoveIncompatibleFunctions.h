@@ -13,13 +13,13 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class AMDGPURemoveIncompatibleFunctionsPass : public PassInfoMixin<AMDGPURemoveIncompatibleFunctionsPass> {
-    const TargetMachine* TM;
-public:
-  AMDGPURemoveIncompatibleFunctionsPass(const TargetMachine& TM) : TM(&TM) {}
-  PreservedAnalyses run(Module &M,
-                        ModuleAnalysisManager &MAM);
+class AMDGPURemoveIncompatibleFunctionsPass
+    : public PassInfoMixin<AMDGPURemoveIncompatibleFunctionsPass> {
+  const TargetMachine *TM;
 
+public:
+  AMDGPURemoveIncompatibleFunctionsPass(const TargetMachine &TM) : TM(&TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm
 
