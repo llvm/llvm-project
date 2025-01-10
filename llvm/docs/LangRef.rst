@@ -1160,7 +1160,8 @@ The return type and each parameter of a function type may have a set of
 used to communicate additional information about the result or
 parameters of a function. Parameter attributes are considered to be part
 of the function, not of the function type, so functions with different
-parameter attributes can have the same function type.
+parameter attributes can have the same function type. Parameter attributes can
+be placed both on function declarations/definitions, and at call-sites.
 
 Parameter attributes are either simple keywords or strings that follow the
 specified type. Multiple parameter attributes, when required, are separated by
@@ -1168,13 +1169,30 @@ spaces. For example:
 
 .. code-block:: llvm
 
+    ; On function declarations/definitions:
     declare i32 @printf(ptr noalias nocapture, ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
 
+    ; On call-sites:
+    call i32 @atoi(i8 zeroext %x)
+    call signext i8 @returns_signed_char()
+
 Note that any attributes for the function result (``nonnull``,
 ``signext``) come before the result type.
+
+Parameter attributes can be broadly separated into two kinds: ABI attributes
+that affect how values are passed to/from functions, like ``zeroext``,
+``inreg``, ``byval``, or ``sret``. And optimization attributes, which provide
+additional optimization guarantees, like ``noalias``, ``nonnull`` and
+``dereferenceable``.
+
+ABI attributes must be specified *both* at the function declaration/definition
+and call-site, otherwise the behavior may be undefined. ABI attributes cannot
+be safely dropped. Optimization attributes do not have to match between
+call-site and function: The intersection of their implied semantics applies.
+Optimization attributes can also be freely dropped.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1499,6 +1517,9 @@ Currently, only the following parameter attributes are defined:
     representation contains any undefined or poison bits, the behavior is
     undefined. Note that this does not refer to padding introduced by the
     type's storage representation.
+
+    If memory sanitizer is enabled, ``noundef`` becomes an ABI attribute and
+    must match between the call-site and the function definition.
 
 .. _nofpclass:
 
