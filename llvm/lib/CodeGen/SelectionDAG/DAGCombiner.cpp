@@ -27534,8 +27534,12 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   // If all lanes but 1 are undefined, no need to splat the scalar result.
   // TODO: Keep track of undefs and use that info in the general case.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode() &&
-      count_if(N0->ops(), [](SDValue V) { return !V.isUndef(); }) == 1 &&
-      count_if(N1->ops(), [](SDValue V) { return !V.isUndef(); }) == 1) {
+      // This is assuming if either input is undef, the result will fold out.
+      //
+      // TODO: Do we need to check if the opcode/operand propagates undef?
+      // Should we ignore operation identity values?
+      ((count_if(N0->ops(), [](SDValue V) { return !V.isUndef(); }) == 1) ||
+       (count_if(N1->ops(), [](SDValue V) { return !V.isUndef(); }) == 1))) {
     // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
     // build_vec ..undef, (bo X, Y), undef...
     SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), DAG.getUNDEF(EltVT));
