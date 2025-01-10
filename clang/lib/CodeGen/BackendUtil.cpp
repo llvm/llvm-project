@@ -216,6 +216,7 @@ public:
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
 	CASOpts(CASOpts), // MCCAS
         TheModule(M), VFS(std::move(VFS)),
+        CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
   ~EmitAssemblyHelper() {
