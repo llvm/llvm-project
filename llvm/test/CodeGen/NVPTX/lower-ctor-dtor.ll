@@ -43,7 +43,7 @@ define internal void @bar() {
   ret void
 }
 
-; CHECK-LABEL: define weak_odr void @"nvptx$device$init"() {
+; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$init"() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BEGIN:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__init_array_start, align 8
 ; CHECK-NEXT:    [[STOP:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__init_array_end, align 8
@@ -60,7 +60,7 @@ define internal void @bar() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define weak_odr void @"nvptx$device$fini"() {
+; CHECK-LABEL: define weak_odr ptx_kernel void @"nvptx$device$fini"() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BEGIN:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_start, align 8
 ; CHECK-NEXT:    [[STOP:%.*]] = load ptr addrspace(1), ptr addrspace(1) @__fini_array_end, align 8
@@ -82,12 +82,10 @@ define internal void @bar() {
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 
-; CHECK: [[META0:![0-9]+]] = !{ptr @"nvptx$device$init", !"kernel", i32 1}
 ; CHECK: [[META1:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidx", i32 1}
 ; CHECK: [[META2:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidy", i32 1}
 ; CHECK: [[META3:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxntidz", i32 1}
 ; CHECK: [[META4:![0-9]+]] = !{ptr @"nvptx$device$init", !"maxclusterrank", i32 1}
-; CHECK: [[META5:![0-9]+]] = !{ptr @"nvptx$device$fini", !"kernel", i32 1}
 ; CHECK: [[META6:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidx", i32 1}
 ; CHECK: [[META7:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidy", i32 1}
 ; CHECK: [[META8:![0-9]+]] = !{ptr @"nvptx$device$fini", !"maxntidz", i32 1}
