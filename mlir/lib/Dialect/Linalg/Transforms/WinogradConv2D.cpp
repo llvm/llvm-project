@@ -514,12 +514,14 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     Value CIter = ivs[3];
 
     auto context = builder.getContext();
+
+    auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
-    Value widthOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
+    Value heightOffset = builder.create<affine::AffineApplyOp>(
+        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = builder.create<affine::AffineApplyOp>(
+        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     // Extract (H, W) from (N, H, W, C).
     auto extractInput =
@@ -753,12 +755,13 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
     Value zero = builder.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(elementType));
 
+    auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
-    Value widthOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
+    Value heightOffset = builder.create<affine::AffineApplyOp>(
+        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = builder.create<affine::AffineApplyOp>(
+        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     Value outInitVal =
         extract2DDataFrom4D(builder, loc, args[0], NIter, FIter, heightOffset,
@@ -1075,16 +1078,17 @@ FailureOr<Operation *>
 decomposeWinogradInputTransformHelper(RewriterBase &rewriter,
                                       linalg::WinogradInputTransformOp op) {
   Location loc = op.getLoc();
-  Value input = op.getInput();
-  auto inputType = cast<ShapedType>(input.getType());
-  auto inputShape = inputType.getShape();
-  int64_t inputH = inputShape[1];
-  int64_t inputW = inputShape[2];
+  Value output = op.getOutput();
+  auto outputType = cast<ShapedType>(output.getType());
+  auto outputShape = outputType.getShape();
+
+  int64_t outputH = outputShape[0];
+  int64_t outputW = outputShape[1];
 
   // For F(m x 1, r x 1), we only need to do left side transform.
-  bool leftTransform = inputH != 1;
+  bool leftTransform = outputH != 1;
   // For F(1 x m, 1 x r), we only need to do right side transform.
-  bool rightTransform = inputW != 1;
+  bool rightTransform = outputW != 1;
   Value transformedInput =
       inputTransform(rewriter, loc, op.getInput(), op.getOutput(), op.getM(),
                      op.getR(), leftTransform, rightTransform);
