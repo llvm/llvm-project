@@ -61,3 +61,9 @@ import A;
 // expected-no-diagnostics
 #include "foo.h"
 import A;
+
+//--- Use3.cpp
+#include "foo.h"
+import A;
+foo test;
+int size = test.size(); // expected-error {{no member named 'size' in 'foo'}}

@@ -3165,7 +3165,7 @@ public:
     ASTContext &Context = Reader.getContext();
     Attr *New = nullptr;
     auto Record = *this;
-#include "clang/Serialization/AttrPCHRead.inc"
+  #include "clang/Serialization/AttrPCHRead.inc"
 
     assert(New && "Unable to decode attribute?");
     return New;
