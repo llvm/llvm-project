@@ -355,7 +355,8 @@ static bool isEmptyModule(const Module &Mod) {
   // Module is empty if it has no functions, no globals, no inline asm and no
   // named metadata (aliases and ifuncs require functions or globals so we
   // don't need to check those explicitly).
-  return Mod.empty() && Mod.global_empty() && Mod.named_metadata_empty() && Mod.getModuleInlineAsm().empty();
+  return Mod.empty() && Mod.global_empty() && Mod.named_metadata_empty() &&
+         Mod.getModuleInlineAsm().empty();
 }
 
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
