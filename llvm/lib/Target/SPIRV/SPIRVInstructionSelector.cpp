@@ -3220,13 +3220,13 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
     Register SrcReg, unsigned BitSetOpcode, bool SwapPrimarySide) const {
 
-  // SPIR-V allow vectors of size 2,3,4 only. Calling with a larger vectors requires
-  // creating a param register and return register with an invalid vector size. If that is
-  // resolved, then this function can be used for vectors of any component size.
+  // SPIR-V allow vectors of size 2,3,4 only. Calling with a larger vectors
+  // requires creating a param register and return register with an invalid
+  // vector size. If that is resolved, then this function can be used for
+  // vectors of any component size.
   unsigned ComponentCount = GR.getScalarOrVectorComponentCount(ResType);
   assert(ComponentCount < 5 && "Vec 5+ will generate invalid SPIR-V ops");
 
-  bool ZeroAsNull = STI.isOpenCLEnv();
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
   SPIRVType *I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
@@ -3249,11 +3249,9 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
                    .addDef(BitSetResult)
                    .addUse(GR.getSPIRVTypeID(I64x2Type))
                    .addUse(SrcReg)
-                   // Per the spec, repeat the vector if only one vec is needed
-                   .addUse(SrcReg);
-
-    MIB.addImm(CurrentComponent);
-    MIB.addImm(CurrentComponent + 1);
+                   .addUse(SrcReg)
+                   .addImm(CurrentComponent)
+                   .addImm(CurrentComponent + 1);
 
     if (!MIB.constrainAllUses(TII, TRI, RBI))
       return false;
@@ -3270,6 +3268,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
 
   // On odd component counts we need to handle one more component
   if (CurrentComponent != ComponentCount) {
+    bool ZeroAsNull = STI.isOpenCLEnv();
     Register FinalElemReg = MRI->createVirtualRegister(GR.getRegClass(I64Type));
     Register ConstIntLastIdx = GR.getOrCreateConstInt(
         ComponentCount - 1, I, BaseType, TII, ZeroAsNull);
