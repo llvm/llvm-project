@@ -138,7 +138,6 @@ public:
   }
 
   MPCNumber cproj() const {
-
     mpc_t res;
 
     mpc_init2(res, precision);
