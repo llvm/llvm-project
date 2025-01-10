@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Mutex.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -19,6 +20,7 @@
 
 namespace llvm {
 
+class TimerGlobals;
 class TimerGroup;
 class raw_ostream;
 
@@ -195,6 +197,10 @@ class TimerGroup {
   TimerGroup *Next;  ///< Pointer to next timergroup in list.
   TimerGroup(const TimerGroup &TG) = delete;
   void operator=(const TimerGroup &TG) = delete;
+
+  friend class TimerGlobals;
+  explicit TimerGroup(StringRef Name, StringRef Description,
+                      sys::SmartMutex<true> &lock);
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);

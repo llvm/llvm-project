@@ -471,6 +471,22 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Device: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
+  case OpenACCClauseKind::Host: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Update:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -736,14 +752,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
   // isn't really much to do here.
 
   // If the 'if' clause is true, it makes the 'self' clause have no effect,
-  // diagnose that here.
-  // TODO OpenACC: When we add these two to other constructs, we might not
-  // want to warn on this (for example, 'update').
-  const auto *Itr =
-      llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
-  if (Itr != ExistingClauses.end()) {
-    SemaRef.Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
-    SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+  // diagnose that here.  This only applies on compute/combined constructs.
+  if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Update) {
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
+    if (Itr != ExistingClauses.end()) {
+      SemaRef.Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      SemaRef.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
   }
 
   return OpenACCIfClause::Create(Ctx, Clause.getBeginLoc(),
@@ -753,16 +769,6 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIfClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  // Restrictions only properly implemented on 'compute' constructs, and
-  // 'compute' constructs are the only construct that can do anything with
-  // this yet, so skip/treat as unimplemented in this case.
-  if (!isDirectiveKindImplemented(Clause.getDirectiveKind()))
-    return isNotImplemented();
-
-  // TODO OpenACC: When we implement this for 'update', this takes a
-  // 'var-list' instead of a condition expression, so semantics/handling has
-  // to happen differently here.
-
   // There is no prose in the standard that says duplicates aren't allowed,
   // but this diagnostic is present in other compilers, as well as makes
   // sense.
@@ -770,9 +776,12 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSelfClause(
     return nullptr;
 
   // If the 'if' clause is true, it makes the 'self' clause have no effect,
-  // diagnose that here.
-  // TODO OpenACC: When we add these two to other constructs, we might not
-  // want to warn on this (for example, 'update').
+  // diagnose that here.  This only applies on compute/combined constructs.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Update)
+    return OpenACCSelfClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
+
   const auto *Itr =
       llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCIfClause>);
   if (Itr != ExistingClauses.end()) {
@@ -1045,6 +1054,28 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPresentClause(
   return OpenACCPresentClause::Create(Ctx, Clause.getBeginLoc(),
                                       Clause.getLParenLoc(),
                                       Clause.getVarList(), Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitHostClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, so there
+  // really isn't anything to do here. GCC does some duplicate-finding, though
+  // it isn't apparent in the standard where this is justified.
+
+  return OpenACCHostClause::Create(Ctx, Clause.getBeginLoc(),
+                                   Clause.getLParenLoc(), Clause.getVarList(),
+                                   Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // ActOnVar ensured that everything is a valid variable reference, so there
+  // really isn't anything to do here. GCC does some duplicate-finding, though
+  // it isn't apparent in the standard where this is justified.
+
+  return OpenACCDeviceClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getLParenLoc(), Clause.getVarList(),
+                                     Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCopyClause(
@@ -3701,8 +3732,17 @@ bool SemaOpenACC::ActOnStartStmtDirective(
                                 OpenACCClauseKind::DeviceType,
                                 OpenACCClauseKind::If});
 
-  // TODO: OpenACC: 'Update' construct needs to have one of 'self', 'host', or
-  // 'device'.  Implement here.
+  // OpenACC3.3 2.14.4: At least one self, host, or device clause must appear on
+  // an update directive.
+  if (K == OpenACCDirectiveKind::Update &&
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCSelfClause, OpenACCHostClause,
+                                           OpenACCDeviceClause>) ==
+          Clauses.end())
+    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
+           << K
+           << GetListOfClauses({OpenACCClauseKind::Self,
+                                OpenACCClauseKind::Host,
+                                OpenACCClauseKind::Device});
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }

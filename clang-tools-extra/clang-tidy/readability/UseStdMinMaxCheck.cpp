@@ -59,7 +59,7 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
   return false;
 }
 
-QualType getNonTemplateAlias(QualType QT) {
+static QualType getNonTemplateAlias(QualType QT) {
   while (true) {
     // cast to a TypedefType
     if (const TypedefType *TT = dyn_cast<TypedefType>(QT)) {
@@ -92,15 +92,15 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
-  clang::QualType GlobalImplicitCastType;
-  clang::QualType LhsType = CondLhs->getType()
-                                .getCanonicalType()
-                                .getNonReferenceType()
-                                .getUnqualifiedType();
-  clang::QualType RhsType = CondRhs->getType()
-                                .getCanonicalType()
-                                .getNonReferenceType()
-                                .getUnqualifiedType();
+  QualType GlobalImplicitCastType;
+  QualType LhsType = CondLhs->getType()
+                         .getCanonicalType()
+                         .getNonReferenceType()
+                         .getUnqualifiedType();
+  QualType RhsType = CondRhs->getType()
+                         .getCanonicalType()
+                         .getNonReferenceType()
+                         .getUnqualifiedType();
   if (LhsType != RhsType) {
     GlobalImplicitCastType = getNonTemplateAlias(BO->getLHS()->getType());
   }

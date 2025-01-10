@@ -713,7 +713,7 @@ public:
   /// variables vector are acceptable.
   ///
   /// LastParamTransformed, if non-null, will be set to the index of the last
-  /// parameter on which transformation was started. In the event of an error,
+  /// parameter on which transfromation was started. In the event of an error,
   /// this will contain the parameter which failed to instantiate.
   ///
   /// Return true on error.
@@ -11647,22 +11647,48 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitSelfClause(
     const OpenACCSelfClause &C) {
 
-  if (C.hasConditionExpr()) {
-    Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
-    Sema::ConditionResult Res =
-        Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
-                                Sema::ConditionKind::Boolean);
+  // If this is an 'update' 'self' clause, this is actually a var list instead.
+  if (ParsedClause.getDirectiveKind() == OpenACCDirectiveKind::Update) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : C.getVarList()) {
+      ExprResult Res = Self.TransformExpr(CurVar);
 
-    if (Res.isInvalid() || !Res.get().second)
-      return;
+      if (!Res.isUsable())
+        continue;
 
-    ParsedClause.setConditionDetails(Res.get().second);
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+                                              Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+
+    ParsedClause.setVarListDetails(InstantiatedVarList,
+                                   /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+        ParsedClause.getEndLoc());
+  } else {
+
+    if (C.hasConditionExpr()) {
+      Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
+      Sema::ConditionResult Res =
+          Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                                  Sema::ConditionKind::Boolean);
+
+      if (Res.isInvalid() || !Res.get().second)
+        return;
+
+      ParsedClause.setConditionDetails(Res.get().second);
+    }
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
+        ParsedClause.getEndLoc());
   }
-
-  NewClause = OpenACCSelfClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
-      ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -11699,6 +11725,30 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
 
   NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitHostClause(
+    const OpenACCHostClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCHostClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceClause(
+    const OpenACCDeviceClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCDeviceClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());

@@ -37,6 +37,7 @@ using namespace clang;
 
 namespace {
 class PCHContainerGenerator : public ASTConsumer {
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
   const std::string MainFileName;
   const std::string OutputFileName;
@@ -139,7 +140,7 @@ public:
                         const std::string &OutputFileName,
                         std::unique_ptr<raw_pwrite_stream> OS,
                         std::shared_ptr<PCHBuffer> Buffer)
-      : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
+      : CI(CI), Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         FS(&CI.getVirtualFileSystem()),
@@ -317,19 +318,17 @@ public:
     LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
-      clang::EmitBackendOutput(
-          Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
-          Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+      clang::emitBackendOutput(
+          CI, Ctx.getTargetInfo().getDataLayoutString(), M.get(),
           BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                             LangOpts,
-                             Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-                             BackendAction::Backend_EmitObj, FS, std::move(OS));
+    clang::emitBackendOutput(CI, Ctx.getTargetInfo().getDataLayoutString(),
+                             M.get(), BackendAction::Backend_EmitObj, FS,
+                             std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
