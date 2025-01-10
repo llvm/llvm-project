@@ -31,13 +31,12 @@ StringRef getAttrTag();
 enum VendorID : unsigned {
   AEABI_FEATURE_AND_BITS = 0,
   AEABI_PAUTHABI = 1,
-  VENDOR_NOT_FOUND = 404
+  VENDOR_UNKNOWN = 404 // Treated as a private subsection name
 };
 static const StringRef VendorName[] = {"aeabi_feature_and_bits",
                                        "aeabi_pauthabi"};
 StringRef getVendorName(unsigned const Vendor);
 VendorID getVendorID(StringRef const Vendor);
-StringRef getSubsectionUnknownError();
 
 enum SubsectionOptional : unsigned {
   REQUIRED = 0,

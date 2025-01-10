@@ -11,11 +11,11 @@
 // ERR-NEXT: .aeabi_attribute a, 1
 
 .aeabi_attribute Tag_PAuth_Platform, Tag_PAuth_Platform
-// ERR: error: AArch64 build attributes Value not found
+// ERR: error: active subsection type is ULEB128 (unsigned), found NTBS (string)
 // ERR-NEXT: .aeabi_attribute Tag_PAuth_Platform, Tag_PAuth_Platform
 
 .aeabi_attribute Tag_PAuth_Platform, a
-// ERR: error: AArch64 build attributes Value not found
+// ERR: error: active subsection type is ULEB128 (unsigned), found NTBS (string)
 // ERR-NEXT: .aeabi_attribute Tag_PAuth_Platform, a
 
 .aeabi_attribute Tag_PAuth_Platform,
@@ -42,11 +42,11 @@
 // ERR-NEXT: .aeabi_attribute a, 1
 
 .aeabi_attribute Tag_Feature_BTI, Tag_Feature_BTI
-// ERR: error: AArch64 build attributes Value not found
+// ERR: error: active subsection type is ULEB128 (unsigned), found NTBS (string)
 // ERR-NEXT: .aeabi_attribute Tag_Feature_BTI, Tag_Feature_BTI
 
 .aeabi_attribute Tag_Feature_BTI, a
-// ERR: error: AArch64 build attributes Value not found
+// ERR: error: active subsection type is ULEB128 (unsigned), found NTBS (string)
 // ERR-NEXT: .aeabi_attribute Tag_Feature_BTI, a
 
 .aeabi_attribute Tag_Feature_BTI,

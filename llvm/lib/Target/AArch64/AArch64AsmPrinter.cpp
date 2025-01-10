@@ -466,15 +466,18 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
 
   if (PAuthABIPlatform || PAuthABIVersion) {
     TS->emitAtributesSubsection(
-        AArch64BuildAttributes::AEABI_PAUTHABI,
+        AArch64BuildAttributes::VendorName
+            [AArch64BuildAttributes::AEABI_PAUTHABI],
         AArch64BuildAttributes::SubsectionOptional::REQUIRED,
         AArch64BuildAttributes::SubsectionType::ULEB128);
-    TS->emitAttribute(AArch64BuildAttributes::AEABI_PAUTHABI,
+    TS->emitAttribute(AArch64BuildAttributes::VendorName
+                          [AArch64BuildAttributes::AEABI_PAUTHABI],
                       AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
-                      PAuthABIPlatform, false);
-    TS->emitAttribute(AArch64BuildAttributes::AEABI_PAUTHABI,
+                      PAuthABIPlatform, "", false);
+    TS->emitAttribute(AArch64BuildAttributes::VendorName
+                          [AArch64BuildAttributes::AEABI_PAUTHABI],
                       AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
-                      false);
+                      "", false);
   }
 
   unsigned BTIValue =
@@ -486,15 +489,22 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
 
   if (BTIValue || PACValue || GCSValue) {
     TS->emitAtributesSubsection(
-        AArch64BuildAttributes::AEABI_FEATURE_AND_BITS,
+        AArch64BuildAttributes::VendorName
+            [AArch64BuildAttributes::AEABI_FEATURE_AND_BITS],
         AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
         AArch64BuildAttributes::SubsectionType::ULEB128);
-    TS->emitAttribute(AArch64BuildAttributes::AEABI_FEATURE_AND_BITS,
-                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, false);
-    TS->emitAttribute(AArch64BuildAttributes::AEABI_FEATURE_AND_BITS,
-                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, false);
-    TS->emitAttribute(AArch64BuildAttributes::AEABI_FEATURE_AND_BITS,
-                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, false);
+    TS->emitAttribute(AArch64BuildAttributes::VendorName
+                          [AArch64BuildAttributes::AEABI_FEATURE_AND_BITS],
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::VendorName
+                          [AArch64BuildAttributes::AEABI_FEATURE_AND_BITS],
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::VendorName
+                          [AArch64BuildAttributes::AEABI_FEATURE_AND_BITS],
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "",
+                      false);
   }
 }
 

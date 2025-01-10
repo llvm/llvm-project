@@ -17,10 +17,6 @@
 // ERR: error: aeabi_feature_and_bits must be marked as ULEB128
 // ERR-NEXT: .aeabi_subsection aeabi_feature_and_bits, optional, ntbs
 
-.aeabi_subsection a, required, uleb128
-// ERR: error: unknown AArch64 build attributes subsection: a
-// ERR-NEXT: .aeabi_subsection a, required, uleb128
-
 .aeabi_subsection 1, required, uleb128
 // ERR: error: Expecting subsection name
 // ERR-NEXT: .aeabi_subsection 1, required, uleb128
@@ -30,7 +26,7 @@
 // ERR-NEXT: .aeabi_subsection , required, uleb128
 
 .aeabi_subsection required, uleb128
-// ERR: error: unknown AArch64 build attributes subsection: required
+// ERR: error: unknown AArch64 build attributes optionality, expecting required|optional: uleb128
 // ERR-NEXT: .aeabi_subsection required, uleb128
 
 .aeabi_subsection aeabi_pauthabi, a, uleb128

@@ -20,10 +20,10 @@ StringRef getVendorName(unsigned Vendor) {
     return VendorName[AEABI_FEATURE_AND_BITS];
   case AEABI_PAUTHABI:
     return VendorName[AEABI_PAUTHABI];
-  case VENDOR_NOT_FOUND:
-    [[fallthrough]];
+  case VENDOR_UNKNOWN:
+    return "";
   default:
-    assert(0 && "unknown AArch64 vendor");
+    assert(0 && "Vendor name error");
     return "";
   }
 }
@@ -34,10 +34,7 @@ VendorID getVendorID(StringRef Vendor) {
   if (Vendor == VendorName[AEABI_PAUTHABI]) {
     return AEABI_PAUTHABI;
   }
-  return VENDOR_NOT_FOUND;
-}
-StringRef getSubsectionUnknownError() {
-  return "unknown AArch64 build attributes subsection";
+  return VENDOR_UNKNOWN;
 }
 
 StringRef getOptionalStr(unsigned Optional) {

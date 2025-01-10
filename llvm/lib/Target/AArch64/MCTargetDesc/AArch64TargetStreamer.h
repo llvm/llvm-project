@@ -96,13 +96,14 @@ public:
 
   /// Build attributes implementation
   virtual void
-  emitAtributesSubsection(unsigned VendorID,
+  emitAtributesSubsection(StringRef VendorName,
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
-  virtual void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
-                             bool Override);
+  virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                             std::string String, bool Override);
   void activateAtributesSubsection(StringRef VendorName);
-  StringRef getActiveAtributesSubsection();
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getActiveAtributesSubsection();
   void
   insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
                          MCELFStreamer::AttributeSubSection &AttSubSection);
@@ -121,11 +122,11 @@ private:
 
   /// Build attributes implementation
   void emitAtributesSubsection(
-      unsigned VendorID, AArch64BuildAttributes::SubsectionOptional IsOptional,
+      StringRef VendorName,
+      AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;
-  void emitAttribute(unsigned VendorID, unsigned Tag, unsigned Value,
-                     bool Override = false) override;
-
+  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                     std::string String, bool Override = false) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;

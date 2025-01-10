@@ -153,9 +153,8 @@ MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
 }
 
 void AArch64TargetStreamer::emitAtributesSubsection(
-    unsigned VendorID, AArch64BuildAttributes::SubsectionOptional IsOptional,
+    StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
     AArch64BuildAttributes::SubsectionType ParameterType) {
-  StringRef VendorName = AArch64BuildAttributes::getVendorName(VendorID);
 
   // If exists, return.
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
@@ -173,19 +172,23 @@ void AArch64TargetStreamer::emitAtributesSubsection(
   activateAtributesSubsection(VendorName);
 }
 
-StringRef AArch64TargetStreamer::getActiveAtributesSubsection() {
+std::unique_ptr<MCELFStreamer::AttributeSubSection>
+AArch64TargetStreamer::getActiveAtributesSubsection() {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
     if (SubSection.IsActive) {
-      return SubSection.VendorName;
+      return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
     }
   }
-  return "";
+  return nullptr;
 }
 
-void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
-                                          unsigned Value, bool Override) {
-  StringRef VendorName = AArch64BuildAttributes::getVendorName(VendorID);
-
+void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
+                                          unsigned Value, std::string String,
+                                          bool Override) {
+  if (unsigned(-1) == Value && "" == String) {
+    assert(0 && "Arguments error");
+    return;
+  }
   if (AttributeSubSections.size() == 0) {
     assert(0 &&
            "Can not add AArch64 build attribute: no AArch64 subsection exists");
@@ -202,21 +205,29 @@ void AArch64TargetStreamer::emitAttribute(unsigned VendorID, unsigned Tag,
       for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
         if (Item.Tag == Tag) {
           if (!Override) {
-            if (Item.IntValue != Value) {
+            if ((unsigned(-1) != Value && Item.IntValue != Value) ||
+                ("" != String && Item.StringValue != String)) {
               assert(0 &&
                      "Can not add AArch64 build attribute: An attribute with "
                      "the same tag and a different value allready exists");
               return;
+            } else {
+              // Case Item.IntValue == Value, no need to emit twice
+              assert(0 &&
+                     "AArch64 build attribute: An attribute with the same tag "
+                     "and a same value allready exists");
+              return;
             }
           }
-          // Case Item.IntValue == Value, no need to emit twice
-          assert(0 && "AArch64 build attribute: An attribute with the same tag "
-                      "and a same value allready exists");
-          return;
         }
       }
-      SubSection.Content.push_back(MCELFStreamer::AttributeItem(
-          MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
+      if (unsigned(-1) != Value)
+        SubSection.Content.push_back(MCELFStreamer::AttributeItem(
+            MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
+      if ("" != String)
+        SubSection.Content.push_back(MCELFStreamer::AttributeItem(
+            MCELFStreamer::AttributeItem::NumericAttribute, Tag, unsigned(-1),
+            String));
       return;
     }
   }
