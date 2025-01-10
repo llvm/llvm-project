@@ -31,6 +31,70 @@ template<typename ...Ts>
 void forward_as_tuple(Ts...) = delete;
 }
 
+// https://github.com/llvm/llvm-project/issues/41034
+struct Unconstrained {
+  int data;
+  template <typename Arg>
+  TEST_CONSTEXPR_CXX14 Unconstrained(Arg arg) : data(arg) {}
+};
+
+TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_lvalue() {
+  auto tup = std::tuple<Unconstrained>(Unconstrained(5));
+  return std::tuple_cat(tup);
+}
+
+TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_rvalue() {
+  return std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(6)));
+}
+
+TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_and_nullary() {
+  return std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(7)), std::tuple<>());
+}
+
+#if TEST_STD_VER >= 17
+constexpr auto test_cat_unary_lvalue_ctad() {
+  auto tup = std::tuple(Unconstrained(8));
+  return std::tuple_cat(tup);
+}
+
+constexpr auto test_cat_unary_rvalue_ctad() { return std::tuple_cat(std::tuple(Unconstrained(9))); }
+
+constexpr auto test_cat_unary_and_nullary_ctad() { return std::tuple_cat(std::tuple(Unconstrained(10)), std::tuple()); }
+#endif
+
+TEST_CONSTEXPR_CXX14 bool test_tuple_cat_with_unconstrained_constructor() {
+  {
+    auto tup = test_cat_unary_lvalue();
+    assert(std::get<0>(tup).data == 5);
+  }
+  {
+    auto tup = test_cat_unary_rvalue();
+    assert(std::get<0>(tup).data == 6);
+  }
+  {
+    auto tup = test_cat_unary_and_nullary();
+    assert(std::get<0>(tup).data == 7);
+  }
+#if TEST_STD_VER >= 17
+  {
+    auto tup = test_cat_unary_lvalue_ctad();
+    ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
+    assert(std::get<0>(tup).data == 8);
+  }
+  {
+    auto tup = test_cat_unary_rvalue_ctad();
+    ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
+    assert(std::get<0>(tup).data == 9);
+  }
+  {
+    auto tup = test_cat_unary_and_nullary_ctad();
+    ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
+    assert(std::get<0>(tup).data == 10);
+  }
+#endif
+  return true;
+}
+
 int main(int, char**)
 {
     {
@@ -270,5 +334,13 @@ int main(int, char**)
         assert(std::get<0>(t).i == 1);
         assert(std::get<0>(t2).i == 1);
     }
-  return 0;
+    // See https://github.com/llvm/llvm-project/issues/41034
+    {
+      test_tuple_cat_with_unconstrained_constructor();
+#if TEST_STD_VER >= 14
+      static_assert(test_tuple_cat_with_unconstrained_constructor(), "");
+#endif
+    }
+
+    return 0;
 }
