@@ -54,6 +54,14 @@ void dispatchIndexOpFoldResult(OpFoldResult ofr,
     staticVec.push_back(apInt.getSExtValue());
     return;
   }
+
+  OpFoldResult result = getAsOpFoldResult(v);
+  if (auto attr = result.dyn_cast<Attribute>()) {
+    APInt apInt = cast<IntegerAttr>(attr).getValue();
+    staticVec.push_back(apInt.getSExtValue());
+    return;
+  }
+
   dynamicVec.push_back(v);
   staticVec.push_back(ShapedType::kDynamic);
 }
