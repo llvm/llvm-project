@@ -4730,9 +4730,8 @@ public:
 
   static OutlinedFunctionDecl *Create(ASTContext &C, DeclContext *DC,
                                       unsigned NumParams);
-  static OutlinedFunctionDecl *CreateDeserialized(ASTContext &C,
-                                                  GlobalDeclID ID,
-                                                  unsigned NumParams);
+  static OutlinedFunctionDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NumParams);
 
   Stmt *getBody() const override;
   void setBody(Stmt *B);

@@ -48,8 +48,7 @@ public:
       : Stmt(SYCLKernelCallStmtClass), OriginalStmt(OS), OFDecl(OFD) {}
 
   /// Construct an empty SYCL kernel call statement.
-  SYCLKernelCallStmt(EmptyShell Empty)
-      : Stmt(SYCLKernelCallStmtClass, Empty) {}
+  SYCLKernelCallStmt(EmptyShell Empty) : Stmt(SYCLKernelCallStmtClass, Empty) {}
 
   /// Retrieve the model statement.
   Stmt *getOriginalStmt() { return OriginalStmt; }
@@ -61,9 +60,7 @@ public:
   const OutlinedFunctionDecl *getOutlinedFunctionDecl() const { return OFDecl; }
 
   /// Set the outlined function declaration.
-  void setOutlinedFunctionDecl(OutlinedFunctionDecl *OFD) {
-    OFDecl = OFD;
-  }
+  void setOutlinedFunctionDecl(OutlinedFunctionDecl *OFD) { OFDecl = OFD; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getOriginalStmt()->getBeginLoc();

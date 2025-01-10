@@ -8,11 +8,11 @@
 // This implements Semantic Analysis for SYCL constructs.
 //===----------------------------------------------------------------------===//
 
-#include "TreeTransform.h"
 #include "clang/Sema/SemaSYCL.h"
+#include "TreeTransform.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/SYCLKernelInfo.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Sema/Attr.h"
@@ -375,16 +375,14 @@ namespace {
 class OutlinedFunctionDeclBodyInstantiator
     : public TreeTransform<OutlinedFunctionDeclBodyInstantiator> {
 public:
-  using ParmDeclMap = llvm::DenseMap<ParmVarDecl*, VarDecl*>;
+  using ParmDeclMap = llvm::DenseMap<ParmVarDecl *, VarDecl *>;
 
   OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M)
-      : TreeTransform<OutlinedFunctionDeclBodyInstantiator>(S),
-        SemaRef(S), MapRef(M) {}
+      : TreeTransform<OutlinedFunctionDeclBodyInstantiator>(S), SemaRef(S),
+        MapRef(M) {}
 
   // A new set of AST nodes is always required.
-  bool AlwaysRebuild() {
-    return true;
-  }
+  bool AlwaysRebuild() { return true; }
 
   // Transform ParmVarDecl references to the supplied replacement variables.
   ExprResult TransformDeclRefExpr(DeclRefExpr *DRE) {
@@ -427,7 +425,7 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD, Stmt *Body) {
   // Ensure that the kernel name was previously registered and that the
   // stored declaration matches.
   const SYCLKernelInfo &SKI =
-        getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
+      getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
 
@@ -439,10 +437,9 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD, Stmt *Body) {
       OutlinedFunctionDecl::Create(getASTContext(), FD, FD->getNumParams());
   unsigned i = 0;
   for (ParmVarDecl *PVD : FD->parameters()) {
-    ImplicitParamDecl *IPD =
-        ImplicitParamDecl::Create(getASTContext(), OFD, SourceLocation(),
-                                  PVD->getIdentifier(), PVD->getType(),
-                                  ImplicitParamKind::Other);
+    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
+        getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
+        PVD->getType(), ImplicitParamKind::Other);
     OFD->setParam(i, IPD);
     ParmMap[PVD] = IPD;
     ++i;
