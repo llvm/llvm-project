@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; here, only that this case no longer causes said crash.
 define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-LABEL: dupext_crashtest:
-; CHECK:       // %bb.0: // %for.body.lr.ph
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    dup v0.2s, w0
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -18,7 +18,7 @@ define dso_local i32 @dupext_crashtest(i32 %e) local_unnamed_addr {
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-NEXT:    str d1, [x8]
 ; CHECK-NEXT:    b .LBB0_1
-for.body.lr.ph:
+entry:
   %conv314 = zext i32 %e to i64
   br label %vector.memcheck
 
@@ -44,7 +44,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 ; This test got stuck in a loop hoisting the and to the load, and sinking it back to the mull
 define i32 @dup_and_load(ptr %p, i1 %c) {
 ; CHECK-LABEL: dup_and_load:
-; CHECK:       // %bb.0: // %for.body.lr.ph
+; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    ldrb w0, [x0]
 ; CHECK-NEXT:    tbz w1, #0, .LBB1_3
@@ -63,13 +63,13 @@ define i32 @dup_and_load(ptr %p, i1 %c) {
 ; CHECK-NEXT:    b.lt .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: // %end
 ; CHECK-NEXT:    ret
-for.body.lr.ph:
+entry:
   %l = load i32, ptr %p
-  %conv314 = and i32 %l, 255
+  %and255 = and i32 %l, 255
   br i1 %c, label %ph, label %end
 
 ph:
-  %broadcast.splatinsert = insertelement <8 x i32> poison, i32 %conv314, i32 0
+  %broadcast.splatinsert = insertelement <8 x i32> poison, i32 %and255, i32 0
   %broadcast.splat = shufflevector <8 x i32> %broadcast.splatinsert, <8 x i32> poison, <8 x i32> zeroinitializer
   br label %vector.body
 
@@ -84,5 +84,5 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %e, label %vector.body, label %end
 
 end:
-  ret i32 %conv314
+  ret i32 %and255
 }
