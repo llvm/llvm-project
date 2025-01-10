@@ -828,6 +828,9 @@ void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   if (!Ctx.isInstantiationRecord())
     ++NonInstantiationEntries;
 
+  if (Ctx.Kind != CodeSynthesisContext::ConstraintSubstitution)
+    ++NonConstraintSubstitutionEntries;
+
   // Check to see if we're low on stack space. We can't do anything about this
   // from here, but we can at least warn the user.
   StackHandler.warnOnStackNearlyExhausted(Ctx.PointOfInstantiation);
@@ -838,6 +841,11 @@ void Sema::popCodeSynthesisContext() {
   if (!Active.isInstantiationRecord()) {
     assert(NonInstantiationEntries > 0);
     --NonInstantiationEntries;
+  }
+
+  if (Active.Kind != CodeSynthesisContext::ConstraintSubstitution) {
+    assert(NonConstraintSubstitutionEntries > 0);
+    --NonConstraintSubstitutionEntries;
   }
 
   InNonInstantiationSFINAEContext = Active.SavedInNonInstantiationSFINAEContext;
@@ -1363,13 +1371,6 @@ namespace {
     bool BailOutOnIncomplete;
 
   private:
-    bool isSubstitutingConstraints() const {
-      return llvm::any_of(SemaRef.CodeSynthesisContexts, [](auto &Context) {
-        return Context.Kind ==
-               Sema::CodeSynthesisContext::ConstraintSubstitution;
-      });
-    }
-
     // CWG2770: Function parameters should be instantiated when they are
     // needed by a satisfaction check of an atomic constraint or
     // (recursively) by another function parameter.
@@ -1431,7 +1432,8 @@ namespace {
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,
                                  bool &ShouldExpand, bool &RetainExpansion,
                                  std::optional<unsigned> &NumExpansions) {
-      if (SemaRef.CurrentInstantiationScope && isSubstitutingConstraints()) {
+      if (SemaRef.CurrentInstantiationScope &&
+          SemaRef.inConstraintSubstitution()) {
         for (UnexpandedParameterPack ParmPack : Unexpanded) {
           NamedDecl *VD = ParmPack.first.dyn_cast<NamedDecl *>();
           if (!isa_and_present<ParmVarDecl>(VD))
@@ -1945,7 +1947,7 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
   }
 
   if (SemaRef.CurrentInstantiationScope) {
-    if (isSubstitutingConstraints() && isa<ParmVarDecl>(D) &&
+    if (SemaRef.inConstraintSubstitution() && isa<ParmVarDecl>(D) &&
         maybeInstantiateFunctionParameterToScope(cast<ParmVarDecl>(D)))
       return nullptr;
   }
