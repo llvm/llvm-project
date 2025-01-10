@@ -241,12 +241,12 @@ struct ConvertUpdateHaloOp
 
     // convert a OpFoldResult into a Value
     auto toValue = [&rewriter, &loc](OpFoldResult &v) {
-      return v.is<Value>()
-                 ? v.get<Value>()
+      return isa<Value>(v)
+                 ? cast<Value>(v)
                  : rewriter.create<::mlir::arith::ConstantOp>(
                        loc,
                        rewriter.getIndexAttr(
-                           cast<IntegerAttr>(v.get<Attribute>()).getInt()));
+                           cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
     };
 
     auto dest = op.getDestination();
@@ -267,11 +267,11 @@ struct ConvertUpdateHaloOp
         getMixedValues(op.getStaticHaloSizes(), op.getHaloSizes(), rewriter);
     // subviews need Index values
     for (auto &sz : haloSizes) {
-      if (sz.is<Value>()) {
-        sz = rewriter
-                 .create<arith::IndexCastOp>(loc, rewriter.getIndexType(),
-                                             sz.get<Value>())
-                 .getResult();
+      if (auto value = dyn_cast<Value>(sz)) {
+        sz =
+            rewriter
+                .create<arith::IndexCastOp>(loc, rewriter.getIndexType(), value)
+                .getResult();
       }
     }
 
