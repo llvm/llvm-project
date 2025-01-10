@@ -45,11 +45,7 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 
 static BasicBlock::iterator
 getInsertPointAfterInstrs(ArrayRef<Value *> Instrs) {
-  // TODO: Use the VecUtils function for getting the bottom instr once it lands.
-  auto *BotI = cast<Instruction>(
-      *std::max_element(Instrs.begin(), Instrs.end(), [](auto *V1, auto *V2) {
-        return cast<Instruction>(V1)->comesBefore(cast<Instruction>(V2));
-      }));
+  auto *BotI = VecUtils::getLowest(Instrs);
   // If Bndl contains Arguments or Constants, use the beginning of the BB.
   return std::next(BotI->getIterator());
 }
