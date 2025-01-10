@@ -2674,9 +2674,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
-      Value *CopySign = Builder.CreateCopySign(
-          Mag, X,
-          II->getFastMathFlags() & cast<Instruction>(Sign)->getFastMathFlags());
+      Value *CopySign =
+          Builder.CreateCopySign(Mag, X, FMFSource::intersect(II, Sign));
       return replaceInstUsesWith(*II, CopySign);
     }
 
