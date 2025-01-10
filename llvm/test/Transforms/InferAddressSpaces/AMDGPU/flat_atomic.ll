@@ -121,29 +121,31 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_ashr_i32 s7, s6, 31
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[6:7], 3
-; CHECK-NEXT:    s_add_u32 s4, s0, s4
-; CHECK-NEXT:    s_addc_u32 s5, s1, s5
-; CHECK-NEXT:    s_add_u32 s0, s4, -8
-; CHECK-NEXT:    s_addc_u32 s1, s5, -1
-; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 9
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; CHECK-NEXT:    s_add_u32 s0, s0, s4
+; CHECK-NEXT:    s_addc_u32 s1, s1, s5
+; CHECK-NEXT:    s_add_u32 s4, s0, -8
+; CHECK-NEXT:    s_addc_u32 s5, s1, -1
+; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 9
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; CHECK-NEXT:  .LBB3_1: ; %bb0
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb1
-; CHECK-NEXT:    s_mov_b64 s[4:5], exec
-; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
-; CHECK-NEXT:    v_mbcnt_hi_u32_b32 v0, s5, v0
+; CHECK-NEXT:    s_mov_b64 s[0:1], exec
+; CHECK-NEXT:    v_mbcnt_lo_u32_b32 v0, s0, 0
+; CHECK-NEXT:    v_mbcnt_hi_u32_b32 v0, s1, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:    s_cbranch_execz .LBB3_4
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; CHECK-NEXT:    v_cvt_f64_u32_e32 v[0:1], s4
+; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
+; CHECK-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; CHECK-NEXT:    v_mul_f64 v[0:1], s[2:3], v[0:1]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    global_atomic_add_f64 v2, v[0:1], s[0:1]
+; CHECK-NEXT:    global_atomic_add_f64 v2, v[0:1], s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_wbinvl1_vol
 ; CHECK-NEXT:  .LBB3_4:
