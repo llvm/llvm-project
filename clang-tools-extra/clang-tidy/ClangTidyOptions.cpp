@@ -342,7 +342,7 @@ void FileOptionsBaseProvider::addRawFileOptions(
   StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
   auto MemorizedConfigFile =
       [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
-    auto Iter = CachedOptions.Memorized.find(CurrentPath);
+    const auto Iter = CachedOptions.Memorized.find(CurrentPath);
     if (Iter != CachedOptions.Memorized.end())
       return CachedOptions.Storage[Iter->second];
     std::optional<OptionsSource> OptionsSource = tryReadConfigFile(CurrentPath);
