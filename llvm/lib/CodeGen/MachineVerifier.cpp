@@ -1276,18 +1276,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
           report("load memory size cannot exceed result size", MI);
 
         if (MMO.getRanges()) {
-          auto operandBits = [](const MDOperand &o) -> unsigned {
-            ConstantInt *i = mdconst::extract<ConstantInt>(o);
-            if (!i->isNegative())
-              return i->getValue().getActiveBits();
-            APInt reversed(i->getValue());
-            reversed.negate();
-            return reversed.getActiveBits() + 1; // one more bit for the sign
-          };
-          unsigned bitsUsed =
-              std::max(operandBits(MMO.getRanges()->getOperand(0)),
-                       operandBits(MMO.getRanges()->getOperand(1)));
-          if (bitsUsed != ValTy.getScalarType().getSizeInBits()) {
+          ConstantInt *i = mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
+          if (i->getIntegerType()->getBitWidth() != ValTy.getScalarType().getSizeInBits()) {
             report("range is incompatible with the value it gets assigned to",
                    MI);
           }
