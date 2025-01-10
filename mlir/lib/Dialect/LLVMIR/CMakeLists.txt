@@ -51,6 +51,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRNVVMOpsIncGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
+  MLIRInferIntRangeInterface
   intrinsics_gen
 
   LINK_COMPONENTS
