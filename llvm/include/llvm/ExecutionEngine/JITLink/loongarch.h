@@ -238,35 +238,35 @@ enum EdgeKind_loongarch : Edge::Kind {
   /// 8 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target + *{1}Fixup + Addend) : int8
+  ///   Fixup <- (*{1}Fixup + Target + Addend) : int8
   ///
   Add8,
 
   /// 16 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target + *{2}Fixup + Addend) : int16
+  ///   Fixup <- (*{2}Fixup + Target + Addend) : int16
   ///
   Add16,
 
   /// 32 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target + *{4}Fixup + Addend) : int32
+  ///   Fixup <- (*{4}Fixup + Target + Addend) : int32
   ///
   Add32,
 
   /// 64 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target + *{8}Fixup + Addend) : int64
+  ///   Fixup <- (*{8}Fixup + Target + Addend) : int64
   ///
   Add64,
 
   /// ULEB128 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target + *{16}Fixup + Addend) : uleb128
+  ///   Fixup <- (*{16}Fixup + Target + Addend) : uleb128
   ///
   AddUleb128,
 
