@@ -169,13 +169,13 @@ class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class QCIRVInst16CI_RS1<bits<5> imm5, string OpcodeStr>
+class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
     : RVInst16CI<0b000, 0b10, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1"> {
     bits<5> rs1;
 
     let Inst{12} = 0b1;
     let Inst{11-7} = rs1;
-    let Inst{6-2} = imm5{4-0};
+    let Inst{6-2} = funct5{4-0};
 }
 
 let hasSideEffects = 1 in
