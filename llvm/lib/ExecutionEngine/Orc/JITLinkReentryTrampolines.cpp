@@ -173,8 +173,7 @@ void JITLinkReentryTrampolines::emit(ResourceTrackerSP RT,
 Expected<std::unique_ptr<LazyReexportsManager>>
 createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   RedirectableSymbolManager &RSMgr,
-                                  JITDylib &PlatformJD,
-                                  LazyReexportsManager::Listener *L) {
+                                  JITDylib &PlatformJD) {
   auto JLT = JITLinkReentryTrampolines::Create(ObjLinkingLayer);
   if (!JLT)
     return JLT.takeError();
@@ -185,7 +184,7 @@ createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   OnTrampolinesReady) mutable {
         JLT->emit(std::move(RT), NumTrampolines, std::move(OnTrampolinesReady));
       },
-      RSMgr, PlatformJD, L);
+      RSMgr, PlatformJD);
 }
 
 } // namespace llvm::orc

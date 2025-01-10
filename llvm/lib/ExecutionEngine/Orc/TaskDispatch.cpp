@@ -15,13 +15,9 @@ namespace orc {
 
 char Task::ID = 0;
 char GenericNamedTask::ID = 0;
-char IdleTask::ID = 0;
-
 const char *GenericNamedTask::DefaultDescription = "Generic Task";
 
 void Task::anchor() {}
-void IdleTask::anchor() {}
-
 TaskDispatcher::~TaskDispatcher() = default;
 
 void InPlaceTaskDispatcher::dispatch(std::unique_ptr<Task> T) { T->run(); }
@@ -30,15 +26,7 @@ void InPlaceTaskDispatcher::shutdown() {}
 
 #if LLVM_ENABLE_THREADS
 void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
-
-  enum { Normal, Materialization, Idle } TaskKind;
-
-  if (isa<MaterializationTask>(*T))
-    TaskKind = Materialization;
-  else if (isa<IdleTask>(*T))
-    TaskKind = Idle;
-  else
-    TaskKind = Normal;
+  bool IsMaterializationTask = isa<MaterializationTask>(*T);
 
   {
     std::lock_guard<std::mutex> Lock(DispatchMutex);
@@ -47,24 +35,24 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
     if (Shutdown)
       return;
 
-    if (TaskKind == Materialization) {
+    if (IsMaterializationTask) {
 
       // If this is a materialization task and there are too many running
       // already then queue this one up and return early.
-      if (!canRunMaterializationTaskNow())
-        return MaterializationTaskQueue.push_back(std::move(T));
+      if (MaxMaterializationThreads &&
+          NumMaterializationThreads == *MaxMaterializationThreads) {
+        MaterializationTaskQueue.push_back(std::move(T));
+        return;
+      }
 
       // Otherwise record that we have a materialization task running.
       ++NumMaterializationThreads;
-    } else if (TaskKind == Idle) {
-      if (!canRunIdleTaskNow())
-        return IdleTaskQueue.push_back(std::move(T));
     }
 
     ++Outstanding;
   }
 
-  std::thread([this, T = std::move(T), TaskKind]() mutable {
+  std::thread([this, T = std::move(T), IsMaterializationTask]() mutable {
     while (true) {
 
       // Run the task.
@@ -79,24 +67,18 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
       // Check the work queue state and either proceed with the next task or
       // end this thread.
       std::lock_guard<std::mutex> Lock(DispatchMutex);
-
-      if (TaskKind == Materialization)
-        --NumMaterializationThreads;
-      --Outstanding;
-
-      if (!MaterializationTaskQueue.empty() && canRunMaterializationTaskNow()) {
+      if (!MaterializationTaskQueue.empty()) {
         // If there are any materialization tasks running then steal that work.
         T = std::move(MaterializationTaskQueue.front());
         MaterializationTaskQueue.pop_front();
-        TaskKind = Materialization;
-        ++NumMaterializationThreads;
-        ++Outstanding;
-      } else if (!IdleTaskQueue.empty() && canRunIdleTaskNow()) {
-        T = std::move(IdleTaskQueue.front());
-        IdleTaskQueue.pop_front();
-        TaskKind = Idle;
-        ++Outstanding;
+        if (!IsMaterializationTask) {
+          ++NumMaterializationThreads;
+          IsMaterializationTask = true;
+        }
       } else {
+        if (IsMaterializationTask)
+          --NumMaterializationThreads;
+        --Outstanding;
         if (Outstanding == 0)
           OutstandingCV.notify_all();
         return;
@@ -110,17 +92,6 @@ void DynamicThreadPoolTaskDispatcher::shutdown() {
   Shutdown = true;
   OutstandingCV.wait(Lock, [this]() { return Outstanding == 0; });
 }
-
-bool DynamicThreadPoolTaskDispatcher::canRunMaterializationTaskNow() {
-  return !MaxMaterializationThreads ||
-         (NumMaterializationThreads < *MaxMaterializationThreads);
-}
-
-bool DynamicThreadPoolTaskDispatcher::canRunIdleTaskNow() {
-  return !MaxMaterializationThreads ||
-         (Outstanding < *MaxMaterializationThreads);
-}
-
 #endif
 
 } // namespace orc
