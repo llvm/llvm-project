@@ -963,6 +963,15 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
+  // Vector Single-Width Averaging Add and Subtract
+  case RISCV::VAADDU_VV:
+  case RISCV::VAADDU_VX:
+  case RISCV::VAADD_VV:
+  case RISCV::VAADD_VX:
+  case RISCV::VASUBU_VV:
+  case RISCV::VASUBU_VX:
+  case RISCV::VASUB_VV:
+  case RISCV::VASUB_VX:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
