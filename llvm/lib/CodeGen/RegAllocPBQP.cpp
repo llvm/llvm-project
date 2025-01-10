@@ -794,9 +794,6 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   MachineBlockFrequencyInfo &MBFI =
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  auto &LiveStks = getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-
   VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   PBQPVirtRegAuxInfo VRAI(
@@ -810,7 +807,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   VirtRegAuxInfo DefaultVRAI(
       MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
-      createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
+      createInlineSpiller(*this, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
 
