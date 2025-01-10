@@ -45,10 +45,11 @@ const FunctionDecl *getFunctionNode(ASTUnit *AST, const std::string &Name) {
   return Result[0].getNodeAs<FunctionDecl>("fn");
 }
 
-const VarDecl *getVariableNode(ASTUnit *AST, const std::string &Name) {
+const VarDecl *getVariableNode(ASTUnit *AST, const std::string &Name,
+                               int NumRedeclsExpected = 1) {
   auto Result = match(varDecl(hasName(Name)).bind("var"), AST->getASTContext());
-  EXPECT_EQ(Result.size(), 1u);
-  return Result[0].getNodeAs<VarDecl>("var");
+  EXPECT_EQ(Result.size(), NumRedeclsExpected);
+  return Result[0].getNodeAs<VarDecl>("var")->getFirstDecl();
 }
 
 template <class ModifiedTypeLoc>
@@ -67,6 +68,20 @@ void AssertAnnotatedAs(TypeLoc TL, llvm::StringRef annotation,
   if (AnnotateOut) {
     *AnnotateOut = Annotate;
   }
+}
+
+void AssertAnnotatedAs(const Decl *D, llvm::StringRef annotation,
+                       const AnnotateDeclAttr **AnnotateOut = nullptr) {
+  for (const Attr *A : D->attrs()) {
+    if (const auto *Annotate = dyn_cast<AnnotateDeclAttr>(A)) {
+      EXPECT_EQ(Annotate->getAnnotation(), annotation);
+      if (AnnotateOut) {
+        *AnnotateOut = Annotate;
+      }
+      return;
+    }
+  }
+  FAIL() << "No AnnotateDeclAttr found";
 }
 
 TEST(Attr, AnnotateType) {
@@ -165,6 +180,44 @@ TEST(Attr, AnnotateType) {
 
     AutoTypeLoc AutoTL;
     AssertAnnotatedAs(Var->getTypeSourceInfo()->getTypeLoc(), "auto", AutoTL);
+  }
+}
+
+TEST(Attr, AnnotateDecl) {
+
+  // Test that the AnnotateDecl attribute shows up in the right places and that
+  // it stores its arguments correctly.
+
+  auto AST = buildASTFromCode(R"cpp(
+    [[clang::annotate_decl("foo", "arg1", 2)]] int global;
+
+    [[clang::annotate_decl("first_decl")]] extern int global2;
+    [[clang::annotate_decl("second_decl")]] extern int global2;
+  )cpp");
+
+  {
+    const VarDecl *Global = getVariableNode(AST.get(), "global");
+
+    const AnnotateDeclAttr *Annotate;
+    AssertAnnotatedAs(Global, "foo", &Annotate);
+
+    EXPECT_EQ(Annotate->args_size(), 2u);
+    const auto *StringLit = selectFirst<StringLiteral>(
+        "str", match(constantExpr(hasDescendant(stringLiteral().bind("str"))),
+                     *Annotate->args_begin()[0], AST->getASTContext()));
+    ASSERT_NE(StringLit, nullptr);
+    EXPECT_EQ(StringLit->getString(), "arg1");
+    EXPECT_EQ(match(constantExpr(has(integerLiteral(equals(2u)).bind("int"))),
+                    *Annotate->args_begin()[1], AST->getASTContext())
+                  .size(),
+              1u);
+  }
+
+  {
+    const VarDecl *Global2 = getVariableNode(AST.get(), "global2", 2);
+
+    AssertAnnotatedAs(Global2, "first_decl");
+    AssertAnnotatedAs(Global2->getMostRecentDecl(), "second_decl");
   }
 }
 
