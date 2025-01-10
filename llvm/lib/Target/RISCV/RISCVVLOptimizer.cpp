@@ -1004,6 +1004,9 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFDIV_VF:
   case RISCV::VFDIV_VV:
   case RISCV::VFRDIV_VF:
+  // Vector Widening Floating-Point Multiply
+  case RISCV::VFWMUL_VF:
+  case RISCV::VFWMUL_VV:
   // Single-Width Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFCVT_XU_F_V:
   case RISCV::VFCVT_X_F_V:
