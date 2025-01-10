@@ -281,9 +281,11 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return Result;
 }
 
-bool isPointerLikeType(QualType QT) {
-  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
-         QT->isNullPtrType();
+// Tells whether the type is annotated with [[gsl::Pointer]].
+bool isGLSPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
+
+static bool isPointerLikeType(QualType QT) {
+  return isGLSPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
