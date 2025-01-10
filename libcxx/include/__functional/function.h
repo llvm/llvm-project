@@ -192,6 +192,13 @@ public:
   }
 };
 
+template <class _Tp>
+struct __deallocating_deleter {
+  _LIBCPP_HIDE_FROM_ABI void operator()(void* __p) const {
+    std::__libcpp_deallocate<_Tp>(static_cast<_Tp*>(__p), __element_count(1));
+  }
+};
+
 template <class _Fp, class _Rp, class... _ArgTypes>
 class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
   _Fp __f_;
@@ -212,8 +219,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
     using _Self = __default_alloc_func;
-    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold(
-        static_cast<_Self*>(std::__libcpp_allocate<_Self>(sizeof(_Self), _LIBCPP_ALIGNOF(_Self))));
+    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold(std::__libcpp_allocate<_Self>(__element_count(1)));
     _Self* __res = ::new ((void*)__hold.get()) _Self(__f_);
     (void)__hold.release();
     return __res;
@@ -223,7 +229,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__default_alloc_func* __f) {
     __f->destroy();
-    __deallocating_deleter<__default_alloc_func>()(__f);
+    std::__libcpp_deallocate<__default_alloc_func>(__f, __element_count(1));
   }
 };
 
@@ -669,8 +675,7 @@ public:
       if (__use_small_storage<_Fun>()) {
         ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
       } else {
-        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold(
-            static_cast<_Fun*>(std::__libcpp_allocate<_Fun>(sizeof(_Fun), _LIBCPP_ALIGNOF(_Fun))));
+        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold(std::__libcpp_allocate<_Fun>(__element_count(1)));
         __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
         (void)__hold.release();
       }

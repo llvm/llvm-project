@@ -879,6 +879,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
   __utility/exchange.h

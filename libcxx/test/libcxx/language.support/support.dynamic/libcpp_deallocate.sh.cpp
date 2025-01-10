@@ -138,42 +138,42 @@ void test_libcpp_dealloc() {
   std::size_t with_size_val   = 2;
 
   {
-    std::__libcpp_deallocate_unsized<char>(p, under_align_val);
+    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), under_align_val);
     assert(stats.expect_plain());
   }
   stats.reset();
 
 #if defined(NO_SIZE) && defined(NO_ALIGN)
   {
-    std::__libcpp_deallocate<char>(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_plain());
   }
   stats.reset();
 #elif defined(NO_SIZE)
   {
-    std::__libcpp_deallocate<char>(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_align(over_align_val));
   }
   stats.reset();
 #elif defined(NO_ALIGN)
   {
-    std::__libcpp_deallocate<char>(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_size(with_size_val));
   }
   stats.reset();
 #else
   {
-    std::__libcpp_deallocate<char>(p, with_size_val, over_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), over_align_val);
     assert(stats.expect_size_align(with_size_val, over_align_val));
   }
   stats.reset();
   {
-    std::__libcpp_deallocate_unsized<char>(p, over_align_val);
+    std::__libcpp_deallocate_unsized<char>(static_cast<char*>(p), over_align_val);
     assert(stats.expect_align(over_align_val));
   }
   stats.reset();
   {
-    std::__libcpp_deallocate<char>(p, with_size_val, under_align_val);
+    std::__libcpp_deallocate<char>(static_cast<char*>(p), std::__element_count(with_size_val), under_align_val);
     assert(stats.expect_size(with_size_val));
   }
   stats.reset();

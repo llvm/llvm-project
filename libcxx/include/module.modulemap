@@ -1527,7 +1527,7 @@ module std [system] {
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
       header "__memory/allocator.h"
-      export std.new.allocate // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
@@ -1569,7 +1569,7 @@ module std [system] {
       header "__memory/unique_temporary_buffer.h"
       export std.memory.unique_ptr
       export std_core.type_traits.is_constant_evaluated
-      export std.new.allocate // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
@@ -1607,6 +1607,7 @@ module std [system] {
     module align_val_t          { header "__new/align_val_t.h" }
     module allocate {
       header "__new/allocate.h"
+      export std.utility.element_count // used as part of the API
       export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
@@ -1915,7 +1916,10 @@ module std [system] {
 
   module string {
     module char_traits              { header "__string/char_traits.h" }
-    module constexpr_c_functions    { header "__string/constexpr_c_functions.h" }
+    module constexpr_c_functions    {
+      header "__string/constexpr_c_functions.h"
+      export std.utility.element_count // used as part of the constexpr C function's API
+    }
     module extern_template_lists    { header "__string/extern_template_lists.h" }
     module fwd                      {  header "__fwd/string.h" }
 
@@ -2025,6 +2029,7 @@ module std [system] {
     }
     module cmp                        { header "__utility/cmp.h" }
     module convert_to_integral        { header "__utility/convert_to_integral.h" }
+    module element_count              { header "__utility/element_count.h" }
     module exception_guard            { header "__utility/exception_guard.h" }
     module exchange                   { header "__utility/exchange.h" }
     module forward_like               { header "__utility/forward_like.h" }
