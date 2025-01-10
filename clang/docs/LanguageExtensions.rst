@@ -2870,8 +2870,8 @@ Query for this feature with ``__has_builtin(__builtin_assume_separate_storage)``
 -------------------------------------
 
 ``__builtin_assume_dereferenceable`` is used to provide the optimizer with the
-knowledge that the pointer argument P is dereferenceable up to the specified
-number of bytes.
+knowledge that the pointer argument P is dereferenceable up to at least the
+specified number of bytes.
 
 **Syntax**:
 

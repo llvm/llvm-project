@@ -1294,14 +1294,6 @@ CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
                           {DereferenceableOpB});
 }
 
-CallInst *IRBuilderBase::CreateNonNullAssumption(Value *PtrValue) {
-  assert(isa<PointerType>(PtrValue->getType()) &&
-         "trying to create an nonnull assumption on a non-pointer?");
-  SmallVector<Value *, 4> Vals({PtrValue});
-  OperandBundleDefT<Value *> NonNullOpB("nonnull", Vals);
-  return CreateAssumption(ConstantInt::getTrue(getContext()), {NonNullOpB});
-}
-
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;
 IRBuilderCallbackInserter::~IRBuilderCallbackInserter() = default;
 IRBuilderFolder::~IRBuilderFolder() = default;
