@@ -297,3 +297,76 @@ define i16 @cttz_assume(i16 %x) {
   %cttz = call i16 @llvm.cttz.i16(i16 %x, i1 false)
   ret i16 %cttz
 }
+
+
+declare void @use.i8(i8)
+define i8 @fold_ctz_log2(i8 %x) {
+; CHECK-LABEL: @fold_ctz_log2(
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umin.i8(i8 [[P2]], i8 32)
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 1, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  %r = call i8 @llvm.cttz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i8 @fold_ctz_log2_maybe_z(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: @fold_ctz_log2_maybe_z(
+; CHECK-NEXT:    [[V:%.*]] = shl i8 2, [[V_V:%.*]]
+; CHECK-NEXT:    [[P2_2:%.*]] = shl i8 4, [[Y:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = select i1 [[C:%.*]], i8 [[V]], i8 [[P2_2]]
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 1, 9) i8 @llvm.cttz.i8(i8 [[V1]], i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 2, %x
+  %p2_2 = shl i8 4, %y
+  %v = select i1 %c, i8 %p2, i8 %p2_2
+  %r = call i8 @llvm.cttz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i8 @fold_ctz_log2_maybe_z_okay(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: @fold_ctz_log2_maybe_z_okay(
+; CHECK-NEXT:    [[X:%.*]] = shl i8 2, [[X1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = shl i8 4, [[Y1:%.*]]
+; CHECK-NEXT:    [[V_V:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 1, 9) i8 @llvm.cttz.i8(i8 [[V_V]], i1 true)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 2, %x
+  %p2_2 = shl i8 4, %y
+  %v = select i1 %c, i8 %p2, i8 %p2_2
+  %r = call i8 @llvm.cttz(i8 %v, i1 true)
+  ret i8 %r
+}
+
+define i8 @fold_clz_log2(i8 %x) {
+; CHECK-LABEL: @fold_clz_log2(
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umin.i8(i8 [[P2]], i8 32)
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 2, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 1, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  %r = call i8 @llvm.ctlz(i8 %v, i1 false)
+  ret i8 %r
+}
+
+define i8 @fold_clz_log2_fail_multi_use(i8 %x) {
+; CHECK-LABEL: @fold_clz_log2_fail_multi_use(
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i8 1, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umin.i8(i8 [[P2]], i8 32)
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 2, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    call void @use.i8(i8 [[R]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p2 = shl i8 1, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
+  %r = call i8 @llvm.ctlz(i8 %v, i1 false)
+  call void @use.i8(i8 %r)
+  ret i8 %r
+}
