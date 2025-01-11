@@ -96,6 +96,6 @@ func.func @no_decompose_on_scalar() -> tensor<2x2xi32> {
 
 // CHECK-LABEL: no_decompose_on_scalar
 // CHECK-SAME: () -> tensor<2x2xi32> {
-// CHECK: %[[CST:.+]] = arith.constant dense<2> : tensor<2x2xi32>
-// CHECK: %[[C42:.+]] = arith.constant 42 : i32
+// CHECK-DAG: %[[CST:.+]] = arith.constant dense<2> : tensor<2x2xi32>
+// CHECK-DAG: %[[C42:.+]] = arith.constant 42 : i32
 // CHECK: linalg.generic {{.*}} ins(%[[CST]], %[[C42]] : tensor<2x2xi32>, i32) outs(%0 : tensor<2x2xi32>) {
