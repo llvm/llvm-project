@@ -131,8 +131,7 @@ define i1 @sgt_implies_false_le_via_assume(i32 %i, i32 %j) {
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
 ; CHECK-NEXT:    [[I_SGT_J:%.*]] = icmp sgt i32 [[I]], [[J]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I_SGT_J]])
-; CHECK-NEXT:    [[I_LE_J:%.*]] = icmp samesign ule i32 [[I]], [[J]]
-; CHECK-NEXT:    ret i1 [[I_LE_J]]
+; CHECK-NEXT:    ret i1 false
 ;
   %i.sgt.j = icmp sgt i32 %i, %j
   call void @llvm.assume(i1 %i.sgt.j)
