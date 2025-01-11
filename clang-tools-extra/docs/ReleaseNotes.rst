@@ -112,10 +112,10 @@ Improvements to clang-tidy
   the configuration options of the `Clang Static Analyzer Checks
   <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
 
+- Improved :program:`clang-tidy` by accepting parameters file in command line.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
-
-- Improved :program:`clang-tidy` by accepting parameters file in command line.
 
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
@@ -292,7 +292,7 @@ Changes in existing checks
   overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using
   ``std::span`` as a replacement for parameters of incomplete C array type in
   C++20 and ``std::array`` or ``std::vector`` before C++20.
 

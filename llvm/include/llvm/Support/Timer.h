@@ -131,6 +131,9 @@ public:
   /// Clear the timer state.
   void clear();
 
+  /// Stop the timer and start another timer.
+  void yieldTo(Timer &);
+
   /// Return the duration for which this timer has been running.
   TimeRecord getTotalTime() const { return Time; }
 
@@ -240,9 +243,9 @@ public:
   /// global constructors and destructors.
   static void constructForStatistics();
 
-  /// This makes the default group unmanaged, and lets the user manage the
-  /// group's lifetime.
-  static std::unique_ptr<TimerGroup> aquireDefaultGroup();
+  /// This makes the timer globals unmanaged, and lets the user manage the
+  /// lifetime.
+  static void *acquireTimerGlobals();
 
 private:
   friend class Timer;
