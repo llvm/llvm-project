@@ -936,7 +936,11 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
   default:
     return pos_type(off_type(-1));
   }
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  if (_fseeki64(__file_, __width > 0 ? __width * __off : 0, __whence))
+    return pos_type(off_type(-1));
+  pos_type __r = _ftelli64(__file_);
+#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
   if (fseek(__file_, __width > 0 ? __width * __off : 0, __whence))
     return pos_type(off_type(-1));
   pos_type __r = ftell(__file_);
@@ -954,7 +958,10 @@ typename basic_filebuf<_CharT, _Traits>::pos_type
 basic_filebuf<_CharT, _Traits>::seekpos(pos_type __sp, ios_base::openmode) {
   if (__file_ == nullptr || sync())
     return pos_type(off_type(-1));
-#    if !_LIBCPP_HAS_OFF_T_FUNCTIONS
+#    if defined(_LIBCPP_MSVCRT_LIKE)
+  if (_fseeki64(__file_, __sp, SEEK_SET))
+    return pos_type(off_type(-1));
+#    elif !_LIBCPP_HAS_OFF_T_FUNCTIONS
   if (fseek(__file_, __sp, SEEK_SET))
     return pos_type(off_type(-1));
 #    else
