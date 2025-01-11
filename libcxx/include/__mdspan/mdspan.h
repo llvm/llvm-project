@@ -20,6 +20,7 @@
 #include <__assert>
 #include <__config>
 #include <__fwd/mdspan.h>
+#include <__mdspan/aligned_accessor.h>
 #include <__mdspan/default_accessor.h>
 #include <__mdspan/extents.h>
 #include <__type_traits/extent.h>
@@ -266,13 +267,13 @@ private:
 #  if _LIBCPP_STD_VER >= 26
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*,
-                _OtherIndexTypes...) -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
+explicit mdspan(_ElementType*, _OtherIndexTypes...)
+    -> mdspan<_ElementType, extents<size_t, __maybe_static_ext<_OtherIndexTypes>...>>;
 #  else
 template <class _ElementType, class... _OtherIndexTypes>
   requires((is_convertible_v<_OtherIndexTypes, size_t> && ...) && (sizeof...(_OtherIndexTypes) > 0))
-explicit mdspan(_ElementType*,
-                _OtherIndexTypes...) -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
+explicit mdspan(_ElementType*, _OtherIndexTypes...)
+    -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
 #  endif
 
 template <class _Pointer>
