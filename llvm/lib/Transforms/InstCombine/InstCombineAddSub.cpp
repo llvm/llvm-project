@@ -2424,16 +2424,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   const APInt *Op0C;
   if (match(Op0, m_APInt(Op0C))) {
-    if (Op0C->isMask()) {
-      // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
-      // zero. We don't use information from dominating conditions so this
-      // transform is easier to reverse if necessary.
-      KnownBits RHSKnown = llvm::computeKnownBits(
-          Op1, 0, SQ.getWithInstruction(&I).getWithoutDomCondCache());
-      if ((*Op0C | RHSKnown.Zero).isAllOnes())
-        return BinaryOperator::CreateXor(Op1, Op0);
-    }
-
     // C - ((C3 -nuw X) & C2) --> (C - (C2 & C3)) + (X & C2) when:
     // (C3 - ((C2 & C3) - 1)) is pow2
     // ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
