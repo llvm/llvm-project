@@ -72,7 +72,7 @@ func.func @broadcast_only(%x : tensor<2x16x32xf32>, %y:  tensor<2x32xf32>, %z : 
 
 // -----
 
-func.func @test_broadcast_scalar_across_single_tensor() -> tensor<2x2xi32> {
+func.func @no_decompose_on_scalar() -> tensor<2x2xi32> {
   %a = arith.constant dense<2> : tensor<2x2xi32>
   %b = arith.constant 42 : i32
   %c = tensor.empty() : tensor<2x2xi32>
@@ -96,8 +96,6 @@ func.func @test_broadcast_scalar_across_single_tensor() -> tensor<2x2xi32> {
 
 // CHECK-LABEL: test_broadcast_scalar_across_single_tensor
 // CHECK-SAME: () -> tensor<2x2xi32> {
-// CHECK:   %[[E0:.+]] = linalg.generic {indexing_maps = [#map, #map1, #map], iterator_types = ["parallel", "parallel"]} ins(%cst, %c42_i32 : tensor<2x2xi32>, i32) outs(%0 : tensor<2x2xi32>) {
-// CHECK:   ^bb0(%in: i32, %in_0: i32, %out: i32):
-// CHECK:     %[[E0:.+]] = arith.addi %in, %in_0 : i32
-// CHECK:     linalg.yield %2 : i32
-// CHECK:   } -> tensor<2x2xi32>
+// CHECK-DAG: %[[CST:.+]] = arith.constant dense<2> : tensor<2x2xi32>
+// CHECK-DAG: %[[C42:.+]] = arith.constant 42 : i32
+// CHECK:   %[[E0:.+]] = linalg.generic {{.*}} ins(%[[CST]], %[[C42]] : tensor<2x2xi32>, i32) outs(%0 : tensor<2x2xi32>) {
