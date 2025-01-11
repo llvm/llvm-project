@@ -373,7 +373,7 @@ define void @vselect_concat_splat() {
 ; AVX512:       ## %bb.0: ## %entry
 ; AVX512-NEXT:    vmovups (%rax), %ymm0
 ; AVX512-NEXT:    vmovups (%rax), %xmm1
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
 ; AVX512-NEXT:    vmovaps %ymm2, %ymm3
 ; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
 ; AVX512-NEXT:    vmovups 32, %xmm4
