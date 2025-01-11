@@ -1529,7 +1529,7 @@ static bool isAIXLayout(const ASTContext &Context) {
 
 void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
-  uint64_t FieldSize = D->getBitWidthValue(Context);
+  uint64_t FieldSize = D->getBitWidthValue();
   TypeInfo FieldInfo = Context.getTypeInfo(D->getType());
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
@@ -3009,7 +3009,7 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
 }
 
 void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
-  unsigned Width = FD->getBitWidthValue(Context);
+  unsigned Width = FD->getBitWidthValue();
   if (Width == 0) {
     layoutZeroWidthBitField(FD);
     return;
@@ -3677,7 +3677,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     if (Field->isBitField()) {
       uint64_t LocalFieldByteOffsetInBits = C.toBits(FieldOffset - Offset);
       unsigned Begin = LocalFieldOffsetInBits - LocalFieldByteOffsetInBits;
-      unsigned Width = Field->getBitWidthValue(C);
+      unsigned Width = Field->getBitWidthValue();
       PrintBitFieldOffset(OS, FieldOffset, Begin, Width, IndentLevel);
     } else {
       PrintOffset(OS, FieldOffset, IndentLevel);
