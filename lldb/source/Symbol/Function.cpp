@@ -133,7 +133,7 @@ lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
                                       Function &caller, Target &target) {
   Log *log = GetLog(LLDBLog::Step);
 
-  const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
+  const Address &caller_start_addr = caller.GetAddress();
 
   ModuleSP caller_module_sp = caller_start_addr.GetModule();
   if (!caller_module_sp) {
@@ -279,9 +279,10 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    AddressRanges ranges)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(*this, func_uid),
-      m_range(CollapseRanges(ranges)), m_prologue_byte_size(0) {
+      m_range(CollapseRanges(ranges)), m_address(m_range.GetBaseAddress()),
+      m_prologue_byte_size(0) {
   assert(comp_unit != nullptr);
-  lldb::addr_t base_file_addr = m_range.GetBaseAddress().GetFileAddress();
+  lldb::addr_t base_file_addr = m_address.GetFileAddress();
   for (const AddressRange &range : ranges)
     m_block.AddRange(
         Block::Range(range.GetBaseAddress().GetFileAddress() - base_file_addr,
@@ -312,8 +313,7 @@ void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
       return;
 
     LineEntry line_entry;
-    if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                           line_entry, nullptr)) {
+    if (line_table->FindLineEntryByAddress(GetAddress(), line_entry, nullptr)) {
       line_no = line_entry.line;
       source_file_sp = line_entry.file_sp;
     }
@@ -484,7 +484,7 @@ Function *Function::CalculateSymbolContextFunction() { return this; }
 lldb::DisassemblerSP Function::GetInstructions(const ExecutionContext &exe_ctx,
                                                const char *flavor,
                                                bool prefer_file_cache) {
-  ModuleSP module_sp(GetAddressRange().GetBaseAddress().GetModule());
+  ModuleSP module_sp = GetAddress().GetModule();
   if (module_sp && exe_ctx.HasTargetScope()) {
     return Disassembler::DisassembleRange(
         module_sp->GetArchitecture(), nullptr, nullptr, nullptr, flavor,
@@ -601,8 +601,7 @@ uint32_t Function::GetPrologueByteSize() {
     if (line_table) {
       LineEntry first_line_entry;
       uint32_t first_line_entry_idx = UINT32_MAX;
-      if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
-                                             first_line_entry,
+      if (line_table->FindLineEntryByAddress(GetAddress(), first_line_entry,
                                              &first_line_entry_idx)) {
         // Make sure the first line entry isn't already the end of the prologue
         addr_t prologue_end_file_addr = LLDB_INVALID_ADDRESS;
