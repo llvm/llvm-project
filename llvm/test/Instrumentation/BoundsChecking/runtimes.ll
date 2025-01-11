@@ -10,7 +10,7 @@
 ; RUN: opt < %s -passes='bounds-checking<min-rt-abort>' -S | FileCheck %s --check-prefixes=MINRTABORT-NOMERGE
 ;
 ; RUN: opt < %s -passes='bounds-checking<trap;guard=3>'   -S | FileCheck %s --check-prefixes=TR-GUARD
-; RUN: opt < %s -passes='bounds-checking<rt;guard=-5>'     -S | FileCheck %s --check-prefixes=RT-GUARDRT
+; RUN: opt < %s -passes='bounds-checking<rt;guard=-5>'     -S | FileCheck %s --check-prefixes=RT-GUARD
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 define void @f1(i64 %x) nounwind {
@@ -144,23 +144,23 @@ define void @f1(i64 %x) nounwind {
 ; TR-GUARD-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR3:[0-9]+]], !nosanitize [[META0]]
 ; TR-GUARD-NEXT:    unreachable, !nosanitize [[META0]]
 ;
-; RT-GUARDRT-LABEL: define void @f1(
-; RT-GUARDRT-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; RT-GUARDRT-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
-; RT-GUARDRT-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
-; RT-GUARDRT-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
-; RT-GUARDRT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 -5), !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
-; RT-GUARDRT:       [[BB9]]:
-; RT-GUARDRT-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
-; RT-GUARDRT-NEXT:    ret void
-; RT-GUARDRT:       [[TRAP]]:
-; RT-GUARDRT-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR2:[0-9]+]], !nosanitize [[META0]]
-; RT-GUARDRT-NEXT:    br label %[[BB9]], !nosanitize [[META0]]
+; RT-GUARD-LABEL: define void @f1(
+; RT-GUARD-SAME: i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; RT-GUARD-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
+; RT-GUARD-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; RT-GUARD-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0:![0-9]+]]
+; RT-GUARD-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
+; RT-GUARD-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
+; RT-GUARD-NEXT:    [[TMP6:%.*]] = or i1 false, [[TMP5]], !nosanitize [[META0]]
+; RT-GUARD-NEXT:    [[TMP7:%.*]] = call i1 @llvm.allow.ubsan.check(i8 -5), !nosanitize [[META0]]
+; RT-GUARD-NEXT:    [[TMP8:%.*]] = and i1 [[TMP6]], [[TMP7]], !nosanitize [[META0]]
+; RT-GUARD-NEXT:    br i1 [[TMP8]], label %[[TRAP:.*]], label %[[BB9:.*]]
+; RT-GUARD:       [[BB9]]:
+; RT-GUARD-NEXT:    [[TMP10:%.*]] = load i128, ptr [[TMP2]], align 4
+; RT-GUARD-NEXT:    ret void
+; RT-GUARD:       [[TRAP]]:
+; RT-GUARD-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR2:[0-9]+]], !nosanitize [[META0]]
+; RT-GUARD-NEXT:    br label %[[BB9]], !nosanitize [[META0]]
 ;
   %1 = alloca i128, i64 %x
   %3 = load i128, ptr %1, align 4
@@ -197,9 +197,9 @@ define void @f1(i64 %x) nounwind {
 ; TR-GUARD: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind }
 ; TR-GUARD: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 ;.
-; RT-GUARDRT: attributes #[[ATTR0]] = { nounwind }
-; RT-GUARDRT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; RT-GUARDRT: attributes #[[ATTR2]] = { nomerge nounwind }
+; RT-GUARD: attributes #[[ATTR0]] = { nounwind }
+; RT-GUARD: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; RT-GUARD: attributes #[[ATTR2]] = { nomerge nounwind }
 ;.
 ; TR: [[META0]] = !{}
 ;.
@@ -217,5 +217,5 @@ define void @f1(i64 %x) nounwind {
 ;.
 ; TR-GUARD: [[META0]] = !{}
 ;.
-; RT-GUARDRT: [[META0]] = !{}
+; RT-GUARD: [[META0]] = !{}
 ;.

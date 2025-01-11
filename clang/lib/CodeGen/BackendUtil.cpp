@@ -84,6 +84,7 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <limits>
 #include <memory>
 #include <optional>
 using namespace clang;
@@ -1030,6 +1031,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         BoundsCheckingPass::Options Options;
         if (CodeGenOpts.SanitizeSkipHotCutoffs[SanitizerKind::SO_LocalBounds] ||
             ClSanitizeGuardChecks) {
+          static_assert(SanitizerKind::SO_LocalBounds <=
+                            std::numeric_limits<
+                                decltype(Options.GuardKind)::value_type>::max(),
+                        "Update type of llvm.allow.ubsan.check.");
           Options.GuardKind = SanitizerKind::SO_LocalBounds;
         }
         Options.Merge =
