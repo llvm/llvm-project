@@ -2229,6 +2229,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BitOp;
     }
 
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
+    }
+
     // Left or right might be masked.
     if (SimplifyDemandedInstructionBits(*II))
       return &CI;
