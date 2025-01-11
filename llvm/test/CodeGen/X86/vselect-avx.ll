@@ -128,7 +128,7 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512-NEXT:    vpternlogq $226, %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm2 ^ (xmm0 & (xmm1 ^ xmm2))
 ; AVX512-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -283,7 +283,7 @@ define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i6
 ; AVX512-LABEL: vselect_concat_split_v16i8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vpternlogq $216, %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 ^ (ymm2 & (ymm0 ^ ymm1))
 ; AVX512-NEXT:    retq
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
   %b.bc = bitcast <4 x i64> %b to <32 x i8>
