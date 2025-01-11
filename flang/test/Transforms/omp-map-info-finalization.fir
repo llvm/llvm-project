@@ -296,3 +296,49 @@ func.func @alloca_dtype_map_op_block_add(%arg0 : !fir.ref<!fir.box<!fir.heap<!fi
 // CHECK:    %[[DESC_MAP_2:.*]] = omp.map.info var_ptr(%[[DESC_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {{.*}}
 // CHECK:    %[[TOP_PARENT_MAP:.*]] = omp.map.info var_ptr(%0#1 : !fir.ref<!fir.type<[[REC_TY]]>>, !fir.type<[[REC_TY]]>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) members(%6, %5, %14, %13 : [1], [1, 0], [1, 0, 2], [1, 0, 2, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<[[REC_TY2]]>>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?x!fir.type<[[REC_TY2]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.type<[[REC_TY]]>> {{{.*}} partial_map = true}
 // CHECK:    omp.target map_entries(%[[TOP_PARENT_MAP]] -> %{{.*}}, %[[DESC_MAP_1]] -> %{{.*}}, %[[BASE_ADDR_MAP_1]] -> %{{.*}}, %[[DESC_MAP_2]] -> %{{.*}}, %[[BASE_ADDR_MAP_2]] -> %{{.*}} : !fir.ref<!fir.type<[[REC_TY]]>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<[[REC_TY2]]>>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?x!fir.type<[[REC_TY2]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
+
+// -----
+
+func.func @_QPreuse_alloca(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFreuse_allocaEa"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %2:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+  %c0_0 = arith.constant 0 : index
+  %3 = arith.subi %2#1, %c1 : index
+  %4 = omp.map.bounds lower_bound(%c0_0 : index) upper_bound(%3 : index) extent(%2#1 : index) stride(%2#2 : index) start_idx(%c1 : index) {stride_in_bytes = true}
+  %5 = fir.box_addr %1#1 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+  %6 = omp.map.info var_ptr(%5 : !fir.ref<!fir.array<?xf64>>, f64) map_clauses(to) capture(ByRef) bounds(%4) -> !fir.ref<!fir.array<?xf64>> {name = "a"}
+  omp.target_data map_entries(%6 : !fir.ref<!fir.array<?xf64>>) {
+    %cst = arith.constant 0.000000e+00 : f64
+    %c0_1 = arith.constant 0 : index
+    %7 = hlfir.designate %1#0 (%c0_1)  : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+    hlfir.assign %cst to %7 : f64, !fir.ref<f64>
+    %c1_2 = arith.constant 1 : index
+    %c0_3 = arith.constant 0 : index
+    %8:3 = fir.box_dims %1#0, %c0_3 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+    %c0_4 = arith.constant 0 : index
+    %9 = arith.subi %8#1, %c1_2 : index
+    %10 = omp.map.bounds lower_bound(%c0_4 : index) upper_bound(%9 : index) extent(%8#1 : index) stride(%8#2 : index) start_idx(%c1_2 : index) {stride_in_bytes = true}
+    %11 = fir.box_addr %1#1 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+    %12 = omp.map.info var_ptr(%11 : !fir.ref<!fir.array<?xf64>>, f64) map_clauses(from) capture(ByRef) bounds(%10) -> !fir.ref<!fir.array<?xf64>> {name = "a"}
+    omp.target_update map_entries(%12 : !fir.ref<!fir.array<?xf64>>)
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: @_QPreuse_alloca
+// CHECK-NEXT:  %[[ALLOCA:[0-9]+]] = fir.alloca !fir.box<!fir.array<?xf64>>
+// CHECK-NOT:   fir.alloca
+// CHECK:       %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
+// CHECK:       %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
+// CHECK:       omp.target_data map_entries
+// CHECK:         %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
+// CHECK:         %{{[0-9]+}} = omp.map.info var_ptr(%[[ALLOCA]]
+// CHECK:         omp.target_update map_entries
+// CHECK:         omp.terminator
+// CHECK:       }
+// CHECK:       return
+
