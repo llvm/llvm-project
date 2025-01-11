@@ -875,7 +875,7 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (IsNUW) {
     Value *X;
     if (match(Op1, m_Xor(m_Value(X), m_Specific(Op0))) &&
-        match(Op0, m_CheckedInt([](const APInt &C) { return C.isMask(); })))
+        match(Op0, m_LowBitMask()))
       return X;
   }
 
@@ -2552,7 +2552,7 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   {
     Value *X;
     if (match(Op0, m_NUWSub(m_Specific(Op1), m_Value(X))) &&
-        match(Op1, m_CheckedInt([](const APInt &C) { return C.isMask(); })))
+        match(Op1, m_LowBitMask()))
       return X;
   }
 
