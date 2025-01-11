@@ -739,8 +739,8 @@ cc_library(
         ":basic_builtins_gen",
         ":basic_builtins_riscv_gen",
         ":basic_builtins_spirv_gen",
-        ":basic_builtins_x86_gen",
         ":basic_builtins_x86_64_gen",
+        ":basic_builtins_x86_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -1354,13 +1354,9 @@ cc_library(
 
 cc_library(
     name = "tooling",
-    srcs = glob(
-        [
-            "lib/Tooling/*.cpp",
-        ],
-        # Temporarily disable until we support the generated file.
-        exclude = ["lib/Tooling/NodeIntrospection.cpp"],
-    ),
+    srcs = glob([
+        "lib/Tooling/*.cpp",
+    ]),
     hdrs = glob([
         "include/clang/Tooling/*.h",
     ]),

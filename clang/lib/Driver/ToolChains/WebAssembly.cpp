@@ -422,7 +422,8 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       }
     }
 
-    for (const auto *Option : {"-wasm-enable-eh", "-wasm-enable-sjlj"}) {
+    for (const auto *Option :
+         {"-wasm-enable-eh", "-wasm-enable-sjlj", "-wasm-use-legacy-eh"}) {
       if (Opt.starts_with(Option)) {
         BanIncompatibleOptionsForWasmEHSjLj(Option);
         EnableFeaturesForWasmEHSjLj();
