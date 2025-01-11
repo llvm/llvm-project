@@ -154,16 +154,14 @@ class BankedReg<string name,  bits<8> enc> {
 def BankedRegsList : GenericTable {
   let FilterClass = "BankedReg";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupBankedRegByEncoding";
 }
 
 def lookupBankedRegByName : SearchIndex {
   let Table = BankedRegsList;
   let Key = ["Name"];
-}
-
-def lookupBankedRegByEncoding : SearchIndex {
-  let Table = BankedRegsList;
-  let Key = ["Encoding"];
 }
 
 
