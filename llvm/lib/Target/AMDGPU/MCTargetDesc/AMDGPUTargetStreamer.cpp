@@ -338,15 +338,6 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   return true;
 }
 
-bool AMDGPUTargetAsmStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI, bool TrapEnabled) {
-  OS << (TrapEnabled ? "\ts_trap 2" : "\ts_endpgm")
-     << " ; Kernarg preload header. Trap with incompatible firmware that "
-        "doesn't support preloading kernel arguments.\n";
-  OS << "\t.fill 63, 4, 0xbf800000 ; s_nop 0\n";
-  return true;
-}
-
 bool AMDGPUTargetAsmStreamer::EmitCodeEnd(const MCSubtargetInfo &STI) {
   const uint32_t Encoded_s_code_end = 0xbf9f0000;
   const uint32_t Encoded_s_nop = 0xbf800000;
@@ -932,20 +923,6 @@ bool AMDGPUTargetELFStreamer::EmitHSAMetadata(msgpack::Document &HSAMetadataDoc,
              OS.emitBytes(HSAMetadataString);
              OS.emitLabel(DescEnd);
            });
-  return true;
-}
-
-bool AMDGPUTargetELFStreamer::EmitKernargPreloadHeader(
-    const MCSubtargetInfo &STI, bool TrapEnabled) {
-  const uint32_t Encoded_s_nop = 0xbf800000;
-  const uint32_t Encoded_s_trap = 0xbf920002;
-  const uint32_t Encoded_s_endpgm = 0xbf810000;
-  const uint32_t TrapInstr = TrapEnabled ? Encoded_s_trap : Encoded_s_endpgm;
-  MCStreamer &OS = getStreamer();
-  OS.emitInt32(TrapInstr);
-  for (int i = 0; i < 63; ++i) {
-    OS.emitInt32(Encoded_s_nop);
-  }
   return true;
 }
 

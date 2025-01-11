@@ -229,6 +229,19 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
       return true;
   }
 
+  // Look for: (X << V) op (Y >> (BitWidth - V))
+  // or        (X >> V) op (Y << (BitWidth - V))
+  {
+    const Value *V;
+    const APInt *R;
+    if (((match(RHS, m_Shl(m_Value(), m_Sub(m_APInt(R), m_Value(V)))) &&
+          match(LHS, m_LShr(m_Value(), m_Specific(V)))) ||
+         (match(RHS, m_LShr(m_Value(), m_Sub(m_APInt(R), m_Value(V)))) &&
+          match(LHS, m_Shl(m_Value(), m_Specific(V))))) &&
+        R->uge(LHS->getType()->getScalarSizeInBits()))
+      return true;
+  }
+
   return false;
 }
 
@@ -9374,12 +9387,11 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
 /// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
 /// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool>
-isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
-                              CmpInst::Predicate RPred) {
-  if (CmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
+static std::optional<bool> isImpliedCondMatchingOperands(CmpPredicate LPred,
+                                                         CmpPredicate RPred) {
+  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
     return true;
-  if (CmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
+  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
     return false;
 
   return std::nullopt;

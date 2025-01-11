@@ -445,6 +445,10 @@ Non-comprehensive list of changes in this release
 - Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
   which allows them to be stored in STL containers.
 
+- In the ``-ftime-report`` output, the new "Clang time report" group replaces
+  the old "Clang front-end time report" and includes "Front end", "LLVM IR
+  generation", "Optimizer", and "Machine code generation".
+
 New Compiler Flags
 ------------------
 
@@ -1083,6 +1087,12 @@ CUDA Support
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
 - Added support for `__grid_constant__` attribute.
+- CUDA now uses the new offloading driver by default. The new driver supports
+  device-side LTO, interoperability with OpenMP and other languages, and native ``-fgpu-rdc``
+  support with static libraries. The old behavior can be returned using the
+  ``--no-offload-new-driver`` flag. The binary format is no longer compatible
+  with the NVIDIA compiler's RDC-mode support. More information can be found at:
+  https://clang.llvm.org/docs/OffloadingDesign.html
 
 AIX Support
 ^^^^^^^^^^^
@@ -1176,6 +1186,8 @@ libclang
 --------
 - Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
   whether the first one comes strictly before the second in the source code.
+- Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
+  to pretty-print a type.
 
 Static Analyzer
 ---------------
@@ -1316,10 +1328,13 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
-- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
-  which allow changing the formatting of pretty-printed code.
-- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
-  a declaration is an anonymous union or anonymous struct.
+- Added ``Cursor.pretty_printed``, a binding for ``clang_getCursorPrettyPrinted``,
+  and related functions, which allow changing the formatting of pretty-printed code.
+- Added ``Cursor.is_anonymous_record_decl``, a binding for
+  ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if a
+  declaration is an anonymous union or anonymous struct.
+- Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
+  which allows changing the formatting of pretty-printed types.
 
 OpenMP Support
 --------------
