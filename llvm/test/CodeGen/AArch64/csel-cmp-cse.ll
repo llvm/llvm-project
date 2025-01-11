@@ -338,9 +338,8 @@ define i32 @test_eq0_multi_use_sub_i32(i32 %x0, i32 %x1) {
 define i32 @test_eq_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_eq_nonconst_sub_add_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x1, %x2
@@ -353,9 +352,8 @@ define i32 @test_eq_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ne_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ne_nonconst_sub_add_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i32 %x1, %x2
@@ -368,9 +366,8 @@ define i32 @test_ne_nonconst_sub_add_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ult_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ult_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x1, %x2
@@ -383,9 +380,8 @@ define i32 @test_ult_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ule_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ule_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, ls
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i32 %x1, %x2
@@ -398,9 +394,8 @@ define i32 @test_ule_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ugt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ugt_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x1, %x2
@@ -413,9 +408,8 @@ define i32 @test_ugt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_uge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_uge_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, hs
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i32 %x1, %x2
@@ -428,9 +422,8 @@ define i32 @test_uge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_slt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_slt_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %x1, %x2
@@ -443,9 +436,8 @@ define i32 @test_slt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sle_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sle_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, le
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i32 %x1, %x2
@@ -458,9 +450,8 @@ define i32 @test_sle_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sgt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sgt_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %x1, %x2
@@ -473,9 +464,8 @@ define i32 @test_sgt_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sge_nonconst_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w1, w2
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, ge
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %x1, %x2
@@ -488,9 +478,8 @@ define i32 @test_sge_nonconst_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i64 @test_ult_nonconst_i64(i64 %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: test_ult_nonconst_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1
-; CHECK-NEXT:    cmp x1, x2
-; CHECK-NEXT:    sub x8, x8, x2
+; CHECK-NEXT:    subs x8, x1, x2
+; CHECK-NEXT:    add x8, x8, x0
 ; CHECK-NEXT:    csel x0, xzr, x8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i64 %x1, %x2
@@ -503,9 +492,8 @@ define i64 @test_ult_nonconst_i64(i64 %x0, i64 %x1, i64 %x2) {
 define i32 @test_eq_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_eq_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
   %cmp = icmp eq i32 %x2, %x1
@@ -518,9 +506,8 @@ define i32 @test_eq_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ne_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ne_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
 ; CHECK-NEXT:    csel w0, wzr, w8, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i32 %x2, %x1
@@ -533,10 +520,9 @@ define i32 @test_ne_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ult_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ult_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, lo
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -548,10 +534,9 @@ define i32 @test_ult_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ule_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ule_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, ls
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, hs
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -563,10 +548,9 @@ define i32 @test_ule_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_ugt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_ugt_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, hi
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -578,10 +562,9 @@ define i32 @test_ugt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_uge_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_uge_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, hs
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ls
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -593,10 +576,9 @@ define i32 @test_uge_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_slt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_slt_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, lt
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -608,10 +590,9 @@ define i32 @test_slt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sle_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sle_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, le
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, ge
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -623,10 +604,9 @@ define i32 @test_sle_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sgt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sgt_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, gt
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
@@ -638,10 +618,9 @@ define i32 @test_sgt_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 define i32 @test_sge_nonconst_sub_add_comm_i32(i32 %x0, i32 %x1, i32 %x2) {
 ; CHECK-LABEL: test_sge_nonconst_sub_add_comm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, w1
-; CHECK-NEXT:    cmp w2, w1
-; CHECK-NEXT:    sub w8, w8, w2
-; CHECK-NEXT:    csel w0, wzr, w8, ge
+; CHECK-NEXT:    subs w8, w1, w2
+; CHECK-NEXT:    add w8, w8, w0
+; CHECK-NEXT:    csel w0, wzr, w8, le
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %x2, %x1
   %add = add nuw i32 %x0, %x1
