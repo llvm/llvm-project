@@ -117,8 +117,6 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
-- Improved :program:`clang-tidy` by accepting parameters file in command line.
-
 - Improved :program:`clang-tidy` by fixing incorrect configuration file path
   resolving when file paths contain ``..``.
 
