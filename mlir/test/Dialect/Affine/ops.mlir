@@ -324,3 +324,39 @@ module attributes {gpu.container_module} {
 // CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
 // CHECK:             }
 // CHECK:             gpu.return
+
+// -----
+
+#map = affine_map<()[s0] -> (s0 mod 32)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0] -> (s0 mod 32)>
+
+module {
+  gpu.module @gpu {
+    gpu.func @affine_thread_id(%arg0: memref<?x?xf32>) kernel {
+      %c3 = arith.constant 3 : index
+      %dim = memref.dim %arg0, %c3 : memref<?x?xf32>
+      %c0 = arith.constant 0 : index
+      affine.for %arg3 = %c0 to %dim step 32 {
+        %thread_id_x = gpu.thread_id  x
+        %0 = affine.apply #map()[%thread_id_x]
+        %c128 = arith.constant 128 : index
+        affine.for %arg4 = %0 to %c128 step 8 {
+          %c32 = arith.constant 32 : index
+        }
+      }
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL:     @affine_thread_id
+// CHECK-SAME:        (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
+// CHECK:             %[[VAL_1:.*]] = arith.constant 3 : index
+// CHECK:             %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
+// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
+// CHECK:               %[[VAL_5:.*]] = gpu.thread_id  x
+// CHECK:               %[[VAL_6:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_5]]]
+// CHECK:               %[[VAL_7:.*]] = arith.constant 128 : index
+// CHECK:               affine.for %[[VAL_8:.*]] = %[[VAL_6]] to %[[VAL_7]] step 8 {

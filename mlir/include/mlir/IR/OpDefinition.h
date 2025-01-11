@@ -365,6 +365,7 @@ LogicalResult verifyResultSizeAttr(Operation *op, StringRef sizeAttrName);
 LogicalResult verifyNoRegionArguments(Operation *op);
 LogicalResult verifyElementwise(Operation *op);
 LogicalResult verifyIsIsolatedFromAbove(Operation *op);
+LogicalResult verifyIndexResultType(Operation *op);
 } // namespace impl
 
 /// Helper class for implementing traits.  Clients are not expected to interact
@@ -1265,6 +1266,16 @@ public:
     static_assert(!ConcreteType::template hasTrait<ZeroRegions>(),
                   "expected operation to have one or more regions");
     return success();
+  }
+};
+
+/// A trait of operation. Any operation holds the AffineSymbol, and its result
+/// can be used as a symbol.
+template <typename ConcreteType>
+class AffineSymbol : public TraitBase<ConcreteType, AffineSymbol> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifyIndexResultType(op);
   }
 };
 

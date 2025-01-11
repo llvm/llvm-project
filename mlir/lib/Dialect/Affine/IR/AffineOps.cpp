@@ -443,6 +443,10 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
+  // AffineScope Op.
+  if (defOp->hasTrait<OpTrait::AffineSymbol>())
+    return true;
+
   // Affine apply operation is ok if all of its operands are ok.
   if (auto applyOp = dyn_cast<AffineApplyOp>(defOp))
     return applyOp.isValidSymbol(region);

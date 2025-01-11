@@ -1390,6 +1390,14 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
   return success();
 }
 
+LogicalResult OpTrait::impl::verifyIndexResultType(Operation *op) {
+  if (op->getNumResults() != 1)
+    op->emitError("operation's result number should be 1.");
+  if (!mlir::isa<IndexType>(op->getResult(0).getType()))
+    op->emitError("operation's result type should be index.");
+  return success();
+}
+
 bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
   return op->hasTrait<Elementwise>() && op->hasTrait<Scalarizable>() &&
          op->hasTrait<Vectorizable>() && op->hasTrait<Tensorizable>();
