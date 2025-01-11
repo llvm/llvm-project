@@ -9905,7 +9905,7 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
   switch (II.getIntrinsicID()) {
   case Intrinsic::ctlz:
   case Intrinsic::cttz: {
-    APInt Upper = APInt(Width, Width);
+    APInt Upper(Width, Width);
     if (!UseInstrInfo || !match(II.getArgOperand(1), m_One()))
       Upper += 1;
     // Maximum of set/clear bits is the bit width.
