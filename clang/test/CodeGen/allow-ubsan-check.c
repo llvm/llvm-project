@@ -174,12 +174,14 @@ void use(double*);
 // CHECK-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP0]], align 16
 // CHECK-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR7:[0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt i64 [[TMP0]], [[IDXPROM]]
-// CHECK-NEXT:    br i1 [[DOTNOT]], label %[[BB1:.*]], label %[[TRAP:.*]]
-// CHECK:       [[BB1]]:
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
+// CHECK:       [[BB4]]:
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[VLA]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
-// CHECK-NEXT:    ret double [[TMP2]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    ret double [[TMP5]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR6]], !nosanitize [[META2]]
 // CHECK-NEXT:    unreachable, !nosanitize [[META2]]
@@ -191,12 +193,14 @@ void use(double*);
 // TR-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP0]], align 16
 // TR-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR6:[0-9]+]]
 // TR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-// TR-NEXT:    [[DOTNOT:%.*]] = icmp ugt i64 [[TMP0]], [[IDXPROM]]
-// TR-NEXT:    br i1 [[DOTNOT]], label %[[BB1:.*]], label %[[TRAP:.*]]
-// TR:       [[BB1]]:
+// TR-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
+// TR-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META2]]
+// TR-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// TR-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
+// TR:       [[BB4]]:
 // TR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[VLA]], i64 [[IDXPROM]]
-// TR-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// TR-NEXT:    ret double [[TMP2]]
+// TR-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
+// TR-NEXT:    ret double [[TMP5]]
 // TR:       [[TRAP]]:
 // TR-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR5]], !nosanitize [[META2]]
 // TR-NEXT:    unreachable, !nosanitize [[META2]]
@@ -208,15 +212,17 @@ void use(double*);
 // REC-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP0]], align 16
 // REC-NEXT:    call void @use(ptr noundef nonnull [[VLA]]) #[[ATTR5:[0-9]+]]
 // REC-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-// REC-NEXT:    [[DOTNOT:%.*]] = icmp ugt i64 [[TMP0]], [[IDXPROM]]
-// REC-NEXT:    br i1 [[DOTNOT]], label %[[BB1:.*]], label %[[TRAP:.*]]
-// REC:       [[BB1]]:
+// REC-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP0]], [[IDXPROM]]
+// REC-NEXT:    [[TMP2:%.*]] = call i1 @llvm.allow.ubsan.check(i8 71), !nosanitize [[META2]]
+// REC-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// REC-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[BB4:.*]]
+// REC:       [[BB4]]:
 // REC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[VLA]], i64 [[IDXPROM]]
-// REC-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
-// REC-NEXT:    ret double [[TMP2]]
+// REC-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// REC-NEXT:    ret double [[TMP5]]
 // REC:       [[TRAP]]:
 // REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR6]], !nosanitize [[META2]]
-// REC-NEXT:    br label %[[BB1]], !nosanitize [[META2]]
+// REC-NEXT:    br label %[[BB4]], !nosanitize [[META2]]
 //
 double lbounds(int b, int i) {
   double a[b];

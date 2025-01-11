@@ -118,6 +118,9 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
+namespace clang {
+extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
+}
 
 namespace {
 
@@ -1025,6 +1028,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback([this](FunctionPassManager &FPM,
                                                       OptimizationLevel Level) {
         BoundsCheckingPass::Options Options;
+        if (CodeGenOpts.SanitizeSkipHotCutoffs[SanitizerKind::SO_LocalBounds] ||
+            ClSanitizeGuardChecks) {
+          Options.GuardKind = SanitizerKind::SO_LocalBounds;
+        }
         Options.Merge =
             CodeGenOpts.SanitizeMergeHandlers.has(SanitizerKind::LocalBounds);
         if (!CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {

@@ -214,8 +214,15 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
         Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getValOperand(),
                                 DL, TLI, ObjSizeEval, IRB, SE);
     }
-    if (Or)
+    if (Or) {
+      if (Opts.GuardKind) {
+        llvm::Value *Allow = IRB.CreateIntrinsic(
+            IRB.getInt1Ty(), Intrinsic::allow_ubsan_check,
+            {llvm::ConstantInt::getSigned(IRB.getInt8Ty(), *Opts.GuardKind)});
+        Or = IRB.CreateAnd(Or, Allow);
+      }
       TrapInfo.push_back(std::make_pair(&I, Or));
+    }
   }
 
   std::string Name;
@@ -299,5 +306,7 @@ void BoundsCheckingPass::printPipeline(
   }
   if (Opts.Merge)
     OS << ";merge";
+  if (Opts.GuardKind)
+    OS << ";guard=" << static_cast<int>(*Opts.GuardKind);
   OS << ">";
 }
