@@ -202,6 +202,28 @@
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_REFERENCE_TYPES %s
 // WASM_SJLJ_NO_REFERENCE_TYPES: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-reference-types'
 
+// '-mllvm -wasm-use-legacy-eh' not allowed with
+// '-mllvm -enable-emscripten-cxx-exceptions'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_EH %s
+// WASM_LEGACY_EH_EMSCRIPTEN_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-cxx-exceptions'
+
+// '-mllvm -wasm-use-legacy-eh' not allowed with '-mllvm -enable-emscripten-sjlj'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mllvm -enable-emscripten-sjlj 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_SJLJ %s
+// WASM_LEGACY_EH_EMSCRIPTEN_SJLJ: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-sjlj'
+
+// '-mllvm -wasm-use-legacy-eh' not allowed with '-mno-exception-handling'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mno-exception-handling 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_NO_EH %s
+// WASM_LEGACY_EH_NO_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-mno-exception-handling'
+
 // RUN: %clang -### %s -fsanitize=address --target=wasm32-unknown-emscripten 2>&1 | FileCheck -check-prefix=CHECK-ASAN-EMSCRIPTEN %s
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize-address-globals-dead-stripping"
