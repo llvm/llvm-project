@@ -12,6 +12,7 @@
 #include <__config>
 #include <clocale> // uselocale & friends
 #include <cstdlib>
+#include <cstdio>
 #include <cwchar>
 #include <utility>
 
