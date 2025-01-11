@@ -195,7 +195,7 @@ Changes in existing checks
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
 - Improved :doc:`bugprone-dangling-handle
-  <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
+  <clang-tidy/checks/bugprone/dangling-handle>` check to treat ``std::span`` as a
   handle class.
 
 - Improved :doc:`bugprone-exception-escape
@@ -233,7 +233,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
-  `bsl::optional` and `bdlb::NullableValue` from
+  ``bsl::optional`` and ``bdlb::NullableValue`` from
   <https://github.com/bloomberg/bde>_.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
@@ -370,7 +370,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
-  remove `->`, when redundant `get()` is removed.
+  remove ``->``, when redundant ``get()`` is removed.
 
 - Improved :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check to use correct template
