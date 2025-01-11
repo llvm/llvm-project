@@ -23,8 +23,10 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:    ; Child Loop BB0_4 Depth 2
 ; GCN-NEXT:    buffer_load_dword v1, off, s[8:11], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v1
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
 ; GCN-NEXT:    s_mov_b32 s12, s6
 ; GCN-NEXT:    s_branch .LBB0_4
 ; GCN-NEXT:  .LBB0_3: ; %Flow1
@@ -34,7 +36,7 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:  .LBB0_4: ; %bb2
 ; GCN-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_lshl_b32 s12, s12, 5
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_6
 ; GCN-NEXT:  ; %bb.5: ; in Loop: Header=BB0_4 Depth=2

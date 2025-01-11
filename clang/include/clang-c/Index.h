@@ -4183,6 +4183,14 @@ CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
                                                      CXPrintingPolicy Policy);
 
 /**
+ * Pretty-print the underlying type using a custom printing policy.
+ *
+ * If the type is invalid, an empty string is returned.
+ */
+CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
+                                                   CXPrintingPolicy cxPolicy);
+
+/**
  * Retrieve the display name for the entity referenced by this cursor.
  *
  * The display name contains extra information that helps identify the cursor,
