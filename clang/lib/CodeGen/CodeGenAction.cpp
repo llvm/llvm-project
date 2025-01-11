@@ -118,8 +118,7 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
     : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
       TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
       CASOpts(CASOpts), AsmOutStream(std::move(OS)),
-      CasIDStream(std::move(CasIDOS)), FS(VFS),
-      LLVMIRGeneration("irgen", "LLVM IR Generation Time"), Action(Action),
+      CasIDStream(std::move(CasIDOS)), FS(VFS), Action(Action),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
                             CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
                             CI.getCodeGenOpts(), C, CoverageInfo)),
@@ -127,6 +126,8 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
   TimerIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesPerRun = CodeGenOpts.TimePassesPerRun;
+  if (CodeGenOpts.TimePasses)
+    LLVMIRGeneration.init("irgen", "LLVM IR generation", CI.getTimerGroup());
 }
 
 llvm::Module* BackendConsumer::getModule() const {
@@ -165,19 +166,13 @@ bool BackendConsumer::HandleTopLevelDecl(DeclGroupRef D) {
                                  "LLVM IR generation of declaration");
 
   // Recurse.
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount += 1;
-    if (LLVMIRGenerationRefCount == 1)
-      LLVMIRGeneration.startTimer();
-  }
+  if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleTopLevelDecl(D);
 
-  if (TimerIsEnabled) {
-    LLVMIRGenerationRefCount -= 1;
-    if (LLVMIRGenerationRefCount == 0)
-      LLVMIRGeneration.stopTimer();
-  }
+  if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
   return true;
 }
@@ -187,12 +182,12 @@ void BackendConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
                                  Context->getSourceManager(),
                                  "LLVM IR generation of inline function");
   if (TimerIsEnabled)
-    LLVMIRGeneration.startTimer();
+    CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
   Gen->HandleInlineFunctionDefinition(D);
 
   if (TimerIsEnabled)
-    LLVMIRGeneration.stopTimer();
+    LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 }
 
 void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
@@ -242,19 +237,13 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   {
     llvm::TimeTraceScope TimeScope("Frontend");
     PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount += 1;
-      if (LLVMIRGenerationRefCount == 1)
-        LLVMIRGeneration.startTimer();
-    }
+    if (TimerIsEnabled && !LLVMIRGenerationRefCount++)
+      CI.getFrontendTimer().yieldTo(LLVMIRGeneration);
 
     Gen->HandleTranslationUnit(C);
 
-    if (TimerIsEnabled) {
-      LLVMIRGenerationRefCount -= 1;
-      if (LLVMIRGenerationRefCount == 0)
-        LLVMIRGeneration.stopTimer();
-    }
+    if (TimerIsEnabled && !--LLVMIRGenerationRefCount)
+      LLVMIRGeneration.yieldTo(CI.getFrontendTimer());
 
     IRGenFinished = true;
   }

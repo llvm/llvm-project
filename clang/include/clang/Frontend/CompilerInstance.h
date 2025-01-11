@@ -137,7 +137,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -679,6 +679,8 @@ public:
   /// @}
   /// @name Frontend timer
   /// @{
+
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   bool hasFrontendTimer() const { return (bool)FrontendTimer; }
 
