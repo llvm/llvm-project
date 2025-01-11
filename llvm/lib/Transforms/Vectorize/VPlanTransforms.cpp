@@ -592,9 +592,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *PhiR = dyn_cast<VPHeaderPHIRecipe>(&Phi);
+    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!PhiR)
-      break;
+      continue;
 
     // Check if any uniform VPReplicateRecipes using the phi recipe are used by
     // ExtractFromEnd. Those must be replaced by a regular VPReplicateRecipe to
@@ -641,9 +641,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!WideIV)
-      continue;
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
