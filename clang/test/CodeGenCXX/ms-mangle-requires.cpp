@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 -triple=x86_64-windows-msvc -Wno-defaulted-function-deleted -fms-compatibility -fms-extensions -emit-llvm %s -o - | FileCheck %s
 
-namespace CWG2369_Regression {
+namespace CWG2369 {
+
+namespace Regression1 {
 
 template <class, class Up>
 using compare_three_way_result_t = Up::type;
@@ -24,6 +26,34 @@ RuntimeModeArgs foo() {
   return {};
 }
 
-// CHECK: ?foo@CWG2369_Regression@@YA?AURuntimeModeArgs@1@XZ
+// CHECK: ?foo@Regression1@CWG2369@@YA?AURuntimeModeArgs@12@XZ
+
+} // namespace Regression1
+
+namespace Regression2 {
+
+template <class _Tp>
+constexpr _Tp * __to_address(_Tp *) {
+  return nullptr;
+}
+
+template <class _Ip>
+concept contiguous_iterator = requires(_Ip __i) { __to_address(__i); };
+
+struct basic_string_view {
+  template <contiguous_iterator _It>
+  basic_string_view(_It, _It);
+};
+
+const char *str;
+void sv() { basic_string_view(str, str); }
+
+void m_fn2() {
+  const char __trans_tmp_1 = *__to_address(&__trans_tmp_1);
+}
+
+// CHECK: define {{.*}} @"??$__to_address@$$CBD@Regression2@CWG2369@@YAPEBDPEBD@Z"
+
+} // namespace Regression2
 
 }
