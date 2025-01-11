@@ -459,7 +459,7 @@ static MaybeExtentExpr GetNonNegativeExtent(
     } else {
       return ExtentExpr{*uval - *lval + 1};
     }
-  } else if (lbound && ubound &&
+  } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||
           (IsScopeInvariantExpr(*lbound) && IsScopeInvariantExpr(*ubound)))) {
     // Apply effective IDIM (MAX calculation with 0) so thet the
