@@ -222,7 +222,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     }
 
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+      (*this)->setAttr(getCalleeAttrName(),
+                       llvm::cast<mlir::SymbolRefAttr>(callee));
     }
     mlir::FunctionType getFunctionType();
 

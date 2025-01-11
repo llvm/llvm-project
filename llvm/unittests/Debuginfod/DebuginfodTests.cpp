@@ -37,6 +37,7 @@ TEST(DebuginfodClient, CacheHit) {
   sys::fs::createTemporaryFile("llvmcache-key", "temp", FD, CachedFilePath);
   StringRef CacheDir = sys::path::parent_path(CachedFilePath);
   StringRef UniqueKey = sys::path::filename(CachedFilePath);
+  llvm::CachePruningPolicy policy;
   EXPECT_TRUE(UniqueKey.consume_front("llvmcache-"));
   raw_fd_ostream OF(FD, true, /*unbuffered=*/true);
   OF << "contents\n";
@@ -44,7 +45,7 @@ TEST(DebuginfodClient, CacheHit) {
   OF.close();
   Expected<std::string> PathOrErr = getCachedOrDownloadArtifact(
       UniqueKey, /*UrlPath=*/"/null", CacheDir,
-      /*DebuginfodUrls=*/{}, /*Timeout=*/std::chrono::milliseconds(1));
+      /*DebuginfodUrls=*/{}, /*Timeout=*/std::chrono::milliseconds(1), policy);
   EXPECT_THAT_EXPECTED(PathOrErr, HasValue(CachedFilePath));
 }
 

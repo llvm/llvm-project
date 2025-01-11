@@ -1471,8 +1471,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
     return false;
   const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
-  Field.deref<T>() =
-      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
+  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   Field.initialize();
   return true;
 }
@@ -1495,8 +1494,7 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
-  Field.deref<T>() =
-      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
+  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   Field.activate();
   Field.initialize();
   return true;
@@ -1750,7 +1748,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
     Ptr.deref<T>() = Value;
   return true;
@@ -1765,7 +1763,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
     Ptr.deref<T>() = Value;
   return true;
