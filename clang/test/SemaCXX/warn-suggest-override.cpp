@@ -17,13 +17,13 @@ struct C {
 
 struct D : public C {
   void run();
-  // expected-warning@-1 {{'run()' overrides a member function but is not marked 'override'}}
+  // expected-warning@-1 {{'run' overrides a member function but is not marked 'override'}}
   ~D();
 };
 
 struct E : public C {
   virtual void run();
-  // expected-warning@-1 {{'run()' overrides a member function but is not marked 'override'}}
+  // expected-warning@-1 {{'run' overrides a member function but is not marked 'override'}}
   virtual ~E();
 };
 
