@@ -51,7 +51,8 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
   }
   // Handle the given inlined terminator by replacing it with a new operation
   // as necessary. Required when the region has only one block.
-  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
+  void handleTerminator(Operation *op, OpBuilder &builder,
+                        ValueRange valuesToRepl) const final {
     auto retValOp = dyn_cast<scf::YieldOp>(op);
     if (!retValOp)
       return;

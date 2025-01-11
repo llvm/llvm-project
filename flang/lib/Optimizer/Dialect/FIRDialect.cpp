@@ -44,7 +44,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// We handle the return (a Fortran FUNCTION) by replacing the values
   /// previously returned by the call operation with the operands of the
   /// return.
-  void handleTerminator(mlir::Operation *op,
+  void handleTerminator(mlir::Operation *op, mlir::OpBuilder &builder,
                         mlir::ValueRange valuesToRepl) const final {
     auto returnOp = llvm::cast<mlir::func::ReturnOp>(op);
     assert(returnOp.getNumOperands() == valuesToRepl.size());

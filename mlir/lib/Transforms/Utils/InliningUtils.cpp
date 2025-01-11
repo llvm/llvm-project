@@ -111,11 +111,11 @@ void InlinerInterface::handleTerminator(Operation *op, Block *newDest) const {
 
 /// Handle the given inlined terminator by replacing it with a new operation
 /// as necessary.
-void InlinerInterface::handleTerminator(Operation *op,
+void InlinerInterface::handleTerminator(Operation *op, OpBuilder &builder,
                                         ValueRange valuesToRepl) const {
   auto *handler = getInterfaceFor(op);
   assert(handler && "expected valid dialect handler");
-  handler->handleTerminator(op, valuesToRepl);
+  handler->handleTerminator(op, builder, valuesToRepl);
 }
 
 Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
@@ -304,7 +304,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                        firstBlockTerminator->getOperands());
 
     // Have the interface handle the terminator of this block.
-    interface.handleTerminator(firstBlockTerminator, resultsToReplace);
+    interface.handleTerminator(firstBlockTerminator, builder, resultsToReplace);
     firstBlockTerminator->erase();
 
     // Merge the post insert block into the cloned entry block.

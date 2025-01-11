@@ -103,7 +103,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
-  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
+  void handleTerminator(Operation *op, OpBuilder &builder,
+                        ValueRange valuesToRepl) const final {
     // Only spirv.ReturnValue needs to be handled here.
     auto retValOp = dyn_cast<spirv::ReturnValueOp>(op);
     if (!retValOp)

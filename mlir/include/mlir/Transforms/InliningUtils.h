@@ -116,7 +116,7 @@ public:
   /// calls, these are directly replaced with the operands of the `return`
   /// operation). The given 'op' will be removed by the caller, after this
   /// function has been called.
-  virtual void handleTerminator(Operation *op,
+  virtual void handleTerminator(Operation *op, OpBuilder &builder,
                                 ValueRange valuesToReplace) const {
     llvm_unreachable(
         "must implement handleTerminator in the case of one inlined block");
@@ -212,7 +212,8 @@ public:
   //===--------------------------------------------------------------------===//
 
   virtual void handleTerminator(Operation *op, Block *newDest) const;
-  virtual void handleTerminator(Operation *op, ValueRange valuesToRepl) const;
+  virtual void handleTerminator(Operation *op, OpBuilder &builder,
+                                ValueRange valuesToRepl) const;
 
   virtual Value handleArgument(OpBuilder &builder, Operation *call,
                                Operation *callable, Value argument,

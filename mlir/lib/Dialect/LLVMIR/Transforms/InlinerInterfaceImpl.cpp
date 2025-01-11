@@ -746,8 +746,17 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   /// Handle the given inlined return by replacing the uses of the call with the
   /// operands of the return. This overload is called when the inlined region
   /// only contains one block.
-  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
-    // Return will be the only terminator present.
+  void handleTerminator(Operation *op, OpBuilder &builder,
+                        ValueRange valuesToRepl) const final {
+    if (isa<LLVM::UnreachableOp>(op)) {
+      for (auto dst : valuesToRepl) {
+        auto repl = builder.create<LLVM::PoisonOp>(op->getLoc(), dst.getType());
+        dst.replaceAllUsesWith(repl);
+      }
+      return;
+    }
+
+    // Otherwise return will be the only terminator present.
     auto returnOp = cast<LLVM::ReturnOp>(op);
 
     // Replace the values directly with the return operands.
