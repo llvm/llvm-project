@@ -143,7 +143,7 @@ int overflow(int x, int y) {
 
 void use(double*);
 
-// CHECK-LABEL: define dso_local double @f1(
+// CHECK-LABEL: define dso_local double @lbounds(
 // CHECK-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
@@ -160,7 +160,7 @@ void use(double*);
 // CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR7]]
 // CHECK-NEXT:    unreachable
 //
-// TR-LABEL: define dso_local double @f1(
+// TR-LABEL: define dso_local double @lbounds(
 // TR-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // TR-NEXT:  [[ENTRY:.*:]]
 // TR-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
@@ -177,7 +177,7 @@ void use(double*);
 // TR-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR6]]
 // TR-NEXT:    unreachable
 //
-// REC-LABEL: define dso_local double @f1(
+// REC-LABEL: define dso_local double @lbounds(
 // REC-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // REC-NEXT:  [[ENTRY:.*:]]
 // REC-NEXT:    [[TMP0:%.*]] = zext i32 [[B]] to i64
@@ -194,7 +194,7 @@ void use(double*);
 // REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR7]]
 // REC-NEXT:    br label %[[BB1]]
 //
-double f1(int b, int i) {
+double lbounds(int b, int i) {
   double a[b];
   use(a);
   return a[i];
