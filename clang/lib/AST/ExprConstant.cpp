@@ -3051,7 +3051,7 @@ static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
 
   APSInt &Int = Value.getInt();
   unsigned OldBitWidth = Int.getBitWidth();
-  unsigned NewBitWidth = FD->getBitWidthValue(Info.Ctx);
+  unsigned NewBitWidth = FD->getBitWidthValue();
   if (NewBitWidth < OldBitWidth)
     Int = Int.trunc(NewBitWidth).extend(OldBitWidth);
   return true;
