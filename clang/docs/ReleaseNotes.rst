@@ -147,7 +147,7 @@ C++ Specific Potentially Breaking Changes
     // Fixed version:
     unsigned operator""_udl_name(unsigned long long);
 
-- Clang will now produce an error diagnostic when [[clang::lifetimebound]] is
+- Clang will now produce an error diagnostic when ``[[clang::lifetimebound]]`` is
   applied on a parameter or an implicit object parameter of a function that
   returns void. This was previously ignored and had no effect. (#GH107556)
 
@@ -155,6 +155,21 @@ C++ Specific Potentially Breaking Changes
 
     // Now diagnoses with an error.
     void f(int& i [[clang::lifetimebound]]);
+
+- Clang will now produce an error diagnostic when ``[[clang::lifetimebound]]``
+  is applied on a type (instead of a function parameter or an implicit object
+  parameter); this includes the case when the attribute is specified for an
+  unnamed function parameter. These were previously ignored and had no effect.
+  (#GH118281)
+
+  .. code-block:: c++
+
+    // Now diagnoses with an error.
+    int* [[clang::lifetimebound]] x;
+    // Now diagnoses with an error.
+    void f(int* [[clang::lifetimebound]] i);
+    // Now diagnoses with an error.
+    void g(int* [[clang::lifetimebound]]);
 
 - Clang now rejects all field accesses on null pointers in constant expressions. The following code
   used to work but will now be rejected:
@@ -947,6 +962,9 @@ Miscellaneous Clang Crashes Fixed
 - Fixed internal assertion firing when a declaration in the implicit global
   module is found through ADL. (GH#109879)
 
+- Fixed a crash when an unscoped enumeration declared by an opaque-enum-declaration within a class template
+  with a dependent underlying type is subject to integral promotion. (#GH117960)
+
 OpenACC Specific Changes
 ------------------------
 
@@ -1069,6 +1087,12 @@ CUDA Support
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
 - Added support for `__grid_constant__` attribute.
+- CUDA now uses the new offloading driver by default. The new driver supports
+  device-side LTO, interoperability with OpenMP and other languages, and native ``-fgpu-rdc``
+  support with static libraries. The old behavior can be returned using the
+  ``--no-offload-new-driver`` flag. The binary format is no longer compatible
+  with the NVIDIA compiler's RDC-mode support. More information can be found at:
+  https://clang.llvm.org/docs/OffloadingDesign.html
 
 AIX Support
 ^^^^^^^^^^^
@@ -1162,6 +1186,8 @@ libclang
 --------
 - Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
   whether the first one comes strictly before the second in the source code.
+- Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
+  to pretty-print a type.
 
 Static Analyzer
 ---------------
@@ -1302,10 +1328,13 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
-- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
-  which allow changing the formatting of pretty-printed code.
-- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
-  a declaration is an anonymous union or anonymous struct.
+- Added ``Cursor.pretty_printed``, a binding for ``clang_getCursorPrettyPrinted``,
+  and related functions, which allow changing the formatting of pretty-printed code.
+- Added ``Cursor.is_anonymous_record_decl``, a binding for
+  ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if a
+  declaration is an anonymous union or anonymous struct.
+- Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
+  which allows changing the formatting of pretty-printed types.
 
 OpenMP Support
 --------------

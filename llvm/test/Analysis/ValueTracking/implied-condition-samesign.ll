@@ -4,11 +4,7 @@
 define i1 @incr_sle(i32 %i, i32 %len) {
 ; CHECK-LABEL: define i1 @incr_sle(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[LEN:%.*]]) {
-; CHECK-NEXT:    [[I_INCR:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[I_GT_LEN:%.*]] = icmp samesign ugt i32 [[I]], [[LEN]]
-; CHECK-NEXT:    [[I_INCR_SGT_LEN:%.*]] = icmp sgt i32 [[I_INCR]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp sle i1 [[I_INCR_SGT_LEN]], [[I_GT_LEN]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i.incr = add nsw nuw i32 %i, 1
   %i.gt.len = icmp samesign ugt i32 %i, %len
@@ -36,11 +32,7 @@ define i1 @incr_sle_no_nsw_nuw(i32 %i, i32 %len) {
 define i1 @incr_sge(i32 %i, i32 %len) {
 ; CHECK-LABEL: define i1 @incr_sge(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[LEN:%.*]]) {
-; CHECK-NEXT:    [[I_INCR:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[I_LT_LEN:%.*]] = icmp samesign ult i32 [[I]], [[LEN]]
-; CHECK-NEXT:    [[I_INCR_SLT_LEN:%.*]] = icmp slt i32 [[I_INCR]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp sge i1 [[I_INCR_SLT_LEN]], [[I_LT_LEN]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i.incr = add nsw nuw i32 %i, 1
   %i.lt.len = icmp samesign ult i32 %i, %len
@@ -68,11 +60,7 @@ define i1 @incr_sge_no_nsw_nuw(i32 %i, i32 %len) {
 define i1 @incr_ule(i32 %i, i32 %len) {
 ; CHECK-LABEL: define i1 @incr_ule(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[LEN:%.*]]) {
-; CHECK-NEXT:    [[I_INCR:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[I_GT_LEN:%.*]] = icmp samesign ugt i32 [[I]], [[LEN]]
-; CHECK-NEXT:    [[I_INCR_SGT_LEN:%.*]] = icmp sgt i32 [[I_INCR]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[I_GT_LEN]], [[I_INCR_SGT_LEN]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i.incr = add nsw nuw i32 %i, 1
   %i.gt.len = icmp samesign ugt i32 %i, %len
@@ -100,11 +88,7 @@ define i1 @incr_ule_no_nsw_nuw(i32 %i, i32 %len) {
 define i1 @incr_uge(i32 %i, i32 %len) {
 ; CHECK-LABEL: define i1 @incr_uge(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[LEN:%.*]]) {
-; CHECK-NEXT:    [[I_INCR:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[I_LT_LEN:%.*]] = icmp samesign ult i32 [[I]], [[LEN]]
-; CHECK-NEXT:    [[I_INCR_SLT_LEN:%.*]] = icmp slt i32 [[I_INCR]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i1 [[I_LT_LEN]], [[I_INCR_SLT_LEN]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i.incr = add nsw nuw i32 %i, 1
   %i.lt.len = icmp samesign ult i32 %i, %len
@@ -176,9 +160,7 @@ define i32 @gt_implies_sge_dominating_cr(i32 %a, i32 %len) {
 ; CHECK-NEXT:    [[A_GT_20:%.*]] = icmp samesign ugt i32 [[A]], 20
 ; CHECK-NEXT:    br i1 [[A_GT_20]], label %[[TAKEN:.*]], label %[[END:.*]]
 ; CHECK:       [[TAKEN]]:
-; CHECK-NEXT:    [[A_SGE_10:%.*]] = icmp sge i32 [[A]], 10
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_SGE_10]], i32 30, i32 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 30
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 -1
 ;
@@ -202,9 +184,7 @@ define i32 @sgt_implies_ge_dominating_cr(i32 %a, i32 %len) {
 ; CHECK-NEXT:    [[A_SGT_MINUS_10:%.*]] = icmp sgt i32 [[A]], -10
 ; CHECK-NEXT:    br i1 [[A_SGT_MINUS_10]], label %[[TAKEN:.*]], label %[[END:.*]]
 ; CHECK:       [[TAKEN]]:
-; CHECK-NEXT:    [[A_GE_MINUS_20:%.*]] = icmp samesign uge i32 [[A]], -20
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_GE_MINUS_20]], i32 30, i32 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 30
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 -1
 ;

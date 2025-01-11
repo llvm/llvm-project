@@ -1,6 +1,14 @@
 import os
 
-from clang.cindex import Config, CursorKind, RefQualifierKind, TranslationUnit, TypeKind
+from clang.cindex import (
+    Config,
+    CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
+    RefQualifierKind,
+    TranslationUnit,
+    TypeKind,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
@@ -517,3 +525,12 @@ class A
         # Variable without a template argument.
         cursor = get_cursor(tu, "bar")
         self.assertEqual(cursor.get_num_template_arguments(), -1)
+
+    def test_pretty(self):
+        tu = get_tu("struct X {}; X x;", lang="cpp")
+        f = get_cursor(tu, "x")
+
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "X")
+        pp.set_property(PrintingPolicyProperty.SuppressTagKeyword, False)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "struct X")
