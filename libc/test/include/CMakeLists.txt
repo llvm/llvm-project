@@ -502,6 +502,7 @@ function(add_header_test target_name source_file deps std_mode)
 	${source_file}
       COMPILE_OPTIONS
 	-Werror
+	-Wsystem-headers
 	-Wall
 	-Wextra
 	-std=${std_mode}
