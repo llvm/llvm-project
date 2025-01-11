@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -66,7 +66,7 @@ namespace cwg2100 { // cwg2100: 12
   };
 } // namespace cwg2100
 
-namespace cwg2103 { // cwg2103: yes
+namespace cwg2103 { // cwg2103: 2.7
   void f() {
     int a;
     int &r = a; // #cwg2103-r
@@ -259,13 +259,13 @@ struct NonConstCopy {
   NonConstCopy &operator=(NonConstCopy &) = default;
 };
 
-static_assert(__has_trivial_copy(NonConstCopy), "");
+static_assert(__is_trivially_copyable(NonConstCopy), "");
 static_assert(__is_trivially_constructible(NonConstCopy, NonConstCopy &), "");
 static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy), "");
 static_assert(!__is_trivially_constructible(NonConstCopy, const NonConstCopy &), "");
 static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy &&), "");
 
-static_assert(__has_trivial_assign(NonConstCopy), "");
+static_assert(__is_trivially_assignable(NonConstCopy, NonConstCopy &), "");
 static_assert(__is_trivially_assignable(NonConstCopy &, NonConstCopy &), "");
 static_assert(!__is_trivially_assignable(NonConstCopy &, const NonConstCopy &), "");
 static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy), "");
@@ -287,7 +287,7 @@ static_assert(!noexcept(typeid(*static_cast<D*>(nullptr))), "");
 #endif
 } // namespace cwg2191
 
-namespace cwg2180 { // cwg2180: yes
+namespace cwg2180 { // cwg2180: 3.0
   class A {
     A &operator=(const A &); // #cwg2180-A-copy
     A &operator=(A &&); // #cwg2180-A-move

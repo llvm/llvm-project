@@ -954,7 +954,7 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
       CharUnits UnionSize = CharUnits::Zero();
 
       for (const auto *FD : RD->fields()) {
-        if (FD->isZeroLengthBitField(Context))
+        if (FD->isZeroLengthBitField())
           continue;
         assert(!FD->isBitField() &&
                "Cannot expand structure with bit-field members.");
@@ -974,7 +974,7 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
       }
 
       for (const auto *FD : RD->fields()) {
-        if (FD->isZeroLengthBitField(Context))
+        if (FD->isZeroLengthBitField())
           continue;
         assert(!FD->isBitField() &&
                "Cannot expand structure with bit-field members.");
@@ -3682,7 +3682,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
   for (auto I = RD->field_begin(), E = RD->field_end(); I != E; ++I, ++Idx) {
     const FieldDecl *F = *I;
 
-    if (F->isUnnamedBitField() || F->isZeroLengthBitField(Context) ||
+    if (F->isUnnamedBitField() || F->isZeroLengthBitField() ||
         F->getType()->isIncompleteArrayType())
       continue;
 
@@ -4024,20 +4024,20 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
 
   // Prefer the returns_nonnull attribute if it's present.
   SourceLocation AttrLoc;
-  SanitizerMask CheckKind;
+  SanitizerKind::SanitizerOrdinal CheckKind;
   SanitizerHandler Handler;
   if (RetNNAttr) {
     assert(!requiresReturnValueNullabilityCheck() &&
            "Cannot check nullability and the nonnull attribute");
     AttrLoc = RetNNAttr->getLocation();
-    CheckKind = SanitizerKind::ReturnsNonnullAttribute;
+    CheckKind = SanitizerKind::SO_ReturnsNonnullAttribute;
     Handler = SanitizerHandler::NonnullReturn;
   } else {
     if (auto *DD = dyn_cast<DeclaratorDecl>(CurCodeDecl))
       if (auto *TSI = DD->getTypeSourceInfo())
         if (auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>())
           AttrLoc = FTL.getReturnLoc().findNullabilityLoc();
-    CheckKind = SanitizerKind::NullabilityReturn;
+    CheckKind = SanitizerKind::SO_NullabilityReturn;
     Handler = SanitizerHandler::NullabilityReturn;
   }
 
@@ -4419,15 +4419,15 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
     return;
 
   SourceLocation AttrLoc;
-  SanitizerMask CheckKind;
+  SanitizerKind::SanitizerOrdinal CheckKind;
   SanitizerHandler Handler;
   if (NNAttr) {
     AttrLoc = NNAttr->getLocation();
-    CheckKind = SanitizerKind::NonnullAttribute;
+    CheckKind = SanitizerKind::SO_NonnullAttribute;
     Handler = SanitizerHandler::NonnullArg;
   } else {
     AttrLoc = PVD->getTypeSourceInfo()->getTypeLoc().findNullabilityLoc();
-    CheckKind = SanitizerKind::NullabilityArg;
+    CheckKind = SanitizerKind::SO_NullabilityArg;
     Handler = SanitizerHandler::NullabilityArg;
   }
 
@@ -4871,7 +4871,7 @@ llvm::CallInst *CodeGenFunction::EmitRuntimeCall(llvm::FunctionCallee callee,
   call->setCallingConv(getRuntimeCC());
 
   if (CGM.shouldEmitConvergenceTokens() && call->isConvergent())
-    return addControlledConvergenceToken(call);
+    return cast<llvm::CallInst>(addConvergenceControlToken(call));
   return call;
 }
 
@@ -5787,7 +5787,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     CI->setName("call");
 
   if (CGM.shouldEmitConvergenceTokens() && CI->isConvergent())
-    CI = addControlledConvergenceToken(CI);
+    CI = addConvergenceControlToken(CI);
 
   // Update largest vector width from the return type.
   LargestVectorWidth =
@@ -6090,6 +6090,8 @@ RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
   VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
                                     : EmitVAListRef(VE->getSubExpr());
   QualType Ty = VE->getType();
+  if (Ty->isVariablyModifiedType())
+    EmitVariablyModifiedType(Ty);
   if (VE->isMicrosoftABI())
     return CGM.getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
   return CGM.getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);

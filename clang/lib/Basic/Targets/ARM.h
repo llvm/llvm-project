@@ -300,6 +300,17 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY AppleMachOARMTargetInfo
+    : public AppleMachOTargetInfo<ARMleTargetInfo> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+
+public:
+  AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinARMTargetInfo
     : public DarwinTargetInfo<ARMleTargetInfo> {
 protected:

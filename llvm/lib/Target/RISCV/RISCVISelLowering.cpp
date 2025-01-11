@@ -5261,6 +5261,39 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
   return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
 }
 
+/// Try to widen element type to get a new mask value for a better permutation
+/// sequence.  This doesn't try to inspect the widened mask for profitability;
+/// we speculate the widened form is equal or better.  This has the effect of
+/// reducing mask constant sizes - allowing cheaper materialization sequences
+/// - and index sequence sizes - reducing register pressure and materialization
+/// cost, at the cost of (possibly) an extra VTYPE toggle.
+static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT ScalarVT = VT.getVectorElementType();
+  unsigned ElementSize = ScalarVT.getFixedSizeInBits();
+  SDValue V0 = Op.getOperand(0);
+  SDValue V1 = Op.getOperand(1);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op)->getMask();
+
+  // Avoid wasted work leading to isTypeLegal check failing below
+  if (ElementSize > 32)
+    return SDValue();
+
+  SmallVector<int, 8> NewMask;
+  if (!widenShuffleMaskElts(Mask, NewMask))
+    return SDValue();
+
+  MVT NewEltVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(ElementSize * 2)
+                                      : MVT::getIntegerVT(ElementSize * 2);
+  MVT NewVT = MVT::getVectorVT(NewEltVT, VT.getVectorNumElements() / 2);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(NewVT))
+    return SDValue();
+  V0 = DAG.getBitcast(NewVT, V0);
+  V1 = DAG.getBitcast(NewVT, V1);
+  return DAG.getBitcast(VT, DAG.getVectorShuffle(NewVT, DL, V0, V1, NewMask));
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -5506,6 +5539,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
       return V;
 
+    // Before hitting generic lowering fallbacks, try to widen the mask
+    // to a wider SEW.
+    if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
+      return V;
+
     // Can we generate a vcompress instead of a vrgather?  These scale better
     // at high LMUL, at the cost of not being able to fold a following select
     // into them.  The mask constants are also smaller than the index vector
@@ -5614,6 +5652,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       !ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts))
     if (SDValue V = lowerDisjointIndicesShuffle(SVN, DAG, Subtarget))
       return V;
+
+  // Before hitting generic lowering fallbacks, try to widen the mask
+  // to a wider SEW.
+  if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
+    return V;
 
   // Try to pick a profitable operand order.
   bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
@@ -10154,7 +10197,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   case ISD::VP_REDUCE_AND: {
     // vcpop ~x == 0
     SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-    Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    if (IsVP || VecVT.isFixedLengthVector())
+      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    else
+      Vec = DAG.getNode(ISD::XOR, DL, ContainerVT, Vec, TrueMask);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     break;
@@ -12663,8 +12709,7 @@ SDValue RISCVTargetLowering::lowerGET_ROUNDING(SDValue Op,
   const MVT XLenVT = Subtarget.getXLenVT();
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
   SDVTList VTs = DAG.getVTList(XLenVT, MVT::Other);
   SDValue RM = DAG.getNode(RISCVISD::READ_CSR, DL, VTs, Chain, SysRegNo);
 
@@ -12695,8 +12740,7 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
   SDLoc DL(Op);
   SDValue Chain = Op->getOperand(0);
   SDValue RMValue = Op->getOperand(1);
-  SDValue SysRegNo = DAG.getTargetConstant(
-      RISCVSysReg::lookupSysRegByName("FRM")->Encoding, DL, XLenVT);
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::frm, DL, XLenVT);
 
   // Encoding used for rounding mode in RISC-V differs from that used in
   // FLT_ROUNDS. To convert it the C rounding mode is used as an index in
@@ -12899,15 +12943,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue LoCounter, HiCounter;
     MVT XLenVT = Subtarget.getXLenVT();
     if (N->getOpcode() == ISD::READCYCLECOUNTER) {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLE")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("CYCLEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::cycle, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::cycleh, DL, XLenVT);
     } else {
-      LoCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIME")->Encoding, DL, XLenVT);
-      HiCounter = DAG.getTargetConstant(
-          RISCVSysReg::lookupSysRegByName("TIMEH")->Encoding, DL, XLenVT);
+      LoCounter = DAG.getTargetConstant(RISCVSysReg::time, DL, XLenVT);
+      HiCounter = DAG.getTargetConstant(RISCVSysReg::timeh, DL, XLenVT);
     }
     SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
     SDValue RCW = DAG.getNode(RISCVISD::READ_COUNTER_WIDE, DL, VTs,
@@ -18386,6 +18426,15 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
 
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+
+    // Bail if we might break a sh{1,2,3}add pattern.
+    if (Subtarget.hasStdExtZba() && C2 && C2->getZExtValue() >= 1 &&
+        C2->getZExtValue() <= 3 && N->hasOneUse() &&
+        N->user_begin()->getOpcode() == ISD::ADD &&
+        !isUsedByLdSt(*N->user_begin(), nullptr) &&
+        !isa<ConstantSDNode>(N->user_begin()->getOperand(1)))
+      return false;
+
     if (C1 && C2) {
       const APInt &C1Int = C1->getAPIntValue();
       APInt ShiftedC1Int = C1Int << C2->getAPIntValue();
@@ -20267,13 +20316,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &Reg : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
 
-  if (!IsTailCall) {
-    // Add a register mask operand representing the call-preserved registers.
-    const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-    const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
-    assert(Mask && "Missing call preserved mask for calling convention");
-    Ops.push_back(DAG.getRegisterMask(Mask));
-  }
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
 
   // Glue the call to the argument copies, if any.
   if (Glue.getNode())

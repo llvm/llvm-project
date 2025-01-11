@@ -137,7 +137,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
@@ -304,6 +304,20 @@ public:
 
 private:
   void setDataLayout() override;
+};
+
+void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
+                                 const llvm::Triple &Triple);
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
+    : public AppleMachOTargetInfo<AArch64leTargetInfo> {
+public:
+  AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
+                              const TargetOptions &Opts);
+
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinAArch64TargetInfo

@@ -1098,7 +1098,7 @@ CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
 }
 
 void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallAndStoreOp::getArgOperands() {
@@ -1117,7 +1117,7 @@ CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
 }
 
 void TestCallOnDeviceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallOnDeviceOp::getArgOperands() {

@@ -90,6 +90,8 @@ private:
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
   void SelectV2I64toI128(SDNode *N);
   void SelectI128toV2I64(SDNode *N);
+  void SelectCpAsyncBulkG2S(SDNode *N);
+  void SelectCpAsyncBulkS2G(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);
@@ -104,13 +106,13 @@ private:
   bool SelectDirectAddr(SDValue N, SDValue &Address);
 
   bool SelectADDRri_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
+                        SDValue &Offset, MVT VT);
   bool SelectADDRri(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
   bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
-                        SDValue &Offset, MVT mvt);
+                        SDValue &Offset, MVT VT);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
