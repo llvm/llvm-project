@@ -623,6 +623,7 @@ bool IODEF(SetRec)(Cookie cookie, std::int64_t rec) {
       handler.SignalError(
           IostatBadOpOnChildUnit, "REC= specifier on child I/O");
     } else {
+      handler.HasRec();
       unit->SetDirectRec(rec, handler);
     }
   } else if (!io.get_if<ErroneousIoStatementState>()) {

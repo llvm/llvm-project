@@ -25,7 +25,9 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
   case IostatOk:
     return;
   case IostatEnd:
-    if (flags_ & (hasIoStat | hasEnd)) {
+    if ((flags_ & (hasIoStat | hasEnd)) ||
+        ((flags_ & hasErr) && (flags_ & hasRec))) {
+      // EOF goes to ERR= when REC= is present
       if (ioStat_ == IostatOk || ioStat_ < IostatEnd) {
         ioStat_ = IostatEnd;
       }
