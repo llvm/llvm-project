@@ -323,7 +323,6 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
   std::optional<TmpFile> ptxFile = createTemp(basename, "ptx");
   if (!ptxFile)
     return std::nullopt;
-  ptx.releaseFile();
   std::optional<TmpFile> logFile = createTemp(basename, "log");
   if (!logFile)
     return std::nullopt;
