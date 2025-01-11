@@ -32172,6 +32172,8 @@ static SDValue LowerCTPOP(SDValue N, const X86Subtarget &Subtarget,
     // allowing us to shift the active bits down if necessary to fit into the
     // special cases below.
     KnownBits Known = DAG.computeKnownBits(Op);
+    if (Known.isConstant())
+      return DAG.getConstant(Known.getConstant().popcount(), DL, VT);
     unsigned LZ = Known.countMinLeadingZeros();
     unsigned TZ = Known.countMinTrailingZeros();
     assert((LZ + TZ) < Known.getBitWidth() && "Illegal shifted mask");
