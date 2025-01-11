@@ -9897,13 +9897,20 @@ static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
   }
 }
 
-static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
+static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II,
+                                          bool UseInstrInfo) {
   unsigned Width = II.getType()->getScalarSizeInBits();
   const APInt *C;
   switch (II.getIntrinsicID()) {
-  case Intrinsic::ctpop:
   case Intrinsic::ctlz:
-  case Intrinsic::cttz:
+  case Intrinsic::cttz: {
+    APInt Upper(Width, Width);
+    if (!UseInstrInfo || !match(II.getArgOperand(1), m_One()))
+      Upper += 1;
+    // Maximum of set/clear bits is the bit width.
+    return ConstantRange::getNonEmpty(APInt::getZero(Width), Upper);
+  }
+  case Intrinsic::ctpop:
     // Maximum of set/clear bits is the bit width.
     return ConstantRange::getNonEmpty(APInt::getZero(Width),
                                       APInt(Width, Width) + 1);
@@ -10094,7 +10101,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
-    CR = getRangeForIntrinsic(*II);
+    CR = getRangeForIntrinsic(*II, UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
     ConstantRange CRTrue = computeConstantRange(
         SI->getTrueValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
