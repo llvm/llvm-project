@@ -5514,7 +5514,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
-      Ops.push_back(&Insert->getOperandUse(1));
+      // And(Load) is excluded to prevent CGP getting stuck in a loop of sinking
+      // the And, just to hoist it again back to the load.
+      if (!match(OperandInstr, m_And(m_Load(m_Value()), m_Value())))
+        Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }

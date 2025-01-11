@@ -21,6 +21,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -1454,6 +1455,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  if (Context.getTargetInfo().getTriple().isAArch64())
+    ARM().CheckSMEFunctionDefAttributes(Method);
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)

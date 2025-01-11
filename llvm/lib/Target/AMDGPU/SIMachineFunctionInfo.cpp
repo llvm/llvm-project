@@ -262,6 +262,8 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
   // If the available register tuples are aligned with the kernarg to be
   // preloaded use that register, otherwise we need to use a set of SGPRs and
   // merge them.
+  if (!ArgInfo.FirstKernArgPreloadReg)
+    ArgInfo.FirstKernArgPreloadReg = getNextUserSGPR();
   Register PreloadReg =
       TRI.getMatchingSuperReg(getNextUserSGPR(), AMDGPU::sub0, RC);
   if (PreloadReg &&

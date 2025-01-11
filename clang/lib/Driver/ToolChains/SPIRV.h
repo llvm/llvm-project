@@ -43,7 +43,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("SPIRV::Linker", "spirv-link", TC) {}
+  Linker(const ToolChain &TC) : Tool("SPIR-V::Linker", "spirv-link", TC) {}
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
@@ -54,7 +54,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
-  Assembler(const ToolChain &TC) : Tool("SPIRV::Assembler", "spirv-as", TC) {}
+  Assembler(const ToolChain &TC) : Tool("SPIR-V::Assembler", "spirv-as", TC) {}
   bool hasIntegratedAssembler() const override { return false; }
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
