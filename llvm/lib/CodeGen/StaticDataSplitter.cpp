@@ -97,10 +97,7 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
     if (JTI == -1)
       continue;
 
-    bool AllBlocksCold = true;
-
-    if (!PSI->isColdBlock(&MBB, MBFI))
-      AllBlocksCold = false;
+    bool AllBlocksCold = PSI->isColdBlock(&MBB, MBFI);
 
     for (const MachineBasicBlock *MBB : MJTI.getJumpTables()[JTI].MBBs)
       if (!PSI->isColdBlock(MBB, MBFI))

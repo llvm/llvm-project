@@ -1347,7 +1347,7 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
 void MachineJumpTableInfo::updateJumpTableHotness(size_t JTI,
                                                   DataHotness Hotness) {
   assert(JTI < JumpTables.size() && "Invalid JTI!");
-  // Note record the largest hotness is important for mergable data (constant
+  // Note: recording the largest hotness is important for mergable data (constant
   // pools). Even if jump table instances are not merged, record the largest
   // value seen fwiw.
   JumpTables[JTI].Hotness = std::max(JumpTables[JTI].Hotness, Hotness);
