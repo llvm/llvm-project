@@ -586,4 +586,11 @@ struct Y : X {} y1{ }; // expected-error {{call to implicitly-deleted default co
                        // expected-note {{default constructor of 'Y' is implicitly deleted because base class 'X' has no destructor}}
 }
 
+namespace GH121706 {
+struct S {
+  *~S();  // expected-error {{invalid destructor declaration}}
+  **~S(); // expected-error {{invalid destructor declaration}}
+};
+}
+
 #endif // BE_THE_HEADER

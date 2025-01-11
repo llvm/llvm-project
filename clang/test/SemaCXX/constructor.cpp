@@ -96,3 +96,13 @@ namespace PR38286 {
   template<typename> struct C; // expected-note {{non-type declaration found}}
   template<typename T> C<T>::~C() {} // expected-error {{identifier 'C' after '~' in destructor name does not name a type}}
 }
+
+namespace GH121706 {
+struct S {
+  *S();  // expected-error {{invalid constructor declaration}}
+  **S(); // expected-error {{invalid constructor declaration}}
+
+  **S(const S &); // expected-error {{invalid constructor declaration}}
+  *S(S &&);       // expected-error {{invalid constructor declaration}}
+};
+}

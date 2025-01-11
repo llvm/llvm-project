@@ -10757,6 +10757,17 @@ static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
   }
 }
 
+static void checkMethodPointerType(Sema &S, Declarator &D, unsigned DiagID) {
+  if (D.getNumTypeObjects() > 0) {
+    DeclaratorChunk &Chunk = D.getTypeObject(D.getNumTypeObjects() - 1);
+    if (Chunk.Kind == DeclaratorChunk::Pointer) {
+      SourceLocation PointerLoc = Chunk.getSourceRange().getBegin();
+      S.Diag(PointerLoc, DiagID) << Chunk.getSourceRange();
+      D.setInvalidType();
+    }
+  }
+}
+
 QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
                                           StorageClass &SC) {
   bool isVirtual = D.getDeclSpec().isVirtualSpecified();
@@ -10792,6 +10803,7 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_constructor);
+  checkMethodPointerType(*this, D, diag::err_invalid_constructor_decl);
 
   // C++0x [class.ctor]p4:
   //   A constructor shall not be declared with a ref-qualifier.
@@ -10958,6 +10970,7 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_destructor);
+  checkMethodPointerType(*this, D, diag::err_invalid_destructor_decl);
 
   // C++0x [class.dtor]p2:
   //   A destructor shall not be declared with a ref-qualifier.
