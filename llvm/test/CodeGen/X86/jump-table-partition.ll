@@ -6,6 +6,8 @@
 ; RUN: llc -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
 ; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
+; RUN: llc -enable-split-machine-functions -split-static-data -emit-static-data-hotness-suffix=true -function-sections -min-jump-table-entries=2 -disable-block-placement %s -o - 2>&1 | FileCheck %s --check-prefix=SECTION
+
 ; Tests stat messages are expected.
 ; TODO: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
 ; TODO: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
@@ -13,6 +15,13 @@
 ; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
 ; STAT-DAG: 3 static-data-splitter - Number of hot jump tables seen
 ; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
+
+; SECTION: .section .rodata.hot.foo,"a",@progbits
+; SECTION: .LJTI0_0:
+; SECTION: .LJTI0_2:
+; SECTION: .section .rodata.foo,"a",@progbits
+; SECTION: .LJTI0_1:
+; SECTION: .LJTI0_3:
 
 ; @foo has four jump tables, jt0, jt1, jt2 and jt3 in the input basic block
 ; order; jt0 and jt2 are hot, and jt1 and jt3 are cold.
@@ -59,29 +68,7 @@ jt0.default:
 
 jt0.epilog:
   %zero = icmp eq i32 %num, 0
-  br i1 %zero, label %cold, label %hot, !prof !17
-
-cold:
-  %c1 = call i32 @compute(i32 %num)
-  switch i32 %c1, label %jt1.default [
-    i32 1, label %jt1.bb1
-    i32 2, label %jt1.bb2
-  ], !prof !14
-
-jt1.bb1:
-  call i32 @puts(ptr @case1)
-  br label %jt1.epilog
-
-jt1.bb2:
-  call i32 @puts(ptr @case2)
-  br label %jt1.epilog
-
-jt1.default:
-  call i32 @puts(ptr @default)
-  br label %jt1.epilog
-
-jt1.epilog:
-  br label %return
+  br i1 %zero, label %hot, label %cold, !prof !17
 
 hot:
  %c2 = call i32 @transform(i32 %num)
@@ -105,6 +92,28 @@ jt2.default:
 jt2.epilog:
   %c2cmp = icmp ne i32 %c2, 0
   br i1 %c2cmp, label %return, label %jt3.prologue, !prof !18
+
+cold:
+  %c1 = call i32 @compute(i32 %num)
+  switch i32 %c1, label %jt1.default [
+    i32 1, label %jt1.bb1
+    i32 2, label %jt1.bb2
+  ], !prof !14
+
+jt1.bb1:
+  call i32 @puts(ptr @case1)
+  br label %jt1.epilog
+
+jt1.bb2:
+  call i32 @puts(ptr @case2)
+  br label %jt1.epilog
+
+jt1.default:
+  call i32 @puts(ptr @default)
+  br label %jt1.epilog
+
+jt1.epilog:
+  br label %return
 
 jt3.prologue:
   %c3 = call i32 @cleanup(i32 %num)
@@ -166,7 +175,7 @@ loop.exit:
   %inc = add i32 %i.04, 1
   %lsr.iv.next = add i32 %lsr.iv, -1
   %exitcond.not = icmp eq i32 %lsr.iv.next, 0
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !prof !17
+  br i1 %exitcond.not, label %for.body, label %for.cond.cleanup, !prof !17
 }
 
 define void @func_without_entry_count(i32 %num) {
@@ -217,6 +226,6 @@ declare i32 @cleanup(i32)
 !14 = !{!"branch_weights", i32 60000, i32 20000, i32 20000}
 !15 = !{!"function_entry_count", i64 1}
 !16 = !{!"branch_weights", i32 1, i32 0, i32 0, i32 0, i32 0, i32 0}
-!17 = !{!"branch_weights", i32 1, i32 99999}
+!17 = !{!"branch_weights", i32 99999, i32 1}
 !18 = !{!"branch_weights", i32 99998, i32 1}
 !19 = !{!"branch_weights", i32 97000, i32 1000, i32 1000, i32 1000}

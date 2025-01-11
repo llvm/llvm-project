@@ -453,6 +453,10 @@ public:
   /// function to the current output stream.
   virtual void emitJumpTableInfo();
 
+  virtual void emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
+                              MCSection *JumpTableSection, bool JTInDiffSection,
+                              const MachineJumpTableInfo &MJTI);
+
   /// Emit the specified global variable to the .s file.
   virtual void emitGlobalVariable(const GlobalVariable *GV);
 
@@ -892,10 +896,10 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
 
-  void emitJumpTableSizesSection(const MachineJumpTableInfo *MJTI,
+  void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;
 
   void emitLLVMUsedList(const ConstantArray *InitList);

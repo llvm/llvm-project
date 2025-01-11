@@ -1261,9 +1261,9 @@ void TargetPassConfig::addMachinePasses() {
                "performance.\n";
       }
     }
-    addPass(createMachineFunctionSplitterPass());
     if (SplitStaticData)
       addPass(createStaticDataSplitterPass());
+    addPass(createMachineFunctionSplitterPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
