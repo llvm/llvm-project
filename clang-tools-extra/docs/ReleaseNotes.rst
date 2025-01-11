@@ -117,6 +117,9 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
+- Improved :program:`clang-tidy` by fixing incorrect configuration file path
+  resolving when file paths contain ``..``.
+
 - Removed :program:`clang-tidy`'s global options for most of checks. All options
   are changed to local options except `IncludeStyle`, `StrictMode` and
   `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
