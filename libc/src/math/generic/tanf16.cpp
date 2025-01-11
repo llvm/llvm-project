@@ -50,7 +50,7 @@ LLVM_LIBC_FUNCTION(float16, tanf16, (float16 x)) {
 
   // |x| <= 0x1.d1p-5
   if (LIBC_UNLIKELY(x_abs <= 0x2b44)) {
-    // |x| <= 1.398p-11
+    // |x| <= 0x1.398p-11
     if (LIBC_UNLIKELY(x_abs <= 0x10e6)) {
       // tan(+/-0) = +/-0
       if (LIBC_UNLIKELY(x_abs == 0))
