@@ -58,7 +58,7 @@ void ExplicitMoveConstructorCheck::check(
 
   auto Diag = diag(
       MoveCtor->getLocation(),
-      "copy constructor may be called instead of explicit move constructor");
+      "copy constructor may be called instead of move constructor");
   SourceRange ExplicitTokenRange =
       findExplicitToken(MoveCtor, *Result.SourceManager, getLangOpts());
 
