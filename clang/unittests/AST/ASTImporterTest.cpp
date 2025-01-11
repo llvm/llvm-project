@@ -3394,7 +3394,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportBitfields) {
   ASSERT_TRUE(FromF->isBitField());
   ASSERT_EQ(3u, FromF->getBitWidthValue());
   auto *ToField = Import(FromF, Lang_CXX03);
-  auto *ToTU = ToField->getTranslationUnitDecl();
 
   EXPECT_TRUE(ToField->isBitField());
   EXPECT_EQ(3u, ToField->getBitWidthValue());
