@@ -11118,16 +11118,9 @@ TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
 
 TEST_F(FormatTest, BreakBeforeTemplateClose) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  // Begin with tests covering the case where there is no constraint on the column limit.
   Style.ColumnLimit = 0;
-  verifyNoChange("template <typename Foo>\n"
-                 "void foo() {}",
-                 Style);
-  verifyNoChange("template <\n"
-                 "    typename Foo,\n"
-                 "    typename Bar>\n"
-                 "void foo() {}",
-                 Style);
-  // when BreakBeforeTemplateClose is off, this line break is removed:
+  // When BreakBeforeTemplateClose is turned off, the line break that it adds shall be removed:
   verifyFormat("template <\n"
                "    typename Foo,\n"
                "    typename Bar>\n"
@@ -11139,14 +11132,15 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "void foo() {}",
                Style);
   Style.BreakBeforeTemplateClose = true;
-  // BreakBeforeTemplateClose should NOT force multiline templates
+  // BreakBeforeTemplateClose should NOT force template declarations onto multiple lines.
+  // Use verifyNoChange since ColumnLimit = 0.
   verifyNoChange("template <typename Foo>\n"
                  "void foo() {}",
                  Style);
   verifyNoChange("template <typename Foo, typename Bar>\n"
                  "void foo() {}",
                  Style);
-  // it should allow a line break:
+  // It should allow a line break, even when the typename is short:
   verifyNoChange("template <\n"
                  "    typename Foo\n"
                  ">\n"
@@ -11158,7 +11152,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                  ">\n"
                  "void foo() {}",
                  Style);
-  // it should add a line break if not already present:
+  // It should add a line break before > if not already present:
   verifyFormat("template <\n"
                "    typename Foo\n"
                ">\n"
@@ -11177,7 +11171,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "    typename Bar>\n"
                "void foo() {}",
                Style);
-  // when within an indent scope, the > should be placed appropriately:
+  // When within an indent scope, the > should be placed accordingly:
   verifyFormat("struct Baz {\n"
                "  template <\n"
                "      typename Foo,\n"
@@ -11193,7 +11187,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "};",
                Style);
 
-  // test from issue #80049
+  // Test from issue #80049:
   verifyFormat(
       "void foo() {\n"
       "  using type = std::remove_cv_t<\n"
@@ -11203,91 +11197,91 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
       "          T1\n"
       "      >\n"
       "  >;\n"
-      "}\n",
+      "}",
       "void foo() {\n"
       "  using type = std::remove_cv_t<\n"
       "      add_common_cv_reference<\n"
       "          std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
       "          T0,\n"
       "          T1>>;\n"
-      "}\n",
+      "}",
       Style);
 
-  // test lambda goes to next line:
+  // Test lambda goes to next line:
   verifyFormat("void foo() {\n"
                "  auto lambda = []<\n"
                "                    typename T\n"
                "                >(T t) {\n"
                "  };\n"
-               "}\n",
+               "}",
                "void foo() {\n"
                "  auto lambda = []<\n"
                "  typename T>(T t){\n"
                "  };\n"
-               "}\n",
+               "}",
                Style);
-  // with no column limit, two parameters can go on the same line:
+  // With no column limit, two parameters can go on the same line:
   verifyFormat("void foo() {\n"
                "  auto lambda = []<\n"
                "                    typename T, typename Foo\n"
                "                >(T t) {\n"
                "  };\n"
-               "}\n",
+               "}",
                "void foo() {\n"
                "  auto lambda = []<\n"
                "  typename T, typename Foo>(T t){\n"
                "  };\n"
-               "}\n",
+               "}",
                Style);
-  // or on different lines:
+  // Or on different lines:
   verifyFormat("void foo() {\n"
                "  auto lambda = []<\n"
                "                    typename T,\n"
                "                    typename Foo\n"
                "                >(T t) {\n"
                "  };\n"
-               "}\n",
+               "}",
                "void foo() {\n"
                "  auto lambda = []<\n"
                "  typename T,\n"
                "  typename Foo>(T t){\n"
                "  };\n"
-               "}\n",
+               "}",
                Style);
 
-  // same line with no column limit
+  // Note that this is the same line (no \n):
   verifyFormat("void foo() {\n"
                "  auto lambda = []<typename "
                "Looooooooooooooooooooooooooooong>("
                "Looooooooooooooooooooooooooooong t) {};\n"
-               "}\n",
+               "}",
                Style);
 
-  // test template usage goes to next line:
+  // Test template usage goes to next line too:
   verifyFormat("void foo() {\n"
                "  myFunc<\n"
                "      T\n"
                "  >();\n"
-               "}\n",
+               "}",
                "void foo() {\n"
                "  myFunc<\n"
                "  T>();\n"
-               "}\n",
+               "}",
                Style);
 
-  // now test that it handles the cases when the column limit forces wrapping
+  // Now test that it handles the cases when the column limit forces wrapping.
   Style.ColumnLimit = 40;
-  // when the column limit allows it, the template should be combined back into
+  // When the column limit allows it, the template should be combined back into
   // one line:
   verifyFormat("template <typename Foo, typename Bar>\n"
                "void foo() {}",
                "template <\n"
                "    typename Foo,\n"
                "    typename Bar\n"
-               ">\n"
+               ">"
                "void foo() {}",
                Style);
-  // but not when the name is looong
+  // But not when the name is looong:
   verifyFormat("template <\n"
                "    typename Foo,\n"
                "    typename Barrrrrrrrrrrrrrrrrrrrrrrrrr\n"
@@ -11300,7 +11294,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                ">\n"
                "void foo() {}",
                Style);
-  // additionally, long names should be split in one step:
+  // Additionally, long names should be split in one step:
   verifyFormat(
       "template <\n"
       "    typename Foo,\n"
@@ -11319,7 +11313,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
       "template <typename Fooooooooooooooooooooooooooo, typename Bar>\n"
       "void foo() {}",
       Style);
-  // even when there is only one long name:
+  // Even when there is only one long name:
   verifyFormat("template <\n"
                "    typename Fooooooooooooooooooooooooooo\n"
                ">\n"
@@ -11327,18 +11321,18 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "template <typename Fooooooooooooooooooooooooooo>\n"
                "void foo() {}",
                Style);
-  // test lambda goes to next line if the type is looong:
+  // Test lambda goes to next line if the type is looong:
   verifyFormat(
       "void foo() {\n"
-      // in this case, breaking "typename Looong" onto the next line would
-      // actually exceed the column limit by even more. same goes for "auto
+      // In this case, breaking "typename Looong" onto the next line would
+      // actually exceed the column limit by even more. Same goes for "auto
       // lambda = []<\n" because then the continuation indent would be all the
-      // way to the "[". therefore, this is correct for the column limited case:
+      // way to the "[". Therefore, this is correct for the column limited case:
       "  auto lambda =\n"
       "      []<typename Loooooooooooooooooooooooooooooooooong\n"
       "      >(T t) {};\n"
-      // for completeness, let's also make sure it's willing to break if and
-      // when doing so is helpful. if we put something long into the square
+      // For completeness, let's also make sure it's willing to break if and
+      // when doing so is helpful. If we put something long into the square
       // brackets, now it's worth it:
       "  auto lambda =\n"
       "      [looooooooooooooong]<\n"
@@ -11348,18 +11342,18 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
       "      []<typename T,\n"
       "         typename Loooooooooooooooooooooooooooooooooong\n"
       "      >(T t) {};\n"
-      // nested:
+      // Nested:
       "  auto lambda =\n"
       "      []<template <typename, typename>\n"
       "         typename Looooooooooooooooooong\n"
       "      >(T t) {};\n"
-      // nested with long capture:
+      // Nested with long capture:
       "  auto lambda =\n"
       "      [loooooooooooooooooooong]<\n"
       "          template <typename, typename>\n"
       "          typename Looooooooooooooooooong\n"
       "      >(T t) {};\n"
-      // nested, with long name and long captures:
+      // Nested, with long name and long captures:
       "  auto lambda =\n"
       "      [loooooooooooooooooooong]<\n"
       "          template <\n"
@@ -11368,26 +11362,26 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
       "          >\n"
       "          typename T\n"
       "      >(T t) {};\n"
-      "}\n",
+      "}",
       Style);
-  // test that if the type is NOT long, it pulls it back into one line:
+  // Test that if the type is NOT long, it pulls it back into one line:
   verifyFormat("void foo() {\n"
                "  auto lambda = []<typename T>(T t) {};\n"
-               "}\n",
+               "}",
                "void foo() {\n"
                "  auto lambda = []<\n"
                "                    typename T\n"
                "                  >(T t) {};\n"
-               "}\n",
+               "}",
                Style);
 
-  // test template usage goes to next line only if the type is looong:
-  verifyFormat("void foo() { myFunc<T>(); }\n", Style);
+  // Test template usage goes to next line only if the type is looong:
+  verifyFormat("void foo() { myFunc<T>(); }", Style);
   verifyFormat("void foo() {\n"
                "  myFunc<\n"
                "      Loooooooooooooooooooooooooooooooooooooooong\n"
                "  >();\n"
-               "}\n",
+               "}",
                Style);
 }
 
