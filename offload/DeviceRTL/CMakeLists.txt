@@ -107,7 +107,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nogpuinc
              -fopenmp -fopenmp-cuda-mode
-             -Wno-unknown-cuda-version
+             -Wno-unknown-cuda-version -Wno-openmp-target
              -I${CMAKE_BINARY_DIR}/openmp/runtime/src # Need omp.h for LibM.
              -I${CMAKE_BINARY_DIR}/projects/openmp/runtime/src # Need omp.h for LibM.
              -I${CMAKE_BINARY_DIR}/runtime/src
