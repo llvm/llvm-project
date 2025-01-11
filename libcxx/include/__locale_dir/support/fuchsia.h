@@ -10,9 +10,9 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
 
 #include <__config>
+#include <clocale> // uselocale & friends
 #include <cstdlib>
 #include <cwchar>
-#include <clocale> // uselocale & friends
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
