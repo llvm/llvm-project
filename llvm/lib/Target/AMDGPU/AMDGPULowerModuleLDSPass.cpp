@@ -984,6 +984,7 @@ public:
       unsigned BarId = NumAbsolutes[BarrierScope] + 1;
       unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
       NumAbsolutes[BarrierScope] += BarCnt;
+
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;

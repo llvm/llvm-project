@@ -663,8 +663,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
-    if (!wouldBeCloned)
-      return false;
     if (!isa<LLVM::CallOp>(call)) {
       LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
                               << LLVM::CallOp::getOperationName() << "' op\n");

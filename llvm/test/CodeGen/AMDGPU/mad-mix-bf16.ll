@@ -598,6 +598,31 @@ define float @v_mad_mix_f32_bf16lo_cast_from_half_bf16lo_bf16lo(half %src0, bflo
   ret float %result
 }
 
+define amdgpu_kernel void @test_fma_mix_f32_bf16_src2_bf16lo(float %x, i32 %y, ptr addrspace(1) %out) {
+; GFX1250-LABEL: test_fma_mix_f32_bf16_src2_bf16lo:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, s0, 0, s1 op_sel_hi:[0,0,1]
+; GFX1250-NEXT:    s_mov_b32 s0, 0
+; GFX1250-NEXT:    s_wait_alu 0xfffe
+; GFX1250-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX1250-NEXT:    s_endpgm
+entry:
+  %v0 = shl i32 %y, 16
+  %v1 = bitcast i32 %v0 to float
+  %mul7 = fmul contract float %x, 0.000000e+00
+  %add2 = fadd contract float %mul7, %v1
+  %v2 = fcmp uno float %add2, 0.000000e+00
+  %v3 = select i1 %v2, i64 1, i64 0
+  store i64 %v3, ptr addrspace(1) %out, align 8
+  ret void
+}
+
 declare bfloat @llvm.fabs.bf16(bfloat) #2
 declare <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat>) #2
 declare float @llvm.fabs.f32(float) #2

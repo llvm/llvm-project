@@ -6369,12 +6369,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     } else if (ID == ".amdhsa_workgroup_processor_mode") {
       if (!supportsWGP(getSTI()))
         return Error(IDRange.Start, "directive unsupported on " + getSTI().getCPU(), IDRange);
-      // Add changes to whole macro so ifdef insertion doesn't insert ifdef
-      // inside macro
-      // TODO: remove this when upstreamed
-      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,                           // w/a
-                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal, // w/a
-                       ValRange);                                      // w/a
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1,
+                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE, ExprVal,
+                       ValRange);
     } else if (ID == ".amdhsa_memory_ordered") {
       if (IVersion.Major < 10)
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
