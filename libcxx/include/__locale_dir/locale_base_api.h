@@ -117,11 +117,7 @@
 #    include <__locale_dir/locale_base_api/musl.h>
 #  endif
 
-#  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
-#  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
-#  endif
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 
 #  include <__cstddef/size_t.h>
 #  include <__utility/forward.h>

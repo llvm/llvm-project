@@ -24,7 +24,7 @@
 "`P1383R2 <https://wg21.link/P1383R2>`__","More ``constexpr`` for ``<cmath>`` and ``<complex>``","2023-06 (Varna)","","",""
 "`P2734R0 <https://wg21.link/P2734R0>`__","Adding the new SI prefixes","2023-06 (Varna)","|Complete|","17",""
 "`P2548R6 <https://wg21.link/P2548R6>`__","``copyable_function``","2023-06 (Varna)","","",""
-"`P2714R1 <https://wg21.link/P2714R1>`__","Bind front and back to NTTP callables","2023-06 (Varna)","","",""
+"`P2714R1 <https://wg21.link/P2714R1>`__","Bind front and back to NTTP callables","2023-06 (Varna)","|Partial|","20","``not_fn`` only"
 "`P2630R4 <https://wg21.link/P2630R4>`__","``submdspan``","2023-06 (Varna)","","",""
 "","","","","",""
 "`P0543R3 <https://wg21.link/P0543R3>`__","Saturation arithmetic","2023-11 (Kona)","|Complete|","18",""

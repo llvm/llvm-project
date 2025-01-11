@@ -250,8 +250,16 @@ Changes to the WebAssembly Backend
   `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
   `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
 
+* Support for the new standardized [Exception Handling] proposal is added.
+  The [legacy Exception Handling] proposal is still supported, and turned on by
+  the newly added `-wasm-use-legacy-eh` option. Given that major web browsers
+  still default to the legacy EH proposal, this option is turned on by default
+  for the moment.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+[legacy Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
 [widely implemented in engines]: https://webassembly.org/features/
 [here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 

@@ -134,10 +134,10 @@ const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
 
   // If the register already has a class, fallback to MRI::constrainRegClass.
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (isa<const TargetRegisterClass *>(RegClassOrBank))
+  if (isa_and_present<const TargetRegisterClass *>(RegClassOrBank))
     return MRI.constrainRegClass(Reg, &RC);
 
-  const RegisterBank *RB = cast<const RegisterBank *>(RegClassOrBank);
+  const auto *RB = dyn_cast_if_present<const RegisterBank *>(RegClassOrBank);
   // Otherwise, all we can do is ensure the bank covers the class, and set it.
   if (RB && !RB->covers(RC))
     return nullptr;

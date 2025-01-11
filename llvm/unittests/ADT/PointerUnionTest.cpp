@@ -208,6 +208,11 @@ TEST_F(PointerUnionTest, NewCastInfra) {
   EXPECT_FALSE(isa<float *>(d4null));
   EXPECT_FALSE(isa<long long *>(d4null));
 
+  EXPECT_FALSE(isa_and_present<int *>(i4null));
+  EXPECT_FALSE(isa_and_present<float *>(f4null));
+  EXPECT_FALSE(isa_and_present<long long *>(l4null));
+  EXPECT_FALSE(isa_and_present<double *>(d4null));
+
   // test cast<>
   EXPECT_EQ(cast<float *>(a), &f);
   EXPECT_EQ(cast<int *>(b), &i);

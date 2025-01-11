@@ -208,6 +208,7 @@ public:
       : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
         TheModule(M), VFS(std::move(VFS)),
+        CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
   ~EmitAssemblyHelper() {
