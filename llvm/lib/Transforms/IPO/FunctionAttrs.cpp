@@ -852,9 +852,11 @@ determinePointerAccessAttrs(Argument *A,
         continue;
       }
 
-      // Given we've explictily handled the callee operand above, what's left
+      // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
+      const bool IsByVal =
+          CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U));
 
       // Some intrinsics (for instance ptrmask) do not capture their results,
       // but return results thas alias their pointer argument, and thus should
@@ -864,7 +866,7 @@ determinePointerAccessAttrs(Argument *A,
         for (Use &UU : CB.uses())
           if (Visited.insert(&UU).second)
             Worklist.push_back(&UU);
-      } else if (!CB.doesNotCapture(UseIndex)) {
+      } else if (!(CB.doesNotCapture(UseIndex) || IsByVal)) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -894,7 +896,7 @@ determinePointerAccessAttrs(Argument *A,
       // invokes with operand bundles.
       if (CB.doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex) || IsByVal) {
         IsRead = true;
       } else if (!isRefSet(ArgMR) ||
                  CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {

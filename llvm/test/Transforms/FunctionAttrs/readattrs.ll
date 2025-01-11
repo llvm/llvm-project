@@ -766,7 +766,7 @@ declare void @byval_param(ptr byval(i32) %p)
 
 define void @call_byval_param(ptr %p) {
 ; FNATTRS-LABEL: define {{[^@]+}}@call_byval_param
-; FNATTRS-SAME: (ptr [[P:%.*]]) {
+; FNATTRS-SAME: (ptr readonly [[P:%.*]]) {
 ; FNATTRS-NEXT:    call void @byval_param(ptr byval(i32) [[P]])
 ; FNATTRS-NEXT:    ret void
 ;
