@@ -67,13 +67,13 @@ ArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
     BitCount = BitCountPowerOfTwo;
   }
 
-  assert((!ForcePowerOf2 || isPowerOf2_32(BitCount)) &&
-         "Must be a power of two");
   // Return any non-empty slice
-  if (NumElements > 1)
+  if (NumElements > 1) {
+    assert((!ForcePowerOf2 || isPowerOf2_32(BitCount)) &&
+           "Must be a power of two");
     return ArrayRef<Instruction *>(&Seeds[StartIdx], NumElements);
-  else
-    return {};
+  }
+  return {};
 }
 
 template <typename LoadOrStoreT>
