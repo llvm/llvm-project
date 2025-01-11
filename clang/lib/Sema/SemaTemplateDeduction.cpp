@@ -4829,8 +4829,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
                                           /*AdjustExceptionSpec*/false);
 
   // Unevaluated SFINAE context.
-  EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
+  std::optional<EnterExpressionEvaluationContext> Unevaluated(
+      std::in_place, *this, Sema::ExpressionEvaluationContext::Unevaluated);
   SFINAETrap Trap(*this);
 
   Deduced.resize(TemplateParams->size());
@@ -4873,13 +4873,14 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       DeduceReturnType(Specialization, Info.getLocation(), false))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
+  Unevaluated = std::nullopt;
   // [C++26][expr.const]/p17
   // An expression or conversion is immediate-escalating if it is not initially
   // in an immediate function context and it is [...]
   // a potentially-evaluated id-expression that denotes an immediate function.
   if (IsAddressOfFunction && getLangOpts().CPlusPlus20 &&
       Specialization->isImmediateEscalating() &&
-      parentEvaluationContext().isPotentiallyEvaluated() &&
+      currentEvaluationContext().isPotentiallyEvaluated() &&
       CheckIfFunctionSpecializationIsImmediate(Specialization,
                                                Info.getLocation()))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
