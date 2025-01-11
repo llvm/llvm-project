@@ -945,7 +945,7 @@ namespace {
       ASTContext &Ctx = CGF.getContext();
       unsigned LastFieldSize =
           LastField->isBitField()
-              ? LastField->getBitWidthValue(Ctx)
+              ? LastField->getBitWidthValue()
               : Ctx.toBits(
                     Ctx.getTypeInfoDataSizeInChars(LastField->getType()).Width);
       uint64_t MemcpySizeBits = LastFieldOffset + LastFieldSize -

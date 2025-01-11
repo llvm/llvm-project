@@ -3154,7 +3154,9 @@ public:
 
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.
-  unsigned getBitWidthValue(const ASTContext &Ctx) const;
+  /// Note that in order to successfully use this function, the bitwidth
+  /// expression must be a ConstantExpr with a valid integer result set.
+  unsigned getBitWidthValue() const;
 
   /// Set the bit-field width for this member.
   // Note: used by some clients (i.e., do not remove it).
@@ -3185,7 +3187,7 @@ public:
   /// Is this a zero-length bit-field? Such bit-fields aren't really bit-fields
   /// at all and instead act as a separator between contiguous runs of other
   /// bit-fields.
-  bool isZeroLengthBitField(const ASTContext &Ctx) const;
+  bool isZeroLengthBitField() const;
 
   /// Determine if this field is a subobject of zero size, that is, either a
   /// zero-length bit-field or a field of empty class type with the
