@@ -1,0 +1,17 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module mod1
+  type int
+    real :: inf, sup 
+  end type int
+contains
+  attributes(global) subroutine fadd(c, a, b)
+    type (int) :: c, a, b
+    c%inf = __fadd_rd(a%inf, b%inf)
+    c%sup = __fadd_ru(a%sup, b%sup)
+  end subroutine
+end
+
+! CHECK-LABEL: func.func @_QMmod1Pfadd
+! CHECK: fir.call @__nv_fadd_rd
+! CHECK: fir.call @__nv_fadd_ru
