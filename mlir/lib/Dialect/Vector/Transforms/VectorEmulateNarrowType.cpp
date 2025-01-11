@@ -296,38 +296,49 @@ static VectorValue emulatedVectorLoad(OpBuilder &rewriter, Location loc,
       newLoad);
 }
 
-/// Selects values from two sources based on a mask, and casts the result to a
-/// new type.
-static Value selectAndCast(OpBuilder &builder, Location loc,
-                           VectorType castIntoType, Value mask, Value trueValue,
-                           Value falseValue) {
-  Value maskedValue =
+/// Downcast two values to `downcastType`, then select values
+/// based on `mask`, and casts the result to `upcastType`.
+static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
+                                     VectorType downcastType,
+                                     VectorType upcastType, Value mask,
+                                     Value trueValue, Value falseValue) {
+  assert(
+      downcastType.getNumElements() * downcastType.getElementTypeBitWidth() ==
+          upcastType.getNumElements() * upcastType.getElementTypeBitWidth() &&
+      "expected upcastType size to be twice the size of downcastType");
+  if (trueValue.getType() != downcastType)
+    trueValue = builder.create<vector::BitCastOp>(loc, downcastType, trueValue);
+  if (falseValue.getType() != downcastType)
+    falseValue =
+        builder.create<vector::BitCastOp>(loc, downcastType, falseValue);
+  Value selectedType =
       builder.create<arith::SelectOp>(loc, mask, trueValue, falseValue);
-  return builder.create<vector::BitCastOp>(loc, castIntoType, maskedValue);
+  // Upcast the selected value to the new type.
+  return builder.create<vector::BitCastOp>(loc, upcastType, selectedType);
 }
 
 /// Emits `memref.generic_atomic_rmw` op to store a subbyte-sized value to a
-/// byte in memory, with a mask. The `valueToStore` is a vector of subbyte-sized
-/// elements, with size of 8 bits, and the mask is used to select which elements
-/// to store.
+/// byte in `linearizedMemref`, with a mask. The `valueToStore` is a vector of
+/// subbyte-sized elements, with size of 8 bits, and the mask is used to select
+/// which elements to store.
 ///
 /// Inputs:
 ///   linearizedMemref = |2|2|2|2| : <4xi2> (<1xi8>)
-///   linearizedIndex = 2
+///   storeIdx = 2
 ///   valueToStore = |3|3|3|3| : vector<4xi2>
 ///   mask = |0|0|1|1| : vector<4xi1>
 ///
 /// Result:
 ///   linearizedMemref = |2|2|3|3| : <4xi2> (<1xi8>)
 static void atomicStore(OpBuilder &builder, Location loc,
-                        MemRefValue linearizedMemref, Value linearizedIndex,
+                        MemRefValue linearizedMemref, Value storeIdx,
                         VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
   // Create an atomic load-modify-write region using
   // `memref.generic_atomic_rmw`.
   auto atomicOp = builder.create<memref::GenericAtomicRMWOp>(
-      loc, linearizedMemref, ValueRange{linearizedIndex});
+      loc, linearizedMemref, ValueRange{storeIdx});
   Value origValue = atomicOp.getCurrentValue();
 
   OpBuilder::InsertionGuard guard(builder);
@@ -338,30 +349,30 @@ static void atomicStore(OpBuilder &builder, Location loc,
   auto oneElemVecType = VectorType::get({1}, origValue.getType());
   Value origVecValue = builder.create<vector::FromElementsOp>(
       loc, oneElemVecType, ValueRange{origValue});
-  origVecValue = builder.create<vector::BitCastOp>(loc, valueToStore.getType(),
-                                                   origVecValue);
 
   // Construct the final masked value and yield it.
-  Value maskedValue = selectAndCast(builder, loc, oneElemVecType, mask,
-                                    valueToStore, origVecValue);
+  Value maskedValue =
+      downcastSelectAndUpcast(builder, loc, valueToStore.getType(),
+                              oneElemVecType, mask, valueToStore, origVecValue);
   auto scalarMaskedValue =
       builder.create<vector::ExtractOp>(loc, maskedValue, 0);
   builder.create<memref::AtomicYieldOp>(loc, scalarMaskedValue);
 }
 
-/// Extract `sliceNumElements` from source `vector` at `sliceOffset`,
-/// and insert it into an empty vector at offset `byteOffset`.
+/// Extract `sliceNumElements` from source `vector` at `extractOffset`,
+/// and insert it into an empty vector at `insertOffset`.
 /// Inputs:
-///   vector = |1|2|3|4| : vector<4xi2>
-///   sliceOffset = 1
+///   vec_in  = |0|1|2|3| : vector<4xi2>
+///   extractOffset = 1
 ///   sliceNumElements = 2
-///   byteOffset = 2
+///   insertOffset = 2
 /// Output:
-///   vector = |0|0|2|3| : vector<4xi2>
+///   vec_out = |0|0|1|2| : vector<4xi2>
 static Value extractSliceIntoByte(ConversionPatternRewriter &rewriter,
                                   Location loc, VectorValue vector,
-                                  int64_t sliceOffset, int64_t sliceNumElements,
-                                  int64_t byteOffset) {
+                                  int64_t extractOffset,
+                                  int64_t sliceNumElements,
+                                  int64_t insertOffset) {
   assert(vector.getType().getRank() == 1 && "expected 1-D vector");
   auto vectorElementType = vector.getType().getElementType();
   assert(
@@ -374,9 +385,9 @@ static Value extractSliceIntoByte(ConversionPatternRewriter &rewriter,
       loc, VectorType::get({scale}, vectorElementType),
       rewriter.getZeroAttr(VectorType::get({scale}, vectorElementType)));
   auto extracted = staticallyExtractSubvector(rewriter, loc, vector,
-                                              sliceOffset, sliceNumElements);
+                                              extractOffset, sliceNumElements);
   return staticallyInsertSubvector(rewriter, loc, extracted, emptyByteVector,
-                                   byteOffset);
+                                   insertOffset);
 }
 
 namespace {

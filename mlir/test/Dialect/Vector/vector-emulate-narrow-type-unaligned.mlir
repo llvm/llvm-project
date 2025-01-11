@@ -361,25 +361,27 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
 /// vector.store
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_store_i2_const_index_two_atomic(%arg0: vector<3xi2>) {
-    %0 = memref.alloc() : memref<3x3xi2>
+func.func @vector_store_i2_const_index_two_atomic_rmw(%arg0: vector<3xi2>) {
+    %src = memref.alloc() : memref<3x3xi2>
     %c0 = arith.constant 0 : index
     %c2 = arith.constant 2 : index
-    vector.store %arg0, %0[%c2, %c0] :memref<3x3xi2>, vector<3xi2>
+    vector.store %arg0, %src[%c2, %c0] :memref<3x3xi2>, vector<3xi2>
     return
 }
 
 // In this example, emit 2 atomic RMWs.
-// Load from bit [12:18), byte [1:2] of total 3 bytes, both bytes needs rmw.
+//
+// Note, sizeof(%src) = 18 bits. This is modelled as %src_as_bytes:
+// <3xi8> (bits [0, 18) with the input values from %src, and [18, 24) are masked out)
 
-// CHECK-LABEL: func @vector_store_i2_const_index_two_atomic(
+// CHECK-LABEL: func @vector_store_i2_const_index_two_atomic_rmw(
 // CHECK-SAME: %[[ARG0:.+]]: vector<3xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
 // CHECK: %[[CST:.+]] = arith.constant dense<[false, false, true, true]> : vector<4xi1>
 // CHECK: %[[CST_0:.+]] = arith.constant dense<0> : vector<4xi2>
 
-// Part 1 atomic RMW sequence
+// Part 1 atomic RMW sequence (load bits [12, 16) from %src_as_bytes[1])
 // CHECK: %[[EXTRACT:.+]] = vector.extract_strided_slice %[[ARG0]]
 // CHECK-SAME: {offsets = [0], sizes = [2], strides = [1]} : vector<3xi2> to vector<2xi2>
 // CHECK: %[[INSERT:.+]] = vector.insert_strided_slice %[[EXTRACT]], %[[CST_0]]
@@ -393,7 +395,7 @@ func.func @vector_store_i2_const_index_two_atomic(%arg0: vector<3xi2>) {
 // CHECK: %[[EXTRACT2:.+]] = vector.extract %[[BITCAST2]][0] : i8 from vector<1xi8>
 // CHECK: memref.atomic_yield %[[EXTRACT2]] : i8
 
-// Part 2 atomic RMW sequence
+// Part 2 atomic RMW sequence (load bits [16, 18) from %src_as_bytes[2])
 // CHECK: %[[ADDR2:.+]] = arith.addi %[[C1]], %[[C1]] : index
 // CHECK: %[[EXTRACT3:.+]] = vector.extract_strided_slice %[[ARG0]]
 // CHECK-SAME: {offsets = [2], sizes = [1], strides = [1]} : vector<3xi2> to vector<1xi2>
@@ -411,7 +413,7 @@ func.func @vector_store_i2_const_index_two_atomic(%arg0: vector<3xi2>) {
 
 // -----
 
-func.func @vector_store_i2_atomic(%arg0: vector<7xi2>) {
+func.func @vector_store_i2_atomic_rmw(%arg0: vector<7xi2>) {
     %0 = memref.alloc() : memref<3x7xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -420,7 +422,7 @@ func.func @vector_store_i2_atomic(%arg0: vector<7xi2>) {
 }
 
 // In this example, emit 2 atomic RMWs and 1 non-atomic store:
-// CHECK-LABEL: func @vector_store_i2_atomic(
+// CHECK-LABEL: func @vector_store_i2_atomic_rmw(
 // CHECK-SAME: %[[ARG0:.+]]: vector<7xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<6xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -467,7 +469,7 @@ func.func @vector_store_i2_atomic(%arg0: vector<7xi2>) {
 
 // -----
 
-func.func @vector_store_i2_single_atomic(%arg0: vector<1xi2>) {
+func.func @vector_store_i2_const_index_one_atomic_rmw(%arg0: vector<1xi2>) {
     %0 = memref.alloc() : memref<4x1xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -476,7 +478,7 @@ func.func @vector_store_i2_single_atomic(%arg0: vector<1xi2>) {
 }
 
 // In this example, only emit 1 atomic store
-// CHECK-LABEL: func @vector_store_i2_single_atomic(
+// CHECK-LABEL: func @vector_store_i2_const_index_one_atomic_rmw(
 // CHECK-SAME: %[[ARG0:.+]]: vector<1xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<1xi8>
 // CHECK: %[[C0:.+]] = arith.constant 0 : index
