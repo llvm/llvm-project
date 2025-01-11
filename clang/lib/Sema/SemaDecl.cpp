@@ -15868,8 +15868,8 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
   llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
 
   auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
-    if (EscapeInfo.count(BD))
-      return EscapeInfo[BD];
+    if (auto It = EscapeInfo.find(BD); It != EscapeInfo.end())
+      return It->second;
 
     bool R = false;
     const BlockDecl *CurBD = BD;
