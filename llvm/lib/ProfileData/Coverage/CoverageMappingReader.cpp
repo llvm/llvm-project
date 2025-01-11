@@ -36,6 +36,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <limits>
 #include <vector>
 
 using namespace llvm;
@@ -442,7 +443,6 @@ Error RawCoverageMappingReader::read() {
   // from the expanded file.
   // This assumes:
   //   - Records are partitioned by FileID.
-  //     - ExpandedFileID doesn't point FileID==0, since it is the root.
   //   - The Count in Expansion is propagated from 1st Record in
   //     ExpandedFileID.
   // Therefore another fact below can be assumed.
@@ -458,15 +458,12 @@ Error RawCoverageMappingReader::read() {
     bool ExpansionPending = false;
   };
   SmallVector<FileNode> FileIDExpansionRegionMapping(VirtualFileMapping.size());
-  assert(VirtualFileMapping.size() == FileIDExpansionRegionMapping.size());
 
   // Construct the tree.
-  unsigned PrevFileID = 0;
+  auto PrevFileID = std::numeric_limits<unsigned>::max(); // Invalid value
   for (auto &R : MappingRegions) {
     if (R.Kind == CounterMappingRegion::ExpansionRegion) {
       // The File that contains Expansion may be a node.
-      assert(R.ExpandedFileID != 0 &&
-             "ExpandedFileID shouldn't point the root");
       assert(!FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR);
       FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR = &R;
 
@@ -474,7 +471,6 @@ Error RawCoverageMappingReader::read() {
       FileIDExpansionRegionMapping[R.ExpandedFileID].ExpansionPending = true;
     }
 
-    // FileID==0 is not handled here but don't care since it's the root.
     if (PrevFileID != R.FileID) {
       // Record 1st Record for each File.
       assert(!FileIDExpansionRegionMapping[R.FileID].FirstR);
@@ -482,12 +478,6 @@ Error RawCoverageMappingReader::read() {
       PrevFileID = R.FileID;
     }
   }
-
-  // Make sure the root [0] doesn't point others.
-  assert((FileIDExpansionRegionMapping.empty() ||
-          (!FileIDExpansionRegionMapping[0].ExpanderR &&
-           !FileIDExpansionRegionMapping[0].FirstR)) &&
-         "The root shouldn't point other nodes");
 
   auto Propagate = [&](FileNode &X) {
     // Skip already processed node.
