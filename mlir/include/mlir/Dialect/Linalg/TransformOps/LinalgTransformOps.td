@@ -27,6 +27,25 @@ def TransformAnyParamTypeOrAnyHandle : Type<
     "transform any param type or any handle type">;
 
 //===----------------------------------------------------------------------===//
+// Winter School
+//===----------------------------------------------------------------------===//
+
+def ApplyReduceFloatBitwidthPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.arith.reduce_float_bitwidth",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply patterns to reduce the bidwidth of floating-point computations.
+  }];
+  let arguments = (ins ArrayAttr:$enabled_patterns,
+                       TypeAttr:$sourceType,
+                       TypeAttr:$targetType);
+  let assemblyFormat = [{
+    $enabled_patterns `from` $sourceType `to` $targetType attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 

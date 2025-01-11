@@ -60,6 +60,8 @@ void registerTestPreserveUseListOrders();
 void registerTestPrintDefUsePass();
 void registerTestPrintInvalidPass();
 void registerTestPrintNestingPass();
+void registerTestReduceFloatBitwidthPass();
+void registerTestReduceFloatBitwidthConversionPass();
 void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
 void registerTestSpirvModuleCombinerPass();
@@ -200,6 +202,8 @@ void registerTestPasses() {
   registerTestPrintDefUsePass();
   registerTestPrintInvalidPass();
   registerTestPrintNestingPass();
+  registerTestReduceFloatBitwidthPass();
+  registerTestReduceFloatBitwidthConversionPass();
   registerTestReducer();
   registerTestSpirvEntryPointABIPass();
   registerTestSpirvModuleCombinerPass();

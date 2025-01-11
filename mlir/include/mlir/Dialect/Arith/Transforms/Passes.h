@@ -13,6 +13,7 @@
 
 namespace mlir {
 class DataFlowSolver;
+class FloatType;
 class ConversionTarget;
 class TypeConverter;
 
@@ -81,6 +82,12 @@ std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
                                        ArrayRef<unsigned> bitwidthsSupported);
+
+/// Populate the specified patterns for reducing the bitwidth of FP
+/// computations.
+void populateTestReduceFloatBitwidthPatterns(
+    RewritePatternSet &patterns, ArrayRef<std::string> enabledPatterns,
+    FloatType sourceType, FloatType targetType);
 
 //===----------------------------------------------------------------------===//
 // Registration

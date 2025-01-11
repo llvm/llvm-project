@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
@@ -217,6 +218,34 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     reified.push_back(attr.getInt());
   }
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// Winter School
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyReduceFloatBitwidthPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  SmallVector<std::string> enabledPatternsStr;
+  for (Attribute attr : getEnabledPatterns()) {
+    enabledPatternsStr.push_back(cast<StringAttr>(attr).getValue().str());
+  }
+  FloatType sourceType = cast<FloatType>(getSourceType());
+  FloatType targetType = cast<FloatType>(getTargetType());
+  arith::populateTestReduceFloatBitwidthPatterns(patterns, enabledPatternsStr,
+                                                 sourceType, targetType);
+}
+
+LogicalResult transform::ApplyReduceFloatBitwidthPatternsOp::verify() {
+  for (Attribute attr : getEnabledPatterns())
+    if (!isa<StringAttr>(attr))
+      return emitOpError(
+          "expected 'enabled_patterns' to be an array of string attributes");
+  if (!isa<FloatType>(getSourceType()))
+    return emitOpError("expected float source type");
+  if (!isa<FloatType>(getTargetType()))
+    return emitOpError("expected float target type");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,0 +1,29 @@
+#include "mlir/Dialect/Arith/IR/ArithOps.td"
+
+Pattern TruncExtPattern {
+  let extf = op<arith.extf>(input: Value<type<"f16">>) -> (type<"f32">);
+  let truncf = op<arith.truncf>(extf) -> (type<"f16">);
+  replace truncf with input;
+}
+
+Pattern AddPattern {
+  let addf = op<arith.addf>(lhs: Value, rhs: Value) -> (type<"f32">);
+  rewrite addf with {
+    let lhs16 = op<arith.truncf>(lhs) -> (type<"f16">);
+    let rhs16 = op<arith.truncf>(rhs) -> (type<"f16">);
+    let addf16 = op<arith.addf>(lhs16, rhs16);
+    replace addf with op<arith.extf>(addf16) -> (type<"f32">);
+  };
+}
+
+Rewrite ConvertAttrF32ToF16(value: Attr) -> Attr;
+
+Pattern ConstantPattern {
+  let attr: Attr;
+  let constant = op<arith.constant> {value = attr} -> (type<"f32">);
+  rewrite constant with {
+    let attr16 = ConvertAttrF32ToF16(attr);
+    let const16 = op<arith.constant>() {value = attr16};
+    replace constant with op<arith.extf>(const16) -> (type<"f32">);
+  };
+}
