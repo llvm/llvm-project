@@ -105,22 +105,22 @@ entry:
 ; ======================================================================
 ; Functions with their addresses taken should not be cloned.
 ; `func_inc_with_address_taken` is used by pointer and thus remains unaltered.
-; CHECK-NOT: define dso_local i32 @__yk_opt_func_inc_with_address_taken
+; CHECK-NOT: define dso_local i32 @__yk_unopt_func_inc_with_address_taken
 
 ; ======================================================================
 ; Cloned functions - should have no trace calls
 ; ======================================================================
-; Check cloned function: __yk_opt_inc
-; CHECK-LABEL: define dso_local i32 @__yk_opt_inc(i32 %x)
+; Check cloned function: __yk_unopt_inc
+; CHECK-LABEL: define dso_local i32 @__yk_unopt_inc(i32 %x)
 ; CHECK-NEXT: entry:
-; CHECK-NOT: call void @yk_trace_basicblock({{.*}})
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
 ; CHECK-NEXT: %0 = add i32 %x, 1
 ; CHECK-NEXT: ret i32 %0
 
-; Check cloned function: __yk_opt_my_func
-; CHECK-LABEL: define dso_local i32 @__yk_opt_my_func(i32 %x)
+; Check cloned function: __yk_unopt_my_func
+; CHECK-LABEL: define dso_local i32 @__yk_unopt_my_func(i32 %x)
 ; CHECK-NEXT: entry:
-; CHECK-NOT: call void @__yk_trace_basicblock({{.*}})
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
 ; CHECK-NEXT: %0 = add i32 %x, 1
 ; CHECK-NEXT: %func_ptr = alloca ptr, align 8
 ; CHECK-NEXT: store ptr @func_inc_with_address_taken, ptr %func_ptr, align 8
@@ -128,10 +128,10 @@ entry:
 ; CHECK-NEXT: %2 = call i32 %1(i32 42)
 ; CHECK-NEXT: ret i32 %2
 
-; Check cloned function: __yk_opt_main
-; CHECK-LABEL: define dso_local i32 @__yk_opt_main()
+; Check cloned function: __yk_unopt_main
+; CHECK-LABEL: define dso_local i32 @__yk_unopt_main()
 ; CHECK-NEXT: entry:
-; CHECK-NOT: call void @__yk_trace_basicblock({{.*}})
-; CHECK-NEXT: %0 = call i32 @__yk_opt_my_func(i32 10)
+; CHECK-NEXT: call void @__yk_trace_basicblock({{.*}})
+; CHECK-NEXT: %0 = call i32 @__yk_unopt_my_func(i32 10)
 ; CHECK-NEXT: %1 = load i32, ptr @my_global
 ; CHECK-NEXT: %2 = call i32 (ptr, ...) @printf

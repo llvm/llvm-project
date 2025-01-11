@@ -47,7 +47,6 @@ struct YkBasicBlockTracer : public ModulePass {
     uint32_t FunctionIndex = 0;
     for (auto &F : M) {
       uint32_t BlockIndex = 0;
-
       for (auto &BB : F) {
         builder.SetInsertPoint(&*BB.getFirstInsertionPt());
 
@@ -67,11 +66,11 @@ struct YkBasicBlockTracer : public ModulePass {
           // if (F.getName().startswith(YK_CLONE_PREFIX)) {
           //   continue;
           // }
-          builder.CreateCall(DummyTraceFunc, {builder.getInt32(FunctionIndex),
-                                              builder.getInt32(BlockIndex)});
-        } else {
           builder.CreateCall(TraceFunc, {builder.getInt32(FunctionIndex),
                                          builder.getInt32(BlockIndex)});
+        } else {
+          builder.CreateCall(DummyTraceFunc, {builder.getInt32(FunctionIndex),
+                                              builder.getInt32(BlockIndex)});
         }
         assert(BlockIndex != UINT32_MAX &&
                "Expected BlockIndex to not overflow");
