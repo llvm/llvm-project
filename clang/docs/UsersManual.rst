@@ -3051,7 +3051,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
     $ llvm-profdata merge -o code.profdata yyy/zzz
 
   Using the resulting profile, we can generate a function order to pass to the
-  linker via `--symbol-ordering-file` for ELF or `-order_file` for Mach-O.
+  linker via ``--symbol-ordering-file`` for ELF or ``-order_file`` for Mach-O.
 
   .. code-block:: console
 
