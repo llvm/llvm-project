@@ -360,6 +360,11 @@ Changes in existing checks
   case of the literal suffix in fixes and fixing false positive for implicit
   conversion of comparison result in C23.
 
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check
+  by addressing a false positive in aggregate initialization through
+  parenthesized list.
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.
