@@ -43,6 +43,8 @@ std::optional<Constant<ExtentType>> AsConstantShape(
     FoldingContext &, const Shape &);
 Constant<ExtentType> AsConstantShape(const ConstantSubscripts &);
 
+// AsConstantExtents returns a constant shape.  It may contain
+// invalid negative extents; use HasNegativeExtent() to check.
 ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &);
 std::optional<ConstantSubscripts> AsConstantExtents(
     FoldingContext &, const Shape &);
@@ -53,6 +55,7 @@ inline std::optional<ConstantSubscripts> AsConstantExtents(
   }
   return std::nullopt;
 }
+
 Shape AsShape(const ConstantSubscripts &);
 std::optional<Shape> AsShape(const std::optional<ConstantSubscripts> &);
 
@@ -283,14 +286,18 @@ std::optional<Constant<ExtentType>> GetConstantShape(
   }
 }
 
+// Combines GetShape and AsConstantExtents; only returns valid shapes.
 template <typename A>
 std::optional<ConstantSubscripts> GetConstantExtents(
     FoldingContext &context, const A &x) {
   if (auto shape{GetShape(context, x, /*invariantOnly=*/true)}) {
-    return AsConstantExtents(context, *shape);
-  } else {
-    return std::nullopt;
+    if (auto extents{AsConstantExtents(context, *shape)}) {
+      if (!HasNegativeExtent(*extents)) {
+        return extents;
+      }
+    }
   }
+  return std::nullopt;
 }
 
 // Get shape that does not depends on callee scope symbols if the expression
