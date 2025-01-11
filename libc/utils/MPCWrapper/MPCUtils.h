@@ -215,7 +215,7 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
                                              ulp_tolerance, rounding)          \
   {                                                                            \
     MPCRND::ForceRoundingMode __r(rounding);                                   \
-    if (__r##i.success) {                                                      \
+    if (__r.success) {                                                         \
       EXPECT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
                                 rounding);                                     \
     }                                                                          \
@@ -252,7 +252,7 @@ get_mpc_matcher(InputType input, [[maybe_unused]] OutputType output,
                                              ulp_tolerance, rounding)          \
   {                                                                            \
     MPCRND::ForceRoundingMode __r(rounding);                                   \
-    if (__r##i.success) {                                                      \
+    if (__r.success) {                                                         \
       ASSERT_MPC_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,         \
                                 rounding);                                     \
     }                                                                          \
