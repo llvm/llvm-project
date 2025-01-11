@@ -530,16 +530,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       }
       Add &= Supported;
 
-      // Msan is not supported on Android
-      if ((Add & SanitizerKind::Memory) && TC.getTriple().isAndroid()) {
-        if (DiagnoseErrors) {
-          D.Diag(diag::warn_drv_unsupported_option_for_target)
-              << "-fsanitize=memory" << Triple.str();
-        }
-        DiagnosedKinds |= SanitizerKind::Memory;
-        Add &= ~SanitizerKind::Memory;
-      }
-
       // Test for -fno-rtti + explicit -fsanitizer=vptr before expanding groups
       // so we don't error out if -fno-rtti and -fsanitize=undefined were
       // passed.
