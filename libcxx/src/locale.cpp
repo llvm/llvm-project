@@ -707,69 +707,70 @@ constinit locale::id ctype<wchar_t>::id;
 ctype<wchar_t>::~ctype() {}
 
 bool ctype<wchar_t>::do_is(mask m, char_type c) const {
-  return isascii(c) ? (ctype<char>::classic_table()[c] & m) != 0 : false;
+  return std::__libcpp_isascii(c) ? (ctype<char>::classic_table()[c] & m) != 0 : false;
 }
 
 const wchar_t* ctype<wchar_t>::do_is(const char_type* low, const char_type* high, mask* vec) const {
   for (; low != high; ++low, ++vec)
-    *vec = static_cast<mask>(isascii(*low) ? ctype<char>::classic_table()[*low] : 0);
+    *vec = static_cast<mask>(std::__libcpp_isascii(*low) ? ctype<char>::classic_table()[*low] : 0);
   return low;
 }
 
 const wchar_t* ctype<wchar_t>::do_scan_is(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    if (isascii(*low) && (ctype<char>::classic_table()[*low] & m))
+    if (std::__libcpp_isascii(*low) && (ctype<char>::classic_table()[*low] & m))
       break;
   return low;
 }
 
 const wchar_t* ctype<wchar_t>::do_scan_not(mask m, const char_type* low, const char_type* high) const {
   for (; low != high; ++low)
-    if (!(isascii(*low) && (ctype<char>::classic_table()[*low] & m)))
+    if (!(std::__libcpp_isascii(*low) && (ctype<char>::classic_table()[*low] & m)))
       break;
   return low;
 }
 
 wchar_t ctype<wchar_t>::do_toupper(char_type c) const {
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? _DefaultRuneLocale.__mapupper[c] : c;
+  return std::__libcpp_isascii(c) ? _DefaultRuneLocale.__mapupper[c] : c;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-  return isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
+  return std::__libcpp_isascii(c) ? ctype<char>::__classic_upper_table()[c] : c;
 #  else
-  return (isascii(c) && __locale::__iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
+  return (std::__libcpp_isascii(c) && __locale::__iswlower(c, _LIBCPP_GET_C_LOCALE)) ? c - L'a' + L'A' : c;
 #  endif
 }
 
 const wchar_t* ctype<wchar_t>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? _DefaultRuneLocale.__mapupper[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? _DefaultRuneLocale.__mapupper[*low] : *low;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-    *low = isascii(*low) ? ctype<char>::__classic_upper_table()[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? ctype<char>::__classic_upper_table()[*low] : *low;
 #  else
-    *low = (isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? (*low - L'a' + L'A') : *low;
+    *low =
+        (std::__libcpp_isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? (*low - L'a' + L'A') : *low;
 #  endif
   return low;
 }
 
 wchar_t ctype<wchar_t>::do_tolower(char_type c) const {
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? _DefaultRuneLocale.__maplower[c] : c;
+  return std::__libcpp_isascii(c) ? _DefaultRuneLocale.__maplower[c] : c;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-  return isascii(c) ? ctype<char>::__classic_lower_table()[c] : c;
+  return std::__libcpp_isascii(c) ? ctype<char>::__classic_lower_table()[c] : c;
 #  else
-  return (isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - L'A' + 'a' : c;
+  return (std::__libcpp_isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - L'A' + 'a' : c;
 #  endif
 }
 
 const wchar_t* ctype<wchar_t>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #  ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? _DefaultRuneLocale.__maplower[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? _DefaultRuneLocale.__maplower[*low] : *low;
 #  elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) || defined(__MVS__)
-    *low = isascii(*low) ? ctype<char>::__classic_lower_table()[*low] : *low;
+    *low = std::__libcpp_isascii(*low) ? ctype<char>::__classic_lower_table()[*low] : *low;
 #  else
-    *low = (isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - L'A' + L'a' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - L'A' + L'a' : *low;
 #  endif
   return low;
 }
@@ -783,14 +784,14 @@ const char* ctype<wchar_t>::do_widen(const char* low, const char* high, char_typ
 }
 
 char ctype<wchar_t>::do_narrow(char_type c, char dfault) const {
-  if (isascii(c))
+  if (std::__libcpp_isascii(c))
     return static_cast<char>(c);
   return dfault;
 }
 
 const wchar_t* ctype<wchar_t>::do_narrow(const char_type* low, const char_type* high, char dfault, char* dest) const {
   for (; low != high; ++low, ++dest)
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *dest = static_cast<char>(*low);
     else
       *dest = dfault;
@@ -816,52 +817,56 @@ ctype<char>::~ctype() {
 
 char ctype<char>::do_toupper(char_type c) const {
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
   return static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-  return isascii(c) ? static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(c)]) : c;
 #else
-  return (isascii(c) && __locale::__islower(c, _LIBCPP_GET_C_LOCALE)) ? c - 'a' + 'A' : c;
+  return (std::__libcpp_isascii(c) && __locale::__islower(c, _LIBCPP_GET_C_LOCALE)) ? c - 'a' + 'A' : c;
 #endif
 }
 
 const char* ctype<char>::do_toupper(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low)
+             ? static_cast<char>(_DefaultRuneLocale.__mapupper[static_cast<ptrdiff_t>(*low)])
+             : *low;
 #elif defined(__NetBSD__)
     *low = static_cast<char>(__classic_upper_table()[static_cast<unsigned char>(*low)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-    *low = isascii(*low) ? static_cast<char>(__classic_upper_table()[static_cast<size_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low) ? static_cast<char>(__classic_upper_table()[static_cast<size_t>(*low)]) : *low;
 #else
-    *low = (isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'a' + 'A' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__islower(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'a' + 'A' : *low;
 #endif
   return low;
 }
 
 char ctype<char>::do_tolower(char_type c) const {
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-  return isascii(c) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(c)]) : c;
 #elif defined(__NetBSD__)
   return static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(c)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-  return isascii(c) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(c)]) : c;
+  return std::__libcpp_isascii(c) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(c)]) : c;
 #else
-  return (isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - 'A' + 'a' : c;
+  return (std::__libcpp_isascii(c) && __locale::__isupper(c, _LIBCPP_GET_C_LOCALE)) ? c - 'A' + 'a' : c;
 #endif
 }
 
 const char* ctype<char>::do_tolower(char_type* low, const char_type* high) const {
   for (; low != high; ++low)
 #ifdef _LIBCPP_HAS_DEFAULTRUNELOCALE
-    *low = isascii(*low) ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low)
+             ? static_cast<char>(_DefaultRuneLocale.__maplower[static_cast<ptrdiff_t>(*low)])
+             : *low;
 #elif defined(__NetBSD__)
     *low = static_cast<char>(__classic_lower_table()[static_cast<unsigned char>(*low)]);
 #elif defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__MVS__)
-    *low = isascii(*low) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(*low)]) : *low;
+    *low = std::__libcpp_isascii(*low) ? static_cast<char>(__classic_lower_table()[static_cast<size_t>(*low)]) : *low;
 #else
-    *low = (isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'A' + 'a' : *low;
+    *low = (std::__libcpp_isascii(*low) && __locale::__isupper(*low, _LIBCPP_GET_C_LOCALE)) ? *low - 'A' + 'a' : *low;
 #endif
   return low;
 }
@@ -875,14 +880,14 @@ const char* ctype<char>::do_widen(const char* low, const char* high, char_type* 
 }
 
 char ctype<char>::do_narrow(char_type c, char dfault) const {
-  if (isascii(c))
+  if (std::__libcpp_isascii(c))
     return static_cast<char>(c);
   return dfault;
 }
 
 const char* ctype<char>::do_narrow(const char_type* low, const char_type* high, char dfault, char* dest) const {
   for (; low != high; ++low, ++dest)
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *dest = *low;
     else
       *dest = dfault;
@@ -1140,7 +1145,7 @@ bool ctype_byname<wchar_t>::do_is(mask m, char_type c) const {
 
 const wchar_t* ctype_byname<wchar_t>::do_is(const char_type* low, const char_type* high, mask* vec) const {
   for (; low != high; ++low, ++vec) {
-    if (isascii(*low))
+    if (std::__libcpp_isascii(*low))
       *vec = static_cast<mask>(ctype<char>::classic_table()[*low]);
     else {
       *vec      = 0;

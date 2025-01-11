@@ -45,8 +45,7 @@ class AMDGPUPreLegalizerCombinerImpl : public Combiner {
 protected:
   const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig;
   const GCNSubtarget &STI;
-  // TODO: Make CombinerHelper methods const.
-  mutable AMDGPUCombinerHelper Helper;
+  const AMDGPUCombinerHelper Helper;
 
 public:
   AMDGPUPreLegalizerCombinerImpl(
