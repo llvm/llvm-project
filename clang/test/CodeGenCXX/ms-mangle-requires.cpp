@@ -14,7 +14,7 @@ concept is_derived_from_optional =
     requires(Tp param) { []<class Up>(Up) {}(param); };
 
 template <class Tp, class Up>
-  requires(is_derived_from_optional<Up>)
+  requires(is_derived_from_optional<Up> && []<class W>(W) { return true; }(Up()))
 compare_three_way_result_t<Tp, Up> operator<=>(Tp, Up);
 
 struct RuntimeModeArgs {

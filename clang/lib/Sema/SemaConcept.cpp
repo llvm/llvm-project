@@ -442,6 +442,9 @@ static ExprResult calculateConstraintSatisfaction(
     ConstraintSatisfaction &Satisfaction;
 
     ExprResult EvaluateAtomicConstraint(const Expr *AtomicExpr) const {
+      EnterExpressionEvaluationContext UnevaluatedSubstitution(
+          S, Sema::ExpressionEvaluationContext::Unevaluated,
+          Sema::ReuseLambdaContextDecl);
       EnterExpressionEvaluationContext ConstantEvaluated(
           S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
           Sema::ReuseLambdaContextDecl);
