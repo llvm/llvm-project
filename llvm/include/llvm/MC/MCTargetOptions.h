@@ -112,6 +112,8 @@ public:
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
+  bool PgoInstrumentation = false;
+  bool PgoUse = false;
   MCTargetOptions();
 
   /// getABIName - If this returns a non-empty string this represents the

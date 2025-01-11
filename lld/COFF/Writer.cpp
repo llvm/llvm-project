@@ -77,6 +77,12 @@ static unsigned char dosProgram[] = {
 static_assert(sizeof(dosProgram) % 8 == 0,
               "DOSProgram size must be multiple of 8");
 
+static char ltcg[] = "LTCG";
+static char pgi[] = "PGI";
+static char pgu[] = "PGU";
+static char pgiSectionName[] = ".pgi";
+static char pguSectionName[] = ".pgu";
+
 static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
 static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
@@ -182,6 +188,23 @@ public:
   void writeTo(uint8_t *buf) const override { write32le(buf, characteristics); }
 
   uint32_t characteristics = 0;
+};
+
+class DebugDirStringChunk : public NonSectionChunk {
+public:
+  DebugDirStringChunk(std::string str) : str(str.begin(), str.end()) {
+    while (this->str.size() % 4 != 0)
+      this->str.push_back(0);
+  }
+  size_t getSize() const override { return str.size(); }
+
+  void writeTo(uint8_t *b) const override {
+    char *p = reinterpret_cast<char *>(b);
+    auto strReverse = str;
+    std::reverse(strReverse.begin(), strReverse.end());
+    memcpy(p, strReverse.data(), strReverse.size());
+  }
+  std::vector<char> str;
 };
 
 // PartialSection represents a group of chunks that contribute to an
@@ -1176,6 +1199,22 @@ void Writer::createMiscChunks() {
   llvm::TimeTraceScope timeScope("Misc chunks");
   Configuration *config = &ctx.config;
 
+  auto searchForPgoMagicSection = [this](char sectionName[]) {
+    for (auto *obj : ctx.objFileInstances) {
+      for (auto &chunk : obj->getChunks()) {
+        if (chunk->kind() == Chunk::SectionKind &&
+            chunk->getSectionName() == sectionName) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  bool writePgi = searchForPgoMagicSection(pgiSectionName);
+  bool writePgu = !writePgi && searchForPgoMagicSection(pguSectionName);
+  bool writeLTO = ctx.bitcodeFileInstances.size();
+
   for (MergeChunk *p : ctx.mergeChunkInstances) {
     if (p) {
       p->finalizeContents();
@@ -1192,7 +1231,7 @@ void Writer::createMiscChunks() {
   // Create Debug Information Chunks
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || writePgi || writePgu || writeLTO) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1215,6 +1254,19 @@ void Writer::createMiscChunks() {
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
                               make<ExtendedDllCharacteristicsChunk>(
                                   IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  }
+
+  if (writeLTO) {
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO,
+                              make<DebugDirStringChunk>(ltcg));
+  }
+
+  if (writePgi) {
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO,
+                              make<DebugDirStringChunk>(pgi));
+  } else if (writePgu) {
+    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_POGO,
+                              make<DebugDirStringChunk>(pgu));
   }
 
   // Align and add each chunk referenced by the debug data directory.
