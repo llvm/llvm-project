@@ -112,10 +112,10 @@ public:
   ///   style specific regions.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
-  /// Get an unsorted collection of the threads to save
+  /// Get an unsorted copy of all threads to save
   ///
   /// \returns
-  ///   An unsorted collection with zero or more threads.
+  ///   An unsorted copy of all threads to save.
   SBThreadCollection GetThreadsToSave() const;
 
   /// Reset all options.
