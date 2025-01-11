@@ -21,6 +21,9 @@
 #ifdef __clang__
 #if (__clang_major__ >= 11) &&                                                 \
     (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__))
+// Use _Complex __float128 type. clang uses __SIZEOF_FLOAT128__ or __FLOAT128__
+// macro to notify the availability of __float128 type:
+// https://reviews.llvm.org/D15120
 #define LIBC_TYPES_HAS_CFLOAT128
 typedef _Complex __float128 cfloat128;
 #endif
