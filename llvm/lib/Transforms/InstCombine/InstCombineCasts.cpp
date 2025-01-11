@@ -832,7 +832,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
       Value *X, *Y;
-      if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
+      if (match(Src, m_XorLike(m_Value(X), m_Value(Y))))
         return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
     }
   }
@@ -1280,7 +1280,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
-  if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
+  if (match(Src, m_OneUse(m_XorLike(m_Value(And), m_Constant(C)))) &&
       match(And, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Specific(C)))) &&
       X->getType() == DestTy) {
     Value *ZC = Builder.CreateZExt(C, DestTy);

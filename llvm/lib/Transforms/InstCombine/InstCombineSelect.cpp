@@ -1141,7 +1141,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
 
   Value *Ctlz;
   if (!match(FalseVal,
-             m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
+             m_XorLike(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
     return nullptr;
 
   if (!match(Ctlz, m_Intrinsic<Intrinsic::ctlz>()))

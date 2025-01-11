@@ -207,7 +207,7 @@ static bool haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
   // for constant Y.
   Value *Y;
   if (match(RHS,
-            m_c_Xor(m_c_And(m_Specific(LHS), m_Value(Y)), m_Deferred(Y))) &&
+            m_c_XorLike(m_c_And(m_Specific(LHS), m_Value(Y)), m_Deferred(Y))) &&
       isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT) &&
       isGuaranteedNotToBeUndef(Y, SQ.AC, SQ.CxtI, SQ.DT))
     return true;
@@ -690,7 +690,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       if (match(Y, m_APInt(Mask)))
         Known.One |= *C & ~*Mask;
       // assume(V ^ Mask = C)
-    } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
+    } else if (match(LHS, m_XorLike(m_V, m_APInt(Mask))) &&
                match(RHS, m_APInt(C))) {
       // Equivalent to assume(V == Mask ^ C)
       Known = Known.unionWith(KnownBits::makeConstant(*C ^ *Mask));
@@ -954,7 +954,7 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
     // Demanded) == (xor(x, x-1) & Demanded). Extend the xor pattern
     // to use arbitrary C if xor(x, x-C) as the same as xor(x, x-1).
     if (HasKnownOne &&
-        match(I, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())))) {
+        match(I, m_c_XorLike(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())))) {
       const KnownBits &XBits = I->getOperand(0) == X ? KnownLHS : KnownRHS;
       KnownOut = XBits.blsmsk();
     }
