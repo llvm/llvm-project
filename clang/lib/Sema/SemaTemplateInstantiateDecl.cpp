@@ -5845,7 +5845,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       return Context.isUnevaluated() || Context.isImmediateFunctionContext();
     });
   }();
-  if (ShouldSkipCG) {
+  if (!ShouldSkipCG) {
     DeclGroupRef DG(Function);
     Consumer.HandleTopLevelDecl(DG);
   }
