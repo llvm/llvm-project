@@ -1,4 +1,4 @@
-//===--- PGOCtxProfJSONReader.h - JSON format  ------------------*- C++ -*-===//
+//===--- llvm-ctxprof-util - utilities for ctxprof --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,19 +8,15 @@
 ///
 /// \file
 ///
-/// JSON format for the contextual profile for testing.
+/// Utilities for manipulating contextual profiles
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/ProfileData/CtxInstrContextNode.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 

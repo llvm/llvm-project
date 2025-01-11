@@ -135,11 +135,15 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::aarch64_32:
     if (Triple.isOSDarwin())
       return std::make_unique<DarwinAArch64TargetInfo>(Triple, Opts);
+    else if (Triple.isAppleMachO())
+      return std::make_unique<AppleMachOAArch64TargetInfo>(Triple, Opts);
 
     return nullptr;
   case llvm::Triple::aarch64:
     if (Triple.isOSDarwin())
       return std::make_unique<DarwinAArch64TargetInfo>(Triple, Opts);
+    else if (Triple.isAppleMachO())
+      return std::make_unique<AppleMachOAArch64TargetInfo>(Triple, Opts);
 
     switch (os) {
     case llvm::Triple::FreeBSD:
@@ -243,6 +247,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::thumbeb:
     if (Triple.isOSDarwin())
       return std::make_unique<DarwinARMTargetInfo>(Triple, Opts);
+    else if (Triple.isAppleMachO())
+      return std::make_unique<AppleMachOARMTargetInfo>(Triple, Opts);
 
     switch (os) {
     case llvm::Triple::Linux:
@@ -531,6 +537,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::x86:
     if (Triple.isOSDarwin())
       return std::make_unique<DarwinI386TargetInfo>(Triple, Opts);
+    else if (Triple.isAppleMachO())
+      return std::make_unique<AppleMachOI386TargetInfo>(Triple, Opts);
 
     switch (os) {
     case llvm::Triple::Linux: {
