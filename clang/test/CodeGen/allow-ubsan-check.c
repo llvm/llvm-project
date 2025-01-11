@@ -181,8 +181,8 @@ void use(double*);
 // CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    ret double [[TMP2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR6]]
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    call void @__ubsan_handle_local_out_of_bounds_abort() #[[ATTR6]], !nosanitize [[META2]]
+// CHECK-NEXT:    unreachable, !nosanitize [[META2]]
 //
 // TR-LABEL: define dso_local double @lbounds(
 // TR-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -198,8 +198,8 @@ void use(double*);
 // TR-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
 // TR-NEXT:    ret double [[TMP2]]
 // TR:       [[TRAP]]:
-// TR-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR5]]
-// TR-NEXT:    unreachable
+// TR-NEXT:    call void @llvm.ubsantrap(i8 3) #[[ATTR5]], !nosanitize [[META2]]
+// TR-NEXT:    unreachable, !nosanitize [[META2]]
 //
 // REC-LABEL: define dso_local double @lbounds(
 // REC-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -215,8 +215,8 @@ void use(double*);
 // REC-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
 // REC-NEXT:    ret double [[TMP2]]
 // REC:       [[TRAP]]:
-// REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR6]]
-// REC-NEXT:    br label %[[BB1]]
+// REC-NEXT:    call void @__ubsan_handle_local_out_of_bounds() #[[ATTR6]], !nosanitize [[META2]]
+// REC-NEXT:    br label %[[BB1]], !nosanitize [[META2]]
 //
 double lbounds(int b, int i) {
   double a[b];
