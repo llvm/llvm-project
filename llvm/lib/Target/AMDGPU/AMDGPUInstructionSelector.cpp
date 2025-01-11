@@ -2300,7 +2300,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_join:
-  case Intrinsic::amdgcn_s_wakeup_barrier:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -3457,11 +3456,8 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
     return Register();
 
 #if LLPC_BUILD_NPI
-  // Add changes to whole macro so ifdef insertion doesn't insert ifdef
-  // inside macro
-  // TODO: remove this when upstreamed
-  assert(Def->getNumOperands() == 3 &&                                  // w/a
-         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64)); // w/a
+  assert(Def->getNumOperands() == 3 &&
+         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
   if (mi_match(Def->getOperand(2).getReg(), *MRI, m_ZeroInt())) {
 #else /* LLPC_BUILD_NPI */
   assert(Def->getNumOperands() == 3 &&
@@ -3923,13 +3919,7 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (NumOpcodes < 2 || Src.empty())
     return false;
 
-  // For a uniform case threshold should be higher to account for moves between
-  // VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be in SGPRs
-  // and a readtfirstlane after.
-  if (NumOpcodes < 4)
-    return false;
-
-  bool IsB32 = MRI->getType(DstReg) == LLT::scalar(32);
+  const bool IsB32 = MRI->getType(DstReg) == LLT::scalar(32);
   if (NumOpcodes == 2 && IsB32) {
     // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
     // asm more readable. This cannot be modeled with AddedComplexity because
@@ -3938,6 +3928,11 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
         mi_match(MI, *MRI, m_GOr(m_GOr(m_Reg(), m_Reg()), m_Reg())) ||
         mi_match(MI, *MRI, m_GOr(m_GAnd(m_Reg(), m_Reg()), m_Reg())))
       return false;
+  } else if (NumOpcodes < 4) {
+    // For a uniform case threshold should be higher to account for moves
+    // between VGPRs and SGPRs. It needs one operand in a VGPR, rest two can be
+    // in SGPRs and a readtfirstlane after.
+    return false;
   }
 
   unsigned Opc = IsB32 ? AMDGPU::V_BITOP3_B32_e64 : AMDGPU::V_BITOP3_B16_e64;
@@ -6307,8 +6302,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
-    case Intrinsic::amdgcn_s_wakeup_barrier:
-      return AMDGPU::S_WAKEUP_BARRIER_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -6318,8 +6311,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
-    case Intrinsic::amdgcn_s_wakeup_barrier:
-      return AMDGPU::S_WAKEUP_BARRIER_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };

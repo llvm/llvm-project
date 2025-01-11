@@ -72,6 +72,7 @@ FunctionPass *createAMDGPUMarkPromotablePrivateLegacyPass();
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 #if LLPC_BUILD_NPI
 FunctionPass *createAMDGPUIdxRegAllocPass();
 FunctionPass *createAMDGPUPrivateObjectVGPRsPass();
@@ -281,6 +282,9 @@ extern char &AMDGPURegPressAnalysisID;
 
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
+
+void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
 #if LLPC_BUILD_NPI
 void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);

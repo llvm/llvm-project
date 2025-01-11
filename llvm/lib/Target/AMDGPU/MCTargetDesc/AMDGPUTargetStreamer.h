@@ -103,12 +103,6 @@ public:
   /// \returns True on success, false on failure.
   virtual bool EmitCodeEnd(const MCSubtargetInfo &STI) { return true; }
 
-  /// \returns True on success, false on failure.
-  virtual bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                        bool TrapEnabled) {
-    return true;
-  }
-
   virtual void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
                              const AMDGPU::MCKernelDescriptor &KernelDescriptor,
@@ -184,10 +178,6 @@ public:
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
 
-  /// \returns True on success, false on failure.
-  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                bool TrapEnabled) override;
-
   void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,
                              const AMDGPU::MCKernelDescriptor &KernelDescriptor,
@@ -240,10 +230,6 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
-
-  /// \returns True on success, false on failure.
-  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI,
-                                bool TrapEnabled) override;
 
   void
   EmitAmdhsaKernelDescriptor(const MCSubtargetInfo &STI, StringRef KernelName,

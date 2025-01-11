@@ -1,6 +1,6 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 
 ; RUN: opt -passes='module-inline,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything %t/module.ll -S \
 ; RUN:   -use-ctx-profile=%t/profile.ctxprofdata -ctx-profile-printer-level=json \
@@ -94,22 +94,21 @@ define i32 @b() !guid !2 {
 !0 = !{i64 1000}
 !1 = !{i64 1001}
 !2 = !{i64 1002}
-;--- profile.json
-[
-  { "Guid": 1000,
-    "Counters": [10, 2, 8],
-    "Callsites": [
-      [ { "Guid": 1001,
-          "Counters": [2, 100],
-          "Callsites": [[{"Guid": 1002, "Counters": [100]}]]}
-      ],
-      [ { "Guid": 1001,
-          "Counters": [8, 500],
-          "Callsites": [[{"Guid": 1002, "Counters": [500]}]]}
-      ]
-    ]
-  }
-]
+;--- profile.yaml
+- Guid: 1000
+  Counters: [10, 2, 8]
+  Callsites:  -
+                - Guid: 1001
+                  Counters: [2, 100]
+                  Callsites:  -
+                                - Guid: 1002
+                                  Counters: [100]
+              -
+                - Guid: 1001
+                  Counters: [8, 500]
+                  Callsites:  -
+                                - Guid: 1002
+                                  Counters: [500]
 ;--- expected.json
 [
   { "Guid": 1000,

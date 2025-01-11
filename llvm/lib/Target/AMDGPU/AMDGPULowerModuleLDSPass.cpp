@@ -991,6 +991,7 @@ public:
       unsigned BarId = NumAbsolutes[BarrierScope] + 1;
       unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
       NumAbsolutes[BarrierScope] += BarCnt;
+
 #else /* LLPC_BUILD_NPI */
       int BarId = ++NumAbsolutes;
       unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;

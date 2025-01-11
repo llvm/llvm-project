@@ -207,12 +207,6 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
-
-  if (MFI.getNumKernargPreloadedSGPRs() > 0) {
-    assert(AMDGPU::hasKernargPreload(STM));
-    getTargetStreamer()->EmitKernargPreloadHeader(*getGlobalSTI(),
-                                                  STM.isAmdHsaOS());
-  }
 }
 
 void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
@@ -877,7 +871,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 #if LLPC_BUILD_NPI
     assert(STM.hasGFX90AInsts() || AMDGPU::isGFX1250Plus(STM) ||
            (CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
-            static_cast<uint64_t>(PGMRSrc3) == 0)); // Dummy comment
+            static_cast<uint64_t>(PGMRSrc3) == 0));
 #else /* LLPC_BUILD_NPI */
     assert(STM.hasGFX90AInsts() ||
            (CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(
