@@ -108,22 +108,19 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
-  the configuration options of the `Clang Static Analyzer Checks
-  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
-
-- Improved :program:`clang-tidy` by accepting parameters file in command line.
-
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
-- Improved :program:`clang-tidy` by fixing incorrect configuration file path
-  resolving when file paths contain ``..``.
+- Improved :program:`clang-tidy`:
 
-- Removed :program:`clang-tidy`'s global options for most of checks. All options
-  are changed to local options except `IncludeStyle`, `StrictMode` and
-  `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
-  and will be removed in further releases.
+  - add support for `--verify-config` flag to check the configuration options of
+    the `Clang Static Analyzer Checks <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
+  - accept parameters file in command line.
+  - fix incorrect configuration file path resolving when file paths contain ``..``.
+  - remove global options for most of checks. All options are changed to local
+    options except `IncludeStyle`, `StrictMode` and `IgnoreMacros`. Global scoped
+    `StrictMode` and `IgnoreMacros` are deprecated and will be removed in further
+    releases.
 
 .. csv-table::
   :header: "Check", "Options removed from global option"
