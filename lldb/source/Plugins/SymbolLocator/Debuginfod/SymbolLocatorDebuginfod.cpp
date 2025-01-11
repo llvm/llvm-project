@@ -146,9 +146,8 @@ static llvm::StringRef getFileName(const ModuleSpec &module_spec,
                                    std::string url_path) {
   // Check if the URL path requests an executable file or a symbol file
   bool is_executable = url_path.find("debuginfo") == std::string::npos;
-  if (is_executable) {
+  if (is_executable)
     return module_spec.GetFileSpec().GetFilename().GetStringRef();
-  }
   llvm::StringRef symbol_file =
       module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
   // Remove llvmcache- prefix and hash, keep origin file name
@@ -191,9 +190,8 @@ GetFileForModule(const ModuleSpec &module_spec,
   std::string url_path = UrlBuilder(build_id);
   llvm::StringRef file_name = getFileName(module_spec, url_path);
   std::string cache_file_name = llvm::toHex(build_id, true);
-  if (!file_name.empty()) {
+  if (!file_name.empty())
     cache_file_name += "-" + file_name.str();
-  }
   llvm::Expected<std::string> result = llvm::getCachedOrDownloadArtifact(
       cache_file_name, url_path, cache_path, debuginfod_urls, timeout,
       pruning_policy);
