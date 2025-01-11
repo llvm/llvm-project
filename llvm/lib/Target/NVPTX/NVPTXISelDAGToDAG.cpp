@@ -2479,14 +2479,15 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 }
 
 // symbol+offset
-bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRsi_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (isAddLike(Addr)) {
     if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
       SDValue base = Addr.getOperand(0);
       if (SelectDirectAddr(base, Base)) {
-        Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                           mvt);
+        Offset =
+            CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode), VT);
         return true;
       }
     }
@@ -2507,11 +2508,12 @@ bool NVPTXDAGToDAGISel::SelectADDRsi64(SDNode *OpNode, SDValue Addr,
 }
 
 // register+offset
-bool NVPTXDAGToDAGISel::SelectADDRri_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRri_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), mvt);
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), VT);
     return true;
   }
   if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
@@ -2526,7 +2528,7 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       if (FrameIndexSDNode *FIN =
               dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
         // Constant offset from frame ref.
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       else
         Base = Addr.getOperand(0);
 
