@@ -2336,9 +2336,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                             LLVMDialect::getDialectNamespace()));
   assert(llvm::is_contained(context->getAvailableDialects(),
                             DLTIDialect::getDialectNamespace()));
-  if (loadAllDialects) {
+  if (loadAllDialects)
     context->loadAllAvailableDialects();
-  }
   OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));
