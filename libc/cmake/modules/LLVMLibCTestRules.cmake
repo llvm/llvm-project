@@ -60,11 +60,6 @@ endfunction()
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
 
-  list(APPEND compile_options "-fpie")
-  list(APPEND compile_options "-ffreestanding")
-  list(APPEND compile_options "-fno-exceptions")
-  list(APPEND compile_options "-fno-rtti")
-
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     list(APPEND compile_options
