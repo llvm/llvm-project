@@ -51,6 +51,8 @@ struct YkBasicBlockTracer : public ModulePass {
         builder.SetInsertPoint(&*BB.getFirstInsertionPt());
 
         if (F.getName().startswith(YK_CLONE_PREFIX)) {
+          // Add dummy tracing calls to unoptimised functions
+          // TODO: remove these calls once we get rid of the error:
           // #0  core::sync::atomic::AtomicUsize::fetch_sub (self=0xfffffffffffffff0) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/sync/atomic.rs:2720
           // #1  alloc::sync::{impl#37}::drop<lock_api::mutex::Mutex<parking_lot::raw_mutex::RawMutex, ykrt::location::HotLocation>, alloc::alloc::Global> (self=0x7fffffffd2d0) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/sync.rs:2529
           // #2  0x00007ffff79fa5bb in core::ptr::drop_in_place<alloc::sync::Arc<lock_api::mutex::Mutex<parking_lot::raw_mutex::RawMutex, ykrt::location::HotLocation>, alloc::alloc::Global>> () at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:521
@@ -69,6 +71,7 @@ struct YkBasicBlockTracer : public ModulePass {
           builder.CreateCall(TraceFunc, {builder.getInt32(FunctionIndex),
                                          builder.getInt32(BlockIndex)});
         } else {
+          // Add tracing calls to unoptimised functions
           builder.CreateCall(DummyTraceFunc, {builder.getInt32(FunctionIndex),
                                               builder.getInt32(BlockIndex)});
         }
