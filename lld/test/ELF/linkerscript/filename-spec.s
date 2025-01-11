@@ -73,7 +73,7 @@
 # RUN: ld.lld -o 11 -T 11.t --whole-archive 'lib1().a' dir2/lib2.a
 # RUN: llvm-objdump -s 11 | FileCheck --check-prefix=SECONDFIRST %s
 
-## Verify that matching files excluded from an archive doesn't match files within one
+## Verify that matching files excluded from an archive will not match files within one.
 # RUN: echo 'SECTIONS{.foo :{ KEEP(:*x.o(.foo)) KEEP(*y.o(.foo)) KEEP(*x.o(.foo)) }}' > 12.t
 # RUN: ld.lld -o 12 -T 12.t --whole-archive combined.a
 # RUN: llvm-objdump -s 12 | FileCheck --check-prefix=SECONDFIRST %s
