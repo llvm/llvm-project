@@ -9387,12 +9387,11 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
 /// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
 /// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool>
-isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
-                              CmpInst::Predicate RPred) {
-  if (CmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
+static std::optional<bool> isImpliedCondMatchingOperands(CmpPredicate LPred,
+                                                         CmpPredicate RPred) {
+  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
     return true;
-  if (CmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
+  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
     return false;
 
   return std::nullopt;
