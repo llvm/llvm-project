@@ -1014,7 +1014,8 @@ define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
 define i16 @fshl_i16_shl(i16 %x, i16 %y) {
 ; CHECK-LABEL: @fshl_i16_shl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 0, i16 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i16 [[Y:%.*]], 15
+; CHECK-NEXT:    [[RES:%.*]] = shl i16 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
 entry:
@@ -1025,7 +1026,8 @@ entry:
 define i32 @fshl_i32_shl(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_i32_shl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 0, i32 [[Y:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[Y:%.*]], 31
+; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -1036,7 +1038,8 @@ entry:
 define <2 x i16> @fshl_vi16_shl(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @fshl_vi16_shl(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> zeroinitializer, <2 x i16> [[Y:%.*]])
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i16> [[Y:%.*]], splat (i16 15)
+; CHECK-NEXT:    [[RES:%.*]] = shl <2 x i16> [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <2 x i16> [[RES]]
 ;
 entry:
