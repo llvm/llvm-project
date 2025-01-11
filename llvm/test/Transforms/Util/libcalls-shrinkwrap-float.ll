@@ -334,6 +334,8 @@ entry:
 ; CHECK-NEXT: %call_11 = call float @log1pf(float %value)
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
+
+  %call_12 = call i32 @ilogb(float %value) strictfp
   ret void
 }
 

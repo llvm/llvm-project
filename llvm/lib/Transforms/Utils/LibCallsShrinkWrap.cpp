@@ -246,7 +246,6 @@ bool LibCallsShrinkWrap::performCallErrors(CallInst *CI,
   case LibFunc_logb:   // Same as log
   case LibFunc_logbf:  // Same as log
   case LibFunc_logbl:  // Same as log
-  case LibFunc_ilogb:  // Same as log
   {
     ++NumWrappedOneCond;
     Cond = createCond(CI, CmpInst::FCMP_OLE, 0.0f);
