@@ -196,8 +196,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 
   if (const FieldDecl *FD = E->getSourceBitField())
     if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
-        !FD->getBitWidth()->isValueDependent() &&
-        FD->getBitWidthValue(FD->getASTContext()) == 1)
+        !FD->getBitWidth()->isValueDependent() && FD->getBitWidthValue() == 1)
       return true;
 
   return false;
