@@ -2985,13 +2985,11 @@ bool TargetLowering::SimplifyDemandedBits(
   if (!isTargetCanonicalConstantNode(Op) &&
       DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
-    const SDNode *N = Op.getNode();
-    for (SDNode *Op :
-         llvm::make_range(SDNodeIterator::begin(N), SDNodeIterator::end(N))) {
-      if (auto *C = dyn_cast<ConstantSDNode>(Op))
-        if (C->isOpaque())
-          return false;
-    }
+    if (llvm::any_of(Op->ops(), [](SDValue V) {
+          auto *C = dyn_cast<ConstantSDNode>(V);
+          return C && C->isOpaque();
+        }))
+      return false;
     if (VT.isInteger())
       return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
     if (VT.isFloatingPoint())

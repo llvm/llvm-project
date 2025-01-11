@@ -547,7 +547,7 @@ define i32 @f4() !guid !3 {
     raw_fd_stream Out(ProfileFile.path(), EC);
     ASSERT_FALSE(EC);
     // "False" means no error.
-    ASSERT_FALSE(llvm::createCtxProfFromJSON(Profile, Out));
+    ASSERT_FALSE(llvm::createCtxProfFromYAML(Profile, Out));
   }
 
   ModuleAnalysisManager MAM;

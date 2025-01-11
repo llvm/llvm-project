@@ -564,18 +564,4 @@ void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
-
-  VersionTuple OsVersion = getTriple().getOSVersion();
-  bool UseInitArrayDefault =
-      OsVersion >= VersionTuple(9) || OsVersion.getMajor() == 0 ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getArch() == llvm::Triple::aarch64_be ||
-      getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::armeb ||
-      getTriple().getArch() == llvm::Triple::riscv32 ||
-      getTriple().getArch() == llvm::Triple::riscv64;
-
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, UseInitArrayDefault))
-    CC1Args.push_back("-fno-use-init-array");
 }

@@ -113,10 +113,10 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID& profile, const Stmt *S,
-                      QualType T, unsigned Count, const LocationContext *LCtx,
+  static void Profile(llvm::FoldingSetNodeID &profile, const Stmt *S,
+                      const LocationContext *LCtx, QualType T, unsigned Count,
                       const void *SymbolTag) {
-    profile.AddInteger((unsigned) SymbolConjuredKind);
+    profile.AddInteger((unsigned)SymbolConjuredKind);
     profile.AddPointer(S);
     profile.AddPointer(LCtx);
     profile.Add(T);
@@ -125,7 +125,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, S, T, Count, LCtx, SymbolTag);
+    Profile(profile, S, LCtx, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -224,6 +224,8 @@ class SymbolMetadata : public SymbolData {
   const Stmt *S;
   QualType T;
   const LocationContext *LCtx;
+  /// Count can be used to differentiate regions corresponding to
+  /// different loop iterations, thus, making the symbol path-dependent.
   unsigned Count;
   const void *Tag;
 
@@ -525,14 +527,18 @@ public:
 
   static bool canSymbolicate(QualType T);
 
-  /// Make a unique symbol for MemRegion R according to its kind.
-  const SymbolRegionValue* getRegionValueSymbol(const TypedValueRegion* R);
+  /// Create or retrieve a SymExpr of type \p SymExprT for the given arguments.
+  /// Use the arguments to check for an existing SymExpr and return it,
+  /// otherwise, create a new one and keep a pointer to it to avoid duplicates.
+  template <typename SymExprT, typename... Args>
+  const SymExprT *acquire(Args &&...args);
 
-  const SymbolConjured* conjureSymbol(const Stmt *E,
-                                      const LocationContext *LCtx,
-                                      QualType T,
+  const SymbolConjured *conjureSymbol(const Stmt *E,
+                                      const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
-                                      const void *SymbolTag = nullptr);
+                                      const void *SymbolTag = nullptr) {
+    return acquire<SymbolConjured>(E, LCtx, T, VisitCount, SymbolTag);
+  }
 
   const SymbolConjured* conjureSymbol(const Expr *E,
                                       const LocationContext *LCtx,
@@ -540,41 +546,6 @@ public:
                                       const void *SymbolTag = nullptr) {
     return conjureSymbol(E, LCtx, E->getType(), VisitCount, SymbolTag);
   }
-
-  const SymbolDerived *getDerivedSymbol(SymbolRef parentSymbol,
-                                        const TypedValueRegion *R);
-
-  const SymbolExtent *getExtentSymbol(const SubRegion *R);
-
-  /// Creates a metadata symbol associated with a specific region.
-  ///
-  /// VisitCount can be used to differentiate regions corresponding to
-  /// different loop iterations, thus, making the symbol path-dependent.
-  const SymbolMetadata *getMetadataSymbol(const MemRegion *R, const Stmt *S,
-                                          QualType T,
-                                          const LocationContext *LCtx,
-                                          unsigned VisitCount,
-                                          const void *SymbolTag = nullptr);
-
-  const SymbolCast* getCastSymbol(const SymExpr *Operand,
-                                  QualType From, QualType To);
-
-  const SymIntExpr *getSymIntExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t);
-
-  const SymIntExpr *getSymIntExpr(const SymExpr &lhs, BinaryOperator::Opcode op,
-                                  APSIntPtr rhs, QualType t) {
-    return getSymIntExpr(&lhs, op, rhs, t);
-  }
-
-  const IntSymExpr *getIntSymExpr(APSIntPtr lhs, BinaryOperator::Opcode op,
-                                  const SymExpr *rhs, QualType t);
-
-  const SymSymExpr *getSymSymExpr(const SymExpr *lhs, BinaryOperator::Opcode op,
-                                  const SymExpr *rhs, QualType t);
-
-  const UnarySymExpr *getUnarySymExpr(const SymExpr *operand,
-                                      UnaryOperator::Opcode op, QualType t);
 
   QualType getType(const SymExpr *SE) const {
     return SE->getType();
@@ -706,6 +677,19 @@ public:
   virtual bool VisitSymbol(SymbolRef sym) = 0;
   virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
+
+template <typename T, typename... Args>
+const T *SymbolManager::acquire(Args &&...args) {
+  llvm::FoldingSetNodeID profile;
+  T::Profile(profile, args...);
+  void *InsertPos;
+  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
+  if (!SD) {
+    SD = Alloc.make<T>(std::forward<Args>(args)...);
+    DataSet.InsertNode(SD, InsertPos);
+  }
+  return cast<T>(SD);
+}
 
 } // namespace ento
 
