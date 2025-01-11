@@ -436,6 +436,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_EQ(CC, ISD::SETULT);
   EXPECT_TRUE(sd_match(SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(),
                                      m_SpecificCondCode(ISD::SETULT))));
+
+  SDValue UndefInt32VT = DAG->getUNDEF(Int32VT);
+  SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
+  EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
+  EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {
@@ -602,19 +607,4 @@ TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {
   EXPECT_FALSE(sd_match(Op1, DAG.get(), m_LegalType(m_Value())));
   EXPECT_TRUE(sd_match(Add, DAG.get(),
                        m_LegalOp(m_IntegerVT(m_Add(m_Value(), m_Value())))));
-}
-
-TEST_F(SelectionDAGPatternMatchTest, matchUndefined) {
-  auto BoolVT = EVT::getIntegerVT(Context, 1);
-  auto Int32VT = EVT::getIntegerVT(Context, 32);
-  auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
-
-  SDValue UndefBoolVT = DAG->getUNDEF(BoolVT);
-  SDValue UndefInt32VT = DAG->getUNDEF(Int32VT);
-  SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
-
-  using namespace SDPatternMatch;
-  EXPECT_TRUE(sd_match(UndefBoolVT, m_Undef()));
-  EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
-  EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
 }
