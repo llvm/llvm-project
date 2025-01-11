@@ -8,7 +8,7 @@
 
 #include "ExplicitMoveConstructorCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/lexer.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -39,7 +39,8 @@ static SourceRange findExplicitToken(const CXXConstructorDecl *Ctor,
 void ExplicitMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxRecordDecl(
-          has(cxxConstructorDecl(isMoveConstructor(), isExplicit())
+          has(cxxConstructorDecl(isMoveConstructor(), isExplicit(),
+                                 unless(isDeleted()))
                   .bind("move-ctor")),
           has(cxxConstructorDecl(isCopyConstructor(), unless(isDeleted()))
                   .bind("copy-ctor"))),
@@ -56,9 +57,9 @@ void ExplicitMoveConstructorCheck::check(
   if (!MoveCtor || !CopyCtor)
     return;
 
-  auto Diag = diag(
-      MoveCtor->getLocation(),
-      "copy constructor may be called instead of move constructor");
+  auto Diag =
+      diag(MoveCtor->getLocation(),
+           "copy constructor may be called instead of move constructor");
   SourceRange ExplicitTokenRange =
       findExplicitToken(MoveCtor, *Result.SourceManager, getLangOpts());
 

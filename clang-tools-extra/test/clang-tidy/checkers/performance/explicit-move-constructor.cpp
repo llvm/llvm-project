@@ -29,6 +29,6 @@ class Reported {
 public:
   explicit Reported(Reported&&) = default;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor may be called instead of move constructor [performance-explicit-move-constructor]
-  // CHECK-FIXES: {{^}}Reported(Reported&&) = default;{{$}}
+  // CHECK-FIXES: {{^  }}Reported(Reported&&) = default;{{$}}
   Reported(const Reported&) = default;
 };
