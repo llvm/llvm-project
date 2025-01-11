@@ -118,8 +118,7 @@ define i1 @sgt_implies_ge_via_assume(i32 %i, i32 %j) {
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
 ; CHECK-NEXT:    [[I_SGT_J:%.*]] = icmp sgt i32 [[I]], [[J]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[I_SGT_J]])
-; CHECK-NEXT:    [[I_GE_J:%.*]] = icmp samesign uge i32 [[I]], [[J]]
-; CHECK-NEXT:    ret i1 [[I_GE_J]]
+; CHECK-NEXT:    ret i1 true
 ;
   %i.sgt.j = icmp sgt i32 %i, %j
   call void @llvm.assume(i1 %i.sgt.j)
@@ -134,9 +133,7 @@ define i32 @gt_implies_sge_dominating(i32 %a, i32 %len) {
 ; CHECK-NEXT:    [[A_GT_LEN:%.*]] = icmp samesign ugt i32 [[A]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[A_GT_LEN]], label %[[TAKEN:.*]], label %[[END:.*]]
 ; CHECK:       [[TAKEN]]:
-; CHECK-NEXT:    [[A_SGE_LEN:%.*]] = icmp sge i32 [[A]], [[LEN]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_SGE_LEN]], i32 30, i32 0
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 30
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 -1
 ;
