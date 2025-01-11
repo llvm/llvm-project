@@ -88,32 +88,11 @@ Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
   }
 
   m_threads_to_save.insert({thread_sp->GetID(), thread_sp});
-  m_thread_indexes.push_back(thread_sp->GetID());
   return error;
 }
 
 bool SaveCoreOptions::RemoveThread(lldb::ThreadSP thread_sp) {
-  if (!thread_sp)
-    return false;
-  if (m_threads_to_save.erase(thread_sp->GetID()) == 0)
-    return false;
-
-  auto it = std::find(m_thread_indexes.begin(), m_thread_indexes.end(),
-                      thread_sp->GetID());
-  m_thread_indexes.erase(it);
-  return true;
-}
-
-uint32_t SaveCoreOptions::GetNumThreads() const {
-  return m_threads_to_save.size();
-}
-
-std::optional<lldb::ThreadSP>
-SaveCoreOptions::GetThreadAtIndex(uint32_t idx) const {
-  if (idx >= m_thread_indexes.size())
-    return std::nullopt;
-  lldb::tid_t tid = m_thread_indexes[idx];
-  return m_threads_to_save.find(tid)->second;
+  return thread_sp && m_threads_to_save.erase(thread_sp->GetID()) > 0;
 }
 
 bool SaveCoreOptions::ShouldThreadBeSaved(lldb::tid_t tid) const {
@@ -134,6 +113,15 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
+}
+
+lldb::ThreadCollectionSP SaveCoreOptions::GetThreadsToSave() const {
+  lldb::ThreadCollectionSP threadcollection_sp =
+      std::make_shared<ThreadCollection>();
+  for (const auto &thread : m_threads_to_save) {
+    threadcollection_sp->AddThread(thread.second);
+  }
+  return threadcollection_sp;
 }
 
 Status
@@ -166,5 +154,4 @@ void SaveCoreOptions::Clear() {
   m_threads_to_save.clear();
   m_process_sp.reset();
   m_regions_to_save.Clear();
-  m_thread_indexes.clear();
 }

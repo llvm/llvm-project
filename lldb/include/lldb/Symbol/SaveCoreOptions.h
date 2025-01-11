@@ -46,8 +46,7 @@ public:
 
   void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
 
-  std::optional<lldb::ThreadSP> GetThreadAtIndex(uint32_t idx) const;
-  uint32_t GetNumThreads() const;
+  lldb::ThreadCollectionSP GetThreadsToSave() const;
 
   void Clear();
 
@@ -60,8 +59,6 @@ private:
   lldb::ProcessSP m_process_sp;
   std::unordered_map<lldb::tid_t, lldb::ThreadSP> m_threads_to_save;
   MemoryRanges m_regions_to_save;
-
-  std::vector<lldb::tid_t> m_thread_indexes;
 };
 } // namespace lldb_private
 

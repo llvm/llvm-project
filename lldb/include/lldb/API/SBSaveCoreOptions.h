@@ -14,6 +14,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBThreadCollection.h"
 
 namespace lldb {
 
@@ -111,26 +112,18 @@ public:
   ///   style specific regions.
   SBError AddMemoryRegionToSave(const SBMemoryRegionInfo &region);
 
-  /// Get the number of Threads to be saved
+  /// Get an unsorted collection of the threads to save
   ///
   /// \returns
-  ///  The count of Threads to be saved.
-  uint32_t GetNumThreads() const;
-
-  /// Get the Thread at the specified index.
-  ///
-  /// \param [in] idx
-  ///   The zero based index of the thread to return.
-  /// \returns
-  ///   The thread at the specified index, or an invalid SBThread if the index
-  ///   is greater than or equal to the number of threads.
-  lldb::SBThread GetThreadAtIndex(uint32_t idx) const;
+  ///   An unsorted collection with zero or more threads.
+  SBThreadCollection GetThreadsToSave() const;
 
   /// Reset all options.
   void Clear();
 
 protected:
   friend class SBProcess;
+  friend class SBThreadCollection;
   lldb_private::SaveCoreOptions &ref() const;
 
 private:
