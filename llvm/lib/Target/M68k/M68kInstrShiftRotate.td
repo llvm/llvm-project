@@ -74,7 +74,7 @@ class MxSR_DI<string MN, MxType TYPE, SDNode NODE, bit RODI, bits<2> ROOP>
 
 multiclass MxSROp<string MN, SDNode NODE, bit RODI, bits<2> ROOP> {
 
-  let Defs = [CCR] in {
+  let Defs = [CCR, SR] in {
   let Constraints = "$src = $dst" in {
 
   def NAME#"8dd"  : MxSR_DD<MN, MxType8d,  NODE, RODI, ROOP>;
@@ -86,7 +86,7 @@ multiclass MxSROp<string MN, SDNode NODE, bit RODI, bits<2> ROOP> {
   def NAME#"32di" : MxSR_DI<MN, MxType32d, NODE, RODI, ROOP>;
 
   } // $src = $dst
-  } // Defs = [CCR]
+  } // Defs = [CCR, SR]
 
 } // MxBiArOp_RF
 

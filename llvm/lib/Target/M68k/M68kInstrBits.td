@@ -57,7 +57,7 @@ class MxBITEnc_I<bits<3> opmode, MxEncMemOp dst_enc, string bitno_name> {
   );
 }
 
-let Defs = [CCR] in {
+let Defs = [CCR, SR] in {
 class MxBIT_RR<string MN, bits<3> OPMODE, MxType TYPE>
     : MxInst<(outs), (ins TYPE.ROp:$dst, TYPE.ROp:$bitno),
              MN#"\t$bitno, $dst"> {
@@ -83,7 +83,7 @@ class MxBIT_MI<string MN, bits<3> OPMODE, MxType TYPE,
              MN#"\t$bitno, $dst"> {
   let Inst = MxBITEnc_I<OPMODE, DST_ENC, "bitno">.Value;
 }
-} // Defs = [CCR]
+} // Defs = [CCR, SR]
 
 def BTST8qd : MxBIT_MR<"btst", 0b100, MxType8d, MxType8.QOp,
                         MxEncAddrMode_q<"dst">>;

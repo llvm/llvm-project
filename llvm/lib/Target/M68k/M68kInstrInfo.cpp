@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 
+#include <algorithm>
 #include <functional>
 
 using namespace llvm;
@@ -758,6 +759,8 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   bool FromSR = SrcReg == M68k::SR;
   bool ToCCR = DstReg == M68k::CCR;
   bool ToSR = DstReg == M68k::SR;
+
+  assert((FromCCR+FromSR+ToCCR+ToSR) <= 1 && "Copies may only touch one of either SR or CCR");
 
   if (FromCCR) {
     if (M68k::DR8RegClass.contains(DstReg)) {

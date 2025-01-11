@@ -53,7 +53,7 @@ def MxOpMode32_a_EA : MxOpModeEncoding<0b111>;
 // Encoding
 //===----------------------------------------------------------------------===//
 
-let Defs = [CCR] in {
+let Defs = [CCR, SR] in {
 let Constraints = "$src = $dst" in {
 
 /// Encoding for Normal forms
@@ -64,7 +64,7 @@ let Constraints = "$src = $dst" in {
 ///  x  x  x  x |   REG   | OP MODE |   MODE  |   REG
 /// ----------------------------------------------------
 
-// $reg, $ccr <- $reg op $reg
+// $reg, $ccr, $sr <- $reg op $reg
 class MxBiArOp_R_RR_xEA<string MN, SDNode NODE, MxType DST_TYPE, MxType SRC_TYPE,
                         bits<4> CMD>
     : MxInst<(outs DST_TYPE.ROp:$dst), (ins DST_TYPE.ROp:$src, SRC_TYPE.ROp:$opd),
@@ -190,7 +190,7 @@ class MxBiArOp_MI<string MN, MxType TYPE,
   );
 }
 } // mayLoad, mayStore
-} // Defs = [CCR]
+} // Defs = [CCR, SR]
 
 multiclass MxBiArOp_DF<string MN, SDNode NODE, bit isComm,
                        bits<4> CMD, bits<4> CMDI> {
@@ -319,7 +319,7 @@ defm SUB : MxBiArOp_AF<"suba", MxSub, 0x9>;
 //   t8: i32,i8 = ADD32ab GLOBAL_OFFSET_TABLE, TargetGlobalTLSAddress:i32<ptr @myvar>
 def : Pat<(add MxARD32:$src, tglobaltlsaddr:$opd), (ADD32ab MxARD32:$src, MxAL32:$opd)>;
 
-let Uses = [CCR], Defs = [CCR] in {
+let Uses = [CCR, SR], Defs = [CCR, SR] in {
 let Constraints = "$src = $dst" in {
 
 /// Encoding for Extended forms
@@ -394,7 +394,7 @@ defm XOR : MxBiArOp_DF_EAd<"eor", MxXor, 0xB, 0xA>;
 // CMP
 //===----------------------------------------------------------------------===//
 
-let Defs = [CCR] in {
+let Defs = [CCR, SR] in {
 class MxCmp_RR<MxType LHS_TYPE, MxType RHS_TYPE = LHS_TYPE>
     : MxInst<(outs), (ins LHS_TYPE.ROp:$lhs, RHS_TYPE.ROp:$rhs),
              "cmp."#RHS_TYPE.Prefix#"\t$lhs, $rhs",
@@ -480,7 +480,7 @@ class MxCmp_RM<MxType TYPE, MxOperand MEMOpd, ComplexPattern MEMPat,
 }
 } // let mayLoad = 1
 
-} // let Defs = [CCR]
+} // let Defs = [CCR, SR]
 
 multiclass MMxCmp_RM<MxType TYPE> {
   def NAME#TYPE.KOp.Letter : MxCmp_RM<TYPE, TYPE.KOp, TYPE.KPat, MxEncAddrMode_k<"mem">>;
@@ -534,7 +534,7 @@ defm CMP32 : MMxCmp_MI<MxType32d>;
 /// ---------------------------------------------------
 ///  0  1  0  0  1  0  0 |  OPMODE | 0  0  0 |   REG
 /// ---------------------------------------------------
-let Defs = [CCR] in
+let Defs = [CCR, SR] in
 let Constraints = "$src = $dst" in
 class MxExt<MxType TO, MxType FROM>
     : MxInst<(outs TO.ROp:$dst), (ins TO.ROp:$src),
@@ -575,7 +575,7 @@ def : Pat<(sext_inreg i32:$src, i8),
 ///             |         |         | EFFECTIVE ADDRESS
 ///  x  x  x  x |   REG   | OP MODE |   MODE  |   REG
 /// ----------------------------------------------------
-let Defs = [CCR] in {
+let Defs = [CCR, SR] in {
 let Constraints = "$src = $dst" in {
 // $dreg <- $dreg op $dreg
 class MxDiMuOp_DD<string MN, bits<4> CMD, bit SIGNED = false,
@@ -621,7 +621,7 @@ class MxDiMuOp_DI<string MN, bits<4> CMD, bit SIGNED = false,
   );
 }
 } // let Constraints
-} // Defs = [CCR]
+} // Defs = [CCR, SR]
 
 multiclass MxDiMuOp<string MN, bits<4> CMD> {
   def "S"#NAME#"d32d16" : MxDiMuOp_DD<MN#"s", CMD, /*SIGNED*/true, MxDRD32, MxDRD16>;
@@ -778,7 +778,7 @@ def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
 ///             |            |      | EFFECTIVE ADDRESS
 ///  0  1  0  0 | x  x  x  x | SIZE |   MODE  |   REG
 /// ------------+------------+------+---------+---------
-let Defs = [CCR] in {
+let Defs = [CCR, SR] in {
 let Constraints = "$src = $dst" in {
 
 class MxNeg_D<MxType TYPE>
@@ -794,7 +794,7 @@ class MxNeg_D<MxType TYPE>
   );
 }
 
-let Uses = [CCR] in {
+let Uses = [CCR, SR] in {
 class MxNegX_D<MxType TYPE>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src),
              "negx."#TYPE.Prefix#"\t$dst",
@@ -823,7 +823,7 @@ class MxNot_D<MxType TYPE>
 }
 
 } // let Constraints
-} // let Defs = [CCR]
+} // let Defs = [CCR, SR]
 
 foreach S = [8, 16, 32] in {
   def NEG#S#d  : MxNeg_D<!cast<MxType>("MxType"#S#"d")>;
