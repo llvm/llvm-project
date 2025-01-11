@@ -1,14 +1,14 @@
 #ifndef LLVM_LIB_TARGET_X86_X86MATCHJUMPTABLEPASS_H
 #define LLVM_LIB_TARGET_X86_X86MATCHJUMPTABLEPASS_H
 
-
-#pragma once
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 
-  FunctionPass *createX86MatchJumptablePass();
+/// \brief Creates the X86MatchJumptablePass.
+/// This pass analyzes and processes jump tables in X86 backend code generation.
+FunctionPass *createX86MatchJumptablePass();
 
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_X86_X86MATCHJUMPTABLEPASS_H
