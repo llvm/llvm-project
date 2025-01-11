@@ -76,14 +76,8 @@ static unsigned char dosProgram[] = {
 };
 static_assert(sizeof(dosProgram) % 8 == 0,
               "DOSProgram size must be multiple of 8");
-
-static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
-static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
-static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
-static const uint32_t peHeaderOffset =
-    coffHeaderOffset + sizeof(coff_file_header);
-static const uint32_t dataDirOffset64 =
-    peHeaderOffset + sizeof(pe32plus_header);
+static_assert((sizeof(dos_header) + sizeof(dosProgram)) % 8 == 0,
+              "DOSStub size must be multiple of 8");
 
 static const int numberOfDataDirectory = 16;
 
@@ -214,6 +208,7 @@ public:
   void run();
 
 private:
+  void calculateStubDependentSizes();
   void createSections();
   void createMiscChunks();
   void createImportTables();
@@ -314,6 +309,11 @@ private:
   uint32_t pointerToSymbolTable = 0;
   uint64_t sizeOfImage;
   uint64_t sizeOfHeaders;
+
+  uint32_t dosStubSize;
+  uint32_t coffHeaderOffset;
+  uint32_t peHeaderOffset;
+  uint32_t dataDirOffset64;
 
   OutputSection *textSec;
   OutputSection *hexpthkSec;
@@ -762,6 +762,7 @@ void Writer::run() {
     llvm::TimeTraceScope timeScope("Write PE");
     ScopedTimer t1(ctx.codeLayoutTimer);
 
+    calculateStubDependentSizes();
     if (ctx.config.machine == ARM64X)
       ctx.dynamicRelocs = make<DynamicRelocsChunk>();
     createImportTables();
@@ -1033,6 +1034,17 @@ void Writer::sortSections() {
   if (!ctx.config.order.empty())
     for (auto it : partialSections)
       sortBySectionOrder(it.second->chunks);
+}
+
+void Writer::calculateStubDependentSizes() {
+  if (ctx.config.stub.size())
+    dosStubSize = ctx.config.stub.size();
+  else
+    dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
+
+  coffHeaderOffset = dosStubSize + sizeof(PEMagic);
+  peHeaderOffset = coffHeaderOffset + sizeof(coff_file_header);
+  dataDirOffset64 = peHeaderOffset + sizeof(pe32plus_header);
 }
 
 // Create output section objects and add them to OutputSections.
@@ -1668,21 +1680,31 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // When run under Windows, the loader looks at AddressOfNewExeHeader and uses
   // the PE header instead.
   Configuration *config = &ctx.config;
+
   uint8_t *buf = buffer->getBufferStart();
   auto *dos = reinterpret_cast<dos_header *>(buf);
-  buf += sizeof(dos_header);
-  dos->Magic[0] = 'M';
-  dos->Magic[1] = 'Z';
-  dos->UsedBytesInTheLastPage = dosStubSize % 512;
-  dos->FileSizeInPages = divideCeil(dosStubSize, 512);
-  dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
-
-  dos->AddressOfRelocationTable = sizeof(dos_header);
-  dos->AddressOfNewExeHeader = dosStubSize;
 
   // Write DOS program.
-  memcpy(buf, dosProgram, sizeof(dosProgram));
-  buf += sizeof(dosProgram);
+  if (config->stub.size()) {
+    memcpy(buf, config->stub.data(), config->stub.size());
+    // MS link.exe accepts an invalid `e_lfanew` and updates it automatically.
+    // Replicate the same behaviour.
+    dos->AddressOfNewExeHeader = config->stub.size();
+    buf += config->stub.size();
+  } else {
+    buf += sizeof(dos_header);
+    dos->Magic[0] = 'M';
+    dos->Magic[1] = 'Z';
+    dos->UsedBytesInTheLastPage = dosStubSize % 512;
+    dos->FileSizeInPages = divideCeil(dosStubSize, 512);
+    dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
+
+    dos->AddressOfRelocationTable = sizeof(dos_header);
+    dos->AddressOfNewExeHeader = dosStubSize;
+
+    memcpy(buf, dosProgram, sizeof(dosProgram));
+    buf += sizeof(dosProgram);
+  }
 
   // Write PE magic
   memcpy(buf, PEMagic, sizeof(PEMagic));

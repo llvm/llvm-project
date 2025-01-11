@@ -246,6 +246,21 @@ void LinkerDriver::parseAligncomm(StringRef s) {
       std::max(ctx.config.alignComm[std::string(name)], 1 << v);
 }
 
+void LinkerDriver::parseStub(StringRef path) {
+  std::unique_ptr<MemoryBuffer> stub =
+      CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  size_t bufferSize = stub->getBufferSize();
+  const char *bufferStart = stub->getBufferStart();
+  // MS link.exe compatibility:
+  // 1. stub must be greater or equal than 64 bytes
+  // 2. stub must be 8-byte aligned
+  // 3. stub must be start with a valid dos signature 'MZ'
+  if (bufferSize < 0x40 || bufferSize % 8 != 0 ||
+      (bufferStart[0] != 'M' || bufferStart[1] != 'Z'))
+    Err(ctx) << "/stub: invalid format for MS-DOS stub file: " << path;
+  ctx.config.stub.append(bufferStart, bufferStart + bufferSize);
+}
+
 // Parses /functionpadmin option argument.
 void LinkerDriver::parseFunctionPadMin(llvm::opt::Arg *a) {
   StringRef arg = a->getNumValues() ? a->getValue() : "";
