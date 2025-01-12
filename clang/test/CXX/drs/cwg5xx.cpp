@@ -1138,6 +1138,18 @@ namespace cwg587 { // cwg587: 3.2
   struct S {};
   template void f(bool, const int, int);
   template void f(bool, const S, S);
+
+  void g(bool b, int i, const int ci) {
+    extern volatile int vi;
+    extern const volatile int cvi;
+
+    const int &cir = b ? i : ci;
+    volatile int &vir = b ? i : vi;
+    const volatile int &cvir1 = b ? ci : cvi;
+    const volatile int &cvir2 = b ? vi : cvi;
+    const volatile int &cvir3 = b ? ci : vi;
+    // expected-error@-1 {{volatile lvalue reference to type 'const volatile int' cannot bind to a temporary of type 'int'}}
+  }
 }
 
 namespace cwg588 { // cwg588: yes

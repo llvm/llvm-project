@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-pointer-to-int-cast -verify -pedantic -Wsign-conversion %s
 void foo(void) {
   *(0 ? (double *)0 : (void *)0) = 0;
-  // FIXME: GCC doesn't consider the following two statements to be errors.
   *(0 ? (double *)0 : (void *)(int *)0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
                                                 expected-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
   *(0 ? (double *)0 : (void *)(double *)0) = 0; /* expected-error {{incomplete type 'void' is not assignable}}
@@ -95,7 +94,6 @@ int Postgresql(void) {
 extern int f1(void);
 
 int f0(int a) {
-  // GCC considers this a warning.
   return a ? f1() : nil; // expected-warning {{pointer/integer type mismatch in conditional expression ('int' and 'void *')}} expected-error {{incompatible pointer to integer conversion returning 'void *' from a function with result type 'int'}}
 }
 
