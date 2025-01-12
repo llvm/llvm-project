@@ -1,14 +1,15 @@
 // RUN: llvm-mc -triple aarch64 -filetype asm -o - %s 2>&1 | FileCheck %s
 
+// SVE2 should imply SVE
+.arch_extension sve2
+add z23.d, z13.d, z8.d
+// CHECK: add z23.d, z13.d, z8.d
+
 .arch_extension sve2
 tbx z0.b, z1.b, z2.b
 // CHECK: tbx z0.b, z1.b, z2.b
 
 .arch_extension sve-aes
-aesd z23.b, z23.b, z13.b
-// CHECK: aesd z23.b, z23.b, z13.b
-
-.arch_extension sve2-aes
 aesd z23.b, z23.b, z13.b
 // CHECK: aesd z23.b, z23.b, z13.b
 

@@ -1,5 +1,10 @@
 // RUN: llvm-mc -triple aarch64 -filetype asm -o - %s 2>&1 | FileCheck %s
 
+// SVE2p1 should imply SVE2
+.arch_extension sve2p1
+tbx z0.b, z1.b, z2.b
+// CHECK: tbx z0.b, z1.b, z2.b
+
 .arch_extension sve2p1
 sclamp z0.s, z1.s, z2.s
 // CHECK: sclamp z0.s, z1.s, z2.s

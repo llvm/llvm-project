@@ -1,7 +1,12 @@
 // RUN: not llvm-mc -triple aarch64 -filetype asm -o - %s 2>&1 | FileCheck %s
 
-.cpu generic+sve2
-.cpu generic+nosve2
+// SVE2 should require SVE
+.cpu generic+sve2+nosve
+tbx z0.b, z1.b, z2.b
+// CHECK: error: instruction requires: sve2 or sme
+// CHECK-NEXT: tbx z0.b, z1.b, z2.b
+
+.cpu generic+sve2+nosve2
 tbx z0.b, z1.b, z2.b
 // CHECK: error: instruction requires: sve2 or sme
 // CHECK-NEXT: tbx z0.b, z1.b, z2.b
@@ -17,44 +22,37 @@ aesd z23.b, z23.b, z13.b
 // CHECK: error: instruction requires: sve2 or ssve-aes sve-aes
 // CHECK-NEXT: aesd z23.b, z23.b, z13.b
 
-.cpu generic+sve2-sm4
-.cpu generic+nosve2-sm4
+.cpu generic+sve2-sm4+nosve2-sm4
 sm4e z0.s, z0.s, z0.s
 // CHECK: error: instruction requires: sve2-sm4
 // CHECK-NEXT: sm4e z0.s, z0.s, z0.s
 
-.cpu generic+sve2-sha3
-.cpu generic+nosve2-sha3
+.cpu generic+sve2-sha3+nosve2-sha3
 rax1 z0.d, z0.d, z0.d
 // CHECK: error: instruction requires: sve2-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
-.cpu generic+sve2-bitperm
-.cpu generic+nosve2-bitperm
+.cpu generic+sve2-bitperm+nosve2-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: error: instruction requires: sve2-bitperm
 // CHECK-NEXT: bgrp z21.s, z10.s, z21.s
 
-.cpu generic+sve2+f8f16mm
-.cpu generic+sve2+nof8f16mm
+.cpu generic+sve2+f8f16mm+nof8f16mm
 fmmla   z23.h, z13.b, z8.b
 // CHECK: error: instruction requires: f8f16mm
 // CHECK-NEXT: fmmla   z23.h, z13.b, z8.b
 
-.cpu generic+sve2+f8f32mm
-.cpu generic+sve2+nof8f32mm
+.cpu generic+sve2+f8f32mm+nof8f32mm
 fmmla   z23.s, z13.b, z8.b
 // CHECK: error: instruction requires: f8f32mm
 // CHECK-NEXT: fmmla   z23.s, z13.b, z8.b
 
-.cpu generic+sve-f16f32mm
-.cpu generic+nosve-f16f32mm
+.cpu generic+sve-f16f32mm+nosve-f16f32mm
 fmmla   z23.s, z13.h, z8.h
 // CHECK: error: instruction requires: sve-f16f32mm
 // CHECK-NEXT: fmmla   z23.s, z13.h, z8.h
 
-.cpu generic+sve-bfscale
-.cpu generic+nosve-bfscale
+.cpu generic+sve-bfscale+nosve-bfscale
 bfscale z0.h, p0/m, z0.h, z0.h
 // CHECK: error: instruction requires: sve-bfscale
 // CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
