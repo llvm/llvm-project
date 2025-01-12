@@ -3020,11 +3020,7 @@ define i32 @floor_sdiv_wrong_op(i32 %x, i32 %y) {
 
 define i32 @floor_sdiv_using_srem_by_8(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_using_srem_by_8(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 8
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[R]], -2147483648
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i32
-; CHECK-NEXT:    [[F:%.*]] = add nsw i32 [[D]], [[S]]
+; CHECK-NEXT:    [[F:%.*]] = ashr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i32 [[F]]
 ;
   %d = sdiv i32 %x, 8
@@ -3037,11 +3033,7 @@ define i32 @floor_sdiv_using_srem_by_8(i32 %x) {
 
 define i32 @floor_sdiv_using_srem_by_2(i32 %x) {
 ; CHECK-LABEL: @floor_sdiv_using_srem_by_2(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 2
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i32 [[R]], -2147483648
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[I]] to i32
-; CHECK-NEXT:    [[F:%.*]] = add nsw i32 [[D]], [[S]]
+; CHECK-NEXT:    [[F:%.*]] = ashr i32 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i32 [[F]]
 ;
   %d = sdiv i32 %x, 2
