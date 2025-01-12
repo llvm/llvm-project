@@ -17,7 +17,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-#include "utils/MPFRWrapper/MPFRUtils.cpp"
+#include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <stdint.h>
 
@@ -39,8 +39,6 @@ static inline cpp::string str(RoundingMode mode) {
     return "MPFR_RNDZ";
   case RoundingMode::Nearest:
     return "MPFR_RNDN";
-  default:
-    __builtin_unreachable();
   }
 }
 

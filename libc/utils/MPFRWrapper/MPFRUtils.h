@@ -12,11 +12,14 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
 #include "mpfr_inc.h"
+
+template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -61,9 +64,31 @@ template <> struct ExtraPrecision<float128> {
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.
 template <typename T>
-static inline unsigned int get_precision(double ulp_tolerance);
+static inline unsigned int get_precision(double ulp_tolerance) {
+  if (ulp_tolerance <= 0.5) {
+    return LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN + 1;
+  } else {
+    return ExtraPrecision<T>::VALUE;
+  }
+}
 
-static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode);
+static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
+  switch (mode) {
+  case RoundingMode::Upward:
+    return MPFR_RNDU;
+    break;
+  case RoundingMode::Downward:
+    return MPFR_RNDD;
+    break;
+  case RoundingMode::TowardZero:
+    return MPFR_RNDZ;
+    break;
+  case RoundingMode::Nearest:
+    return MPFR_RNDN;
+    break;
+  }
+  __builtin_unreachable();
+}
 
 class MPFRNumber {
   unsigned int mpfr_precision;

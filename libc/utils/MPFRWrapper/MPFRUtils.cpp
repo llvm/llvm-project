@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
@@ -25,38 +24,9 @@ float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
 #endif
 
-template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
-
-template <typename T>
-static inline unsigned int get_precision(double ulp_tolerance) {
-  if (ulp_tolerance <= 0.5) {
-    return LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN + 1;
-  } else {
-    return ExtraPrecision<T>::VALUE;
-  }
-}
-
-static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
-  switch (mode) {
-  case RoundingMode::Upward:
-    return MPFR_RNDU;
-    break;
-  case RoundingMode::Downward:
-    return MPFR_RNDD;
-    break;
-  case RoundingMode::TowardZero:
-    return MPFR_RNDZ;
-    break;
-  case RoundingMode::Nearest:
-    return MPFR_RNDN;
-    break;
-  }
-  __builtin_unreachable();
-}
 
 MPFRNumber::MPFRNumber() : mpfr_precision(256), mpfr_rounding(MPFR_RNDN) {
   mpfr_init2(value, mpfr_precision);
