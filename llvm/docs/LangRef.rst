@@ -1594,6 +1594,12 @@ Currently, only the following parameter attributes are defined:
     | pinf  | Positive infinity    |       512     |
     +-------+----------------------+---------------+
 
+``negated``
+    The function parameter marked with this attribute is negated from
+    its opposite number by the frontend like Clang. The middle end or
+    backend should convert it back if possible. For example if -(a*b)
+    is converted to (-a)*b, the arg0 of `fmul` instruction should be
+    marked with `negated` attribute.
 
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when

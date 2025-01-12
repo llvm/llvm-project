@@ -162,6 +162,9 @@ def Memory : IntAttr<"memory", IntersectCustom, [FnAttr]>;
 /// Forbidden floating-point classes.
 def NoFPClass : IntAttr<"nofpclass", IntersectCustom, [ParamAttr, RetAttr]>;
 
+/// Converted from the opposite number
+def Negated : EnumAttr<"negated", IntersectAnd, [ParamAttr, RetAttr]>;
+
 /// Function must be optimized for size first.
 def MinSize : EnumAttr<"minsize", IntersectPreserve, [FnAttr]>;
 

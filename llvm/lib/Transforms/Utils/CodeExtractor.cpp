@@ -918,6 +918,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::PresplitCoroutine:
       case Attribute::Memory:
       case Attribute::NoFPClass:
+      case Attribute::Negated:
       case Attribute::CoroDestroyOnlyWhenComplete:
       case Attribute::CoroElideSafe:
       case Attribute::NoDivergenceSource:
