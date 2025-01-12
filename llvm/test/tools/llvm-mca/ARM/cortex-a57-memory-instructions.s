@@ -325,11 +325,11 @@
 # CHECK-NEXT:  2      1     1.00           *            strd	r4, r5, [r12], -r10
 # CHECK-NEXT:  1      1     1.00           *            strh	r3, [r4]
 # CHECK-NEXT:  1      1     1.00           *            strh	r2, [r7, #4]
-# CHECK-NEXT:  2      1     1.00                  U     strh	r1, [r8, #64]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r1, [r8, #64]!
 # CHECK-NEXT:  2      1     1.00           *            strh	r12, [sp], #4
 # CHECK-NEXT:  1      1     1.00           *            strh	r6, [r5, r4]
-# CHECK-NEXT:  2      1     1.00                  U     strh	r3, [r8, r11]!
-# CHECK-NEXT:  2      1     1.00                  U     strh	r1, [r2, -r1]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r3, [r8, r11]!
+# CHECK-NEXT:  2      1     1.00           *            strh	r1, [r2, -r1]!
 # CHECK-NEXT:  2      1     1.00           *            strh	r9, [r7], r2
 # CHECK-NEXT:  2      1     1.00           *            strh	r4, [r3], -r2
 # CHECK-NEXT:  2      1     1.00                  U     strht	r2, [r5], #76

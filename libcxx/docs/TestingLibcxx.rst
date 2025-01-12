@@ -459,6 +459,29 @@ we only want to make sure they don't rot. Do not rely on the results of benchmar
 run through ``check-cxx`` for anything, instead run the benchmarks manually using
 the instructions for running individual tests.
 
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
+
 .. _`Google Benchmark`: https://github.com/google/benchmark
 
 .. _testing-hardening-assertions:

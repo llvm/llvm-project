@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,cxx11-23 %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,cxx11-23 %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,cxx11-23 %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,cxx11-23,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,cxx11-23,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 
 int main() {} // required for cwg2811
@@ -14,14 +14,14 @@ namespace cwg2811 { // cwg2811: 3.5
 void f() {
   (void)[&] {
     using T = decltype(main);
-    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+    // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
   };
   using T2 = decltype(main);
-  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+  // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 }
 
 using T = decltype(main);
-// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+// since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 
 int main();
 
@@ -150,7 +150,7 @@ struct A {
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
   friend struct Ts...[0]::C;
-  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]::' for friend template declaration is not supported; ignoring this friend declaration}}
 };
 
 #endif

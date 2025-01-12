@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-17,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -33,7 +33,7 @@ namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
 } // namespace std
 
-namespace cwg601 { // cwg601: yes
+namespace cwg601 { // cwg601: 2.7
 #if __cplusplus >= 201103L
 #define MAX __LLONG_MAX__
 #else
@@ -63,7 +63,7 @@ static_assert(0x8000000000000000 < -1, "0x8000000000000000 should be unsigned");
 #undef MAX
 } // namespace cwg601
 
-namespace cwg602 { // cwg602: yes
+namespace cwg602 { // cwg602: 2.7
   template<class T> struct A {
     template<class U> friend struct A;
   };
@@ -78,11 +78,11 @@ namespace cwg602 { // cwg602: yes
   B<int> b;
 } // namespace cwg602
 
-namespace cwg603 { // cwg603: yes
+namespace cwg603 { // cwg603: 3.1
   template<unsigned char> struct S {};
   typedef S<'\001'> S1;
   typedef S<(1ul << __CHAR_BIT__) + 1> S1;
-  // since-cxx11-error@-1 {{cannot be narrowed}}
+  // since-cxx11-error@-1 {{non-type template argument evaluates to 257, which cannot be narrowed to type 'unsigned char'}}
 } // namespace cwg603
 
 // cwg604: na
@@ -110,7 +110,7 @@ namespace cwg606 { // cwg606: 3.0
 #endif
 } // namespace cwg606
 
-namespace cwg607 { // cwg607: yes
+namespace cwg607 { // cwg607: 2.7
 namespace example1 {
 struct Y {};
 
@@ -138,23 +138,25 @@ N::D::D() : typedef_B(0) {}
 } // namespace example2
 } // namespace cwg607
 
-namespace cwg608 { // cwg608: yes
+namespace cwg608 { // cwg608: 2.7
   struct A { virtual void f(); };
   struct B : A {};
   struct C : A { void f(); };
   struct D : B, C {};
 } // namespace cwg608
 
-static_assert(-0u == 0u, ""); // cwg610: yes
+namespace cwg610 { // cwg610: 2.7
+static_assert(-0u == 0u, "");
+} // namespace cwg610
 
-namespace cwg611 { // cwg611: yes
+namespace cwg611 { // cwg611: 2.7
   int k;
   struct S { int &r; } s = { k ? k : k };
 } // namespace cwg611
 
 // cwg612: na
 
-namespace cwg613 { // cwg613: yes c++11
+namespace cwg613 { // cwg613: 3.1 c++11
   // see also n2253
   struct A { int n; static void f(); };
   int f(int);
@@ -191,10 +193,12 @@ namespace cwg613 { // cwg613: yes c++11
   }
 } // namespace cwg613
 
-static_assert((-1) / 2 == 0, ""); // cwg614: yes
+namespace cwg614 { // cwg614: 2.7
+static_assert((-1) / 2 == 0, "");
 static_assert((-1) % 2 == -1, "");
+} // namespace cwg614
 
-namespace cwg615 { // cwg615: yes
+namespace cwg615 { // cwg615: 2.7
   int f();
   static int n = f();
 } // namespace cwg615
@@ -217,13 +221,13 @@ namespace cwg616 { // cwg616: 4
 #endif
 } // namespace cwg616
 
-namespace cwg618 { // cwg618: yes
+namespace cwg618 { // cwg618: 2.7
 #if (unsigned)-1 > 0
 #error wrong
 #endif
 } // namespace cwg618
 
-namespace cwg619 { // cwg619: yes
+namespace cwg619 { // cwg619: 3.4
   extern int x[10];
   struct S { static int x[10]; };
 
@@ -244,7 +248,7 @@ namespace cwg619 { // cwg619: yes
 
 // cwg620: dup 568
 
-namespace cwg621 { // cwg621: yes
+namespace cwg621 { // cwg621: 2.7
   template<typename T> T f();
   template<> int f() {} // #cwg621-f
   template<> int f<int>() {}
@@ -257,7 +261,7 @@ namespace cwg621 { // cwg621: yes
 
 // cwg624 needs a libc++abi test.
 
-namespace cwg625 { // cwg625: yes
+namespace cwg625 { // cwg625: 2.9
   template<typename T> struct A {};
   A<auto> x = A<int>();
   // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
@@ -268,14 +272,14 @@ namespace cwg625 { // cwg625: yes
   // expected-error@-2 {{'auto' not allowed in function prototype}}
 } // namespace cwg625
 
-namespace cwg626 { // cwg626: yes
+namespace cwg626 { // cwg626: 2.7
 #define STR(x) #x
   char c[2] = STR(c); // ok, type matches
   wchar_t w[2] = STR(w);
   // expected-error@-1 {{initializing wide char array with non-wide string literal}}
 } // namespace cwg626
 
-namespace cwg627 { // cwg627: yes
+namespace cwg627 { // cwg627: 2.7
   void f() {
     // FIXME: emitted diagnostic have a room for improvement
     true a = 0;
@@ -300,7 +304,7 @@ namespace cwg629 { // cwg629: 2.9
   }
 } // namespace cwg629
 
-namespace cwg630 { // cwg630: yes
+namespace cwg630 { // cwg630: 2.7
 const bool MB_EQ_WC =
     ' ' == L' ' && '\t' == L'\t' && '\v' == L'\v' && '\r' == L'\r' &&
     '\n' == L'\n' && //
@@ -336,7 +340,7 @@ static_assert(MB_EQ_WC, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
 
 // cwg631: na
 
-namespace cwg632 { // cwg632: yes
+namespace cwg632 { // cwg632: 2.7
   struct S { int n; } s = {{5}};
   // expected-warning@-1 {{braces around scalar initializer}}
 } // namespace cwg632
@@ -344,7 +348,7 @@ namespace cwg632 { // cwg632: yes
 // cwg633: na
 // see also n2993
 
-namespace cwg634 { // cwg634: yes
+namespace cwg634 { // cwg634: 2.7
   struct S { S(); S(const S&); virtual void f(); ~S(); };
   int f(...);
   char f(int);
@@ -356,7 +360,7 @@ namespace cwg634 { // cwg634: yes
   // since-cxx11-error@-2 {{cannot pass object of non-trivial type 'S' through variadic function; call will abort at runtime}}
 } // namespace cwg634
 
-namespace cwg635 { // cwg635: yes
+namespace cwg635 { // cwg635: 2.7
   template<typename T> struct A { A(); ~A(); };
   template<typename T> A<T>::A<T>() {}
   // expected-error@-1 {{out-of-line constructor for 'A' cannot have template arguments}}
@@ -383,7 +387,7 @@ namespace cwg635 { // cwg635: yes
   //   expected-note@#cwg635-D {{previous definition is here}}
 } // namespace cwg635
 
-namespace cwg637 { // cwg637: yes
+namespace cwg637 { // cwg637: 3.0
   void f(int i) {
     i = ++i + 1;
     i = i++ + 1;
@@ -433,7 +437,7 @@ namespace cwg639 { // cwg639: 3.3
   }
 } // namespace cwg639
 
-namespace cwg641 { // cwg641: yes
+namespace cwg641 { // cwg641: 2.7
   namespace std_example {
     struct abc;
 
@@ -483,7 +487,7 @@ namespace cwg641 { // cwg641: yes
   }
 } // namespace cwg641
 
-namespace cwg642 { // cwg642: yes
+namespace cwg642 { // cwg642: 2.7
   void f() {
     const int i = 2;
     {
@@ -623,7 +627,7 @@ namespace cwg647 { // cwg647: 3.1
 #endif
 } // namespace cwg647
 
-namespace cwg648 { // cwg648: yes
+namespace cwg648 { // cwg648: 2.7
 #if __cplusplus >= 201103L
   int f();
   constexpr int a = (true ? 1 : f());
@@ -651,7 +655,7 @@ struct Y {
 
 // cwg650 is in cwg650.cpp
 
-namespace cwg651 { // cwg651: yes
+namespace cwg651 { // cwg651: 2.7
 #if __cplusplus >= 201103L
   struct X {
     virtual X &f();
@@ -664,7 +668,7 @@ namespace cwg651 { // cwg651: yes
 #endif
 } // namespace cwg651
 
-namespace cwg652 { // cwg652: yes
+namespace cwg652 { // cwg652: 3.1
 #if __cplusplus >= 201103L
   constexpr int n = 1.2 * 3.4;
   static_assert(n == 4, "");
@@ -700,7 +704,7 @@ namespace cwg654 { // cwg654: sup 1423
 #endif
 } // namespace cwg654
 
-namespace cwg655 { // cwg655: yes
+namespace cwg655 { // cwg655: 3.0
   struct A { A(int); }; // #cwg655-A
   struct B : A {
     A a; // #cwg655-a
@@ -718,7 +722,7 @@ namespace cwg655 { // cwg655: yes
   };
 } // namespace cwg655
 
-namespace cwg656 { // cwg656: yes
+namespace cwg656 { // cwg656: 2.8
   struct A { A(const A&) = delete; };
   // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   struct B : A {};
@@ -830,7 +834,7 @@ namespace cwg660 { // cwg660: 3.0
 
 // cwg661 is in cwg661.cpp
 
-namespace cwg662 { // cwg662: yes
+namespace cwg662 { // cwg662: 2.7
   template <typename T> void f(T t) {
     T &tr = t;
     T *tp = &t;
@@ -847,7 +851,7 @@ namespace cwg663 { // cwg663: sup P1949
   int ЍЎ = 123;
 } // namespace cwg663
 
-namespace cwg664 { // cwg664: yes
+namespace cwg664 { // cwg664: 2.7
 #if __cplusplus >= 201103L
   struct A { A(const A&) = delete; };
   A &&f(A &&a, int n) {
@@ -932,7 +936,7 @@ namespace cwg667 { // cwg667: 8
 
 // cwg668 needs an libc++abi test
 
-namespace cwg669 { // cwg669: yes
+namespace cwg669 { // cwg669: 3.1
 #if __cplusplus >= 201103L
   void f() {
     int n;
@@ -972,7 +976,7 @@ namespace cwg671 { // cwg671: 2.9
 
 // cwg672 is in cwg672.cpp
 
-namespace cwg673 { // cwg673: yes
+namespace cwg673 { // cwg673: 2.7
   template<typename> struct X { static const int n = 0; };
 
   class A {
@@ -980,14 +984,14 @@ namespace cwg673 { // cwg673: yes
     class C *f();
     void f(class D *);
     enum { e = X<struct E>::n };
-    void g() { extern struct F *p; }
+    void g() { extern struct FF *p; }
   };
   B *b;
   C *c;
   D *d;
   E *e;
-  F *f;
-  // expected-error@-1 {{unknown type name 'F'}}
+  FF *ff;
+  // expected-error@-1 {{unknown type name 'FF'}}
 } // namespace cwg673
 
 namespace cwg674 { // cwg674: 8
@@ -1096,7 +1100,7 @@ namespace cwg677 { // cwg677: no
 
 // cwg678 FIXME: check that the modules ODR check catches this
 
-namespace cwg679 { // cwg679: yes
+namespace cwg679 { // cwg679: 2.7
   struct X {};
   template<int> void operator+(X, X);
   template<> void operator+<0>(X, X) {} // #cwg679-def
@@ -1130,7 +1134,7 @@ namespace cwg681 { // cwg681: partial
 #endif
 } // namespace cwg681
 
-namespace cwg683 { // cwg683: yes
+namespace cwg683 { // cwg683: 3.3
 #if __cplusplus >= 201103L
   struct A {
     A() = default;
@@ -1153,14 +1157,14 @@ namespace cwg684 { // cwg684: sup 1454
   void f() {
     int a;  // #cwg684-a
     constexpr int *p = &a;
-    // expected-error@-1 {{constexpr variable 'p' must be initialized by a constant expression}}
-    //   expected-note@-2 {{pointer to 'a' is not a constant expression}}
-    //   expected-note@#cwg684-a {{here}}
+    // since-cxx11-error@-1 {{constexpr variable 'p' must be initialized by a constant expression}}
+    //   since-cxx11-note@-2 {{pointer to 'a' is not a constant expression}}
+    //   since-cxx11-note@#cwg684-a {{here}}
   }
 #endif
 } // namespace cwg684
 
-namespace cwg685 { // cwg685: yes
+namespace cwg685 { // cwg685: 10
   enum E : long { e };
   // cxx98-error@-1 {{enumeration types with a fixed underlying type are a C++11 extension}}
   void f(int);
@@ -1245,12 +1249,12 @@ namespace cwg686 { // cwg686: 3.0
     //   expected-note@-2 {{forward declaration of 'P'}}
     catch (struct P {} *) {}
     // expected-error@-1 {{'P' cannot be defined in a type specifier}}
-#if __cplusplus < 201703L
+#if __cplusplus <= 201402L
     void g() throw(struct Q);
-    // cxx98-17-error@-1 {{incomplete type 'struct Q' is not allowed in exception specification}}
-    //   cxx98-17-note@-2 {{forward declaration of 'Q'}}
+    // cxx98-14-error@-1 {{incomplete type 'struct Q' is not allowed in exception specification}}
+    //   cxx98-14-note@-2 {{forward declaration of 'Q'}}
     void h() throw(struct Q {});
-    // cxx98-17-error@-1 {{'Q' cannot be defined in a type specifier}}
+    // cxx98-14-error@-1 {{'Q' cannot be defined in a type specifier}}
 #endif
   }
   template<struct R *> struct X;

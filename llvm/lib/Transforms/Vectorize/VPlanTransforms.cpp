@@ -562,21 +562,62 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
   return Builder.createScalarIVSteps(InductionOpcode, FPBinOp, BaseIV, Step);
 }
 
+static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
+  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  for (unsigned I = 0; I != Users.size(); ++I) {
+    VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
+    if (isa<VPHeaderPHIRecipe>(Cur))
+      continue;
+    for (VPValue *V : Cur->definedValues())
+      Users.insert(V->user_begin(), V->user_end());
+  }
+  return Users.takeVector();
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
 /// require vectors while other require scalars, the scalar uses need to extract
 /// the scalars from the generated vectors (Note that this is different to how
-/// int/fp inductions are handled). Also optimize VPWidenIntOrFpInductionRecipe,
-/// if any of its users needs scalar values, by providing them scalar steps
-/// built on the canonical scalar IV and update the original IV's users. This is
-/// an optional optimization to reduce the needs of vector extracts.
+/// int/fp inductions are handled). Legalize extract-from-ends using uniform
+/// VPReplicateRecipe of wide inductions to use regular VPReplicateRecipe, so
+/// the correct end value is available. Also optimize
+/// VPWidenIntOrFpInductionRecipe, if any of its users needs scalar values, by
+/// providing them scalar steps built on the canonical scalar IV and update the
+/// original IV's users. This is an optional optimization to reduce the needs of
+/// vector extracts.
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
-  SmallVector<VPRecipeBase *> ToRemove;
+  using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
+    if (!PhiR)
+      continue;
+
+    // Check if any uniform VPReplicateRecipes using the phi recipe are used by
+    // ExtractFromEnd. Those must be replaced by a regular VPReplicateRecipe to
+    // ensure the final value is available.
+    // TODO: Remove once uniformity analysis is done on VPlan.
+    for (VPUser *U : collectUsersRecursively(PhiR)) {
+      auto *ExitIRI = dyn_cast<VPIRInstruction>(U);
+      VPValue *Op;
+      if (!ExitIRI || !match(ExitIRI->getOperand(0),
+                             m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                                 m_VPValue(Op), m_VPValue())))
+        continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(Op);
+      if (!RepR || !RepR->isUniform())
+        continue;
+      assert(!RepR->isPredicated() && "RepR must not be predicated");
+      Instruction *I = RepR->getUnderlyingInstr();
+      auto *Clone =
+          new VPReplicateRecipe(I, RepR->operands(), /*IsUniform*/ false);
+      Clone->insertAfter(RepR);
+      RepR->replaceAllUsesWith(Clone);
+    }
+
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
     if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
@@ -600,9 +641,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!WideIV)
-      continue;
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
@@ -1084,18 +1123,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     RecurSplice->setOperand(0, FOR);
   }
   return true;
-}
-
-static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
-  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
-  for (unsigned I = 0; I != Users.size(); ++I) {
-    VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
-    if (isa<VPHeaderPHIRecipe>(Cur))
-      continue;
-    for (VPValue *V : Cur->definedValues())
-      Users.insert(V->user_begin(), V->user_end());
-  }
-  return Users.takeVector();
 }
 
 void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {

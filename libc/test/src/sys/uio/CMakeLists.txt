@@ -1,0 +1,15 @@
+add_custom_target(libc_sys_uio_unittests)
+add_libc_unittest(
+  writev_test
+  SUITE
+  libc_sys_uio_unittests
+  SRCS
+    writev_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.sys.uio.writev
+    libc.src.unistd.close
+    libc.src.fcntl.open
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

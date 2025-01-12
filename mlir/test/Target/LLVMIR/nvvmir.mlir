@@ -556,9 +556,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK: ptx_kernel void @kernel_func
 
 // -----
 
@@ -566,9 +564,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
@@ -578,9 +575,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
@@ -590,31 +586,28 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 // -----
 
@@ -622,9 +615,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
@@ -633,9 +625,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
@@ -643,19 +634,19 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
 // -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1, i32 3}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }

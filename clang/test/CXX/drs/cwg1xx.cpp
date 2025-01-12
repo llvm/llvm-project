@@ -17,7 +17,7 @@
 #define __enable_constant_folding
 #endif
 
-namespace cwg100 { // cwg100: yes
+namespace cwg100 { // cwg100: 2.7
   template<const char (*)[4]> struct A {}; // #cwg100-A
   template<const char (&)[4]> struct B {}; // #cwg100-B
   template<const char *> struct C {}; // #cwg100-C
@@ -53,7 +53,7 @@ namespace cwg101 { // cwg101: 3.5
   typedef unsigned size_t;
 } // namespace cwg101
 
-namespace cwg102 { // cwg102: yes
+namespace cwg102 { // cwg102: 2.7
   namespace A {
     template<typename T> T f(T a, T b) { return a + b; }
     // expected-error@-1 {{call to function 'operator+' that is neither visible in the template definition nor found by argument-dependent lookup}}
@@ -87,7 +87,7 @@ namespace cwg106 { // cwg106: sup 540
   // expected-warning@-1 {{'const' qualifier on reference type 'r2' (aka 'const int &') has no effect}}
 } // namespace cwg106
 
-namespace cwg107 { // cwg107: yes
+namespace cwg107 { // cwg107: 2.7
   struct S {};
   extern "C" S operator+(S, S) { return S(); }
 } // namespace cwg107
@@ -103,7 +103,7 @@ namespace cwg108 { // cwg108: 2.9
   template<> struct A<int>::B { int X; };
 } // namespace cwg108
 
-namespace cwg109 { // cwg109: yes
+namespace cwg109 { // cwg109: 2.8
   struct A { template<typename T> void f(T); };
   template<typename T> struct B : T {
     using T::template f;
@@ -144,7 +144,7 @@ namespace cwg111 { // cwg111: dup 535
   //   expected-note@#cwg111-B {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
 } // namespace cwg111
 
-namespace cwg112 { // cwg112: yes
+namespace cwg112 { // cwg112: 3.1
   struct T { int n; };
   typedef T Arr[1];
 
@@ -164,7 +164,7 @@ namespace cwg112 { // cwg112: yes
   X<a4> x4;
 } // namespace cwg112
 
-namespace cwg113 { // cwg113: yes
+namespace cwg113 { // cwg113: 2.7
   extern void (*p)();
   void f() {
     no_such_function();
@@ -175,7 +175,7 @@ namespace cwg113 { // cwg113: yes
   void (*p)() = &g;
 } // namespace cwg113
 
-namespace cwg114 { // cwg114: yes
+namespace cwg114 { // cwg114: 2.7
   struct A {
     virtual void f(int) = 0; // #cwg114-A-f
   };
@@ -279,24 +279,24 @@ namespace cwg115 { // cwg115: 3.0
   // Special case kicks in only if a template argument list is specified.
   template<typename T=int> void with_default(); // #cwg115-with-default
   int k10 = f(&with_default);
-  // expected-error@-1 {{no matching function for call to 'f'}}
-  //   expected-note@#cwg115-f {{candidate template ignored: couldn't infer template argument 'T'}}
+  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx11-note@#cwg115-f {{candidate template ignored: couldn't infer template argument 'T'}}
   int k11 = f(&with_default<>);
   void k() {
     (void)&with_default;
-    // expected-error@-1 {{address of overloaded function 'with_default' cannot be cast to type 'void'}}
-    //   expected-note@#cwg115-with-default {{candidate function template}}
+    // since-cxx11-error@-1 {{address of overloaded function 'with_default' cannot be cast to type 'void'}}
+    //   since-cxx11-note@#cwg115-with-default {{candidate function template}}
     (void)&with_default<>;
     &with_default;
-    // expected-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
-    //   expected-note@#cwg115-with-default {{possible target for call}}
+    // since-cxx11-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+    //   since-cxx11-note@#cwg115-with-default {{possible target for call}}
     &with_default<>;
-    // expected-warning@-1 {{expression result unused}}
+    // since-cxx11-warning@-1 {{expression result unused}}
   }
 #endif
 } // namespace cwg115
 
-namespace cwg116 { // cwg116: yes
+namespace cwg116 { // cwg116: 2.7
   template<int> struct A {};
   template<int N> void f(A<N>) {} // #cwg116-f-N
   template<int M> void f(A<M>) {}
@@ -313,7 +313,7 @@ namespace cwg116 { // cwg116: yes
 // cwg119: na
 // cwg120: na
 
-namespace cwg121 { // cwg121: yes
+namespace cwg121 { // cwg121: 2.7
   struct X {
     template<typename T> struct Y {};
   };
@@ -326,7 +326,7 @@ namespace cwg121 { // cwg121: yes
   Z<X> z;
 } // namespace cwg121
 
-namespace cwg122 { // cwg122: yes
+namespace cwg122 { // cwg122: 2.7
   template<typename T> void f();
   void g() { f<int>(); }
 } // namespace cwg122
@@ -334,7 +334,7 @@ namespace cwg122 { // cwg122: yes
 // cwg123: na
 // cwg124 is in cwg124.cpp
 
-// cwg125: yes
+// cwg125: 2.7
 struct cwg125_A { struct cwg125_B {}; }; // #cwg125_B
 cwg125_A::cwg125_B cwg125_C();
 namespace cwg125_B { cwg125_A cwg125_C(); }
@@ -478,7 +478,7 @@ namespace cwg127 { // cwg127: 2.9
   A<int> *q = new ("") A<int>; // #cwg127-q
 } // namespace cwg127
 
-namespace cwg128 { // cwg128: yes
+namespace cwg128 { // cwg128: 2.7
   enum E1 { e1 } x = e1;
   enum E2 { e2 } y = static_cast<E2>(x), z = static_cast<E2>(e1);
 } // namespace cwg128
@@ -503,7 +503,7 @@ namespace cwg132 { // cwg132: no
 // cwg133: dup 87
 // cwg134: na
 
-namespace cwg135 { // cwg135: yes
+namespace cwg135 { // cwg135: 2.7
   struct A {
     A f(A a) { return a; }
     friend A g(A a) { return a; }
@@ -559,7 +559,7 @@ namespace cwg136 { // cwg136: 3.4
   };
 } // namespace cwg136
 
-namespace cwg137 { // cwg137: yes
+namespace cwg137 { // cwg137: 2.7
   extern void *p;
   extern const void *cp;
   extern volatile void *vp;
@@ -657,7 +657,7 @@ struct Data {
 } // namespace example3
 } // namespace cwg138
 
-namespace cwg139 { // cwg139: yes
+namespace cwg139 { // cwg139: 2.7
   namespace example1 {
     typedef int f; // #cwg139-typedef-f
     struct A {
@@ -679,7 +679,7 @@ namespace cwg139 { // cwg139: yes
   }
 } // namespace cwg139
 
-namespace cwg140 { // cwg140: yes
+namespace cwg140 { // cwg140: 2.7
   void f(int *const) {} // #cwg140-f-first
   void f(int[3]) {}
   // expected-error@-1 {{redefinition of 'f'}}
@@ -783,7 +783,7 @@ namespace cwg142 { // cwg142: 2.8
   }
 } // namespace cwg142
 
-namespace cwg143 { // cwg143: yes
+namespace cwg143 { // cwg143: 2.7
   namespace A { struct X; }
   namespace B { void f(A::X); }
   namespace A {
@@ -795,7 +795,7 @@ namespace cwg143 { // cwg143: yes
   }
 } // namespace cwg143
 
-namespace cwg145 { // cwg145: yes
+namespace cwg145 { // cwg145: 2.7
   void f(bool b) {
     ++b;
     // cxx98-14-warning@-1 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
@@ -806,7 +806,7 @@ namespace cwg145 { // cwg145: yes
   }
 } // namespace cwg145
 
-namespace cwg147 { // cwg147: yes
+namespace cwg147 { // cwg147: 2.7
   namespace example1 {
     template<typename> struct A {
       template<typename T> A(T);
@@ -834,7 +834,7 @@ namespace cwg147 { // cwg147: yes
   }
 } // namespace cwg147
 
-namespace cwg148 { // cwg148: yes
+namespace cwg148 { // cwg148: 2.7
   struct A { int A::*p; };
   static_assert(__is_pod(int(A::*)), "");
   static_assert(__is_pod(A), "");
@@ -888,7 +888,7 @@ namespace cwg151 { // cwg151: 3.1
   static_assert(__enable_constant_folding(p() == 0), "");
 } // namespace cwg151
 
-namespace cwg152 { // cwg152: yes
+namespace cwg152 { // cwg152: 2.7
   struct A {
     A(); // #cwg152-A-ctor
     explicit A(const A&); // #cwg152-A-explicit-ctor
@@ -909,7 +909,7 @@ namespace cwg152 { // cwg152: yes
 
 // cwg153: na
 
-namespace cwg154 { // cwg154: yes
+namespace cwg154 { // cwg154: 2.7
   union { int a; };
   // expected-error@-1 {{nonymous unions at namespace or global scope must be declared 'static'}}
   namespace {
@@ -992,7 +992,7 @@ namespace cwg162 { // cwg162: 19
 
 // cwg163: na
 
-namespace cwg164 { // cwg164: yes
+namespace cwg164 { // cwg164: 2.7
   void f(int);
   template <class T> int g(T t) { return f(t); }
 
@@ -1057,7 +1057,7 @@ namespace cwg168 { // cwg168: no
   q b = &S::f;
 } // namespace cwg168
 
-namespace cwg169 { // cwg169: yes
+namespace cwg169 { // cwg169: 3.4
   template<typename> struct A { int n; };
   struct B {
     template<typename> struct C;
@@ -1087,7 +1087,7 @@ namespace cwg171 {
   //   expected-note@#cwg171b-int {{declared in global scope here}}
 } // namespace cwg171
 
-namespace cwg172 { // cwg172: yes
+namespace cwg172 { // cwg172: 2.7
   enum { zero };
   static_assert(-1 < zero, "");
 
@@ -1121,7 +1121,7 @@ namespace cwg172 { // cwg172: yes
   static_assert(-f > 0, "");
 } // namespace cwg172
 
-namespace cwg173 { // cwg173: yes
+namespace cwg173 { // cwg173: 2.7
   static_assert('0' + 1 == '1' && '0' + 2 == '2' && '0' + 3 == '3' &&
                 '0' + 4 == '4' && '0' + 5 == '5' && '0' + 6 == '6' &&
                 '0' + 7 == '7' && '0' + 8 == '8' && '0' + 9 == '9', "");
@@ -1181,7 +1181,7 @@ namespace cwg176 { // cwg176: 3.1
   };
 } // namespace cwg176
 
-namespace cwg177 { // cwg177: yes
+namespace cwg177 { // cwg177: 2.7
   struct B {};
   struct A {
     A(A &); // #cwg177-A-copy-ctor
@@ -1202,7 +1202,7 @@ namespace cwg177 { // cwg177: yes
   //   expected-note@#cwg177-C-copy-ctor {{candidate constructor not viable: expects an lvalue for 1st argument}}
 } // namespace cwg177
 
-namespace cwg178 { // cwg178: yes
+namespace cwg178 { // cwg178: 3.1
   static_assert(int() == 0, "");
 #if __cplusplus >= 201103L
   static_assert(int{} == 0, "");
@@ -1215,7 +1215,7 @@ namespace cwg178 { // cwg178: yes
 #endif
 } // namespace cwg178
 
-namespace cwg179 { // cwg179: yes
+namespace cwg179 { // cwg179: 2.7
   void f();
   int n = &f - &f;
   // expected-error@-1 {{arithmetic on pointers to the function type 'void ()'}}
@@ -1231,7 +1231,7 @@ namespace cwg180 { // cwg180: 2.8
   };
 } // namespace cwg180
 
-namespace cwg181 { // cwg181: yes
+namespace cwg181 { // cwg181: 2.7
   namespace X {
     template <template X<class T> > struct A { };
     // expected-error@-1 +{{}}
@@ -1279,7 +1279,7 @@ namespace cwg183 { // cwg183: sup 382
   };
 } // namespace cwg183
 
-namespace cwg184 { // cwg184: yes
+namespace cwg184 { // cwg184: 2.7
   template<typename T = float> struct B {};
 
   template<template<typename TT = float> class T> struct A {
@@ -1311,7 +1311,7 @@ namespace cwg187 { // cwg187: sup 481
   typedef A<1, 1> T;
 } // namespace cwg187
 
-namespace cwg188 { // cwg188: yes
+namespace cwg188 { // cwg188: 2.7
   char c[10];
   static_assert(sizeof(0, c) == 10, "");
 } // namespace cwg188
@@ -1337,7 +1337,7 @@ static_assert(__is_layout_compatible(A, B), "");
 } // namespace cwg190
 
 int cwg191_j;
-namespace cwg191 { // cwg191: yes
+namespace cwg191 { // cwg191: 2.7
   namespace example1 {
     struct outer {
       static int i;
@@ -1376,7 +1376,7 @@ struct S {
 
 // cwg193 is in cwg193.cpp
 
-namespace cwg194 { // cwg194: yes
+namespace cwg194 { // cwg194: 2.7
   struct A {
     A();
     void A();
@@ -1392,7 +1392,7 @@ namespace cwg194 { // cwg194: yes
   };
 } // namespace cwg194
 
-namespace cwg195 { // cwg195: yes
+namespace cwg195 { // cwg195: 2.7
   void f();
   int *p = (int*)&f;
   // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
@@ -1400,7 +1400,7 @@ namespace cwg195 { // cwg195: yes
   // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
 } // namespace cwg195
 
-namespace cwg197 { // cwg197: yes
+namespace cwg197 { // cwg197: 2.7
   char &f(char);
 
   template <class T> void g(T t) {
@@ -1424,7 +1424,7 @@ namespace cwg197 { // cwg197: yes
   }
 } // namespace cwg197
 
-namespace cwg198 { // cwg198: yes
+namespace cwg198 { // cwg198: 2.9
   struct A {
     int n;
     struct B {
