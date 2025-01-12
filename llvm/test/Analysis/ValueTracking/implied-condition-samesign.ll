@@ -207,10 +207,7 @@ define i32 @gt_sub_nsw(i32 %x, i32 %y) {
 ; CHECK:       [[TAKEN]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp samesign ult i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -239,10 +236,7 @@ define i32 @ge_sub_nsw(i32 %x, i32 %y) {
 ; CHECK:       [[TAKEN]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], 1
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABSCOND:%.*]] = icmp samesign ult i32 [[SUB]], -1
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[ABSCOND]], i32 [[NEG]], i32 [[ADD]]
-; CHECK-NEXT:    ret i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[ADD]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
