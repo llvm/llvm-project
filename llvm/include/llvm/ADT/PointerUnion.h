@@ -148,7 +148,7 @@ public:
 
   /// Test if the Union currently holds the type matching T.
   template <typename T>
-  LLVM_DEPRECATED("Use isa instead", "isa")
+  [[deprecated("Use isa instead")]]
   inline bool is() const {
     return isa<T>(*this);
   }
@@ -157,7 +157,7 @@ public:
   ///
   /// If the specified pointer type is incorrect, assert.
   template <typename T>
-  LLVM_DEPRECATED("Use cast instead", "cast")
+  [[deprecated("Use cast instead")]]
   inline T get() const {
     assert(isa<T>(*this) && "Invalid accessor called");
     return cast<T>(*this);
