@@ -379,7 +379,7 @@ def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3
 def FeatureSVEBitPerm : ExtensionWithMArch<"sve-bitperm", "SVEBitPerm",
   "FEAT_SVE_BitPerm",  "Enable bit permutation SVE2 instructions">;
 
-def FeatureSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
+def FeatureAliasSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
   "",  "Shorthand for +sve2+sve-bitperm", [FeatureSVE2, FeatureSVEBitPerm]>;
 
 def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",

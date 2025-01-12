@@ -155,7 +155,7 @@ def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
-def HasSVEBitPerm   : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVEBitPerm()">,
+def HasSVEBitPerm   : Predicate<"Subtarget->hasSVEBitPerm()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBitPerm), "sve-bitperm">;
 def HasSMEandIsNonStreamingSafe
                      : Predicate<"Subtarget->hasSME()">,

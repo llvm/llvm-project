@@ -3951,7 +3951,7 @@ let Predicates = [HasSVEBitPerm, HasNonStreamingSVE2orSSVE_BitPerm] in {
   defm BEXT_ZZZ : sve2_misc_bitwise<0b1100, "bext", int_aarch64_sve_bext_x>;
   defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep", int_aarch64_sve_bdep_x>;
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
-} // End HasSVE2BitPerm
+}
 
 let Predicates = [HasSVEAES2, HasNonStreamingSVE2p1orSSVE_AES] in {
   // SVE_AES2 multi-vector instructions (x2)
