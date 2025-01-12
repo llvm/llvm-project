@@ -243,15 +243,9 @@ static MlirBlock createBlock(const nb::sequence &pyArgTypes,
 
 /// Wrapper for the global LLVM debugging flag.
 struct PyGlobalDebugFlag {
-  static void set(nb::object &o, bool enable) {
-    nb::ft_lock_guard lock(mutex);
-    mlirEnableGlobalDebug(enable);
-  }
+  static void set(nb::object &o, bool enable) { mlirEnableGlobalDebug(enable); }
 
-  static bool get(const nb::object &) {
-    nb::ft_lock_guard lock(mutex);
-    return mlirIsGlobalDebugEnabled();
-  }
+  static bool get(const nb::object &) { return mlirIsGlobalDebugEnabled(); }
 
   static void bind(nb::module_ &m) {
     // Debug flags.
@@ -261,7 +255,6 @@ struct PyGlobalDebugFlag {
         .def_static(
             "set_types",
             [](const std::string &type) {
-              nb::ft_lock_guard lock(mutex);
               mlirSetGlobalDebugType(type.c_str());
             },
             "types"_a, "Sets specific debug types to be produced by LLVM")
@@ -270,16 +263,10 @@ struct PyGlobalDebugFlag {
           pointers.reserve(types.size());
           for (const std::string &str : types)
             pointers.push_back(str.c_str());
-          nb::ft_lock_guard lock(mutex);
           mlirSetGlobalDebugTypes(pointers.data(), pointers.size());
         });
   }
-
-private:
-  static nb::ft_mutex mutex;
 };
-
-nb::ft_mutex PyGlobalDebugFlag::mutex;
 
 struct PyAttrBuilderMap {
   static bool dunderContains(const std::string &attributeKind) {
@@ -619,7 +606,6 @@ private:
 
 PyMlirContext::PyMlirContext(MlirContext context) : context(context) {
   nb::gil_scoped_acquire acquire;
-  nb::ft_lock_guard lock(live_contexts_mutex);
   auto &liveContexts = getLiveContexts();
   liveContexts[context.ptr] = this;
 }
@@ -629,10 +615,7 @@ PyMlirContext::~PyMlirContext() {
   // forContext method, which always puts the associated handle into
   // liveContexts.
   nb::gil_scoped_acquire acquire;
-  {
-    nb::ft_lock_guard lock(live_contexts_mutex);
-    getLiveContexts().erase(context.ptr);
-  }
+  getLiveContexts().erase(context.ptr);
   mlirContextDestroy(context);
 }
 
@@ -649,7 +632,6 @@ nb::object PyMlirContext::createFromCapsule(nb::object capsule) {
 
 PyMlirContextRef PyMlirContext::forContext(MlirContext context) {
   nb::gil_scoped_acquire acquire;
-  nb::ft_lock_guard lock(live_contexts_mutex);
   auto &liveContexts = getLiveContexts();
   auto it = liveContexts.find(context.ptr);
   if (it == liveContexts.end()) {
@@ -665,17 +647,12 @@ PyMlirContextRef PyMlirContext::forContext(MlirContext context) {
   return PyMlirContextRef(it->second, std::move(pyRef));
 }
 
-nb::ft_mutex PyMlirContext::live_contexts_mutex;
-
 PyMlirContext::LiveContextMap &PyMlirContext::getLiveContexts() {
   static LiveContextMap liveContexts;
   return liveContexts;
 }
 
-size_t PyMlirContext::getLiveCount() {
-  nb::ft_lock_guard lock(live_contexts_mutex);
-  return getLiveContexts().size();
-}
+size_t PyMlirContext::getLiveCount() { return getLiveContexts().size(); }
 
 size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
 
