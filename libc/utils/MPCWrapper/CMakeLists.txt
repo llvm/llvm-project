@@ -20,7 +20,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     LibcTest.unit
   )
   target_include_directories(libcMPCWrapper PUBLIC ${LIBC_SOURCE_DIR})
-  target_link_libraries(libcMPCWrapper PUBLIC libcMPFRWrapper LibcFPTestHelpers.unit LibcTest.unit mpc mpfr gmp)
+  target_link_libraries(libcMPCWrapper PUBLIC libcMPFRWrapper LibcFPTestHelpers.unit LibcTest.unit mpc)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
   message(WARNING "Math tests using MPC will be skipped.")
 endif()
