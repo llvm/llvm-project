@@ -4593,9 +4593,14 @@ public:
     SME_ZT0Shift = 5,
     SME_ZT0Mask = 0b111 << SME_ZT0Shift,
 
+    // A bit to tell whether a function is agnostic about sme ZA state.
+    SME_AgnosticZAStateShift = 8,
+    SME_AgnosticZAStateMask = 1 << SME_AgnosticZAStateShift,
+
     SME_AttributeMask =
-        0b111'111'11 // We can't support more than 8 bits because of
-                     // the bitmask in FunctionTypeExtraBitfields.
+        0b1'111'111'11 // We can't support more than 9 bits because of
+                       // the bitmask in FunctionTypeArmAttributes
+                       // and ExtProtoInfo.
   };
 
   enum ArmStateValue : unsigned {
@@ -4620,7 +4625,7 @@ public:
   struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
-    unsigned AArch64SMEAttributes : 8;
+    unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
   };
@@ -5188,7 +5193,7 @@ public:
     FunctionType::ExtInfo ExtInfo;
     unsigned Variadic : 1;
     unsigned HasTrailingReturn : 1;
-    unsigned AArch64SMEAttributes : 8;
+    unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
