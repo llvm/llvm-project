@@ -11134,7 +11134,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "void foo() {}",
                Style);
 
-  Style.BreakBeforeTemplateCloser = true;
+  Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Multiline;
   // BreakBeforeTemplateCloser should NOT force template declarations onto
   // multiple lines.
   verifyFormat("template <typename Foo>\n"

@@ -3423,24 +3423,36 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BreakBeforeTemplateCloser:
 
-**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBeforeTemplateCloser>`
-  If ``true``, a line break will be placed before the ``>`` in a multiline
-  template declaration.
+**BreakBeforeTemplateCloser** (``BreakBeforeTemplateCloserStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBeforeTemplateCloser>`
+  The style of when a line break will be placed before the ``>`` that closes
+  a template.
 
-  .. code-block:: c++
+  Possible values:
 
-     true:
-     template <
-         typename Foo,
-         typename Bar,
-         typename Baz
-     >
+  * ``BBTCS_Never`` (in configuration: ``Never``)
+    Never break before a template closer.
 
-     false:
-     template <
-         typename Foo,
-         typename Bar,
-         typename Baz>
+    .. code-block:: c++
+
+       template <typename Foo, typename Bar>
+
+       template <
+           typename Foo,
+           typename Bar>
+
+  * ``BBTCS_Multiline`` (in configuration: ``Multiline``)
+    Break before a template closer if the template spans more than one line.
+
+    .. code-block:: c++
+
+       template <typename Foo, typename Bar>
+
+       template <
+           typename Foo,
+           typename Bar
+       >
+
+
 
 .. _BreakBeforeTernaryOperators:
 
