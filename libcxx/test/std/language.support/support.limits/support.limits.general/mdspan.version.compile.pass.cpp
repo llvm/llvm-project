@@ -16,6 +16,7 @@
 // Test the feature test macros defined by <mdspan>
 
 /*  Constant                         Value
+    __cpp_lib_aligned_accessor       202411L [C++26]
     __cpp_lib_freestanding_mdspan    202311L [C++26]
     __cpp_lib_mdspan                 202207L [C++23]
                                      202406L [C++26]
@@ -26,6 +27,10 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_mdspan
 #   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
@@ -41,6 +46,10 @@
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_mdspan
 #   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
 # endif
@@ -54,6 +63,10 @@
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_mdspan
 #   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
@@ -69,6 +82,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_freestanding_mdspan
 #   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
 # endif
@@ -82,6 +99,10 @@
 # endif
 
 #elif TEST_STD_VER == 23
+
+# ifdef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should not be defined before c++26"
+# endif
 
 # ifdef __cpp_lib_freestanding_mdspan
 #   error "__cpp_lib_freestanding_mdspan should not be defined before c++26"
@@ -99,6 +120,13 @@
 # endif
 
 #elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_aligned_accessor
+#   error "__cpp_lib_aligned_accessor should be defined in c++26"
+# endif
+# if __cpp_lib_aligned_accessor != 202411L
+#   error "__cpp_lib_aligned_accessor should have the value 202411L in c++26"
+# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_freestanding_mdspan
