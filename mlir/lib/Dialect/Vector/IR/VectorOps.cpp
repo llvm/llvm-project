@@ -465,11 +465,11 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 /// Computes the result of reducing a constant vector where the accumulator
 /// value, `acc`, is also constant.
 template <typename T>
-static OpFoldResult foldSplatReduce(T src, T acc, int64_t times,
+static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
                                     CombiningKind kind, ShapedType dstType);
 
 template <>
-OpFoldResult foldSplatReduce(FloatAttr src, FloatAttr acc, int64_t times,
+OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc, int64_t times,
                              CombiningKind kind, ShapedType dstType) {
   APFloat srcVal = src.getValue();
   APFloat accVal = acc.getValue();
@@ -501,7 +501,7 @@ OpFoldResult foldSplatReduce(FloatAttr src, FloatAttr acc, int64_t times,
 }
 
 template <>
-OpFoldResult foldSplatReduce(IntegerAttr src, IntegerAttr acc, int64_t times,
+OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc, int64_t times,
                              CombiningKind kind, ShapedType dstType) {
   APInt srcVal = src.getValue();
   APInt accVal = acc.getValue();
@@ -564,12 +564,12 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   Type dstEltType = dstType.getElementType();
 
   if (mlir::dyn_cast_or_null<FloatType>(dstEltType)) {
-    return foldSplatReduce<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
+    return computeConstantReduction<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
                                       accAttr.getSplatValue<FloatAttr>(), times,
                                       kind, dstType);
   }
   if (mlir::dyn_cast_or_null<IntegerType>(dstEltType)) {
-    return foldSplatReduce<IntegerAttr>(srcAttr.getSplatValue<IntegerAttr>(),
+    return computeConstantReduction<IntegerAttr>(srcAttr.getSplatValue<IntegerAttr>(),
                                         accAttr.getSplatValue<IntegerAttr>(),
                                         times, kind, dstType);
   }
