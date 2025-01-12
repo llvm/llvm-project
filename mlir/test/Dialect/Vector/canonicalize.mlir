@@ -2857,6 +2857,37 @@ func.func @contiguous_gather(%base: memref<?xf32>,
 
 // -----
 
+// CHECK-LABEL: @contiguous_gather_non_zero_start(
+//  TODO: Non-zero start is not supported yet.
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_non_zero_start(%base: memref<?xf32>,
+                                            %mask: vector<16xi1>,
+                                            %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> : vector<16xi32>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_2d(
+// TODO: Only 1D vectors are supported.
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_2d(%base: memref<?x?xf32>,
+                                %mask: vector<4x4xi1>, %passthru: vector<4x4xf32>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]> : vector<4x4xi32>
+  %1 = vector.gather %base[%c0, %c0][%indices], %mask, %passthru :
+    memref<?x?xf32>, vector<4x4xi32>, vector<4x4xi1>, vector<4x4xf32> into vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @contiguous_gather_const_mask
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[PASSTHRU:.*]]: vector<16xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -2885,6 +2916,21 @@ func.func @contiguous_gather_step(%base: memref<?xf32>,
   %indices = vector.step : vector<16xindex>
   %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
     memref<?xf32>, vector<16xindex>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %1 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @gather_broadcast(
+// TODO: Broadcast is not supported yet
+//       CHECK:   %[[R:.*]] = vector.gather
+//       CHECK:   return %[[R]]
+func.func @gather_broadcast(%base: memref<?xf32>,
+                             %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<0> : vector<16xi32>
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
+    memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %1 : vector<16xf32>
 }
 
