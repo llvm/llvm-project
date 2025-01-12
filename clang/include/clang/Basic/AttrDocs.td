@@ -7641,7 +7641,7 @@ def ArmAgnosticDocs : Documentation {
 The ``__arm_agnostic`` keyword applies to prototyped function types and
 affects the function's calling convention for a given state S. This
 attribute allows the user to describe a function that preserves S, without
-requiring the function to share S with its callers and without the making
+requiring the function to share S with its callers and without making
 the assumption that S exists.
 
 If a function has the ``__arm_agnostic(S)`` attribute and calls a function

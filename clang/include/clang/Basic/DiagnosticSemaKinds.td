@@ -3835,7 +3835,7 @@ def err_sme_unimplemented_za_save_restore : Error<
   "call to a function that shares state other than 'za' from a "
   "function that has live 'za' state requires a spill/fill of ZA, which is not yet "
   "implemented">;
-def err_sme_unimplemented_agnostic_new : Error<
+def err_sme_unsupported_agnostic_new : Error<
   "__arm_agnostic(\"sme_za_state\") is not supported together with "
   "__arm_new(\"za\") or __arm_new(\"zt0\")">;
 def note_sme_use_preserves_za : Note<

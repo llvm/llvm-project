@@ -1341,7 +1341,7 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
     if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask)
-        Diag(FD->getLocation(), diag::err_sme_unimplemented_agnostic_new);
+        Diag(FD->getLocation(), diag::err_sme_unsupported_agnostic_new);
     }
   }
 
