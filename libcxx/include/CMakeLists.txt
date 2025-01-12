@@ -538,12 +538,12 @@ set(files
   __memory/inout_ptr.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
+  __memory/pointer_tag_pair.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
-  __memory/tagged_ptr.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h

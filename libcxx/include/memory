@@ -970,7 +970,7 @@ template<class Pointer = void, class Smart, class... Args>
 #endif
 
 #if _LIBCPP_STD_VER >= 26
-#  include <__memory/tagged_ptr.h>
+#  include <__memory/pointer_tag_pair.h>
 #endif
 
 #include <version>
