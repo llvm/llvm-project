@@ -139,6 +139,33 @@ class QCIStoreMultiple<bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
   let Inst{31-25} = {funct2, imm{6-2}};
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCILICC<bits<3> funct3, bits<2> funct2, DAGOperand InTyRs2, string opcodestr>
+    : RVInstRBase<funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd_wb),
+                  (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyRs2:$rs2, simm5:$simm),
+                  opcodestr, "$rd, $rs1, $rs2, $simm"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> simm;
+
+  let Inst{31-25} = {simm, funct2};
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIMVCC<bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
+               (ins GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
+    : RVInstR4<0b10, funct3, OPC_CUSTOM_2, (outs GPRNoX0:$rd),
+               (ins GPRNoX0:$rs1, immType:$imm, GPRNoX0:$rs3),
+               opcodestr, "$rd, $rs1, $imm, $rs3"> {
+  bits<5> imm;
+
+  let rs2 = imm;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -242,6 +269,48 @@ let Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm" in {
     def QC_LWM : QCILoadMultiple<0b00, GPRNoX0, "qc.lwm">;
     def QC_LWMI : QCILoadMultiple<0b01, uimm5nonzero, "qc.lwmi">;
 } // Predicates = [HasVendorXqcilsm, IsRV32], DecoderNamespace = "Xqcilsm"
+
+let Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli" in {
+  def QC_LIEQ    : QCILICC<0b000, 0b01, GPRNoX0, "qc.lieq">;
+  def QC_LINE    : QCILICC<0b001, 0b01, GPRNoX0, "qc.line">;
+  def QC_LILT    : QCILICC<0b100, 0b01, GPRNoX0, "qc.lilt">;
+  def QC_LIGE    : QCILICC<0b101, 0b01, GPRNoX0, "qc.lige">;
+  def QC_LILTU   : QCILICC<0b110, 0b01, GPRNoX0, "qc.liltu">;
+  def QC_LIGEU   : QCILICC<0b111, 0b01, GPRNoX0, "qc.ligeu">;
+
+  def QC_LIEQI   : QCILICC<0b000, 0b11, simm5, "qc.lieqi">;
+  def QC_LINEI   : QCILICC<0b001, 0b11, simm5, "qc.linei">;
+  def QC_LILTI   : QCILICC<0b100, 0b11, simm5, "qc.lilti">;
+  def QC_LIGEI   : QCILICC<0b101, 0b11, simm5, "qc.ligei">;
+  def QC_LILTUI  : QCILICC<0b110, 0b11, uimm5, "qc.liltui">;
+  def QC_LIGEUI  : QCILICC<0b111, 0b11, uimm5, "qc.ligeui">;
+} // Predicates = [HasVendorXqcicli, IsRV32], DecoderNamespace = "Xqcicli"
+
+let Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+  def QC_C_MVEQZ   : RVInst16CL<0b101, 0b10, (outs GPRC:$rd_wb),
+                              (ins GPRC:$rd, GPRC:$rs1),
+                              "qc.c.mveqz", "$rd, $rs1"> {
+    let Constraints = "$rd = $rd_wb";
+
+    let Inst{12-10} = 0b011;
+    let Inst{6-5} = 0b00;
+  }
+
+  def QC_MVEQ    : QCIMVCC<0b000, "qc.mveq">;
+  def QC_MVNE    : QCIMVCC<0b001, "qc.mvne">;
+  def QC_MVLT    : QCIMVCC<0b100, "qc.mvlt">;
+  def QC_MVGE    : QCIMVCC<0b101, "qc.mvge">;
+  def QC_MVLTU   : QCIMVCC<0b110, "qc.mvltu">;
+  def QC_MVGEU   : QCIMVCC<0b111, "qc.mvgeu">;
+
+  def QC_MVEQI   : QCIMVCCI<0b000, "qc.mveqi", simm5>;
+  def QC_MVNEI   : QCIMVCCI<0b001, "qc.mvnei", simm5>;
+  def QC_MVLTI   : QCIMVCCI<0b100, "qc.mvlti", simm5>;
+  def QC_MVGEI   : QCIMVCCI<0b101, "qc.mvgei", simm5>;
+  def QC_MVLTUI  : QCIMVCCI<0b110, "qc.mvltui", uimm5>;
+  def QC_MVGEUI  : QCIMVCCI<0b111, "qc.mvgeui", uimm5>;
+} // Predicates = [HasVendorXqcicm, IsRV32], DecoderNamespace = "Xqcicm"
 
 //===----------------------------------------------------------------------===//
 // Aliases

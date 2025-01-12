@@ -121,21 +121,17 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
                                            m_SpecificFP(-1.0))),
-                         m_Value(OtherOp)))) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    return Builder.CreateSelect(Cond, OtherOp, Builder.CreateFNeg(OtherOp));
-  }
+                         m_Value(OtherOp))))
+    return Builder.CreateSelectFMF(Cond, OtherOp,
+                                   Builder.CreateFNegFMF(OtherOp, &I), &I);
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
                                            m_SpecificFP(1.0))),
-                         m_Value(OtherOp)))) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    return Builder.CreateSelect(Cond, Builder.CreateFNeg(OtherOp), OtherOp);
-  }
+                         m_Value(OtherOp))))
+    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
+                                   OtherOp, &I);
 
   return nullptr;
 }
@@ -188,9 +184,6 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
 
   return nullptr;
 }
-
-static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
-                       bool AssumeNonZero, bool DoFold);
 
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -535,19 +528,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   //        (shl Op1, Log2(Op0))
   //    if Log2(Op1) folds away ->
   //        (shl Op0, Log2(Op1))
-  if (takeLog2(Builder, Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Builder, Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
-                          /*DoFold*/ true);
+  if (Value *Res = tryGetLog2(Op0, /*AssumeNonZero=*/false)) {
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op1, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
     return Shl;
   }
-  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
-                          /*DoFold*/ true);
+  if (Value *Res = tryGetLog2(Op1, /*AssumeNonZero=*/false)) {
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op0, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
@@ -590,11 +577,9 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   // fabs(X) / fabs(Y) --> fabs(X / Y)
   if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(I.getFastMathFlags());
-    Value *XY = Builder.CreateBinOp(Opcode, X, Y);
-    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY);
-    Fabs->takeName(&I);
+    Value *XY = Builder.CreateBinOpFMF(Opcode, X, Y, &I);
+    Value *Fabs =
+        Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY, &I, I.getName());
     return replaceInstUsesWith(I, Fabs);
   }
 
@@ -685,8 +670,6 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       match(Op0, m_AllowReassoc(m_BinOp(Op0BinOp)))) {
     // Everything in this scope folds I with Op0, intersecting their FMF.
     FastMathFlags FMF = I.getFastMathFlags() & Op0BinOp->getFastMathFlags();
-    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-    Builder.setFastMathFlags(FMF);
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
       // (C1 / X) * C --> (C * C1) / X
@@ -718,7 +701,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (X + C1) * C --> (X * C) + (C * C1)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMul(X, C);
+        Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFAddFMF(XC, CC1, FMF);
       }
     }
@@ -726,7 +709,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (C1 - X) * C --> (C * C1) - (X * C)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMul(X, C);
+        Value *XC = Builder.CreateFMulFMF(X, C, FMF);
         return BinaryOperator::CreateFSubFMF(CC1, XC, FMF);
       }
     }
@@ -740,9 +723,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
     FastMathFlags FMF = I.getFastMathFlags() & DivOp->getFastMathFlags();
     if (FMF.allowReassoc()) {
       // Sink division: (X / Y) * Z --> (X * Z) / Y
-      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-      Builder.setFastMathFlags(FMF);
-      auto *NewFMul = Builder.CreateFMul(X, Z);
+      auto *NewFMul = Builder.CreateFMulFMF(X, Z, FMF);
       return BinaryOperator::CreateFDivFMF(NewFMul, Y, FMF);
     }
   }
@@ -1417,13 +1398,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
-static const unsigned MaxDepth = 6;
-
-// Take the exact integer log2 of the value. If DoFold is true, create the
-// actual instructions, otherwise return a non-null dummy value. Return nullptr
-// on failure.
-static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
-                       bool AssumeNonZero, bool DoFold) {
+Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
+                                  bool DoFold) {
   auto IfFold = [DoFold](function_ref<Value *()> Fn) {
     if (!DoFold)
       return reinterpret_cast<Value *>(-1);
@@ -1442,14 +1418,14 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     });
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
-  if (Depth++ == MaxDepth)
+  if (Depth++ == MaxAnalysisRecursionDepth)
     return nullptr;
 
   // log2(zext X) -> zext log2(X)
   // FIXME: Require one use?
   Value *X, *Y;
   if (match(Op, m_ZExt(m_Value(X))))
-    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+    if (Value *LogX = takeLog2(X, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
   // log2(trunc x) -> trunc log2(X)
@@ -1457,7 +1433,7 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   if (match(Op, m_Trunc(m_Value(X)))) {
     auto *TI = cast<TruncInst>(Op);
     if (AssumeNonZero || TI->hasNoUnsignedWrap())
-      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      if (Value *LogX = takeLog2(X, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
           return Builder.CreateTrunc(LogX, Op->getType(), "",
                                      /*IsNUW=*/TI->hasNoUnsignedWrap());
@@ -1470,7 +1446,7 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
     auto *BO = cast<OverflowingBinaryOperator>(Op);
     // nuw will be set if the `shl` is trivially non-zero.
     if (AssumeNonZero || BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap())
-      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      if (Value *LogX = takeLog2(X, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
   }
 
@@ -1479,26 +1455,25 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   if (match(Op, m_LShr(m_Value(X), m_Value(Y)))) {
     auto *PEO = cast<PossiblyExactOperator>(Op);
     if (AssumeNonZero || PEO->isExact())
-      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+      if (Value *LogX = takeLog2(X, Depth, AssumeNonZero, DoFold))
         return IfFold([&]() { return Builder.CreateSub(LogX, Y); });
   }
 
   // log2(X & Y) -> either log2(X) or log2(Y)
   // This requires `AssumeNonZero` as `X & Y` may be zero when X != Y.
   if (AssumeNonZero && match(Op, m_And(m_Value(X), m_Value(Y)))) {
-    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+    if (Value *LogX = takeLog2(X, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return LogX; });
-    if (Value *LogY = takeLog2(Builder, Y, Depth, AssumeNonZero, DoFold))
+    if (Value *LogY = takeLog2(Y, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return LogY; });
   }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
   // FIXME: Require one use?
   if (SelectInst *SI = dyn_cast<SelectInst>(Op))
-    if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth,
-                               AssumeNonZero, DoFold))
-      if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth,
-                                 AssumeNonZero, DoFold))
+    if (Value *LogX = takeLog2(SI->getOperand(1), Depth, AssumeNonZero, DoFold))
+      if (Value *LogY =
+              takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
           return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
         });
@@ -1509,9 +1484,9 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   if (MinMax && MinMax->hasOneUse() && !MinMax->isSigned()) {
     // Use AssumeNonZero as false here. Otherwise we can hit case where
     // log2(umax(X, Y)) != umax(log2(X), log2(Y)) (because overflow).
-    if (Value *LogX = takeLog2(Builder, MinMax->getLHS(), Depth,
+    if (Value *LogX = takeLog2(MinMax->getLHS(), Depth,
                                /*AssumeNonZero*/ false, DoFold))
-      if (Value *LogY = takeLog2(Builder, MinMax->getRHS(), Depth,
+      if (Value *LogY = takeLog2(MinMax->getRHS(), Depth,
                                  /*AssumeNonZero*/ false, DoFold))
         return IfFold([&]() {
           return Builder.CreateBinaryIntrinsic(MinMax->getIntrinsicID(), LogX,
@@ -1623,14 +1598,25 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
     return Lshr;
   }
 
-  // Op1 udiv Op2 -> Op1 lshr log2(Op2), if log2() folds away.
-  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ true,
-               /*DoFold*/ false)) {
-    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0,
-                          /*AssumeNonZero*/ true, /*DoFold*/ true);
+  auto GetShiftableDenom = [&](Value *Denom) -> Value * {
+    // Op0 udiv Op1 -> Op0 lshr log2(Op1), if log2() folds away.
+    if (Value *Log2 = tryGetLog2(Op1, /*AssumeNonZero=*/true))
+      return Log2;
+
+    // Op0 udiv Op1 -> Op0 lshr cttz(Op1), if Op1 is a power of 2.
+    if (isKnownToBeAPowerOfTwo(Denom, /*OrZero=*/true, /*Depth=*/0, &I))
+      // This will increase instruction count but it's okay
+      // since bitwise operations are substantially faster than
+      // division.
+      return Builder.CreateBinaryIntrinsic(Intrinsic::cttz, Denom,
+                                           Builder.getTrue());
+
+    return nullptr;
+  };
+
+  if (auto *Res = GetShiftableDenom(Op1))
     return replaceInstUsesWith(
         I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
-  }
 
   return nullptr;
 }
@@ -2066,14 +2052,18 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   bool ShiftByX = false;
 
   // If V is not nullptr, it will be matched using m_Specific.
-  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C) -> bool {
+  auto MatchShiftOrMulXC = [](Value *Op, Value *&V, APInt &C,
+                              bool &PreserveNSW) -> bool {
     const APInt *Tmp = nullptr;
     if ((!V && match(Op, m_Mul(m_Value(V), m_APInt(Tmp)))) ||
         (V && match(Op, m_Mul(m_Specific(V), m_APInt(Tmp)))))
       C = *Tmp;
     else if ((!V && match(Op, m_Shl(m_Value(V), m_APInt(Tmp)))) ||
-             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp)))))
+             (V && match(Op, m_Shl(m_Specific(V), m_APInt(Tmp))))) {
       C = APInt(Tmp->getBitWidth(), 1) << *Tmp;
+      // We cannot preserve NSW when shifting by BW - 1.
+      PreserveNSW = Tmp->ult(Tmp->getBitWidth() - 1);
+    }
     if (Tmp != nullptr)
       return true;
 
@@ -2095,7 +2085,9 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
     return false;
   };
 
-  if (MatchShiftOrMulXC(Op0, X, Y) && MatchShiftOrMulXC(Op1, X, Z)) {
+  bool Op0PreserveNSW = true, Op1PreserveNSW = true;
+  if (MatchShiftOrMulXC(Op0, X, Y, Op0PreserveNSW) &&
+      MatchShiftOrMulXC(Op1, X, Z, Op1PreserveNSW)) {
     // pass
   } else if (MatchShiftCX(Op0, Y, X) && MatchShiftCX(Op1, Z, X)) {
     ShiftByX = true;
@@ -2108,7 +2100,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   OverflowingBinaryOperator *BO0 = cast<OverflowingBinaryOperator>(Op0);
   // TODO: We may be able to deduce more about nsw/nuw of BO0/BO1 based on Y >=
   // Z or Z >= Y.
-  bool BO0HasNSW = BO0->hasNoSignedWrap();
+  bool BO0HasNSW = Op0PreserveNSW && BO0->hasNoSignedWrap();
   bool BO0HasNUW = BO0->hasNoUnsignedWrap();
   bool BO0NoWrap = IsSRem ? BO0HasNSW : BO0HasNUW;
 
@@ -2131,7 +2123,7 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   };
 
   OverflowingBinaryOperator *BO1 = cast<OverflowingBinaryOperator>(Op1);
-  bool BO1HasNSW = BO1->hasNoSignedWrap();
+  bool BO1HasNSW = Op1PreserveNSW && BO1->hasNoSignedWrap();
   bool BO1HasNUW = BO1->hasNoUnsignedWrap();
   bool BO1NoWrap = IsSRem ? BO1HasNSW : BO1HasNUW;
   // (rem (mul X, Y), (mul nuw/nsw X, Z))

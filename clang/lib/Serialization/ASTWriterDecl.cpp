@@ -1951,7 +1951,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   Record.push_back(D->wasDeclaredWithTypename());
 
   const TypeConstraint *TC = D->getTypeConstraint();
-  assert((bool)TC == D->hasTypeConstraint());
+  if (D->hasTypeConstraint())
+    Record.push_back(/*TypeConstraintInitialized=*/TC != nullptr);
   if (TC) {
     auto *CR = TC->getConceptReference();
     Record.push_back(CR != nullptr);
@@ -1969,7 +1970,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (OwnsDefaultArg)
     Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
-  if (!TC && !OwnsDefaultArg &&
+  if (!D->hasTypeConstraint() && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->isInvalidDecl() && !D->hasAttrs() &&
       !D->isTopLevelDeclInObjCContainer() && !D->isImplicit() &&

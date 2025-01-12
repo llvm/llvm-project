@@ -73,6 +73,7 @@ set(files
   __algorithm/prev_permutation.h
   __algorithm/pstl.h
   __algorithm/push_heap.h
+  __algorithm/radix_sort.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
   __algorithm/ranges_any_of.h
@@ -497,7 +498,6 @@ set(files
   __locale
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/android.h
-  __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/fuchsia.h
   __locale_dir/locale_base_api/ibm.h

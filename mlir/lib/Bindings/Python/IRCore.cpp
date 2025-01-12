@@ -272,13 +272,13 @@ struct PyAttrBuilderMap {
   static bool dunderContains(const std::string &attributeKind) {
     return PyGlobals::get().lookupAttributeBuilder(attributeKind).has_value();
   }
-  static nb::callable dundeGetItemNamed(const std::string &attributeKind) {
+  static nb::callable dunderGetItemNamed(const std::string &attributeKind) {
     auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
     if (!builder)
       throw nb::key_error(attributeKind.c_str());
     return *builder;
   }
-  static void dundeSetItemNamed(const std::string &attributeKind,
+  static void dunderSetItemNamed(const std::string &attributeKind,
                                 nb::callable func, bool replace) {
     PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
                                               replace);
@@ -287,8 +287,8 @@ struct PyAttrBuilderMap {
   static void bind(nb::module_ &m) {
     nb::class_<PyAttrBuilderMap>(m, "AttrBuilder")
         .def_static("contains", &PyAttrBuilderMap::dunderContains)
-        .def_static("get", &PyAttrBuilderMap::dundeGetItemNamed)
-        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed,
+        .def_static("get", &PyAttrBuilderMap::dunderGetItemNamed)
+        .def_static("insert", &PyAttrBuilderMap::dunderSetItemNamed,
                     "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
                     "Register an attribute builder for building MLIR "
                     "attributes from python values.");

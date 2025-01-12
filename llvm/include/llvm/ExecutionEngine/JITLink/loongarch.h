@@ -233,7 +233,7 @@ const char *getEdgeKindName(Edge::Kind K);
 
 // Returns extract bits Val[Hi:Lo].
 inline uint32_t extractBits(uint64_t Val, unsigned Hi, unsigned Lo) {
-  return Hi == 63 ? Val >> Lo : (Val & (((1UL << (Hi + 1)) - 1))) >> Lo;
+  return Hi == 63 ? Val >> Lo : (Val & ((((uint64_t)1 << (Hi + 1)) - 1))) >> Lo;
 }
 
 /// Apply fixup expression for edge to block content.
