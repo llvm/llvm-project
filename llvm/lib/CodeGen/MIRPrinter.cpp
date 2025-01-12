@@ -604,7 +604,7 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
                                       const MachineFunction &MF,
                                       MachineModuleSlotTracker &MST) {
-  for (const auto [CallInst, CG] : MF.getCalledGlobals()) {
+  for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
     // If the call instruction was dropped, then we don't need to print it.
     auto BB = CallInst->getParent();
     if (BB) {
