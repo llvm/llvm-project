@@ -29,6 +29,34 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 // precision compared to the floating point precision.
 template <typename T> struct ExtraPrecision;
 
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template <> struct ExtraPrecision<float16> {
+  static constexpr unsigned int VALUE = 128;
+};
+#endif
+
+template <> struct ExtraPrecision<float> {
+  static constexpr unsigned int VALUE = 128;
+};
+
+template <> struct ExtraPrecision<double> {
+  static constexpr unsigned int VALUE = 256;
+};
+
+template <> struct ExtraPrecision<long double> {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
+  static constexpr unsigned int VALUE = 512;
+#else
+  static constexpr unsigned int VALUE = 256;
+#endif
+};
+
+#if defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
+template <> struct ExtraPrecision<float128> {
+  static constexpr unsigned int VALUE = 512;
+};
+#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.
@@ -82,7 +110,7 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x, unsigned int precision = 128,
+  explicit MPFRNumber(XType x, unsigned int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest);
 
   MPFRNumber(const MPFRNumber &other);

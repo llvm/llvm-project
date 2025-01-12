@@ -8,7 +8,7 @@
 
 #include "MPCUtils.h"
 
-#include "../MPFRWrapper/MPFRUtils.cpp"
+#include "utils/MPFRWrapper/MPFRUtils.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"

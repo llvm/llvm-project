@@ -8,6 +8,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
   target_compile_options(libcMPCWrapper PRIVATE -O3 ${compile_options})
   add_dependencies(
     libcMPCWrapper
+    libcMPFRWrapper
     libc.src.__support.CPP.array
     libc.src.__support.CPP.stringstream
     libc.src.__support.CPP.string_view
@@ -19,7 +20,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     LibcTest.unit
   )
   target_include_directories(libcMPCWrapper PUBLIC ${LIBC_SOURCE_DIR})
-  target_link_libraries(libcMPCWrapper PUBLIC LibcFPTestHelpers.unit LibcTest.unit mpc mpfr gmp)
+  target_link_libraries(libcMPCWrapper PUBLIC libcMPFRWrapper LibcFPTestHelpers.unit LibcTest.unit mpc mpfr gmp)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
   message(WARNING "Math tests using MPC will be skipped.")
 endif()
