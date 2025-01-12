@@ -10758,6 +10758,9 @@ static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
 }
 
 static void checkMethodPointerType(Sema &S, Declarator &D, unsigned DiagID) {
+  if (D.isInvalidType())
+    return;
+
   if (D.getNumTypeObjects() > 0) {
     DeclaratorChunk &Chunk = D.getTypeObject(D.getNumTypeObjects() - 1);
     if (Chunk.Kind == DeclaratorChunk::Pointer) {
