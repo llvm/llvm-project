@@ -110,7 +110,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x, unsigned int precision = ExtraPrecision<float>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest);
 
   MPFRNumber(const MPFRNumber &other);

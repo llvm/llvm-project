@@ -8,7 +8,6 @@
 
 #include "MPCUtils.h"
 
-#include "utils/MPFRWrapper/MPFRUtils.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
@@ -18,6 +17,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
+#include "utils/MPFRWrapper/MPFRUtils.h"
 
 #include <stdint.h>
 
