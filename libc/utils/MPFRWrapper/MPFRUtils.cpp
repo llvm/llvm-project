@@ -28,34 +28,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
-template <> struct ExtraPrecision<float16> {
-  static constexpr unsigned int VALUE = 128;
-};
-#endif
-
-template <> struct ExtraPrecision<float> {
-  static constexpr unsigned int VALUE = 128;
-};
-
-template <> struct ExtraPrecision<double> {
-  static constexpr unsigned int VALUE = 256;
-};
-
-template <> struct ExtraPrecision<long double> {
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128
-  static constexpr unsigned int VALUE = 512;
-#else
-  static constexpr unsigned int VALUE = 256;
-#endif
-};
-
-#if defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
-template <> struct ExtraPrecision<float128> {
-  static constexpr unsigned int VALUE = 512;
-};
-#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
-
 MPFRNumber::MPFRNumber() : mpfr_precision(256), mpfr_rounding(MPFR_RNDN) {
   mpfr_init2(value, mpfr_precision);
 }
