@@ -2002,6 +2002,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CmseNSCall:
   case attr::AnnotateType:
   case attr::WebAssemblyFuncref:
+  case attr::ArmAgnostic:
   case attr::ArmStreaming:
   case attr::ArmStreamingCompatible:
   case attr::ArmIn:
