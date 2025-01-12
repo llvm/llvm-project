@@ -2144,11 +2144,10 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-  // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, symTable);
-  dsp.processStep1();
+                           enableDelayedPrivatization, symTable);
+  dsp.processStep1(&simdClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2156,7 +2155,8 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
+  simdArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
