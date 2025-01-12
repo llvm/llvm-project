@@ -313,6 +313,19 @@ define i8 @fold_ctz_log2(i8 %x) {
   ret i8 %r
 }
 
+define i9 @fold_ctz_log2_i9_okay(i9 %x) {
+; CHECK-LABEL: @fold_ctz_log2_i9_okay(
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i9 1, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i9 @llvm.umin.i9(i9 [[P2]], i9 32)
+; CHECK-NEXT:    [[R:%.*]] = call range(i9 0, 10) i9 @llvm.cttz.i9(i9 [[V]], i1 true)
+; CHECK-NEXT:    ret i9 [[R]]
+;
+  %p2 = shl i9 1, %x
+  %v = call i9 @llvm.umin(i9 %p2, i9 32)
+  %r = call i9 @llvm.cttz(i9 %v, i1 false)
+  ret i9 %r
+}
+
 define i8 @fold_ctz_log2_maybe_z(i8 %x, i8 %y, i1 %c) {
 ; CHECK-LABEL: @fold_ctz_log2_maybe_z(
 ; CHECK-NEXT:    [[V:%.*]] = shl i8 2, [[V_V:%.*]]
@@ -356,8 +369,8 @@ define i8 @fold_clz_log2(i8 %x) {
   ret i8 %r
 }
 
-define i8 @fold_clz_log2_multiuse(i8 %x) {
-; CHECK-LABEL: @fold_clz_log2_multiuse(
+define i8 @fold_clz_log2_multiuse_fail(i8 %x) {
+; CHECK-LABEL: @fold_clz_log2_multiuse_fail(
 ; CHECK-NEXT:    [[V:%.*]] = shl i8 2, [[X:%.*]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
 ; CHECK-NEXT:    [[R:%.*]] = call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
@@ -370,8 +383,8 @@ define i8 @fold_clz_log2_multiuse(i8 %x) {
 }
 
 
-  define i9 @fold_clz_log2_i9(i9 %x) {
-; CHECK-LABEL: @fold_clz_log2_i9(
+define i9 @fold_clz_log2_i9_fail(i9 %x) {
+; CHECK-LABEL: @fold_clz_log2_i9_fail(
 ; CHECK-NEXT:    [[P2:%.*]] = shl nuw i9 1, [[X:%.*]]
 ; CHECK-NEXT:    [[V:%.*]] = call i9 @llvm.umin.i9(i9 [[P2]], i9 32)
 ; CHECK-NEXT:    [[R:%.*]] = call range(i9 3, 10) i9 @llvm.ctlz.i9(i9 [[V]], i1 true)
@@ -379,6 +392,6 @@ define i8 @fold_clz_log2_multiuse(i8 %x) {
 ;
   %p2 = shl i9 1, %x
   %v = call i9 @llvm.umin(i9 %p2, i9 32)
-  %r = call i9 @llvm.ctlz(i9 %v, i1 false)
+  %r = call i9 @llvm.ctlz(i9 %v, i1 true)
   ret i9 %r
 }
