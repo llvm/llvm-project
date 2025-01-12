@@ -371,20 +371,22 @@ define i8 @fold_clz_log2(i8 %x) {
 
 define i8 @fold_clz_log2_multiuse_fail(i8 %x) {
 ; CHECK-LABEL: @fold_clz_log2_multiuse_fail(
-; CHECK-NEXT:    [[V:%.*]] = shl i8 2, [[X:%.*]]
+; CHECK-NEXT:    [[P2:%.*]] = shl nuw i8 2, [[X:%.*]]
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.umin.i8(i8 [[P2]], i8 32)
 ; CHECK-NEXT:    call void @use.i8(i8 [[V]])
-; CHECK-NEXT:    [[R:%.*]] = call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 2, 9) i8 @llvm.ctlz.i8(i8 [[V]], i1 true)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %v = shl i8 2, %x
+  %p2 = shl nuw i8 2, %x
+  %v = call i8 @llvm.umin(i8 %p2, i8 32)
   call void @use.i8(i8 %v)
   %r = call i8 @llvm.ctlz(i8 %v, i1 true)
   ret i8 %r
 }
 
 
-define i9 @fold_clz_log2_i9_fail(i9 %x) {
-; CHECK-LABEL: @fold_clz_log2_i9_fail(
+define i9 @fold_clz_log2_i9(i9 %x) {
+; CHECK-LABEL: @fold_clz_log2_i9(
 ; CHECK-NEXT:    [[P2:%.*]] = shl nuw i9 1, [[X:%.*]]
 ; CHECK-NEXT:    [[V:%.*]] = call i9 @llvm.umin.i9(i9 [[P2]], i9 32)
 ; CHECK-NEXT:    [[R:%.*]] = call range(i9 3, 10) i9 @llvm.ctlz.i9(i9 [[V]], i1 true)
