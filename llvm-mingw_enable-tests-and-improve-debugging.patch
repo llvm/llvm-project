@@ -1,0 +1,37 @@
+diff --git a/build-compiler-rt.sh b/build-compiler-rt.sh
+index f80272c..d775bb0 100755
+--- a/build-compiler-rt.sh
++++ b/build-compiler-rt.sh
+@@ -27,7 +27,7 @@ while [ $# -gt 0 ]; do
+         SRC_DIR=..
+         BUILD_SUFFIX=-sanitizers
+         SANITIZERS=1
+-        BUILD_BUILTINS=FALSE
++        BUILD_BUILTINS=TRUE
+         # Override the default cfguard options here; this unfortunately
+         # also overrides the user option if --enable-cfguard is passed
+         # before --build-sanitizers (although that combination isn't
+@@ -99,7 +99,7 @@ for arch in $ARCHS; do
+     [ -n "$NO_RECONF" ] || rm -rf CMake*
+     cmake \
+         ${CMAKE_GENERATOR+-G} "$CMAKE_GENERATOR" \
+-        -DCMAKE_BUILD_TYPE=Release \
++        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+         -DCMAKE_INSTALL_PREFIX="$CLANG_RESOURCE_DIR" \
+         -DCMAKE_C_COMPILER=$arch-w64-mingw32-clang \
+         -DCMAKE_CXX_COMPILER=$arch-w64-mingw32-clang++ \
+@@ -118,8 +118,12 @@ for arch in $ARCHS; do
+         -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+         -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
+         -DSANITIZER_CXX_ABI=libc++ \
+-        -DCMAKE_C_FLAGS_INIT="$CFGUARD_CFLAGS" \
+-        -DCMAKE_CXX_FLAGS_INIT="$CFGUARD_CFLAGS" \
++        -DCMAKE_C_FLAGS_INIT="-ggdb3 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer $CFGUARD_CFLAGS" \
++        -DCMAKE_CXX_FLAGS_INIT="-ggdb3 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer $CFGUARD_CFLAGS" \
++        -DCOMPILER_RT_INCLUDE_TESTS=ON \
++        -DCOMPILER_RT_TEST_COMPILER=$arch-w64-mingw32-clang \
++        -DCOMPILER_RT_TEST_COMPILER_CFLAGS="" \
++        -DCOMPILER_RT_EMULATOR="true" \
+         $SRC_DIR
+     cmake --build . ${CORES:+-j${CORES}}
+     cmake --install . --prefix "$INSTALL_PREFIX"
