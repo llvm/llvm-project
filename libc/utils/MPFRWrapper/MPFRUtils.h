@@ -257,7 +257,8 @@ public:
   //    of N between this number and [input].
   // 4. A values of +0.0 and -0.0 are treated as equal.
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber> ulp_as_mpfr_number(T input) {
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber>
+  ulp_as_mpfr_number(T input) {
     T thisAsT = as<T>();
     if (thisAsT == input)
       return MPFRNumber(0.0);
@@ -281,7 +282,7 @@ public:
       mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
       mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
       mpfr_mul_2si(inputMPFR.value, inputMPFR.value,
-                  -thisExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+                   -thisExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
       return inputMPFR;
     }
 
@@ -308,27 +309,28 @@ public:
 
     mpfr_sub(minMPFR.value, pivot.value, minMPFR.value, MPFR_RNDN);
     mpfr_mul_2si(minMPFR.value, minMPFR.value,
-                -minExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+                 -minExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
 
     mpfr_sub(maxMPFR.value, maxMPFR.value, pivot.value, MPFR_RNDN);
     mpfr_mul_2si(maxMPFR.value, maxMPFR.value,
-                -maxExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+                 -maxExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
 
     mpfr_add(minMPFR.value, minMPFR.value, maxMPFR.value, MPFR_RNDN);
     return minMPFR;
   }
 
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string> ulp_as_string(T input) {
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string>
+  ulp_as_string(T input) {
     MPFRNumber num = ulp_as_mpfr_number(input);
     return num.str();
   }
 
   template <typename T>
   cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input) {
-  MPFRNumber num = ulp_as_mpfr_number(input);
-  return num.as<double>();
-}
+    MPFRNumber num = ulp_as_mpfr_number(input);
+    return num.as<double>();
+  }
 };
 
 enum class Operation : int {
