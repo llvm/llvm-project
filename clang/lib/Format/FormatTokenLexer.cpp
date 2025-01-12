@@ -72,8 +72,12 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
 
+  for (const auto &TemplateName : Style.TemplateNames)
+    TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
     TypeNames.insert(&IdentTable.get(TypeName));
+  for (const auto &VariableTemplate : Style.VariableTemplates)
+    VariableTemplates.insert(&IdentTable.get(VariableTemplate));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -100,6 +104,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+  if (Style.InsertNewlineAtEOF) {
+    auto &TokEOF = *Tokens.back();
+    if (TokEOF.NewlinesBefore == 0) {
+      TokEOF.NewlinesBefore = 1;
+      TokEOF.OriginalColumn = 0;
+    }
+  }
   return Tokens;
 }
 
@@ -553,8 +564,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   if (Tokens.size() < Kinds.size())
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First =
-      Tokens.end() - Kinds.size();
+  const auto *First = Tokens.end() - Kinds.size();
   for (unsigned i = 0; i < Kinds.size(); ++i)
     if (First[i]->isNot(Kinds[i]))
       return false;
@@ -566,7 +576,7 @@ bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
   if (Tokens.size() < Count)
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First = Tokens.end() - Count;
+  const auto *First = Tokens.end() - Count;
   unsigned AddLength = 0;
   for (size_t i = 1; i < Count; ++i) {
     // If there is whitespace separating the token and the previous one,
@@ -1177,6 +1187,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
         Column = 0;
         break;
       case '\f':
+        if (Style.KeepFormFeed && !FormatTok->HasFormFeedBefore &&
+            // The form feed is immediately preceded and followed by a newline.
+            i > 0 && Text[i - 1] == '\n' &&
+            ((i + 1 < e && Text[i + 1] == '\n') ||
+             (i + 2 < e && Text[i + 1] == '\r' && Text[i + 2] == '\n'))) {
+          FormatTok->HasFormFeedBefore = true;
+        }
+        [[fallthrough]];
       case '\v':
         Column = 0;
         break;
@@ -1361,8 +1379,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TemplateNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TypeName);
+      else if (VariableTemplates.contains(Identifier))
+        FormatTok->setFinalizedType(TT_VariableTemplate);
     }
   }
 

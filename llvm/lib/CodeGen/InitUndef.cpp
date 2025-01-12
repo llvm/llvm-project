@@ -98,7 +98,7 @@ INITIALIZE_PASS(InitUndef, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
 char &llvm::InitUndefID = InitUndef::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
-  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
+  return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {
     return DefMO.isReg() && DefMO.isEarlyClobber();
   });
 }
@@ -163,6 +163,14 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     SmallVector<unsigned> SubRegIndexNeedInsert;
     TRI->getCoveringSubRegIndexes(*MRI, TargetRegClass, NeedDef,
                                   SubRegIndexNeedInsert);
+
+    // It's not possible to create the INIT_UNDEF when there is no register
+    // class associated for the subreg. This may happen for artificial subregs
+    // that are not directly addressable.
+    if (any_of(SubRegIndexNeedInsert, [&](unsigned Ind) -> bool {
+          return !TRI->getSubRegisterClass(TargetRegClass, Ind);
+        }))
+      continue;
 
     Register LatestReg = Reg;
     for (auto ind : SubRegIndexNeedInsert) {

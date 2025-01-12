@@ -39,7 +39,7 @@ enum {
 
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint64_t TSFlags) {
-  return TSFlags & IsVRegClassShiftMask >> IsVRegClassShift;
+  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.
@@ -101,6 +101,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   void lowerVRELOAD(MachineBasicBlock::iterator II) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  StringRef getRegAsmName(MCRegister Reg) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;

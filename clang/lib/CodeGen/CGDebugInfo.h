@@ -85,7 +85,8 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
@@ -195,6 +196,8 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
+                           llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 

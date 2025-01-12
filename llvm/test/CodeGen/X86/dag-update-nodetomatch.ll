@@ -144,7 +144,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    movq %rsi, %r12
 ; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_15: # %for.cond1.for.inc3_crit_edge
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movl %edx, (%r8)
@@ -220,7 +220,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    addq %r13, %r10
 ; CHECK-NEXT:    leaq (%r11,%r10,8), %r10
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_12: # %vector.body
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
@@ -237,7 +237,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    cmpq %rdx, %rbp
 ; CHECK-NEXT:    movq %r13, %rdx
 ; CHECK-NEXT:    je .LBB1_15
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_14: # %for.body2
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2

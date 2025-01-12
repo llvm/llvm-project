@@ -32,7 +32,6 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Unicode.h"
@@ -528,7 +527,7 @@ bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
 
   const char *StrData = Buffer.data()+LocInfo.second;
 
-  if (!IgnoreWhiteSpace && isWhitespace(StrData[0]))
+  if (!IgnoreWhiteSpace && isWhitespace(SkipEscapedNewLines(StrData)[0]))
     return true;
 
   // Create a lexer starting at the beginning of this token.

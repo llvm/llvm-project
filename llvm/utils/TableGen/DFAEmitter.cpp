@@ -124,12 +124,9 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   Table.layout();
   OS << "const std::array<NfaStatePair, " << Table.size() << "> " << Name
      << "TransitionInfo = {{\n";
-  Table.emit(
-      OS,
-      [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
-        OS << "{" << P.first << ", " << P.second << "}";
-      },
-      "{0ULL, 0ULL}");
+  Table.emit(OS, [](raw_ostream &OS, std::pair<uint64_t, uint64_t> P) {
+    OS << "{" << P.first << ", " << P.second << "}";
+  });
 
   OS << "}};\n\n";
 
@@ -170,7 +167,7 @@ void DfaEmitter::printActionValue(action_type A, raw_ostream &OS) { OS << A; }
 
 namespace {
 
-using Action = std::variant<Record *, unsigned, std::string>;
+using Action = std::variant<const Record *, unsigned, std::string>;
 using ActionTuple = std::vector<Action>;
 class Automaton;
 
@@ -306,7 +303,7 @@ StringRef Automaton::getActionSymbolType(StringRef A) {
 }
 
 Transition::Transition(const Record *R, Automaton *Parent) {
-  BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
+  const BitsInit *NewStateInit = R->getValueAsBitsInit("NewState");
   NewState = 0;
   assert(NewStateInit->getNumBits() <= sizeof(uint64_t) * 8 &&
          "State cannot be represented in 64 bits!");
@@ -356,7 +353,7 @@ void CustomDfaEmitter::printActionValue(action_type A, raw_ostream &OS) {
   ListSeparator LS;
   for (const auto &SingleAction : AT) {
     OS << LS;
-    if (const auto *R = std::get_if<Record *>(&SingleAction))
+    if (const auto *R = std::get_if<const Record *>(&SingleAction))
       OS << (*R)->getName();
     else if (const auto *S = std::get_if<std::string>(&SingleAction))
       OS << '"' << *S << '"';

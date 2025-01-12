@@ -78,6 +78,11 @@ public:
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
+  bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const override {
+    return MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&
+           MI.getOperand(1).getReg() == RISCV::X0;
+  }
+
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
@@ -293,6 +298,9 @@ public:
 
   unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const override;
 
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+
 protected:
   const RISCVSubtarget &STI;
 
@@ -345,6 +353,9 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
+
+/// Given two VL operands, do we know that LHS <= RHS?
+bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

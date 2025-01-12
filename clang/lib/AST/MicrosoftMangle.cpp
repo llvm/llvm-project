@@ -26,14 +26,12 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
 #include <functional>
@@ -397,7 +395,7 @@ public:
   void mangleBits(llvm::APInt Number);
   void mangleTagTypeKind(TagTypeKind TK);
   void mangleArtificialTagType(TagTypeKind TK, StringRef UnqualifiedName,
-                               ArrayRef<StringRef> NestedNames = std::nullopt);
+                               ArrayRef<StringRef> NestedNames = {});
   void mangleAddressSpaceType(QualType T, Qualifiers Quals, SourceRange Range);
   void mangleType(QualType T, SourceRange Range,
                   QualifierMangleMode QMM = QMM_Mangle);
@@ -1016,6 +1014,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_x87DoubleExtended: Out << 'X'; break;
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
+  case APFloat::S_PPCDoubleDoubleLegacy:
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
@@ -1024,6 +1023,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E4M3B11FNUZ:
   case APFloat::S_Float8E3M4:
   case APFloat::S_FloatTF32:
+  case APFloat::S_Float8E8M0FNU:
   case APFloat::S_Float6E3M2FN:
   case APFloat::S_Float6E2M3FN:
   case APFloat::S_Float4E2M1FN:
@@ -2814,7 +2814,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
@@ -3373,7 +3373,15 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Error(Range.getBegin(), "template type parameter type") << Range;
+  Out << '?';
+
+  llvm::SmallString<64> Name;
+  Name += "<TTPT_";
+  Name += llvm::utostr(T->getDepth());
+  Name += "_";
+  Name += llvm::utostr(T->getIndex());
+  Name += ">";
+  mangleSourceName(Name);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
@@ -3751,6 +3759,11 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
 void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "DependentBitInt type") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
+                                         Qualifiers, SourceRange Range) {
+  llvm_unreachable("HLSL uses Itanium name mangling");
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |

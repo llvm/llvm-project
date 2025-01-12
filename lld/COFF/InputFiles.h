@@ -40,7 +40,10 @@ class DWARFCache;
 namespace coff {
 class COFFLinkerContext;
 
-std::vector<MemoryBufferRef> getArchiveMembers(llvm::object::Archive *file);
+const COFFSyncStream &operator<<(const COFFSyncStream &, const InputFile *);
+
+std::vector<MemoryBufferRef> getArchiveMembers(COFFLinkerContext &,
+                                               llvm::object::Archive *file);
 
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::MachineTypes;
@@ -59,6 +62,7 @@ class ImportThunkChunk;
 class ImportThunkChunkARM64EC;
 class SectionChunk;
 class Symbol;
+class SymbolTable;
 class Undefined;
 class TpiSource;
 
@@ -68,7 +72,6 @@ public:
   enum Kind {
     ArchiveKind,
     ObjectKind,
-    LazyObjectKind,
     PDBKind,
     ImportKind,
     BitcodeKind,
@@ -96,11 +99,11 @@ public:
   // Returns .drectve section contents if exist.
   StringRef getDirectives() { return directives; }
 
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 
 protected:
-  InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
-      : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
+  InputFile(SymbolTable &s, Kind k, MemoryBufferRef m, bool lazy = false)
+      : mb(m), symtab(s), fileKind(k), lazy(lazy) {}
 
   StringRef directives;
 
@@ -132,8 +135,10 @@ private:
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false)
-      : InputFile(ctx, ObjectKind, m, lazy) {}
+  static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                         bool lazy = false);
+  explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy);
+
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
@@ -272,7 +277,7 @@ private:
                     &comdatDefs,
                 bool &prevailingComdat);
   Symbol *createRegular(COFFSymbolRef sym);
-  Symbol *createUndefined(COFFSymbolRef sym);
+  Symbol *createUndefined(COFFSymbolRef sym, bool overrideLazy);
 
   std::unique_ptr<COFFObjectFile> coffObj;
 
@@ -349,7 +354,7 @@ public:
   MachineTypes getMachineType() const override;
 
   DefinedImportData *impSym = nullptr;
-  Symbol *thunkSym = nullptr;
+  Defined *thunkSym = nullptr;
   ImportThunkChunkARM64EC *impchkThunk = nullptr;
   std::string dllName;
 
@@ -362,10 +367,12 @@ public:
   const coff_import_header *hdr;
   Chunk *location = nullptr;
 
-  // Auxiliary IAT symbol and chunk on ARM64EC.
+  // Auxiliary IAT symbols and chunks on ARM64EC.
   DefinedImportData *impECSym = nullptr;
   Chunk *auxLocation = nullptr;
-  Symbol *auxThunkSym = nullptr;
+  Defined *auxThunkSym = nullptr;
+  DefinedImportData *auxImpCopySym = nullptr;
+  Chunk *auxCopyLocation = nullptr;
 
   // We want to eliminate dllimported symbols if no one actually refers to them.
   // These "Live" bits are used to keep track of which import library members
@@ -398,8 +405,8 @@ private:
 // .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
-  explicit DLLFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-      : InputFile(ctx, DLLKind, m) {}
+  explicit DLLFile(SymbolTable &symtab, MemoryBufferRef m)
+      : InputFile(symtab, DLLKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
   MachineTypes getMachineType() const override;

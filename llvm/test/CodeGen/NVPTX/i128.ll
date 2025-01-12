@@ -13,7 +13,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd45, %rd46}, [srem_i128_param_0];
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd49, %rd50}, [srem_i128_param_1];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd46, 63;
-; CHECK-NEXT:    mov.u64 %rd119, 0;
+; CHECK-NEXT:    mov.b64 %rd119, 0;
 ; CHECK-NEXT:    sub.cc.s64 %rd52, %rd119, %rd45;
 ; CHECK-NEXT:    subc.cc.s64 %rd53, %rd119, %rd46;
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd46, 0;
@@ -95,7 +95,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    shr.u64 %rd124, %rd4, %r16;
 ; CHECK-NEXT:    add.cc.s64 %rd35, %rd5, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd36, %rd6, -1;
-; CHECK-NEXT:    mov.u64 %rd116, 0;
+; CHECK-NEXT:    mov.b64 %rd116, 0;
 ; CHECK-NEXT:    mov.u64 %rd119, %rd116;
 ; CHECK-NEXT:  $L__BB0_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -145,7 +145,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    xor.b64 %rd112, %rd110, %rd2;
 ; CHECK-NEXT:    sub.cc.s64 %rd113, %rd111, %rd2;
 ; CHECK-NEXT:    subc.cc.s64 %rd114, %rd112, %rd2;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd113, %rd114};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd113, %rd114};
 ; CHECK-NEXT:    ret;
   %div = srem i128 %lhs, %rhs
   ret i128 %div
@@ -180,7 +180,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    cvt.u64.u32 %rd52, %r4;
 ; CHECK-NEXT:    add.s64 %rd53, %rd52, 64;
 ; CHECK-NEXT:    selp.b64 %rd54, %rd51, %rd53, %p5;
-; CHECK-NEXT:    mov.u64 %rd105, 0;
+; CHECK-NEXT:    mov.b64 %rd105, 0;
 ; CHECK-NEXT:    sub.cc.s64 %rd56, %rd50, %rd54;
 ; CHECK-NEXT:    subc.cc.s64 %rd57, %rd105, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p6, %rd57, 0;
@@ -233,7 +233,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    shr.u64 %rd110, %rd42, %r16;
 ; CHECK-NEXT:    add.cc.s64 %rd33, %rd3, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd34, %rd4, -1;
-; CHECK-NEXT:    mov.u64 %rd102, 0;
+; CHECK-NEXT:    mov.b64 %rd102, 0;
 ; CHECK-NEXT:    mov.u64 %rd105, %rd102;
 ; CHECK-NEXT:  $L__BB1_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -279,7 +279,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    mul.lo.s64 %rd98, %rd3, %rd113;
 ; CHECK-NEXT:    sub.cc.s64 %rd99, %rd41, %rd98;
 ; CHECK-NEXT:    subc.cc.s64 %rd100, %rd42, %rd97;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd99, %rd100};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd99, %rd100};
 ; CHECK-NEXT:    ret;
   %div = urem i128 %lhs, %rhs
   ret i128 %div
@@ -299,7 +299,7 @@ define i128 @srem_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    and.b64 %rd7, %rd5, -8589934592;
 ; CHECK-NEXT:    sub.cc.s64 %rd8, %rd1, %rd7;
 ; CHECK-NEXT:    subc.cc.s64 %rd9, %rd2, %rd6;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd8, %rd9};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd8, %rd9};
 ; CHECK-NEXT:    ret;
   %div = srem i128 %lhs, 8589934592
   ret i128 %div
@@ -313,8 +313,8 @@ define i128 @urem_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [urem_i128_pow2k_param_0];
 ; CHECK-NEXT:    and.b64 %rd3, %rd1, 8589934591;
-; CHECK-NEXT:    mov.u64 %rd4, 0;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd3, %rd4};
+; CHECK-NEXT:    mov.b64 %rd4, 0;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
   %div = urem i128 %lhs, 8589934592
   ret i128 %div
@@ -330,7 +330,7 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd45, %rd46}, [sdiv_i128_param_0];
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd49, %rd50}, [sdiv_i128_param_1];
-; CHECK-NEXT:    mov.u64 %rd112, 0;
+; CHECK-NEXT:    mov.b64 %rd112, 0;
 ; CHECK-NEXT:    sub.cc.s64 %rd52, %rd112, %rd45;
 ; CHECK-NEXT:    subc.cc.s64 %rd53, %rd112, %rd46;
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd46, 0;
@@ -414,7 +414,7 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    shr.u64 %rd117, %rd2, %r16;
 ; CHECK-NEXT:    add.cc.s64 %rd35, %rd3, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd36, %rd4, -1;
-; CHECK-NEXT:    mov.u64 %rd109, 0;
+; CHECK-NEXT:    mov.b64 %rd109, 0;
 ; CHECK-NEXT:    mov.u64 %rd112, %rd109;
 ; CHECK-NEXT:  $L__BB4_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -456,7 +456,7 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    xor.b64 %rd105, %rd121, %rd5;
 ; CHECK-NEXT:    sub.cc.s64 %rd106, %rd104, %rd5;
 ; CHECK-NEXT:    subc.cc.s64 %rd107, %rd105, %rd5;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd106, %rd107};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd106, %rd107};
 ; CHECK-NEXT:    ret;
   %div = sdiv i128 %lhs, %rhs
   ret i128 %div
@@ -491,7 +491,7 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    cvt.u64.u32 %rd52, %r4;
 ; CHECK-NEXT:    add.s64 %rd53, %rd52, 64;
 ; CHECK-NEXT:    selp.b64 %rd54, %rd51, %rd53, %p5;
-; CHECK-NEXT:    mov.u64 %rd97, 0;
+; CHECK-NEXT:    mov.b64 %rd97, 0;
 ; CHECK-NEXT:    sub.cc.s64 %rd56, %rd50, %rd54;
 ; CHECK-NEXT:    subc.cc.s64 %rd57, %rd97, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p6, %rd57, 0;
@@ -544,7 +544,7 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    shr.u64 %rd102, %rd42, %r16;
 ; CHECK-NEXT:    add.cc.s64 %rd33, %rd43, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd34, %rd44, -1;
-; CHECK-NEXT:    mov.u64 %rd94, 0;
+; CHECK-NEXT:    mov.b64 %rd94, 0;
 ; CHECK-NEXT:    mov.u64 %rd97, %rd94;
 ; CHECK-NEXT:  $L__BB5_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -582,7 +582,7 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    or.b64 %rd105, %rd97, %rd92;
 ; CHECK-NEXT:    or.b64 %rd106, %rd94, %rd91;
 ; CHECK-NEXT:  $L__BB5_5: // %udiv-end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd105, %rd106};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd105, %rd106};
 ; CHECK-NEXT:    ret;
   %div = udiv i128 %lhs, %rhs
   ret i128 %div
@@ -603,7 +603,7 @@ define i128 @sdiv_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    shr.u64 %rd8, %rd5, 33;
 ; CHECK-NEXT:    or.b64 %rd9, %rd8, %rd7;
 ; CHECK-NEXT:    shr.s64 %rd10, %rd6, 33;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd9, %rd10};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd9, %rd10};
 ; CHECK-NEXT:    ret;
   %div = sdiv i128 %lhs, 8589934592
   ret i128 %div
@@ -620,7 +620,7 @@ define i128 @udiv_i128_pow2k(i128 %lhs) {
 ; CHECK-NEXT:    shr.u64 %rd4, %rd1, 33;
 ; CHECK-NEXT:    or.b64 %rd5, %rd4, %rd3;
 ; CHECK-NEXT:    shr.u64 %rd6, %rd2, 33;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd5, %rd6};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd5, %rd6};
 ; CHECK-NEXT:    ret;
   %div = udiv i128 %lhs, 8589934592
   ret i128 %div
@@ -636,7 +636,7 @@ define i128 @add_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd3, %rd4}, [add_i128_param_1];
 ; CHECK-NEXT:    add.cc.s64 %rd5, %rd1, %rd3;
 ; CHECK-NEXT:    addc.cc.s64 %rd6, %rd2, %rd4;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0+0], {%rd5, %rd6};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd5, %rd6};
 ; CHECK-NEXT:    ret;
   %result = add i128 %lhs, %rhs
   ret i128 %result

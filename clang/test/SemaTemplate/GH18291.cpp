@@ -112,3 +112,12 @@ namespace static_vs_nonstatic {
     }
   } // namespace explicit_obj_param
 } // namespace static_vs_nonstatic
+
+namespace incomplete_on_sugar {
+  template <unsigned P, class T> void f(T[P]) = delete;
+  template <unsigned P> void f(int[][P]);
+  void test() {
+    int array[1][8];
+    f<8>(array);
+  }
+} // namespace incomplete_on_sugar

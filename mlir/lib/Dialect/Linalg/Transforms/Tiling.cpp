@@ -101,7 +101,7 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
 
   Value zero = b.create<arith::ConstantIndexOp>(0);
   Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
-                                            value.get<Value>(), zero);
+                                            cast<Value>(value), zero);
   b.create<cf::AssertOp>(
       condition,
       b.getStringAttr("expected strictly positive tile size and divisor"));
@@ -375,10 +375,8 @@ static void calculateTileOffsetsAndSizes(
   b.setInsertionPointToStart(forallOp.getBody(0));
 
   SmallVector<Value> threadIds = forallOp.getInductionVars();
-  SmallVector<OpFoldResult> nonZeroNumThreads =
-      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 0);
-      }));
+  SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
+      numThreads, [](OpFoldResult ofr) { return !isConstantIntValue(ofr, 0); });
   int64_t nLoops = loopRanges.size();
   tiledOffsets.reserve(nLoops);
   tiledSizes.reserve(nLoops);
@@ -656,10 +654,8 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
 
   Operation *tiledOp = nullptr;
 
-  SmallVector<OpFoldResult> nonZeroNumThreads =
-      llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 0);
-      }));
+  SmallVector<OpFoldResult> nonZeroNumThreads = llvm::filter_to_vector(
+      numThreads, [](OpFoldResult ofr) { return !isConstantIntValue(ofr, 0); });
   SmallVector<Value> materializedNonZeroNumThreads =
       getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 

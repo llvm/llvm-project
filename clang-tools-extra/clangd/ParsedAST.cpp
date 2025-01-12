@@ -280,6 +280,8 @@ public:
     llvm::StringRef Check;
     while (!Checks.empty()) {
       std::tie(Check, Checks) = Checks.split(',');
+      Check = Check.trim();
+
       if (Check.empty())
         continue;
 
@@ -340,7 +342,7 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
       if (Enable) {
         if (Diags.getDiagnosticLevel(ID, SourceLocation()) <
             DiagnosticsEngine::Warning) {
-          auto Group = Diags.getDiagnosticIDs()->getGroupForDiag(ID);
+          auto Group = DiagnosticIDs::getGroupForDiag(ID);
           if (!Group || !EnabledGroups(*Group))
             continue;
           Diags.setSeverity(ID, diag::Severity::Warning, SourceLocation());
@@ -583,8 +585,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
-          isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                                 Clang->getLangOpts()))
+          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
+                                        Clang->getLangOpts()))
         return DiagnosticsEngine::Ignored;
 
       auto It = OverriddenSeverity.find(Info.getID());
@@ -637,7 +639,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS, false);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
-          &Clang->getPreprocessor().getHeaderSearchInfo());
+          &Clang->getPreprocessor().getHeaderSearchInfo(),
+          Cfg.Style.QuotedHeaders, Cfg.Style.AngledHeaders);
       ArrayRef<Inclusion> MainFileIncludes;
       if (Preamble) {
         MainFileIncludes = Preamble->Includes.MainFileIncludes;

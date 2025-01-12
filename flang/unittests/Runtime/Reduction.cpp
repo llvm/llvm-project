@@ -619,7 +619,7 @@ TEST(Reductions, DotProduct) {
       *logicalVector2, *logicalVector1, __FILE__, __LINE__));
 }
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 TEST(Reductions, ExtremaReal16) {
   // The identity value for Min/Maxval for REAL(16) was mistakenly
   // set to 0.0.
@@ -634,7 +634,7 @@ TEST(Reductions, ExtremaReal16) {
   auto maxArray{MakeArray<TypeCategory::Real, 16>(shape, rawMaxData)};
   EXPECT_EQ(RTNAME(MaxvalReal16)(*maxArray, __FILE__, __LINE__), -1.0);
 }
-#endif // LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#endif // HAS_LDBL128 || HAS_FLOAT128
 
 static std::int32_t IAdd(const std::int32_t *x, const std::int32_t *y) {
   return *x + *y;

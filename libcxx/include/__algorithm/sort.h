@@ -29,9 +29,12 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <climits>
@@ -848,7 +851,7 @@ template <class _Comp, class _RandomAccessIterator>
 void __sort(_RandomAccessIterator, _RandomAccessIterator, _Comp);
 
 extern template _LIBCPP_EXPORTED_FROM_ABI void __sort<__less<char>&, char*>(char*, char*, __less<char>&);
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template _LIBCPP_EXPORTED_FROM_ABI void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&);
 #endif
 extern template _LIBCPP_EXPORTED_FROM_ABI void
@@ -887,13 +890,13 @@ __sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
 }
 
 template <class _Type, class... _Options>
-using __is_any_of = _Or<is_same<_Type, _Options>...>;
+using __is_any_of _LIBCPP_NODEBUG = _Or<is_same<_Type, _Options>...>;
 
 template <class _Type>
-using __sort_is_specialized_in_library = __is_any_of<
+using __sort_is_specialized_in_library _LIBCPP_NODEBUG = __is_any_of<
     _Type,
     char,
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
     wchar_t,
 #endif
     signed char,

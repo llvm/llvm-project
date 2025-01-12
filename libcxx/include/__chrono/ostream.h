@@ -12,7 +12,7 @@
 
 #include <__config>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/day.h>
@@ -36,6 +36,7 @@
 #  include <__format/format_functions.h>
 #  include <__fwd/ostream.h>
 #  include <ratio>
+#  include <sstream>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -85,7 +86,7 @@ _LIBCPP_HIDE_FROM_ABI auto __units_suffix() {
   else if constexpr (same_as<typename _Period::type, nano>)
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "ns");
   else if constexpr (same_as<typename _Period::type, micro>)
-#    ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "\u00b5s");
 #    else
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "us");
@@ -306,7 +307,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
 }
 
-#      if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
@@ -321,6 +322,6 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _Ti
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___CHRONO_OSTREAM_H

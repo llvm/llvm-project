@@ -101,7 +101,8 @@ namespace {
       if (DumpDeclTypes) {
         Decl *InnerD = D;
         if (auto *TD = dyn_cast<TemplateDecl>(D))
-          InnerD = TD->getTemplatedDecl();
+          if (Decl *TempD = TD->getTemplatedDecl())
+            InnerD = TempD;
 
         // FIXME: Support OutputFormat in type dumping.
         // FIXME: Support combining -ast-dump-decl-types with -ast-dump-lookups.

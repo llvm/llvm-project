@@ -11,10 +11,11 @@
 #ifndef FORTRAN_RUNTIME_CPP_TYPE_H_
 #define FORTRAN_RUNTIME_CPP_TYPE_H_
 
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/float128.h"
+#include "flang/Common/float80.h"
 #include "flang/Common/uint128.h"
-#include <complex>
+#include "flang/Runtime/complex.h"
 #include <cstdint>
 #if __cplusplus >= 202302
 #include <stdfloat>
@@ -46,6 +47,10 @@ template <int KIND> struct CppTypeForHelper<TypeCategory::Integer, KIND> {
   using type = common::HostSignedIntType<8 * KIND>;
 };
 
+template <int KIND> struct CppTypeForHelper<TypeCategory::Unsigned, KIND> {
+  using type = common::HostUnsignedIntType<8 * KIND>;
+};
+
 #if HAS_FP16
 template <> struct CppTypeForHelper<TypeCategory::Real, 2> {
   using type = std::float16_t;
@@ -70,26 +75,26 @@ template <> struct CppTypeForHelper<TypeCategory::Real, 8> {
   using type = double;
 #endif
 };
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 template <> struct CppTypeForHelper<TypeCategory::Real, 10> {
-  using type = long double;
+  using type = CppFloat80Type;
 };
 #endif
 #if __STDCPP_FLOAT128_T__
 using CppFloat128Type = std::float128_t;
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 using CppFloat128Type = long double;
 #elif HAS_FLOAT128
 using CppFloat128Type = __float128;
 #endif
-#if __STDCPP_FLOAT128_t || LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if __STDCPP_FLOAT128_t || HAS_LDBL128 || HAS_FLOAT128
 template <> struct CppTypeForHelper<TypeCategory::Real, 16> {
   using type = CppFloat128Type;
 };
 #endif
 
 template <int KIND> struct CppTypeForHelper<TypeCategory::Complex, KIND> {
-  using type = std::complex<CppTypeFor<TypeCategory::Real, KIND>>;
+  using type = rtcmplx::complex<CppTypeFor<TypeCategory::Real, KIND>>;
 };
 
 template <> struct CppTypeForHelper<TypeCategory::Character, 1> {

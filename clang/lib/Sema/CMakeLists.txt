@@ -55,6 +55,7 @@ add_clang_library(clangSema
   SemaExprMember.cpp
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
+  SemaFunctionEffects.cpp
   SemaHLSL.cpp
   SemaHexagon.cpp
   SemaInit.cpp
@@ -78,6 +79,7 @@ add_clang_library(clangSema
   SemaStmt.cpp
   SemaStmtAsm.cpp
   SemaStmtAttr.cpp
+  SemaSPIRV.cpp
   SemaSYCL.cpp
   SemaSwift.cpp
   SemaSystemZ.cpp

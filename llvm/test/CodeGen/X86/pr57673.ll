@@ -37,7 +37,7 @@ define void @foo() {
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
   ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
-  ; NORMAL-NEXT:   DBG_VALUE $noreg, $noreg, !3, !DIExpression(), debug-location !8
+  ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
   ; NORMAL-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
   ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; NORMAL-NEXT: {{  $}}
@@ -76,7 +76,7 @@ define void @foo() {
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
   ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
-  ; INSTRREF-NEXT:   DBG_VALUE $noreg, $noreg, !3, !DIExpression(), debug-location !8
+  ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
   ; INSTRREF-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
   ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; INSTRREF-NEXT: {{  $}}
@@ -100,7 +100,7 @@ bb_entry:
   br label %bb_8
 
 bb_8:                                             ; preds = %bb_last, %bb_entry
-  br i1 undef, label %bb_last, label %bb_mid
+  br i1 poison, label %bb_last, label %bb_mid
 
 bb_mid:                                           ; preds = %bb_8
   %i4 = getelementptr inbounds %t10, ptr %i1, i64 0, i32 1, i64 32

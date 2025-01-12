@@ -89,6 +89,7 @@ body:             |
 # CHECK: $sp = t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, $r4, $r5, $r6, undef $r7, $r8, $r9, $r10, $r11
 # CHECK-NEXT:  $r0 = t2BICri $r0, 1, 14 /* CC::al */, $noreg, $noreg
 # CHECK-NEXT:  $sp = tSUBspi $sp, 34, 14 /* CC::al */, $noreg
+# CHECK-NEXT:  dead $s0 = VMOVS undef $s0, 14 /* CC::al */, $noreg
 # CHECK-NEXT:  VLSTM $sp, 14 /* CC::al */, $noreg, 0, implicit-def $vpr, implicit-def $fpscr, implicit-def $fpscr_nzcv, implicit undef $vpr, implicit undef $fpscr, implicit undef $fpscr_nzcv, implicit undef $d0, implicit undef $d1, implicit undef $d2, implicit undef $d3, implicit undef $d4, implicit undef $d5, implicit undef $d6, implicit undef $d7, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, implicit $d14, implicit $d15
 # CHECK-NEXT:  $r1 = tMOVr $r0, 14 /* CC::al */, $noreg
 # CHECK-NEXT:  $r2 = tMOVr $r0, 14 /* CC::al */, $noreg

@@ -34,10 +34,10 @@ inline constexpr bool is_same_v = __is_same(_Tp, _Up);
 // (such as in a dependent return type).
 
 template <class _Tp, class _Up>
-using _IsSame = _BoolConstant<__is_same(_Tp, _Up)>;
+using _IsSame _LIBCPP_NODEBUG = _BoolConstant<__is_same(_Tp, _Up)>;
 
 template <class _Tp, class _Up>
-using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
+using _IsNotSame _LIBCPP_NODEBUG = _BoolConstant<!__is_same(_Tp, _Up)>;
 
 _LIBCPP_END_NAMESPACE_STD
 

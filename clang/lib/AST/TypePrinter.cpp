@@ -22,9 +22,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -37,7 +37,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1413,7 +1412,9 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
 
     // Only suppress an inline namespace if the name has the same lookup
     // results in the enclosing namespace.
-    if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
+    if (Policy.SuppressInlineNamespace !=
+            PrintingPolicy::SuppressInlineNamespaceMode::None &&
+        NS->isInline() && NameInScope &&
         NS->isRedundantInlineQualifierFor(NameInScope))
       return AppendScope(DC->getParent(), OS, NameInScope);
 
@@ -1907,6 +1908,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << " [[clang::lifetimebound]]";
     return;
   }
+  if (T->getAttrKind() == attr::LifetimeCaptureBy) {
+    OS << " [[clang::lifetime_capture_by(";
+    if (auto *attr = dyn_cast_or_null<LifetimeCaptureByAttr>(T->getAttr()))
+      llvm::interleaveComma(attr->getArgIdents(), OS,
+                            [&](auto it) { OS << it->getName(); });
+    OS << ")]]";
+    return;
+  }
 
   // The printing of the address_space attribute is handled by the qualifier
   // since it is still stored in the qualifier. Return early to prevent printing
@@ -1932,6 +1941,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
+  if (T->getAttrKind() == attr::SwiftAttr) {
+    if (auto *swiftAttr = dyn_cast_or_null<SwiftAttrAttr>(T->getAttr())) {
+      OS << " __attribute__((swift_attr(\"" << swiftAttr->getAttribute()
+         << "\")))";
+    }
+    return;
+  }
+
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
 #define TYPE_ATTR(NAME)
@@ -1945,6 +1962,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::HLSLResourceClass:
   case attr::HLSLROV:
+  case attr::HLSLRawBuffer:
+  case attr::HLSLContainedType:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -1964,6 +1983,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::SizedBy:
   case attr::SizedByOrNull:
   case attr::LifetimeBound:
+  case attr::LifetimeCaptureBy:
   case attr::TypeNonNull:
   case attr::TypeNullable:
   case attr::TypeNullableResult:
@@ -1990,6 +2010,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::NonAllocating:
   case attr::Blocking:
   case attr::Allocating:
+  case attr::SwiftAttr:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2078,6 +2099,16 @@ void TypePrinter::printHLSLAttributedResourceAfter(
      << ")]]";
   if (Attrs.IsROV)
     OS << " [[hlsl::is_rov]]";
+  if (Attrs.RawBuffer)
+    OS << " [[hlsl::raw_buffer]]";
+
+  QualType ContainedTy = T->getContainedType();
+  if (!ContainedTy.isNull()) {
+    OS << " [[hlsl::contained_type(";
+    printBefore(ContainedTy, OS);
+    printAfter(ContainedTy, OS);
+    OS << ")]]";
+  }
 }
 
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,

@@ -512,6 +512,12 @@ def N2Write_8c_3L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL,
   let NumMicroOps = 7;
 }
 
+def N2Write_7c_7V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 7;
+  let NumMicroOps = 7;
+  let ReleaseAtCycles = [7];
+}
+
 //===----------------------------------------------------------------------===//
 // Define generic 8 micro-op types
 
@@ -548,6 +554,15 @@ def N2Write_9c_4L_4V : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL,
 }
 
 //===----------------------------------------------------------------------===//
+// Define generic 9 micro-op types
+
+def N2Write_9c_9V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 9;
+  let NumMicroOps = 9;
+  let ReleaseAtCycles = [9];
+}
+
+//===----------------------------------------------------------------------===//
 // Define generic 10 micro-op types
 
 def N2Write_7c_5L01_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
@@ -555,6 +570,12 @@ def N2Write_7c_5L01_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
                                         N2UnitV, N2UnitV, N2UnitV, N2UnitV]> {
   let Latency     = 7;
   let NumMicroOps = 10;
+}
+
+def N2Write_10c_10V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 10;
+  let NumMicroOps = 10;
+  let ReleaseAtCycles = [10];
 }
 
 //===----------------------------------------------------------------------===//
@@ -578,6 +599,21 @@ def N2Write_7c_5L01_5S_5V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
                                            N2UnitV, N2UnitV, N2UnitV]> {
   let Latency     = 7;
   let NumMicroOps = 15;
+}
+
+def N2Write_15c_15V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 15;
+  let NumMicroOps = 15;
+  let ReleaseAtCycles = [15];
+}
+
+//===----------------------------------------------------------------------===//
+// Define generic 16 micro-op types
+
+def N2Write_16c_16V0 : SchedWriteRes<[N2UnitV0]> {
+  let Latency     = 16;
+  let NumMicroOps = 16;
+  let ReleaseAtCycles = [16];
 }
 
 //===----------------------------------------------------------------------===//
@@ -795,22 +831,26 @@ def : SchedAlias<WriteF,     N2Write_2c_1V>;
 // FP compare
 def : SchedAlias<WriteFCmp,  N2Write_2c_1V0>;
 
+// FP divide and square root operations are performed using an iterative
+// algorithm and block subsequent similar operations to the same pipeline
+// until complete (Arm Neoverse N2 Software Optimization Guide, 3.14).
+
 // FP divide, square root
-def : SchedAlias<WriteFDiv,  N2Write_7c_1V0>;
+def : SchedAlias<WriteFDiv,  N2Write_7c_7V0>;
 
 // FP divide, H-form
-def : InstRW<[N2Write_7c_1V0],  (instrs FDIVHrr)>;
+def : InstRW<[N2Write_7c_7V0],  (instrs FDIVHrr)>;
 // FP divide, S-form
-def : InstRW<[N2Write_10c_1V0], (instrs FDIVSrr)>;
+def : InstRW<[N2Write_10c_10V0], (instrs FDIVSrr)>;
 // FP divide, D-form
-def : InstRW<[N2Write_15c_1V0], (instrs FDIVDrr)>;
+def : InstRW<[N2Write_15c_15V0], (instrs FDIVDrr)>;
 
 // FP square root, H-form
-def : InstRW<[N2Write_7c_1V0],  (instrs FSQRTHr)>;
+def : InstRW<[N2Write_7c_7V0],  (instrs FSQRTHr)>;
 // FP square root, S-form
-def : InstRW<[N2Write_9c_1V0],  (instrs FSQRTSr)>;
+def : InstRW<[N2Write_9c_9V0],  (instrs FSQRTSr)>;
 // FP square root, D-form
-def : InstRW<[N2Write_16c_1V0], (instrs FSQRTDr)>;
+def : InstRW<[N2Write_16c_16V0], (instrs FSQRTDr)>;
 
 // FP multiply
 def : WriteRes<WriteFMul, [N2UnitV]> { let Latency = 3; }
@@ -836,8 +876,10 @@ def : InstRW<[N2Write_3c_1V], (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]r$")>;
 def : SchedAlias<WriteFCvt, N2Write_3c_1V0>;
 
 // FP move, immed
-// FP move, register
 def : SchedAlias<WriteFImm, N2Write_2c_1V>;
+
+// FP move, register
+def : InstRW<[N2Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
 def : InstRW<[N2Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr,
@@ -858,9 +900,8 @@ def : InstRW<[N2Write_6c_1L], (instregex "^LDR[SDQ]l$",
                                          "^LDUR[BHSDQ]i$")>;
 
 // Load vector reg, immed post-index
-def : InstRW<[N2Write_6c_1I_1L, WriteI], (instregex "^LDR[BHSDQ]post$")>;
 // Load vector reg, immed pre-index
-def : InstRW<[WriteAdr, N2Write_6c_1I_1L], (instregex "^LDR[BHSDQ]pre$")>;
+def : InstRW<[WriteAdr, N2Write_6c_1I_1L], (instregex "^LDR[BHSDQ](post|pre)$")>;
 
 // Load vector reg, unsigned immed
 def : InstRW<[N2Write_6c_1L], (instregex "^LDR[BHSDQ]ui$")>;
@@ -1119,7 +1160,7 @@ def : InstRW<[N2Write_5c_1V], (instregex "^FMLALv", "^FMLSLv")>;
 // ASIMD FP round, D-form F32 and Q-form F64
 def : InstRW<[N2Write_3c_1V0],
              (instregex "^FRINT[AIMNPXZ]v2f(32|64)$",
-                        "^FRINT[32|64)[XZ]v2f(32|64)$")>;
+                        "^FRINT(32|64)[XZ]v2f(32|64)$")>;
 
 // ASIMD FP round, D-form F16 and Q-form F32
 def : InstRW<[N2Write_4c_2V0],

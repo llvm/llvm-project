@@ -20,12 +20,8 @@ void __init_cpu_features_resolver() {
     setCPUFeature(FEAT_FP);
   if (features & ZX_ARM64_FEATURE_ISA_ASIMD)
     setCPUFeature(FEAT_SIMD);
-  if (features & ZX_ARM64_FEATURE_ISA_AES)
-    setCPUFeature(FEAT_AES);
   if (features & ZX_ARM64_FEATURE_ISA_PMULL)
     setCPUFeature(FEAT_PMULL);
-  if (features & ZX_ARM64_FEATURE_ISA_SHA1)
-    setCPUFeature(FEAT_SHA1);
   if (features & ZX_ARM64_FEATURE_ISA_SHA256)
     setCPUFeature(FEAT_SHA2);
   if (features & ZX_ARM64_FEATURE_ISA_CRC32)

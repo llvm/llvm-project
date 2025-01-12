@@ -225,7 +225,7 @@ define <32 x half> @build_vec(ptr %p, <32 x i1> %mask) {
 ; CHECK-NEXT:    testl $65536, %eax # imm = 0x10000
 ; CHECK-NEXT:    je .LBB1_35
 ; CHECK-NEXT:  .LBB1_34: # %cond.load46
-; CHECK-NEXT:    vpbroadcastw 32(%rdi), %xmm1
+; CHECK-NEXT:    vpinsrw $0, 32(%rdi), %xmm0, %xmm1
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]

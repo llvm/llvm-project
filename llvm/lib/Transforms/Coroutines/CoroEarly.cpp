@@ -8,12 +8,12 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
-#include "CoroShape.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 using namespace llvm;
 
@@ -34,9 +34,7 @@ class Lowerer : public coro::LowererBase {
 public:
   Lowerer(Module &M)
       : LowererBase(M), Builder(Context),
-        AnyResumeFnPtrTy(FunctionType::get(Type::getVoidTy(Context), Int8Ptr,
-                                           /*isVarArg=*/false)
-                             ->getPointerTo()) {}
+        AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };
 }
@@ -91,11 +89,9 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   static_assert(coro::Shape::SwitchFieldIndex::Resume == 0,
                 "resume function not at offset zero");
   auto *FrameTy = Int8Ptr;
-  PointerType *FramePtrTy = FrameTy->getPointerTo();
 
   Builder.SetInsertPoint(II);
-  auto *BCI = Builder.CreateBitCast(Operand, FramePtrTy);
-  auto *Load = Builder.CreateLoad(FrameTy, BCI);
+  auto *Load = Builder.CreateLoad(FrameTy, Operand);
   auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
 
   II->replaceAllUsesWith(Cond);
@@ -127,12 +123,11 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     Module &M = *II->getModule();
 
     // Create a noop.frame struct type.
-    StructType *FrameTy = StructType::create(C, "NoopCoro.Frame");
-    auto *FramePtrTy = FrameTy->getPointerTo();
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
+    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
                                    /*isVarArg=*/false);
-    auto *FnPtrTy = FnTy->getPointerTo();
-    FrameTy->setBody({FnPtrTy, FnPtrTy});
+    auto *FnPtrTy = Builder.getPtrTy(0);
+    StructType *FrameTy =
+        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
 
     // Create a Noop function that does nothing.
     Function *NoopFn =

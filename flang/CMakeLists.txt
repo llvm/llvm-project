@@ -66,6 +66,13 @@ if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
   if (IS_DIRECTORY "${LIBDIR}")
     link_libraries(${CLANG_RT_BUILTINS_LIBRARY})
   endif()
+
+  if (MSVC_VERSION EQUAL 1942)
+    message(FATAL_ERROR "Flang cannot be built with clang and the MSVC 17.12 "
+            "toolchain version. Please upgrade to 17.13 or later, or switch "
+            "to the 17.10 LTSC release. "
+            "See https://github.com/microsoft/STL/issues/4959 for more details.")
+  endif()
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -117,7 +124,6 @@ if (FLANG_STANDALONE_BUILD)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 
-  include(CMakeParseArguments)
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -445,7 +451,6 @@ if (APPLE)
   endif()
 endif()
 
-include(CMakeParseArguments)
 include(AddFlang)
 
 if (FLANG_INCLUDE_TESTS)

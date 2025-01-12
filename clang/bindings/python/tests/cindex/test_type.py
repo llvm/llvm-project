@@ -1,5 +1,14 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import (
+    Config,
+    CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
+    RefQualifierKind,
+    TranslationUnit,
+    TypeKind,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
@@ -7,12 +16,7 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 import gc
 import unittest
 
-from clang.cindex import CursorKind
-from clang.cindex import TranslationUnit
-from clang.cindex import TypeKind
-from .util import get_cursor
-from .util import get_tu
-
+from .util import get_cursor, get_cursors, get_tu
 
 kInput = """\
 
@@ -136,7 +140,7 @@ class TestType(unittest.TestCase):
         self.assertIsInstance(t.translation_unit, TranslationUnit)
 
         # If the TU was destroyed, this should cause a segfault.
-        decl = t.get_declaration()
+        t.get_declaration()
 
     def testConstantArray(self):
         tu = get_tu(constarrayInput)
@@ -308,10 +312,10 @@ class TestType(unittest.TestCase):
     def test_invalid_element_type(self):
         """Ensure Type.element_type raises if type doesn't have elements."""
         tu = get_tu("int i;")
-        i = get_cursor(tu, "i")
-        self.assertIsNotNone(i)
-        with self.assertRaises(Exception):
-            i.element_type
+        ty = get_cursor(tu, "i").type
+        with self.assertRaises(Exception) as ctx:
+            ty.element_type
+        self.assertEqual(str(ctx.exception), "Element type not available on this type.")
 
     def test_element_count(self):
         """Ensure Type.element_count works."""
@@ -356,6 +360,49 @@ class TestType(unittest.TestCase):
         self.assertIsInstance(i.type.is_restrict_qualified(), bool)
         self.assertTrue(i.type.is_restrict_qualified())
         self.assertFalse(j.type.is_restrict_qualified())
+
+    def test_get_result(self):
+        tu = get_tu("void foo(); int bar(char, short);")
+        foo = get_cursor(tu, "foo")
+        bar = get_cursor(tu, "bar")
+        self.assertEqual(foo.type.get_result().spelling, "void")
+        self.assertEqual(bar.type.get_result().spelling, "int")
+
+    def test_get_class_type(self):
+        tu = get_tu(
+            """
+class myClass
+{
+   char *myAttr;
+};
+
+char *myClass::*pMyAttr = &myClass::myAttr;
+""",
+            lang="cpp",
+        )
+        cur = get_cursor(tu, "pMyAttr")
+        self.assertEqual(cur.type.get_class_type().spelling, "myClass")
+
+    def test_get_named_type(self):
+        tu = get_tu("using char_alias = char; char_alias xyz;", lang="cpp")
+        cur = get_cursor(tu, "xyz")
+        self.assertEqual(cur.type.get_named_type().spelling, "char_alias")
+
+    def test_get_ref_qualifier(self):
+        tu = get_tu(
+            """
+class A
+{
+	const int& getAttr() const &;
+	int getAttr() const &&;
+};
+""",
+            lang="cpp",
+        )
+        getters = get_cursors(tu, "getAttr")
+        self.assertEqual(len(getters), 2)
+        self.assertEqual(getters[0].type.get_ref_qualifier(), RefQualifierKind.LVALUE)
+        self.assertEqual(getters[1].type.get_ref_qualifier(), RefQualifierKind.RVALUE)
 
     def test_record_layout(self):
         """Ensure Cursor.type.get_size, Cursor.type.get_align and
@@ -414,8 +461,8 @@ class TestType(unittest.TestCase):
             (["-target", "i386-pc-win32"], (8, 16, 0, 32, 64, 96)),
             (["-target", "msp430-none-none"], (2, 14, 0, 32, 64, 96)),
         ]
-        for flags, values in tries:
-            align, total, f1, bariton, foo, bar = values
+        for _, values in tries:
+            _, _, f1, bariton, foo, bar = values
             tu = get_tu(source)
             teststruct = get_cursor(tu, "Test")
             children = list(teststruct.get_children())
@@ -424,8 +471,11 @@ class TestType(unittest.TestCase):
             self.assertNotEqual(children[0].spelling, "typeanon")
             self.assertEqual(children[1].spelling, "typeanon")
             self.assertEqual(fields[0].kind, CursorKind.FIELD_DECL)
+            self.assertTrue(fields[0].is_anonymous())
+            self.assertFalse(fields[0].is_anonymous_record_decl())
             self.assertEqual(fields[1].kind, CursorKind.FIELD_DECL)
             self.assertTrue(fields[1].is_anonymous())
+            self.assertTrue(fields[1].is_anonymous_record_decl())
             self.assertEqual(teststruct.type.get_offset("typeanon"), f1)
             self.assertEqual(teststruct.type.get_offset("bariton"), bariton)
             self.assertEqual(teststruct.type.get_offset("foo"), foo)
@@ -475,3 +525,12 @@ class TestType(unittest.TestCase):
         # Variable without a template argument.
         cursor = get_cursor(tu, "bar")
         self.assertEqual(cursor.get_num_template_arguments(), -1)
+
+    def test_pretty(self):
+        tu = get_tu("struct X {}; X x;", lang="cpp")
+        f = get_cursor(tu, "x")
+
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "X")
+        pp.set_property(PrintingPolicyProperty.SuppressTagKeyword, False)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "struct X")

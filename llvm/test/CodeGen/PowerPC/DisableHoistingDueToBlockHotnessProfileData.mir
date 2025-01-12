@@ -15,7 +15,22 @@
 # RUN:   -disable-hoisting-to-hotter-blocks=none \
 # RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
 # RUN:   --check-prefix=CHECK-HOIST
-
+# Tests for the new pass manager
+# RUN: llc -passes early-machinelicm \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=pgo \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-NO-HOIST
+# RUN: llc -passes early-machinelicm \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=pgo \
+# RUN:   -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
+# RUN: llc -passes early-machinelicm \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -disable-hoisting-to-hotter-blocks=none \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"

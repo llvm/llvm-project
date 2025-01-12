@@ -107,7 +107,6 @@ end program
 ! CHECK:                 hlfir.assign %[[VAL_30]] to %[[VAL_33]] : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

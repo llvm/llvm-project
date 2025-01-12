@@ -74,7 +74,7 @@ void XtensaInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printAnnotation(O, Annot);
 }
 
-void XtensaInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+void XtensaInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
   O << getRegisterName(Reg);
 }
 
@@ -237,6 +237,28 @@ void XtensaInstPrinter::printImm1_16_AsmOperand(const MCInst *MI, int OpNum,
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 1 && Value <= 16) &&
            "Invalid argument, value must be in range [1,16]");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printImm1n_15_AsmOperand(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -1 && (Value != 0) && Value <= 15) &&
+           "Invalid argument, value must be in ranges <-1,-1> or <1,15>");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printImm32n_95_AsmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -32 && Value <= 95) &&
+           "Invalid argument, value must be in ranges <-32,95>");
     O << Value;
   } else
     printOperand(MI, OpNum, O);

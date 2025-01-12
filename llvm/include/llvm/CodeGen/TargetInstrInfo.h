@@ -136,6 +136,10 @@ public:
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF) const;
 
+  /// Returns true if MI is an instruction we are unable to reason about
+  /// (like a call or something with unmodeled side effects).
+  virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
+
   /// Return true if the instruction is trivially rematerializable, meaning it
   /// has no side effects and requires no operands that aren't always available.
   /// This means the only allowed uses are constants and unallocatable physical
@@ -157,6 +161,12 @@ public:
   virtual bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
                             MachineCycleInfo *CI) const {
     return true;
+  }
+
+  /// For a "cheap" instruction which doesn't enable additional sinking,
+  /// should MachineSink break a critical edge to sink it anyways?
+  virtual bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const {
+    return false;
   }
 
 protected:
@@ -2007,7 +2017,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Decompose the machine operand's target flags into two values - the direct
@@ -2024,7 +2034,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the bitmask target flag values and their
@@ -2034,7 +2044,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the MMO target flag values and their
@@ -2044,7 +2054,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Determines whether \p Inst is a tail call instruction. Override this
@@ -2309,8 +2319,7 @@ template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
 
   static bool isEqual(const TargetInstrInfo::RegSubRegPair &LHS,
                       const TargetInstrInfo::RegSubRegPair &RHS) {
-    return RegInfo::isEqual(LHS.Reg, RHS.Reg) &&
-           SubRegInfo::isEqual(LHS.SubReg, RHS.SubReg);
+    return LHS == RHS;
   }
 };
 

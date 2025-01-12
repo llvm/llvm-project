@@ -24,6 +24,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -48,6 +49,7 @@ class APInt;
 class BasicBlock;
 class ConstantInt;
 class DataLayout;
+struct KnownBits;
 class StringRef;
 class Type;
 class Value;
@@ -1117,7 +1119,7 @@ public:
   /// the base GEP pointer.
   bool accumulateConstantOffset(const DataLayout &DL, APInt &Offset) const;
   bool collectOffset(const DataLayout &DL, unsigned BitWidth,
-                     MapVector<Value *, APInt> &VariableOffsets,
+                     SmallMapVector<Value *, APInt, 4> &VariableOffsets,
                      APInt &ConstantOffset) const;
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1165,6 +1167,8 @@ class ICmpInst: public CmpInst {
            "Invalid operand types for ICmp instruction");
   }
 
+  enum { SameSign = (1 << 0) };
+
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -1200,29 +1204,86 @@ public:
 #endif
   }
 
+  /// @returns the predicate along with samesign information.
+  CmpPredicate getCmpPredicate() const {
+    return {getPredicate(), hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getInverseCmpPredicate(CmpPredicate Pred) {
+    return {getInversePredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the inverse predicate along with samesign information.
+  CmpPredicate getInverseCmpPredicate() const {
+    return getInverseCmpPredicate(getCmpPredicate());
+  }
+
+  /// @returns the swapped predicate along with samesign information: static
+  /// variant.
+  static CmpPredicate getSwappedCmpPredicate(CmpPredicate Pred) {
+    return {getSwappedPredicate(Pred), Pred.hasSameSign()};
+  }
+
+  /// @returns the swapped predicate along with samesign information.
+  CmpPredicate getSwappedCmpPredicate() const {
+    return getSwappedCmpPredicate(getCmpPredicate());
+  }
+
   /// For example, EQ->EQ, SLE->SLE, UGT->SGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as signed.
-  /// Return the signed version of the predicate
+  /// Return the signed version of the predicate.
   Predicate getSignedPredicate() const {
     return getSignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the signed version of the predicate.
-  static Predicate getSignedPredicate(Predicate pred);
+  /// Return the signed version of the predicate: static variant.
+  static Predicate getSignedPredicate(Predicate Pred);
 
   /// For example, EQ->EQ, SLE->ULE, UGT->UGT, etc.
   /// @returns the predicate that would be the result if the operand were
   /// regarded as unsigned.
-  /// Return the unsigned version of the predicate
+  /// Return the unsigned version of the predicate.
   Predicate getUnsignedPredicate() const {
     return getUnsignedPredicate(getPredicate());
   }
 
-  /// This is a static version that you can use without an instruction.
-  /// Return the unsigned version of the predicate.
-  static Predicate getUnsignedPredicate(Predicate pred);
+  /// Return the unsigned version of the predicate: static variant.
+  static Predicate getUnsignedPredicate(Predicate Pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  /// Static variant.
+  static Predicate getFlippedSignednessPredicate(Predicate Pred);
+
+  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->EQ
+  /// @returns the unsigned version of the signed predicate pred or
+  ///          the signed version of the signed predicate pred.
+  Predicate getFlippedSignednessPredicate() const {
+    return getFlippedSignednessPredicate(getPredicate());
+  }
+
+  /// Determine if Pred1 implies Pred2 is true when two compares have matching
+  /// operands.
+  static bool isImpliedTrueByMatchingCmp(CmpPredicate Pred1,
+                                         CmpPredicate Pred2);
+
+  /// Determine if Pred1 implies Pred2 is false when two compares have matching
+  /// operands.
+  static bool isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
+                                          CmpPredicate Pred2);
+
+  void setSameSign(bool B = true) {
+    SubclassOptionalData = (SubclassOptionalData & ~SameSign) | (B * SameSign);
+  }
+
+  /// An icmp instruction, which can be marked as "samesign", indicating that
+  /// the two operands have the same sign. This means that we can convert
+  /// "slt" to "ult" and vice versa, which enables more optimizations.
+  bool hasSameSign() const { return SubclassOptionalData & SameSign; }
 
   /// Return true if this predicate is either EQ or NE.  This also
   /// tests for commutativity.
@@ -1236,9 +1297,13 @@ public:
     return isEquality(getPredicate());
   }
 
+  /// @returns true if the predicate is commutative
+  /// Determine if this relation is commutative.
+  static bool isCommutative(Predicate P) { return isEquality(P); }
+
   /// @returns true if the predicate of this ICmpInst is commutative
   /// Determine if this relation is commutative.
-  bool isCommutative() const { return isEquality(); }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// Return true if the predicate is relational (not EQ or NE).
   ///
@@ -1293,6 +1358,11 @@ public:
   /// Return result of `LHS Pred RHS` comparison.
   static bool compare(const APInt &LHS, const APInt &RHS,
                       ICmpInst::Predicate Pred);
+
+  /// Return result of `LHS Pred RHS`, if it can be determined from the
+  /// KnownBits. Otherwise return nullopt.
+  static std::optional<bool> compare(const KnownBits &LHS, const KnownBits &RHS,
+                                     ICmpInst::Predicate Pred);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1352,7 +1422,7 @@ public:
     AssertOK();
   }
 
-  /// @returns true if the predicate of this instruction is EQ or NE.
+  /// @returns true if the predicate is EQ or NE.
   /// Determine if this is an equality predicate.
   static bool isEquality(Predicate Pred) {
     return Pred == FCMP_OEQ || Pred == FCMP_ONE || Pred == FCMP_UEQ ||
@@ -1363,15 +1433,16 @@ public:
   /// Determine if this is an equality predicate.
   bool isEquality() const { return isEquality(getPredicate()); }
 
+  /// @returns true if the predicate is commutative.
+  /// Determine if this is a commutative predicate.
+  static bool isCommutative(Predicate Pred) {
+    return isEquality(Pred) || Pred == FCMP_FALSE || Pred == FCMP_TRUE ||
+           Pred == FCMP_ORD || Pred == FCMP_UNO;
+  }
+
   /// @returns true if the predicate of this instruction is commutative.
   /// Determine if this is a commutative predicate.
-  bool isCommutative() const {
-    return isEquality() ||
-           getPredicate() == FCMP_FALSE ||
-           getPredicate() == FCMP_TRUE ||
-           getPredicate() == FCMP_ORD ||
-           getPredicate() == FCMP_UNO;
-  }
+  bool isCommutative() const { return isCommutative(getPredicate()); }
 
   /// @returns true if the predicate is relational (not EQ or NE).
   /// Determine if this a relational predicate.
@@ -1421,8 +1492,7 @@ class CallInst : public CallBase {
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   const Twine &NameStr, AllocInfo AllocInfo,
                   InsertPosition InsertBefore)
-      : CallInst(Ty, Func, Args, std::nullopt, NameStr, AllocInfo,
-                 InsertBefore) {}
+      : CallInst(Ty, Func, Args, {}, NameStr, AllocInfo, InsertBefore) {}
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
                     AllocInfo AllocInfo, InsertPosition InsertBefore);
@@ -1457,12 +1527,12 @@ public:
                           const Twine &NameStr,
                           InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{ComputeNumOperands(Args.size())};
-    return new (AllocMarker) CallInst(Ty, Func, Args, std::nullopt, NameStr,
-                                      AllocMarker, InsertBefore);
+    return new (AllocMarker)
+        CallInst(Ty, Func, Args, {}, NameStr, AllocMarker, InsertBefore);
   }
 
   static CallInst *Create(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+                          ArrayRef<OperandBundleDef> Bundles = {},
                           const Twine &NameStr = "",
                           InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
@@ -1480,7 +1550,7 @@ public:
   }
 
   static CallInst *Create(FunctionCallee Func, ArrayRef<Value *> Args,
-                          ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+                          ArrayRef<OperandBundleDef> Bundles = {},
                           const Twine &NameStr = "",
                           InsertPosition InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), Args, Bundles,
@@ -3648,14 +3718,13 @@ public:
                             InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(unsigned(Args.size()))};
-    return new (AllocMarker)
-        InvokeInst(Ty, Func, IfNormal, IfException, Args, std::nullopt,
-                   AllocMarker, NameStr, InsertBefore);
+    return new (AllocMarker) InvokeInst(Ty, Func, IfNormal, IfException, Args,
+                                        {}, AllocMarker, NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+                            ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
@@ -3672,12 +3741,12 @@ public:
                             const Twine &NameStr,
                             InsertPosition InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
-                  IfException, Args, std::nullopt, NameStr, InsertBefore);
+                  IfException, Args, {}, NameStr, InsertBefore);
   }
 
   static InvokeInst *Create(FunctionCallee Func, BasicBlock *IfNormal,
                             BasicBlock *IfException, ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+                            ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), IfNormal,
@@ -3805,15 +3874,15 @@ public:
     IntrusiveOperandsAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size())};
     return new (AllocMarker)
-        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, std::nullopt,
-                   AllocMarker, NameStr, InsertBefore);
+        CallBrInst(Ty, Func, DefaultDest, IndirectDests, Args, {}, AllocMarker,
+                   NameStr, InsertBefore);
   }
 
   static CallBrInst *
   Create(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
          ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
-         ArrayRef<OperandBundleDef> Bundles = std::nullopt,
-         const Twine &NameStr = "", InsertPosition InsertBefore = nullptr) {
+         ArrayRef<OperandBundleDef> Bundles = {}, const Twine &NameStr = "",
+         InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAndDescriptorAllocMarker AllocMarker{
         ComputeNumOperands(Args.size(), IndirectDests.size(),
                            CountBundleInputs(Bundles)),
@@ -3835,7 +3904,7 @@ public:
   static CallBrInst *Create(FunctionCallee Func, BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
                             ArrayRef<Value *> Args,
-                            ArrayRef<OperandBundleDef> Bundles = std::nullopt,
+                            ArrayRef<OperandBundleDef> Bundles = {},
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr) {
     return Create(Func.getFunctionType(), Func.getCallee(), DefaultDest,
@@ -4163,8 +4232,7 @@ private:
                        NameStr, InsertBefore) {}
 
 public:
-  static CleanupPadInst *Create(Value *ParentPad,
-                                ArrayRef<Value *> Args = std::nullopt,
+  static CleanupPadInst *Create(Value *ParentPad, ArrayRef<Value *> Args = {},
                                 const Twine &NameStr = "",
                                 InsertPosition InsertBefore = nullptr) {
     IntrusiveOperandsAllocMarker AllocMarker{unsigned(1 + Args.size())};
@@ -4950,6 +5018,16 @@ inline Align getLoadStoreAlignment(const Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getAlign();
   return cast<StoreInst>(I)->getAlign();
+}
+
+/// A helper function that set the alignment of load or store instruction.
+inline void setLoadStoreAlignment(Value *I, Align NewAlign) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    LI->setAlignment(NewAlign);
+  else
+    cast<StoreInst>(I)->setAlignment(NewAlign);
 }
 
 /// A helper function that returns the address space of the pointer operand of

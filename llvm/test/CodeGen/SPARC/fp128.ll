@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
-; RUN: llc < %s -march=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
 
 ; CHECK-LABEL: f128_ops:
 ; CHECK:      ldd
@@ -54,18 +54,10 @@ entry:
 
 ; CHECK-LABEL: f128_spill_large:
 ; CHECK:       sethi 4, %g1
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  std %f{{.+}}, [%g1]
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  std %f{{.+}}, [%g1+8]
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  ldd [%g1], %f{{.+}}
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  ldd [%g1+8], %f{{.+}}
+; CHECK:       std %f{{.+}}, [%fp+-16]
+; CHECK-NEXT:  std %f{{.+}}, [%fp+-8]
+; CHECK:       ldd [%fp+-16], %f{{.+}}
+; CHECK-NEXT:  ldd [%fp+-8], %f{{.+}}
 
 define void @f128_spill_large(ptr noalias sret(<251 x fp128>) %scalar.result, ptr byval(<251 x fp128>) %a) {
 entry:

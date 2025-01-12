@@ -202,14 +202,6 @@ def int_wasm_shuffle :
                          ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
                          ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
                          ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
-def int_wasm_sub_sat_signed :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_sat_unsigned :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_avgr_unsigned :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],

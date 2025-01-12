@@ -23,8 +23,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr31, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; GCN-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 killed $vgpr1, killed $vgpr0, implicit-def dead $vcc, implicit $exec
+    ; GCN-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 killed $vgpr0, killed $vgpr1, implicit-def dead $vcc, implicit $exec
     ; GCN-NEXT: renamable $vgpr0, dead renamable $vcc = nuw V_ADD_CO_U32_e64 4, killed $vgpr0, 0, implicit $exec
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: DS_WRITE_B32 undef renamable $vgpr0, killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec
@@ -166,7 +166,7 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-LABEL: name: func_add_constant_to_fi_uniform_live_SCC_i32
-    ; GCN: liveins: $sgpr10, $sgpr30_sgpr31
+    ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr4 = nuw S_ADD_U32 $sgpr10, 4, implicit-def $scc
     ; GCN-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -206,8 +206,8 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr31, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; GCN-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 killed $vgpr1, killed $vgpr0, implicit-def dead $vcc, implicit $exec
+    ; GCN-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 killed $vgpr0, killed $vgpr1, implicit-def dead $vcc, implicit $exec
     renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr31, implicit $exec
     renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
     renamable $vgpr0 = V_ADD_CO_U32_e32 %stack.0, killed $vgpr0, implicit-def dead $vcc, implicit $exec

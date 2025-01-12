@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdio>
+#include <__verbose_abort>
 
 namespace std {
 
@@ -34,28 +34,25 @@ terminate_handler set_terminate(terminate_handler func) noexcept {
 terminate_handler get_terminate() noexcept { return __libcpp_atomic_load(&__terminate_handler); }
 
 [[noreturn]] void terminate() noexcept {
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   try {
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
     (*get_terminate())();
     // handler should not return
-    fprintf(stderr, "terminate_handler unexpectedly returned\n");
-    ::abort();
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    __libcpp_verbose_abort("terminate_handler unexpectedly returned\n");
+#if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     // handler should not throw exception
-    fprintf(stderr, "terminate_handler unexpectedly threw an exception\n");
-    ::abort();
+    __libcpp_verbose_abort("terminate_handler unexpectedly threw an exception\n");
   }
-#endif // _LIBCPP_HAS_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
 bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }
 
 int uncaught_exceptions() noexcept {
 #warning uncaught_exception not yet implemented
-  fprintf(stderr, "uncaught_exceptions not yet implemented\n");
-  ::abort();
+  __libcpp_verbose_abort("uncaught_exceptions not yet implemented\n");
 }
 
 exception::~exception() noexcept {}

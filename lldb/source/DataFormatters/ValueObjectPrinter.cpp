@@ -8,12 +8,12 @@
 
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
 
@@ -503,14 +503,7 @@ ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
 }
 
 bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
-  switch (m_mode) {
-  case Mode::Always:
-  case Mode::Default:
-    return m_count > 0;
-  case Mode::Never:
-    return false;
-  }
-  return false;
+  return m_count > 0;
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(

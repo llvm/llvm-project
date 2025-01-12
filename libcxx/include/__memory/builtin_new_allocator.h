@@ -10,9 +10,9 @@
 #define _LIBCPP___MEMORY_BUILTIN_NEW_ALLOCATOR_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory/unique_ptr.h>
-#include <cstddef>
-#include <new>
+#include <__new/allocate.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

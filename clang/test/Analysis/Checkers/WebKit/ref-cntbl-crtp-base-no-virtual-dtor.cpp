@@ -61,14 +61,6 @@ template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::Callab
     return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
 }
 
-template<typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTraits = DefaultRefDerefTraits<T>> Ref<T, PtrTraits, RefDerefTraits> adoptRef(T&);
-
-template<typename T, typename _PtrTraits, typename RefDerefTraits>
-inline Ref<T, _PtrTraits, RefDerefTraits> adoptRef(T& reference)
-{
-    return Ref<T, _PtrTraits, RefDerefTraits>(reference);
-}
-
 enum class DestructionThread : unsigned char { Any, Main, MainRunLoop };
 void ensureOnMainThread(Function<void()>&&); // Sync if called on main thread, async otherwise.
 void ensureOnMainRunLoop(Function<void()>&&); // Sync if called on main run loop, async otherwise.
@@ -119,6 +111,11 @@ public:
             ensureOnMainThread([this] {
                 delete static_cast<const T*>(this);
             });
+        } else if constexpr (destructionThread == DestructionThread::MainRunLoop) {
+            auto deleteThis = [this] {
+                delete static_cast<const T*>(this);
+            };
+            ensureOnMainThread(deleteThis);
         }
     }
 
@@ -229,4 +226,17 @@ public:
 
 private:
     FancyRefCountedClass4();
+};
+
+class FancyRefCountedClass5 final : public ThreadSafeRefCounted<FancyRefCountedClass5, DestructionThread::MainRunLoop> {
+public:
+    static Ref<FancyRefCountedClass5> create()
+    {
+        return adoptRef(*new FancyRefCountedClass5());
+    }
+
+    virtual ~FancyRefCountedClass5();
+
+private:
+    FancyRefCountedClass5();
 };

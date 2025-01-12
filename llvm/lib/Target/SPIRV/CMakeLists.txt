@@ -20,7 +20,6 @@ add_llvm_target(SPIRVCodeGen
   SPIRVCallLowering.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
-  SPIRVDuplicatesTracker.cpp
   SPIRVEmitIntrinsics.cpp
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
@@ -32,6 +31,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
+  SPIRVStructurizer.cpp
   SPIRVPreLegalizer.cpp
   SPIRVPostLegalizer.cpp
   SPIRVPrepareFunctions.cpp
@@ -55,6 +55,7 @@ add_llvm_target(SPIRVCodeGen
   MC
   SPIRVDesc
   SPIRVInfo
+  ScalarOpts
   SelectionDAG
   Support
   Target

@@ -49,7 +49,7 @@ class LLVM_LIBRARY_VISIBILITY InstCombiner {
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
-  TargetTransformInfo &TTI;
+  TargetTransformInfo &TTIForTargetIntrinsicsOnly;
 
 public:
   /// Maximum size of array considered when transforming.
@@ -105,7 +105,7 @@ public:
                BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
                ProfileSummaryInfo *PSI, const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : TTI(TTI), Builder(Builder), Worklist(Worklist),
+      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
@@ -157,7 +157,7 @@ public:
   /// conditional branch or select to create a compare with a canonical
   /// (inverted) predicate which is then more likely to be matched with other
   /// values.
-  static bool isCanonicalPredicate(CmpInst::Predicate Pred) {
+  static bool isCanonicalPredicate(CmpPredicate Pred) {
     switch (Pred) {
     case CmpInst::ICMP_NE:
     case CmpInst::ICMP_ULE:
@@ -183,13 +183,6 @@ public:
   static Constant *SubOne(Constant *C) {
     return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
   }
-
-  std::optional<std::pair<
-      CmpInst::Predicate,
-      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpInst::
-                                                                       Predicate
-                                                                           Pred,
-                                                                   Constant *C);
 
   static bool shouldAvoidAbsorbingNotIntoSelect(const SelectInst &SI) {
     // a ? b : false and a ? true : b are the canonical form of logical and/or.

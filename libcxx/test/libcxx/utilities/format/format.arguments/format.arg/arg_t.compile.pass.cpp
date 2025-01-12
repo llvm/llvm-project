@@ -14,6 +14,7 @@
 
 #include <format>
 
+#include <cstdint>
 #include <type_traits>
 
 #include "test_macros.h"

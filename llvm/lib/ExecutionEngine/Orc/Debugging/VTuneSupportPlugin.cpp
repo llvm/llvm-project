@@ -39,12 +39,12 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
 
   auto GetStringIdx = [Deduplicator = StringMap<uint32_t>(),
                        &Batch](StringRef S) mutable {
-    auto I = Deduplicator.find(S);
-    if (I != Deduplicator.end())
-      return I->second;
-
-    Batch.Strings.push_back(S.str());
-    return Deduplicator[S] = Batch.Strings.size();
+    auto [I, Inserted] = Deduplicator.try_emplace(S);
+    if (Inserted) {
+      Batch.Strings.push_back(S.str());
+      I->second = Batch.Strings.size();
+    }
+    return I->second;
   };
   for (auto Sym : G.defined_symbols()) {
     if (!Sym->isCallable())
@@ -56,7 +56,7 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
     Method.ParentMI = 0;
     Method.LoadAddr = Sym->getAddress();
     Method.LoadSize = Sym->getSize();
-    Method.NameSI = GetStringIdx(Sym->getName());
+    Method.NameSI = GetStringIdx(*Sym->getName());
     Method.ClassFileSI = 0;
     Method.SourceFileSI = 0;
 

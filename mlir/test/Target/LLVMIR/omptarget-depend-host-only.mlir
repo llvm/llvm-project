@@ -8,8 +8,7 @@ module attributes {omp.is_target_device = false} {
     %3 = omp.map.bounds lower_bound(%1 : i64) upper_bound(%0 : i64) extent(%2 : i64) stride(%1 : i64) start_idx(%1 : i64)
     %4 = llvm.mlir.addressof @_QFEa : !llvm.ptr
     %5 = omp.map.info var_ptr(%4 : !llvm.ptr, !llvm.array<40 x i32>) map_clauses(from) capture(ByRef) bounds(%3) -> !llvm.ptr {name = "a"}
-    omp.target map_entries(%5 -> %arg0 : !llvm.ptr) depend(taskdependin -> %4 : !llvm.ptr) {
-    ^bb0(%arg0: !llvm.ptr):
+    omp.target depend(taskdependin -> %4 : !llvm.ptr) map_entries(%5 -> %arg0 : !llvm.ptr) {
       %6 = llvm.mlir.constant(100 : index) : i32
       llvm.store %6, %arg0 : i32, !llvm.ptr
       omp.terminator

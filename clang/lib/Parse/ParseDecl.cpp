@@ -17,9 +17,9 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2445,8 +2445,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
               // Recover as if it were an explicit specialization.
               TemplateParameterLists FakedParamLists;
               FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-                  0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-                  std::nullopt, LAngleLoc, nullptr));
+                  0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+                  LAngleLoc, nullptr));
 
               TheDecl = ParseFunctionDefinition(
                   D,
@@ -2787,8 +2787,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         // Recover as if it were an explicit specialization.
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-            std::nullopt, LAngleLoc, nullptr));
+            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+            LAngleLoc, nullptr));
 
         ThisDecl =
             Actions.ActOnTemplateDeclarator(getCurScope(), FakedParamLists, D);
@@ -3706,8 +3706,14 @@ void Parser::ParseDeclarationSpecifiers(
           if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_LifetimeBound &&
               PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
             continue;
-          Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
-              << PA << PA.isRegularKeywordAttribute();
+
+          if (PA.getKind() == ParsedAttr::AT_LifetimeBound)
+            Diag(PA.getLoc(), diag::err_attribute_wrong_decl_type_str)
+                << PA << PA.isRegularKeywordAttribute()
+                << "parameters and implicit object parameters";
+          else
+            Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
+                << PA << PA.isRegularKeywordAttribute();
           PA.setInvalid();
         }
 
@@ -5439,18 +5445,20 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
-      if (!getLangOpts().ObjC && !getLangOpts().C23) {
+      if (!getLangOpts().ObjC) {
         if (getLangOpts().CPlusPlus11)
           Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
               << BaseRange;
         else if (getLangOpts().CPlusPlus)
           Diag(ColonLoc, diag::ext_cxx11_enum_fixed_underlying_type)
               << BaseRange;
-        else if (getLangOpts().MicrosoftExt)
+        else if (getLangOpts().MicrosoftExt && !getLangOpts().C23)
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
               << BaseRange;
         else
-          Diag(ColonLoc, diag::ext_clang_c_enum_fixed_underlying_type)
+          Diag(ColonLoc, getLangOpts().C23
+                             ? diag::warn_c17_compat_enum_fixed_underlying_type
+                             : diag::ext_c23_enum_fixed_underlying_type)
               << BaseRange;
       }
     }
@@ -7948,21 +7956,8 @@ void Parser::ParseParameterDeclarationClause(
     // Parse a C++23 Explicit Object Parameter
     // We do that in all language modes to produce a better diagnostic.
     SourceLocation ThisLoc;
-    if (getLangOpts().CPlusPlus && Tok.is(tok::kw_this)) {
+    if (getLangOpts().CPlusPlus && Tok.is(tok::kw_this))
       ThisLoc = ConsumeToken();
-      // C++23 [dcl.fct]p6:
-      //   An explicit-object-parameter-declaration is a parameter-declaration
-      //   with a this specifier. An explicit-object-parameter-declaration
-      //   shall appear only as the first parameter-declaration of a
-      //   parameter-declaration-list of either:
-      //   - a member-declarator that declares a member function, or
-      //   - a lambda-declarator.
-      //
-      // The parameter-declaration-list of a requires-expression is not such
-      // a context.
-      if (DeclaratorCtx == DeclaratorContext::RequiresExpr)
-        Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
-    }
 
     ParsedTemplateInfo TemplateInfo;
     ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,
@@ -8130,6 +8125,14 @@ void Parser::ParseParameterDeclarationClause(
     }
 
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc)) {
+      if (getLangOpts().CPlusPlus26) {
+        // C++26 [dcl.dcl.fct]p3:
+        //   A parameter-declaration-clause of the form
+        //   parameter-list '...' is deprecated.
+        Diag(EllipsisLoc, diag::warn_deprecated_missing_comma_before_ellipsis)
+            << FixItHint::CreateInsertion(EllipsisLoc, ", ");
+      }
+
       if (!getLangOpts().CPlusPlus) {
         // We have ellipsis without a preceding ',', which is ill-formed
         // in C. Complain and provide the fix.

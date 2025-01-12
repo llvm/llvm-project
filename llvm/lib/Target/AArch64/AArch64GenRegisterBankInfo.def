@@ -183,6 +183,8 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
     const unsigned MinSize = Size.getKnownMinValue();
     assert((!Size.isScalable() || MinSize >= 128) &&
            "Scalable vector types should have size of at least 128 bits");
+    if (Size.isScalable())
+      return 3;
     if (MinSize <= 16)
       return 0;
     if (MinSize <= 32)

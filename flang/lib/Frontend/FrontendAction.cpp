@@ -95,6 +95,10 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
         getCurrentInput().getIsCUDAFortran());
   }
 
+  // -fpreprocess-include-lines
+  invoc.getFortranOpts().expandIncludeLinesInPreprocessedOutput =
+      invoc.getPreprocessorOpts().preprocessIncludeLines;
+
   // Decide between fixed and free form (if the user didn't express any
   // preference, use the file extension to decide)
   if (invoc.getFrontendOpts().fortranForm == FortranForm::Unknown) {
@@ -226,6 +230,19 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
     instance->getParsing().messages().Emit(llvm::errs(),
                                            instance->getAllCookedSources());
+    return true;
+  }
+  if (instance->getParsing().parseTree().has_value() &&
+      !instance->getParsing().consumedWholeFile()) {
+    // Parsing failed without error.
+    const unsigned diagID = instance->getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, message);
+    instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
+    instance->getParsing().messages().Emit(llvm::errs(),
+                                           instance->getAllCookedSources());
+    instance->getParsing().EmitMessage(
+        llvm::errs(), instance->getParsing().finalRestingPlace(),
+        "parser FAIL (final position)", "error: ", llvm::raw_ostream::RED);
     return true;
   }
   return false;

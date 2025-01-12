@@ -40,13 +40,13 @@ inline
 Base::~Base() {}
 
 // CHECK: @_ZTVW3Mod4Base = unnamed_addr constant
-// CHECK: @_ZTSW3Mod4Base = constant
 // CHECK: @_ZTIW3Mod4Base = constant
+// CHECK: @_ZTSW3Mod4Base = constant
 
 // With the new Itanium C++ ABI, the linkage of vtables in modules don't need to be linkonce ODR.
 // CHECK-INLINE: @_ZTVW3Mod4Base = {{.*}}unnamed_addr constant
-// CHECK-INLINE: @_ZTSW3Mod4Base = {{.*}}constant
 // CHECK-INLINE: @_ZTIW3Mod4Base = {{.*}}constant
+// CHECK-INLINE: @_ZTSW3Mod4Base = {{.*}}constant
 
 module :private;
 int private_use() {
@@ -61,12 +61,12 @@ int use() {
     return 43;
 }
 
-// CHECK-NOT: @_ZTSW3Mod4Base
 // CHECK-NOT: @_ZTIW3Mod4Base
+// CHECK-NOT: @_ZTSW3Mod4Base
 // CHECK: @_ZTVW3Mod4Base = external
 
-// CHECK-INLINE-NOT: @_ZTSW3Mod4Base
 // CHECK-INLINE-NOT: @_ZTIW3Mod4Base
+// CHECK-INLINE-NOT: @_ZTSW3Mod4Base
 // CHECK-INLINE: @_ZTVW3Mod4Base = external
 
 // Check the case that the declaration of the key function comes from another
@@ -86,8 +86,8 @@ int a_use() {
 }
 
 // CHECK: @_ZTVW1M1C = unnamed_addr constant
-// CHECK: @_ZTSW1M1C = constant
 // CHECK: @_ZTIW1M1C = constant
+// CHECK: @_ZTSW1M1C = constant
 
 //--- M-B.cppm
 export module M:B;
@@ -101,5 +101,5 @@ int b_use() {
 }
 
 // CHECK: @_ZTVW1M1C = external
-// CHECK-NOT: @_ZTSW1M1C
 // CHECK-NOT: @_ZTIW1M1C
+// CHECK-NOT: @_ZTSW1M1C

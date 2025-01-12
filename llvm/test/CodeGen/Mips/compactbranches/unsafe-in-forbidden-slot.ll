@@ -1,5 +1,5 @@
-; RUN: llc -march=mips64el -O0 -mcpu=mips64r6 < %s | FileCheck %s
-; RUN: llc -march=mips64 -O0 -mcpu=mips64r6 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el -O0 -mcpu=mips64r6 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 -O0 -mcpu=mips64r6 < %s | FileCheck %s
 
 @boo = global i32 0, align 4
 

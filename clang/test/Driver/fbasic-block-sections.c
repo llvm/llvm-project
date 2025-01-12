@@ -22,7 +22,8 @@
 // CHECK-OPT-NONE:   "-fbasic-block-sections=none"
 // CHECK-OPT-ALL:    "-fbasic-block-sections=all"
 // CHECK-OPT-LIST:   "-fbasic-block-sections={{[^ ]*}}fbasic-block-sections.c"
-// CHECK-OPT-LABELS: "-fbasic-block-sections=labels"
+// CHECK-OPT-LABELS: warning: argument '-fbasic-block-sections=labels' is deprecated, use '-fbasic-block-address-map' instead
+// CHECK-OPT-LABELS: "-fbasic-block-address-map"
 // CHECK-TRIPLE:     error: unsupported option '-fbasic-block-sections=all' for target
 // CHECK-INVALID-VALUE: error: invalid value {{[^ ]*}} in '-fbasic-block-sections={{.*}}'
 // CHECK-OPT-NULL-LIST: "-fbasic-block-sections=list="

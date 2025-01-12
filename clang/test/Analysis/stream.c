@@ -185,7 +185,7 @@ void f_double_close(void) {
   if (!p)
     return;
   fclose(p);
-  fclose(p); // expected-warning {{Stream might be already closed}}
+  fclose(p); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void f_double_close_alias(void) {
@@ -194,7 +194,7 @@ void f_double_close_alias(void) {
     return;
   FILE *p2 = p1;
   fclose(p1);
-  fclose(p2); // expected-warning {{Stream might be already closed}}
+  fclose(p2); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void f_use_after_close(void) {
@@ -202,7 +202,7 @@ void f_use_after_close(void) {
   if (!p)
     return;
   fclose(p);
-  clearerr(p); // expected-warning {{Stream might be already closed}}
+  clearerr(p); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void f_open_after_close(void) {
@@ -266,7 +266,7 @@ void check_freopen_2(void) {
     if (f2) {
       // Check if f1 and f2 point to the same stream.
       fclose(f1);
-      fclose(f2); // expected-warning {{Stream might be already closed.}}
+      fclose(f2); // expected-warning {{Use of a stream that might be already closed}}
     } else {
       // Reopen failed.
       // f1 is non-NULL but points to a possibly invalid stream.
@@ -370,7 +370,7 @@ void fflush_after_fclose(void) {
   if ((Ret = fflush(F)) != 0)
     clang_analyzer_eval(Ret == EOF); // expected-warning {{TRUE}}
   fclose(F);
-  fflush(F);                         // expected-warning {{Stream might be already closed}}
+  fflush(F);                         // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void fflush_on_open_failed_stream(void) {

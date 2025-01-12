@@ -18,14 +18,14 @@ target triple = "thumbv6m-arm-none-eabi"
 
 ; Test case 01: -1*reg is not free for the Thumb1 target.
 define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) nounwind {
-; CHECK-LABEL: define ptr @negativeOneCase
-; CHECK-SAME: (ptr returned [[A:%.*]], ptr nocapture readonly [[B:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define ptr @negativeOneCase(
+; CHECK-SAME: ptr returned [[A:%.*]], ptr nocapture readonly [[B:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 -1
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi ptr [ [[ADD_PTR]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR:%.*]], [[WHILE_COND]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[P_0]], i32 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr i8, ptr [[P_0]], i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_COND2_PREHEADER:%.*]], label [[WHILE_COND]]
@@ -85,8 +85,8 @@ while.end8:                                       ; preds = %while.cond2
 ; Test case 02: 4*reg({0,+,-1}) and -4*reg({0,+,-1}) are not supported for
 ;               the Thumb1 target.
 define void @negativeFourCase(ptr %ptr1, ptr %ptr2) nounwind {
-; CHECK-LABEL: define void @negativeFourCase
-; CHECK-SAME: (ptr [[PTR1:%.*]], ptr [[PTR2:%.*]]) #[[ATTR0]] {
+; CHECK-LABEL: define void @negativeFourCase(
+; CHECK-SAME: ptr [[PTR1:%.*]], ptr [[PTR2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND6_PREHEADER_US_I_I:%.*]]
 ; CHECK:       for.cond6.preheader.us.i.i:

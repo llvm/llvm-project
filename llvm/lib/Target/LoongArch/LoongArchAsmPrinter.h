@@ -55,6 +55,7 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
     return lowerLoongArchMachineOperandToMCOperand(MO, MCOp, *this);
   }
+  void emitJumpTableInfo() override;
 };
 
 } // end namespace llvm

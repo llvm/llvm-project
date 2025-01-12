@@ -84,8 +84,8 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    pshufb %xmm8, %xmm1
 ; SSE-NEXT:    por %xmm4, %xmm1
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    pand %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm0, %xmm4
 ; SSE-NEXT:    pmaddubsw %xmm3, %xmm4
 ; SSE-NEXT:    pand %xmm2, %xmm4
@@ -120,7 +120,7 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm2
 ; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
 ; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm0, %xmm3
 ; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpandn %xmm1, %xmm2, %xmm1

@@ -391,8 +391,7 @@ struct LowerDeallocationsPass
 
     bufferization::DeallocHelperMap deallocHelperFuncMap;
     if (auto module = dyn_cast<ModuleOp>(getOperation())) {
-      OpBuilder builder =
-          OpBuilder::atBlockBegin(&module.getBodyRegion().front());
+      OpBuilder builder = OpBuilder::atBlockBegin(module.getBody());
 
       // Build dealloc helper function if there are deallocs.
       getOperation()->walk([&](bufferization::DeallocOp deallocOp) {

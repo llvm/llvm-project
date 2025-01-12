@@ -283,6 +283,12 @@ TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
           hasDeclaration(typeAliasTemplateDecl()))))))));
 }
 
+TEST(HasDeclaration, HasDeclarationOfObjCInterface) {
+  EXPECT_TRUE(matchesObjC("@interface BaseClass @end void f() {BaseClass* b;}",
+                          varDecl(hasType(objcObjectPointerType(
+                              pointee(hasDeclaration(objcInterfaceDecl())))))));
+}
+
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
   EXPECT_TRUE(
       matches("struct A {}; using B = A; B b;",
@@ -3082,10 +3088,13 @@ B func1() { return 42; }
     auto M = expr(unless(integerLiteral(equals(24)))).bind("intLit");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 6),
+        {"-std=c++11"}));
+
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("intLit", 1),
+        {"-std=c++11"}));
   }
   {
     auto M =
@@ -3128,7 +3137,8 @@ B func1() { return 42; }
     auto M = expr().bind("allExprs");
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_AsIs, M),
-        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6)));
+        std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 6),
+        {"-std=c++11"}));
     EXPECT_TRUE(matchAndVerifyResultTrue(
         Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
         std::make_unique<VerifyIdIsBoundTo<Expr>>("allExprs", 1)));
@@ -5052,6 +5062,19 @@ TEST(ForEachConstructorInitializer, MatchesInitializers) {
     cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer()))));
 }
 
+TEST(LambdaCapture, InvalidLambdaCapture) {
+  // not crash
+  EXPECT_FALSE(matches(
+      R"(int main() {
+        struct A { A()=default; A(A const&)=delete; };
+        A a; [a]() -> void {}();
+        return 0;
+      })",
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               lambdaExpr(has(lambdaCapture()))),
+      langCxx11OrLater()));
+}
+
 TEST(ForEachLambdaCapture, MatchesCaptures) {
   EXPECT_TRUE(matches(
       "int main() { int x, y; auto f = [x, y]() { return x + y; }; }",
@@ -5649,7 +5672,6 @@ TEST(HasParent, MatchesAllParents) {
 TEST(HasParent, NoDuplicateParents) {
   class HasDuplicateParents : public BoundNodesCallback {
   public:
-    bool run(const BoundNodes *Nodes) override { return false; }
     bool run(const BoundNodes *Nodes, ASTContext *Context) override {
       const Stmt *Node = Nodes->getNodeAs<Stmt>("node");
       std::set<const void *> Parents;
@@ -5858,16 +5880,14 @@ template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
 public:
   VerifyMatchOnNode(StringRef Id, const internal::Matcher<T> &InnerMatcher,
                     StringRef InnerId)
-    : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {
-  }
-
-  bool run(const BoundNodes *Nodes) override { return false; }
+      : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {}
 
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>(Id);
     return selectFirst<T>(InnerId, match(InnerMatcher, *Node, *Context)) !=
-      nullptr;
+           nullptr;
   }
+
 private:
   std::string Id;
   internal::Matcher<T> InnerMatcher;
@@ -6061,7 +6081,7 @@ namespace {
 class ForCallablePreservesBindingWithMultipleParentsTestCallback
     : public BoundNodesCallback {
 public:
-  bool run(const BoundNodes *BoundNodes) override {
+  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
     FunctionDecl const *FunDecl =
         BoundNodes->getNodeAs<FunctionDecl>("funDecl");
     // Validate test assumptions. This would be expressed as ASSERT_* in
@@ -6096,10 +6116,6 @@ public:
 
     // This value does not really matter: the EXPECT_* will set the exit code.
     return true;
-  }
-
-  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
-    return run(BoundNodes);
   }
 
 private:

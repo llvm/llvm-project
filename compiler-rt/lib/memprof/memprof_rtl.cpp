@@ -27,6 +27,8 @@
 
 #include <time.h>
 
+SANITIZER_WEAK_ATTRIBUTE char __memprof_default_options_str[1];
+
 uptr __memprof_shadow_memory_dynamic_address; // Global interface symbol.
 
 // Allow the user to specify a profile output file via the binary.
@@ -212,9 +214,6 @@ static void MemprofInitInternal() {
     Atexit(memprof_atexit);
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
-
-  // interceptors
-  InitTlsSize();
 
   // Create main thread.
   MemprofThread *main_thread = CreateMainThread();

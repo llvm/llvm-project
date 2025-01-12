@@ -198,6 +198,14 @@ uninstrumented libc. For example, the authors were able to bootstrap
 MemorySanitizer-instrumented Clang compiler by linking it with
 self-built instrumented libc++ (as a replacement for libstdc++).
 
+Security Considerations
+=======================
+
+MemorySanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+MemorySanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
+
 Supported Platforms
 ===================
 

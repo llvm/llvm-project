@@ -9,8 +9,8 @@
 
 #include "QuantDialectBytecode.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +31,7 @@ static LogicalResult readDoubleAPFloat(DialectBytecodeReader &reader,
   return success();
 }
 
-#include "mlir/Dialect/Quant/QuantDialectBytecode.cpp.inc"
+#include "mlir/Dialect/Quant/IR/QuantDialectBytecode.cpp.inc"
 
 /// This class implements the bytecode interface for the Quant dialect.
 struct QuantDialectBytecodeInterface : public BytecodeDialectInterface {
@@ -64,6 +64,6 @@ struct QuantDialectBytecodeInterface : public BytecodeDialectInterface {
 };
 } // namespace
 
-void quant::detail::addBytecodeInterface(QuantizationDialect *dialect) {
+void quant::detail::addBytecodeInterface(QuantDialect *dialect) {
   dialect->addInterfaces<QuantDialectBytecodeInterface>();
 }

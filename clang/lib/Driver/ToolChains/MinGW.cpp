@@ -138,6 +138,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back("arm64pe");
     break;
+  case llvm::Triple::mipsel:
+    CmdArgs.push_back("mipspe");
+    break;
   default:
     D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
@@ -187,6 +190,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << GuardArgs;
   }
+
+  if (Args.hasArg(options::OPT_fms_hotpatch))
+    CmdArgs.push_back("--functionpadmin");
 
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
@@ -251,7 +257,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  if (C.getDriver().IsFlangMode()) {
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
     addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
