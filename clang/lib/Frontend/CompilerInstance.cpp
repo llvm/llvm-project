@@ -1194,9 +1194,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
        << LLVM_VERSION_STRING << " default target "
        << llvm::sys::getDefaultTargetTriple() << "\n";
 
-  if (getCodeGenOpts().TimePasses)
-    createFrontendTimer();
-
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
     llvm::EnableStatistics(false);
 
