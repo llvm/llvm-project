@@ -17,7 +17,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/MPFRWrapper/MPFRUtils.cpp"
 
 #include <stdint.h>
 
