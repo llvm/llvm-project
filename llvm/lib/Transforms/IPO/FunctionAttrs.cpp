@@ -855,8 +855,6 @@ determinePointerAccessAttrs(Argument *A,
       // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
-      const bool IsByVal =
-          CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U));
 
       // Some intrinsics (for instance ptrmask) do not capture their results,
       // but return results thas alias their pointer argument, and thus should
@@ -866,7 +864,7 @@ determinePointerAccessAttrs(Argument *A,
         for (Use &UU : CB.uses())
           if (Visited.insert(&UU).second)
             Worklist.push_back(&UU);
-      } else if (!(CB.doesNotCapture(UseIndex) || IsByVal)) {
+      } else if (!CB.doesNotCapture(UseIndex)) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -891,6 +889,9 @@ determinePointerAccessAttrs(Argument *A,
           // that only operands corresponding to formal arguments of the callee
           // can participate in the speculation.
           break;
+
+      const bool IsByVal =
+          CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U));
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
