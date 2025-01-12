@@ -11136,14 +11136,15 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
   Style.BreakBeforeTemplateCloser = true;
   // BreakBeforeTemplateCloser should NOT force template declarations onto
-  // multiple lines. Use verifyNoChange since ColumnLimit = 0.
-  verifyNoChange("template <typename Foo>\n"
-                 "void foo() {}",
-                 Style);
-  verifyNoChange("template <typename Foo, typename Bar>\n"
-                 "void foo() {}",
-                 Style);
-  // It should allow a line break, even when the typename is short:
+  // multiple lines.
+  verifyFormat("template <typename Foo>\n"
+               "void foo() {}",
+               Style);
+  verifyFormat("template <typename Foo, typename Bar>\n"
+               "void foo() {}",
+               Style);
+  // It should allow a line break, even when the typename is short.
+  // verifyNoChange is needed because the default behavior is one line.
   verifyNoChange("template <\n"
                  "    typename Foo\n"
                  ">\n"
