@@ -143,26 +143,26 @@ MPFRNumber MPFRNumber::cospi() const {
 
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
-    mpfr_cospi(result.value, value, mpfr_rounding);
-    return result;
+  mpfr_cospi(result.value, value, mpfr_rounding);
+  return result;
 #else
-    if (mpfr_integer_p(value)) {
-      mpz_t integer;
-      mpz_init(integer);
-      mpfr_get_z(integer, value, mpfr_rounding);
+  if (mpfr_integer_p(value)) {
+    mpz_t integer;
+    mpz_init(integer);
+    mpfr_get_z(integer, value, mpfr_rounding);
 
-      int d = mpz_tstbit(integer, 0);
-      mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
-      mpz_clear(integer);
-      return result;
-    }
-
-    MPFRNumber value_pi(0.0, 1280);
-    mpfr_const_pi(value_pi.value, MPFR_RNDN);
-    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
-    mpfr_cos(result.value, value_pi.value, mpfr_rounding);
-
+    int d = mpz_tstbit(integer, 0);
+    mpfr_set_si(result.value, d ? -1 : 1, mpfr_rounding);
+    mpz_clear(integer);
     return result;
+  }
+
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+  mpfr_cos(result.value, value_pi.value, mpfr_rounding);
+
+  return result;
 #endif
 }
 
@@ -188,29 +188,29 @@ MPFRNumber MPFRNumber::exp2m1() const {
   // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
-    MPFRNumber result(*this);
-    mpfr_exp2m1(result.value, value, mpfr_rounding);
-    return result;
+  MPFRNumber result(*this);
+  mpfr_exp2m1(result.value, value, mpfr_rounding);
+  return result;
 #else
-    unsigned int prec = mpfr_precision * 3;
-    MPFRNumber result(*this, prec);
+  unsigned int prec = mpfr_precision * 3;
+  MPFRNumber result(*this, prec);
 
-    float f = mpfr_get_flt(abs().value, mpfr_rounding);
-    if (f > 0.5f && f < 0x1.0p30f) {
-      mpfr_exp2(result.value, value, mpfr_rounding);
-      mpfr_sub_ui(result.value, result.value, 1, mpfr_rounding);
-      return result;
-    }
-
-    MPFRNumber ln2(2.0f, prec);
-    // log(2)
-    mpfr_log(ln2.value, ln2.value, mpfr_rounding);
-    // x * log(2)
-    mpfr_mul(result.value, value, ln2.value, mpfr_rounding);
-    // e^(x * log(2)) - 1
-    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
-    mpfr_subnormalize(result.value, ex, mpfr_rounding);
+  float f = mpfr_get_flt(abs().value, mpfr_rounding);
+  if (f > 0.5f && f < 0x1.0p30f) {
+    mpfr_exp2(result.value, value, mpfr_rounding);
+    mpfr_sub_ui(result.value, result.value, 1, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber ln2(2.0f, prec);
+  // log(2)
+  mpfr_log(ln2.value, ln2.value, mpfr_rounding);
+  // x * log(2)
+  mpfr_mul(result.value, value, ln2.value, mpfr_rounding);
+  // e^(x * log(2)) - 1
+  int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+  mpfr_subnormalize(result.value, ex, mpfr_rounding);
+  return result;
 #endif
 }
 
@@ -224,22 +224,22 @@ MPFRNumber MPFRNumber::exp10m1() const {
   // TODO: Only use mpfr_exp10m1 once CI and buildbots get MPFR >= 4.2.0.
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
-    MPFRNumber result(*this);
-    mpfr_exp10m1(result.value, value, mpfr_rounding);
-    return result;
+  MPFRNumber result(*this);
+  mpfr_exp10m1(result.value, value, mpfr_rounding);
+  return result;
 #else
-    unsigned int prec = mpfr_precision * 3;
-    MPFRNumber result(*this, prec);
+  unsigned int prec = mpfr_precision * 3;
+  MPFRNumber result(*this, prec);
 
-    MPFRNumber ln10(10.0f, prec);
-    // log(10)
-    mpfr_log(ln10.value, ln10.value, mpfr_rounding);
-    // x * log(10)
-    mpfr_mul(result.value, value, ln10.value, mpfr_rounding);
-    // e^(x * log(10)) - 1
-    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
-    mpfr_subnormalize(result.value, ex, mpfr_rounding);
-    return result;
+  MPFRNumber ln10(10.0f, prec);
+  // log(10)
+  mpfr_log(ln10.value, ln10.value, mpfr_rounding);
+  // x * log(10)
+  mpfr_mul(result.value, value, ln10.value, mpfr_rounding);
+  // e^(x * log(10)) - 1
+  int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+  mpfr_subnormalize(result.value, ex, mpfr_rounding);
+  return result;
 #endif
 }
 
@@ -328,11 +328,11 @@ MPFRNumber MPFRNumber::round() const {
 MPFRNumber MPFRNumber::roundeven() const {
   MPFRNumber result(*this);
 #if MPFR_VERSION_MAJOR >= 4
-    mpfr_roundeven(result.value, value);
+  mpfr_roundeven(result.value, value);
 #else
-    mpfr_rint(result.value, value, MPFR_RNDN);
+  mpfr_rint(result.value, value, MPFR_RNDN);
 #endif
-    return result;
+  return result;
 }
 
 bool MPFRNumber::round_to_long(long &result) const {
@@ -396,28 +396,28 @@ MPFRNumber MPFRNumber::sinpi() const {
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
-    mpfr_sinpi(result.value, value, mpfr_rounding);
-    return result;
+  mpfr_sinpi(result.value, value, mpfr_rounding);
+  return result;
 #else
-    if (mpfr_integer_p(value)) {
-      mpfr_set_si(result.value, 0, mpfr_rounding);
-      return result;
-    }
-
-    MPFRNumber value_mul_two(*this);
-    mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
-
-    if (mpfr_integer_p(value_mul_two.value)) {
-      auto d = mpfr_get_si(value, MPFR_RNDD);
-      mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
-      return result;
-    }
-
-    MPFRNumber value_pi(0.0, 1280);
-    mpfr_const_pi(value_pi.value, MPFR_RNDN);
-    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
-    mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+  if (mpfr_integer_p(value)) {
+    mpfr_set_si(result.value, 0, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber value_mul_two(*this);
+  mpfr_mul_si(value_mul_two.value, value, 2, MPFR_RNDN);
+
+  if (mpfr_integer_p(value_mul_two.value)) {
+    auto d = mpfr_get_si(value, MPFR_RNDD);
+    mpfr_set_si(result.value, (d & 1) ? -1 : 1, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+  mpfr_sin(result.value, value_pi.value, mpfr_rounding);
+  return result;
 #endif
 }
 
@@ -457,47 +457,45 @@ MPFRNumber MPFRNumber::tanpi() const {
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
 
-    mpfr_tanpi(result.value, value, mpfr_rounding);
-    return result;
+  mpfr_tanpi(result.value, value, mpfr_rounding);
+  return result;
 #else
-    MPFRNumber value_ret_exact(*this);
-    MPFRNumber value_one(*this);
-    mpfr_set_si(value_one.value, 1, MPFR_RNDN);
-    mpfr_fmod(value_ret_exact.value, value, value_one.value, mpfr_rounding);
-    mpfr_mul_si(value_ret_exact.value, value_ret_exact.value, 4, MPFR_RNDN);
+  MPFRNumber value_ret_exact(*this);
+  MPFRNumber value_one(*this);
+  mpfr_set_si(value_one.value, 1, MPFR_RNDN);
+  mpfr_fmod(value_ret_exact.value, value, value_one.value, mpfr_rounding);
+  mpfr_mul_si(value_ret_exact.value, value_ret_exact.value, 4, MPFR_RNDN);
 
-    if (mpfr_integer_p(value_ret_exact.value)) {
-      int mod = mpfr_get_si(value_ret_exact.value, MPFR_RNDN);
-      mod = (mod < 0 ? -1 * mod : mod);
+  if (mpfr_integer_p(value_ret_exact.value)) {
+    int mod = mpfr_get_si(value_ret_exact.value, MPFR_RNDN);
+    mod = (mod < 0 ? -1 * mod : mod);
 
-      switch (mod) {
-      case 0:
-        mpfr_set_si(result.value, 0, mpfr_rounding);
-        break;
-      case 1:
-        mpfr_set_si(result.value, (mpfr_signbit(value) ? -1 : 1),
-                    mpfr_rounding);
-        break;
-      case 2: {
-        auto d = mpfr_get_si(value, MPFR_RNDZ);
-        d += mpfr_sgn(value) > 0 ? 0 : 1;
-        mpfr_set_inf(result.value, (d & 1) ? -1 : 1);
-        break;
-      }
-      case 3:
-        mpfr_set_si(result.value, (mpfr_signbit(value) ? 1 : -1),
-                    mpfr_rounding);
-        break;
-      }
-
-      return result;
+    switch (mod) {
+    case 0:
+      mpfr_set_si(result.value, 0, mpfr_rounding);
+      break;
+    case 1:
+      mpfr_set_si(result.value, (mpfr_signbit(value) ? -1 : 1), mpfr_rounding);
+      break;
+    case 2: {
+      auto d = mpfr_get_si(value, MPFR_RNDZ);
+      d += mpfr_sgn(value) > 0 ? 0 : 1;
+      mpfr_set_inf(result.value, (d & 1) ? -1 : 1);
+      break;
+    }
+    case 3:
+      mpfr_set_si(result.value, (mpfr_signbit(value) ? 1 : -1), mpfr_rounding);
+      break;
     }
 
-    MPFRNumber value_pi(0.0, 1280);
-    mpfr_const_pi(value_pi.value, MPFR_RNDN);
-    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
-    mpfr_tan(result.value, value_pi.value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+  mpfr_tan(result.value, value_pi.value, mpfr_rounding);
+  return result;
 #endif
 }
 
