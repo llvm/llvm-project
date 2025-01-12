@@ -145,6 +145,13 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-incorrect-enable-shared-from-this
+  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
+
+  Detect classes or structs that do not publicly inherit from 
+  ``std::enable_shared_from_this``, because unintended behavior will 
+  otherwise occur when calling ``shared_from_this``.
+  
 - New :doc:`bugprone-nondeterministic-pointer-iteration-order
   <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
   check.
