@@ -231,8 +231,8 @@ define void @add_e_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r26, r26
 ; CHECK-NEXT:    add r26, r30
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    mov r20, r30
 ; CHECK-NEXT:    mov r24, r26
+; CHECK-NEXT:    mov r20, r30
 ; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=e,e,e"(i8 %0, i8 %1)

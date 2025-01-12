@@ -272,38 +272,24 @@ body:             |
     ; RA-NEXT:   internal [[COPY]].sub13:sgpr_512 = COPY [[DEF2]].sub13
     ; RA-NEXT:   internal [[COPY]].sub14:sgpr_512 = COPY [[DEF2]].sub14
     ; RA-NEXT: }
-    ; RA-NEXT: undef [[COPY1:%[0-9]+]].sub4_sub5:sgpr_512 = COPY [[COPY]].sub4_sub5 {
-    ; RA-NEXT:   internal [[COPY1]].sub10_sub11:sgpr_512 = COPY [[COPY]].sub10_sub11
-    ; RA-NEXT:   internal [[COPY1]].sub7:sgpr_512 = COPY [[COPY]].sub7
-    ; RA-NEXT:   internal [[COPY1]].sub8:sgpr_512 = COPY [[COPY]].sub8
-    ; RA-NEXT:   internal [[COPY1]].sub13:sgpr_512 = COPY [[COPY]].sub13
-    ; RA-NEXT:   internal [[COPY1]].sub14:sgpr_512 = COPY [[COPY]].sub14
-    ; RA-NEXT: }
-    ; RA-NEXT: SI_SPILL_S512_SAVE [[COPY1]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
+    ; RA-NEXT: SI_SPILL_S512_SAVE [[COPY]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s512) into %stack.0, align 4, addrspace 5)
     ; RA-NEXT: S_NOP 0, implicit-def $sgpr8, implicit-def $sgpr12, implicit-def $sgpr16, implicit-def $sgpr20, implicit-def $sgpr24, implicit-def $sgpr28, implicit-def $sgpr32, implicit-def $sgpr36, implicit-def $sgpr40, implicit-def $sgpr44, implicit-def $sgpr48, implicit-def $sgpr52, implicit-def $sgpr56, implicit-def $sgpr60, implicit-def $sgpr64, implicit-def $sgpr68, implicit-def $sgpr72, implicit-def $sgpr74, implicit-def $sgpr78, implicit-def $sgpr82, implicit-def $sgpr86, implicit-def $sgpr90, implicit-def $sgpr94, implicit-def $sgpr98
     ; RA-NEXT: [[SI_SPILL_S512_RESTORE:%[0-9]+]]:sgpr_512 = SI_SPILL_S512_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s512) from %stack.0, align 4, addrspace 5)
-    ; RA-NEXT: undef [[COPY2:%[0-9]+]].sub4_sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub4_sub5 {
-    ; RA-NEXT:   internal [[COPY2]].sub10_sub11:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10_sub11
-    ; RA-NEXT:   internal [[COPY2]].sub7:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub7
-    ; RA-NEXT:   internal [[COPY2]].sub8:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub8
-    ; RA-NEXT:   internal [[COPY2]].sub13:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub13
-    ; RA-NEXT:   internal [[COPY2]].sub14:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub14
+    ; RA-NEXT: undef [[COPY1:%[0-9]+]].sub4_sub5:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub4_sub5 {
+    ; RA-NEXT:   internal [[COPY1]].sub10_sub11:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub10_sub11
+    ; RA-NEXT:   internal [[COPY1]].sub7:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub7
+    ; RA-NEXT:   internal [[COPY1]].sub8:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub8
+    ; RA-NEXT:   internal [[COPY1]].sub13:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub13
+    ; RA-NEXT:   internal [[COPY1]].sub14:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub14
     ; RA-NEXT: }
-    ; RA-NEXT: undef [[COPY3:%[0-9]+]].sub4_sub5:sgpr_512 = COPY [[COPY2]].sub4_sub5 {
-    ; RA-NEXT:   internal [[COPY3]].sub10_sub11:sgpr_512 = COPY [[COPY2]].sub10_sub11
-    ; RA-NEXT:   internal [[COPY3]].sub7:sgpr_512 = COPY [[COPY2]].sub7
-    ; RA-NEXT:   internal [[COPY3]].sub8:sgpr_512 = COPY [[COPY2]].sub8
-    ; RA-NEXT:   internal [[COPY3]].sub13:sgpr_512 = COPY [[COPY2]].sub13
-    ; RA-NEXT:   internal [[COPY3]].sub14:sgpr_512 = COPY [[COPY2]].sub14
-    ; RA-NEXT: }
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub4, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR1:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub5, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR2:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub10, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR3:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub11, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub7, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR5:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub8, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR6:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub13, 0 :: (dereferenceable invariant load (s32))
-    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR7:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY3]].sub14, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub4, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR1:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub5, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR2:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub10, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR3:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub11, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub7, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR5:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub8, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR6:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub13, 0 :: (dereferenceable invariant load (s32))
+    ; RA-NEXT: [[S_BUFFER_LOAD_DWORD_SGPR7:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], [[COPY1]].sub14, 0 :: (dereferenceable invariant load (s32))
     ; RA-NEXT: S_NOP 0, implicit [[DEF]], implicit [[DEF1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR]], implicit [[S_BUFFER_LOAD_DWORD_SGPR1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR2]], implicit [[S_BUFFER_LOAD_DWORD_SGPR3]], implicit [[S_BUFFER_LOAD_DWORD_SGPR4]], implicit [[S_BUFFER_LOAD_DWORD_SGPR5]], implicit [[S_BUFFER_LOAD_DWORD_SGPR6]], implicit [[S_BUFFER_LOAD_DWORD_SGPR7]]
     ;
     ; VR-LABEL: name: splitkit_copy_unbundle_reorder

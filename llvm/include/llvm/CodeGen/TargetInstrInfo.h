@@ -1113,7 +1113,7 @@ public:
 
     const MachineOperand *DestRegOp = DestSrc->Destination;
     const MachineOperand *SrcRegOp = DestSrc->Source;
-    return !DestRegOp->getSubReg() && !SrcRegOp->getSubReg();
+    return DestRegOp->getSubReg() == SrcRegOp->getSubReg();
   }
 
   /// If the specific machine instruction is an instruction that adds an
