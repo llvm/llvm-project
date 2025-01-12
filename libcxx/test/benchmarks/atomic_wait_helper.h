@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ATOMIC_WAIT_HELPER_H
-#define ATOMIC_WAIT_HELPER_H
+#ifndef TEST_BENCHMARK_ATOMIC_WAIT_HELPER_H
+#define TEST_BENCHMARK_ATOMIC_WAIT_HELPER_H
 
 #include <atomic>
 #include <chrono>
@@ -91,4 +91,4 @@ struct NotifyEveryNus {
   }
 };
 
-#endif // ATOMIC_WAIT_HELPER_H
+#endif // TEST_BENCHMARK_ATOMIC_WAIT_HELPER_H
