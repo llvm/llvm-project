@@ -557,7 +557,7 @@ TEST_F(PatternMatchTest, XorLike) {
     Value *Xor = IRB.CreateXor(X, MaskC);
     Value *Sub = IRB.CreateNUWSub(MaskC, X);
     OpA = nullptr;
-    OpB = nullptr;	
+    OpB = nullptr;
     EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
     EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
                 (OpA == MaskC || OpB == MaskC));
@@ -571,7 +571,7 @@ TEST_F(PatternMatchTest, XorLike) {
     Value *Xor = IRB.CreateXor(X, MaskC);
     Value *Sub = IRB.CreateNSWSub(MaskC, X);
     OpA = nullptr;
-    OpB = nullptr;	
+    OpB = nullptr;
     EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
     EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
                 (OpA == MaskC || OpB == MaskC));
@@ -589,14 +589,14 @@ TEST_F(PatternMatchTest, XorLike) {
     Value *Xor = IRB.CreateXor(X, NonMaskC);
     Value *Sub = IRB.CreateNUWSub(NonMaskC, X);
     OpA = nullptr;
-    OpB = nullptr;	
+    OpB = nullptr;
     EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
     EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
                 (OpA == NonMaskC || OpB == NonMaskC));
     OpA = nullptr;
     OpB = nullptr;
     EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
-  }  
+  }
 }
 
 TEST_F(PatternMatchTest, ZExtSExtSelf) {
