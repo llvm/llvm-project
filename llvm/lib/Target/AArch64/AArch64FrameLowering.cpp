@@ -2362,7 +2362,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   bool CombineSPBump = shouldCombineCSRLocalStackBumpInEpilogue(MBB, NumBytes);
   // Assume we can't combine the last pop with the sp restore.
-  //
   bool CombineAfterCSRBump = false;
   if (!CombineSPBump && PrologueSaveSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
