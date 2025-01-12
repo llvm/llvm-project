@@ -10,12 +10,10 @@ if(LIBC_TESTS_CAN_USE_MPC)
     libcMPCWrapper
     libcMPCommon
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.string
     libc.src.__support.CPP.stringstream
-    libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
-    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.complex_type
     LibcTest.unit
   )

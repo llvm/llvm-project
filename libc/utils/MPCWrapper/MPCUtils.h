@@ -10,7 +10,6 @@
 #define LLVM_LIBC_UTILS_MPCWRAPPER_MPCUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/CPP/type_traits/is_complex.h"
 #include "src/__support/complex_type.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/complex_types.h"
