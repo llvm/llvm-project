@@ -214,6 +214,7 @@ INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(PartiallyInlineLibCallsLegacyPass,
                     "partially-inline-libcalls",
                     "Partially inline calls to library functions", false, false)
