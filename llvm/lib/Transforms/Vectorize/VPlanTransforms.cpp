@@ -621,28 +621,6 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       Def->replaceAllUsesWith(Clone);
     }
 
-    // Check if any uniform VPReplicateRecipes using the phi recipe are used by
-    // ExtractFromEnd. Those must be replaced by a regular VPReplicateRecipe to
-    // ensure the final value is available.
-    // TODO: Remove once uniformity analysis is done on VPlan.
-    for (VPUser *U : Users) {
-      auto *ExitIRI = dyn_cast<VPIRInstruction>(U);
-      VPValue *Op;
-      if (!ExitIRI || !match(ExitIRI->getOperand(0),
-                             m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                                 m_VPValue(Op), m_VPValue())))
-        continue;
-      auto *RepR = dyn_cast<VPReplicateRecipe>(Op);
-      if (!RepR || !RepR->isUniform())
-        continue;
-      assert(!RepR->isPredicated() && "RepR must not be predicated");
-      Instruction *I = RepR->getUnderlyingInstr();
-      auto *Clone =
-          new VPReplicateRecipe(I, RepR->operands(), /*IsUniform*/ false);
-      Clone->insertAfter(RepR);
-      RepR->replaceAllUsesWith(Clone);
-    }
-
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
     if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {

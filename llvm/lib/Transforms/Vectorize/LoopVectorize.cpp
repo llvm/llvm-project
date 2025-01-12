@@ -3806,7 +3806,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // uniform after vectorization.
     bool UniformIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || !TheLoop->contains(I) || Worklist.count(I) ||
+      return I == Ind || Worklist.count(I) ||
              IsVectorizedMemAccessUse(I, IndUpdate);
     });
     if (!UniformIndUpdate)
