@@ -19,6 +19,7 @@
 #include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
 #include "MinMaxUseInitializerListCheck.h"
+#include "NlohmannJsonExplicitConversionsCheck.h"
 #include "PassByValueCheck.h"
 #include "RawStringLiteralCheck.h"
 #include "RedundantVoidArgCheck.h"
@@ -74,6 +75,8 @@ public:
     CheckFactories.registerCheck<MakeUniqueCheck>("modernize-make-unique");
     CheckFactories.registerCheck<MinMaxUseInitializerListCheck>(
         "modernize-min-max-use-initializer-list");
+    CheckFactories.registerCheck<NlohmannJsonExplicitConversionsCheck>(
+        "modernize-nlohmann-json-explicit-conversions");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");

@@ -91,6 +91,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`modernize-nlohmann-json-explicit-conversions
+  <clang-tidy/checks/modernize/nlohmann-json-explicit-conversions>` check.
+
+  Converts implicit conversions via ``operator ValueType`` in code that
+  uses the `nlohmann/json <https://json.nlohmann.me/>`_ library to calls to
+  the ``get()`` method with an explicit type.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

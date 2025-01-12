@@ -18,6 +18,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   MakeUniqueCheck.cpp
   MinMaxUseInitializerListCheck.cpp
   ModernizeTidyModule.cpp
+  NlohmannJsonExplicitConversionsCheck.cpp
   PassByValueCheck.cpp
   RawStringLiteralCheck.cpp
   RedundantVoidArgCheck.cpp
