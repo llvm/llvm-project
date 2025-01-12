@@ -903,10 +903,20 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 }
 
 define <4 x i32> @test_compress_all_const() {
-; CHECK-LABEL: test_compress_all_const:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = [5,9,0,0]
-; CHECK-NEXT:    retq
+; AVX2-LABEL: test_compress_all_const:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = [5,9,0,0]
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: test_compress_all_const:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [5,9,0,0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: test_compress_all_const:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [5,9,0,0]
+; AVX512VL-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
                                                 <4 x i1>   <i1 0,  i1 1,  i1 0,  i1 1>,
                                                 <4 x i32> undef)
