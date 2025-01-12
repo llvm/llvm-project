@@ -5185,7 +5185,7 @@ std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
 }
 
 /// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
-static LogicalResult isContiguousIndices(Value indexVec) {
+static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
   auto vecType = dyn_cast<VectorType>(indexVec.getType());
   if (!vecType || vecType.getRank() != 1 || vecType.isScalable())
     return failure();
@@ -5222,12 +5222,12 @@ public:
 
 /// Fold gathers with consecutive offsets [0, 1, 2, ...] into contiguous
 /// maskedload. Only 1D non-scalable vectors are supported for now.
-class GatherTrivialIndices final : public OpRewritePattern<GatherOp> {
+class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(isContiguousIndices(op.getIndexVec())))
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
@@ -5240,7 +5240,7 @@ public:
 
 void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<GatherFolder, GatherTrivialIndices>(context);
+  results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5284,13 +5284,13 @@ public:
 };
 
 /// Fold scatters with consecutive offsets [0, 1, 2, ...] into contiguous
-/// maskedstore. Only 1D non-scalable vectors are supported for now.
-class ScatterTrivialIndices final : public OpRewritePattern<ScatterOp> {
+/// maskedstore. Only 1D fixed vectors are supported for now.
+class FoldContiguousScatter final : public OpRewritePattern<ScatterOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(isContiguousIndices(op.getIndexVec())))
+    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
@@ -5302,7 +5302,7 @@ public:
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ScatterFolder, ScatterTrivialIndices>(context);
+  results.add<ScatterFolder, FoldContiguousScatter>(context);
 }
 
 //===----------------------------------------------------------------------===//
