@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPCOMMON_H
 
+#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
@@ -17,6 +18,13 @@
 #include <stdint.h>
 
 #include "mpfr_inc.h"
+
+#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+extern "C" {
+int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
+float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
+}
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

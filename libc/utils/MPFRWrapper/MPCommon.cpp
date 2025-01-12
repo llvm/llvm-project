@@ -8,18 +8,10 @@
 
 #include "MPCommon.h"
 
-#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-
-#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
-extern "C" {
-int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
-float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
-}
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
