@@ -1176,7 +1176,6 @@ e.exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/122496.
-; FIXME: Currently an incorrect live-out is used.
 define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-LABEL: define i32 @iv_ext_used_outside(
 ; VEC-SAME: ptr [[DST:%.*]]) {
@@ -1186,15 +1185,19 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VEC-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i16 [[TMP0]]
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
 ; VEC-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP2]], align 4
-; VEC-NEXT:    [[TMP3:%.*]] = add nuw nsw i16 [[TMP0]], 1
+; VEC-NEXT:    [[TMP5:%.*]] = add nuw nsw <2 x i16> [[VEC_IND]], splat (i16 1)
+; VEC-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP5]], i32 0
 ; VEC-NEXT:    [[TMP4:%.*]] = zext nneg i16 [[TMP3]] to i32
-; VEC-NEXT:    [[TMP5:%.*]] = zext nneg i16 [[TMP3]] to i32
+; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[TMP5]], i32 1
+; VEC-NEXT:    [[TMP7:%.*]] = zext nneg i16 [[TMP8]] to i32
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
@@ -1213,7 +1216,7 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    [[EC:%.*]] = icmp samesign ult i16 [[IV_1]], 128
 ; VEC-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[EXIT]]:
-; VEC-NEXT:    [[IV_1_EXT_LCSSA:%.*]] = phi i32 [ [[IV_1_EXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[IV_1_EXT_LCSSA:%.*]] = phi i32 [ [[IV_1_EXT]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i32 [[IV_1_EXT_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: define i32 @iv_ext_used_outside(
@@ -1274,7 +1277,6 @@ exit:
 }
 
 ; Test case for https://github.com/llvm/llvm-project/issues/122602.
-; FIXME: Currently an incorrect live-out is used.
 define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-LABEL: define i64 @test_iv_increment_incremented(
 ; VEC-SAME: ptr [[DST:%.*]]) {
@@ -1288,8 +1290,9 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i32 -1
 ; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
 ; VEC-NEXT:    [[TMP3:%.*]] = add i64 2, -1
+; VEC-NEXT:    [[TMP5:%.*]] = add i64 1, -1
 ; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 1
-; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], 1
+; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1307,7 +1310,7 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    [[IV_1_NEXT]] = add i64 [[IV_2_NEXT]], 1
 ; VEC-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[EXIT]]:
-; VEC-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i64 [ [[IV_1_NEXT]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i64 [[IV_1_NEXT_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: define i64 @test_iv_increment_incremented(
