@@ -6151,8 +6151,8 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                                                    Sema::CCEKind CCE,
                                                    NamedDecl *Dest,
                                                    APValue &PreNarrowingValue) {
-  assert(S.getLangOpts().CPlusPlus11 &&
-         "converted constant expression outside C++11");
+  assert((S.getLangOpts().CPlusPlus11 || CCE == Sema::CCEK_InjectedTTP) &&
+         "converted constant expression outside C++11 or TTP matching");
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
@@ -6221,8 +6221,10 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   // earlier, but that's not guaranteed to work when initializing an object of
   // class type.
   ExprResult Result;
+  bool IsTemplateArgument =
+      CCE == Sema::CCEK_TemplateArg || CCE == Sema::CCEK_InjectedTTP;
   if (T->isRecordType()) {
-    assert(CCE == Sema::CCEK_TemplateArg &&
+    assert(IsTemplateArgument &&
            "unexpected class type converted constant expr");
     Result = S.PerformCopyInitialization(
         InitializedEntity::InitializeTemplateParameter(
@@ -6239,7 +6241,7 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   //   A full-expression is [...] a constant-expression [...]
   Result = S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
                                  /*DiscardedValue=*/false, /*IsConstexpr=*/true,
-                                 CCE == Sema::CCEKind::CCEK_TemplateArg);
+                                 IsTemplateArgument);
   if (Result.isInvalid())
     return Result;
 
@@ -6248,9 +6250,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   QualType PreNarrowingType;
   switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,
                                 PreNarrowingType)) {
-  case NK_Dependent_Narrowing:
-    // Implicit conversion to a narrower type, but the expression is
-    // value-dependent so we can't tell whether it's actually narrowing.
   case NK_Variable_Narrowing:
     // Implicit conversion to a narrower type, and the value is not a constant
     // expression. We'll diagnose this in a moment.
@@ -6271,6 +6270,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
         << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
     break;
 
+  case NK_Dependent_Narrowing:
+    // Implicit conversion to a narrower type, but the expression is
+    // value-dependent so we can't tell whether it's actually narrowing.
+    // For matching the parameters of a TTP, the conversion is ill-formed
+    // if it may narrow.
+    if (CCE != Sema::CCEK_InjectedTTP)
+      break;
+    [[fallthrough]];
   case NK_Type_Narrowing:
     // FIXME: It would be better to diagnose that the expression is not a
     // constant expression.
@@ -6342,6 +6349,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
+
+  assert(CCE != Sema::CCEK_InjectedTTP && "unnexpected CCE Kind");
 
   ConstantExprKind Kind;
   if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
