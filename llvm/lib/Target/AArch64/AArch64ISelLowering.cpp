@@ -9459,7 +9459,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (OpFlags & AArch64II::MO_GOT) {
       Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
-    } else if (Subtarget->isTargetCOFF() && GV->hasDLLImportStorageClass()) {
+    } else if (Subtarget->isTargetCOFF() && CalledGlobal->hasDLLImportStorageClass()) {
       assert(Subtarget->isTargetWindows() &&
              "Windows is the only supported COFF target");
       Callee = getGOT(G, DAG, AArch64II::MO_DLLIMPORT);
