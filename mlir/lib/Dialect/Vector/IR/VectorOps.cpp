@@ -466,11 +466,13 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 /// value, `acc`, is also constant.
 template <typename T>
 static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
-                                    CombiningKind kind, ShapedType dstType);
+                                             CombiningKind kind,
+                                             ShapedType dstType);
 
 template <>
-OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc, int64_t times,
-                             CombiningKind kind, ShapedType dstType) {
+OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
+                                      int64_t times, CombiningKind kind,
+                                      ShapedType dstType) {
   APFloat srcVal = src.getValue();
   APFloat accVal = acc.getValue();
   switch (kind) {
@@ -501,8 +503,9 @@ OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc, int64_t time
 }
 
 template <>
-OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc, int64_t times,
-                             CombiningKind kind, ShapedType dstType) {
+OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
+                                      int64_t times, CombiningKind kind,
+                                      ShapedType dstType) {
   APInt srcVal = src.getValue();
   APInt accVal = acc.getValue();
 
@@ -564,14 +567,14 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   Type dstEltType = dstType.getElementType();
 
   if (mlir::dyn_cast_or_null<FloatType>(dstEltType)) {
-    return computeConstantReduction<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
-                                      accAttr.getSplatValue<FloatAttr>(), times,
-                                      kind, dstType);
+    return computeConstantReduction<FloatAttr>(
+        srcAttr.getSplatValue<FloatAttr>(), accAttr.getSplatValue<FloatAttr>(),
+        times, kind, dstType);
   }
   if (mlir::dyn_cast_or_null<IntegerType>(dstEltType)) {
-    return computeConstantReduction<IntegerAttr>(srcAttr.getSplatValue<IntegerAttr>(),
-                                        accAttr.getSplatValue<IntegerAttr>(),
-                                        times, kind, dstType);
+    return computeConstantReduction<IntegerAttr>(
+        srcAttr.getSplatValue<IntegerAttr>(),
+        accAttr.getSplatValue<IntegerAttr>(), times, kind, dstType);
   }
 
   return {};
