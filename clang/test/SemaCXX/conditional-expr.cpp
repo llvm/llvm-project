@@ -355,30 +355,6 @@ namespace PR9236 {
   }
 }
 
-namespace DR587 {
-  template<typename T>
-  const T *f(bool b) {
-    static T t1 = T();
-    static const T t2 = T();
-    return &(b ? t1 : t2);
-  }
-  struct S {};
-  template const int *f(bool);
-  template const S *f(bool);
-
-  extern bool b;
-  int i = 0;
-  const int ci = 0;
-  volatile int vi = 0;
-  const volatile int cvi = 0;
-
-  const int &cir = b ? i : ci;
-  volatile int &vir = b ? vi : i;
-  const volatile int &cvir1 = b ? ci : cvi;
-  const volatile int &cvir2 = b ? cvi : vi;
-  const volatile int &cvir3 = b ? ci : vi; // expected-error{{volatile lvalue reference to type 'const volatile int' cannot bind to a temporary of type 'int'}}
-}
-
 namespace PR17052 {
   struct X {
     int i_;

@@ -8816,14 +8816,8 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
       commonExpr = result.get();
     }
     // We usually want to apply unary conversions *before* saving, except
-    // in the special case of a C++ l-value conditional.
-    if (!(getLangOpts().CPlusPlus
-          && !commonExpr->isTypeDependent()
-          && commonExpr->getValueKind() == RHSExpr->getValueKind()
-          && commonExpr->isGLValue()
-          && commonExpr->isOrdinaryOrBitFieldObject()
-          && RHSExpr->isOrdinaryOrBitFieldObject()
-          && Context.hasSameType(commonExpr->getType(), RHSExpr->getType()))) {
+    // in special cases in C++.
+    if (!getLangOpts().CPlusPlus) {
       ExprResult commonRes = UsualUnaryConversions(commonExpr);
       if (commonRes.isInvalid())
         return ExprError();
@@ -8832,6 +8826,11 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
 
     // If the common expression is a class or array prvalue, materialize it
     // so that we can safely refer to it multiple times.
+    //
+    // FIXME: Materialization changes value catagory of the common expression,
+    // which may changes type and/or value catagory of the result of this
+    // operator. See tests in 'clang/test/SemaCXX/conditional-gnu-ext.cpp'.
+    // We need to confirm the behavior of GCC at first.
     if (commonExpr->isPRValue() && (commonExpr->getType()->isRecordType() ||
                                     commonExpr->getType()->isArrayType())) {
       ExprResult MatExpr = TemporaryMaterializationConversion(commonExpr);
