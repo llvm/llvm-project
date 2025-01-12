@@ -8817,6 +8817,18 @@ void CodeGenFunction::EmitOMPMasterTaskLoopSimdDirective(
   CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getBeginLoc());
 }
 
+void CodeGenFunction::EmitOMPMaskedTaskLoopSimdDirective(
+    const OMPMaskedTaskLoopSimdDirective &S) {
+  auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    EmitOMPTaskLoopBasedDirective(S);
+  };
+  auto LPCRegion =
+      CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+  OMPLexicalScope Scope(*this, S);
+  CGM.getOpenMPRuntime().emitMaskedRegion(*this, CodeGen, S.getBeginLoc());
+}
+
 void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
     const OMPParallelMasterTaskLoopDirective &S) {
   auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
