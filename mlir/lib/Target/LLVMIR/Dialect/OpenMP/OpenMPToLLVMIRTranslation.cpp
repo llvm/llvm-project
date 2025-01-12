@@ -273,7 +273,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);
-        checkPrivate(op, result);
         checkReduction(op, result);
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -2230,7 +2229,27 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
+  MutableArrayRef<BlockArgument> privateBlockArgs =
+      cast<omp::BlockArgOpenMPOpInterface>(*simdOp).getPrivateBlockArgs();
+  SmallVector<mlir::Value> mlirPrivateVars;
+  SmallVector<llvm::Value *> llvmPrivateVars;
+  SmallVector<omp::PrivateClauseOp> privateDecls;
+  mlirPrivateVars.reserve(privateBlockArgs.size());
+  llvmPrivateVars.reserve(privateBlockArgs.size());
+  collectPrivatizationDecls(simdOp, privateDecls);
+
+  for (mlir::Value privateVar : simdOp.getPrivateVars())
+    mlirPrivateVars.push_back(privateVar);
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      builder, moduleTranslation, privateBlockArgs, privateDecls,
+      mlirPrivateVars, llvmPrivateVars, allocaIP);
+  if (handleError(afterAllocas, opInst).failed())
+    return failure();
 
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
@@ -2331,7 +2350,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   builder.restoreIP(afterIP);
-  return success();
+
+  return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
+                            llvmPrivateVars, privateDecls);
 }
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.

@@ -156,25 +156,6 @@ llvm.func @simd_nontemporal(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
-llvm.func @simd_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
