@@ -10,9 +10,9 @@
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
@@ -135,7 +135,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x, unsigned int precision = ExtraPrecision<float>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest);
 
   MPFRNumber(const MPFRNumber &other);
