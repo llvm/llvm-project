@@ -2269,7 +2269,7 @@ struct FormatStyle {
   ///        typename Baz>
   /// \endcode
   /// \version 20
-  bool BreakBeforeTemplateClose;
+  bool BreakBeforeTemplateCloser;
 
   /// If ``true``, ternary operators will be placed after line breaks.
   /// \code
@@ -5252,7 +5252,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
-           BreakBeforeTemplateClose == R.BreakBeforeTemplateClose &&
+           BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&

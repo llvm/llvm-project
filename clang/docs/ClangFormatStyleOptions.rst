@@ -3421,9 +3421,9 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-.. _BreakBeforeTemplateClose:
+.. _BreakBeforeTemplateCloser:
 
-**BreakBeforeTemplateClose** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBeforeTemplateClose>`
+**BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBeforeTemplateCloser>`
   If ``true``, a line break will be placed before the ``>`` in a multiline
   template declaration.
 

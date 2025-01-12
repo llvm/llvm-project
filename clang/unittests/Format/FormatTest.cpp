@@ -11116,11 +11116,13 @@ TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
       Style);
 }
 
-TEST_F(FormatTest, BreakBeforeTemplateClose) {
+TEST_F(FormatTest, BreakBeforeTemplateCloser) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
-  // Begin with tests covering the case where there is no constraint on the column limit.
+  // Begin with tests covering the case where there is no constraint on the
+  // column limit.
   Style.ColumnLimit = 0;
-  // When BreakBeforeTemplateClose is turned off, the line break that it adds shall be removed:
+  // When BreakBeforeTemplateCloser is turned off, the line break that it adds
+  // shall be removed:
   verifyFormat("template <\n"
                "    typename Foo,\n"
                "    typename Bar>\n"
@@ -11131,9 +11133,10 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                ">\n"
                "void foo() {}",
                Style);
-  Style.BreakBeforeTemplateClose = true;
-  // BreakBeforeTemplateClose should NOT force template declarations onto multiple lines.
-  // Use verifyNoChange since ColumnLimit = 0.
+
+  Style.BreakBeforeTemplateCloser = true;
+  // BreakBeforeTemplateCloser should NOT force template declarations onto
+  // multiple lines. Use verifyNoChange since ColumnLimit = 0.
   verifyNoChange("template <typename Foo>\n"
                  "void foo() {}",
                  Style);
@@ -11278,7 +11281,7 @@ TEST_F(FormatTest, BreakBeforeTemplateClose) {
                "template <\n"
                "    typename Foo,\n"
                "    typename Bar\n"
-               ">"
+               ">\n"
                "void foo() {}",
                Style);
   // But not when the name is looong:
