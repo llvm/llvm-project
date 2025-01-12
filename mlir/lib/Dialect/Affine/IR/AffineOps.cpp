@@ -410,6 +410,7 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
+/// *) It is a result, its defineOp is holded by `AffineSymbol` Trait.
 /// *) It is the result of an affine apply operation with symbol arguments.
 /// *) It is a result of the dim op on a memref whose corresponding size is
 ///    a valid symbol.
@@ -443,7 +444,7 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
-  // AffineScope Op.
+  // AffineSymbol Op.
   if (defOp->hasTrait<OpTrait::AffineSymbol>())
     return true;
 

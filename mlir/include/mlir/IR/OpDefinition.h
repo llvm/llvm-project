@@ -1269,8 +1269,10 @@ public:
   }
 };
 
-/// A trait of operation. Any operation holds the AffineSymbol, and its result
-/// can be used as a symbol.
+/// A trait of operation. The results of an operation with the AffineSymbol
+/// trait can be used as symbols for the purposes for affine dialect purposes.
+/// This trait will make the results of the operation that holds it become valid
+/// symbols. For more details, see `Traits.md#AffineSymbol`.
 template <typename ConcreteType>
 class AffineSymbol : public TraitBase<ConcreteType, AffineSymbol> {
 public:

@@ -69,7 +69,7 @@ immediately enclosed by the latter),
 3. a value that dominates the `AffineScope` op enclosing the value's
 use,
 4. the result of a constant operation,
-5. the result of an `AffineSymbol` op,
+5. the result of an op with [`AffineSymbol`](Traits.md#AffineSymbol) trait,
 6. the result of an
 [`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
 arguments any valid symbolic identifiers, or

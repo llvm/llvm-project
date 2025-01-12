@@ -1391,10 +1391,17 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
 }
 
 LogicalResult OpTrait::impl::verifyIndexResultType(Operation *op) {
-  if (op->getNumResults() != 1)
-    op->emitError("operation's result number should be 1.");
-  if (!mlir::isa<IndexType>(op->getResult(0).getType()))
-    op->emitError("operation's result type should be index.");
+  ResultRange results = op->getResults();
+  if (results.empty()) {
+    op->emitError("operation must have at least one result");
+    return failure();
+  }
+  for (OpResult result : results) {
+    if (!mlir::isa<IndexType>(result.getType())) {
+      op->emitError("operation's result type should be index");
+      return failure();
+    }
+  }
   return success();
 }
 
