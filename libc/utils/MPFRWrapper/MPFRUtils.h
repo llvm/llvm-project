@@ -41,6 +41,7 @@ class MPFRNumber {
   unsigned int mpfr_precision;
   mpfr_rnd_t mpfr_rounding;
   mpfr_t value;
+
 public:
   MPFRNumber();
   // We use explicit EnableIf specializations to disallow implicit
@@ -81,8 +82,7 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = 128,
+  explicit MPFRNumber(XType x, unsigned int precision = 128,
                       RoundingMode rounding = RoundingMode::Nearest);
 
   MPFRNumber(const MPFRNumber &other);
@@ -163,8 +163,7 @@ public:
   ulp_as_string(T input);
 
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, double>
-  ulp(T input);
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input);
 };
 
 enum class Operation : int {
