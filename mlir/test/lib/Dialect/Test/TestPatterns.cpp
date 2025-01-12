@@ -1264,14 +1264,6 @@ public:
     // Replace test.multiple_1_to_n_replacement with test.step_1.
     Operation *repl1 = replaceWithDoubleResults(op, "test.step_1");
     // Now replace test.step_1 with test.legal_op.
-    // TODO: Ideally, it should not be necessary to reset the insertion point
-    // here. Based on the API calls, it looks like test.step_1 is entirely
-    // erased. But that's not the case: an argument materialization will
-    // survive. And that argument materialization will be used by the users of
-    // `op`. If we don't reset the insertion point here, we get dominance
-    // errors. This will be fixed when we have 1:N support in the conversion
-    // value mapping.
-    rewriter.setInsertionPoint(repl1);
     replaceWithDoubleResults(repl1, "test.legal_op");
     return success();
   }
@@ -1284,7 +1276,6 @@ struct TestTypeConverter : public TypeConverter {
   using TypeConverter::TypeConverter;
   TestTypeConverter() {
     addConversion(convertType);
-    addArgumentMaterialization(materializeCast);
     addSourceMaterialization(materializeCast);
   }
 

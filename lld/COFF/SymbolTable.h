@@ -51,8 +51,6 @@ public:
               llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
       : ctx(c), machine(machine) {}
 
-  void addFile(InputFile *file);
-
   // Emit errors for symbols that cannot be resolved.
   void reportUnresolvable();
 
@@ -155,7 +153,6 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
-  bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
 };

@@ -105,8 +105,7 @@ bool SymbolContext::DumpStopContext(
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
       const addr_t function_offset =
-          file_addr -
-          function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          file_addr - function->GetAddress().GetFileAddress();
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
@@ -700,9 +699,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   }
 
   if (function) {
-    if (function->GetAddressRange()
-            .GetBaseAddress()
-            .CalculateSymbolContextLineEntry(line_entry))
+    if (function->GetAddress().CalculateSymbolContextLineEntry(line_entry))
       return line_entry;
   }
   return LineEntry();
@@ -1228,8 +1225,7 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
           continue;
 
         if (pos->function) {
-          if (pos->function->GetAddressRange().GetBaseAddress() ==
-              sc.symbol->GetAddressRef()) {
+          if (pos->function->GetAddress() == sc.symbol->GetAddressRef()) {
             // Do we already have a function with this symbol?
             if (pos->symbol == sc.symbol)
               return false;

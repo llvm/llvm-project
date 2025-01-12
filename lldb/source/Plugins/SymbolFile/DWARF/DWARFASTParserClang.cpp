@@ -1222,11 +1222,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   }
 
   if (die.HasChildren()) {
-    bool skip_artificial = true;
-    ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
-                         is_variadic, has_template_params,
-                         function_param_types, function_param_decls,
-                         type_quals);
+    ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
+                         has_template_params, function_param_types,
+                         function_param_decls, type_quals);
   }
 
   bool ignore_containing_context = false;
@@ -2325,7 +2323,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
-  ParseChildParameters(containing_decl_ctx, die, true, is_static, is_variadic,
+  ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
                        has_template_params, param_types, param_decls,
                        type_quals);
   sstr << "(";
@@ -3069,8 +3067,8 @@ bool DWARFASTParserClang::ParseChildMembers(
 
 size_t DWARFASTParserClang::ParseChildParameters(
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
-    bool skip_artificial, bool &is_static, bool &is_variadic,
-    bool &has_template_params, std::vector<CompilerType> &function_param_types,
+    bool &is_static, bool &is_variadic, bool &has_template_params,
+    std::vector<CompilerType> &function_param_types,
     std::vector<clang::ParmVarDecl *> &function_param_decls,
     unsigned &type_quals) {
   if (!parent_die)
@@ -3125,7 +3123,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
       }
 
       bool skip = false;
-      if (skip_artificial && is_artificial) {
+      if (is_artificial) {
         // In order to determine if a C++ member function is "const" we
         // have to look at the const-ness of "this"...
         if (arg_idx == 0 &&

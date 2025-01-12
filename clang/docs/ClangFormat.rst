@@ -150,6 +150,7 @@ names. It has the following format:
 * Patterns follow the rules specified in `POSIX 2.13.1, 2.13.2, and Rule 1 of
   2.13.3 <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/
   V3_chap02.html#tag_18_13>`_.
+* Bash globstar (``**``) is supported.
 * A pattern is negated if it starts with a bang (``!``).
 
 To match all files in a directory, use e.g. ``foo/bar/*``. To match all files in

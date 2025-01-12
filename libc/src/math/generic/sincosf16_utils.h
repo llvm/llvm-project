@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF16_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF16_UTILS_H
 
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
-#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

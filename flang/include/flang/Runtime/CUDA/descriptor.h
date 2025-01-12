@@ -33,6 +33,10 @@ void *RTDECL(CUFGetDeviceAddress)(
 void RTDECL(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
+/// Get the device address of registered with the \p hostPtr and sync them.
+void RTDECL(CUFSyncGlobalDescriptor)(
+    void *hostPtr, const char *sourceFile = nullptr, int sourceLine = 0);
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda

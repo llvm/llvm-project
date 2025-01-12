@@ -37,71 +37,6 @@ StringRef ltrim1(StringRef s, const char *chars) {
   return s;
 }
 
-static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
-  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
-    return true;
-  switch (ctx.config.machine) {
-  case ARM64:
-    return mt == ARM64 || mt == ARM64X;
-  case ARM64EC:
-    return COFF::isArm64EC(mt) || mt == AMD64;
-  case ARM64X:
-    return COFF::isAnyArm64(mt) || mt == AMD64;
-  case IMAGE_FILE_MACHINE_UNKNOWN:
-    return true;
-  default:
-    return ctx.config.machine == mt;
-  }
-}
-
-void SymbolTable::addFile(InputFile *file) {
-  Log(ctx) << "Reading " << toString(file);
-  if (file->lazy) {
-    if (auto *f = dyn_cast<BitcodeFile>(file))
-      f->parseLazy();
-    else
-      cast<ObjFile>(file)->parseLazy();
-  } else {
-    file->parse();
-    if (auto *f = dyn_cast<ObjFile>(file)) {
-      ctx.objFileInstances.push_back(f);
-    } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
-      if (ltoCompilationDone) {
-        Err(ctx) << "LTO object file " << toString(file)
-                 << " linked in after "
-                    "doing LTO compilation.";
-      }
-      ctx.bitcodeFileInstances.push_back(f);
-    } else if (auto *f = dyn_cast<ImportFile>(file)) {
-      ctx.importFileInstances.push_back(f);
-    }
-  }
-
-  MachineTypes mt = file->getMachineType();
-  // The ARM64EC target must be explicitly specified and cannot be inferred.
-  if (mt == ARM64EC &&
-      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
-       (ctx.config.machineInferred &&
-        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
-    Err(ctx) << toString(file)
-             << ": machine type arm64ec is ambiguous and cannot be "
-                "inferred, use /machine:arm64ec or /machine:arm64x";
-    return;
-  }
-  if (!compatibleMachineType(ctx, mt)) {
-    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
-             << " conflicts with " << machineToStr(ctx.config.machine);
-    return;
-  }
-  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
-      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
-    ctx.config.machineInferred = true;
-    ctx.driver.setMachine(mt);
-  }
-
-  ctx.driver.parseDirectives(file);
-}
-
 static COFFSyncStream errorOrWarn(COFFLinkerContext &ctx) {
   return {ctx, ctx.config.forceUnresolved ? DiagLevel::Warn : DiagLevel::Err};
 }
@@ -118,7 +53,7 @@ static void forceLazy(Symbol *s) {
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
     file->lazy = false;
-    file->symtab.addFile(file);
+    file->symtab.ctx.driver.addFile(file);
     break;
   }
   case Symbol::Kind::LazyDLLSymbolKind: {
@@ -601,6 +536,15 @@ void SymbolTable::initializeLoadConfig() {
   auto sym =
       dyn_cast_or_null<DefinedRegular>(findUnderscore("_load_config_used"));
   if (!sym) {
+    if (isEC()) {
+      Warn(ctx) << "EC version of '_load_config_used' is missing";
+      return;
+    }
+    if (ctx.hybridSymtab) {
+      Warn(ctx) << "native version of '_load_config_used' is missing for "
+                   "ARM64X target";
+      return;
+    }
     if (ctx.config.guardCF != GuardCFLevel::Off)
       Warn(ctx)
           << "Control Flow Guard is enabled but '_load_config_used' is missing";
@@ -776,7 +720,7 @@ void SymbolTable::addLazyObject(InputFile *f, StringRef n) {
     return;
   s->pendingArchiveLoad = true;
   f->lazy = false;
-  addFile(f);
+  ctx.driver.addFile(f);
 }
 
 void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,
@@ -1054,7 +998,6 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
 }
 
 void SymbolTable::compileBitcodeFiles() {
-  ltoCompilationDone = true;
   if (ctx.bitcodeFileInstances.empty())
     return;
 

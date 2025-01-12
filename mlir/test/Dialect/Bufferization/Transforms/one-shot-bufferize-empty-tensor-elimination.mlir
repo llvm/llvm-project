@@ -465,3 +465,14 @@ func.func @mutli_use_of_the_same_tensor_empty_creates_non_existent_read(%arg1: t
       : tensor<5x6x64xf32> into tensor<5x6x128xf32>
   return %inserted_slice_1, %res_2 : tensor<5x6x128xf32>, tensor<5x6x64xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @direct_use_of_tensor_empty
+func.func @direct_use_of_tensor_empty(%arg0: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
+  // CHECK-NOT: memref.alloc
+  %empty_1 = tensor.empty() : tensor<5x6x64xf32>
+  %inserted_slice_1 = tensor.insert_slice %empty_1 into %arg0[0, 0, 0][5, 6, 64][1, 1, 1]
+      : tensor<5x6x64xf32> into tensor<5x6x128xf32>
+  return %inserted_slice_1 : tensor<5x6x128xf32>
+}
