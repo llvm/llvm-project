@@ -57,9 +57,13 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
-                                  SourceOp>::value,
-                  "expected op with same operand and result types");
+    if constexpr (!std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
+                                   SourceOp>::value) {
+      assert(op->getNumOperands() > 0 &&
+             "expected op to take at least one operand");
+      assert(op->getResultTypes().front() == op->getOperand(0).getType() &&
+             "expected op with same operand and result types");
+    }
 
     if (!op->template getParentOfType<FunctionOpInterface>()) {
       return rewriter.notifyMatchFailure(
