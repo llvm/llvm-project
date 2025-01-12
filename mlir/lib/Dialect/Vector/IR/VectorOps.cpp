@@ -465,12 +465,11 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   build(builder, result, kind, source, acc, reductionDims);
 }
 
-/// Helper function to reduce a multi reduction where src and acc are splat
-/// Folds src @^times acc into OpFoldResult where @ is the reduction operation
-/// (add/max/etc.)
+/// Computes the result of reducing a constant vector where the accumulator
+/// value, `acc`, is also constant.
 template <typename T>
-OpFoldResult foldSplatReduce(T src, T acc, int64_t times, CombiningKind kind,
-                             ShapedType dstType);
+static OpFoldResult foldSplatReduce(T src, T acc, int64_t times,
+                                    CombiningKind kind, ShapedType dstType);
 
 template <>
 OpFoldResult foldSplatReduce(FloatAttr src, FloatAttr acc, int64_t times,
@@ -509,6 +508,7 @@ OpFoldResult foldSplatReduce(IntegerAttr src, IntegerAttr acc, int64_t times,
                              CombiningKind kind, ShapedType dstType) {
   APInt srcVal = src.getValue();
   APInt accVal = acc.getValue();
+
   switch (kind) {
   case CombiningKind::ADD:
     return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
@@ -547,32 +547,36 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   // Single parallel dim, this is a noop.
   if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
     return getSource();
+
   auto srcAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getSource());
   auto accAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getAcc());
-  if (!srcAttr || !accAttr)
+  if (!srcAttr || !accAttr || !srcAttr.isSplat() || !accAttr.isSplat())
     return {};
-  if (!srcAttr.isSplat() || !accAttr.isSplat())
-    return {};
+
   ArrayRef<int64_t> reductionDims = getReductionDims();
   auto srcType = mlir::cast<ShapedType>(getSourceVectorType());
   ArrayRef<int64_t> srcDims = srcType.getShape();
+
   int64_t times = 1;
   for (auto dim : reductionDims) {
     times *= srcDims[dim];
   }
+
   CombiningKind kind = getKind();
   auto dstType = mlir::cast<ShapedType>(getDestType());
-  Type eltype = dstType.getElementType();
-  if (mlir::dyn_cast_or_null<FloatType>(eltype)) {
+  Type dstEltType = dstType.getElementType();
+
+  if (mlir::dyn_cast_or_null<FloatType>(dstEltType)) {
     return foldSplatReduce<FloatAttr>(srcAttr.getSplatValue<FloatAttr>(),
                                       accAttr.getSplatValue<FloatAttr>(), times,
                                       kind, dstType);
   }
-  if (mlir::dyn_cast_or_null<IntegerType>(eltype)) {
+  if (mlir::dyn_cast_or_null<IntegerType>(dstEltType)) {
     return foldSplatReduce<IntegerAttr>(srcAttr.getSplatValue<IntegerAttr>(),
                                         accAttr.getSplatValue<IntegerAttr>(),
                                         times, kind, dstType);
   }
+
   return {};
 }
 
