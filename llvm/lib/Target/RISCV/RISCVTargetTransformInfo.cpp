@@ -1237,9 +1237,9 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::experimental_vp_splice: {
     auto LT = getTypeLegalizationCost(RetTy);
-    SmallVector<unsigned, 3> Opcodes;
+    SmallVector<unsigned, 2> Opcodes;
     Value *ImmValue = *(ICA.getInst()->arg_begin() + 2);
-    auto *Imm = dyn_cast<ConstantInt>(ImmValue);
+    auto *Imm = cast<ConstantInt>(ImmValue);
     if (Imm->isNegative())
       Opcodes = {RISCV::VSLIDEDOWN_VI, RISCV::VSLIDEUP_VX};
     else
@@ -1249,7 +1249,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return InstructionCost::getInvalid();
 
     if (LT.second.getScalarType() == MVT::i1) {
-      SmallVector<unsigned, 8> AddOpcodes = {
+      unsigned AddOpcodes[8] = {
           RISCV::VMV1R_V, RISCV::VMV1R_V, RISCV::VMV_V_I,    RISCV::VMERGE_VIM,
           RISCV::VMV_V_I, RISCV::VMV1R_V, RISCV::VMERGE_VIM, RISCV::VMSNE_VI};
       return LT.first *
