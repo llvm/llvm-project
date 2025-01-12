@@ -145,6 +145,13 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-incorrect-enable-shared-from-this
+  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
+
+  Detect classes or structs that do not publicly inherit from 
+  ``std::enable_shared_from_this``, because unintended behavior will 
+  otherwise occur when calling ``shared_from_this``.
+  
 - New :doc:`bugprone-nondeterministic-pointer-iteration-order
   <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
   check.
@@ -338,6 +345,10 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
+
+- Improved :doc:`performance-unnecessary-copy-initialization`
+  <clang-tidy/checks/performance/unnecessary-copy-initialization> check
+  to consider static member functions the same way as free functions.
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
