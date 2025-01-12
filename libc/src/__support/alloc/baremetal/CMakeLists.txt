@@ -1,0 +1,13 @@
+add_object_library(
+  page
+  SRCS
+    page.cpp
+  HDRS
+    ../page.h
+  DEPENDS
+    libc.src.__support.alloc.base
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.getpagesize
+)

@@ -1,5 +1,31 @@
+function(add_unistd_entrypoint_object name)
+  if(TARGET libc.src.unistd.${LIBC_TARGET_OS}.${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+  elseif(TARGET libc.src.unistd.generic.${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .generic.${name}
+    )
+  endif()
+endfunction(add_unistd_entrypoint_object)
+
+if(LIBC_CONF_PAGE_SIZE)
+  set(getpagesize_config_copts "-DLIBC_PAGE_SIZE=${LIBC_CONF_PAGE_SIZE}")
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
 add_entrypoint_object(
@@ -350,3 +376,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.threads.identifier
 )
+
+# These entrypoints have multiple potential implementations.
+add_unistd_entrypoint_object(getpagesize)

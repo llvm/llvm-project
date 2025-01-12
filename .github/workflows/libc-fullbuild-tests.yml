@@ -54,7 +54,7 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
     
-    # Configure libc fullbuild with scudo.
+    # Configure libc fullbuild.
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: >
@@ -65,12 +65,8 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
-        -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
+        -DLLVM_ENABLE_RUNTIMES="libc"
         -DLLVM_LIBC_FULL_BUILD=ON
-        -DLLVM_LIBC_INCLUDE_SCUDO=ON
-        -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
-        -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
-        -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF
         -G Ninja
         -S ${{ github.workspace }}/runtimes
 

@@ -115,6 +115,16 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    },
+    "LIBC_CONF_ALLOC_TYPE": {
+      "value": "LIBC_ALLOC_TYPE_ARENA",
+      "doc": "The implementation used for allocations, acceptable values are LIBC_ALLOC_TYPE_EXTERN, LIBC_ALLOC_TYPE_SCUDO, LIBC_ALLOC_TYPE_ARENA."
+    }
+  },
+  "unistd": {
+    "LIBC_CONF_PAGE_SIZE": {
+      "value": "LIBC_PAGE_SIZE_SYSTEM",
+      "doc": "The value to use for the system page size, acceptable values are LIBC_CONF_PAGE_SIZE_SYSTEM, LIBC_CONF_PAGE_SIZE_4K, LIBC_CONF_PAGE_SIZE_16K, LIBC_CONF_PAGE_SIZE_64K."
     }
   }
 }

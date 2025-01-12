@@ -21,6 +21,12 @@ add_header_library(
 )
 
 add_header_library(
+  page_size
+  HDRS
+    page_size.h
+)
+
+add_header_library(
   sanitizer
   HDRS
     sanitizer.h
