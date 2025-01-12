@@ -22,6 +22,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include <optional>
 
 using namespace llvm;
@@ -33,7 +34,8 @@ DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                          BasicBlock &CurrBB, Function::iterator &BB,
-                         const TargetTransformInfo *TTI, DomTreeUpdater *DTU) {
+                         const TargetTransformInfo *TTI, DomTreeUpdater *DTU,
+                         OptimizationRemarkEmitter *ORE) {
   // There is no need to change the IR, since backend will emit sqrt
   // instruction if the call has already been marked read-only.
   if (Call->onlyReadsMemory())
@@ -103,7 +105,8 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 
 static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
                                        const TargetTransformInfo *TTI,
-                                       DominatorTree *DT) {
+                                       DominatorTree *DT,
+                                       OptimizationRemarkEmitter *ORE) {
   std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -140,7 +143,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
-                         DTU ? &*DTU : nullptr))
+                         DTU ? &*DTU : nullptr, ORE))
           break;
         continue;
       default:
@@ -160,7 +163,8 @@ PartiallyInlineLibCallsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
-  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI, DT))
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI, DT, &ORE))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
@@ -181,6 +185,7 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -195,7 +200,8 @@ public:
     DominatorTree *DT = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
-    return runPartiallyInlineLibCalls(F, TLI, TTI, DT);
+    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    return runPartiallyInlineLibCalls(F, TLI, TTI, DT, ORE);
   }
 };
 }
