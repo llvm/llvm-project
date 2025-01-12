@@ -775,6 +775,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     if (const FunctionDecl* Pattern = FD->getTemplateInstantiationPattern())
       Decl = Pattern;
 
+    // Bail out if the type of the function has not been set yet.
+    // This can notably happen in the trailing return type of a lambda
+    // expression.
     const Type *Ty = Decl->getType().getTypePtrOrNull();
     if (!Ty)
       return "";
