@@ -16,9 +16,156 @@
 
 #include <stdint.h>
 
+#include "mpfr_inc.h"
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
+
+using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+using LIBC_NAMESPACE::fputil::testing::RoundingMode;
+
+// A precision value which allows sufficiently large additional
+// precision compared to the floating point precision.
+template <typename T> struct ExtraPrecision;
+
+// If the ulp tolerance is less than or equal to 0.5, we would check that the
+// result is rounded correctly with respect to the rounding mode by using the
+// same precision as the inputs.
+template <typename T>
+static inline unsigned int get_precision(double ulp_tolerance);
+
+static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode);
+
+class MPFRNumber {
+  unsigned int mpfr_precision;
+  mpfr_rnd_t mpfr_rounding;
+  mpfr_t value;
+public:
+  MPFRNumber();
+  // We use explicit EnableIf specializations to disallow implicit
+  // conversions. Implicit conversions can potentially lead to loss of
+  // precision. We exceptionally allow implicit conversions from float16
+  // to float, as the MPFR API does not support float16, thus requiring
+  // conversion to a higher-precision format.
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<float, XType>
+#ifdef LIBC_TYPES_HAS_FLOAT16
+                                 || cpp::is_same_v<float16, XType>
+#endif
+                             ,
+                             int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
+                      RoundingMode rounding = RoundingMode::Nearest);
+
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
+                      RoundingMode rounding = RoundingMode::Nearest);
+
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
+                      RoundingMode rounding = RoundingMode::Nearest);
+
+#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<float128, XType>, int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
+                      RoundingMode rounding = RoundingMode::Nearest);
+#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = 128,
+                      RoundingMode rounding = RoundingMode::Nearest);
+
+  MPFRNumber(const MPFRNumber &other);
+  MPFRNumber(const MPFRNumber &other, unsigned int precision);
+  MPFRNumber(const mpfr_t x, unsigned int precision, RoundingMode rounding);
+
+  // Destructor
+  ~MPFRNumber();
+
+  // Assignment operator
+  MPFRNumber &operator=(const MPFRNumber &rhs);
+
+  // Member functions (declarations only)
+  bool is_nan() const;
+  MPFRNumber abs() const;
+  MPFRNumber acos() const;
+  MPFRNumber acosh() const;
+  MPFRNumber add(const MPFRNumber &b) const;
+  MPFRNumber asin() const;
+  MPFRNumber asinh() const;
+  MPFRNumber atan() const;
+  MPFRNumber atan2(const MPFRNumber &b);
+  MPFRNumber atanh() const;
+  MPFRNumber cbrt() const;
+  MPFRNumber ceil() const;
+  MPFRNumber cos() const;
+  MPFRNumber cosh() const;
+  MPFRNumber cospi() const;
+  MPFRNumber erf() const;
+  MPFRNumber exp() const;
+  MPFRNumber exp2() const;
+  MPFRNumber exp2m1() const;
+  MPFRNumber exp10() const;
+  MPFRNumber exp10m1() const;
+  MPFRNumber expm1() const;
+  MPFRNumber div(const MPFRNumber &b) const;
+  MPFRNumber floor() const;
+  MPFRNumber fmod(const MPFRNumber &b);
+  MPFRNumber frexp(int &exp);
+  MPFRNumber hypot(const MPFRNumber &b);
+  MPFRNumber log() const;
+  MPFRNumber log2() const;
+  MPFRNumber log10() const;
+  MPFRNumber log1p() const;
+  MPFRNumber pow(const MPFRNumber &b);
+  MPFRNumber remquo(const MPFRNumber &divisor, int &quotient);
+  MPFRNumber round() const;
+  MPFRNumber roundeven() const;
+  bool round_to_long(long &result) const;
+  bool round_to_long(mpfr_rnd_t rnd, long &result) const;
+  MPFRNumber rint(mpfr_rnd_t rnd) const;
+  MPFRNumber mod_2pi() const;
+  MPFRNumber mod_pi_over_2() const;
+  MPFRNumber mod_pi_over_4() const;
+  MPFRNumber sin() const;
+  MPFRNumber sinpi() const;
+  MPFRNumber sinh() const;
+  MPFRNumber sqrt() const;
+  MPFRNumber sub(const MPFRNumber &b) const;
+  MPFRNumber tan() const;
+  MPFRNumber tanh() const;
+  MPFRNumber tanpi() const;
+  MPFRNumber trunc() const;
+  MPFRNumber fma(const MPFRNumber &b, const MPFRNumber &c);
+  MPFRNumber mul(const MPFRNumber &b);
+  cpp::string str() const;
+
+  // Template member functions
+  template <typename T> T as() const;
+  void dump(const char *msg) const;
+
+  template <typename T>
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber>
+  ulp_as_mpfr_number(T input);
+
+  template <typename T>
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string>
+  ulp_as_string(T input);
+
+  template <typename T>
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, double>
+  ulp(T input);
+};
 
 enum class Operation : int {
   // Operations which take a single floating point number as input
@@ -100,9 +247,6 @@ enum class Operation : int {
   Fma,
   EndTernaryOperationsSingleOutput,
 };
-
-using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
-using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(

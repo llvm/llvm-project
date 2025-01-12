@@ -18,10 +18,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-#include <stdint.h>
-
-#include "mpfr_inc.h"
-
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
@@ -34,10 +30,6 @@ template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
-
-// A precision value which allows sufficiently large additional
-// precision compared to the floating point precision.
-template <typename T> struct ExtraPrecision;
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template <> struct ExtraPrecision<float16> {
@@ -67,9 +59,6 @@ template <> struct ExtraPrecision<float128> {
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
-// If the ulp tolerance is less than or equal to 0.5, we would check that the
-// result is rounded correctly with respect to the rounding mode by using the
-// same precision as the inputs.
 template <typename T>
 static inline unsigned int get_precision(double ulp_tolerance) {
   if (ulp_tolerance <= 0.5) {
@@ -97,194 +86,182 @@ static inline mpfr_rnd_t get_mpfr_rounding_mode(RoundingMode mode) {
   __builtin_unreachable();
 }
 
-class MPFRNumber {
-  unsigned int mpfr_precision;
-  mpfr_rnd_t mpfr_rounding;
+MPFRNumber::MPFRNumber() : mpfr_precision(256), mpfr_rounding(MPFR_RNDN) {
+  mpfr_init2(value, mpfr_precision);
+}
 
-  mpfr_t value;
-
-public:
-  MPFRNumber() : mpfr_precision(256), mpfr_rounding(MPFR_RNDN) {
-    mpfr_init2(value, mpfr_precision);
-  }
-
-  // We use explicit EnableIf specializations to disallow implicit
-  // conversions. Implicit conversions can potentially lead to loss of
-  // precision. We exceptionally allow implicit conversions from float16
-  // to float, as the MPFR API does not support float16, thus requiring
-  // conversion to a higher-precision format.
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<float, XType>
+template <typename XType,
+          cpp::enable_if_t<cpp::is_same_v<float, XType>
 #ifdef LIBC_TYPES_HAS_FLOAT16
-                                 || cpp::is_same_v<float16, XType>
+                                || cpp::is_same_v<float16, XType>
 #endif
-                             ,
-                             int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_flt(value, x, mpfr_rounding);
-  }
+                            ,
+                            int>>
+MPFRNumber::MPFRNumber(XType x,
+                    unsigned int precision,
+                    RoundingMode rounding)
+    : mpfr_precision(precision),
+      mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+  mpfr_init2(value, mpfr_precision);
+  mpfr_set_flt(value, x, mpfr_rounding);
+}
 
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_d(value, x, mpfr_rounding);
-  }
+template <typename XType,
+          cpp::enable_if_t<cpp::is_same_v<double, XType>, int>>
+MPFRNumber::MPFRNumber(XType x,
+                    unsigned int precision,
+                    RoundingMode rounding)
+    : mpfr_precision(precision),
+      mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+  mpfr_init2(value, mpfr_precision);
+  mpfr_set_d(value, x, mpfr_rounding);
+}
 
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_ld(value, x, mpfr_rounding);
-  }
+template <typename XType,
+          cpp::enable_if_t<cpp::is_same_v<long double, XType>, int>>
+MPFRNumber::MPFRNumber(XType x,
+                    unsigned int precision,
+                    RoundingMode rounding)
+    : mpfr_precision(precision),
+      mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+  mpfr_init2(value, mpfr_precision);
+  mpfr_set_ld(value, x, mpfr_rounding);
+}
 
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<float128, XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_float128(value, x, mpfr_rounding);
-  }
+template <typename XType,
+          cpp::enable_if_t<cpp::is_same_v<float128, XType>, int>>
+MPFRNumber::MPFRNumber(XType x,
+                    unsigned int precision,
+                    RoundingMode rounding)
+    : mpfr_precision(precision),
+      mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+  mpfr_init2(value, mpfr_precision);
+  mpfr_set_float128(value, x, mpfr_rounding);
+}
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x,
-                      unsigned int precision = ExtraPrecision<float>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_sj(value, x, mpfr_rounding);
-  }
+template <typename XType,
+          cpp::enable_if_t<cpp::is_integral_v<XType>, int>>
+MPFRNumber::MPFRNumber(XType x,
+                    unsigned int precision,
+                    RoundingMode rounding)
+    : mpfr_precision(precision),
+      mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+  mpfr_init2(value, mpfr_precision);
+  mpfr_set_sj(value, x, mpfr_rounding);
+}
 
-  MPFRNumber(const MPFRNumber &other)
+  MPFRNumber::MPFRNumber(const MPFRNumber &other)
       : mpfr_precision(other.mpfr_precision),
         mpfr_rounding(other.mpfr_rounding) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set(value, other.value, mpfr_rounding);
   }
 
-  MPFRNumber(const MPFRNumber &other, unsigned int precision)
+  MPFRNumber::MPFRNumber(const MPFRNumber &other, unsigned int precision)
       : mpfr_precision(precision), mpfr_rounding(other.mpfr_rounding) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set(value, other.value, mpfr_rounding);
   }
 
-  MPFRNumber(const mpfr_t x, unsigned int precision, RoundingMode rounding)
+  MPFRNumber::MPFRNumber(const mpfr_t x, unsigned int precision, RoundingMode rounding)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set(value, x, mpfr_rounding);
   }
 
-  ~MPFRNumber() { mpfr_clear(value); }
+  MPFRNumber::~MPFRNumber() { mpfr_clear(value); }
 
-  MPFRNumber &operator=(const MPFRNumber &rhs) {
+  MPFRNumber& MPFRNumber::operator=(const MPFRNumber &rhs) {
     mpfr_precision = rhs.mpfr_precision;
     mpfr_rounding = rhs.mpfr_rounding;
     mpfr_set(value, rhs.value, mpfr_rounding);
     return *this;
   }
 
-  bool is_nan() const { return mpfr_nan_p(value); }
+  bool MPFRNumber::is_nan() const { return mpfr_nan_p(value); }
 
-  MPFRNumber abs() const {
+  MPFRNumber MPFRNumber::abs() const {
     MPFRNumber result(*this);
     mpfr_abs(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber acos() const {
+  MPFRNumber MPFRNumber::acos() const {
     MPFRNumber result(*this);
     mpfr_acos(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber acosh() const {
+  MPFRNumber MPFRNumber::acosh() const {
     MPFRNumber result(*this);
     mpfr_acosh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber add(const MPFRNumber &b) const {
+  MPFRNumber MPFRNumber::add(const MPFRNumber &b) const {
     MPFRNumber result(*this);
     mpfr_add(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber asin() const {
+  MPFRNumber MPFRNumber::asin() const {
     MPFRNumber result(*this);
     mpfr_asin(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber asinh() const {
+  MPFRNumber MPFRNumber::asinh() const {
     MPFRNumber result(*this);
     mpfr_asinh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber atan() const {
+  MPFRNumber MPFRNumber::atan() const {
     MPFRNumber result(*this);
     mpfr_atan(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber atan2(const MPFRNumber &b) {
+  MPFRNumber MPFRNumber::atan2(const MPFRNumber &b) {
     MPFRNumber result(*this);
     mpfr_atan2(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber atanh() const {
+  MPFRNumber MPFRNumber::atanh() const {
     MPFRNumber result(*this);
     mpfr_atanh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber cbrt() const {
+  MPFRNumber MPFRNumber::cbrt() const {
     MPFRNumber result(*this);
     mpfr_cbrt(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber ceil() const {
+  MPFRNumber MPFRNumber::ceil() const {
     MPFRNumber result(*this);
     mpfr_ceil(result.value, value);
     return result;
   }
 
-  MPFRNumber cos() const {
+  MPFRNumber MPFRNumber::cos() const {
     MPFRNumber result(*this);
     mpfr_cos(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber cosh() const {
+  MPFRNumber MPFRNumber::cosh() const {
     MPFRNumber result(*this);
     mpfr_cosh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber cospi() const {
+  MPFRNumber MPFRNumber::cospi() const {
     MPFRNumber result(*this);
 
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
@@ -312,25 +289,25 @@ public:
 #endif
   }
 
-  MPFRNumber erf() const {
+  MPFRNumber MPFRNumber::erf() const {
     MPFRNumber result(*this);
     mpfr_erf(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber exp() const {
+  MPFRNumber MPFRNumber::exp() const {
     MPFRNumber result(*this);
     mpfr_exp(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber exp2() const {
+  MPFRNumber MPFRNumber::exp2() const {
     MPFRNumber result(*this);
     mpfr_exp2(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber exp2m1() const {
+  MPFRNumber MPFRNumber::exp2m1() const {
     // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
@@ -360,13 +337,13 @@ public:
 #endif
   }
 
-  MPFRNumber exp10() const {
+  MPFRNumber MPFRNumber::exp10() const {
     MPFRNumber result(*this);
     mpfr_exp10(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber exp10m1() const {
+  MPFRNumber MPFRNumber::exp10m1() const {
     // TODO: Only use mpfr_exp10m1 once CI and buildbots get MPFR >= 4.2.0.
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
     (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
@@ -389,31 +366,31 @@ public:
 #endif
   }
 
-  MPFRNumber expm1() const {
+  MPFRNumber MPFRNumber::expm1() const {
     MPFRNumber result(*this);
     mpfr_expm1(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber div(const MPFRNumber &b) const {
+  MPFRNumber MPFRNumber::div(const MPFRNumber &b) const {
     MPFRNumber result(*this);
     mpfr_div(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber floor() const {
+  MPFRNumber MPFRNumber::floor() const {
     MPFRNumber result(*this);
     mpfr_floor(result.value, value);
     return result;
   }
 
-  MPFRNumber fmod(const MPFRNumber &b) {
+  MPFRNumber MPFRNumber::fmod(const MPFRNumber &b) {
     MPFRNumber result(*this);
     mpfr_fmod(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber frexp(int &exp) {
+  MPFRNumber MPFRNumber::frexp(int &exp) {
     MPFRNumber result(*this);
     mpfr_exp_t resultExp;
     mpfr_frexp(&resultExp, result.value, value, mpfr_rounding);
@@ -421,43 +398,43 @@ public:
     return result;
   }
 
-  MPFRNumber hypot(const MPFRNumber &b) {
+  MPFRNumber MPFRNumber::hypot(const MPFRNumber &b) {
     MPFRNumber result(*this);
     mpfr_hypot(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber log() const {
+  MPFRNumber MPFRNumber::log() const {
     MPFRNumber result(*this);
     mpfr_log(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber log2() const {
+  MPFRNumber MPFRNumber::log2() const {
     MPFRNumber result(*this);
     mpfr_log2(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber log10() const {
+  MPFRNumber MPFRNumber::log10() const {
     MPFRNumber result(*this);
     mpfr_log10(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber log1p() const {
+  MPFRNumber MPFRNumber::log1p() const {
     MPFRNumber result(*this);
     mpfr_log1p(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber pow(const MPFRNumber &b) {
+  MPFRNumber MPFRNumber::pow(const MPFRNumber &b) {
     MPFRNumber result(*this);
     mpfr_pow(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber remquo(const MPFRNumber &divisor, int &quotient) {
+  MPFRNumber MPFRNumber::remquo(const MPFRNumber &divisor, int &quotient) {
     MPFRNumber remainder(*this);
     long q;
     mpfr_remquo(remainder.value, &q, value, divisor.value, mpfr_rounding);
@@ -465,13 +442,13 @@ public:
     return remainder;
   }
 
-  MPFRNumber round() const {
+  MPFRNumber MPFRNumber::round() const {
     MPFRNumber result(*this);
     mpfr_round(result.value, value);
     return result;
   }
 
-  MPFRNumber roundeven() const {
+  MPFRNumber MPFRNumber::roundeven() const {
     MPFRNumber result(*this);
 #if MPFR_VERSION_MAJOR >= 4
     mpfr_roundeven(result.value, value);
@@ -481,7 +458,7 @@ public:
     return result;
   }
 
-  bool round_to_long(long &result) const {
+  bool MPFRNumber::round_to_long(long &result) const {
     // We first calculate the rounded value. This way, when converting
     // to long using mpfr_get_si, the rounding direction of MPFR_RNDN
     // (or any other rounding mode), does not have an influence.
@@ -491,19 +468,19 @@ public:
     return mpfr_erangeflag_p();
   }
 
-  bool round_to_long(mpfr_rnd_t rnd, long &result) const {
+  bool MPFRNumber::round_to_long(mpfr_rnd_t rnd, long &result) const {
     MPFRNumber rint_result(*this);
     mpfr_rint(rint_result.value, value, rnd);
     return rint_result.round_to_long(result);
   }
 
-  MPFRNumber rint(mpfr_rnd_t rnd) const {
+  MPFRNumber MPFRNumber::rint(mpfr_rnd_t rnd) const {
     MPFRNumber result(*this);
     mpfr_rint(result.value, value, rnd);
     return result;
   }
 
-  MPFRNumber mod_2pi() const {
+  MPFRNumber MPFRNumber::mod_2pi() const {
     MPFRNumber result(0.0, 1280);
     MPFRNumber _2pi(0.0, 1280);
     mpfr_const_pi(_2pi.value, MPFR_RNDN);
@@ -512,7 +489,7 @@ public:
     return result;
   }
 
-  MPFRNumber mod_pi_over_2() const {
+  MPFRNumber MPFRNumber::mod_pi_over_2() const {
     MPFRNumber result(0.0, 1280);
     MPFRNumber pi_over_2(0.0, 1280);
     mpfr_const_pi(pi_over_2.value, MPFR_RNDN);
@@ -521,7 +498,7 @@ public:
     return result;
   }
 
-  MPFRNumber mod_pi_over_4() const {
+  MPFRNumber MPFRNumber::mod_pi_over_4() const {
     MPFRNumber result(0.0, 1280);
     MPFRNumber pi_over_4(0.0, 1280);
     mpfr_const_pi(pi_over_4.value, MPFR_RNDN);
@@ -530,13 +507,13 @@ public:
     return result;
   }
 
-  MPFRNumber sin() const {
+  MPFRNumber MPFRNumber::sin() const {
     MPFRNumber result(*this);
     mpfr_sin(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber sinpi() const {
+  MPFRNumber MPFRNumber::sinpi() const {
     MPFRNumber result(*this);
 
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
@@ -567,37 +544,37 @@ public:
 #endif
   }
 
-  MPFRNumber sinh() const {
+  MPFRNumber MPFRNumber::sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber sqrt() const {
+  MPFRNumber MPFRNumber::sqrt() const {
     MPFRNumber result(*this);
     mpfr_sqrt(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber sub(const MPFRNumber &b) const {
+  MPFRNumber MPFRNumber::sub(const MPFRNumber &b) const {
     MPFRNumber result(*this);
     mpfr_sub(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber tan() const {
+  MPFRNumber MPFRNumber::tan() const {
     MPFRNumber result(*this);
     mpfr_tan(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber tanh() const {
+  MPFRNumber MPFRNumber::tanh() const {
     MPFRNumber result(*this);
     mpfr_tanh(result.value, value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber tanpi() const {
+  MPFRNumber MPFRNumber::tanpi() const {
     MPFRNumber result(*this);
 
 #if MPFR_VERSION_MAJOR > 4 ||                                                  \
@@ -647,25 +624,25 @@ public:
 #endif
   }
 
-  MPFRNumber trunc() const {
+  MPFRNumber MPFRNumber::trunc() const {
     MPFRNumber result(*this);
     mpfr_trunc(result.value, value);
     return result;
   }
 
-  MPFRNumber fma(const MPFRNumber &b, const MPFRNumber &c) {
+  MPFRNumber MPFRNumber::fma(const MPFRNumber &b, const MPFRNumber &c) {
     MPFRNumber result(*this);
     mpfr_fma(result.value, value, b.value, c.value, mpfr_rounding);
     return result;
   }
 
-  MPFRNumber mul(const MPFRNumber &b) {
+  MPFRNumber MPFRNumber::mul(const MPFRNumber &b) {
     MPFRNumber result(*this);
     mpfr_mul(result.value, value, b.value, mpfr_rounding);
     return result;
   }
 
-  cpp::string str() const {
+  cpp::string MPFRNumber::str() const {
     // 200 bytes should be more than sufficient to hold a 100-digit number
     // plus additional bytes for the decimal point, '-' sign etc.
     constexpr size_t printBufSize = 200;
@@ -681,10 +658,7 @@ public:
     return cpp::string(view.data());
   }
 
-  // These functions are useful for debugging.
-  template <typename T> T as() const;
-
-  void dump(const char *msg) const { mpfr_printf("%s%.128g\n", msg, value); }
+  void MPFRNumber::dump(const char *msg) const { mpfr_printf("%s%.128g\n", msg, value); }
 
   // Return the ULP (units-in-the-last-place) difference between the
   // stored MPFR and a floating point number.
@@ -712,7 +686,7 @@ public:
   // 4. A values of +0.0 and -0.0 are treated as equal.
   template <typename T>
   cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber>
-  ulp_as_mpfr_number(T input) {
+  MPFRNumber::ulp_as_mpfr_number(T input) {
     T thisAsT = as<T>();
     if (thisAsT == input)
       return MPFRNumber(0.0);
@@ -775,42 +749,41 @@ public:
 
   template <typename T>
   cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string>
-  ulp_as_string(T input) {
+  MPFRNumber::ulp_as_string(T input) {
     MPFRNumber num = ulp_as_mpfr_number(input);
     return num.str();
   }
 
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input) {
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> MPFRNumber::ulp(T input) {
     MPFRNumber num = ulp_as_mpfr_number(input);
     return num.as<double>();
   }
-};
 
-template <> float MPFRNumber::as<float>() const {
-  return mpfr_get_flt(value, mpfr_rounding);
-}
+  template <> float MPFRNumber::as<float>() const {
+    return mpfr_get_flt(value, mpfr_rounding);
+  }
 
-template <> double MPFRNumber::as<double>() const {
-  return mpfr_get_d(value, mpfr_rounding);
-}
+  template <> double MPFRNumber::as<double>() const {
+    return mpfr_get_d(value, mpfr_rounding);
+  }
 
-template <> long double MPFRNumber::as<long double>() const {
-  return mpfr_get_ld(value, mpfr_rounding);
-}
+  template <> long double MPFRNumber::as<long double>() const {
+    return mpfr_get_ld(value, mpfr_rounding);
+  }
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
-template <> float16 MPFRNumber::as<float16>() const {
-  // TODO: Either prove that this cast won't cause double-rounding errors, or
-  // find a better way to get a float16.
-  return fputil::cast<float16>(mpfr_get_d(value, mpfr_rounding));
-}
-#endif
+  #ifdef LIBC_TYPES_HAS_FLOAT16
+  template <> float16 MPFRNumber::as<float16>() const {
+    // TODO: Either prove that this cast won't cause double-rounding errors, or
+    // find a better way to get a float16.
+    return fputil::cast<float16>(mpfr_get_d(value, mpfr_rounding));
+  }
+  #endif
 
-#ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
-template <> float128 MPFRNumber::as<float128>() const {
-  return mpfr_get_float128(value, mpfr_rounding);
-}
+  #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+  template <> float128 MPFRNumber::as<float128>() const {
+    return mpfr_get_float128(value, mpfr_rounding);
+  }
 
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
