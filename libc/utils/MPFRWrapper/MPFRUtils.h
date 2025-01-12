@@ -19,12 +19,11 @@
 
 #include "mpfr_inc.h"
 
-template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
+template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
@@ -111,33 +110,58 @@ public:
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest);
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_flt(value, x, mpfr_rounding);
+  }
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest);
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_d(value, x, mpfr_rounding);
+  }
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest);
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_ld(value, x, mpfr_rounding);
+  }
 
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<float128, XType>, int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest);
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_float128(value, x, mpfr_rounding);
+  }
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<float>::VALUE,
-                      RoundingMode rounding = RoundingMode::Nearest);
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_sj(value, x, mpfr_rounding);
+  }
 
   MPFRNumber(const MPFRNumber &other);
   MPFRNumber(const MPFRNumber &other, unsigned int precision);
@@ -208,16 +232,103 @@ public:
   template <typename T> T as() const;
   void dump(const char *msg) const;
 
+  // Return the ULP (units-in-the-last-place) difference between the
+  // stored MPFR and a floating point number.
+  //
+  // We define ULP difference as follows:
+  //   If exponents of this value and the |input| are same, then:
+  //     ULP(this_value, input) = abs(this_value - input) / eps(input)
+  //   else:
+  //     max = max(abs(this_value), abs(input))
+  //     min = min(abs(this_value), abs(input))
+  //     maxExponent = exponent(max)
+  //     ULP(this_value, input) = (max - 2^maxExponent) / eps(max) +
+  //                              (2^maxExponent - min) / eps(min)
+  //
+  // Remarks:
+  // 1. A ULP of 0.0 will imply that the value is correctly rounded.
+  // 2. We expect that this value and the value to be compared (the [input]
+  //    argument) are reasonable close, and we will provide an upper bound
+  //    of ULP value for testing.  Morever, most of the fractional parts of
+  //    ULP value do not matter much, so using double as the return type
+  //    should be good enough.
+  // 3. For close enough values (values which don't diff in their exponent by
+  //    not more than 1), a ULP difference of N indicates a bit distance
+  //    of N between this number and [input].
+  // 4. A values of +0.0 and -0.0 are treated as equal.
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber>
-  ulp_as_mpfr_number(T input);
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, MPFRNumber> ulp_as_mpfr_number(T input) {
+    T thisAsT = as<T>();
+    if (thisAsT == input)
+      return MPFRNumber(0.0);
+
+    if (is_nan()) {
+      if (FPBits<T>(input).is_nan())
+        return MPFRNumber(0.0);
+      return MPFRNumber(FPBits<T>::inf().get_val());
+    }
+
+    int thisExponent = FPBits<T>(thisAsT).get_exponent();
+    int inputExponent = FPBits<T>(input).get_exponent();
+    // Adjust the exponents for denormal numbers.
+    if (FPBits<T>(thisAsT).is_subnormal())
+      ++thisExponent;
+    if (FPBits<T>(input).is_subnormal())
+      ++inputExponent;
+
+    if (thisAsT * input < 0 || thisExponent == inputExponent) {
+      MPFRNumber inputMPFR(input);
+      mpfr_sub(inputMPFR.value, value, inputMPFR.value, MPFR_RNDN);
+      mpfr_abs(inputMPFR.value, inputMPFR.value, MPFR_RNDN);
+      mpfr_mul_2si(inputMPFR.value, inputMPFR.value,
+                  -thisExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+      return inputMPFR;
+    }
+
+    // If the control reaches here, it means that this number and input are
+    // of the same sign but different exponent. In such a case, ULP error is
+    // calculated as sum of two parts.
+    thisAsT = FPBits<T>(thisAsT).abs().get_val();
+    input = FPBits<T>(input).abs().get_val();
+    T min = thisAsT > input ? input : thisAsT;
+    T max = thisAsT > input ? thisAsT : input;
+    int minExponent = FPBits<T>(min).get_exponent();
+    int maxExponent = FPBits<T>(max).get_exponent();
+    // Adjust the exponents for denormal numbers.
+    if (FPBits<T>(min).is_subnormal())
+      ++minExponent;
+    if (FPBits<T>(max).is_subnormal())
+      ++maxExponent;
+
+    MPFRNumber minMPFR(min);
+    MPFRNumber maxMPFR(max);
+
+    MPFRNumber pivot(uint32_t(1));
+    mpfr_mul_2si(pivot.value, pivot.value, maxExponent, MPFR_RNDN);
+
+    mpfr_sub(minMPFR.value, pivot.value, minMPFR.value, MPFR_RNDN);
+    mpfr_mul_2si(minMPFR.value, minMPFR.value,
+                -minExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+
+    mpfr_sub(maxMPFR.value, maxMPFR.value, pivot.value, MPFR_RNDN);
+    mpfr_mul_2si(maxMPFR.value, maxMPFR.value,
+                -maxExponent + FPBits<T>::FRACTION_LEN, MPFR_RNDN);
+
+    mpfr_add(minMPFR.value, minMPFR.value, maxMPFR.value, MPFR_RNDN);
+    return minMPFR;
+  }
 
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string>
-  ulp_as_string(T input);
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, cpp::string> ulp_as_string(T input) {
+    MPFRNumber num = ulp_as_mpfr_number(input);
+    return num.str();
+  }
 
   template <typename T>
-  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input);
+  cpp::enable_if_t<cpp::is_floating_point_v<T>, double> ulp(T input) {
+  MPFRNumber num = ulp_as_mpfr_number(input);
+  return num.as<double>();
+}
 };
 
 enum class Operation : int {
