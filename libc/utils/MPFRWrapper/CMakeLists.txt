@@ -10,15 +10,12 @@ if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
   target_compile_options(libcMPCommon PRIVATE -O3 ${compile_options})
   add_dependencies(
     libcMPCommon
+    libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
   )
-  if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
-    target_include_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
-    target_link_directories(libcMPCommon PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/lib)
-  endif()
   target_include_directories(libcMPCommon PUBLIC ${LIBC_SOURCE_DIR})
   target_link_libraries(libcMPCommon PUBLIC LibcFPTestHelpers.unit mpfr gmp)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
@@ -38,7 +35,6 @@ if(LIBC_TESTS_CAN_USE_MPFR)
     libcMPCommon
     libc.src.__support.CPP.array
     libc.src.__support.CPP.stringstream
-    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
     LibcTest.unit
