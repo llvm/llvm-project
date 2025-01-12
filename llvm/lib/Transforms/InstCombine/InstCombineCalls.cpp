@@ -590,7 +590,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
   // cttz(Pow2) -> Log2(Pow2)
   // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
-  if (IsTZ || II.hasOneUse()) {
+  if (IsTZ) {
     if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
       if (IsTZ)
         return IC.replaceInstUsesWith(II, R);
