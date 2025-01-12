@@ -7,7 +7,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounw
 define void @test_undef() nounwind {
 ; CHECK-LABEL: @test_undef(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 undef, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 poison, i64 4, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
