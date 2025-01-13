@@ -60845,8 +60845,8 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       MBBI = MBB.insert(OrigCall, NewMI);
     assert(MBBI->isCall() &&
            "Unexpected instruction after memory operand unfolding");
-    if (OrigCall->shouldUpdateCallSiteInfo())
-      MF.moveCallSiteInfo(&*OrigCall, &*MBBI);
+    if (OrigCall->shouldUpdateAdditionalCallInfo())
+      MF.moveAdditionalCallInfo(&*OrigCall, &*MBBI);
     MBBI->setCFIType(MF, OrigCall->getCFIType());
     OrigCall->eraseFromParent();
     break;
