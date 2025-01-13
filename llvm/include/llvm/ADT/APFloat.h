@@ -1532,7 +1532,7 @@ inline APFloat abs(APFloat X) {
 }
 
 /// Returns X^N for N >= 0.
-inline APFloat pow(const APFloat &X, const int &N) {
+inline APFloat pow(const APFloat &X, int64_t N) {
   assert(N >= 0 && "negative exponents not supported.");
   if (N == 0) {
     return APFloat::getOne(X.getSemantics());

@@ -2264,7 +2264,7 @@ APInt mulhs(const APInt &C1, const APInt &C2);
 APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Compute X^N for N>0.
-APInt pow(const APInt &X, const int &N);
+APInt pow(const APInt &X, int64_t N);
 
 /// Compute GCD of two unsigned APInt values.
 ///

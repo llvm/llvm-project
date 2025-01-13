@@ -3109,7 +3109,7 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
 
-APInt APIntOps::pow(const APInt &X, const int &N) {
+APInt APIntOps::pow(const APInt &X, int64_t N) {
   assert(N >= 0 && "negative exponents not supported.");
   if (N == 0) {
     return APInt(X.getBitWidth(), 1);
