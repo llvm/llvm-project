@@ -60,7 +60,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   }
   case Instruction::ICmp:
   case VPInstruction::ActiveLaneMask:
-    return inferScalarType(R->getOperand(1));
+    assert(inferScalarType(R->getOperand(0)) ==
+               inferScalarType(R->getOperand(1)) &&
+           "different types inferred for different operands");
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeReductionResult: {
     auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
@@ -71,6 +74,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
   case VPInstruction::ResumePhi:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::AnyOf:
+  case VPInstruction::LogicalAnd:
     return SetResultTyFromOp();
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
@@ -78,8 +85,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
       return VecTy->getElementType();
     return BaseTy;
   }
-  case VPInstruction::LogicalAnd:
-    return IntegerType::get(Ctx, 1);
   case VPInstruction::PtrAdd:
     // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
