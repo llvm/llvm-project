@@ -163,7 +163,6 @@ public:
                         const MCFixup &Fixup, MCValue Target,
                         uint64_t &FixedValue);
   uint64_t writeObject(MCAssembler &Asm);
-  int getSectionNumber(const MCSection &Section) const;
 
 private:
   COFFSymbol *createSymbol(StringRef Name);
@@ -819,15 +818,6 @@ void WinCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
       if (!Symbol.isTemporary() ||
           cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
         defineSymbol(Asm, Symbol);
-
-  UseBigObj = Sections.size() > COFF::MaxNumberOfSections16;
-  Header.NumberOfSections = Sections.size();
-  Header.NumberOfSymbols = 0;
-  if (Sections.size() > INT32_MAX)
-    report_fatal_error(
-        "PE COFF object files can't have more than 2147483647 sections");
-
-  assignSectionNumbers();
 }
 
 void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
@@ -990,7 +980,16 @@ static std::time_t getTime() {
 uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
 
+  if (Sections.size() > INT32_MAX)
+    report_fatal_error(
+        "PE COFF object files can't have more than 2147483647 sections");
+
+  UseBigObj = Sections.size() > COFF::MaxNumberOfSections16;
+  Header.NumberOfSections = Sections.size();
+  Header.NumberOfSymbols = 0;
+
   setWeakDefaultNames();
+  assignSectionNumbers();
   if (Mode != DwoOnly)
     createFileSymbols(Asm);
 
@@ -1144,10 +1143,6 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
   return W.OS.tell() - StartOffset;
 }
 
-int WinCOFFWriter::getSectionNumber(const MCSection &Section) const {
-  return SectionMap.at(&Section)->Number;
-}
-
 //------------------------------------------------------------------------------
 // WinCOFFObjectWriter class implementation
 
@@ -1197,10 +1192,6 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
   if (DwoWriter)
     TotalSize += DwoWriter->writeObject(Asm);
   return TotalSize;
-}
-
-int WinCOFFObjectWriter::getSectionNumber(const MCSection &Section) const {
-  return ObjWriter->getSectionNumber(Section);
 }
 
 MCWinCOFFObjectTargetWriter::MCWinCOFFObjectTargetWriter(unsigned Machine_)

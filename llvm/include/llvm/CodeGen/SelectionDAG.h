@@ -293,7 +293,6 @@ class SelectionDAG {
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
-    std::pair<const GlobalValue *, unsigned> CalledGlobal{};
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -2373,19 +2372,6 @@ public:
   MDNode *getMMRAMetadata(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.MMRA : nullptr;
-  }
-  /// Set CalledGlobal to be associated with Node.
-  void addCalledGlobal(const SDNode *Node, const GlobalValue *GV,
-                       unsigned OpFlags) {
-    SDEI[Node].CalledGlobal = {GV, OpFlags};
-  }
-  /// Return CalledGlobal associated with Node, or a nullopt if none exists.
-  std::optional<std::pair<const GlobalValue *, unsigned>>
-  getCalledGlobal(const SDNode *Node) {
-    auto I = SDEI.find(Node);
-    return I != SDEI.end()
-               ? std::make_optional(std::move(I->second).CalledGlobal)
-               : std::nullopt;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {
