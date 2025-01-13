@@ -19,6 +19,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__mdspan/default_accessor.h>
 #include <__memory/assume_aligned.h>
 #include <__type_traits/is_abstract.h>
 #include <__type_traits/is_array.h>
