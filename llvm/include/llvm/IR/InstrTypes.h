@@ -1015,7 +1015,7 @@ struct OperandBundleUse {
   /// has the attribute A.
   bool operandHasAttr(unsigned Idx, Attribute::AttrKind A) const {
     if (isDeoptOperandBundle())
-      if (A == Attribute::ReadOnly || A == Attribute::NoCapture)
+      if (A == Attribute::ReadOnly)
         return Inputs[Idx]->getType()->isPointerTy();
 
     // Conservative answer:  no operands have any attributes.
@@ -1663,16 +1663,14 @@ public:
     return bundleOperandHasAttr(i, Kind);
   }
 
+  /// Return which pointer components this operand may capture.
+  CaptureInfo getCaptureInfo(unsigned OpNo) const;
+
   /// Determine whether this data operand is not captured.
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool doesNotCapture(unsigned OpNo) const {
-    // If the argument is passed byval, the callee does not have access to the
-    // original pointer and thus cannot capture it.
-    if (OpNo < arg_size() && isByValArgument(OpNo))
-      return true;
-
-    return dataOperandHasImpliedAttr(OpNo, Attribute::NoCapture);
+    return capturesNothing(getCaptureInfo(OpNo));
   }
 
   /// Determine whether this argument is passed by value.
