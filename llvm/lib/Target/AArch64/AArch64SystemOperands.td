@@ -61,16 +61,14 @@ def ATValues : GenericEnum {
 def ATsList : GenericTable {
   let FilterClass = "AT";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupATByEncoding";
 }
 
 def lookupATByName : SearchIndex {
   let Table = ATsList;
   let Key = ["Name"];
-}
-
-def lookupATByEncoding : SearchIndex {
-  let Table = ATsList;
-  let Key = ["Encoding"];
 }
 
 def : AT<"S1E1R",  0b000, 0b0111, 0b1000, 0b000>;
@@ -114,16 +112,14 @@ def DBValues : GenericEnum {
 def DBsList : GenericTable {
   let FilterClass = "DB";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupDBByEncoding";
 }
 
 def lookupDBByName : SearchIndex {
   let Table = DBsList;
   let Key = ["Name"];
-}
-
-def lookupDBByEncoding : SearchIndex {
-  let Table = DBsList;
-  let Key = ["Encoding"];
 }
 
 def : DB<"oshld", 0x1>;
@@ -155,16 +151,14 @@ def DBnXSValues : GenericEnum {
 def DBnXSsList : GenericTable {
   let FilterClass = "DBnXS";
   let Fields = ["Name", "Encoding", "ImmValue", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupDBnXSByEncoding";
 }
 
 def lookupDBnXSByName : SearchIndex {
   let Table = DBnXSsList;
   let Key = ["Name"];
-}
-
-def lookupDBnXSByEncoding : SearchIndex {
-  let Table = DBnXSsList;
-  let Key = ["Encoding"];
 }
 
 def lookupDBnXSByImmValue : SearchIndex {
@@ -201,16 +195,14 @@ def DCValues : GenericEnum {
 def DCsList : GenericTable {
   let FilterClass = "DC";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupDCByEncoding";
 }
 
 def lookupDCByName : SearchIndex {
   let Table = DCsList;
   let Key = ["Name"];
-}
-
-def lookupDCByEncoding : SearchIndex {
-  let Table = DCsList;
-  let Key = ["Encoding"];
 }
 
 def : DC<"ZVA",   0b011, 0b0111, 0b0100, 0b001>;
@@ -289,16 +281,14 @@ def ICValues : GenericEnum {
 def ICsList : GenericTable {
   let FilterClass = "IC";
   let Fields = ["Name", "Encoding", "NeedsReg"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupICByEncoding";
 }
 
 def lookupICByName : SearchIndex {
   let Table = ICsList;
   let Key = ["Name"];
-}
-
-def lookupICByEncoding : SearchIndex {
-  let Table = ICsList;
-  let Key = ["Encoding"];
 }
 
 def : IC<"IALLUIS", 0b000, 0b0111, 0b0001, 0b000, 0>;
@@ -324,16 +314,14 @@ def ISBValues : GenericEnum {
 def ISBsList : GenericTable {
   let FilterClass = "ISB";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupISBByEncoding";
 }
 
 def lookupISBByName : SearchIndex {
   let Table = ISBsList;
   let Key = ["Name"];
-}
-
-def lookupISBByEncoding : SearchIndex {
-  let Table = ISBsList;
-  let Key = ["Encoding"];
 }
 
 def : ISB<"sy", 0xf>;
@@ -359,16 +347,14 @@ def TSBValues : GenericEnum {
 def TSBsList : GenericTable {
   let FilterClass = "TSB";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupTSBByEncoding";
 }
 
 def lookupTSBByName : SearchIndex {
   let Table = TSBsList;
   let Key = ["Name"];
-}
-
-def lookupTSBByEncoding : SearchIndex {
-  let Table = TSBsList;
-  let Key = ["Encoding"];
 }
 
 def : TSB<"csync", 0>;
@@ -398,16 +384,14 @@ def PRFMValues : GenericEnum {
 def PRFMsList : GenericTable {
   let FilterClass = "PRFM";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPRFMByEncoding";
 }
 
 def lookupPRFMByName : SearchIndex {
   let Table = PRFMsList;
   let Key = ["Name"];
-}
-
-def lookupPRFMByEncoding : SearchIndex {
-  let Table = PRFMsList;
-  let Key = ["Encoding"];
 }
 
 def : PRFM<"pld", 0b00, "l1",  0b00, "keep", 0b0>;
@@ -461,16 +445,14 @@ def SVEPRFMValues : GenericEnum {
 def SVEPRFMsList : GenericTable {
   let FilterClass = "SVEPRFM";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupSVEPRFMByEncoding";
 }
 
 def lookupSVEPRFMByName : SearchIndex {
   let Table = SVEPRFMsList;
   let Key = ["Name"];
-}
-
-def lookupSVEPRFMByEncoding : SearchIndex {
-  let Table = SVEPRFMsList;
-  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeatureSVE} }] in {
@@ -545,16 +527,14 @@ def SVEPREDPATValues : GenericEnum {
 def SVEPREDPATsList : GenericTable {
   let FilterClass = "SVEPREDPAT";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupSVEPREDPATByEncoding";
 }
 
 def lookupSVEPREDPATByName : SearchIndex {
   let Table = SVEPREDPATsList;
   let Key = ["Name"];
-}
-
-def lookupSVEPREDPATByEncoding : SearchIndex {
-  let Table = SVEPREDPATsList;
-  let Key = ["Encoding"];
 }
 
 def : SVEPREDPAT<"pow2",  0x00>;
@@ -594,16 +574,14 @@ def SVEVECLENSPECIFIERValues : GenericEnum {
 def SVEVECLENSPECIFIERsList : GenericTable {
   let FilterClass = "SVEVECLENSPECIFIER";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupSVEVECLENSPECIFIERByEncoding";
 }
 
 def lookupSVEVECLENSPECIFIERByName : SearchIndex {
   let Table = SVEVECLENSPECIFIERsList;
   let Key = ["Name"];
-}
-
-def lookupSVEVECLENSPECIFIERByEncoding : SearchIndex {
-  let Table = SVEVECLENSPECIFIERsList;
-  let Key = ["Encoding"];
 }
 
 def : SVEVECLENSPECIFIER<"vlx2", 0x0>;
@@ -664,16 +642,14 @@ def PStateImm0_15Values : GenericEnum {
 def PStateImm0_15sList : GenericTable {
   let FilterClass = "PStateImm0_15";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPStateImm0_15ByEncoding";
 }
 
 def lookupPStateImm0_15ByName : SearchIndex {
   let Table = PStateImm0_15sList;
   let Key = ["Name"];
-}
-
-def lookupPStateImm0_15ByEncoding : SearchIndex {
-  let Table = PStateImm0_15sList;
-  let Key = ["Encoding"];
 }
 
 class PStateImm0_1<string name, bits<3> op1, bits<3> op2, bits<3> crm_high> {
@@ -694,16 +670,14 @@ def PStateImm0_1Values : GenericEnum {
 def PStateImm0_1sList : GenericTable {
   let FilterClass = "PStateImm0_1";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPStateImm0_1ByEncoding";
 }
 
 def lookupPStateImm0_1ByName : SearchIndex {
   let Table = PStateImm0_1sList;
   let Key = ["Name"];
-}
-
-def lookupPStateImm0_1ByEncoding : SearchIndex {
-  let Table = PStateImm0_1sList;
-  let Key = ["Encoding"];
 }
 
 //                   Name,     Op1,   Op2
@@ -753,16 +727,14 @@ def SVCRValues : GenericEnum {
 def SVCRsList : GenericTable {
   let FilterClass = "SVCR";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupSVCRByEncoding";
 }
 
 def lookupSVCRByName : SearchIndex {
   let Table = SVCRsList;
   let Key = ["Name"];
-}
-
-def lookupSVCRByEncoding : SearchIndex {
-  let Table = SVCRsList;
-  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeatureSME} }] in {
@@ -790,16 +762,14 @@ def PSBValues : GenericEnum {
 def PSBsList : GenericTable {
   let FilterClass = "PSB";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPSBByEncoding";
 }
 
 def lookupPSBByName : SearchIndex {
   let Table = PSBsList;
   let Key = ["Name"];
-}
-
-def lookupPSBByEncoding : SearchIndex {
-  let Table = PSBsList;
-  let Key = ["Encoding"];
 }
 
 def : PSB<"csync", 0x11>;
@@ -823,16 +793,14 @@ def BTIValues : GenericEnum {
 def BTIsList : GenericTable {
   let FilterClass = "BTI";
   let Fields = ["Name", "Encoding"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupBTIByEncoding";
 }
 
 def lookupBTIByName : SearchIndex {
   let Table = BTIsList;
   let Key = ["Name"];
-}
-
-def lookupBTIByEncoding : SearchIndex {
-  let Table = BTIsList;
-  let Key = ["Encoding"];
 }
 
 def : BTI<"c",  0b010>;
@@ -861,16 +829,14 @@ def TLBITable : GenericTable {
   let FilterClass = "TLBIEntry";
   let CppTypeName = "TLBI";
   let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupTLBIByEncoding";
 }
 
 def lookupTLBIByName : SearchIndex {
   let Table = TLBITable;
   let Key = ["Name"];
-}
-
-def lookupTLBIByEncoding : SearchIndex {
-  let Table = TLBITable;
-  let Key = ["Encoding"];
 }
 
 multiclass TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
@@ -2382,16 +2348,14 @@ def PHintValues : GenericEnum {
 def PHintsList : GenericTable {
   let FilterClass = "PHint";
   let Fields = ["Name", "Encoding", "Requires"];
+
+  let PrimaryKey = ["Encoding"];
+  let PrimaryKeyName = "lookupPHintByEncoding";
 }
 
 def lookupPHintByName : SearchIndex {
   let Table = PHintsList;
   let Key = ["Name"];
-}
-
-def lookupPHintByEncoding : SearchIndex {
-  let Table = PHintsList;
-  let Key = ["Encoding"];
 }
 
 let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {

@@ -4739,7 +4739,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
-  // A sebvector extract can be implemented with a ext (or trivial extract, if
+  // A subvector extract can be implemented with an ext (or trivial extract, if
   // from lane 0). This currently only handles low or high extracts to prevent
   // SLP vectorizer regressions.
   if (IsExtractSubvector && LT.second.isFixedLengthVector()) {
@@ -5514,7 +5514,10 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
         NumZExts++;
       }
 
-      Ops.push_back(&Insert->getOperandUse(1));
+      // And(Load) is excluded to prevent CGP getting stuck in a loop of sinking
+      // the And, just to hoist it again back to the load.
+      if (!match(OperandInstr, m_And(m_Load(m_Value()), m_Value())))
+        Ops.push_back(&Insert->getOperandUse(1));
       Ops.push_back(&Shuffle->getOperandUse(0));
       Ops.push_back(&Op);
     }

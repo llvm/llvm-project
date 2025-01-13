@@ -311,21 +311,23 @@ Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
 
   src += GetRegisterInfoInterface().GetGPRSize();
   ::memcpy(GetFPRBuffer(), src, GetFPRSize());
-
+  m_fpu_is_valid = true;
   error = WriteFPR();
   if (error.Fail())
     return error;
 
+  // Currently, we assume that LoongArch always support LASX.
+  // TODO: check whether LSX/LASX exists.
   src += GetFPRSize();
   ::memcpy(&m_lsx, src, sizeof(m_lsx));
-
+  m_lsx_is_valid = true;
   error = WriteLSX();
   if (error.Fail())
     return error;
 
   src += sizeof(m_lsx);
   ::memcpy(&m_lasx, src, sizeof(m_lasx));
-
+  m_lasx_is_valid = true;
   error = WriteLASX();
   if (error.Fail())
     return error;
@@ -484,7 +486,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteLASX() {
   m_lsx_is_valid = false;
   m_lasx_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, sizeof(m_lsx), NT_LOONGARCH_LASX);
+  return WriteRegisterSet(&ioVec, sizeof(m_lasx), NT_LOONGARCH_LASX);
 }
 
 void NativeRegisterContextLinux_loongarch64::InvalidateAllRegisters() {

@@ -3806,7 +3806,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     // uniform after vectorization.
     bool UniformIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || !TheLoop->contains(I) || Worklist.count(I) ||
+      return I == Ind || Worklist.count(I) ||
              IsVectorizedMemAccessUse(I, IndUpdate);
     });
     if (!UniformIndUpdate)
@@ -10350,6 +10350,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                "early exit is not enabled",
                                "UncountableEarlyExitLoopsDisabled", ORE, L);
+    return false;
+  }
+
+  if (LVL.hasStructVectorCall()) {
+    reportVectorizationFailure("Auto-vectorization of calls that return struct "
+                               "types is not yet supported",
+                               "StructCallVectorizationUnsupported", ORE, L);
     return false;
   }
 

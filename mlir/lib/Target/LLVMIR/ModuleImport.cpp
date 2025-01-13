@@ -2325,7 +2325,8 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context, bool emitExpensiveWarnings,
-                              bool dropDICompositeTypeElements) {
+                              bool dropDICompositeTypeElements,
+                              bool loadAllDialects) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2335,7 +2336,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                             LLVMDialect::getDialectNamespace()));
   assert(llvm::is_contained(context->getAvailableDialects(),
                             DLTIDialect::getDialectNamespace()));
-  context->loadAllAvailableDialects();
+  if (loadAllDialects)
+    context->loadAllAvailableDialects();
   OwningOpRef<ModuleOp> module(ModuleOp::create(FileLineColLoc::get(
       StringAttr::get(context, llvmModule->getSourceFileName()), /*line=*/0,
       /*column=*/0)));

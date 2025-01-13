@@ -916,24 +916,22 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (It == VL.end())
     return InstructionsState::invalid();
 
-  Value *V = *It;
+  Instruction *MainOp = cast<Instruction>(*It);
   unsigned InstCnt = std::count_if(It, VL.end(), IsaPred<Instruction>);
-  if ((VL.size() > 2 && !isa<PHINode>(V) && InstCnt < VL.size() / 2) ||
+  if ((VL.size() > 2 && !isa<PHINode>(MainOp) && InstCnt < VL.size() / 2) ||
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
-  bool IsCastOp = isa<CastInst>(V);
-  bool IsBinOp = isa<BinaryOperator>(V);
-  bool IsCmpOp = isa<CmpInst>(V);
-  CmpInst::Predicate BasePred =
-      IsCmpOp ? cast<CmpInst>(V)->getPredicate() : CmpInst::BAD_ICMP_PREDICATE;
-  unsigned Opcode = cast<Instruction>(V)->getOpcode();
+  bool IsCastOp = isa<CastInst>(MainOp);
+  bool IsBinOp = isa<BinaryOperator>(MainOp);
+  bool IsCmpOp = isa<CmpInst>(MainOp);
+  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
+                                        : CmpInst::BAD_ICMP_PREDICATE;
+  Instruction *AltOp = MainOp;
+  unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
-  unsigned AltIndex = std::distance(VL.begin(), It);
 
-  bool SwappedPredsCompatible = [&]() {
-    if (!IsCmpOp)
-      return false;
+  bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
     UniqueNonSwappedPreds.insert(BasePred);
@@ -956,18 +954,18 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }();
   // Check for one alternate opcode from another BinaryOperator.
   // TODO - generalize to support all operators (types, calls etc.).
-  auto *IBase = cast<Instruction>(V);
   Intrinsic::ID BaseID = 0;
   SmallVector<VFInfo> BaseMappings;
-  if (auto *CallBase = dyn_cast<CallInst>(IBase)) {
+  if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
     BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
     BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
     if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
-  for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
-    auto *I = dyn_cast<Instruction>(VL[Cnt]);
+  // Skip MainOp.
+  for (Value *V : iterator_range(It + 1, VL.end())) {
+    auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
 
@@ -983,11 +981,11 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       if (Opcode == AltOpcode && isValidForAlternation(InstOpcode) &&
           isValidForAlternation(Opcode)) {
         AltOpcode = InstOpcode;
-        AltIndex = Cnt;
+        AltOp = I;
         continue;
       }
     } else if (IsCastOp && isa<CastInst>(I)) {
-      Value *Op0 = IBase->getOperand(0);
+      Value *Op0 = MainOp->getOperand(0);
       Type *Ty0 = Op0->getType();
       Value *Op1 = I->getOperand(0);
       Type *Ty1 = Op1->getType();
@@ -999,12 +997,12 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                  isValidForAlternation(InstOpcode) &&
                  "Cast isn't safe for alternation, logic needs to be updated!");
           AltOpcode = InstOpcode;
-          AltIndex = Cnt;
+          AltOp = I;
           continue;
         }
       }
-    } else if (auto *Inst = dyn_cast<CmpInst>(VL[Cnt]); Inst && IsCmpOp) {
-      auto *BaseInst = cast<CmpInst>(V);
+    } else if (auto *Inst = dyn_cast<CmpInst>(I); Inst && IsCmpOp) {
+      auto *BaseInst = cast<CmpInst>(MainOp);
       Type *Ty0 = BaseInst->getOperand(0)->getType();
       Type *Ty1 = Inst->getOperand(0)->getType();
       if (Ty0 == Ty1) {
@@ -1018,21 +1016,21 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
         CmpInst::Predicate SwappedCurrentPred =
             CmpInst::getSwappedPredicate(CurrentPred);
 
-        if ((E == 2 || SwappedPredsCompatible) &&
+        if ((VL.size() == 2 || SwappedPredsCompatible) &&
             (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
           continue;
 
         if (isCmpSameOrSwapped(BaseInst, Inst, TLI))
           continue;
-        auto *AltInst = cast<CmpInst>(VL[AltIndex]);
-        if (AltIndex) {
+        auto *AltInst = cast<CmpInst>(AltOp);
+        if (MainOp != AltOp) {
           if (isCmpSameOrSwapped(AltInst, Inst, TLI))
             continue;
         } else if (BasePred != CurrentPred) {
           assert(
               isValidForAlternation(InstOpcode) &&
               "CmpInst isn't safe for alternation, logic needs to be updated!");
-          AltIndex = Cnt;
+          AltOp = I;
           continue;
         }
         CmpInst::Predicate AltPred = AltInst->getPredicate();
@@ -1046,17 +1044,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
              "CastInst.");
       if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
         if (Gep->getNumOperands() != 2 ||
-            Gep->getOperand(0)->getType() != IBase->getOperand(0)->getType())
+            Gep->getOperand(0)->getType() != MainOp->getOperand(0)->getType())
           return InstructionsState::invalid();
       } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
         if (!isVectorLikeInstWithConstOps(EI))
           return InstructionsState::invalid();
       } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-        auto *BaseLI = cast<LoadInst>(IBase);
+        auto *BaseLI = cast<LoadInst>(MainOp);
         if (!LI->isSimple() || !BaseLI->isSimple())
           return InstructionsState::invalid();
       } else if (auto *Call = dyn_cast<CallInst>(I)) {
-        auto *CallBase = cast<CallInst>(IBase);
+        auto *CallBase = cast<CallInst>(MainOp);
         if (Call->getCalledFunction() != CallBase->getCalledFunction())
           return InstructionsState::invalid();
         if (Call->hasOperandBundles() &&
@@ -1086,8 +1084,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
-  return InstructionsState(cast<Instruction>(V),
-                           cast<Instruction>(VL[AltIndex]));
+  return InstructionsState(MainOp, AltOp);
 }
 
 /// \returns true if all of the values in \p VL have the same type or false
@@ -6918,7 +6915,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     return L1.second > L2.second;
   };
 
-  auto IsMaskedGatherSupported = [&](ArrayRef<LoadInst *> Loads) {
+  auto IsMaskedGatherSupported = [&, TTI = TTI](ArrayRef<LoadInst *> Loads) {
     ArrayRef<Value *> Values(reinterpret_cast<Value *const *>(Loads.begin()),
                              Loads.size());
     Align Alignment = computeCommonAlignment<LoadInst>(Values);
@@ -7085,9 +7082,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
           }
           SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
           SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(
-              LoadsDists, OriginalLoads.begin(),
-              [](const std::pair<LoadInst *, int> &L) { return L.first; });
+          transform(LoadsDists, OriginalLoads.begin(),
+                    [](const std::pair<LoadInst *, int> &L) -> LoadInst * {
+                      return L.first;
+                    });
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
@@ -7314,7 +7312,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     if (!Ref.empty() && !NonVectorized.empty() &&
         std::accumulate(
             Ref.begin(), Ref.end(), 0u,
-            [](unsigned S, ArrayRef<std::pair<LoadInst *, int>> LoadsDists) {
+            [](unsigned S,
+               ArrayRef<std::pair<LoadInst *, int>> LoadsDists) -> unsigned {
               return S + LoadsDists.size();
             }) != NonVectorized.size() &&
         IsMaskedGatherSupported(NonVectorized)) {
@@ -10973,7 +10972,19 @@ public:
       }
     }
 
-    ::addMask(CommonMask, ExtMask, /*ExtendingManyInputs=*/true);
+    if (!ExtMask.empty()) {
+      if (CommonMask.empty()) {
+        CommonMask.assign(ExtMask.begin(), ExtMask.end());
+      } else {
+        SmallVector<int> NewMask(ExtMask.size(), PoisonMaskElem);
+        for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
+          if (ExtMask[I] == PoisonMaskElem)
+            continue;
+          NewMask[I] = CommonMask[ExtMask[I]];
+        }
+        CommonMask.swap(NewMask);
+      }
+    }
     if (CommonMask.empty()) {
       assert(InVectors.size() == 1 && "Expected only one vector with no mask");
       return Cost;
@@ -13435,14 +13446,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       for_each(SubMask, [&](int &Idx) {
         if (Idx == PoisonMaskElem)
           return;
-        Idx = (Idx % VF) - (MinElement % VF) +
+        Idx = ((Idx % VF) - (((MinElement % VF) / NewVF) * NewVF)) % NewVF +
               (Idx >= static_cast<int>(VF) ? NewVF : 0);
       });
-      VF = NewVF;
+    } else {
+      NewVF = VF;
     }
 
     constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    auto *VecTy = getWidenedType(VL.front()->getType(), VF);
+    auto *VecTy = getWidenedType(VL.front()->getType(), NewVF);
     auto *MaskVecTy = getWidenedType(VL.front()->getType(), SubMask.size());
     auto GetShuffleCost = [&,
                            &TTI = *TTI](ArrayRef<int> Mask,
@@ -13467,7 +13479,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       APInt DemandedElts = APInt::getAllOnes(SubMask.size());
       bool IsIdentity = true;
       for (auto [I, Idx] : enumerate(FirstMask)) {
-        if (Idx >= static_cast<int>(VF)) {
+        if (Idx >= static_cast<int>(NewVF)) {
           Idx = PoisonMaskElem;
         } else {
           DemandedElts.clearBit(I);
@@ -13490,12 +13502,12 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       APInt DemandedElts = APInt::getAllOnes(SubMask.size());
       bool IsIdentity = true;
       for (auto [I, Idx] : enumerate(SecondMask)) {
-        if (Idx < static_cast<int>(VF) && Idx >= 0) {
+        if (Idx < static_cast<int>(NewVF) && Idx >= 0) {
           Idx = PoisonMaskElem;
         } else {
           DemandedElts.clearBit(I);
           if (Idx != PoisonMaskElem) {
-            Idx -= VF;
+            Idx -= NewVF;
             IsIdentity &= static_cast<int>(I) == Idx;
           }
         }
@@ -13515,12 +13527,24 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
                                       /*Extract=*/false, CostKind);
     const TreeEntry *BestEntry = nullptr;
     if (FirstShuffleCost < ShuffleCost) {
-      copy(FirstMask, std::next(Mask.begin(), Part * VL.size()));
+      std::for_each(std::next(Mask.begin(), Part * VL.size()),
+                    std::next(Mask.begin(), (Part + 1) * VL.size()),
+                    [&](int &Idx) {
+                      if (Idx >= static_cast<int>(VF))
+                        Idx = PoisonMaskElem;
+                    });
       BestEntry = Entries.front();
       ShuffleCost = FirstShuffleCost;
     }
     if (SecondShuffleCost < ShuffleCost) {
-      copy(SecondMask, std::next(Mask.begin(), Part * VL.size()));
+      std::for_each(std::next(Mask.begin(), Part * VL.size()),
+                    std::next(Mask.begin(), (Part + 1) * VL.size()),
+                    [&](int &Idx) {
+                      if (Idx < static_cast<int>(VF))
+                        Idx = PoisonMaskElem;
+                      else
+                        Idx -= VF;
+                    });
       BestEntry = Entries[1];
       ShuffleCost = SecondShuffleCost;
     }
@@ -16970,8 +16994,9 @@ void BoUpSLP::optimizeGatherSequence() {
   // and its mask indeces are the same as in the first one or undefs. E.g.
   // shuffle %0, poison, <0, 0, 0, undef> is less defined than shuffle %0,
   // poison, <0, 0, 0, 0>.
-  auto &&IsIdenticalOrLessDefined = [this](Instruction *I1, Instruction *I2,
-                                           SmallVectorImpl<int> &NewMask) {
+  auto &&IsIdenticalOrLessDefined = [TTI = TTI](Instruction *I1,
+                                                Instruction *I2,
+                                                SmallVectorImpl<int> &NewMask) {
     if (I1->getType() != I2->getType())
       return false;
     auto *SI1 = dyn_cast<ShuffleVectorInst>(I1);
@@ -17765,7 +17790,7 @@ bool BoUpSLP::collectValuesToDemote(
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
-  auto FinalAnalysis = [&]() {
+  auto FinalAnalysis = [&, TTI = TTI]() {
     if (!IsProfitableToDemote)
       return false;
     bool Res = all_of(
@@ -19380,27 +19405,32 @@ class HorizontalReduction {
   /// Creates reduction operation with the current opcode.
   static Value *createOp(IRBuilderBase &Builder, RecurKind Kind, Value *LHS,
                          Value *RHS, const Twine &Name, bool UseSelect) {
-    unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     switch (Kind) {
-    case RecurKind::Or:
+    case RecurKind::Or: {
       if (UseSelect &&
           LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
         return Builder.CreateSelect(LHS, Builder.getTrue(), RHS, Name);
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
-    case RecurKind::And:
+    }
+    case RecurKind::And: {
       if (UseSelect &&
           LHS->getType() == CmpInst::makeCmpResultType(LHS->getType()))
         return Builder.CreateSelect(LHS, RHS, Builder.getFalse(), Name);
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
+    }
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Xor:
     case RecurKind::FAdd:
-    case RecurKind::FMul:
+    case RecurKind::FMul: {
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
+    }
     case RecurKind::FMax:
       return Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS);
     case RecurKind::FMin:

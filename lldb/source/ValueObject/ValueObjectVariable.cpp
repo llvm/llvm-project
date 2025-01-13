@@ -160,8 +160,7 @@ bool ValueObjectVariable::UpdateValue() {
       variable->CalculateSymbolContext(&sc);
       if (sc.function)
         loclist_base_load_addr =
-            sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                target);
+            sc.function->GetAddress().GetLoadAddress(target);
     }
     Value old_value(m_value);
     llvm::Expected<Value> maybe_value = expr_list.Evaluate(

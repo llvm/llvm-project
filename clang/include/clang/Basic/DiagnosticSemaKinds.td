@@ -3835,6 +3835,9 @@ def err_sme_unimplemented_za_save_restore : Error<
   "call to a function that shares state other than 'za' from a "
   "function that has live 'za' state requires a spill/fill of ZA, which is not yet "
   "implemented">;
+def err_sme_unsupported_agnostic_new : Error<
+  "__arm_agnostic(\"sme_za_state\") is not supported together with "
+  "__arm_new(\"za\") or __arm_new(\"zt0\")">;
 def note_sme_use_preserves_za : Note<
   "add '__arm_preserves(\"za\")' to the callee if it preserves ZA">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
@@ -3851,6 +3854,8 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_conflicting_attributes_arm_agnostic : Error<
+  "__arm_agnostic(\"sme_za_state\") cannot share ZA state with its caller">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
@@ -12428,6 +12433,33 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+
+// SYCL kernel entry point diagnostics
+def err_sycl_entry_point_invalid : Error<
+  "'sycl_kernel_entry_point' attribute cannot be applied to a"
+  " %select{non-static member function|variadic function|deleted function|"
+           "defaulted function|constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|coroutine}0">;
+def err_sycl_entry_point_invalid_redeclaration : Error<
+  "'sycl_kernel_entry_point' kernel name argument does not match prior"
+  " declaration%diff{: $ vs $|}0,1">;
+def err_sycl_kernel_name_conflict : Error<
+  "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
+  " declaration">;
+def warn_sycl_kernel_name_not_a_class_type : Warning<
+  "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
+  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+def warn_sycl_entry_point_redundant_declaration : Warning<
+  "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;
+def err_sycl_entry_point_after_definition : Error<
+  "'sycl_kernel_entry_point' attribute cannot be added to a function after the"
+  " function is defined">;
+def err_sycl_entry_point_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " 'void' return type">;
+def err_sycl_entry_point_deduced_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " non-deduced 'void' return type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
