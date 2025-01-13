@@ -17412,10 +17412,9 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   default:
     llvm_unreachable("Expected SHL");
   }
-  return DAG.getNode(
-      Opcode, DL, VT, NarrowOp,
-      DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowVT),
-      Passthru, Mask, VL);
+  return DAG.getNode(Opcode, DL, VT, NarrowOp,
+                     DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowVT),
+                     Passthru, Mask, VL);
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
