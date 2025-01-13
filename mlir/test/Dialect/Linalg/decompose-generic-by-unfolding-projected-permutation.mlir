@@ -72,6 +72,8 @@ func.func @broadcast_only(%x : tensor<2x16x32xf32>, %y:  tensor<2x32xf32>, %z : 
 
 // -----
 
+// unsupported currently.
+
 func.func @no_decompose_on_scalar() -> tensor<2x2xi32> {
   %a = arith.constant dense<2> : tensor<2x2xi32>
   %b = arith.constant 42 : i32

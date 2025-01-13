@@ -161,13 +161,13 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     if (!map.isProjectedPermutation(false))
       return failure();
 
-    // If we have any inputs that aren't memref or ranked tensor types, reject
+    // If we have any inputs that aren't ranked tensor types, reject
     // the pattern.
-    if (!dyn_cast<ShapedType>(opOperand.get().getType()))
+    if (!dyn_cast<RankedTensorType>(opOperand.get().getType()))
       return rewriter.notifyMatchFailure(
           opOperand.get().getLoc(),
-          llvm::formatv("Expected operand #{0} to be memref of any type values "
-                        "or ranked tensor of any type values, but got {1}",
+          llvm::formatv("Expected operand #{0} to be "
+                        "ranked tensor of any type values, but got {1}",
                         opOperand.getOperandNumber(),
                         opOperand.get().getType()));
   }
