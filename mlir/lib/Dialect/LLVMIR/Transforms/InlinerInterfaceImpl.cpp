@@ -744,6 +744,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     op->erase();
   }
 
+  bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const final {
+    if (!inlinedBlocks.empty() &&
+        isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()))
+      return false;
+    return true;
+  }
+
   /// Handle the given inlined return by replacing the uses of the call with the
   /// operands of the return. This overload is called when the inlined region
   /// only contains one block.
