@@ -512,6 +512,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+        // The `__mfp8` type maps to `<1 x i8>` which can't be used to build
+        // a <N x i8> vector type, hence bypass the call to `ConvertType` for
+        // the element type and create the vector type directly.
         auto *EltTy = Info.ElementType->isMFloat8Type()
                           ? llvm::Type::getInt8Ty(getLLVMContext())
                           : ConvertType(Info.ElementType);
