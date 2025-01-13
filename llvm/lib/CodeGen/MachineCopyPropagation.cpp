@@ -256,19 +256,6 @@ public:
     }
   }
 
-  /// Clobber all registers which are not preserved by RegMask, removing them
-  /// from the tracker's copy maps.
-  void clobberRegistersExceptMask(const MachineOperand *RegMask,
-                                  const TargetRegisterInfo &TRI,
-                                  const TargetInstrInfo &TII,
-                                  bool UseCopyInstr) {
-    BitVector &SafeRegUnits = getPreservedRegUnits(*RegMask, TRI);
-
-    for (unsigned Unit = 0, E = TRI.getNumRegUnits(); Unit < E; ++Unit)
-      if (!SafeRegUnits.test(Unit))
-        clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
-  }
-
   /// Track copy's src users, and return false if that can't be done.
   /// We can only track if we have a COPY instruction which source is
   /// the same as the Reg.
