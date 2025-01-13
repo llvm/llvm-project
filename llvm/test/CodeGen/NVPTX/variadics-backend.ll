@@ -397,8 +397,8 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    st.local.u64 [%rd2+8], %rd6;
 ; CHECK-PTX-NEXT:    mov.b64 %rd7, 1;
 ; CHECK-PTX-NEXT:    st.u64 [%SP+16], %rd7;
-; CHECK-PTX-NEXT:    ld.u64 %rd8, [%SP];
-; CHECK-PTX-NEXT:    ld.u64 %rd9, [%SP+8];
+; CHECK-PTX-NEXT:    ld.local.u64 %rd8, [%rd2];
+; CHECK-PTX-NEXT:    ld.local.u64 %rd9, [%rd2+8];
 ; CHECK-PTX-NEXT:    add.u64 %rd10, %SP, 16;
 ; CHECK-PTX-NEXT:    { // callseq 3, 0
 ; CHECK-PTX-NEXT:    .param .align 8 .b8 param0[16];
