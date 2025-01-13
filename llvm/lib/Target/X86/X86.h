@@ -54,6 +54,8 @@ FunctionPass *createX86IndirectBranchTrackingPass();
 /// This will prevent a stall when returning on the Atom.
 FunctionPass *createX86PadShortFunctions();
 
+FunctionPass *createX86MatchJumptablePass();
+
 /// Return a pass that selectively replaces certain instructions (like add,
 /// sub, inc, dec, some shifts, and some multiplies) by equivalent LEA
 /// instructions, in order to eliminate execution delays in some processors.

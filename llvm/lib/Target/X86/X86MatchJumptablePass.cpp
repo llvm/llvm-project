@@ -1,290 +1,316 @@
-// #include "X86.h"
-// #include "llvm/CodeGen/MachineFunctionPass.h"
-// #include "llvm/CodeGen/MachineInstr.h"
-// #include "llvm/CodeGen/MachineRegisterInfo.h"
-// #include "llvm/Support/Debug.h"
-// #include "llvm/Support/raw_ostream.h"
-// #include "X86MatchJumptablePass.h"
-// #include "llvm/CodeGen/MachineJumpTableInfo.h"
-
-// #define DEBUG_TYPE "match-jump-table"
-
-// using namespace llvm;
-
-// namespace {
-//   class X86MatchJumptablePass : public MachineFunctionPass {
-//   public:
-//     static char ID;
-
-//     X86MatchJumptablePass() : MachineFunctionPass(ID) {}
-
-//     bool runOnMachineFunction(MachineFunction &MF) override {
-//     LLVM_DEBUG(dbgs() << "Analyzing jump tables in function: " << MF.getName() << "\n");
-
-//     // Get jump table information
-//     MachineJumpTableInfo *JumpTableInfo = MF.getJumpTableInfo();
-//     if (!JumpTableInfo) {
-//       LLVM_DEBUG(dbgs() << "No jump tables in this function.\n");
-//       return false;
-//     }
-//     // Assuming JumpTableInfo is available
-//     for (unsigned JTIndex = 0; JTIndex < JumpTableInfo->getJumpTables().size(); ++JTIndex) {
-//   const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
-  
-//   LLVM_DEBUG(dbgs() << "Jump Table #" << JTIndex << " Base Address: " << JTEntry.BaseAddress << "\n");
-
-//   // Iterate through the entries (target basic blocks) in this jump table
-//   for (auto *MBB : JTEntry.MBBs) {
-//     LLVM_DEBUG(dbgs() << "  Target BasicBlock: " << MBB->getName() << " Address: " << MBB->getAddress() << "\n");
-//      }
-    
-
-//       // Trace potential indirect jumps related to this jump table
-//       traceIndirectJumps(MF, JTIndex, JumpTableInfo);
-//     }
-//     return false;
-
-// }
-
-//   void traceIndirectJumps(MachineFunction &MF, unsigned JTIndex, MachineJumpTableInfo *JumpTableInfo) {
-//     const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
-
-//     for (auto &MBB : MF) {
-//       for (auto &MI : MBB) {
-//         if (MI.isIndirectBranch()) {
-//           LLVM_DEBUG(dbgs() << "Found indirect jump: " << MI << "\n");
-
-//           // Analyze data flow to check if this jump is related to the jump table
-//           if (isJumpTableRelated(MI, JTEntry, MF)) {
-//             LLVM_DEBUG(dbgs() << "This indirect jump is related to Jump Table #" << JTIndex << "\n");
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   bool isJumpTableRelated(MachineInstr &MI, const MachineJumpTableEntry &JTEntry, MachineFunction &MF) {
-//   for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
-//     const MachineOperand &Op = MI.getOperand(OpIdx);
-
-//     if (Op.isReg()) {
-//       Register Reg = Op.getReg();
-//       MachineRegisterInfo &MRI = MF.getRegInfo();
-//       // Check if any of the definitions of the register are related to a jump table load
-//       for (MachineInstr &DefMI : MRI.def_instructions(Reg)) {
-//         if (isJumpTableLoad(DefMI, JTEntry)) {
-//           return true;
-//         }
-//       }
-//     } else if (Op.isImm()) {
-//       // Check if the immediate operand might be an offset/index into the jump table
-//       int64_t ImmValue = Op.getImm();
-      
-//       // For example, if the jump table has 10 entries, check if the immediate is between 0 and 9
-//       if (ImmValue >= 0 && ImmValue < JTEntry.MBBs.size()) {
-//         // This immediate value could be an index into the jump table
-//         LLVM_DEBUG(dbgs() << "Immediate operand is a possible jump table index: " << ImmValue << "\n");
-//         return true;
-//       }
-//     }
-//   }
-//   return false;
-// }
-
-// bool isJumpTableLoad(MachineInstr &MI, const MachineJumpTableEntry &JTEntry) {
-//     if (MI.mayLoad()) {
-//         for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-//             const MachineOperand &Op = MI.getOperand(i);
-//             if (Op.isGlobal() && Op.getGlobal() == JTEntry.BaseAddress) {
-//                 return true;
-//             }
-//         }
-//     }
-//     return false;
-// }
-
-//   StringRef getPassName() const override {
-//     return "Match Jump Table Pass";
-//   }
-
-//     // StringRef getPassName() const override {
-//     //   return "X86 My Backend Pass";
-//     // }
-//   };
-// }
-
-// char X86MatchJumptablePass::ID = 0;
-
-// // Ensure the function is in the llvm namespace
-// namespace llvm {
-  
-//   // Define the pass
-//   FunctionPass *createX86MatchJumptablePass() {
-//     return new X86MatchJumptablePass();
-//   }
-
-// } // end llvm namespace
-
-// static RegisterPass<X86MatchJumptablePass> X("match-jump-table", "Match Jump Table Pass", false, false);
-
-
+// X86MatchJumptablePass.cpp
+#include "X86MatchJumptablePass.h"
 #include "X86.h"
+#include "X86InstrInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/Pass.h"
 
 #define DEBUG_TYPE "match-jump-table"
 
-using namespace llvm;
+namespace llvm {
 
-namespace {
-class X86MatchJumptablePass : public MachineFunctionPass {
-public:
-  static char ID;
+char X86MatchJumptablePass::ID = 0;
 
-  X86MatchJumptablePass() : MachineFunctionPass(ID) {}
+void initializeX86MatchJumptablePassPass(PassRegistry &Registry) {
+  RegisterPass<X86MatchJumptablePass> X("match-jump-table", "Match Jump Table Pass", false, false);
+}
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
+void X86MatchJumptablePass::insertIdentifyingMarker(MachineInstr* MI, 
+                                                   MachineFunction &MF, 
+                                                   unsigned JTIndex) {
+  // Create a unique identifier for this indirect jump
+  std::string marker = "IJUMP_" + MF.getName().str() + "_" + std::to_string(JTIndex);
+  
+  // Get target instruction info
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  
+  // Insert a special no-op instruction before the indirect jump with debug info
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), 
+          TII->get(X86::NOOP))
+          .addExternalSymbol(marker.c_str());
+}
+
+void X86MatchJumptablePass::recordJumpLocation(MachineInstr* MI, 
+                                              MachineFunction &MF, 
+                                              unsigned JTIndex) {
+  // Create a new section entry
+  auto &Context = MF.getFunction().getContext();
+  auto *M = MF.getFunction().getParent();
+  
+  // Create mapping data
+  std::string sectionName = ".jumptable.map";
+  std::string data = MF.getName().str() + "," + 
+                    std::to_string(JTIndex) + "\n";
+  
+  // Add the data to a special section
+  auto *GV = new GlobalVariable(
+    *M,
+    ArrayType::get(Type::getInt8Ty(Context), data.size() + 1),
+    true,
+    GlobalValue::PrivateLinkage,
+    ConstantDataArray::getString(Context, data),
+    "jump_map_entry"
+  );
+  
+  GV->setSection(sectionName);
+}
+
+bool X86MatchJumptablePass::runOnMachineFunction(MachineFunction &MF) {
+    static int PassRunCount = 0;
+    PassRunCount++;
+    
+    LLVM_DEBUG(dbgs() << "\n=== Pass Run #" << PassRunCount << " ===\n");
+    LLVM_DEBUG(dbgs() << "Current optimization phase: " 
+               << MF.getFunction().getParent()->getSourceFileName() << "\n");
     LLVM_DEBUG(dbgs() << "Analyzing jump tables in function: " << MF.getName() << "\n");
 
     // Get jump table information
     MachineJumpTableInfo *JumpTableInfo = MF.getJumpTableInfo();
     if (!JumpTableInfo) {
-      LLVM_DEBUG(dbgs() << "No jump tables in this function.\n");
-      return false;
+        LLVM_DEBUG(dbgs() << "No jump tables in this function.\n");
+        return false;
     }
 
+    bool Modified = false;
     for (unsigned JTIndex = 0; JTIndex < JumpTableInfo->getJumpTables().size(); ++JTIndex) {
-      const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
+        const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
 
-      LLVM_DEBUG(dbgs() << "Jump Table #" << JTIndex << " contains " << JTEntry.MBBs.size()
-                        << " entries.\n");
+        LLVM_DEBUG(dbgs() << "Jump Table #" << JTIndex << " contains " 
+                         << JTEntry.MBBs.size() << " entries.\n");
 
-      // Iterate through the entries (target basic blocks) in this jump table
-      for (auto *MBB : JTEntry.MBBs) {
-        if (MBB) {
-          LLVM_DEBUG(dbgs() << "  Target BasicBlock: " << MBB->getName() << "\n");
+        // Print detailed information about jump table entries
+        LLVM_DEBUG(dbgs() << "Jump table entries:\n");
+        for (unsigned i = 0; i < JTEntry.MBBs.size(); ++i) {
+            if (JTEntry.MBBs[i]) {
+                LLVM_DEBUG(dbgs() << "  [" << i << "] -> BB#" 
+                           << JTEntry.MBBs[i]->getNumber() 
+                           << " (" << JTEntry.MBBs[i]->getName() << ")\n");
+            }
         }
-      }
 
-      // Assuming you have access to MF, JTIndex, and JumpTableInfo
-    MachineInstr* indirectJumpInstr = traceIndirectJumps(MF, JTIndex, JumpTableInfo);
+        // Find and process indirect jumps
+        MachineInstr* indirectJumpInstr = traceIndirectJumps(MF, JTIndex, JumpTableInfo);
 
-      if (indirectJumpInstr) {
-          // Handle the found indirect jump instruction
-          dbgs() << "Indirect jump found at address: " << indirectJumpInstr << "\n";
-          for (auto &MBB : JTEntry.MBBs) {
-          LLVM_DEBUG(dbgs() << "Address of MBB: " << &MBB << "\n"); // Print the address of the MBB
-          // Optionally print the name and instructions inside the MBB
-         // LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
-          // for (auto &MI : MBB) {
-          //     LLVM_DEBUG(dbgs() << "  Instruction: " << MI << "\n");
-          // }
+        if (indirectJumpInstr) {
+            // Print more detailed information about the indirect jump
+            LLVM_DEBUG(dbgs() << "Found indirect jump: " << *indirectJumpInstr << "\n");
+            LLVM_DEBUG(dbgs() << "Parent basic block: " << indirectJumpInstr->getParent()->getName() << "\n");
+            
+            // Print operand information
+            LLVM_DEBUG(dbgs() << "Jump instruction operands:\n");
+            for (unsigned i = 0; i < indirectJumpInstr->getNumOperands(); ++i) {
+                LLVM_DEBUG(dbgs() << "  Operand " << i << ": " << indirectJumpInstr->getOperand(i) << "\n");
+            }
+
+            // Insert marker and record location
+            insertIdentifyingMarker(indirectJumpInstr, MF, JTIndex);
+            recordJumpLocation(indirectJumpInstr, MF, JTIndex);
+            Modified = true;
         }
-      } 
     }
 
-    return false;
-  }
+    return Modified;
+}
 
-  // void traceIndirectJumps(MachineFunction &MF, unsigned JTIndex, MachineJumpTableInfo *JumpTableInfo) {
-  //   const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
-
-  //   for (auto &MBB : MF) {
-  //     for (auto &MI : MBB) {
-  //       if (MI.isIndirectBranch()) {
-  //         LLVM_DEBUG(dbgs() << "Found indirect jump: " << MI << "\n");
-
-  //         // Analyze data flow to check if this jump is related to the jump table
-  //         if (isJumpTableRelated(MI, JTEntry, MF)) {
-  //           LLVM_DEBUG(dbgs() << "This indirect jump is related to Jump Table #" << JTIndex << "\n");
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-  MachineInstr* traceIndirectJumps(MachineFunction &MF, unsigned JTIndex, MachineJumpTableInfo *JumpTableInfo) {
+MachineInstr* X86MatchJumptablePass::traceIndirectJumps(MachineFunction &MF, 
+                                                        unsigned JTIndex,
+                                                        MachineJumpTableInfo *JumpTableInfo) {
     const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
 
+    LLVM_DEBUG(dbgs() << "Tracing indirect jumps:\n");
     for (auto &MBB : MF) {
+        LLVM_DEBUG(dbgs() << "  Checking BB: " << MBB.getName() << "\n");
         for (auto &MI : MBB) {
+            LLVM_DEBUG(dbgs() << "    Checking instruction: " << MI << "\n");
             if (MI.isIndirectBranch()) {
-                LLVM_DEBUG(dbgs() << "Found indirect jump: " << MI << "\n");
+                LLVM_DEBUG(dbgs() << "    Found indirect jump: " << MI << "\n");
 
-                // Analyze data flow to check if this jump is related to the jump table
                 if (isJumpTableRelated(MI, JTEntry, MF)) {
-                    LLVM_DEBUG(dbgs() << "This indirect jump is related to Jump Table #" << JTIndex << "\n");
-                    
-                    // Return the address of the indirect jump (MI)
+                    LLVM_DEBUG(dbgs() << "    This indirect jump is related to Jump Table #" 
+                              << JTIndex << "\n");
                     return &MI;
+                } else {
+                    LLVM_DEBUG(dbgs() << "    Jump is not related to this jump table\n");
                 }
             }
         }
     }
 
-    // Return nullptr if no indirect jump is found
+    LLVM_DEBUG(dbgs() << "  No related indirect jump found\n");
     return nullptr;
 }
 
-  bool isJumpTableRelated(MachineInstr &MI, const MachineJumpTableEntry &JTEntry, MachineFunction &MF) {
-    for (unsigned OpIdx = 0; OpIdx < MI.getNumOperands(); ++OpIdx) {
-      const MachineOperand &Op = MI.getOperand(OpIdx);
+bool X86MatchJumptablePass::isJumpTableLoad(MachineInstr &MI, const MachineJumpTableEntry &JTEntry) {
+    LLVM_DEBUG(dbgs() << "\nAnalyzing potential jump table load instruction: " << MI << "\n");
 
-      if (Op.isReg()) {
-        Register Reg = Op.getReg();
-        MachineRegisterInfo &MRI = MF.getRegInfo();
-        // Check if any of the definitions of the register are related to a jump table load
-        for (MachineInstr &DefMI : MRI.def_instructions(Reg)) {
-          if (isJumpTableLoad(DefMI, JTEntry)) {
-            return true;
-          }
+    // First check memory operands for jump table metadata
+    for (const MachineMemOperand *MMO : MI.memoperands()) {
+        LLVM_DEBUG(dbgs() << "  Checking memory operand flags: " << MMO->getFlags() << "\n");
+        if (MMO->getValue()) {
+            StringRef ValueName = MMO->getValue()->getName();
+            LLVM_DEBUG(dbgs() << "    Memory value name: '" << ValueName << "'\n");
+            if (ValueName.contains("jump-table")) {
+                LLVM_DEBUG(dbgs() << "    Found jump table in memory value name\n");
+                return true;
+            }
         }
-      } else if (Op.isImm()) {
-        // Check if the immediate operand might be an offset/index into the jump table
-        int64_t ImmValue = Op.getImm();
-        if (ImmValue >= 0 && ImmValue < JTEntry.MBBs.size()) {
-          // This immediate value could be an index into the jump table
-          LLVM_DEBUG(dbgs() << "Immediate operand is a possible jump table index: " << ImmValue
-                            << "\n");
-          return true;
+
+        // Check if this is a jump table load directly from memory operand comments
+        if (MI.getDesc().mayLoad() && MI.hasOneMemOperand()) {
+            // Look for jump table reference in the instruction's debug info or comments
+            if (MI.getDebugLoc()) {
+                std::string Comment;
+                raw_string_ostream OS(Comment);
+                MI.print(OS);
+                if (Comment.find("jump-table") != std::string::npos) {
+                    LLVM_DEBUG(dbgs() << "    Found jump table reference in instruction comment\n");
+                    return true;
+                }
+            }
         }
-      }
     }
-    return false;
-  }
 
-  bool isJumpTableLoad(MachineInstr &MI, const MachineJumpTableEntry &JTEntry) {
-    if (MI.mayLoad()) {
-      for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-        const MachineOperand &Op = MI.getOperand(i);
-          if (Op.getType() == MachineOperand::MO_JumpTableIndex) {
-          unsigned JTIndex = Op.getIndex();
-          if (JTIndex < JTEntry.MBBs.size()) {
-            LLVM_DEBUG(dbgs() << "Instruction loads from Jump Table index: " << JTIndex << "\n");
-            return true;
-          }
+    // Check for the MOVSX pattern
+    if (MI.getOpcode() == X86::MOVSX64rm32) {
+        LLVM_DEBUG(dbgs() << "  Found MOVSX64rm32 instruction\n");
+        Register BaseReg;
+        
+        // Find base register
+        for (const MachineOperand &MO : MI.operands()) {
+            if (MO.isReg() && MO.isUse()) {
+                BaseReg = MO.getReg();
+                LLVM_DEBUG(dbgs() << "    Found base register: " << printReg(BaseReg, nullptr) << "\n");
+                break;
+            }
         }
-      }
+
+        if (BaseReg) {
+            // Look for preceding LEA
+            MachineBasicBlock::iterator MBBI = MI;
+            const MachineBasicBlock *MBB = MI.getParent();
+            
+            LLVM_DEBUG(dbgs() << "    Looking for LEA defining register: " << printReg(BaseReg, nullptr) << "\n");
+            
+            while (MBBI != MBB->begin()) {
+                --MBBI;
+                LLVM_DEBUG(dbgs() << "      Checking: " << *MBBI << "\n");
+                
+                if (MBBI->getOpcode() == X86::LEA64r) {
+                    LLVM_DEBUG(dbgs() << "      Found LEA64r\n");
+                    
+                    // Verify this LEA defines our base register
+                    const MachineOperand &DefReg = MBBI->getOperand(0);
+                    if (!DefReg.isReg() || DefReg.getReg() != BaseReg) {
+                        LLVM_DEBUG(dbgs() << "      LEA defines different register\n");
+                        continue;
+                    }
+                    
+                    // Check for jump table symbol
+                    for (const MachineOperand &MO : MBBI->operands()) {
+                        if (MO.isSymbol()) {
+                            StringRef SymName = MO.getSymbolName();
+                            LLVM_DEBUG(dbgs() << "      Checking symbol: '" << SymName << "'\n");
+                            if (SymName.contains("jump-table")) {
+                                LLVM_DEBUG(dbgs() << "      Found jump table symbol!\n");
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            LLVM_DEBUG(dbgs() << "    No matching LEA found\n");
+        }
     }
+
     return false;
-  }
+}
 
-  StringRef getPassName() const override { return "Match Jump Table Pass"; }
-};
+bool X86MatchJumptablePass::isJumpTableRelated(MachineInstr &MI, 
+                                              const MachineJumpTableEntry &JTEntry,
+                                              MachineFunction &MF) {
+    if (!MI.isIndirectBranch()) {
+        LLVM_DEBUG(dbgs() << "Not an indirect branch, skipping\n");
+        return false;
+    }
 
-} // namespace
+    LLVM_DEBUG(dbgs() << "\nAnalyzing indirect jump: " << MI << "\n");
 
-char X86MatchJumptablePass::ID = 0;
+    // Get jump register
+    Register JumpReg;
+    for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isReg() && MO.isUse()) {
+            JumpReg = MO.getReg();
+            LLVM_DEBUG(dbgs() << "Found jump register: " << printReg(JumpReg, nullptr) << "\n");
+            break;
+        }
+    }
 
-namespace llvm {
+    if (!JumpReg) {
+        LLVM_DEBUG(dbgs() << "No jump register found\n");
+        return false;
+    }
 
-// Define the pass
-FunctionPass *createX86MatchJumptablePass() { return new X86MatchJumptablePass(); }
+    SmallVector<MachineInstr*, 8> Worklist;
+    SmallPtrSet<MachineInstr*, 16> Visited;
+    
+    LLVM_DEBUG(dbgs() << "Starting backward analysis from register " << printReg(JumpReg, nullptr) << "\n");
 
-} // namespace llvm
+    for (MachineInstr &DefMI : MF.getRegInfo().def_instructions(JumpReg)) {
+        Worklist.push_back(&DefMI);
+        LLVM_DEBUG(dbgs() << "Added to worklist: " << DefMI << "\n");
+    }
 
-static RegisterPass<X86MatchJumptablePass> X("match-jump-table", "Match Jump Table Pass", false,
-                                             false);
+    while (!Worklist.empty()) {
+        MachineInstr *CurrMI = Worklist.pop_back_val();
+        if (!Visited.insert(CurrMI).second) {
+            LLVM_DEBUG(dbgs() << "Already visited: " << *CurrMI << "\n");
+            continue;
+        }
+
+        LLVM_DEBUG(dbgs() << "Analyzing instruction: " << *CurrMI << "\n");
+
+        if (isJumpTableLoad(*CurrMI, JTEntry)) {
+            LLVM_DEBUG(dbgs() << "Found jump table load!\n");
+            return true;
+        }
+
+        if (CurrMI->getOpcode() == X86::ADD64rr) {
+            LLVM_DEBUG(dbgs() << "Found ADD64rr, checking operands\n");
+            for (const MachineOperand &MO : CurrMI->operands()) {
+                if (MO.isReg() && MO.isUse()) {
+                    LLVM_DEBUG(dbgs() << "Checking register operand: " << printReg(MO.getReg(), nullptr) << "\n");
+                    for (MachineInstr &DefMI : MF.getRegInfo().def_instructions(MO.getReg())) {
+                        if (isJumpTableLoad(DefMI, JTEntry)) {
+                            LLVM_DEBUG(dbgs() << "Found jump table load via ADD operand!\n");
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add uses to worklist
+        for (const MachineOperand &MO : CurrMI->operands()) {
+            if (MO.isReg() && MO.isUse()) {
+                LLVM_DEBUG(dbgs() << "Adding definitions of register " << printReg(MO.getReg(), nullptr) << " to worklist\n");
+                for (MachineInstr &DefMI : MF.getRegInfo().def_instructions(MO.getReg())) {
+                    if (!Visited.count(&DefMI)) {
+                        Worklist.push_back(&DefMI);
+                        LLVM_DEBUG(dbgs() << "Added to worklist: " << DefMI << "\n");
+                    }
+                }
+            }
+        }
+    }
+
+    LLVM_DEBUG(dbgs() << "No jump table relation found\n");
+    return false;
+}
+
+FunctionPass *createX86MatchJumptablePass() { 
+    return new X86MatchJumptablePass();
+}
+
+} // end namespace llvm
