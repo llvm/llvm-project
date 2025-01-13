@@ -328,7 +328,7 @@ inline bool isPrimitiveType(const QualType &T) {
 }
 
 inline bool isDereferencableType(const QualType &T) {
-  return T->isAnyPointerType() || T->isReferenceType();
+  return T->isPointerOrObjCObjectPointerType() || T->isReferenceType();
 }
 
 // Template method definitions.

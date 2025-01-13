@@ -12265,7 +12265,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         // restricted prior to C++17.
         if (auto *RT = T->getAs<ReferenceType>())
           T = RT->getPointeeType();
-        else if (T->isAnyPointerType())
+        else if (T->isPointerOrObjCObjectPointerType())
           T = T->getPointeeType();
         else if (auto *MPT = T->getAs<MemberPointerType>())
           T = MPT->getPointeeType();
@@ -12499,7 +12499,7 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
   // Set an implicit return of 'zero' if the function can return some integral,
   // enumeration, pointer or nullptr type.
   if (FT->getReturnType()->isIntegralOrEnumerationType() ||
-      FT->getReturnType()->isAnyPointerType() ||
+      FT->getReturnType()->isPointerOrObjCObjectPointerType() ||
       FT->getReturnType()->isNullPtrType())
     // DllMain is exempt because a return value of zero means it failed.
     if (FD->getName() != "DllMain")
@@ -16099,7 +16099,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           auto findBeginLoc = [&]() {
             // If the return type has `const` qualifier, we want to insert
             // `static` before `const` (and not before the typename).
-            if ((FD->getReturnType()->isAnyPointerType() &&
+            if ((FD->getReturnType()->isPointerOrObjCObjectPointerType() &&
                  FD->getReturnType()->getPointeeType().isConstQualified()) ||
                 FD->getReturnType().isConstQualified()) {
               // But only do this if we can determine where the `const` is.

@@ -2536,7 +2536,7 @@ public:
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
   bool isSignableType() const;
-  bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
+  bool isPointerOrObjCObjectPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
@@ -8196,7 +8196,7 @@ inline bool Type::isPointerOrReferenceType() const {
   return isPointerType() || isReferenceType();
 }
 
-inline bool Type::isAnyPointerType() const {
+inline bool Type::isPointerOrObjCObjectPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
 
@@ -8656,7 +8656,7 @@ inline bool Type::isUndeducedType() const {
 inline bool Type::isOverloadableType() const {
   if (!isDependentType())
     return isRecordType() || isEnumeralType();
-  return !isArrayType() && !isFunctionType() && !isAnyPointerType() &&
+  return !isArrayType() && !isFunctionType() && !isPointerOrObjCObjectPointerType() &&
          !isMemberPointerType();
 }
 
@@ -8692,7 +8692,7 @@ inline const Type *Type::getBaseElementTypeUnsafe() const {
 
 inline const Type *Type::getPointeeOrArrayElementType() const {
   const Type *type = this;
-  if (type->isAnyPointerType())
+  if (type->isPointerOrObjCObjectPointerType())
     return type->getPointeeType().getTypePtr();
   else if (type->isArrayType())
     return type->getBaseElementTypeUnsafe();

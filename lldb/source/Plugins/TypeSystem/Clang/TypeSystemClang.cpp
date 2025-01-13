@@ -4048,7 +4048,7 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
 
   // If the type is a reference, then resolve it to what it refers to first:
   clang::QualType qual_type(GetCanonicalQualType(type).getNonReferenceType());
-  if (qual_type->isAnyPointerType()) {
+  if (qual_type->isPointerOrObjCObjectPointerType()) {
     if (qual_type->isObjCObjectPointerType())
       return lldb::eLanguageTypeObjC;
     if (qual_type->getPointeeCXXRecordDecl())

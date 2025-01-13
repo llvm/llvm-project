@@ -155,7 +155,7 @@ private:
   /// a non-null pointer.
   bool isNonNullPtr(const CallEvent &Call, CheckerContext &C) const {
     QualType ExprRetType = Call.getResultType();
-    if (!ExprRetType->isAnyPointerType())
+    if (!ExprRetType->isPointerOrObjCObjectPointerType())
       return false;
 
     if (getNullabilityAnnotation(ExprRetType) == Nullability::Nonnull)

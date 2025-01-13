@@ -662,7 +662,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // expressions of certain types in C++.
   if (getLangOpts().CPlusPlus) {
     if (T == Context.OverloadTy || T->isRecordType() ||
-        (T->isDependentType() && !T->isAnyPointerType() &&
+        (T->isDependentType() && !T->isPointerOrObjCObjectPointerType() &&
          !T->isMemberPointerType()))
       return E;
   }
@@ -7974,7 +7974,7 @@ static bool checkCondition(Sema &S, const Expr *Cond,
 /// true otherwise.
 static bool checkConditionalNullPointer(Sema &S, ExprResult &NullExpr,
                                         QualType PointerTy) {
-  if ((!PointerTy->isAnyPointerType() && !PointerTy->isBlockPointerType()) ||
+  if ((!PointerTy->isPointerOrObjCObjectPointerType() && !PointerTy->isBlockPointerType()) ||
       !NullExpr.get()->isNullPointerConstant(S.Context,
                                             Expr::NPC_ValueDependentIsNull))
     return true;
@@ -8725,7 +8725,7 @@ static void DiagnoseConditionalPrecedence(Sema &Self, SourceLocation OpLoc,
 static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
                                               QualType LHSTy, QualType RHSTy,
                                               ASTContext &Ctx) {
-  if (!ResTy->isAnyPointerType())
+  if (!ResTy->isPointerOrObjCObjectPointerType())
     return ResTy;
 
   auto GetNullability = [](QualType Ty) {
@@ -10508,7 +10508,7 @@ static void checkArithmeticNull(Sema &S, ExprResult &LHS, ExprResult &RHS,
 
   // The rest of the operations only make sense with a null pointer
   // if the other expression is a pointer.
-  if (LHSNull == RHSNull || NonNullType->isAnyPointerType() ||
+  if (LHSNull == RHSNull || NonNullType->isPointerOrObjCObjectPointerType() ||
       NonNullType->canDecayToPointerType())
     return;
 
@@ -10709,8 +10709,8 @@ static void diagnoseSubtractionOnNullPointer(Sema &S, SourceLocation Loc,
 /// Diagnose invalid arithmetic on two function pointers.
 static void diagnoseArithmeticOnTwoFunctionPointers(Sema &S, SourceLocation Loc,
                                                     Expr *LHS, Expr *RHS) {
-  assert(LHS->getType()->isAnyPointerType());
-  assert(RHS->getType()->isAnyPointerType());
+  assert(LHS->getType()->isPointerOrObjCObjectPointerType());
+  assert(RHS->getType()->isPointerOrObjCObjectPointerType());
   S.Diag(Loc, S.getLangOpts().CPlusPlus
                 ? diag::err_typecheck_pointer_arith_function_type
                 : diag::ext_gnu_ptr_func_arith)
@@ -10725,7 +10725,7 @@ static void diagnoseArithmeticOnTwoFunctionPointers(Sema &S, SourceLocation Loc,
 /// Diagnose invalid arithmetic on a function pointer.
 static void diagnoseArithmeticOnFunctionPointer(Sema &S, SourceLocation Loc,
                                                 Expr *Pointer) {
-  assert(Pointer->getType()->isAnyPointerType());
+  assert(Pointer->getType()->isPointerOrObjCObjectPointerType());
   S.Diag(Loc, S.getLangOpts().CPlusPlus
                 ? diag::err_typecheck_pointer_arith_function_type
                 : diag::ext_gnu_ptr_func_arith)
@@ -10743,7 +10743,7 @@ static bool checkArithmeticIncompletePointerType(Sema &S, SourceLocation Loc,
   if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
     ResType = ResAtomicType->getValueType();
 
-  assert(ResType->isAnyPointerType());
+  assert(ResType->isPointerOrObjCObjectPointerType());
   QualType PointeeTy = ResType->getPointeeType();
   return S.RequireCompleteSizedType(
       Loc, PointeeTy,
@@ -10765,7 +10765,7 @@ static bool checkArithmeticOpPointerOperand(Sema &S, SourceLocation Loc,
   if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
     ResType = ResAtomicType->getValueType();
 
-  if (!ResType->isAnyPointerType()) return true;
+  if (!ResType->isPointerOrObjCObjectPointerType()) return true;
 
   QualType PointeeTy = ResType->getPointeeType();
   if (PointeeTy->isVoidType()) {
@@ -10793,8 +10793,8 @@ static bool checkArithmeticOpPointerOperand(Sema &S, SourceLocation Loc,
 /// \returns True when the operand is valid to use (even if as an extension).
 static bool checkArithmeticBinOpPointerOperands(Sema &S, SourceLocation Loc,
                                                 Expr *LHSExpr, Expr *RHSExpr) {
-  bool isLHSPointer = LHSExpr->getType()->isAnyPointerType();
-  bool isRHSPointer = RHSExpr->getType()->isAnyPointerType();
+  bool isLHSPointer = LHSExpr->getType()->isPointerOrObjCObjectPointerType();
+  bool isRHSPointer = RHSExpr->getType()->isPointerOrObjCObjectPointerType();
   if (!isLHSPointer && !isRHSPointer) return true;
 
   QualType LHSPointeeTy, RHSPointeeTy;
@@ -10892,7 +10892,7 @@ static void diagnoseStringPlusChar(Sema &Self, SourceLocation OpLoc,
   const QualType StringType = StringRefExpr->getType();
 
   // Return if not a PointerType.
-  if (!StringType->isAnyPointerType())
+  if (!StringType->isPointerOrObjCObjectPointerType())
     return;
 
   // Return if not a CharacterType.
@@ -10928,8 +10928,8 @@ static void diagnoseStringPlusChar(Sema &Self, SourceLocation OpLoc,
 /// Emit error when two pointers are incompatible.
 static void diagnosePointerIncompatibility(Sema &S, SourceLocation Loc,
                                            Expr *LHSExpr, Expr *RHSExpr) {
-  assert(LHSExpr->getType()->isAnyPointerType());
-  assert(RHSExpr->getType()->isAnyPointerType());
+  assert(LHSExpr->getType()->isPointerOrObjCObjectPointerType());
+  assert(RHSExpr->getType()->isPointerOrObjCObjectPointerType());
   S.Diag(Loc, diag::err_typecheck_sub_ptr_compatible)
     << LHSExpr->getType() << RHSExpr->getType() << LHSExpr->getSourceRange()
     << RHSExpr->getSourceRange();
@@ -11007,7 +11007,7 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
       return InvalidOperands(Loc, LHS, RHS);
     }
   }
-  assert(PExp->getType()->isAnyPointerType());
+  assert(PExp->getType()->isPointerOrObjCObjectPointerType());
 
   if (!IExp->getType()->isIntegerType())
     return InvalidOperands(Loc, LHS, RHS);
@@ -11108,7 +11108,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Either ptr - int   or   ptr - ptr.
-  if (LHS.get()->getType()->isAnyPointerType()) {
+  if (LHS.get()->getType()->isPointerOrObjCObjectPointerType()) {
     QualType lpointee = LHS.get()->getType()->getPointeeType();
 
     // Diagnose bad cases where we step over interface counts.
@@ -11594,8 +11594,8 @@ static bool convertPointersToCompositeType(Sema &S, SourceLocation Loc,
 
   QualType T = S.FindCompositePointerType(Loc, LHS, RHS);
   if (T.isNull()) {
-    if ((LHSType->isAnyPointerType() || LHSType->isMemberPointerType()) &&
-        (RHSType->isAnyPointerType() || RHSType->isMemberPointerType()))
+    if ((LHSType->isPointerOrObjCObjectPointerType() || LHSType->isMemberPointerType()) &&
+        (RHSType->isPointerOrObjCObjectPointerType() || RHSType->isMemberPointerType()))
       diagnoseDistinctPointerComparison(S, Loc, LHS, RHS, /*isError*/true);
     else
       S.InvalidOperands(Loc, LHS, RHS);
@@ -12165,10 +12165,10 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
 }
 
 void Sema::CheckPtrComparisonWithNullChar(ExprResult &E, ExprResult &NullE) {
-  if (!NullE.get()->getType()->isAnyPointerType())
+  if (!NullE.get()->getType()->isPointerOrObjCObjectPointerType())
     return;
   int NullValue = PP.isMacroDefined("NULL") ? 0 : 1;
-  if (!E.get()->getType()->isAnyPointerType() &&
+  if (!E.get()->getType()->isPointerOrObjCObjectPointerType() &&
       E.get()->isNullPointerConstant(Context,
                                      Expr::NPC_ValueDependentIsNotNull) ==
         Expr::NPCK_ZeroExpression) {
@@ -12605,8 +12605,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       return computeResultTy();
     }
   }
-  if ((LHSType->isAnyPointerType() && RHSType->isIntegerType()) ||
-      (LHSType->isIntegerType() && RHSType->isAnyPointerType())) {
+  if ((LHSType->isPointerOrObjCObjectPointerType() && RHSType->isIntegerType()) ||
+      (LHSType->isIntegerType() && RHSType->isPointerOrObjCObjectPointerType())) {
     unsigned DiagID = 0;
     bool isError = false;
     if (LangOpts.DebuggerSupport) {

@@ -356,8 +356,7 @@ public:
   /// space.
   /// \param type pointer type.
   loc::ConcreteInt makeNullWithType(QualType type) {
-    // We cannot use the `isAnyPointerType()`.
-    assert((type->isPointerType() || type->isObjCObjectPointerType() ||
+    assert((type->isPointerOrObjCObjectPointerType() ||
             type->isBlockPointerType() || type->isNullPtrType() ||
             type->isReferenceType()) &&
            "makeNullWithType must use pointer type");

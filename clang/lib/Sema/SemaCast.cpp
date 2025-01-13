@@ -596,7 +596,7 @@ static CastAwayConstnessKind
 unwrapCastAwayConstnessLevel(ASTContext &Context, QualType &T1, QualType &T2) {
   enum { None, Ptr, MemPtr, BlockPtr, Array };
   auto Classify = [](QualType T) {
-    if (T->isAnyPointerType()) return Ptr;
+    if (T->isPointerOrObjCObjectPointerType()) return Ptr;
     if (T->isMemberPointerType()) return MemPtr;
     if (T->isBlockPointerType()) return BlockPtr;
     // We somewhat-arbitrarily don't look through VLA types here. This is at
@@ -682,10 +682,10 @@ CastsAwayConstness(Sema &Self, QualType SrcType, QualType DestType,
     return CastAwayConstnessKind::CACK_None;
 
   if (!DestType->isReferenceType()) {
-    assert((SrcType->isAnyPointerType() || SrcType->isMemberPointerType() ||
+    assert((SrcType->isPointerOrObjCObjectPointerType() || SrcType->isMemberPointerType() ||
             SrcType->isBlockPointerType()) &&
            "Source type is not pointer or pointer to member.");
-    assert((DestType->isAnyPointerType() || DestType->isMemberPointerType() ||
+    assert((DestType->isPointerOrObjCObjectPointerType() || DestType->isMemberPointerType() ||
             DestType->isBlockPointerType()) &&
            "Destination type is not pointer or pointer to member.");
   }
@@ -2450,7 +2450,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     Kind = CK_NoOp;
     TryCastResult Result = TC_NotApplicable;
     if (SrcType->isIntegralOrEnumerationType() ||
-        SrcType->isAnyPointerType() ||
+        SrcType->isPointerOrObjCObjectPointerType() ||
         SrcType->isMemberPointerType() ||
         SrcType->isBlockPointerType()) {
       Result = TC_Success;
@@ -2458,9 +2458,9 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     return Result;
   }
 
-  bool destIsPtr = DestType->isAnyPointerType() ||
+  bool destIsPtr = DestType->isPointerOrObjCObjectPointerType() ||
                    DestType->isBlockPointerType();
-  bool srcIsPtr = SrcType->isAnyPointerType() ||
+  bool srcIsPtr = SrcType->isPointerOrObjCObjectPointerType() ||
                   SrcType->isBlockPointerType();
   if (!destIsPtr && !srcIsPtr) {
     // Except for std::nullptr_t->integer and lvalue->reference, which are
@@ -2902,8 +2902,8 @@ static void DiagnoseBadFunctionCast(Sema &Self, const ExprResult &SrcExpr,
   QualType SrcType = SrcExpr.get()->getType();
   if (DestType.getUnqualifiedType()->isVoidType())
     return;
-  if ((SrcType->isAnyPointerType() || SrcType->isBlockPointerType())
-      && (DestType->isAnyPointerType() || DestType->isBlockPointerType()))
+  if ((SrcType->isPointerOrObjCObjectPointerType() || SrcType->isBlockPointerType())
+      && (DestType->isPointerOrObjCObjectPointerType() || DestType->isBlockPointerType()))
     return;
   if (SrcType->isIntegerType() && DestType->isIntegerType() &&
       (SrcType->isBooleanType() == DestType->isBooleanType()) &&
@@ -3318,7 +3318,7 @@ static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
     return;
 
   QualType SrcType = SrcExpr.get()->getType();
-  if (!((SrcType->isAnyPointerType() && DestType->isAnyPointerType()) ||
+  if (!((SrcType->isPointerOrObjCObjectPointerType() && DestType->isPointerOrObjCObjectPointerType()) ||
         DestType->isLValueReferenceType()))
     return;
 

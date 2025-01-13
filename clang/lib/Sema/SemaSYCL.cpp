@@ -114,7 +114,7 @@ void SemaSYCL::deepTypeCheckForDevice(SourceLocation UsedAt,
 
     // In case pointer/array/reference type is met get pointee type, then
     // proceed with that type.
-    while (NextTy->isAnyPointerType() || NextTy->isArrayType() ||
+    while (NextTy->isPointerOrObjCObjectPointerType() || NextTy->isArrayType() ||
            NextTy->isReferenceType()) {
       if (NextTy->isArrayType())
         NextTy = QualType{NextTy->getArrayElementTypeNoTypeQual(), 0};

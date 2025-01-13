@@ -2361,7 +2361,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
   if (auto *FD = dyn_cast_or_null<FunctionDecl>(BaseVD);
       FD && FD->isImmediateFunction()) {
     Info.FFDiag(Loc, diag::note_consteval_address_accessible)
-        << !Type->isAnyPointerType();
+        << !Type->isPointerOrObjCObjectPointerType();
     Info.Note(FD->getLocation(), diag::note_declared_at);
     return false;
   }

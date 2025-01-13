@@ -4156,7 +4156,7 @@ AST_MATCHER_P(QualType, asString, std::string, Name) {
 AST_MATCHER_P(
     QualType, pointsTo, internal::Matcher<QualType>,
     InnerMatcher) {
-  return (!Node.isNull() && Node->isAnyPointerType() &&
+  return (!Node.isNull() && Node->isPointerOrObjCObjectPointerType() &&
           InnerMatcher.matches(Node->getPointeeType(), Finder, Builder));
 }
 
@@ -6605,7 +6605,7 @@ AST_MATCHER(QualType, isAnyCharacter) {
 /// varDecl(hasType(isAnyPointer()))
 ///   matches "int *i" and "Foo *f", but not "int j".
 AST_MATCHER(QualType, isAnyPointer) {
-  return Node->isAnyPointerType();
+  return Node->isPointerOrObjCObjectPointerType();
 }
 
 /// Matches QualType nodes that are const-qualified, i.e., that

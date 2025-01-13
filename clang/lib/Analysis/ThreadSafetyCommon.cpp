@@ -383,7 +383,7 @@ static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
 
 static bool hasAnyPointerType(const til::SExpr *E) {
   auto *VD = getValueDeclFromSExpr(E);
-  if (VD && VD->getType()->isAnyPointerType())
+  if (VD && VD->getType()->isPointerOrObjCObjectPointerType())
     return true;
   if (const auto *C = dyn_cast<til::Cast>(E))
     return C->castOpcode() == til::CAST_objToPtr;

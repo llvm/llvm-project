@@ -260,7 +260,7 @@ public:
   void dumpToStream(raw_ostream &Out) const;
 
   static bool isLocType(QualType T) {
-    return T->isAnyPointerType() || T->isBlockPointerType() ||
+    return T->isPointerOrObjCObjectPointerType() || T->isBlockPointerType() ||
            T->isReferenceType() || T->isNullPtrType();
   }
 

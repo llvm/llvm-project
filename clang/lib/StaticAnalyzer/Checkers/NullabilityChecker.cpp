@@ -311,7 +311,7 @@ static NullConstraint getNullConstraint(DefinedOrUnknownSVal Val,
 }
 
 static bool isValidPointerType(QualType T) {
-  return T->isAnyPointerType() || T->isBlockPointerType();
+  return T->isPointerOrObjCObjectPointerType() || T->isBlockPointerType();
 }
 
 const SymbolicRegion *

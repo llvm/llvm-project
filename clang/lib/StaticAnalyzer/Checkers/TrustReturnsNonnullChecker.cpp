@@ -42,7 +42,7 @@ private:
   bool isNonNullPtr(const CallEvent &Call) const {
     QualType ExprRetType = Call.getResultType();
     const Decl *CallDeclaration =  Call.getDecl();
-    if (!ExprRetType->isAnyPointerType() || !CallDeclaration)
+    if (!ExprRetType->isPointerOrObjCObjectPointerType() || !CallDeclaration)
       return false;
 
     return CallDeclaration->hasAttr<ReturnsNonNullAttr>();

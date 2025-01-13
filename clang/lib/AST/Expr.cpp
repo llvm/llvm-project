@@ -1872,7 +1872,7 @@ bool CastExpr::CastConsistency() const {
 
   case CK_AnyPointerToBlockPointerCast:
     assert(getType()->isBlockPointerType());
-    assert(getSubExpr()->getType()->isAnyPointerType() &&
+    assert(getSubExpr()->getType()->isPointerOrObjCObjectPointerType() &&
            !getSubExpr()->getType()->isBlockPointerType());
     goto CheckNoBasePath;
 
@@ -5199,7 +5199,7 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
       OriginalTy = PVD->getOriginalType().getNonReferenceType();
 
   for (unsigned Cnt = 0; Cnt < ArraySectionCount; ++Cnt) {
-    if (OriginalTy->isAnyPointerType())
+    if (OriginalTy->isPointerOrObjCObjectPointerType())
       OriginalTy = OriginalTy->getPointeeType();
     else if (OriginalTy->isArrayType())
       OriginalTy = OriginalTy->castAsArrayTypeUnsafe()->getElementType();

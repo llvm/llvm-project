@@ -7067,7 +7067,7 @@ private:
       // reference. References are ignored for mapping purposes.
       QualType Ty =
           I->getAssociatedDeclaration()->getType().getNonReferenceType();
-      if (Ty->isAnyPointerType() && std::next(I) != CE) {
+      if (Ty->isPointerOrObjCObjectPointerType() && std::next(I) != CE) {
         // No need to generate individual map information for the pointer, it
         // can be associated with the combined storage if shared memory mode is
         // active or the base declaration is not global variable.
@@ -7192,8 +7192,8 @@ private:
           OAShE ||
           (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
                        .getCanonicalType()
-                       ->isAnyPointerType()) ||
-          I->getAssociatedExpression()->getType()->isAnyPointerType();
+                       ->isPointerOrObjCObjectPointerType()) ||
+          I->getAssociatedExpression()->getType()->isPointerOrObjCObjectPointerType();
       bool IsMemberReference = isa<MemberExpr>(I->getAssociatedExpression()) &&
                                MapDecl &&
                                MapDecl->getType()->isLValueReferenceType();
@@ -7687,7 +7687,7 @@ private:
     // 'private ptr' and 'map to' flag. Return the right flags if the captured
     // declaration is known as first-private in this handler.
     if (FirstPrivateDecls.count(Cap.getCapturedVar())) {
-      if (Cap.getCapturedVar()->getType()->isAnyPointerType())
+      if (Cap.getCapturedVar()->getType()->isPointerOrObjCObjectPointerType())
         return OpenMPOffloadMappingFlags::OMP_MAP_TO |
                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
       return OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE |
@@ -8032,7 +8032,7 @@ private:
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
       bool HasMapBasePtr = false;
       bool HasMapArraySec = false;
-      if (VD && VD->getType()->isAnyPointerType()) {
+      if (VD && VD->getType()->isPointerOrObjCObjectPointerType()) {
         for (const auto &M : Data.second) {
           HasMapBasePtr = any_of(M, [](const MapInfo &L) {
             return isa_and_present<DeclRefExpr>(L.VarRef);
@@ -8533,9 +8533,9 @@ public:
         assert(VDecl == VD && "We got information for the wrong declaration??");
         assert(!Components.empty() &&
                "Not expecting declaration with no component lists.");
-        if (VD && E && VD->getType()->isAnyPointerType() && isa<DeclRefExpr>(E))
+        if (VD && E && VD->getType()->isPointerOrObjCObjectPointerType() && isa<DeclRefExpr>(E))
           HasMapBasePtr = true;
-        if (VD && E && VD->getType()->isAnyPointerType() &&
+        if (VD && E && VD->getType()->isPointerOrObjCObjectPointerType() &&
             (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
           HasMapArraySec = true;
         DeclComponentLists.emplace_back(Components, C->getMapType(),
@@ -8752,7 +8752,7 @@ public:
       CombinedInfo.DevicePtrDecls.push_back(nullptr);
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
       CombinedInfo.Pointers.push_back(CV);
-      if (!RI.getType()->isAnyPointerType()) {
+      if (!RI.getType()->isPointerOrObjCObjectPointerType()) {
         // We have to signal to the runtime captures passed by value that are
         // not pointers.
         CombinedInfo.Types.push_back(
@@ -8784,7 +8784,7 @@ public:
       CombinedInfo.BasePointers.push_back(CV);
       CombinedInfo.DevicePtrDecls.push_back(nullptr);
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-      if (I != FirstPrivateDecls.end() && ElementType->isAnyPointerType()) {
+      if (I != FirstPrivateDecls.end() && ElementType->isPointerOrObjCObjectPointerType()) {
         Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
             CV, ElementType, CGF.getContext().getDeclAlign(VD),
             AlignmentSource::Decl));

@@ -2980,7 +2980,7 @@ bool ASTContext::isSentinelNullExpr(const Expr *E) {
   // nullptr_t is always treated as null.
   if (E->getType()->isNullPtrType()) return true;
 
-  if (E->getType()->isAnyPointerType() &&
+  if (E->getType()->isPointerOrObjCObjectPointerType() &&
       E->IgnoreParenCasts()->isNullPointerConstant(*this,
                                                 Expr::NPC_ValueDependentIsNull))
     return true;
@@ -3518,7 +3518,7 @@ QualType ASTContext::getObjCGCQualType(QualType T,
 
   if (const auto *ptr = T->getAs<PointerType>()) {
     QualType Pointee = ptr->getPointeeType();
-    if (Pointee->isAnyPointerType()) {
+    if (Pointee->isPointerOrObjCObjectPointerType()) {
       QualType ResultType = getObjCGCQualType(Pointee, GCAttr);
       return getPointerType(ResultType);
     }
@@ -10101,7 +10101,7 @@ Qualifiers::GC ASTContext::getObjCGCAttrKind(QualType Ty) const {
     QualType CT = Ty->getCanonicalTypeInternal();
     while (const auto *AT = dyn_cast<ArrayType>(CT))
       CT = AT->getElementType();
-    assert(CT->isAnyPointerType() || CT->isBlockPointerType());
+    assert(CT->isPointerOrObjCObjectPointerType() || CT->isBlockPointerType());
 #endif
   }
   return GCAttrs;

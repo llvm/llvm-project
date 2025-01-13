@@ -274,7 +274,7 @@ private:
 static SmallVector<SymbolRef, 1024>
 getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
   int PtrToHandleLevel = 0;
-  while (QT->isAnyPointerType() || QT->isReferenceType()) {
+  while (QT->isPointerOrObjCObjectPointerType() || QT->isReferenceType()) {
     ++PtrToHandleLevel;
     QT = QT->getPointeeType();
   }

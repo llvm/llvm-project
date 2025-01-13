@@ -264,7 +264,7 @@ public:
                                           uint64_t FromBitWidth) {
     if ((FromTy->isIntegralOrEnumerationType() &&
          ToTy->isIntegralOrEnumerationType()) ||
-        (FromTy->isAnyPointerType() ^ ToTy->isAnyPointerType()) ||
+        (FromTy->isPointerOrObjCObjectPointerType() ^ ToTy->isPointerOrObjCObjectPointerType()) ||
         (FromTy->isBlockPointerType() ^ ToTy->isBlockPointerType()) ||
         (FromTy->isReferenceType() ^ ToTy->isReferenceType())) {
 
@@ -365,7 +365,7 @@ public:
 
       // If the two operands are pointers and the operation is a subtraction,
       // the result is of type ptrdiff_t, which is signed
-      if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub) {
+      if (LTy->isPointerOrObjCObjectPointerType() && RTy->isPointerOrObjCObjectPointerType() && Op == BO_Sub) {
         *RetTy = Ctx.getPointerDiffType();
       }
     }
@@ -509,7 +509,7 @@ public:
                             Solver->mkFloat(Zero));
     }
 
-    if (Ty->isIntegralOrEnumerationType() || Ty->isAnyPointerType() ||
+    if (Ty->isIntegralOrEnumerationType() || Ty->isPointerOrObjCObjectPointerType() ||
         Ty->isBlockPointerType() || Ty->isReferenceType()) {
 
       // Skip explicit comparison for boolean types
@@ -613,7 +613,7 @@ public:
       return;
     }
 
-    if ((LTy->isAnyPointerType() || RTy->isAnyPointerType()) ||
+    if ((LTy->isPointerOrObjCObjectPointerType() || RTy->isPointerOrObjCObjectPointerType()) ||
         (LTy->isBlockPointerType() || RTy->isBlockPointerType()) ||
         (LTy->isReferenceType() || RTy->isReferenceType())) {
       // TODO: Refactor to Sema::FindCompositePointerType(), and
@@ -624,7 +624,7 @@ public:
 
       // Cast the non-pointer type to the pointer type.
       // TODO: Be more strict about this.
-      if ((LTy->isAnyPointerType() ^ RTy->isAnyPointerType()) ||
+      if ((LTy->isPointerOrObjCObjectPointerType() ^ RTy->isPointerOrObjCObjectPointerType()) ||
           (LTy->isBlockPointerType() ^ RTy->isBlockPointerType()) ||
           (LTy->isReferenceType() ^ RTy->isReferenceType())) {
         if (LTy->isNullPtrType() || LTy->isBlockPointerType() ||

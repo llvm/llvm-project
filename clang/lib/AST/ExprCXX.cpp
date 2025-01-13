@@ -733,7 +733,7 @@ CXXRecordDecl *CXXMemberCallExpr::getRecordDecl() const {
   if (!ThisArg)
     return nullptr;
 
-  if (ThisArg->getType()->isAnyPointerType())
+  if (ThisArg->getType()->isPointerOrObjCObjectPointerType())
     return ThisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
 
   return ThisArg->getType()->getAsCXXRecordDecl();

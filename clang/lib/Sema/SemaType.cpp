@@ -1595,7 +1595,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     unsigned DiagID = 0;
     QualType ProblemTy;
 
-    if (T->isAnyPointerType() || T->isReferenceType() ||
+    if (T->isPointerOrObjCObjectPointerType() || T->isReferenceType() ||
         T->isMemberPointerType()) {
       QualType EltTy;
       if (T->isObjCObjectPointerType())
@@ -7365,10 +7365,10 @@ static bool CheckNullabilityTypeSpecifier(
     const Type *pointeeType = nullptr;
     if (Desugared->isArrayType())
       pointeeType = Desugared->getArrayElementTypeNoTypeQual();
-    else if (Desugared->isAnyPointerType())
+    else if (Desugared->isPointerOrObjCObjectPointerType())
       pointeeType = Desugared->getPointeeType().getTypePtr();
 
-    if (pointeeType && (pointeeType->isAnyPointerType() ||
+    if (pointeeType && (pointeeType->isPointerOrObjCObjectPointerType() ||
                         pointeeType->isObjCObjectPointerType() ||
                         pointeeType->isMemberPointerType())) {
       S.Diag(NullabilityLoc, diag::err_nullability_cs_multilevel)
@@ -9807,7 +9807,7 @@ QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
 
 QualType Sema::BuiltinRemovePointer(QualType BaseType, SourceLocation Loc) {
   // We don't want block pointers or ObjectiveC's id type.
-  if (!BaseType->isAnyPointerType() || BaseType->isObjCIdType())
+  if (!BaseType->isPointerOrObjCObjectPointerType() || BaseType->isObjCIdType())
     return BaseType;
 
   return BaseType->getPointeeType();

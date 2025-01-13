@@ -3795,7 +3795,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   // function types (recursively).
   bool ObjCLifetimeConversion = false;
   QualType ResultTy;
-  if ((A->isAnyPointerType() || A->isMemberPointerType()) &&
+  if ((A->isPointerOrObjCObjectPointerType() || A->isMemberPointerType()) &&
       (S.IsQualificationConversion(A, DeducedA, false,
                                    ObjCLifetimeConversion) ||
        S.IsFunctionConversion(A, DeducedA, ResultTy)))
