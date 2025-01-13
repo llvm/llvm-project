@@ -27,6 +27,8 @@
 #include <type_traits>
 
 #include "test_macros.h"
+#include "test_allocator.h"
+#include "../../Copyable.h"
 #include "min_allocator.h"
 
 // Ensures that we don't use a non-uglified name 'base' in the implementation of 'list'.
@@ -47,46 +49,56 @@ static_assert(std::is_same<my_derived<int, min_allocator<int>>::base, my_base>::
 static_assert(std::is_same<my_derived<my_base, min_allocator<my_base>>::base, my_base>::value, "");
 #endif
 
-struct A { std::list<A> v; }; // incomplete type support
+template <class C>
+void test_iterators()
+{
+    typedef std::iterator_traits<typename C::iterator> ItT;
+    typedef std::iterator_traits<typename C::const_iterator> CItT;
+
+    static_assert((std::is_same<typename ItT::iterator_category, std::bidirectional_iterator_tag>::value), "");
+    static_assert((std::is_same<typename ItT::value_type, typename C::value_type>::value), "");
+    static_assert((std::is_same<typename ItT::reference, typename C::reference>::value), "");
+    static_assert((std::is_same<typename ItT::pointer, typename C::pointer>::value), "");
+    static_assert((std::is_same<typename ItT::difference_type, typename C::difference_type>::value), "");
+
+    static_assert((std::is_same<typename CItT::iterator_category, std::bidirectional_iterator_tag>::value), "");
+    static_assert((std::is_same<typename CItT::value_type, typename C::value_type>::value), "");
+    static_assert((std::is_same<typename CItT::reference, typename C::const_reference>::value), "");
+    static_assert((std::is_same<typename CItT::pointer, typename C::const_pointer>::value), "");
+    static_assert((std::is_same<typename CItT::difference_type, typename C::difference_type>::value), "");
+}
+
+template <class T, class Allocator>
+void test()
+{
+    typedef std::list<T, Allocator> C;
+	typedef std::allocator_traits<Allocator> alloc_traits_t;
+
+    static_assert((std::is_same<typename C::value_type, T>::value), "");
+    static_assert((std::is_same<typename C::allocator_type, Allocator>::value), "");
+    static_assert((std::is_same<typename C::reference, T&>::value), "");
+    static_assert((std::is_same<typename C::const_reference, const T&>::value), "");
+    static_assert((std::is_same<typename C::pointer, typename alloc_traits_t::pointer>::value), "");
+    static_assert((std::is_same<typename C::const_pointer, typename alloc_traits_t::const_pointer>::value), "");
+    static_assert((std::is_same<typename C::reverse_iterator, std::reverse_iterator<typename C::iterator> >::value), "");
+    static_assert((std::is_same<typename C::const_reverse_iterator, std::reverse_iterator<typename C::const_iterator> >::value), "");
+
+    static_assert((std::is_signed<typename C::difference_type>::value), "");
+    static_assert((std::is_unsigned<typename C::size_type>::value), "");
+
+	test_iterators<C>();
+}
 
 int main(int, char**)
 {
-    {
-    typedef std::list<int> C;
-    static_assert((std::is_same<C::value_type, int>::value), "");
-    static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), "");
-    static_assert((std::is_same<C::reference, std::allocator_traits<std::allocator<int> >::value_type&>::value), "");
-    static_assert(
-        (std::is_same<C::const_reference, const std::allocator_traits<std::allocator<int> >::value_type&>::value), "");
-    static_assert((std::is_same<C::pointer, std::allocator_traits<std::allocator<int> >::pointer>::value), "");
-    static_assert(
-        (std::is_same<C::const_pointer, std::allocator_traits<std::allocator<int> >::const_pointer>::value), "");
-
-    static_assert((std::is_signed<typename C::difference_type>::value), "");
-    static_assert((std::is_unsigned<typename C::size_type>::value), "");
-    static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
-    static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+	test<double, test_allocator<double>>();
+	test<int*, test_allocator<int*>>();
+	test<Copyable, test_allocator<Copyable>>();
 
 #if TEST_STD_VER >= 11
-    {
-    typedef std::list<int, min_allocator<int>> C;
-    static_assert((std::is_same<C::value_type, int>::value), "");
-    static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
-    static_assert((std::is_same<C::reference, int&>::value), "");
-    static_assert((std::is_same<C::const_reference, const int&>::value), "");
-    static_assert((std::is_same<C::pointer, min_pointer<int>>::value), "");
-    static_assert((std::is_same<C::const_pointer, min_pointer<const int>>::value), "");
-
-    static_assert((std::is_signed<typename C::difference_type>::value), "");
-    static_assert((std::is_unsigned<typename C::size_type>::value), "");
-    static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
-    static_assert((std::is_same<typename C::difference_type,
-        typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
-    }
+	test<double, min_allocator<double>>();
+    test<int*, min_allocator<int*>>();
+    test<Copyable, min_allocator<Copyable>>();
 #endif
 
   return 0;
