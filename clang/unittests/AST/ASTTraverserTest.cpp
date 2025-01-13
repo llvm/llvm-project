@@ -1608,14 +1608,16 @@ DecompositionDecl ''
 
   {
     auto FN = ast_matchers::match(
-        functionDecl(hasName("decompTuple"), hasDescendant(callExpr(hasAncestor(varDecl(hasName("a"),
-                     hasAncestor(bindingDecl())))).bind("decomp_call"))),
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(callExpr(hasAncestor(varDecl(
+                                                hasName("a"),
+                                                hasAncestor(bindingDecl()))))
+                                       .bind("decomp_call"))),
         AST2->getASTContext());
     EXPECT_EQ(FN.size(), 1u);
 
-    EXPECT_EQ(
-        dumpASTString(TK_AsIs, FN[0].getNodeAs<CallExpr>("decomp_call")),
-        R"cpp(
+    EXPECT_EQ(dumpASTString(TK_AsIs, FN[0].getNodeAs<CallExpr>("decomp_call")),
+              R"cpp(
 CallExpr
 |-ImplicitCastExpr
 | `-DeclRefExpr 'get'
@@ -1632,8 +1634,11 @@ DeclRefExpr ''
 
   {
     auto FN = ast_matchers::match(
-        functionDecl(hasName("decompTuple"), hasDescendant(callExpr(hasAncestor(varDecl(hasName("c"),
-                     hasAncestor(bindingDecl())))).bind("decomp_call_with_default"))),
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(callExpr(hasAncestor(varDecl(
+                                                hasName("c"),
+                                                hasAncestor(bindingDecl()))))
+                                       .bind("decomp_call_with_default"))),
         AST2->getASTContext());
     EXPECT_EQ(FN.size(), 1u);
 
@@ -1649,9 +1654,10 @@ CallExpr
   `-IntegerLiteral
 )cpp");
 
-    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
-                            FN[0].getNodeAs<CallExpr>("decomp_call_with_default")),
-              R"cpp(
+    EXPECT_EQ(
+        dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                      FN[0].getNodeAs<CallExpr>("decomp_call_with_default")),
+        R"cpp(
 DeclRefExpr ''
 )cpp");
   }
