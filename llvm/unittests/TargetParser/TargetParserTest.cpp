@@ -1343,7 +1343,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-      AArch64::AEK_SVEAES};
+      AArch64::AEK_SVEAES,       AArch64::AEK_SVEBITPERM,
+      AArch64::AEK_SSVE_BITPERM,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1382,7 +1384,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ssve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ssve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2p1"));
@@ -1554,6 +1558,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
       {"sve2p1", "nosve2p1", "+sve2p1", "-sve2p1"},
       {"sve2p2", "nosve2p2", "+sve2p2", "-sve2p2"},
+      {"sve-bitperm", "nosve-bitperm", "+sve-bitperm", "-sve-bitperm"},
+      {"ssve-bitperm", "nossve-bitperm", "+ssve-bitperm", "-ssve-bitperm"},
       {"sve2-bitperm", "nosve2-bitperm", "+sve2-bitperm", "-sve2-bitperm"},
       {"sve-aes2", "nosve-aes2", "+sve-aes2", "-sve-aes2"},
       {"ssve-aes", "nossve-aes", "+ssve-aes", "-ssve-aes"},
@@ -1754,13 +1760,13 @@ AArch64ExtensionDependenciesBaseArchTestParams
 
         // Long dependency chains: sve2-bitperm -> sve2 -> sve -> fp16 -> fp
         {AArch64::ARMV8A,
-         {"nofp", "sve2-bitperm"},
-         {"fp-armv8", "fullfp16", "sve", "sve2", "sve2-bitperm"},
+         {"nofp", "sve2", "sve-bitperm"},
+         {"fp-armv8", "fullfp16", "sve", "sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
-         {"sve2-bitperm", "nofp16"},
+         {"sve2", "sve-bitperm", "nofp16"},
          {"fp-armv8"},
-         {"full-fp16", "sve", "sve2", "sve2-bitperm"}},
+         {"full-fp16", "sve", "sve2", "sve-bitperm"}},
 
         // Meaning of +crypto varies with base architecture.
         {AArch64::ARMV8A, {"crypto"}, {"aes", "sha2"}, {}},
@@ -1864,12 +1870,20 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
          {"nosve2", "sve2-bitperm"},
-         {"sve2", "sve2-bitperm"},
+         {"sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
          {"sve2-bitperm", "nosve2"},
-         {},
-         {"sve2", "sve2-bitperm"}},
+         {"sve"},
+         {"sve-bitperm", "sve2", "sve2-bitperm"}},
+        {AArch64::ARMV8A,
+         {"ssve-bitperm", "nosve-bitperm"},
+         {"sme"},
+         {"ssve-bitperm", "sve-bitperm"}},
+        {AArch64::ARMV8A,
+         {"nosve-bitperm", "ssve-bitperm"},
+         {"sve-bitperm", "sve-bitperm"},
+         {""}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sha3"}, {"sve2", "sve2-sha3"}, {}},
         {AArch64::ARMV8A, {"sve2-sha3", "nosve2"}, {}, {"sve2", "sve2-sha3"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sm4"}, {"sve2", "sve2-sm4"}, {}},
@@ -2040,10 +2054,10 @@ AArch64ExtensionDependenciesBaseCPUTestParams
          {}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
-          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
-          "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
-          "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
+         {"v9.2a",    "bf16",    "crc",  "dotprod",     "flagm", "fp-armv8",
+          "fullfp16", "fp16fml", "i8mm", "lse",         "mte",   "pauth",
+          "perfmon",  "predres", "ras",  "rcpc",        "rdm",   "sb",
+          "neon",     "ssbs",    "sve",  "sve-bitperm", "sve2"},
          {}},
 
         // Negative modifiers
