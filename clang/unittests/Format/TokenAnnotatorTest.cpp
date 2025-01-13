@@ -370,6 +370,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T a, T b) { a && b; };");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[18], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T, typename V>\n"
+                    "concept CheckMultiplicableBy = requires(T a, V b) {\n"
+                    "  { a * b } -> std::same_as<T>;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1454,18 +1469,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
-}
-
-TEST_F(TokenAnnotatorTest, CompoundRequirement) {
-  auto Tokens = annotate("template <typename T, typename V>\n"
-                         "concept CheckMultiplicableBy = requires(T a, V b) {\n"
-                         "  { a * b } -> std::same_as<T>;\n"
-                         "};");
-  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
-
-  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
-  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
-  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {

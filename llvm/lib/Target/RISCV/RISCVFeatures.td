@@ -1294,6 +1294,14 @@ def HasVendorXqcicli
       AssemblerPredicate<(all_of FeatureVendorXqcicli),
                          "'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
 
+def FeatureVendorXqcicm
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Move Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcicm
+    : Predicate<"Subtarget->hasVendorXqcicm()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicm),
+                         "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

@@ -1489,11 +1489,10 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   Value castValue =
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
-                                     /*valuesToMap=*/{value}, /*inputs=*/repl,
+                                     /*valuesToMap=*/repl, /*inputs=*/repl,
                                      /*outputType=*/value.getType(),
                                      /*originalType=*/Type(), converter)
           .front();
-  mapping.map(value, castValue);
   return castValue;
 }
 

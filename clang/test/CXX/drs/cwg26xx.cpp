@@ -319,7 +319,7 @@ void f(T) requires requires { []() { T::invalid; } (); };
 //   since-cxx20-note@-3 {{in instantiation of requirement here}}
 //   since-cxx20-note@-4 {{while substituting template arguments into constraint expression here}}
 //   since-cxx20-note@#cwg2672-f-0 {{while checking constraint satisfaction for template 'f<int>' required here}}
-//   since-cxx20-note@#cwg2672-f-0 {{while substituting deduced template arguments into function template 'f' [with T = int]}}
+//   since-cxx20-note@#cwg2672-f-0 {{in instantiation of function template specialization 'cwg2672::f<int>' requested here}}
 void f(...);
 
 template <class T>
@@ -364,16 +364,13 @@ namespace cwg2692 { // cwg2692: 19
 
   void A::g() {
     (&A::f)(A());
-    // expected-error@-1 {{call to 'f' is ambiguous}}
-    // expected-note@#cwg2692-1 {{candidate}}
-    // expected-note@#cwg2692-2 {{candidate}}
-
-
-
+    // since-cxx23-error@-1 {{call to 'f' is ambiguous}}
+    //   since-cxx23-note@#cwg2692-1 {{candidate function}}
+    //   since-cxx23-note@#cwg2692-2 {{candidate function}}
     (&A::f)();
-    // expected-error@-1 {{no matching function for call to 'f'}}
-    // expected-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
-    // expected-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    // since-cxx23-error@-1 {{no matching function for call to 'f'}}
+    //   since-cxx23-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    //   since-cxx23-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
   }
 #endif
 } // namespace cwg2692

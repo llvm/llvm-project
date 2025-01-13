@@ -90,7 +90,7 @@ class flat_map {
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   template <bool _Const>
-  using __iterator = __key_value_iterator<flat_map, _KeyContainer, _MappedContainer, _Const>;
+  using __iterator _LIBCPP_NODEBUG = __key_value_iterator<flat_map, _KeyContainer, _MappedContainer, _Const>;
 
 public:
   // types
