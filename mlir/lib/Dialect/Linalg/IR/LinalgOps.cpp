@@ -3874,10 +3874,11 @@ void ElemwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
     result = helper.buildBinaryFn(categoryAndFn.fn.binaryFn,
                                   block.getArgument(0), block.getArgument(1));
   } else if (category == ElemwiseNAryCategory::Ternary) {
-    result = helper.buildTernaryFn(categoryAndFn.fn.ternaryFn,
-                                  block.getArgument(0), block.getArgument(1), block.getArgument(2));
+    result =
+        helper.buildTernaryFn(categoryAndFn.fn.ternaryFn, block.getArgument(0),
+                              block.getArgument(1), block.getArgument(2));
   } else
-  assert(false && "found unhandled category in elemwise print");
+    assert(false && "found unhandled category in elemwise print");
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
