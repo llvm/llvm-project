@@ -243,7 +243,8 @@ define float @movmsk(float %x) {
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [NaN,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast double %x to i64
   %and = and i64 %bc1, 9223372036854775807
@@ -254,7 +255,8 @@ define double @bitcast_fabs(double %x) {
 define float @bitcast_fneg(float %x) {
 ; CHECK-LABEL: bitcast_fneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast float %x to i32
   %xor = xor i32 %bc1, 2147483648
@@ -311,7 +313,8 @@ define float @fsub_bitcast_fneg(float %x, float %y) {
 define float @nabsf(float %a) {
 ; CHECK-LABEL: nabsf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast float %a to i32
   %and = or i32 %conv, -2147483648
@@ -322,7 +325,8 @@ define float @nabsf(float %a) {
 define double @nabsd(double %a) {
 ; CHECK-LABEL: nabsd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %conv = bitcast double %a to i64
   %and = or i64 %conv, -9223372036854775808

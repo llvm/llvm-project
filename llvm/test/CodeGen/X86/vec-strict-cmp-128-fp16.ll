@@ -867,11 +867,11 @@ define <4 x i16> @test_v4f16_olt_q(<4 x i16> %a, <4 x i16> %b, <4 x half> %f1, <
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
-; X86-NEXT:    vmovsh {{.*#+}} xmm4 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vcomish %xmm3, %xmm4
-; X86-NEXT:    seta %al
 ; X86-NEXT:    vmovsh {{.*#+}} xmm3 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vpsrld $16, %xmm2, %xmm4
+; X86-NEXT:    vmovsh {{.*#+}} xmm5 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vcomish %xmm4, %xmm5
+; X86-NEXT:    seta %al
 ; X86-NEXT:    vcomish %xmm2, %xmm3
 ; X86-NEXT:    seta %cl
 ; X86-NEXT:    vmovd %ecx, %xmm3

@@ -163,12 +163,12 @@ define amdgpu_kernel void @s_test_fneg_fabs_frexp_exp_f32(ptr addrspace(1) %out,
 define amdgpu_kernel void @s_test_copysign_frexp_exp_f32(ptr addrspace(1) %out, float %src, float %sign) #1 {
 ; GFX6-SDAG-LABEL: s_test_copysign_frexp_exp_f32:
 ; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX6-SDAG-NEXT:    s_load_dword s6, s[4:5], 0xb
+; GFX6-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX6-SDAG-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, s4
+; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, s6
 ; GFX6-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-SDAG-NEXT:    s_endpgm
 ;
@@ -187,12 +187,12 @@ define amdgpu_kernel void @s_test_copysign_frexp_exp_f32(ptr addrspace(1) %out, 
 ;
 ; GFX8-SDAG-LABEL: s_test_copysign_frexp_exp_f32:
 ; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX8-SDAG-NEXT:    s_load_dword s6, s[4:5], 0x2c
+; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8-SDAG-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-SDAG-NEXT:    s_mov_b32 s2, -1
-; GFX8-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, s4
+; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-SDAG-NEXT:    v_frexp_exp_i32_f32_e32 v0, s6
 ; GFX8-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX8-SDAG-NEXT:    s_endpgm
 ;

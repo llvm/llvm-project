@@ -52,31 +52,31 @@ define <4 x float> @load_v16f32_v4f32_ofs7(ptr %val) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movaps 32(%eax), %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
-; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],mem[3,0]
-; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[1,2]
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movaps 32(%rdi), %xmm1
-; X64-SSE-NEXT:    movaps %xmm1, %xmm0
-; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],mem[3,0]
-; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[1,2]
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps 32(%rdi), %xmm0
-; X64-AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],mem[3]
+; X64-AVX1-NEXT:    vbroadcastss 28(%rdi), %xmm0
+; X64-AVX1-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1,2],xmm0[3]
 ; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,0,1,2]
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [7,0,1,2]
-; X64-AVX2-NEXT:    vmovaps 32(%rdi), %ymm1
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],mem[4,5,6,7]
+; X64-AVX2-NEXT:    vbroadcastss 28(%rdi), %ymm1
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm1 = mem[0,1,2,3],ymm1[4,5,6,7]
 ; X64-AVX2-NEXT:    vpermps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; X64-AVX2-NEXT:    vzeroupper
@@ -84,9 +84,9 @@ define <4 x float> @load_v16f32_v4f32_ofs7(ptr %val) nounwind {
 ;
 ; X64-AVX512-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [23,0,1,2]
-; X64-AVX512-NEXT:    vmovaps (%rdi), %ymm2
-; X64-AVX512-NEXT:    vmovaps 32(%rdi), %ymm0
+; X64-AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [7,16,17,18]
+; X64-AVX512-NEXT:    vmovaps 32(%rdi), %ymm2
+; X64-AVX512-NEXT:    vbroadcastss 28(%rdi), %ymm0
 ; X64-AVX512-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
 ; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; X64-AVX512-NEXT:    vzeroupper

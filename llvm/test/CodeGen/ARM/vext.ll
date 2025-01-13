@@ -76,9 +76,10 @@ define <4 x i16> @test_vextd16(ptr %A, ptr %B) nounwind {
 define <4 x i32> @test_vextq32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: test_vextq32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
-; CHECK-NEXT:    vext.32 q8, q9, q8, #3
+; CHECK-NEXT:    add r0, r0, #12
+; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
+; CHECK-NEXT:    vld1.32 {d17[1]}, [r0:32]
+; CHECK-NEXT:    vext.32 q8, q8, q9, #3
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr

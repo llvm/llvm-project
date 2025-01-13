@@ -256,7 +256,7 @@ define <4 x float> @PR186403(<4 x float> %0, <4 x float> %1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[0,0]
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; SSE-NEXT:    retq
 ;
@@ -264,7 +264,8 @@ define <4 x float> @PR186403(<4 x float> %0, <4 x float> %1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[2,3]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],mem[1],xmm0[2,3]
+; AVX1-NEXT:    vbroadcastss {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm2
+; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX1-NEXT:    retq
 ;
