@@ -59,7 +59,7 @@ body:             |
 ...
 
 ---
-name: test_machine_cse_op_sel_v_MAD_u16
+name: test_machine_cse_op_sel_v_mad_u16
 tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_v_MAD_u16
@@ -76,7 +76,7 @@ body:             |
 ...
 
 ---
-name: test_machine_cse_op_sel_const_v_MAD_u16
+name: test_machine_cse_op_sel_const_v_mad_u16
 tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_MAD_u16
@@ -91,7 +91,7 @@ body:             |
 ...
 
 ---
-name: test_machine_cse_op_sel_v_MAD_i16
+name: test_machine_cse_op_sel_v_mad_i16
 tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_v_MAD_i16
@@ -108,7 +108,7 @@ body:             |
 ...
 
 ---
-name: test_machine_cse_op_sel_const_v_MAD_i16
+name: test_machine_cse_op_sel_const_v_mad_i16
 tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_MAD_i16
