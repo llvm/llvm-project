@@ -1337,65 +1337,9 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void DarwinClang::addClangTargetOptions(
   const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-  Action::OffloadKind DeviceOffloadKind) const{
+  Action::OffloadKind DeviceOffloadKind) const {
 
   Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
-
-  // On arm64e, enable pointer authentication (for the return address and
-  // indirect calls), as well as usage of the intrinsics.
-  if (getArchName() == "arm64e") {
-    // The ptrauth ABI version is 0 by default, but can be overridden.
-    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
-
-    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
-    const Arg *A = DriverArgs.getLastArg(options::OPT_fptrauth_abi_version_EQ,
-                                         options::OPT_fno_ptrauth_abi_version);
-    bool HasVersionArg =
-        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
-    if (HasVersionArg) {
-      unsigned PtrAuthABIVersionArg;
-      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
-        getDriver().Diag(diag::err_drv_invalid_value)
-          << A->getAsString(DriverArgs) << A->getValue();
-      else
-        PtrAuthABIVersion = PtrAuthABIVersionArg;
-    }
-
-    // Pass the ABI version to -cc1, regardless of its value, if the user asked
-    // for it or if the user didn't explicitly disable it.
-    if (HasVersionArg ||
-        !DriverArgs.hasArg(options::OPT_fno_ptrauth_abi_version)) {
-      CC1Args.push_back(DriverArgs.MakeArgString(
-          "-fptrauth-abi-version=" + llvm::utostr(PtrAuthABIVersion)));
-
-      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
-      // -fapple-kext
-      if (DriverArgs.hasArg(options::OPT_fptrauth_kernel_abi_version,
-                            options::OPT_mkernel, options::OPT_fapple_kext) &&
-          !DriverArgs.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
-        CC1Args.push_back("-fptrauth-kernel-abi-version");
-    }
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                           options::OPT_fno_ptrauth_returns))
-      CC1Args.push_back("-fptrauth-returns");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                           options::OPT_fno_ptrauth_intrinsics))
-      CC1Args.push_back("-fptrauth-intrinsics");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
-                           options::OPT_fno_ptrauth_calls))
-      CC1Args.push_back("-fptrauth-calls");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
-                           options::OPT_fno_ptrauth_indirect_gotos))
-      CC1Args.push_back("-fptrauth-indirect-gotos");
-
-    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
-                           options::OPT_fno_ptrauth_auth_traps))
-      CC1Args.push_back("-fptrauth-auth-traps");
-  }
 }
 
 /// Take a path that speculatively points into Xcode and return the
@@ -3270,9 +3214,75 @@ bool Darwin::isSizedDeallocationUnavailable() const {
   return TargetVersion < sizedDeallocMinVersion(OS);
 }
 
+void MachO::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  // On arm64e, enable pointer authentication (for the return address and
+  // indirect calls), as well as usage of the intrinsics.
+  if (getArchName() == "arm64e") {
+    // The ptrauth ABI version is 0 by default, but can be overridden.
+    static const constexpr unsigned DefaultPtrauthABIVersion = 0;
+
+    unsigned PtrAuthABIVersion = DefaultPtrauthABIVersion;
+    const Arg *A = DriverArgs.getLastArg(options::OPT_fptrauth_abi_version_EQ,
+                                         options::OPT_fno_ptrauth_abi_version);
+    bool HasVersionArg =
+        A && A->getOption().matches(options::OPT_fptrauth_abi_version_EQ);
+    if (HasVersionArg) {
+      unsigned PtrAuthABIVersionArg;
+      if (StringRef(A->getValue()).getAsInteger(10, PtrAuthABIVersionArg))
+        getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+      else
+        PtrAuthABIVersion = PtrAuthABIVersionArg;
+    }
+
+    // Pass the ABI version to -cc1, regardless of its value, if the user asked
+    // for it or if the user didn't explicitly disable it.
+    if (HasVersionArg ||
+        !DriverArgs.hasArg(options::OPT_fno_ptrauth_abi_version)) {
+      CC1Args.push_back(DriverArgs.MakeArgString(
+          "-fptrauth-abi-version=" + llvm::utostr(PtrAuthABIVersion)));
+
+      // -f(no-)ptrauth-kernel-abi-version can override -mkernel and
+      // -fapple-kext
+      if (DriverArgs.hasArg(options::OPT_fptrauth_kernel_abi_version,
+                            options::OPT_mkernel, options::OPT_fapple_kext) &&
+          !DriverArgs.hasArg(options::OPT_fno_ptrauth_kernel_abi_version))
+        CC1Args.push_back("-fptrauth-kernel-abi-version");
+    }
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                           options::OPT_fno_ptrauth_calls))
+      CC1Args.push_back("-fptrauth-calls");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                           options::OPT_fno_ptrauth_indirect_gotos))
+      CC1Args.push_back("-fptrauth-indirect-gotos");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                           options::OPT_fno_ptrauth_auth_traps))
+      CC1Args.push_back("-fptrauth-auth-traps");
+  }
+}
+
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,

@@ -145,6 +145,10 @@ protected:
   Tool *buildStaticLibTool() const override;
   Tool *getTool(Action::ActionClass AC) const override;
 
+  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args,
+                             Action::OffloadKind DeviceOffloadKind) const override;
+
 private:
   mutable std::unique_ptr<tools::darwin::Lipo> Lipo;
   mutable std::unique_ptr<tools::darwin::Dsymutil> Dsymutil;
