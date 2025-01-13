@@ -1,0 +1,217 @@
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
+
+struct EmptyStruct {
+};
+
+struct A {
+  float a;
+};
+
+struct B {
+  RWBuffer<float> buf;
+  EmptyStruct es;
+  float ea[0];
+  float a;
+};
+
+struct C {
+  EmptyStruct es;
+};
+
+typedef B BTypedef;
+typedef C CTypedef;
+
+struct D : B {
+  float b;
+};
+
+struct E : EmptyStruct {
+  float c;
+};
+
+struct F : A {
+  int ae[0];
+};
+
+typedef float EmptyArrayTypedef[10][0];
+
+// CHECK: HLSLBufferDecl {{.*}} line:41:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}} col:9 used a1 'float'
+  float a1;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB definition
+  // CHECK: FieldDecl {{.*}} a1 'float'
+  // CHECK: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB)]]'
+}
+
+// Check that buffer layout struct does not include resources or empty types 
+// CHECK: HLSLBufferDecl {{.*}} line:55:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}} col:9 used a2 'float'
+  float a2;
+  // CHECK: VarDecl {{.*}} col:19 b2 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+  RWBuffer<float> b2; 
+  // CHECK: VarDecl {{.*}} col:15 c2 'EmptyStruct'
+  EmptyStruct c2;
+  // CHECK: VarDecl {{.*}} col:9 d2 'float[0]'
+  float d2[0];
+  // CHECK: VarDecl {{.*}} col:9 e2 'float'
+  float e2;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.1 definition
+  // CHECK: FieldDecl {{.*}} a2 'float'
+  // CHECK-NEXT: FieldDecl {{.*}} e2 'float'
+  // CHECK: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.1)]]'
+}
+
+// Check that layout struct is created for B and the empty struct C is removed
+// CHECK: HLSLBufferDecl {{.*}} line:78:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}} col:5 used s1 'A'
+  A s1;
+  // CHECK: VarDecl {{.*}} col:5 s2 'B'
+  B s2;
+  // CHECK: VarDecl {{.*}} col:12 s3 'CTypedef':'C
+  CTypedef s3;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.B definition
+  // CHECK: FieldDecl {{.*}} a 'float'
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.2 definition
+  // CHECK: FieldDecl {{.*}} s1 'A'
+  // CHECK: FieldDecl {{.*}} s2 '__hostlayout.struct.B'
+  // CHECK-NEXT: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.2)]]'
+}
+
+// check that layout struct is created for D because of its base struct
+// CHECK: HLSLBufferDecl {{.*}} line:100:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}} s4 'D'
+  D s4;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.D definition
+  // CHECK: FieldDecl {{.*}} b 'float'
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.3 definition
+  // CHECK: FieldDecl {{.*}} s4 '__hostlayout.struct.D'
+  // CHECK: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.3)]]'
+}
+
+// check that layout struct is created for E because because its base struct
+// is empty and should be eliminated, and BTypedef should reuse the previously
+// defined '__hostlayout.struct.B' 
+// CHECK: HLSLBufferDecl {{.*}} line:119:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}}  s5 'E'
+  E s5;
+  // CHECK: VarDecl {{.*}} s6 'BTypedef':'B'
+  BTypedef s6;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.E definition
+  // CHECK: FieldDecl {{.*}} c 'float'
+
+  // CHECK-NOT: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.B definition
+
+  // CHECK: CXXRecordDecl {{.*}}  implicit class __hostlayout.struct.CB.4 definition
+  // CHECK: FieldDecl {{.*}} s5 '__hostlayout.struct.E'
+  // CHECK: FieldDecl {{.*}} s6 '__hostlayout.struct.B'
+  // CHECK: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.4)]]'
+}
+
+// check that this produces empty layout struct
+// CHECK: HLSLBufferDecl {{.*}} line:141:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: FunctionDecl {{.*}} f 'void ()'
+  void f() {}
+  // CHECK: VarDecl {{.*}} SV 'float' static
+  static float SV;
+  // CHECK: VarDecl {{.*}} s7 'EmptyStruct' callinit
+  EmptyStruct s7;
+  // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
+  RWBuffer<float> Buf;
+  // CHECK: VarDecl {{.*}} ea 'EmptyArrayTypedef':'float[10][0]'
+  EmptyArrayTypedef ea;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.5 definition
+  // CHECK-NOT: FieldDecl
+  // CHECK: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.5)]]'
+}
+
+// check host layout struct with compatible base struct
+// CHECK: HLSLBufferDecl {{.*}} line:163:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: VarDecl {{.*}} s8 'F'
+  F s8;
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.F definition
+  // CHECK: public 'A'
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.6 definition
+  // CHECK: FieldDecl {{.*}} s8 '__hostlayout.struct.F'
+  // CHECK: VarDecl  {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.6)]]'
+}
+
+// anonymous structs
+// CHECK: HLSLBufferDecl {{.*}} line:180:9 cbuffer CB
+// CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
+cbuffer CB {
+  // CHECK: CXXRecordDecl {{.*}} struct definition
+  struct {
+    // CHECK: FieldDecl {{.*}} e 'float'
+    float e;
+    // CHECK: FieldDecl {{.*}} c 'int[0][1]'
+    int c[0][1];
+    // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+    RWBuffer<float> f;
+  } s9;
+  // CHECK: VarDecl {{.*}} s9 'struct (unnamed struct at {{.*}}cbuffer.hlsl:182:3
+  
+  // CHECK: CXXRecordDecl {{.*}} struct definition
+  struct {
+    // CHECK: FieldDecl {{.*}} g 'int'
+    int g;
+    // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+    RWBuffer<float> f;
+  } s10;
+  // CHECK: VarDecl {{.*}} s10 'struct (unnamed struct at {{.*}}cbuffer.hlsl:193:3
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.anon definition
+  // CHECK: FieldDecl {{.*}} e 'float'
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.anon.1 definition
+  // CHECK: FieldDecl {{.*}} g 'int'
+
+  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.7 definition
+  // CHECK: FieldDecl {{.*}} s9 '__hostlayout.struct.anon'
+  // CHECK: FieldDecl {{.*}} s10 '__hostlayout.struct.anon.1'
+  // CHECK-NEXT: VarDecl {{.*}} __handle '__hlsl_resource_t
+  // CHECK-SAME{LITERAL} [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.CB.7)]]'
+}
+
+// Add uses for the constant buffer declarations so they are not optimized awayexport 
+export float foo() {
+  return a1 + a2 + s1.a + s4.b + s5.c + s8.a + s9.e;
+}

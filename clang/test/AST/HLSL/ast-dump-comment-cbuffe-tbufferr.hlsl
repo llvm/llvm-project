@@ -44,7 +44,13 @@ tbuffer B {
 // AST-NEXT:`-ParagraphComment {{.*}}<col:4, col:17>
 // AST-NEXT:`-TextComment {{.*}}<col:4, col:17> Text=" CBuffer decl."
 // AST-NEXT:-VarDecl {{.*}}<line:15:5, col:11> col:11 a 'float'
-// AST-NEXT:`-VarDecl {{.*}}<line:19:5, col:9> col:9 b 'int'
+// AST-NEXT:-VarDecl {{.*}}<line:19:5, col:9> col:9 b 'int'
+// AST-NEXT:CXXRecordDecl 0x[[CB:[0-9a-f]+]] {{.*}} implicit class __hostlayout.struct.A definition
+// AST:FieldDecl 0x[[CB:[0-9a-f]+]] {{.*}} a 'float'
+// AST-NEXT:FieldDecl 0x[[CB:[0-9a-f]+]] {{.*}} b 'int'
+// AST-NEXT:VarDecl 0x[[CB:[0-9a-f]+]] {{.*}} __handle '__hlsl_resource_t 
+// AST-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]] [[hlsl::contained_type(__hostlayout.struct.A)]]'
+
 // AST-NEXT:HLSLBufferDecl {{.*}}<line:29:1, line:38:1> line:29:9 tbuffer B
 // AST-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit SRV
 // AST-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit TBuffer
@@ -52,4 +58,9 @@ tbuffer B {
 // AST-NEXT: `-ParagraphComment {{.*}}<col:4, col:17>
 // AST-NEXT:  `-TextComment {{.*}}<col:4, col:17> Text=" TBuffer decl."
 // AST-NEXT:-VarDecl {{.*}}<line:33:5, col:11> col:11 c 'float'
-// AST-NEXT:`-VarDecl {{.*}} <line:37:5, col:9> col:9 d 'int'
+// AST-NEXT:-VarDecl {{.*}} <line:37:5, col:9> col:9 d 'int'
+// AST-NEXT:CXXRecordDecl 0x[[CB:[0-9a-f]+]] {{.*}} implicit class __hostlayout.struct.B definition
+// AST:FieldDecl 0x[[CB:[0-9a-f]+]] {{.*}} c 'float'
+// AST-NEXT:FieldDecl 0x[[CB:[0-9a-f]+]] {{.*}} d 'int'
+// AST-NEXT:VarDecl 0x[[CB:[0-9a-f]+]] {{.*}} __handle '__hlsl_resource_t
+// AST-SAME{LITERAL}: [[hlsl::resource_class(SRV)]] [[hlsl::contained_type(__hostlayout.struct.B)]]'

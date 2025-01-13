@@ -5693,6 +5693,19 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                     SourceLocation(), SourceLocation());
 }
 
+const Type *HLSLBufferDecl::getResourceHandleType() const {
+  // Resource handle is the last decl in the HLSLBufferDecl.
+  // If it is not present, it probably means the buffer is empty.
+  if (VarDecl *VD = llvm::dyn_cast_or_null<VarDecl>(LastDecl)) {
+    const Type *Ty = VD->getType().getTypePtr();
+    if (Ty->isHLSLAttributedResourceType()) {
+      assert(VD->getNameAsString() == "__handle");
+      return Ty;
+    }
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // ImportDecl Implementation
 //===----------------------------------------------------------------------===//
