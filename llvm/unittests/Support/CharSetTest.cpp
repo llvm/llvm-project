@@ -50,6 +50,8 @@ static const char EarthISO2022[] =
     "\x45\x61\x72\x74\x68\x1B\x24\x42\x43\x4F\x35\x65\x1B\x28\x42";
 static const char EarthIBM939[] =
     "\xc5\x81\x99\xa3\x88\x0e\x45\xc2\x48\xdb\x0f";
+static const char EarthUTFExtraPartial[] =
+    "\x45\x61\x72\x74\x68\xe5\x9c\xb0\xe7\x90\x83\xe5";
 
 TEST(CharSet, FromUTF8) {
   // Hello string.
@@ -169,6 +171,25 @@ TEST(CharSet, ShiftState2022) {
   std::error_code EC = ConvTo2022->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(EarthISO2022, static_cast<std::string>(Dst).c_str());
+}
+
+TEST(CharSet, ShiftState2022Partial) {
+  // Earth string.
+  StringRef Src(EarthUTFExtraPartial);
+  SmallString<8> Dst;
+
+  ErrorOr<CharSetConverter> ConvTo2022 =
+      CharSetConverter::create("UTF-8", "ISO-2022-JP");
+  // Stop test if conversion is not supported (no underlying iconv support).
+  if (!ConvTo2022) {
+    ASSERT_EQ(ConvTo2022.getError(),
+              std::make_error_code(std::errc::invalid_argument));
+    return;
+  }
+
+  // Check that the string is properly converted.
+  std::error_code EC = ConvTo2022->convert(Src, Dst);
+  EXPECT_TRUE(EC);
 }
 
 TEST(CharSet, ShiftStateIBM939) {
