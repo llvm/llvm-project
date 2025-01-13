@@ -465,6 +465,10 @@ ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
 
+/// Enables emitting Import Call sections on supported targets that can be used
+/// by the Windows kernel to enable import call optimization.
+CODEGENOPT(ImportCallOptimization, 1, 0)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
