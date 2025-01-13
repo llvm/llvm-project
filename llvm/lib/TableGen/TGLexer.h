@@ -347,14 +347,13 @@ private:
   tgtok::TokKind prepIsDirective() const;
 
   // Given a preprocessing token kind, adjusts CurPtr to the end
-  // of the preprocessing directive word.  Returns true, unless
-  // an unsupported token kind is passed in.
+  // of the preprocessing directive word.
   //
   // We use look-ahead prepIsDirective() and prepEatPreprocessorDirective()
   // to avoid adjusting CurPtr before we are sure that '#' is followed
   // by a preprocessing directive.  If it is not, then we fall back to
   // tgtok::paste interpretation of '#'.
-  bool prepEatPreprocessorDirective(tgtok::TokKind Kind);
+  void prepEatPreprocessorDirective(tgtok::TokKind Kind);
 
   // The main "exit" point from the token parsing to preprocessor.
   //
