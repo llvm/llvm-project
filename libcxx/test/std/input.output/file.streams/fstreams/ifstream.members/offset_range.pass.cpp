@@ -60,8 +60,7 @@ void test_tellg(std::streamoff total_size) {
 }
 
 int main(int, char**) {
-  // TODO: What if std::streamoff is only 32 bit, which may be the case on
-  // some platforms?
+  static_assert(sizeof(std::streamoff) > 4);
   test_tellg(0x100000042ULL);
   return 0;
 }
