@@ -52,3 +52,6 @@
 
 // RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+ssve-aes %s -### 2>&1 | FileCheck %s --check-prefix=SVE-AES
 // SVE-AES: "-target-feature" "+sme" "-target-feature" "+sme2" "-target-feature" "+ssve-aes" "-target-feature" "+sve-aes"
+
++// RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+ssve-bitperm %s -### 2>&1 | FileCheck %s --check-prefix=SVE-BITPERM
++// SVE-BITPERM: "-target-feature" "+sme" "-target-feature" "+sme2" "-target-feature" "+ssve-bitperm" "-target-feature" "+sve-bitperm"

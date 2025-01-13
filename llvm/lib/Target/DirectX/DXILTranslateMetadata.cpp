@@ -15,14 +15,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -302,39 +300,6 @@ static MDTuple *emitTopLevelLibraryNode(Module &M, MDNode *RMD,
   return constructEntryMetadata(nullptr, nullptr, RMD, Properties, Ctx);
 }
 
-// TODO: We might need to refactor this to be more generic,
-// in case we need more metadata to be replaced.
-static void translateBranchMetadata(Module &M) {
-  for (Function &F : M) {
-    for (BasicBlock &BB : F) {
-      Instruction *BBTerminatorInst = BB.getTerminator();
-
-      MDNode *HlslControlFlowMD =
-          BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
-
-      if (!HlslControlFlowMD)
-        continue;
-
-      assert(HlslControlFlowMD->getNumOperands() == 2 &&
-             "invalid operands for hlsl.controlflow.hint");
-
-      MDBuilder MDHelper(M.getContext());
-      ConstantInt *Op1 =
-          mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1));
-
-      SmallVector<llvm::Metadata *, 2> Vals(
-          ArrayRef<Metadata *>{MDHelper.createString("dx.controlflow.hints"),
-                               MDHelper.createConstant(Op1)});
-
-      MDNode *MDNode = llvm::MDNode::get(M.getContext(), Vals);
-
-      BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
-      BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
-    }
-    F.clearMetadata();
-  }
-}
-
 static void translateMetadata(Module &M, DXILBindingMap &DBM,
                               DXILResourceTypeMap &DRTM,
                               const Resources &MDResources,
@@ -407,7 +372,6 @@ PreservedAnalyses DXILTranslateMetadata::run(Module &M,
   const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
   translateMetadata(M, DBM, DRTM, MDResources, ShaderFlags, MMDI);
-  translateBranchMetadata(M);
 
   return PreservedAnalyses::all();
 }
@@ -445,7 +409,6 @@ public:
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
     translateMetadata(M, DBM, DRTM, MDResources, ShaderFlags, MMDI);
-    translateBranchMetadata(M);
     return true;
   }
 };

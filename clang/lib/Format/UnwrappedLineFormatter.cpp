@@ -1460,7 +1460,7 @@ unsigned UnwrappedLineFormatter::format(
     bool ContinueFormatting =
         TheLine.Level > RangeMinLevel ||
         (TheLine.Level == RangeMinLevel && !PreviousRBrace &&
-         !TheLine.startsWith(tok::r_brace));
+         !TheLine.startsWith(TT_NamespaceRBrace));
 
     bool FixIndentation = (FixBadIndentation || ContinueFormatting) &&
                           Indent != TheLine.First->OriginalColumn;

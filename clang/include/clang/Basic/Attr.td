@@ -1516,11 +1516,22 @@ def SYCLKernel : InheritableAttr {
 
 def SYCLKernelEntryPoint : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel_entry_point">];
-  let Args = [TypeArgument<"KernelName">];
+  let Args = [
+    // KernelName is required and specifies the kernel name type.
+    TypeArgument<"KernelName">,
+    // InvalidAttr is a fake argument used to track whether the
+    // semantic requirements of the attribute have been satisified.
+    // A fake argument is used to enable serialization support.
+    DefaultBoolArgument<"Invalid", /*default=*/0, /*fake=*/1>
+  ];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let TemplateDependent = 1;
   let LangOpts = [SYCLHost, SYCLDevice];
   let Documentation = [SYCLKernelEntryPointDocs];
+  let AdditionalMembers = [{
+    void setInvalidAttr() { invalid = true; }
+    bool isInvalidAttr() const { return invalid; }
+  }];
 }
 
 def SYCLSpecialClass: InheritableAttr {
@@ -2864,6 +2875,13 @@ def ArmPreserves : TypeAttr, TargetSpecificAttr<TargetAArch64> {
   let Args = [VariadicStringArgument<"PreserveArgs">];
   let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
   let Documentation = [ArmPreservesDocs];
+}
+
+def ArmAgnostic : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_agnostic">];
+  let Args = [VariadicStringArgument<"AgnosticArgs">];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmAgnosticDocs];
 }
 
 def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
@@ -4335,16 +4353,6 @@ def HLSLLoopHint: StmtAttr {
   let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
 }
 
-def HLSLControlFlowHint: StmtAttr {
-  /// [branch]
-  /// [flatten]
-  let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
-  let Subjects = SubjectList<[IfStmt],
-                              ErrorDiag, "'if' statements">;
-  let LangOpts = [HLSL];
-  let Documentation = [InternalOnly];
-}
-
 def CapturedRecord : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -4721,9 +4729,9 @@ def HLSLPackOffset: HLSLAnnotationAttr {
   let Args = [IntArgument<"Subcomponent">, IntArgument<"Component">];
   let Documentation = [HLSLPackOffsetDocs];
   let AdditionalMembers = [{
-      unsigned getOffset() {
-        return subcomponent * 4 + component;
-      }
+  unsigned getOffsetInBytes() {
+    return subcomponent * 16 + component * 4;
+  }
   }];
 }
 
