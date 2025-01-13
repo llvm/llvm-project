@@ -9,6 +9,8 @@ Custom Assertions
 
 Q: How do I tell the analyzer that I do not want the bug being reported here since my custom error handler will safely end the execution before the bug is reached?
 
+.. image:: ../images/example_custom_assert.png
+
 You can tell the analyzer that this path is unreachable by teaching it about your `custom assertion handlers <Annotations.html#custom-assertion-handlers>`__. For example, you can modify the code segment as following:
 
 .. code-block:: c
@@ -24,6 +26,8 @@ Null Pointer Dereference
 ------------------------
 
 Q: The analyzer reports a null dereference, but I know that the pointer is never null. How can I tell the analyzer that a pointer can never be null?
+
+.. image:: ../images/example_null_pointer.png
 
 The reason the analyzer often thinks that a pointer can be null is because the preceding code checked compared it against null. If you are absolutely sure that it cannot be null, remove the preceding check and, preferably, add an assertion as well. For example:
 
@@ -142,6 +146,8 @@ Ensuring Loop Body Execution
 ----------------------------
 
 Q: The analyzer assumes that a loop body is never entered. How can I tell it that the loop body will be entered at least once?
+
+.. image:: ../images/example_use_assert.png
 
 In cases where you know that a loop will always be entered at least once, you can use assertions to inform the analyzer. For example:
 

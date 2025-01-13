@@ -14935,8 +14935,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           }
         }
         ShuffleBuilder.add(*FrontTE, Mask);
-        Res = ShuffleBuilder.finalize(E->getCommonMask(), SubVectors,
-                                      SubVectorsMask);
+        // Full matched entry found, no need to insert subvectors.
+        Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});
         return Res;
       }
       if (!Resized) {
