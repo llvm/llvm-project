@@ -588,6 +588,19 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
   }
 
+  // cttz(Pow2) -> Log2(Pow2)
+  // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
+  if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
+    if (IsTZ)
+      return IC.replaceInstUsesWith(II, R);
+    BinaryOperator *BO = BinaryOperator::CreateSub(
+        ConstantInt::get(R->getType(), R->getType()->getScalarSizeInBits() - 1),
+        R);
+    BO->setHasNoSignedWrap();
+    BO->setHasNoUnsignedWrap();
+    return BO;
+  }
+
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
