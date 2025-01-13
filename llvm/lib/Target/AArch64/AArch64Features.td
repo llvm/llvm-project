@@ -376,9 +376,11 @@ def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
 def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3",
   "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
 
-def FeatureSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
-  "FEAT_SVE_BitPerm",
-  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+def FeatureSVEBitPerm : ExtensionWithMArch<"sve-bitperm", "SVEBitPerm",
+  "FEAT_SVE_BitPerm",  "Enable bit permutation SVE2 instructions">;
+
+def FeatureAliasSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
+  "",  "Shorthand for +sve2+sve-bitperm", [FeatureSVE2, FeatureSVEBitPerm]>;
 
 def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
   "Enable Trace Buffer Extension">;
@@ -564,6 +566,9 @@ def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
 
 def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
   "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
+
+def FeatureSSVE_BitPerm : ExtensionWithMArch<"ssve-bitperm", "SSVE_BitPerm", "FEAT_SSVE_BitPerm",
+  "Enable Armv9.6-A SVE BitPerm support in streaming SVE mode", [FeatureSME2, FeatureSVEBitPerm]>;
 
 //===----------------------------------------------------------------------===//
 //  Other Features

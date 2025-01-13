@@ -277,6 +277,9 @@ private:
   // attempt to access it will raise an error.
   using LiveOperationMap =
       llvm::DenseMap<void *, std::pair<nanobind::handle, PyOperation *>>;
+  nanobind::ft_mutex liveOperationsMutex;
+
+  // Guarded by liveOperationsMutex in free-threading mode.
   LiveOperationMap liveOperations;
 
   bool emitErrorDiagnostics = false;
