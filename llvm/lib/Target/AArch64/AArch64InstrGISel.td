@@ -25,6 +25,23 @@ def G_ADD_LOW : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Represents an auth-load instruction.  Produced post-legalization from
+// G_LOADs of ptrauth_auth intrinsics, with variants for keys/discriminators.
+def G_LDRA : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$addr, i64imm:$offset, i32imm:$key, i64imm:$disc, type0:$addrdisc);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+// Represents a pre-inc writeback auth-load instruction.  Similar to G_LDRA.
+def G_LDRApre : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst, ptype1:$newaddr);
+  let InOperandList = (ins ptype1:$addr, i64imm:$offset, i32imm:$key, i64imm:$disc, type0:$addrdisc);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
 // Pseudo for a rev16 instruction. Produced post-legalization from
 // G_SHUFFLE_VECTORs with appropriate masks.
 def G_REV16 : AArch64GenericInstruction {
