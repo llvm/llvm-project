@@ -284,7 +284,7 @@ private:
             (definingBlock == parentBlock && isa<BlockArgument>(value))) {
           toProcess.emplace_back(value, parentBlock);
           if (isa<BaseMemRefType>(value.getType())) {
-              valuesToFree.insert(value);
+            valuesToFree.insert(value);
           }
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
                        .second)
