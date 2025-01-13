@@ -50,16 +50,16 @@ template <class RI>
 void
 test_sort_driver_driver(RI f, RI l, int start, RI real_last)
 {
-    for (RI i = l; i > f + start;)
-    {
-        *--i = start;
-        if (f == i)
-        {
-            test_sort_helper(f, real_last);
-        }
+  using value_type = typename std::iterator_traits<RI>::value_type;
+
+  for (RI i = l; i > f + start;) {
+    *--i = static_cast<value_type>(start);
+    if (f == i) {
+      test_sort_helper(f, real_last);
+    }
     if (start > 0)
         test_sort_driver_driver(f, i, start-1, real_last);
-    }
+  }
 }
 
 template <class RI>
@@ -69,27 +69,29 @@ test_sort_driver(RI f, RI l, int start)
     test_sort_driver_driver(f, l, start, l);
 }
 
-template <int sa>
-void
-test_sort_()
-{
-    int ia[sa];
-    for (int i = 0; i < sa; ++i)
-    {
-        test_sort_driver(ia, ia+sa, i);
-    }
+template <int sa, class V>
+void test_sort_() {
+  V ia[sa];
+  for (int i = 0; i < sa; ++i) {
+    test_sort_driver(ia, ia + sa, i);
+  }
 }
 
-template <int N, int M>
-TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
-  static_assert(N != 0, "");
-  static_assert(M != 0, "");
+template <int sa>
+void test_sort_() {
+  test_sort_<sa, int>();
+  test_sort_<sa, float>();
+}
+
+template <class V>
+void test_larger_sorts(int N, int M) {
+  assert(N != 0);
+  assert(M != 0);
   // create array length N filled with M different numbers
-  std::array<int, N> array_;
-  int* array = array_.data();
-  int x      = 0;
+  V* array = new V[N];
+  int x    = 0;
   for (int i = 0; i < N; ++i) {
-    array[i] = x;
+    array[i] = static_cast<V>(x);
     if (++x == M)
       x = 0;
   }
@@ -97,13 +99,9 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   std::stable_sort(array, array + N);
   assert(std::is_sorted(array, array + N));
   // test random pattern
-  if (!TEST_IS_CONSTANT_EVALUATED) // random-number generators not constexpr-friendly
-  {
-    static std::mt19937 randomness;
-    std::shuffle(array, array + N, randomness);
-    std::stable_sort(array, array + N);
-    assert(std::is_sorted(array, array + N));
-  }
+  std::shuffle(array, array + N, randomness);
+  std::stable_sort(array, array + N);
+  assert(std::is_sorted(array, array + N));
   // test sorted pattern
   std::stable_sort(array, array + N);
   assert(std::is_sorted(array, array + N));
@@ -120,6 +118,12 @@ TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   std::swap_ranges(array, array + N / 2, array + N / 2);
   std::stable_sort(array, array + N);
   assert(std::is_sorted(array, array + N));
+  delete[] array;
+}
+
+void test_larger_sorts(int N, int M) {
+  test_larger_sorts<int>(N, M);
+  test_larger_sorts<float>(N, M);
 }
 
 template <int N>
@@ -152,15 +156,17 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test_sort_<8>();
   }
 
-  test_larger_sorts<256>();
-  test_larger_sorts<257>();
-  if (!TEST_IS_CONSTANT_EVALUATED) // only runtime tests bc. error: "constexpr evaluation hit maximum step limit"
-  {
-    test_larger_sorts<499>();
-    test_larger_sorts<500>();
-    test_larger_sorts<997>();
-    test_larger_sorts<1000>();
-    test_larger_sorts<1009>();
+  test_larger_sorts(256);
+  test_larger_sorts(257);
+  if (!TEST_IS_CONSTANT_EVALUATED) { // avoid blowing past constexpr evaluation limit
+    test_larger_sorts(499);
+    test_larger_sorts(500);
+    test_larger_sorts(997);
+    test_larger_sorts(1000);
+    test_larger_sorts(1009);
+    test_larger_sorts(1024);
+    test_larger_sorts(1031);
+    test_larger_sorts(2053);
   }
 
   // check that the algorithm works without memory

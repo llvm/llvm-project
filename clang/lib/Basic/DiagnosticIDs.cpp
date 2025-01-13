@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -597,6 +598,10 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
   if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
       SM.isInSystemMacro(Loc))
+    return diag::Severity::Ignored;
+
+  // Clang-diagnostics pragmas always take precedence over suppression mapping.
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;
 
   return Result;

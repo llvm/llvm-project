@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
 
 define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_0_f32:
@@ -124,6 +125,36 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max3_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_fmax3_olt_0_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b32 s10, -1
+; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-NEXT:    s_mov_b32 s14, s10
+; GFX12-NEXT:    s_mov_b32 s15, s11
+; GFX12-NEXT:    s_mov_b32 s18, s10
+; GFX12-NEXT:    s_mov_b32 s19, s11
+; GFX12-NEXT:    s_mov_b32 s22, s10
+; GFX12-NEXT:    s_mov_b32 s23, s11
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s12, s2
+; GFX12-NEXT:    s_mov_b32 s13, s3
+; GFX12-NEXT:    s_mov_b32 s16, s4
+; GFX12-NEXT:    s_mov_b32 s17, s5
+; GFX12-NEXT:    s_mov_b32 s20, s6
+; GFX12-NEXT:    s_mov_b32 s21, s7
+; GFX12-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s8, s0
+; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX12-NEXT:    buffer_store_b32 v0, off, s[8:11], null
+; GFX12-NEXT:    s_endpgm
   %a = load volatile  float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
   %c = load volatile float, ptr addrspace(1) %cptr, align 4
@@ -254,6 +285,36 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max3_f32 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_fmax3_olt_1_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b32 s10, -1
+; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-NEXT:    s_mov_b32 s14, s10
+; GFX12-NEXT:    s_mov_b32 s15, s11
+; GFX12-NEXT:    s_mov_b32 s18, s10
+; GFX12-NEXT:    s_mov_b32 s19, s11
+; GFX12-NEXT:    s_mov_b32 s22, s10
+; GFX12-NEXT:    s_mov_b32 s23, s11
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s12, s2
+; GFX12-NEXT:    s_mov_b32 s13, s3
+; GFX12-NEXT:    s_mov_b32 s16, s4
+; GFX12-NEXT:    s_mov_b32 s17, s5
+; GFX12-NEXT:    s_mov_b32 s20, s6
+; GFX12-NEXT:    s_mov_b32 s21, s7
+; GFX12-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s8, s0
+; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max3_num_f32 v0, v2, v0, v1
+; GFX12-NEXT:    buffer_store_b32 v0, off, s[8:11], null
+; GFX12-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
   %c = load volatile float, ptr addrspace(1) %cptr, align 4
@@ -391,6 +452,36 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max3_f16 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_fmax3_olt_0_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b32 s10, -1
+; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-NEXT:    s_mov_b32 s14, s10
+; GFX12-NEXT:    s_mov_b32 s15, s11
+; GFX12-NEXT:    s_mov_b32 s18, s10
+; GFX12-NEXT:    s_mov_b32 s19, s11
+; GFX12-NEXT:    s_mov_b32 s22, s10
+; GFX12-NEXT:    s_mov_b32 s23, s11
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s12, s2
+; GFX12-NEXT:    s_mov_b32 s13, s3
+; GFX12-NEXT:    s_mov_b32 s16, s4
+; GFX12-NEXT:    s_mov_b32 s17, s5
+; GFX12-NEXT:    s_mov_b32 s20, s6
+; GFX12-NEXT:    s_mov_b32 s21, s7
+; GFX12-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s8, s0
+; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max3_num_f16 v0, v0, v1, v2
+; GFX12-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
   %c = load volatile half, ptr addrspace(1) %cptr, align 2
@@ -529,6 +620,36 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_max3_f16 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_fmax3_olt_1_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b32 s10, -1
+; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-NEXT:    s_mov_b32 s14, s10
+; GFX12-NEXT:    s_mov_b32 s15, s11
+; GFX12-NEXT:    s_mov_b32 s18, s10
+; GFX12-NEXT:    s_mov_b32 s19, s11
+; GFX12-NEXT:    s_mov_b32 s22, s10
+; GFX12-NEXT:    s_mov_b32 s23, s11
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s12, s2
+; GFX12-NEXT:    s_mov_b32 s13, s3
+; GFX12-NEXT:    s_mov_b32 s16, s4
+; GFX12-NEXT:    s_mov_b32 s17, s5
+; GFX12-NEXT:    s_mov_b32 s20, s6
+; GFX12-NEXT:    s_mov_b32 s21, s7
+; GFX12-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_mov_b32 s8, s0
+; GFX12-NEXT:    s_mov_b32 s9, s1
+; GFX12-NEXT:    v_max3_num_f16 v0, v2, v0, v1
+; GFX12-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
   %c = load volatile half, ptr addrspace(1) %cptr, align 2
@@ -594,6 +715,19 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX11-NEXT:    v_pk_max_f16 v0, v2, v0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: no_fmax3_v2f16:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v2, v0
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
   %max1 = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %c, <2 x half> %max)

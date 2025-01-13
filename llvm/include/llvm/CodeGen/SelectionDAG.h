@@ -44,6 +44,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -247,6 +248,9 @@ class SelectionDAG {
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
 
+  /// Extended EVTs used for single value VTLists.
+  std::set<EVT, EVT::compareRawBits> EVTs;
+
   /// List of non-single value types.
   FoldingSet<SDVTListNode> VTListMap;
 
@@ -289,6 +293,7 @@ class SelectionDAG {
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
+    std::pair<const GlobalValue *, unsigned> CalledGlobal{};
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -450,6 +455,9 @@ private:
 public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
+
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  static unsigned getHasPredecessorMaxSteps();
 
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
@@ -699,6 +707,10 @@ public:
   SDValue getTargetConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
+  }
+  SDValue getSignedTargetConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                                  bool isOpaque = false) {
+    return getSignedConstant(Val, DL, VT, true, isOpaque);
   }
 
   /// Create a true or false constant of type \p VT using the target's
@@ -1319,8 +1331,8 @@ public:
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
-  /// INTRINSIC_W_CHAIN, or a target-specific opcode with a value not
-  /// less than FIRST_TARGET_MEMORY_OPCODE.
+  /// INTRINSIC_W_CHAIN, or a target-specific memory-referencing opcode
+  // (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
   SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
@@ -2361,6 +2373,19 @@ public:
   MDNode *getMMRAMetadata(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.MMRA : nullptr;
+  }
+  /// Set CalledGlobal to be associated with Node.
+  void addCalledGlobal(const SDNode *Node, const GlobalValue *GV,
+                       unsigned OpFlags) {
+    SDEI[Node].CalledGlobal = {GV, OpFlags};
+  }
+  /// Return CalledGlobal associated with Node, or a nullopt if none exists.
+  std::optional<std::pair<const GlobalValue *, unsigned>>
+  getCalledGlobal(const SDNode *Node) {
+    auto I = SDEI.find(Node);
+    return I != SDEI.end()
+               ? std::make_optional(std::move(I->second).CalledGlobal)
+               : std::nullopt;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {

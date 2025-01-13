@@ -1002,10 +1002,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
       return input.reshape(resultTy);
   }
 
-  // Transpose does not change the input type.
-  if (getInput1().getType() != getType())
-    return {};
-
   // Transpose is not the identity transpose.
   SmallVector<int32_t> perms;
   if (getConstantPerms(perms).failed())

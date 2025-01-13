@@ -390,6 +390,13 @@ def SDTFmaRound : SDTypeProfile<1, 4, [SDTCisSameAs<0,1>,
                            SDTCisSameAs<1,2>, SDTCisSameAs<1,3>,
                            SDTCisFP<0>, SDTCisVT<4, i32>]>;
 
+def SDTFPToxIntSatOp
+    : SDTypeProfile<1,
+                    1, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<0>, SDTCisFP<1>]>;
+
+def X86fp2sisat : SDNode<"X86ISD::FP_TO_SINT_SAT", SDTFPToxIntSatOp>;
+def X86fp2uisat : SDNode<"X86ISD::FP_TO_UINT_SAT", SDTFPToxIntSatOp>;
+
 def X86PAlignr : SDNode<"X86ISD::PALIGNR",
                         SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i8>,
                                              SDTCisSameAs<0,1>,

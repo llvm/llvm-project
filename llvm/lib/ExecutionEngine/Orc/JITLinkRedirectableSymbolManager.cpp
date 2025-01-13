@@ -9,8 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
-#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;
@@ -29,8 +27,8 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   Triple TT = ES.getTargetTriple();
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      ("<INDIRECT STUBS #" + Twine(++StubGraphIdx) + ">").str(), TT,
-      TT.isArch64Bit() ? 8 : 4,
+      ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(),
+      ES.getSymbolStringPool(), TT, TT.isArch64Bit() ? 8 : 4,
       TT.isLittleEndian() ? endianness::little : endianness::big,
       jitlink::getGenericEdgeKindName);
   auto &PointerSection =
@@ -48,10 +46,10 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
 
     auto PtrName = ES.intern((*Name + StubSuffix).str());
     auto &Ptr = AnonymousPtrCreator(*G, PointerSection, TargetSym, 0);
-    Ptr.setName(*PtrName);
+    Ptr.setName(PtrName);
     Ptr.setScope(jitlink::Scope::Hidden);
     auto &Stub = PtrJumpStubCreator(*G, StubsSection, Ptr);
-    Stub.setName(*Name);
+    Stub.setName(Name);
     Stub.setScope(jitlink::Scope::Default);
     NewSymbols[std::move(PtrName)] = JITSymbolFlags();
   }

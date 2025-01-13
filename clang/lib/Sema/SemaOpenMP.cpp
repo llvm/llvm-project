@@ -20,12 +20,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -37,7 +36,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -49,7 +47,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/Assumptions.h"
 #include <optional>
-#include <set>
 
 using namespace clang;
 using namespace llvm::omp;
@@ -1614,10 +1611,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        ReductionData.ReductionOp.is<const Expr *>())
+        isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    BOK = ReductionData.ReductionOp.get<ReductionData::BOKPtrType>();
+    BOK = cast<ReductionData::BOKPtrType>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -1641,10 +1638,10 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
       continue;
     const ReductionData &ReductionData = I->ReductionMap.lookup(D);
     if (!ReductionData.ReductionOp ||
-        !ReductionData.ReductionOp.is<const Expr *>())
+        !isa<const Expr *>(ReductionData.ReductionOp))
       return DSAVarData();
     SR = ReductionData.ReductionRange;
-    ReductionRef = ReductionData.ReductionOp.get<const Expr *>();
+    ReductionRef = cast<const Expr *>(ReductionData.ReductionOp);
     assert(I->TaskgroupReductionRef && "taskgroup reduction reference "
                                        "expression for the descriptor is not "
                                        "set.");
@@ -5323,6 +5320,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       Expr *SimpleRefExpr = E;
       auto Res = getPrivateItem(S, SimpleRefExpr, ELoc, ERange);
       ValueDecl *VD = Res.first;
+      if (!VD)
+        continue;
       DSAStackTy::DSAVarData Data = Stack->getTopDSA(VD, /*FromParent=*/false);
       if (!isOpenMPPrivate(Data.CKind)) {
         S.Diag(E->getExprLoc(),
@@ -5333,10 +5332,8 @@ static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
       if (checkPreviousOMPAllocateAttribute(S, Stack, E, PrivateVD,
                                             AllocatorKind, AC->getAllocator()))
         continue;
-      // Placeholder until allocate clause supports align modifier.
-      Expr *Alignment = nullptr;
       applyOMPAllocateAttribute(S, PrivateVD, AllocatorKind, AC->getAllocator(),
-                                Alignment, E->getSourceRange());
+                                AC->getAlignment(), E->getSourceRange());
     }
   }
 }
@@ -7684,7 +7681,7 @@ struct LoopIterationSpace final {
 /// Scan an AST subtree, checking that no decls in the CollapsedLoopVarDecls
 /// set are referenced.  Used for verifying loop nest structure before
 /// performing a loop collapse operation.
-class ForSubExprChecker final : public RecursiveASTVisitor<ForSubExprChecker> {
+class ForSubExprChecker : public DynamicRecursiveASTVisitor {
   const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls;
   VarDecl *ForbiddenVar = nullptr;
   SourceRange ErrLoc;
@@ -7692,13 +7689,13 @@ class ForSubExprChecker final : public RecursiveASTVisitor<ForSubExprChecker> {
 public:
   explicit ForSubExprChecker(
       const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls)
-      : CollapsedLoopVarDecls(CollapsedLoopVarDecls) {}
+      : CollapsedLoopVarDecls(CollapsedLoopVarDecls) {
+    // We want to visit implicit code, i.e. synthetic initialisation statements
+    // created during range-for lowering.
+    ShouldVisitImplicitCode = true;
+  }
 
-  // We want to visit implicit code, i.e. synthetic initialisation statements
-  // created during range-for lowering.
-  bool shouldVisitImplicitCode() const { return true; }
-
-  bool VisitDeclRefExpr(DeclRefExpr *E) {
+  bool VisitDeclRefExpr(DeclRefExpr *E) override {
     ValueDecl *VD = E->getDecl();
     if (!isa<VarDecl, BindingDecl>(VD))
       return true;
@@ -9581,7 +9578,7 @@ static Expr *buildPostUpdate(Sema &S, ArrayRef<Expr *> PostUpdates) {
 /// Look for variables declared in the body parts of a for-loop nest.  Used
 /// for verifying loop nest structure before performing a loop collapse
 /// operation.
-class ForVarDeclFinder final : public RecursiveASTVisitor<ForVarDeclFinder> {
+class ForVarDeclFinder : public DynamicRecursiveASTVisitor {
   int NestingDepth = 0;
   llvm::SmallPtrSetImpl<const Decl *> &VarDecls;
 
@@ -9589,21 +9586,21 @@ public:
   explicit ForVarDeclFinder(llvm::SmallPtrSetImpl<const Decl *> &VD)
       : VarDecls(VD) {}
 
-  bool VisitForStmt(ForStmt *F) {
+  bool VisitForStmt(ForStmt *F) override {
     ++NestingDepth;
     TraverseStmt(F->getBody());
     --NestingDepth;
     return false;
   }
 
-  bool VisitCXXForRangeStmt(CXXForRangeStmt *RF) {
+  bool VisitCXXForRangeStmt(CXXForRangeStmt *RF) override {
     ++NestingDepth;
     TraverseStmt(RF->getBody());
     --NestingDepth;
     return false;
   }
 
-  bool VisitVarDecl(VarDecl *D) {
+  bool VisitVarDecl(VarDecl *D) override {
     Decl *C = D->getCanonicalDecl();
     if (NestingDepth > 0)
       VarDecls.insert(C);
@@ -11105,7 +11102,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFlushDirective(ArrayRef<OMPClause *> Clauses,
   for (const OMPClause *C : Clauses) {
     if (C->getClauseKind() == OMPC_acq_rel ||
         C->getClauseKind() == OMPC_acquire ||
-        C->getClauseKind() == OMPC_release) {
+        C->getClauseKind() == OMPC_release ||
+        C->getClauseKind() == OMPC_seq_cst /*OpenMP 5.1*/) {
       if (MemOrderKind != OMPC_unknown) {
         Diag(C->getBeginLoc(), diag::err_omp_several_mem_order_clauses)
             << getOpenMPDirectiveName(OMPD_flush) << 1
@@ -15619,7 +15617,9 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
-  if ((CKind == OMPC_aligned || CKind == OMPC_align) && !Result.isPowerOf2()) {
+  if ((CKind == OMPC_aligned || CKind == OMPC_align ||
+       CKind == OMPC_allocate) &&
+      !Result.isPowerOf2()) {
     Diag(E->getExprLoc(), diag::warn_omp_alignment_not_power_of_two)
         << E->getSourceRange();
     return ExprError();
@@ -17155,11 +17155,26 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_has_device_addr:
     Res = ActOnOpenMPHasDeviceAddrClause(VarList, Locs);
     break;
-  case OMPC_allocate:
-    Res = ActOnOpenMPAllocateClause(Data.DepModOrTailExpr,
-                                    Data.AllocClauseModifier, VarList, StartLoc,
-                                    LParenLoc, ColonLoc, EndLoc);
+  case OMPC_allocate: {
+    OpenMPAllocateClauseModifier Modifier1 = OMPC_ALLOCATE_unknown;
+    OpenMPAllocateClauseModifier Modifier2 = OMPC_ALLOCATE_unknown;
+    SourceLocation Modifier1Loc, Modifier2Loc;
+    if (!Data.AllocClauseModifiers.empty()) {
+      assert(Data.AllocClauseModifiers.size() <= 2 &&
+             "More allocate modifiers than expected");
+      Modifier1 = Data.AllocClauseModifiers[0];
+      Modifier1Loc = Data.AllocClauseModifiersLoc[0];
+      if (Data.AllocClauseModifiers.size() == 2) {
+        Modifier2 = Data.AllocClauseModifiers[1];
+        Modifier2Loc = Data.AllocClauseModifiersLoc[1];
+      }
+    }
+    Res = ActOnOpenMPAllocateClause(
+        Data.DepModOrTailExpr, Data.AllocateAlignment, Modifier1, Modifier1Loc,
+        Modifier2, Modifier2Loc, VarList, StartLoc, LParenLoc, ColonLoc,
+        EndLoc);
     break;
+  }
   case OMPC_nontemporal:
     Res = ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
@@ -18188,7 +18203,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
             Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
               if (!D->isInvalidDecl() &&
                   SemaRef.IsDerivedFrom(Loc, Ty, D->getType()) &&
-                  !Ty.isMoreQualifiedThan(D->getType()))
+                  !Ty.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
                 return D;
               return nullptr;
             })) {
@@ -21038,7 +21054,8 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
           Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
                 SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-                !Type.isMoreQualifiedThan(D->getType()))
+                !Type.isMoreQualifiedThan(D->getType(),
+                                          SemaRef.getASTContext()))
               return D;
             return nullptr;
           })) {
@@ -21209,7 +21226,7 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
       Lookups, [&SemaRef, Type, Loc](ValueDecl *D) -> ValueDecl * {
         if (!D->isInvalidDecl() &&
             SemaRef.IsDerivedFrom(Loc, Type, D->getType()) &&
-            !Type.isMoreQualifiedThan(D->getType()))
+            !Type.isMoreQualifiedThan(D->getType(), SemaRef.getASTContext()))
           return D;
         return nullptr;
       });
@@ -23163,32 +23180,37 @@ SemaOpenMP::ActOnOpenMPHasDeviceAddrClause(ArrayRef<Expr *> VarList,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
-    Expr *Allocator, OpenMPAllocateClauseModifier AllocClauseModifier,
-    ArrayRef<Expr *> VarList, SourceLocation StartLoc, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation EndLoc) {
-
+    Expr *Allocator, Expr *Alignment,
+    OpenMPAllocateClauseModifier FirstAllocateModifier,
+    SourceLocation FirstAllocateModifierLoc,
+    OpenMPAllocateClauseModifier SecondAllocateModifier,
+    SourceLocation SecondAllocateModifierLoc, ArrayRef<Expr *> VarList,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation EndLoc) {
   if (Allocator) {
     // Allocator expression is dependent - skip it for now and build the
     // allocator when instantiated.
-    if (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
-        Allocator->isInstantiationDependent() ||
-        Allocator->containsUnexpandedParameterPack())
-      return nullptr;
-    // OpenMP [2.11.4 allocate Clause, Description]
-    // allocator is an expression of omp_allocator_handle_t type.
-    if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
-      return nullptr;
+    bool AllocDependent =
+        (Allocator->isTypeDependent() || Allocator->isValueDependent() ||
+         Allocator->isInstantiationDependent() ||
+         Allocator->containsUnexpandedParameterPack());
+    if (!AllocDependent) {
+      // OpenMP [2.11.4 allocate Clause, Description]
+      // allocator is an expression of omp_allocator_handle_t type.
+      if (!findOMPAllocatorHandleT(SemaRef, Allocator->getExprLoc(), DSAStack))
+        return nullptr;
 
-    ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    AllocatorRes = SemaRef.PerformImplicitConversion(
-        AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
-        AssignmentAction::Initializing,
-        /*AllowExplicit=*/true);
-    if (AllocatorRes.isInvalid())
-      return nullptr;
-    Allocator = AllocatorRes.get();
+      ExprResult AllocatorRes = SemaRef.DefaultLvalueConversion(Allocator);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      AllocatorRes = SemaRef.PerformImplicitConversion(
+          AllocatorRes.get(), DSAStack->getOMPAllocatorHandleT(),
+          AssignmentAction::Initializing,
+          /*AllowExplicit=*/true);
+      if (AllocatorRes.isInvalid())
+        return nullptr;
+      Allocator = AllocatorRes.isUsable() ? AllocatorRes.get() : nullptr;
+    }
   } else {
     // OpenMP 5.0, 2.11.4 allocate Clause, Restrictions.
     // allocate clauses that appear on a target construct or on constructs in a
@@ -23198,6 +23220,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
     if (getLangOpts().OpenMPIsTargetDevice &&
         !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
       SemaRef.targetDiag(StartLoc, diag::err_expected_allocator_expression);
+  }
+  if (Alignment) {
+    bool AlignmentDependent = Alignment->isTypeDependent() ||
+                              Alignment->isValueDependent() ||
+                              Alignment->isInstantiationDependent() ||
+                              Alignment->containsUnexpandedParameterPack();
+    if (!AlignmentDependent) {
+      ExprResult AlignResult =
+          VerifyPositiveIntegerConstantInClause(Alignment, OMPC_allocate);
+      Alignment = AlignResult.isUsable() ? AlignResult.get() : nullptr;
+    }
   }
   // Analyze and build list of variables.
   SmallVector<Expr *, 8> Vars;
@@ -23230,11 +23263,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPAllocateClause(
   if (Allocator)
     DSAStack->addInnerAllocatorExpr(Allocator);
 
-  OpenMPAllocateClauseModifier AllocatorModifier = AllocClauseModifier;
-  SourceLocation AllocatorModifierLoc;
-  return OMPAllocateClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                   Allocator, ColonLoc, AllocatorModifier,
-                                   AllocatorModifierLoc, EndLoc, Vars);
+  return OMPAllocateClause::Create(
+      getASTContext(), StartLoc, LParenLoc, Allocator, Alignment, ColonLoc,
+      FirstAllocateModifier, FirstAllocateModifierLoc, SecondAllocateModifier,
+      SecondAllocateModifierLoc, EndLoc, Vars);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,

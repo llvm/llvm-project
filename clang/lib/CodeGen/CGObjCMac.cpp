@@ -25,14 +25,12 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/UniqueVector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -2545,8 +2543,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
   if (LastFieldBitfieldOrUnnamed) {
     if (LastFieldBitfieldOrUnnamed->isBitField()) {
       // Last field was a bitfield. Must update the info.
-      uint64_t BitFieldSize
-        = LastFieldBitfieldOrUnnamed->getBitWidthValue(CGM.getContext());
+      uint64_t BitFieldSize = LastFieldBitfieldOrUnnamed->getBitWidthValue();
       unsigned UnsSize = (BitFieldSize / ByteSizeInBits) +
                         ((BitFieldSize % ByteSizeInBits) != 0);
       CharUnits Size = CharUnits::fromQuantity(UnsSize);

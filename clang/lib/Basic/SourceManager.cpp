@@ -24,12 +24,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -157,8 +157,11 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // Unless this is a named pipe (in which case we can handle a mismatch),
   // check that the file's size is the same as in the file entry (which may
   // have come from a stat cache).
+  // The buffer will always be larger than the file size on z/OS in the presence
+  // of characters outside the base character set.
+  assert(Buffer->getBufferSize() >= (size_t)ContentsEntry->getSize());
   if (!ContentsEntry->isNamedPipe() &&
-      Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
+      Buffer->getBufferSize() < (size_t)ContentsEntry->getSize()) {
     Diag.Report(Loc, diag::err_file_modified) << ContentsEntry->getName();
 
     return std::nullopt;
@@ -584,6 +587,17 @@ SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
 					  FileCharacter);
 }
 
+/// Helper function to determine if an input file requires conversion
+bool needConversion(StringRef Filename) {
+#ifdef __MVS__
+  llvm::ErrorOr<bool> NeedConversion =
+      llvm::needzOSConversion(Filename.str().c_str());
+  return NeedConversion && *NeedConversion;
+#else
+  return false;
+#endif
+}
+
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -603,6 +617,20 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
+  bool NeedConversion = needConversion(Filename);
+  if (NeedConversion) {
+    // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
+    // conversion.
+    if (std::optional<llvm::MemoryBufferRef> Buffer =
+            File.getBufferOrNone(Diag, getFileManager())) {
+      unsigned BufSize = Buffer->getBufferSize();
+      if (BufSize > FileSize) {
+        if (File.ContentsEntry.has_value())
+          File.ContentsEntry->updateFileEntryBufferSize(BufSize);
+        FileSize = BufSize;
+      }
+    }
+  }
   if (!(NextLocalOffset + FileSize + 1 > NextLocalOffset &&
         NextLocalOffset + FileSize + 1 <= CurrentLoadedOffset)) {
     Diag.Report(IncludePos, diag::err_sloc_space_too_large);
@@ -666,7 +694,7 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
-    Diag.Report(SourceLocation(), diag::err_sloc_space_too_large);
+    Diag.Report(diag::err_sloc_space_too_large);
     // FIXME: call `noteSLocAddressSpaceUsage` to report details to users and
     // use a source location from `Info` to point at an error.
     // Currently, both cause Clang to run indefinitely, this needs to be fixed.
@@ -2228,28 +2256,6 @@ LLVM_DUMP_METHOD void SourceManager::dump() const {
   }
 }
 
-// 123 -> "123".
-// 1234 -> "1.23k".
-// 123456 -> "123.46k".
-// 1234567 -> "1.23M".
-// 1234567890 -> "1.23G".
-// 1234567890123 -> "1.23T".
-static std::string humanizeNumber(uint64_t Number) {
-  static constexpr std::array<std::pair<uint64_t, char>, 4> Units = {
-      {{1'000'000'000'000UL, 'T'},
-       {1'000'000'000UL, 'G'},
-       {1'000'000UL, 'M'},
-       {1'000UL, 'k'}}};
-
-  for (const auto &[UnitSize, UnitSign] : Units) {
-    if (Number >= UnitSize) {
-      return llvm::formatv("{0:F}{1}", Number / static_cast<double>(UnitSize),
-                           UnitSign);
-    }
-  }
-  return std::to_string(Number);
-}
-
 void SourceManager::noteSLocAddressSpaceUsage(
     DiagnosticsEngine &Diag, std::optional<unsigned> MaxNotes) const {
   struct Info {
@@ -2318,10 +2324,9 @@ void SourceManager::noteSLocAddressSpaceUsage(
   uint64_t LoadedUsage = MaxLoadedOffset - CurrentLoadedOffset;
   int UsagePercent = static_cast<int>(100.0 * double(LocalUsage + LoadedUsage) /
                                       MaxLoadedOffset);
-  Diag.Report(SourceLocation(), diag::note_total_sloc_usage)
-      << LocalUsage << humanizeNumber(LocalUsage) << LoadedUsage
-      << humanizeNumber(LoadedUsage) << (LocalUsage + LoadedUsage)
-      << humanizeNumber(LocalUsage + LoadedUsage) << UsagePercent;
+  Diag.Report(diag::note_total_sloc_usage)
+      << LocalUsage << LoadedUsage << (LocalUsage + LoadedUsage)
+      << UsagePercent;
 
   // Produce notes on sloc address space usage for each file with a high usage.
   uint64_t ReportedSize = 0;
@@ -2329,17 +2334,14 @@ void SourceManager::noteSLocAddressSpaceUsage(
        llvm::make_range(SortedUsage.begin(), SortedEnd)) {
     Diag.Report(FileInfo.Loc, diag::note_file_sloc_usage)
         << FileInfo.Inclusions << FileInfo.DirectSize
-        << humanizeNumber(FileInfo.DirectSize)
-        << (FileInfo.TotalSize - FileInfo.DirectSize)
-        << humanizeNumber(FileInfo.TotalSize - FileInfo.DirectSize);
+        << (FileInfo.TotalSize - FileInfo.DirectSize);
     ReportedSize += FileInfo.TotalSize;
   }
 
   // Describe any remaining usage not reported in the per-file usage.
   if (ReportedSize != CountedSize) {
-    Diag.Report(SourceLocation(), diag::note_file_misc_sloc_usage)
-        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize
-        << humanizeNumber(CountedSize - ReportedSize);
+    Diag.Report(diag::note_file_misc_sloc_usage)
+        << (SortedUsage.end() - SortedEnd) << CountedSize - ReportedSize;
   }
 }
 

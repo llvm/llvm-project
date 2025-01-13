@@ -23,7 +23,6 @@
 #include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
-#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
@@ -780,7 +779,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
             llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
         llvm::Value *ValidVtable = Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
-        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIMFCall),
+        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIMFCall),
                       SanitizerHandler::CFICheckFail, StaticData,
                       {VTable, ValidVtable});
       }
@@ -824,7 +823,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
         Bit = Builder.CreateOr(Bit, TypeTest);
       }
 
-      CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::CFIMFCall),
+      CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::SO_CFIMFCall),
                     SanitizerHandler::CFICheckFail, StaticData,
                     {NonVirtualFn, llvm::UndefValue::get(CGF.IntPtrTy)});
 
@@ -3303,6 +3302,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       CharUnits Align = CGM.getContext().getDeclAlign(VD);
       Val = Builder.CreateAlignedLoad(Var->getValueType(), Val, Align);
     }
+    Val = Builder.CreateAddrSpaceCast(Val, Wrapper->getReturnType());
 
     Builder.CreateRet(Val);
   }

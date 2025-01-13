@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -133,6 +134,7 @@
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
@@ -187,9 +189,9 @@ static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
 
-static cl::opt<bool>
-    RunPartialInlining("enable-partial-inlining", cl::init(false), cl::Hidden,
-                       cl::desc("Run Partial inlinining pass"));
+static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
+                                        cl::init(false), cl::Hidden,
+                                        cl::desc("Run Partial inlining pass"));
 
 static cl::opt<bool> ExtraVectorizerPasses(
     "extra-vectorizer-passes", cl::init(false), cl::Hidden,
@@ -262,7 +264,7 @@ static cl::opt<bool>
 static cl::opt<bool> FlattenedProfileUsed(
     "flattened-profile-used", cl::init(false), cl::Hidden,
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
-             "no inline hierachy exists in the profile"));
+             "no inline hierarchy exists in the profile"));
 
 static cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
@@ -659,7 +661,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(IndVarSimplifyPass());
 
   {
-    ExtraSimpleLoopUnswitchPassManager ExtraPasses;
+    ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch> ExtraPasses;
     ExtraPasses.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
                                                OptimizationLevel::O3));
     LPM2.addPass(std::move(ExtraPasses));
@@ -1306,7 +1308,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   FPM.addPass(InstCombinePass());
 
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
-    ExtraVectorPassManager ExtraPasses;
+    ExtraFunctionPassManager<ShouldRunExtraVectorPasses> ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any

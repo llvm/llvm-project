@@ -52,6 +52,26 @@ bool arm::isARMAProfile(const llvm::Triple &Triple) {
   return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::A;
 }
 
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
+bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
+  auto arch = Triple.getArch();
+  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
+      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  if (Triple.getEnvironment() != llvm::Triple::EABI &&
+      Triple.getEnvironment() != llvm::Triple::EABIHF)
+    return false;
+
+  return true;
+}
+
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
@@ -908,6 +928,10 @@ fp16_fml_fallthrough:
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
+    } else if (Triple.getVendor() == llvm::Triple::Apple &&
+               Triple.isOSBinFormatMachO()) {
+      // Firmwares on Apple platforms are strict-align by default.
+      Features.push_back("+strict-align");
     } else if (VersionNum < 7 ||
                Triple.getSubArch() ==
                    llvm::Triple::SubArchType::ARMSubArch_v6m ||

@@ -18,7 +18,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -327,7 +326,6 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
-    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:

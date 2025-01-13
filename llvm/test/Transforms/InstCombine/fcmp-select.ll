@@ -219,8 +219,8 @@ define double @test_fcmp_select_clamp(double %x) {
 
 define double @test_fcmp_select_maxnum(double %x) {
 ; CHECK-LABEL: @test_fcmp_select_maxnum(
-; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[X:%.*]], double 1.000000e+00)
-; CHECK-NEXT:    [[SEL2:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[SEL1]], double 2.550000e+02)
+; CHECK-NEXT:    [[SEL1:%.*]] = call nsz double @llvm.maxnum.f64(double [[X:%.*]], double 1.000000e+00)
+; CHECK-NEXT:    [[SEL2:%.*]] = call nsz double @llvm.minnum.f64(double [[SEL1]], double 2.550000e+02)
 ; CHECK-NEXT:    ret double [[SEL2]]
 ;
   %cmp1 = fcmp ogt double %x, 1.0

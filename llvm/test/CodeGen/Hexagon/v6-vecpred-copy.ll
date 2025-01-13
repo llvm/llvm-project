@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK: v{{[0-9]*}} = vxor(v{{[0-9]*}},v{{[0-9]*}})
 ; CHECK: if (q{{[-0-3]}}) v{{[0-9]*}}.b += v{{[0-9]*}}.b

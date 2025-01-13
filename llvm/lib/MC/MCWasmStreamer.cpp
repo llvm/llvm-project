@@ -27,7 +27,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 class MCContext;
@@ -197,7 +196,7 @@ void MCWasmStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixups[I]);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCWasmStreamer::finishImpl() {

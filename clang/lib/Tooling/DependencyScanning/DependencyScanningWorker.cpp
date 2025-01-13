@@ -322,7 +322,8 @@ public:
 
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
-    ScanInstance.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    ScanInstance.createDiagnostics(DriverFileMgr->getVirtualFileSystem(),
+                                   DiagConsumer, /*ShouldOwnClient=*/false);
     if (!ScanInstance.hasDiagnostics())
       return false;
 
@@ -422,6 +423,7 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSerializeOnlyPreprocessor = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
     ScanInstance.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
@@ -649,7 +651,7 @@ bool DependencyScanningWorker::computeDependencies(
   auto DiagOpts = CreateAndPopulateDiagOpts(FinalCCommandLine);
   sanitizeDiagOpts(*DiagOpts);
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(DiagOpts.release(), &DC,
+      CompilerInstance::createDiagnostics(*FinalFS, DiagOpts.release(), &DC,
                                           /*ShouldOwnClient=*/false);
 
   // Although `Diagnostics` are used only for command-line parsing, the

@@ -33,7 +33,7 @@ void ConvertVectorToArmSMEPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateVectorToArmSMEPatterns(patterns, getContext());
 
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 std::unique_ptr<Pass> mlir::createConvertVectorToArmSMEPass() {

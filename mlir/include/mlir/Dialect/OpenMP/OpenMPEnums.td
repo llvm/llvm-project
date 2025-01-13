@@ -108,14 +108,15 @@ def ClauseRequiresAttr : OpenMP_EnumAttr<ClauseRequires, "clause_requires">;
 def ClauseTaskDependIn : I32EnumAttrCase<"taskdependin", 0>;
 def ClauseTaskDependOut : I32EnumAttrCase<"taskdependout", 1>;
 def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+def ClauseTaskDependMutexInOutSet
+    : I32EnumAttrCase<"taskdependmutexinoutset", 3>;
+def ClauseTaskDependInOutSet : I32EnumAttrCase<"taskdependinoutset", 4>;
 
-def ClauseTaskDepend : OpenMP_I32EnumAttr<
-    "ClauseTaskDepend",
-    "depend clause in a target or task construct", [
-      ClauseTaskDependIn,
-      ClauseTaskDependOut,
-      ClauseTaskDependInOut
-    ]>;
+def ClauseTaskDepend
+    : OpenMP_I32EnumAttr<
+          "ClauseTaskDepend", "depend clause in a target or task construct",
+          [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut,
+           ClauseTaskDependMutexInOutSet, ClauseTaskDependInOutSet]>;
 
 def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
                                            "clause_task_depend"> {

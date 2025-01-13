@@ -108,6 +108,41 @@ public:
     }
     return LowestI;
   }
+  /// If all values in \p Bndl are of the same scalar type then return it,
+  /// otherwise return nullptr.
+  static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
+    Value *V0 = Bndl[0];
+    Type *Ty0 = Utils::getExpectedType(V0);
+    Type *ScalarTy = VecUtils::getElementType(Ty0);
+    for (auto *V : drop_begin(Bndl)) {
+      Type *NTy = Utils::getExpectedType(V);
+      Type *NScalarTy = VecUtils::getElementType(NTy);
+      if (NScalarTy != ScalarTy)
+        return nullptr;
+    }
+    return ScalarTy;
+  }
+
+  /// Similar to tryGetCommonScalarType() but will assert that there is a common
+  /// type. So this is faster in release builds as it won't iterate through the
+  /// values.
+  static Type *getCommonScalarType(ArrayRef<Value *> Bndl) {
+    Value *V0 = Bndl[0];
+    Type *Ty0 = Utils::getExpectedType(V0);
+    Type *ScalarTy = VecUtils::getElementType(Ty0);
+    assert(tryGetCommonScalarType(Bndl) && "Expected common scalar type!");
+    return ScalarTy;
+  }
+  /// \Returns the first integer power of 2 that is <= Num.
+  static unsigned getFloorPowerOf2(unsigned Num) {
+    if (Num == 0)
+      return Num;
+    unsigned Mask = Num;
+    Mask >>= 1;
+    for (unsigned ShiftBy = 1; ShiftBy < sizeof(Num) * 8; ShiftBy <<= 1)
+      Mask |= Mask >> ShiftBy;
+    return Num & ~Mask;
+  }
 };
 
 } // namespace llvm::sandboxir

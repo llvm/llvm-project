@@ -1415,7 +1415,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Check to see that all assembler local symbols were actually defined.
   // Targets that don't do subsections via symbols may not want this, though,
   // so conservatively exclude them. Only do this if we're finalizing, though,
-  // as otherwise we won't necessarilly have seen everything yet.
+  // as otherwise we won't necessarily have seen everything yet.
   if (!NoFinalize) {
     if (MAI.hasSubsectionsViaSymbols()) {
       for (const auto &TableEntry : getContext().getSymbols()) {
@@ -6750,6 +6750,7 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;
   // DirectiveKindMap[".cfi_window_save"] = DK_CFI_WINDOW_SAVE;
   // DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
+  // DirectiveKindMap[".cfi_val_offset"] = DK_CFI_VAL_OFFSET;
   DirectiveKindMap["macro"] = DK_MACRO;
   DirectiveKindMap["exitm"] = DK_EXITM;
   DirectiveKindMap["endm"] = DK_ENDM;

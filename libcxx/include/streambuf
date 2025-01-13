@@ -107,26 +107,29 @@ protected:
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/streambuf>
+#else
+#  include <__config>
 
-#if _LIBCPP_HAS_LOCALIZATION
+#  if _LIBCPP_HAS_LOCALIZATION
 
-#  include <__assert>
-#  include <__fwd/streambuf.h>
-#  include <__locale>
-#  include <__type_traits/is_same.h>
-#  include <__utility/is_valid_range.h>
-#  include <climits>
-#  include <ios>
-#  include <iosfwd>
-#  include <version>
+#    include <__assert>
+#    include <__fwd/streambuf.h>
+#    include <__locale>
+#    include <__type_traits/is_same.h>
+#    include <__utility/is_valid_range.h>
+#    include <climits>
+#    include <ios>
+#    include <iosfwd>
+#    include <version>
 
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
 
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -433,18 +436,19 @@ typename basic_streambuf<_CharT, _Traits>::int_type basic_streambuf<_CharT, _Tra
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<char>;
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<wchar_t>;
-#  endif
+#    endif
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_HAS_LOCALIZATION
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <cstdint>
-#endif
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <cstdint>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STREAMBUF

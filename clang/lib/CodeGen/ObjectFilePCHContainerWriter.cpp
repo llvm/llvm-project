@@ -21,15 +21,12 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
 #include <memory>
 #include <utility>
@@ -40,6 +37,7 @@ using namespace clang;
 
 namespace {
 class PCHContainerGenerator : public ASTConsumer {
+  CompilerInstance &CI;
   DiagnosticsEngine &Diags;
   const std::string MainFileName;
   const std::string OutputFileName;
@@ -142,7 +140,7 @@ public:
                         const std::string &OutputFileName,
                         std::unique_ptr<raw_pwrite_stream> OS,
                         std::shared_ptr<PCHBuffer> Buffer)
-      : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
+      : CI(CI), Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         FS(&CI.getVirtualFileSystem()),
@@ -320,19 +318,17 @@ public:
     LLVM_DEBUG({
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
-      clang::EmitBackendOutput(
-          Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts, LangOpts,
-          Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+      clang::emitBackendOutput(
+          CI, Ctx.getTargetInfo().getDataLayoutString(), M.get(),
           BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
-                             LangOpts,
-                             Ctx.getTargetInfo().getDataLayoutString(), M.get(),
-                             BackendAction::Backend_EmitObj, FS, std::move(OS));
+    clang::emitBackendOutput(CI, Ctx.getTargetInfo().getDataLayoutString(),
+                             M.get(), BackendAction::Backend_EmitObj, FS,
+                             std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;

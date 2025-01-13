@@ -14,12 +14,14 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_PREHEADER:%.*]], label [[BB6]]
 ; CHECK:       for.preheader:
 ; CHECK-NEXT:    [[T1_0_LCSSA:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
+; CHECK-NEXT:    [[T1_0_LCSSA4:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
+; CHECK-NEXT:    [[T1_0_LCSSA1:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ARR1]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[TMP0]]
 ; CHECK-NEXT:    [[T1_0_LCSSA3:%.*]] = ptrtoint ptr [[T1_0_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[T1_0_LCSSA3]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0_LCSSA]] to i64
+; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0_LCSSA4]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
@@ -56,7 +58,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_PREHEADER]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[FOR_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -65,7 +67,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[T3_I:%.*]] = icmp slt i8 [[IV_NEXT]], [[T9]]
 ; CHECK-NEXT:    [[T3_I8:%.*]] = zext i1 [[T3_I]] to i8
 ; CHECK-NEXT:    store i8 [[T3_I8]], ptr [[PTR]], align 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[T1_0_LCSSA]], [[PTR]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[T1_0_LCSSA1]], [[PTR]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], [[FOR_BODY]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
