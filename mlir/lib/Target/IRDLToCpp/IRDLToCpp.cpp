@@ -8,6 +8,7 @@
 
 #include "mlir/Target/IRDLToCpp/IRDLToCpp.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -35,6 +36,16 @@ constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
 LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                               raw_ostream &output) {
   StringRef dialectName = dialect.getSymName();
+
+  // TODO: deal with no more constraints than the verifier allows.
+  if (dialectName.size() < 1)
+    return dialect->emitError("dialect name must be more than one character");
+  if (!llvm::isAlpha(dialectName[0]))
+    return dialect->emitError("dialect name must start with a letter");
+  if (!llvm::all_of(dialectName,
+                    [](char c) { return llvm::isAlnum(c) || c == '_'; }))
+    return dialect->emitError(
+        "dialect name must only contain letters, numbers or underscores");
 
   // TODO: allow more complex path.
   llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
