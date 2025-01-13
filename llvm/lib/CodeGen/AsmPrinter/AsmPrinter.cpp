@@ -2094,6 +2094,8 @@ void AsmPrinter::emitFunctionBody() {
     for (auto &Handler : EHHandlers)
       Handler->endBasicBlockSection(MF->back());
   }
+  for (auto &Handler : Handlers)
+    Handler->markFunctionEnd();
   for (auto &Handler : EHHandlers)
     Handler->markFunctionEnd();
   // Update the end label of the entry block's section.
