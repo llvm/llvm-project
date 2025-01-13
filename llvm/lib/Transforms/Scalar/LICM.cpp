@@ -2458,9 +2458,10 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
     return false;
 
   // Everything is fine, we can do the transform.
-  bool UseMin = ICmpInst::isLT(P1) || ICmpInst::isLE(P1);
+  bool UseMin = ICmpInst::isLT(*MatchingPred) || ICmpInst::isLE(*MatchingPred);
   assert(
-      (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
+      (UseMin || ICmpInst::isGT(*MatchingPred) ||
+       ICmpInst::isGE(*MatchingPred)) &&
       "Relational predicate is either less (or equal) or greater (or equal)!");
   Intrinsic::ID id = ICmpInst::isSigned(*MatchingPred)
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
@@ -2475,9 +2476,10 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (isa<SelectInst>(I))
     RHS2 = Builder.CreateFreeze(RHS2, RHS2->getName() + ".fr");
   Value *NewRHS = Builder.CreateBinaryIntrinsic(
-      id, RHS1, RHS2, nullptr, StringRef("invariant.") +
-                                   (ICmpInst::isSigned(P1) ? "s" : "u") +
-                                   (UseMin ? "min" : "max"));
+      id, RHS1, RHS2, nullptr,
+      StringRef("invariant.") +
+          (ICmpInst::isSigned(*MatchingPred) ? "s" : "u") +
+          (UseMin ? "min" : "max"));
   Builder.SetInsertPoint(&I);
   ICmpInst::Predicate P = *MatchingPred;
   if (Inverse)
