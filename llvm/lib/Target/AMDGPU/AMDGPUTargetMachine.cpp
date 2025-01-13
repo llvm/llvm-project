@@ -23,6 +23,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -48,6 +49,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -507,7 +509,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
-  initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
+  initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
   initializeAMDGPUReserveWWMRegsPass(*PR);
@@ -1925,7 +1927,8 @@ AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
 }
 
 void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
-  // TODO: Missing AMDGPURemoveIncompatibleFunctions
+  if (RemoveIncompatibleFunctions && TM.getTargetTriple().isAMDGCN())
+    addPass(AMDGPURemoveIncompatibleFunctionsPass(TM));
 
   addPass(AMDGPUPrintfRuntimeBindingPass());
   if (LowerCtorDtor)
@@ -1955,8 +1958,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
     addPass(AMDGPUAtomicOptimizerPass(TM, AMDGPUAtomicOptimizerStrategy));
 
-  // FIXME: Adding atomic-expand manages to break -passes=atomic-expand
-  // addPass(AtomicExpandPass(TM));
+  addPass(AtomicExpandPass(&TM));
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(AMDGPUPromoteAllocaPass(TM));
