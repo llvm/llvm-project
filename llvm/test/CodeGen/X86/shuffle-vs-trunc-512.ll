@@ -442,7 +442,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BW-LABEL: PR34175:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
 ; AVX512BW-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512BW-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
@@ -461,7 +461,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512VBMI-LABEL: PR34175:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
+; AVX512VBMI-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
 ; AVX512VBMI-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512VBMI-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1

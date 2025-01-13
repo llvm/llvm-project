@@ -1730,7 +1730,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     auto *Real = OperationInstruction[i];
     // We want to check that we have 2 operands, but the function attributes
     // being counted as operands bloats this value.
-    if (Real->getNumOperands() < 2)
+    if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
     RealPHI = ReductionInfo[Real].first;

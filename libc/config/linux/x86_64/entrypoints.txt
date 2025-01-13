@@ -350,6 +350,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.wctob
     libc.src.wchar.btowc
+
+    # sys/uio.h entrypoints
+    libc.src.sys.uio.writev
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -718,6 +721,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.sinhf16
     libc.src.math.sinpif16
     libc.src.math.sqrtf16
+    libc.src.math.tanf16
     libc.src.math.tanhf16
     libc.src.math.tanpif16
     libc.src.math.totalorderf16

@@ -189,7 +189,7 @@ protected:
   __storage_type __first_[_N_words];
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
+  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -199,8 +199,8 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
+    return __const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
     return __iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
@@ -451,7 +451,7 @@ protected:
   __storage_type __first_;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
+  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -461,8 +461,8 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(&__first_, __storage_type(1) << __pos);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return const_reference(&__first_, __storage_type(1) << __pos);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
+    return __const_reference(&__first_, __storage_type(1) << __pos);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
     return __iterator(&__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
@@ -566,7 +566,7 @@ protected:
   friend struct __bit_array<__bitset>;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> const_reference;
+  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -576,8 +576,8 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t) _NOEXCEPT {
     return reference(nullptr, 1);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference __make_ref(size_t) const _NOEXCEPT {
-    return const_reference(nullptr, 1);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t) const _NOEXCEPT {
+    return __const_reference(nullptr, 1);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t) _NOEXCEPT {
     return __iterator(nullptr, 0);
@@ -619,7 +619,7 @@ public:
 
 public:
   typedef typename __base::reference reference;
-  typedef typename __base::const_reference const_reference;
+  typedef typename __base::__const_reference __const_reference;
 
   // 23.3.5.1 constructors:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
@@ -689,7 +689,7 @@ public:
     return __base::__make_ref(__p);
   }
 #  else
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const_reference operator[](size_t __p) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference operator[](size_t __p) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
   }
