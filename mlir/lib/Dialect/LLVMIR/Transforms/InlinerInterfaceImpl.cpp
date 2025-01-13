@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Analysis/SliceWalk.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -812,6 +813,12 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
 void mlir::LLVM::registerInlinerInterface(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, LLVM::LLVMDialect *dialect) {
+    dialect->addInterfaces<LLVMInlinerInterface>();
+  });
+}
+
+void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
     dialect->addInterfaces<LLVMInlinerInterface>();
   });
 }
