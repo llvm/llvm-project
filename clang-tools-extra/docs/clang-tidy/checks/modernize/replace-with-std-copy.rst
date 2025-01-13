@@ -1,48 +1,40 @@
-.. title:: clang-tidy - modernize-replace-with-stdcopy
+.. title:: clang-tidy - modernize-replace-with-std-copy
 
-modernize-replace-with-stdcopy
+modernize-replace-with-std-copy
 ===================================
 
-Replaces all occurrences of the C ``memmove`` function and its wide-char variant with ``std::copy_n``.
-Replacement of ``memcpy`` is optionally also supported.
+This check will flag all calls to ``memmove`` that can be possibly replaced with ``std::copy_n``.
+In some specific cases it will provide a fix automatically.
+``memcpy`` may also be flagged as opt-in. It is disabled by default because it performs no safety checks for overlapping ranges
+in the way ``memmove`` and ``std::copy_n`` do.
+``wmemmove`` and ``wmemcpy`` are also supported.
 
 Example:
 
 .. code-block:: c++
-
-  /*!
-   * \param dst Pointer to the destination array where the content is to be copied
-   * \param src Pointer to the source of data to be copied
-   * \param size Number of bytes to copy
-   */
-  memcpy(dst, src, size);
+  std::vector<int> dst(64);
+  memcpy(dst.data(), std::data(src), N);
 
 becomes
 
 .. code-block:: c++
+  std::vector<int> dst(64);
+  std::copy_n(std::cbegin(src), (N) / sizeof(int), std::begin(dst));
 
-  /*!
-   * \param destination Pointer to the destination array where the content is to be copied
-   * \param source Pointer to the source of data to be copied
-   * \param num Number of bytes to copy
-   */
-  std::copy_n(std::cbegin(src), size, std::begin(dst));
-
-Bytes to iterator conversion
-----------------------------
-
-Unlike ``std::copy`` that take an iterator on the last element of the source array, ``memcpy`` request the number of bytes to copy.
-In order to make the check working, it will convert the size parameter to an iterator by replacing it by ``source + (num / sizeof *source)``
-
-Header inclusion
+Known limitations
 ----------------
+For now, the check works only on a limited, recognizable subset of calls, where it can infer the arguments are pointers to valid collections
+in the sense that ``std::copy_n`` understands. More specifically, source/destination should be one of:
+- a call to ``std::data`` or the corresponding member method.
+- a fixed-size C-array.
 
-``std::copy_n`` is provided by the ``algorithm`` header file, this check will include it if needed.
+Moreover, a fix will not be issued in more complicated cases, e.g. when source and destination are collections of types that have different sizes.
 
 Options
 -------
 
 .. option:: IncludeStyle
+   A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.
 
-   A string specifying which include-style is used, `llvm` or `google`. Default
-   is `llvm`.
+.. option:: FlagMemcpy
+   A boolean specifying whether to flag calls to ``memcpy`` as well. Default is `false`.
