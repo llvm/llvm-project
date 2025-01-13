@@ -57,7 +57,7 @@ private:
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
   lldb::ProcessSP m_process_sp;
-  std::unordered_map<lldb::tid_t, lldb::ThreadSP> m_threads_to_save;
+  std::unordered_set<lldb::tid_t> m_threads_to_save;
   MemoryRanges m_regions_to_save;
 };
 } // namespace lldb_private

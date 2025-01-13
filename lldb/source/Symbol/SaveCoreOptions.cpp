@@ -87,7 +87,7 @@ Status SaveCoreOptions::AddThread(lldb::ThreadSP thread_sp) {
     m_process_sp = thread_sp->GetProcess();
   }
 
-  m_threads_to_save.insert({thread_sp->GetID(), thread_sp});
+  m_threads_to_save.insert(thread_sp->GetID());
   return error;
 }
 
@@ -118,9 +118,13 @@ const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
 lldb::ThreadCollectionSP SaveCoreOptions::GetThreadsToSave() const {
   lldb::ThreadCollectionSP threadcollection_sp =
       std::make_shared<ThreadCollection>();
-  for (const auto &thread : m_threads_to_save) {
-    threadcollection_sp->AddThread(thread.second);
-  }
+  if (!m_process_sp)
+    return threadcollection_sp;
+
+  ThreadList &thread_list = m_process_sp->GetThreadList();
+  for (const auto &tid : m_threads_to_save)
+    threadcollection_sp->AddThread(thread_list.FindThreadByID(tid));
+
   return threadcollection_sp;
 }
 
