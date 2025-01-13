@@ -71,7 +71,10 @@ code bases.
 
   To avoid pointer addition overflow, it is necessary to perform the addition
   on integers, for example using
-  ``(uintptr_t)ptr + unsigned_offset < (uintptr_t)ptr``.
+  ``(uintptr_t)ptr + unsigned_offset < (uintptr_t)ptr``. Sometimes, it is also
+  possible to rewrite checks by only comparing the offset. For example,
+  ``ptr + offset < end_ptr && ptr + offset >= ptr`` can be written as
+  ``offset < (uintptr_t)(end_ptr - ptr)``.
 
   Undefined behavior due to pointer addition overflow can be reliably detected
   using ``-fsanitize=pointer-overflow``. It is also possible to use
