@@ -9011,8 +9011,7 @@ static void addConditionalScalarAssignmentPostprocessRecipes(
            "CSADescriptor must know how to describe the condition");
     VPValue *WidenedCond = GetVPValue(CSA.second.getCond());
     VPValue *CondToUse = WidenedCond;
-    if (cast<SelectInst>(CSA.second.getAssignment())->getTrueValue() ==
-        CSA.first) {
+    if (CSA.second.getAssignment()->getTrueValue() == CSA.first) {
       auto *VPNotCond = B.createNot(WidenedCond, DL);
       VPNotCond->insertBefore(VPDataUpdate);
       CondToUse = VPNotCond;

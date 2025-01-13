@@ -2942,12 +2942,6 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; NO-EVL:       [[LOOP_PREHEADER]]:
 ; NO-EVL-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; NO-EVL-NEXT:    br label %[[LOOP:.*]]
-; NO-EVL:       [[EXIT_LOOPEXIT:.*]]:
-; NO-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
-; NO-EVL-NEXT:    br label %[[EXIT]]
-; NO-EVL:       [[EXIT]]:
-; NO-EVL-NEXT:    [[T_0_LCSSA:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SPEC_SELECT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
-; NO-EVL-NEXT:    ret ptr [[T_0_LCSSA]]
 ; NO-EVL:       [[LOOP]]:
 ; NO-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; NO-EVL-NEXT:    [[T_010:%.*]] = phi ptr [ null, %[[LOOP_PREHEADER]] ], [ [[SPEC_SELECT]], %[[LOOP]] ]
@@ -2960,6 +2954,12 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; NO-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; NO-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]]
+; NO-EVL:       [[EXIT_LOOPEXIT:.*]]:
+; NO-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; NO-EVL-NEXT:    br label %[[EXIT]]
+; NO-EVL:       [[EXIT]]:
+; NO-EVL-NEXT:    [[T_0_LCSSA:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SPEC_SELECT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; NO-EVL-NEXT:    ret ptr [[T_0_LCSSA]]
 ;
 entry:
   %cmp9 = icmp sgt i32 %N, 0
@@ -2968,10 +2968,6 @@ entry:
 loop.preheader:
   %wide.trip.count = zext i32 %N to i64
   br label %loop
-
-exit:
-  %t.0.lcssa = phi ptr [ null, %entry ], [ %spec.select, %loop ]
-  ret ptr %t.0.lcssa
 
 loop:
   %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
@@ -2985,6 +2981,10 @@ loop:
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
   br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %t.0.lcssa = phi ptr [ null, %entry ], [ %spec.select, %loop ]
+  ret ptr %t.0.lcssa
 }
 ;.
 ; EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}

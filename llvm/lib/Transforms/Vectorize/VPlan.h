@@ -2615,6 +2615,8 @@ public:
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
   }
 
+  VPValue *NewData = nullptr;
+
   void execute(VPTransformState &State) override;
 
   InstructionCost computeCost(ElementCount VF,
@@ -2634,8 +2636,8 @@ public:
 
   VPValue *getVPInitData() { return getOperand(0); }
 
-  VPValue *NewData = nullptr;
   void setDataUpdate(VPValue *V) { NewData = V; }
+
   VPValue *getVPNewData() { return NewData; }
 };
 
