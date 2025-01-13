@@ -1688,8 +1688,9 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   auto *VecTyA = ArgTyA->getAs<VectorType>();
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
 
+  ExprResult B;
   for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
-    ExprResult B = TheCall->getArg(i);
+    B = TheCall->getArg(i);
     QualType ArgTyB = B.get()->getType();
     auto *VecTyB = ArgTyB->getAs<VectorType>();
     if (VecTyA == nullptr && VecTyB == nullptr)
@@ -1712,8 +1713,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
         // HLSLVectorTruncation.
         S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
             << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                           TheCall->getArg(1)->getEndLoc());
+            << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
         retValue = true;
       }
       return retValue;
@@ -1724,8 +1724,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   // requires a VectorSplat on Arg0 or Arg1
   S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
       << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-      << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                     TheCall->getArg(1)->getEndLoc());
+      << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
   return true;
 }
 
