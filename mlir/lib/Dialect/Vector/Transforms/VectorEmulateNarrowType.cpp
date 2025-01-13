@@ -1223,11 +1223,11 @@ static Value bitcastSubByteVectorToI8(PatternRewriter &rewriter, Location loc,
 static Value extractNBitsPerByteAndSignExtendToI8(PatternRewriter &rewriter,
                                                   Location loc, Value src,
                                                   int bitIdx, int numBits) {
-  assert(bitIdx >= 0 && bitIdx <= 8 - numBits && numBits > 0 && numBits <= 8 &&
-         "Invalid bitIdx range");
   auto srcType = cast<VectorType>(src.getType());
   Value shl = src;
   int8_t bitsToShiftLeft = 8 - numBits - bitIdx;
+  assert(bitIdx >= 0 && bitsToShiftLeft >= 0 && numBits > 0 && numBits <= 8 &&
+         "Invalid bitIdx range");
   if (bitsToShiftLeft != 0) {
     Value shiftLeftValues = rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(srcType, bitsToShiftLeft));
