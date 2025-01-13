@@ -462,19 +462,11 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   build(builder, result, kind, source, acc, reductionDims);
 }
 
+/// TODO: Move to APFloat/APInt.
 /// Computes the result of reducing a constant vector where the accumulator
 /// value, `acc`, is also constant. `times` is the number of times the operation
 /// is applied.
-template <typename T>
-static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
-                                             CombiningKind kind,
-                                             ShapedType dstType);
-// TODO: move to APFloat, APInt headers.
-template <typename T>
-static T computePowerOf(const T &a, int64_t exponent);
-
-template <>
-APFloat computePowerOf(const APFloat &a, int64_t exponent) {
+static APFloat computePowerOf(const APFloat &a, int64_t exponent) {
   assert(exponent >= 0 && "negative exponents not supported.");
   if (exponent == 0) {
     return APFloat::getOne(a.getSemantics());
@@ -487,14 +479,13 @@ APFloat computePowerOf(const APFloat &a, int64_t exponent) {
       remainingExponent /= 2;
     } else {
       acc = acc * a;
-      remainingExponent--;
+      --remainingExponent;
     }
   }
   return acc;
 };
 
-template <>
-APInt computePowerOf(const APInt &a, int64_t exponent) {
+static APInt computePowerOf(const APInt &a, int64_t exponent) {
   assert(exponent >= 0 && "negative exponents not supported.");
   if (exponent == 0) {
     return APInt(a.getBitWidth(), 1);
@@ -513,10 +504,9 @@ APInt computePowerOf(const APInt &a, int64_t exponent) {
   return acc;
 };
 
-template <>
-OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
-                                      int64_t times, CombiningKind kind,
-                                      ShapedType dstType) {
+static OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
+                                             int64_t times, CombiningKind kind,
+                                             ShapedType dstType) {
   APFloat srcVal = src.getValue();
   APFloat accVal = acc.getValue();
   switch (kind) {
@@ -543,10 +533,9 @@ OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
   }
 }
 
-template <>
-OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
-                                      int64_t times, CombiningKind kind,
-                                      ShapedType dstType) {
+static OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
+                                             int64_t times, CombiningKind kind,
+                                             ShapedType dstType) {
   APInt srcVal = src.getValue();
   APInt accVal = acc.getValue();
 
@@ -554,7 +543,8 @@ OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
   case CombiningKind::ADD:
     return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
   case CombiningKind::MUL: {
-    return DenseElementsAttr::get(dstType, {accVal * power(srcVal, times)});
+    return DenseElementsAttr::get(dstType,
+                                  {accVal * computePowerOf(srcVal, times)});
   }
   case CombiningKind::MINSI:
     return DenseElementsAttr::get(dstType,
@@ -591,27 +581,27 @@ OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
     return {};
 
   ArrayRef<int64_t> reductionDims = getReductionDims();
-  auto srcType = mlir::cast<ShapedType>(getSourceVectorType());
+  auto srcType = cast<ShapedType>(getSourceVectorType());
   ArrayRef<int64_t> srcDims = srcType.getShape();
 
   int64_t times = 1;
-  for (auto dim : reductionDims) {
+  for (int64_t dim : reductionDims) {
     times *= srcDims[dim];
   }
 
   CombiningKind kind = getKind();
-  auto dstType = mlir::cast<ShapedType>(getDestType());
+  auto dstType = cast<ShapedType>(getDestType());
   Type dstEltType = dstType.getElementType();
 
   if (mlir::dyn_cast_or_null<FloatType>(dstEltType)) {
-    return computeConstantReduction<FloatAttr>(
-        srcAttr.getSplatValue<FloatAttr>(), accAttr.getSplatValue<FloatAttr>(),
-        times, kind, dstType);
+    return computeConstantReduction(srcAttr.getSplatValue<FloatAttr>(),
+                                    accAttr.getSplatValue<FloatAttr>(), times,
+                                    kind, dstType);
   }
   if (mlir::dyn_cast_or_null<IntegerType>(dstEltType)) {
-    return computeConstantReduction<IntegerAttr>(
-        srcAttr.getSplatValue<IntegerAttr>(),
-        accAttr.getSplatValue<IntegerAttr>(), times, kind, dstType);
+    return computeConstantReduction(srcAttr.getSplatValue<IntegerAttr>(),
+                                    accAttr.getSplatValue<IntegerAttr>(), times,
+                                    kind, dstType);
   }
 
   return {};
