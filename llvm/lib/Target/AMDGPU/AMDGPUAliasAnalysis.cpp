@@ -85,7 +85,7 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
         // variables in shared or private address space.
         const auto *ObjB =
             getUnderlyingObject(B.Ptr->stripPointerCastsForAliasAnalysis());
-        return isIdentifiedObject(ObjB) && ObjA != ObjB ? AliasResult::NoAlias
+        return ObjA != ObjB && isIdentifiedObject(ObjB) ? AliasResult::NoAlias
                                                         : AliasResult::MayAlias;
       }
       default:
