@@ -872,6 +872,35 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
 float4 degrees(float4);
 
 //===----------------------------------------------------------------------===//
+// distance builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn K distance(T X, T Y)
+/// \brief Returns a distance scalar between \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(half X, half Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+const inline float distance(float X, float Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(vector<half, N> X, vector<half, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+template <int N>
+const inline float distance(vector<float, N> X, vector<float, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+//===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
 
