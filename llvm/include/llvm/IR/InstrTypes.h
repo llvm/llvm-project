@@ -1667,6 +1667,11 @@ public:
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool doesNotCapture(unsigned OpNo) const {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (OpNo < arg_size() && isByValArgument(OpNo))
+      return true;
+
     return dataOperandHasImpliedAttr(OpNo, Attribute::NoCapture);
   }
 
