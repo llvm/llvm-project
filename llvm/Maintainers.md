@@ -10,8 +10,6 @@ The following people are the active maintainers for the project. Please reach
 out to them for code reviews, questions about their area of expertise, or other
 assistance.
 
-**Warning: The maintainer list for LLVM is currently not up to date.**
-
 ### Lead maintainer
 
 The lead maintainer is responsible for all parts of LLVM not covered by somebody else.
