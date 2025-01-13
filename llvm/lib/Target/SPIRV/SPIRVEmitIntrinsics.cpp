@@ -731,14 +731,6 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (Ty)
         break;
     }
-  } else if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
-      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
-      assert(ImageType->getTargetExtName() == "spirv.Image");
-      Ty = ImageType->getTypeParameter(0);
-      // TODO: Need to look at the use to see if it needs to be a vector of the
-      // type.
-    }
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     static StringMap<unsigned> ResTypeByArg = {
         {"to_global", 0},
@@ -749,7 +741,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"__spirv_GenericCastToPtr_ToPrivate", 0},
         {"__spirv_GenericCastToPtrExplicit_ToGlobal", 0},
         {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
-        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
+        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0},
+        {"llvm.spv.resource.getpointer", 0}};
     // TODO: maybe improve performance by caching demangled names
 
     auto *II = dyn_cast<IntrinsicInst>(I);
