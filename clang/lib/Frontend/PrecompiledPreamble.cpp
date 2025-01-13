@@ -499,7 +499,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   // Remap the main source file to the preamble buffer.
   StringRef MainFilePath = FrontendOpts.Inputs[0].getFile();
   auto PreambleInputBuffer = llvm::MemoryBuffer::getMemBufferCopy(
-      MainFileBuffer->getBuffer().slice(0, Bounds.Size), MainFilePath);
+      MainFileBuffer->getBuffer().substr(0, Bounds.Size), MainFilePath);
   if (PreprocessorOpts.RetainRemappedFileBuffers) {
     // MainFileBuffer will be deleted by unique_ptr after leaving the method.
     PreprocessorOpts.addRemappedFile(MainFilePath, PreambleInputBuffer.get());

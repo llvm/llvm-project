@@ -1226,7 +1226,7 @@ ASTWriter::createSignature() const {
 
   // Add the remaining bytes:
   //  1. Before the unhashed control block.
-  Hasher.update(AllBytes.slice(0, UnhashedControlBlockRange.first));
+  Hasher.update(AllBytes.substr(0, UnhashedControlBlockRange.first));
   //  2. Between the unhashed control block and the AST block.
   Hasher.update(
       AllBytes.slice(UnhashedControlBlockRange.second, ASTBlockRange.first));

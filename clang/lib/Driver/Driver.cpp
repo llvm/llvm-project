@@ -7064,7 +7064,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
              Edit.slice(2, Edit.size() - 1).contains('/')) {
     StringRef MatchPattern = Edit.substr(2).split('/').first;
     StringRef ReplPattern = Edit.substr(2).split('/').second;
-    ReplPattern = ReplPattern.slice(0, ReplPattern.size() - 1);
+    ReplPattern = ReplPattern.substr(0, ReplPattern.size() - 1);
 
     for (unsigned i = 1, e = Args.size(); i != e; ++i) {
       // Ignore end-of-line response file markers

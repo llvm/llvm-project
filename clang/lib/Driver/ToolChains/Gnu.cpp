@@ -2154,7 +2154,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
     // string into GoodVersion.PatchSuffix.
 
     if (size_t EndNumber = Segment.find_first_not_of("0123456789")) {
-      StringRef NumberStr = Segment.slice(0, EndNumber);
+      StringRef NumberStr = Segment.substr(0, EndNumber);
       if (NumberStr.getAsInteger(10, Number) || Number < 0)
         return false;
       OutStr = NumberStr;

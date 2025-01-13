@@ -469,7 +469,7 @@ static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
   if (!DS) {
     // Try again after stripping trailing -component.
     // clang++-tot -> clang++
-    ProgName = ProgName.slice(0, ProgName.rfind('-'));
+    ProgName = ProgName.substr(0, ProgName.rfind('-'));
     DS = FindDriverSuffix(ProgName, Pos);
   }
   return DS;
@@ -492,7 +492,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
 
   // Infer target from the prefix.
   StringRef Prefix(ProgName);
-  Prefix = Prefix.slice(0, LastComponent);
+  Prefix = Prefix.substr(0, LastComponent);
   std::string IgnoredError;
   bool IsRegistered =
       llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);

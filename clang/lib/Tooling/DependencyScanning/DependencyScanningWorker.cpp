@@ -222,7 +222,7 @@ static std::optional<StringRef> getSimpleMacroName(StringRef Macro) {
   std::size_t I = 0;
 
   auto FinishName = [&]() -> std::optional<StringRef> {
-    StringRef SimpleName = Name.slice(0, I);
+    StringRef SimpleName = Name.substr(0, I);
     if (SimpleName.empty())
       return std::nullopt;
     return SimpleName;

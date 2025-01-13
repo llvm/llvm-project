@@ -1187,7 +1187,7 @@ SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
     Idx = Prototypes.find_first_of(Primaries, Idx);
     assert(Idx != StringRef::npos);
     auto PD = PrototypeDescriptor::parsePrototypeDescriptor(
-        Prototypes.slice(0, Idx + 1));
+        Prototypes.substr(0, Idx + 1));
     if (!PD)
       llvm_unreachable("Error during parsing prototype.");
     PrototypeDescriptors.push_back(*PD);

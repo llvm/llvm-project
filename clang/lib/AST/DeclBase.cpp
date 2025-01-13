@@ -628,7 +628,7 @@ static StringRef getRealizedPlatform(const AvailabilityAttr *A,
     return RealizedPlatform;
   size_t suffix = RealizedPlatform.rfind("_app_extension");
   if (suffix != StringRef::npos)
-    return RealizedPlatform.slice(0, suffix);
+    return RealizedPlatform.substr(0, suffix);
   return RealizedPlatform;
 }
 

@@ -73,7 +73,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
     auto Pos = LHS.find('-');
     if (Pos == StringRef::npos)
       return false;
-    SmallString<128> NewLHS = LHS.slice(0, Pos);
+    SmallString<128> NewLHS = LHS.substr(0, Pos);
     NewLHS += LHS.slice(Pos+1, LHS.size());
     return NewLHS == RHS;
   };
