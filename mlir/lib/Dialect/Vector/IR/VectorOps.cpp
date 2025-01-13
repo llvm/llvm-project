@@ -468,11 +468,12 @@ template <typename T>
 static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
                                              CombiningKind kind,
                                              ShapedType dstType);
+// TODO: move to APFloat, APInt headers.
 template <typename T>
-static T power(const T &a, int64_t times);
+static T computePowerOf(const T &a, int64_t exponent);
 
 template <>
-APFloat power(const APFloat &a, int64_t exponent) {
+APFloat computePowerOf(const APFloat &a, int64_t exponent) {
   assert(exponent >= 0 && "negative exponents not supported.");
   if (exponent == 0) {
     return APFloat::getOne(a.getSemantics());
@@ -492,7 +493,7 @@ APFloat power(const APFloat &a, int64_t exponent) {
 };
 
 template <>
-APInt power(const APInt &a, int64_t exponent) {
+APInt computePowerOf(const APInt &a, int64_t exponent) {
   assert(exponent >= 0 && "negative exponents not supported.");
   if (exponent == 0) {
     return APInt(a.getBitWidth(), 1);
@@ -525,7 +526,8 @@ OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
     return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
   }
   case CombiningKind::MUL: {
-    return DenseElementsAttr::get(dstType, {accVal * power(srcVal, times)});
+    return DenseElementsAttr::get(dstType,
+                                  {accVal * computePowerOf(srcVal, times)});
   }
   case CombiningKind::MINIMUMF:
     return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
