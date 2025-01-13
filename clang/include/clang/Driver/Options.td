@@ -5756,6 +5756,8 @@ def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
 def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
 def print_multi_flags : Flag<["-", "--"], "print-multi-flags-experimental">,
   HelpText<"Print the flags used for selecting multilibs (experimental)">;
+def fmultilib_flag : Joined<["-", "--"], "fmultilib-flag=">,
+  Visibility<[ClangOption]>;
 def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,
   Flags<[Unsupported]>;
 def print_target_triple : Flag<["-", "--"], "print-target-triple">,
