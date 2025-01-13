@@ -715,11 +715,17 @@ namespace {
   struct DFIParamWithArguments : DFIArguments {
     TemplateParameter Param;
   };
+
   // Structure used by DeductionFailureInfo to store template argument
   // information and the index of the problematic call argument.
   struct DFIDeducedMismatchArgs : DFIArguments {
     TemplateArgumentList *TemplateArgs;
     unsigned CallArgIndex;
+  };
+
+  struct DFIParamWithArgumentsAndSuppliedType : DFIArguments {
+    TemplateParameter Param;
+    TemplateArgument SuppliedType;
   };
   // Structure used by DeductionFailureInfo to store information about
   // unsatisfied constraints.
@@ -736,8 +742,10 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
                                 TemplateDeductionResult TDK,
                                 TemplateDeductionInfo &Info) {
   DeductionFailureInfo Result;
+
   Result.Result = static_cast<unsigned>(TDK);
   Result.HasDiagnostic = false;
+
   switch (TDK) {
   case TemplateDeductionResult::Invalid:
   case TemplateDeductionResult::InstantiationDepth:
@@ -749,10 +757,9 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
 
   case TemplateDeductionResult::Incomplete:
-  case TemplateDeductionResult::InvalidExplicitArguments:
+    // case TemplateDeductionResult::InvalidExplicitArguments:
     Result.Data = Info.Param.getOpaqueValue();
     break;
-
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested: {
     // FIXME: Should allocate from normal heap so that we can free this later.
@@ -777,12 +784,23 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   case TemplateDeductionResult::IncompletePack:
     // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
   case TemplateDeductionResult::Inconsistent:
+
   case TemplateDeductionResult::Underqualified: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
     Saved->Param = Info.Param;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
+    Result.Data = Saved;
+    break;
+  }
+  case TemplateDeductionResult::InvalidExplicitArguments: {
+    DFIParamWithArgumentsAndSuppliedType *Saved =
+        new (Context) DFIParamWithArgumentsAndSuppliedType;
+    Saved->Param = Info.Param;
+    Saved->FirstArg = Info.FirstArg;
+    Saved->SecondArg = Info.SecondArg;
+    Saved->SuppliedType = Info.SuppliedType;
     Result.Data = Saved;
     break;
   }
@@ -822,13 +840,14 @@ void DeductionFailureInfo::Destroy() {
   case TemplateDeductionResult::Incomplete:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  case TemplateDeductionResult::InvalidExplicitArguments:
+  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
     break;
 
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
@@ -885,11 +904,11 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
     return TemplateParameter();
 
   case TemplateDeductionResult::Incomplete:
-  case TemplateDeductionResult::InvalidExplicitArguments:
     return TemplateParameter::getFromOpaqueValue(Data);
 
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
     return static_cast<DFIParamWithArguments*>(Data)->Param;
 
@@ -938,6 +957,16 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   return nullptr;
 }
 
+const TemplateArgument *DeductionFailureInfo::getSuppliedType() {
+  switch (static_cast<TemplateDeductionResult>(Result)) {
+  case TemplateDeductionResult::InvalidExplicitArguments:
+    return &static_cast<DFIParamWithArgumentsAndSuppliedType *>(Data)
+                ->SuppliedType;
+  default:
+    return nullptr;
+  }
+}
+
 const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   switch (static_cast<TemplateDeductionResult>(Result)) {
   case TemplateDeductionResult::Success:
@@ -946,15 +975,17 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case TemplateDeductionResult::Incomplete:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  case TemplateDeductionResult::InvalidExplicitArguments:
+  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::SubstitutionFailure:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
-
+  // case TemplateDeductionResult::InvalidExplicitArguments: //move back up
+  // there^^
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
@@ -979,7 +1010,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  case TemplateDeductionResult::InvalidExplicitArguments:
+  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::SubstitutionFailure:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
@@ -987,6 +1018,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
     return nullptr;
 
   case TemplateDeductionResult::Inconsistent:
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
@@ -11613,6 +11645,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   (ParamD = Param.dyn_cast<TemplateTypeParmDecl*>()) ||
   (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl*>()) ||
   (ParamD = Param.dyn_cast<TemplateTemplateParmDecl*>());
+
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
     llvm_unreachable(
@@ -11716,11 +11749,14 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
   case TemplateDeductionResult::InvalidExplicitArguments:
     assert(ParamD && "no parameter found for invalid explicit arguments");
-    if (ParamD->getDeclName())
+    if (ParamD->getDeclName()) {
+      auto FirstArg = *DeductionFailure.getFirstArg();
+      auto SecondArg = *DeductionFailure.getSecondArg();
+      auto SuppliedType = *DeductionFailure.getSuppliedType();
       S.Diag(Templated->getLocation(),
              diag::note_ovl_candidate_explicit_arg_mismatch_named)
-          << ParamD->getDeclName();
-    else {
+          << FirstArg << SuppliedType << SecondArg;
+    } else {
       int index = 0;
       if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ParamD))
         index = TTP->getIndex();
