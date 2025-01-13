@@ -8091,6 +8091,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             NonUniqueValueVL.append(
                 PWSz - UniqueValues.size(),
                 PoisonValue::get(UniqueValues.front()->getType()));
+            // Check that extended with poisons operations are still valid for
+            // vectorization (div/rem are not allowed).
+            if (!getSameOpcode(NonUniqueValueVL, *TLI).valid()) {
+              LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+              newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+              return false;
+            }
             VL = NonUniqueValueVL;
           }
           return true;
@@ -17818,7 +17825,7 @@ bool BoUpSLP::collectValuesToDemote(
   };
   if (E.isGather() || !Visited.insert(&E).second ||
       any_of(E.Scalars, [&](Value *V) {
-        return all_of(V->users(), [&](User *U) {
+        return !isa<PoisonValue>(V) && all_of(V->users(), [&](User *U) {
           return isa<InsertElementInst>(U) && !getTreeEntry(U);
         });
       }))
