@@ -283,7 +283,9 @@ private:
         if (!dominators.dominates(definingBlock, parentBlock) ||
             (definingBlock == parentBlock && isa<BlockArgument>(value))) {
           toProcess.emplace_back(value, parentBlock);
-          valuesToFree.insert(value);
+          if (isa<BaseMemRefType>(value.getType())) {
+              valuesToFree.insert(value);
+          }
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
                        .second)
           toProcess.emplace_back(value, definingBlock);
@@ -308,9 +310,6 @@ private:
 
     // Add new allocs and additional clone operations.
     for (Value value : valuesToFree) {
-      if (!isa<BaseMemRefType>(value.getType())) {
-        continue;
-      }
       if (failed(isa<BlockArgument>(value)
                      ? introduceBlockArgCopy(cast<BlockArgument>(value))
                      : introduceValueCopyForRegionResult(value)))
