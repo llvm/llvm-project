@@ -5623,6 +5623,7 @@ public:
   }
 };
 
+/// This represents the '#pragma omp stripe' loop transformation directive.
 class OMPStripeDirective final : public OMPLoopTransformationDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;

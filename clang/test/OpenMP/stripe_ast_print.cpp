@@ -1,18 +1,18 @@
 // Check no warnings/errors
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 // Check AST and unparsing
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -ast-dump  %s \
 // RUN: | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -ast-print %s \
 // RUN: | FileCheck %s --check-prefix=PRINT
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump-all %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -ast-dump-all %s \
 // RUN: | FileCheck %s --check-prefix=DUMP
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-print    %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=60 -ast-print %s \
 // RUN: | FileCheck %s --check-prefix=PRINT
 
 // placeholder for loop body code.

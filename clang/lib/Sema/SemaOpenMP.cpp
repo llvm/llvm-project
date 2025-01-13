@@ -14212,6 +14212,15 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
          "Expecting a loop statement for each affected loop");
 }
 
+/// Build and return a DeclRefExpr for the floor induction variable using the
+/// SemaRef and the provided parameters.
+static Expr *MakeFloorIVRef(Sema &SemaRef,
+                            SmallVector<VarDecl *, 4> FloorIndVars, int I,
+                            QualType IVTy, DeclRefExpr *OrigCntVar) {
+  return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
+                          OrigCntVar->getExprLoc());
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                                 Stmt *AStmt,
                                                 SourceLocation StartLoc,
@@ -14349,22 +14358,18 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Stmt *LoopStmt = LoopStmts[I];
 
     // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define lamdas that create
-    // a new AST node at every use.
+    // node object must appear at most once, hence we define a lamda that
+    // creates a new AST node at every use.
     auto MakeTileIVRef = [&SemaRef = this->SemaRef, &TileIndVars, I, IVTy,
                           OrigCntVar]() {
       return buildDeclRefExpr(SemaRef, TileIndVars[I], IVTy,
                               OrigCntVar->getExprLoc());
     };
-    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, IVTy,
-                           OrigCntVar]() {
-      return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
-                              OrigCntVar->getExprLoc());
-    };
 
     // For init-statement: auto .tile.iv = .floor.iv
     SemaRef.AddInitializerToDecl(
-        TileIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
+        TileIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef(
+                SemaRef, FloorIndVars, I, IVTy, OrigCntVar)).get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = TileIndVars[I];
     StmtResult InitStmt = new (Context)
@@ -14377,7 +14382,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
     ExprResult EndOfTile =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
-                           MakeFloorIVRef(), MakeDimTileSize(I));
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        MakeDimTileSize(I));
     if (!EndOfTile.isUsable())
       return StmtError();
     ExprResult IsPartialTile =
@@ -14438,15 +14444,6 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     DeclRefExpr *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType IVTy = NumIterations->getType();
 
-    // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define lamdas that create
-    // a new AST node at every use.
-    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, IVTy,
-                           OrigCntVar]() {
-      return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
-                              OrigCntVar->getExprLoc());
-    };
-
     // For init-statement: auto .floor.iv = 0
     SemaRef.AddInitializerToDecl(
         FloorIndVars[I],
@@ -14462,14 +14459,16 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // For cond-expression: .floor.iv < NumIterations
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           MakeFloorIVRef(), NumIterations);
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
     ExprResult IncrStmt =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-                           MakeFloorIVRef(), MakeDimTileSize(I));
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        MakeDimTileSize(I));
     if (!IncrStmt.isUsable())
       return StmtError();
 
@@ -14493,8 +14492,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
   const auto *SizesClause =
       OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
-  if (!SizesClause ||
-      llvm::any_of(SizesClause->getSizesRefs(), [](Expr *E) { return !E; }))
+  if (!SizesClause || llvm::is_contained(SizesClause->getSizesRefs(), nullptr))
     return StmtError();
   unsigned NumLoops = SizesClause->getNumSizes();
 
@@ -14534,7 +14532,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<VarDecl *, 4> StripeIndVars;
   FloorIndVars.resize(NumLoops);
   StripeIndVars.resize(NumLoops);
-  for (unsigned I = 0; I < NumLoops; ++I) {
+  for (unsigned I : llvm::seq<unsigned>(NumLoops)) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
 
     assert(LoopHelper.Counters.size() == 1 &&
@@ -14574,8 +14572,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
   // Once the original iteration values are set, append the innermost body.
   Stmt *Inner = Body;
 
-  auto MakeDimStripeSize = [&SemaRef = this->SemaRef, &CopyTransformer,
-                            &Context, SizesClause, CurScope](int I) -> Expr * {
+  auto MakeDimStripeSize = [&](int I) -> Expr * {
     Expr *DimStripeSizeExpr = SizesClause->getSizesRefs()[I];
     if (isa<ConstantExpr>(DimStripeSizeExpr))
       return AssertSuccess(CopyTransformer.TransformExpr(DimStripeSizeExpr));
@@ -14621,23 +14618,20 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     Stmt *LoopStmt = LoopStmts[I];
 
     // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define lamdas that create
-    // a new AST node at every use.
-    auto MakeStripeIVRef = [&SemaRef = this->SemaRef, &StripeIndVars, I, IVTy,
-                            OrigCntVar]() {
+    // node object must appear at most once, hence we define a lamda that
+    // creates a new AST node at every use.
+    auto MakeStripeIVRef = [&]() {
       return buildDeclRefExpr(SemaRef, StripeIndVars[I], IVTy,
-                              OrigCntVar->getExprLoc());
-    };
-    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, IVTy,
-                           OrigCntVar]() {
-      return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
                               OrigCntVar->getExprLoc());
     };
 
     // For init-statement: auto .stripe.iv = .floor.iv
     SemaRef.AddInitializerToDecl(
         StripeIndVars[I],
-        SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
+        SemaRef
+            .DefaultLvalueConversion(MakeFloorIVRef(
+                SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
+            .get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = StripeIndVars[I];
     StmtResult InitStmt = new (Context)
@@ -14650,7 +14644,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     //   .stripe.iv < min(.floor.iv + DimStripeSize, NumIterations)
     ExprResult EndOfStripe =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
-                           MakeFloorIVRef(), MakeDimStripeSize(I));
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        MakeDimStripeSize(I));
     if (!EndOfStripe.isUsable())
       return StmtError();
     ExprResult IsPartialStripe =
@@ -14711,15 +14706,6 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     DeclRefExpr *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType IVTy = NumIterations->getType();
 
-    // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define lamdas that create
-    // a new AST node at every use.
-    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, IVTy,
-                           OrigCntVar]() {
-      return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
-                              OrigCntVar->getExprLoc());
-    };
-
     // For init-statement: auto .floor.iv = 0
     SemaRef.AddInitializerToDecl(
         FloorIndVars[I],
@@ -14735,14 +14721,16 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     // For cond-expression: .floor.iv < NumIterations
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           MakeFloorIVRef(), NumIterations);
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimStripeSize
     ExprResult IncrStmt =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-                           MakeFloorIVRef(), MakeDimStripeSize(I));
+        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        MakeDimStripeSize(I));
     if (!IncrStmt.isUsable())
       return StmtError();
 
