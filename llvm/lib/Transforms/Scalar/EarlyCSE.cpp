@@ -16,6 +16,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1608,9 +1609,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // load with.
         if (Inst.hasMetadata(LLVMContext::MD_noundef)) {
           if (auto *AlignMD = Inst.getMetadata(LLVMContext::MD_align)) {
+            Inst.setMetadata(LLVMContext::MD_align, nullptr);
             auto *A = mdconst::extract<ConstantInt>(AlignMD->getOperand(0));
-            if (Op->getPointerAlignment(SQ.DL).value() % A->getZExtValue() !=
-                0) {
+            auto KB = computeKnownBits(Op, SQ.DL);
+            unsigned AlignFromKB = 1 << KB.countMinTrailingZeros();
+            if (AlignFromKB < A->getZExtValue()) {
               IRBuilder B(&Inst);
               B.CreateAlignmentAssumption(SQ.DL, Op, A);
             }
