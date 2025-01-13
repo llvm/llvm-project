@@ -42,7 +42,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI void __insertion_sort_move(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insertion_sort_move(
     _BidirectionalIterator __first1,
     _BidirectionalIterator __last1,
     typename iterator_traits<_BidirectionalIterator>::value_type* __first2,
