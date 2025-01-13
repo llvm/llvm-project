@@ -463,7 +463,7 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
 }
 
 /// Computes the result of reducing a constant vector where the accumulator
-/// value, `acc`, is also constant.
+/// value, `acc`, is also constant. `times` is the number of times the operation is applied.
 template <typename T>
 static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
                                              CombiningKind kind,
