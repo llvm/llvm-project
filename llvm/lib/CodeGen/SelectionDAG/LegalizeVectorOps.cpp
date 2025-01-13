@@ -1777,6 +1777,31 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
   assert((BW == 64 || BW == 32) &&
          "Elements in vector-UINT_TO_FP must be 32 or 64 bits wide");
 
+  // If STRICT_/FMUL is not supported by the target (in case of f16) replace the
+  // UINT_TO_FP with a larger float and round to the smaller type
+  if ((!IsStrict && !TLI.isOperationLegalOrCustom(ISD::FMUL, DstVT)) ||
+      (IsStrict && !TLI.isOperationLegalOrCustom(ISD::STRICT_FMUL, DstVT))) {
+    EVT FPVT = BW == 32 ? MVT::f32 : MVT::f64;
+    SDValue UIToFP;
+    SDValue Result;
+    SDValue TargetZero = DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+    EVT FloatVecVT = SrcVT.changeVectorElementType(FPVT);
+    if (IsStrict) {
+      UIToFP = DAG.getNode(ISD::STRICT_UINT_TO_FP, DL, {FloatVecVT, MVT::Other},
+                           {Node->getOperand(0), Src});
+      Result = DAG.getNode(ISD::STRICT_FP_ROUND, DL, {DstVT, MVT::Other},
+                           {Node->getOperand(0), UIToFP, TargetZero});
+      Results.push_back(Result);
+      Results.push_back(Result.getValue(1));
+    } else {
+      UIToFP = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVecVT, Src);
+      Result = DAG.getNode(ISD::FP_ROUND, DL, DstVT, UIToFP, TargetZero);
+      Results.push_back(Result);
+    }
+
+    return;
+  }
+
   SDValue HalfWord = DAG.getConstant(BW / 2, DL, SrcVT);
 
   // Constants to clear the upper part of the word.

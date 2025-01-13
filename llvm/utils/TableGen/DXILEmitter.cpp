@@ -218,8 +218,10 @@ static StringRef getOverloadKindStr(const Record *R) {
       .Case("Int64Ty", "OverloadKind::I64")
       .Case("ResRetHalfTy", "OverloadKind::HALF")
       .Case("ResRetFloatTy", "OverloadKind::FLOAT")
+      .Case("ResRetDoubleTy", "OverloadKind::DOUBLE")
       .Case("ResRetInt16Ty", "OverloadKind::I16")
-      .Case("ResRetInt32Ty", "OverloadKind::I32");
+      .Case("ResRetInt32Ty", "OverloadKind::I32")
+      .Case("ResRetInt64Ty", "OverloadKind::I64");
 }
 
 /// Return a string representation of valid overload information denoted

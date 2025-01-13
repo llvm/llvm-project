@@ -2229,6 +2229,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BitOp;
     }
 
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
+    }
+
     // Left or right might be masked.
     if (SimplifyDemandedInstructionBits(*II))
       return &CI;
@@ -2674,9 +2683,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
-      Value *CopySign = Builder.CreateCopySign(
-          Mag, X,
-          II->getFastMathFlags() & cast<Instruction>(Sign)->getFastMathFlags());
+      Value *CopySign =
+          Builder.CreateCopySign(Mag, X, FMFSource::intersect(II, Sign));
       return replaceInstUsesWith(*II, CopySign);
     }
 

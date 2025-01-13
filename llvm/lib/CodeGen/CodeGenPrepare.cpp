@@ -152,7 +152,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     EnableAndCmpSinking("enable-andcmp-sinking", cl::Hidden, cl::init(true),
-                        cl::desc("Enable sinkinig and/cmp into branches."));
+                        cl::desc("Enable sinking and/cmp into branches."));
 
 static cl::opt<bool> DisableStoreExtract(
     "disable-cgp-store-extract", cl::Hidden, cl::init(false),

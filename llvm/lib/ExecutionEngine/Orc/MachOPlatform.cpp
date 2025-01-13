@@ -799,17 +799,21 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
 
   using namespace jitlink;
 
-  bool InBootstrapPhase =
-      &MR.getTargetJITDylib() == &MP.PlatformJD && MP.Bootstrap;
+  bool InBootstrapPhase = false;
+
+  if (LLVM_UNLIKELY(&MR.getTargetJITDylib() == &MP.PlatformJD)) {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    if (MP.Bootstrap) {
+      InBootstrapPhase = true;
+      ++MP.Bootstrap->ActiveGraphs;
+    }
+  }
 
   // If we're in the bootstrap phase then increment the active graphs.
-  if (InBootstrapPhase) {
-    Config.PrePrunePasses.push_back(
-        [this](LinkGraph &G) { return bootstrapPipelineStart(G); });
+  if (LLVM_UNLIKELY(InBootstrapPhase))
     Config.PostAllocationPasses.push_back([this](LinkGraph &G) {
       return bootstrapPipelineRecordRuntimeFunctions(G);
     });
-  }
 
   // --- Handle Initializers ---
   if (auto InitSymbol = MR.getInitializerSymbol()) {
@@ -872,19 +876,11 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         [this](LinkGraph &G) { return bootstrapPipelineEnd(G); });
 }
 
-Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineStart(
-    jitlink::LinkGraph &G) {
-  // Increment the active graphs count in BootstrapInfo.
-  std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
-  ++MP.Bootstrap.load()->ActiveGraphs;
-  return Error::success();
-}
-
 Error MachOPlatform::MachOPlatformPlugin::
     bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G) {
   // Record bootstrap function names.
   std::pair<StringRef, ExecutorAddr *> RuntimeSymbols[] = {
-      {*MP.MachOHeaderStartSymbol, &MP.Bootstrap.load()->MachOHeaderAddr},
+      {*MP.MachOHeaderStartSymbol, &MP.Bootstrap->MachOHeaderAddr},
       {*MP.PlatformBootstrap.Name, &MP.PlatformBootstrap.Addr},
       {*MP.PlatformShutdown.Name, &MP.PlatformShutdown.Addr},
       {*MP.RegisterJITDylib.Name, &MP.RegisterJITDylib.Addr},
@@ -924,10 +920,8 @@ Error MachOPlatform::MachOPlatformPlugin::
     // If this graph defines the macho header symbol then create the internal
     // mapping between it and PlatformJD.
     std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-    MP.JITDylibToHeaderAddr[&MP.PlatformJD] =
-        MP.Bootstrap.load()->MachOHeaderAddr;
-    MP.HeaderAddrToJITDylib[MP.Bootstrap.load()->MachOHeaderAddr] =
-        &MP.PlatformJD;
+    MP.JITDylibToHeaderAddr[&MP.PlatformJD] = MP.Bootstrap->MachOHeaderAddr;
+    MP.HeaderAddrToJITDylib[MP.Bootstrap->MachOHeaderAddr] = &MP.PlatformJD;
   }
 
   return Error::success();
@@ -935,19 +929,13 @@ Error MachOPlatform::MachOPlatformPlugin::
 
 Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineEnd(
     jitlink::LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
-  assert(MP.Bootstrap && "DeferredAAs reset before bootstrap completed");
+  std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
 
-  // Transfer any allocation actions to DeferredAAs.
-  std::move(G.allocActions().begin(), G.allocActions().end(),
-            std::back_inserter(MP.Bootstrap.load()->DeferredAAs));
-  G.allocActions().clear();
-
-  --MP.Bootstrap.load()->ActiveGraphs;
+  --MP.Bootstrap->ActiveGraphs;
   // Notify Bootstrap->CV while holding the mutex because the mutex is
   // also keeping Bootstrap->CV alive.
-  if (MP.Bootstrap.load()->ActiveGraphs == 0)
-    MP.Bootstrap.load()->CV.notify_all();
+  if (MP.Bootstrap->ActiveGraphs == 0)
+    MP.Bootstrap->CV.notify_all();
   return Error::success();
 }
 
@@ -1412,15 +1400,23 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
       assert(I->second && "Null header registered for JD");
       HeaderAddr = I->second;
     }
-    G.allocActions().push_back(
-        {cantFail(
-             WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
-                 MP.RegisterObjectPlatformSections.Addr, HeaderAddr, UnwindInfo,
-                 MachOPlatformSecs)),
-         cantFail(
-             WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
-                 MP.DeregisterObjectPlatformSections.Addr, HeaderAddr,
-                 UnwindInfo, MachOPlatformSecs))});
+
+    AllocActionCallPair AllocActions = {
+        cantFail(
+            WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
+                MP.RegisterObjectPlatformSections.Addr, HeaderAddr, UnwindInfo,
+                MachOPlatformSecs)),
+        cantFail(
+            WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
+                MP.DeregisterObjectPlatformSections.Addr, HeaderAddr,
+                UnwindInfo, MachOPlatformSecs))};
+
+    if (LLVM_LIKELY(!InBootstrapPhase))
+      G.allocActions().push_back(std::move(AllocActions));
+    else {
+      std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
+      MP.Bootstrap->DeferredAAs.push_back(std::move(AllocActions));
+    }
   }
 
   return Error::success();
@@ -1701,8 +1697,8 @@ Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
     // If we're in the bootstrap phase then just record these symbols in the
     // bootstrap object and then bail out -- registration will be attached to
     // the bootstrap graph.
-    std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
-    auto &SymTab = MP.Bootstrap.load()->SymTab;
+    std::lock_guard<std::mutex> Lock(MP.Bootstrap->Mutex);
+    auto &SymTab = MP.Bootstrap->SymTab;
     for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
       SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
                         flagsForSymbol(*OriginalSymbol)});

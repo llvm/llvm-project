@@ -96,8 +96,9 @@ using namespace PatternMatch;
 cl::opt<bool> llvm::RequireAndPreserveDomTree(
     "simplifycfg-require-and-preserve-domtree", cl::Hidden,
 
-    cl::desc("Temorary development switch used to gradually uplift SimplifyCFG "
-             "into preserving DomTree,"));
+    cl::desc(
+        "Temporary development switch used to gradually uplift SimplifyCFG "
+        "into preserving DomTree,"));
 
 // Chosen as 2 so as to be cheap, but still to have enough power to fold
 // a select, so the "clamp" idiom (of a min followed by a max) will be caught.
@@ -126,7 +127,7 @@ static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
-    cl::desc("Control the maximal conditonal load/store that we are willing "
+    cl::desc("Control the maximal conditional load/store that we are willing "
              "to speculatively execute to eliminate conditional branch "
              "(default = 6)"));
 
