@@ -4281,7 +4281,8 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   }
 
   QualType ValType = pointerType->getPointeeType();
-  if (!ValType->isIntegerType() && !ValType->isPointerOrObjCObjectPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intptr)
         << FirstArg->getType() << 0 << FirstArg->getSourceRange();
@@ -4658,7 +4659,8 @@ ExprResult Sema::BuiltinNontemporalOverloaded(ExprResult TheCallResult) {
 
   // Strip any qualifiers off ValType.
   ValType = ValType.getUnqualifiedType();
-  if (!ValType->isIntegerType() && !ValType->isPointerOrObjCObjectPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType() && !ValType->isFloatingType() &&
       !ValType->isVectorType()) {
     Diag(DRE->getBeginLoc(),

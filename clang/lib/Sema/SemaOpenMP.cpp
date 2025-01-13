@@ -17344,8 +17344,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
 
     OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
     // Variably modified types are not supported for tasks.
-    if (!Type->isPointerOrObjCObjectPointerType() && Type->isVariablyModifiedType() &&
-        isOpenMPTaskingDirective(CurrDir)) {
+    if (!Type->isPointerOrObjCObjectPointerType() &&
+        Type->isVariablyModifiedType() && isOpenMPTaskingDirective(CurrDir)) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_private) << Type
           << getOpenMPDirectiveName(CurrDir);
@@ -17619,7 +17619,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     }
 
     // Variably modified types are not supported for tasks.
-    if (!Type->isPointerOrObjCObjectPointerType() && Type->isVariablyModifiedType() &&
+    if (!Type->isPointerOrObjCObjectPointerType() &&
+        Type->isVariablyModifiedType() &&
         isOpenMPTaskingDirective(DSAStack->getCurrentDirective())) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_firstprivate) << Type
@@ -19744,7 +19745,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
     }
 
     // Variably modified types are not supported.
-    if (!Type->isPointerOrObjCObjectPointerType() && Type->isVariablyModifiedType()) {
+    if (!Type->isPointerOrObjCObjectPointerType() &&
+        Type->isVariablyModifiedType()) {
       Diag(ELoc, diag::err_omp_variably_modified_type_not_supported)
           << getOpenMPClauseName(OMPC_copyprivate) << Type
           << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
@@ -20490,7 +20492,8 @@ public:
   bool VisitArraySubscriptExpr(ArraySubscriptExpr *AE) {
     Expr *E = AE->getBase()->IgnoreParenImpCasts();
 
-    if (!E->getType()->isPointerOrObjCObjectPointerType() && !E->getType()->isArrayType()) {
+    if (!E->getType()->isPointerOrObjCObjectPointerType() &&
+        !E->getType()->isArrayType()) {
       if (!NoDiagnose) {
         SemaRef.Diag(ELoc, diag::err_omp_expected_base_var_name)
             << 0 << AE->getSourceRange();
@@ -24010,7 +24013,8 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
                              DeclTy->containsUnexpandedParameterPack() ||
                              DeclTy->isInstantiationDependentType();
     if (!IsDeclTyDependent) {
-      if (!DeclTy->isIntegralType(Context) && !DeclTy->isPointerOrObjCObjectPointerType()) {
+      if (!DeclTy->isIntegralType(Context) &&
+          !DeclTy->isPointerOrObjCObjectPointerType()) {
         // OpenMP 5.0, 2.1.6 Iterators, Restrictions, C/C++
         // The iterator-type must be an integral or pointer type.
         Diag(StartLoc, diag::err_omp_iterator_not_integral_or_pointer)

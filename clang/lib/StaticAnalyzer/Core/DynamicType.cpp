@@ -117,7 +117,8 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
     return State;
 
   if (CastSucceeds) {
-    assert((CastToTy->isPointerOrObjCObjectPointerType() || CastToTy->isReferenceType()) &&
+    assert((CastToTy->isPointerOrObjCObjectPointerType() ||
+            CastToTy->isReferenceType()) &&
            "DynamicTypeInfo should always be a pointer.");
     State = State->set<DynamicTypeMap>(MR, CastToTy);
   }

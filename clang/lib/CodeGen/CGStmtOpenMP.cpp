@@ -520,7 +520,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     // deal with pointers. We can pass in the same way the VLA type sizes to the
     // outlined function.
     if (FO.UIntPtrCastRequired &&
-        ((I->capturesVariableByCopy() && !ArgType->isPointerOrObjCObjectPointerType()) ||
+        ((I->capturesVariableByCopy() &&
+          !ArgType->isPointerOrObjCObjectPointerType()) ||
          I->capturesVariableArrayType()))
       ArgType = Ctx.getUIntPtrType();
 
@@ -601,7 +602,8 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     }
     // If we are capturing a pointer by copy we don't need to do anything, just
     // use the value that we get from the arguments.
-    if (I->capturesVariableByCopy() && FD->getType()->isPointerOrObjCObjectPointerType()) {
+    if (I->capturesVariableByCopy() &&
+        FD->getType()->isPointerOrObjCObjectPointerType()) {
       const VarDecl *CurVD = I->getCapturedVar();
       if (!FO.RegisterCastedArgsOnly)
         LocalAddrs.insert({Args[Cnt], {CurVD, LocalAddr}});

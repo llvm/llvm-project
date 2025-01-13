@@ -2981,8 +2981,8 @@ bool ASTContext::isSentinelNullExpr(const Expr *E) {
   if (E->getType()->isNullPtrType()) return true;
 
   if (E->getType()->isPointerOrObjCObjectPointerType() &&
-      E->IgnoreParenCasts()->isNullPointerConstant(*this,
-                                                Expr::NPC_ValueDependentIsNull))
+      E->IgnoreParenCasts()->isNullPointerConstant(
+          *this, Expr::NPC_ValueDependentIsNull))
     return true;
 
   // Unfortunately, __null has type 'int'.

@@ -2536,7 +2536,8 @@ public:
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
   bool isSignableType() const;
-  bool isPointerOrObjCObjectPointerType() const;   // Any C pointer or ObjC object pointer
+  bool isPointerOrObjCObjectPointerType()
+      const; // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
@@ -8656,8 +8657,8 @@ inline bool Type::isUndeducedType() const {
 inline bool Type::isOverloadableType() const {
   if (!isDependentType())
     return isRecordType() || isEnumeralType();
-  return !isArrayType() && !isFunctionType() && !isPointerOrObjCObjectPointerType() &&
-         !isMemberPointerType();
+  return !isArrayType() && !isFunctionType() &&
+         !isPointerOrObjCObjectPointerType() && !isMemberPointerType();
 }
 
 /// Determines whether this type is written as a typedef-name.

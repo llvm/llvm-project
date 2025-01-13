@@ -7974,9 +7974,10 @@ static bool checkCondition(Sema &S, const Expr *Cond,
 /// true otherwise.
 static bool checkConditionalNullPointer(Sema &S, ExprResult &NullExpr,
                                         QualType PointerTy) {
-  if ((!PointerTy->isPointerOrObjCObjectPointerType() && !PointerTy->isBlockPointerType()) ||
+  if ((!PointerTy->isPointerOrObjCObjectPointerType() &&
+       !PointerTy->isBlockPointerType()) ||
       !NullExpr.get()->isNullPointerConstant(S.Context,
-                                            Expr::NPC_ValueDependentIsNull))
+                                             Expr::NPC_ValueDependentIsNull))
     return true;
 
   NullExpr = S.ImpCastExprToType(NullExpr.get(), PointerTy, CK_NullToPointer);
@@ -10765,7 +10766,8 @@ static bool checkArithmeticOpPointerOperand(Sema &S, SourceLocation Loc,
   if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
     ResType = ResAtomicType->getValueType();
 
-  if (!ResType->isPointerOrObjCObjectPointerType()) return true;
+  if (!ResType->isPointerOrObjCObjectPointerType())
+    return true;
 
   QualType PointeeTy = ResType->getPointeeType();
   if (PointeeTy->isVoidType()) {
@@ -11594,8 +11596,10 @@ static bool convertPointersToCompositeType(Sema &S, SourceLocation Loc,
 
   QualType T = S.FindCompositePointerType(Loc, LHS, RHS);
   if (T.isNull()) {
-    if ((LHSType->isPointerOrObjCObjectPointerType() || LHSType->isMemberPointerType()) &&
-        (RHSType->isPointerOrObjCObjectPointerType() || RHSType->isMemberPointerType()))
+    if ((LHSType->isPointerOrObjCObjectPointerType() ||
+         LHSType->isMemberPointerType()) &&
+        (RHSType->isPointerOrObjCObjectPointerType() ||
+         RHSType->isMemberPointerType()))
       diagnoseDistinctPointerComparison(S, Loc, LHS, RHS, /*isError*/true);
     else
       S.InvalidOperands(Loc, LHS, RHS);
@@ -12171,7 +12175,7 @@ void Sema::CheckPtrComparisonWithNullChar(ExprResult &E, ExprResult &NullE) {
   if (!E.get()->getType()->isPointerOrObjCObjectPointerType() &&
       E.get()->isNullPointerConstant(Context,
                                      Expr::NPC_ValueDependentIsNotNull) ==
-        Expr::NPCK_ZeroExpression) {
+          Expr::NPCK_ZeroExpression) {
     if (const auto *CL = dyn_cast<CharacterLiteral>(E.get())) {
       if (CL->getValue() == 0)
         Diag(E.get()->getExprLoc(), diag::warn_pointer_compare)
@@ -12605,8 +12609,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       return computeResultTy();
     }
   }
-  if ((LHSType->isPointerOrObjCObjectPointerType() && RHSType->isIntegerType()) ||
-      (LHSType->isIntegerType() && RHSType->isPointerOrObjCObjectPointerType())) {
+  if ((LHSType->isPointerOrObjCObjectPointerType() &&
+       RHSType->isIntegerType()) ||
+      (LHSType->isIntegerType() &&
+       RHSType->isPointerOrObjCObjectPointerType())) {
     unsigned DiagID = 0;
     bool isError = false;
     if (LangOpts.DebuggerSupport) {

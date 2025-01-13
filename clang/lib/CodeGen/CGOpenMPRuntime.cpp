@@ -7188,12 +7188,13 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
-      bool IsPointer =
-          OAShE ||
-          (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
-                       .getCanonicalType()
-                       ->isPointerOrObjCObjectPointerType()) ||
-          I->getAssociatedExpression()->getType()->isPointerOrObjCObjectPointerType();
+      bool IsPointer = OAShE ||
+                       (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
+                                    .getCanonicalType()
+                                    ->isPointerOrObjCObjectPointerType()) ||
+                       I->getAssociatedExpression()
+                           ->getType()
+                           ->isPointerOrObjCObjectPointerType();
       bool IsMemberReference = isa<MemberExpr>(I->getAssociatedExpression()) &&
                                MapDecl &&
                                MapDecl->getType()->isLValueReferenceType();
@@ -8533,7 +8534,8 @@ public:
         assert(VDecl == VD && "We got information for the wrong declaration??");
         assert(!Components.empty() &&
                "Not expecting declaration with no component lists.");
-        if (VD && E && VD->getType()->isPointerOrObjCObjectPointerType() && isa<DeclRefExpr>(E))
+        if (VD && E && VD->getType()->isPointerOrObjCObjectPointerType() &&
+            isa<DeclRefExpr>(E))
           HasMapBasePtr = true;
         if (VD && E && VD->getType()->isPointerOrObjCObjectPointerType() &&
             (isa<ArraySectionExpr>(E) || isa<ArraySubscriptExpr>(E)))
@@ -8784,7 +8786,8 @@ public:
       CombinedInfo.BasePointers.push_back(CV);
       CombinedInfo.DevicePtrDecls.push_back(nullptr);
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-      if (I != FirstPrivateDecls.end() && ElementType->isPointerOrObjCObjectPointerType()) {
+      if (I != FirstPrivateDecls.end() &&
+          ElementType->isPointerOrObjCObjectPointerType()) {
         Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
             CV, ElementType, CGF.getContext().getDeclAlign(VD),
             AlignmentSource::Decl));

@@ -1763,7 +1763,8 @@ static void handleTLSModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
-  if (ResultType->isPointerOrObjCObjectPointerType() || ResultType->isBlockPointerType()) {
+  if (ResultType->isPointerOrObjCObjectPointerType() ||
+      ResultType->isBlockPointerType()) {
     D->addAttr(::new (S.Context) RestrictAttr(S.Context, AL));
     return;
   }

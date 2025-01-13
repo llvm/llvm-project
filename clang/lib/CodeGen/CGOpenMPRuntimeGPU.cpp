@@ -1962,7 +1962,9 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
                                               CGFContext.getPointerType(ElemTy),
                                               CI->getLocation());
       if (CI->capturesVariableByCopy() &&
-          !CI->getCapturedVar()->getType()->isPointerOrObjCObjectPointerType()) {
+          !CI->getCapturedVar()
+               ->getType()
+               ->isPointerOrObjCObjectPointerType()) {
         Arg = castValueToType(CGF, Arg, ElemTy, CGFContext.getUIntPtrType(),
                               CI->getLocation());
       }

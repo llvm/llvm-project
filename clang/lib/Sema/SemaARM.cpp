@@ -162,7 +162,8 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     }
 
     // at least one argument should be pointer type
-    if (!ArgTypeA->isPointerOrObjCObjectPointerType() && !ArgTypeB->isPointerOrObjCObjectPointerType())
+    if (!ArgTypeA->isPointerOrObjCObjectPointerType() &&
+        !ArgTypeB->isPointerOrObjCObjectPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_any2arg_pointer)
              << ArgTypeA << ArgTypeB << ArgA->getSourceRange();
 
@@ -924,7 +925,8 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
   TheCall->setArg(IsLdrex ? 0 : 1, PointerArg);
 
   // In general, we allow ints, floats and pointers to be loaded and stored.
-  if (!ValType->isIntegerType() && !ValType->isPointerOrObjCObjectPointerType() &&
+  if (!ValType->isIntegerType() &&
+      !ValType->isPointerOrObjCObjectPointerType() &&
       !ValType->isBlockPointerType() && !ValType->isFloatingType()) {
     Diag(DRE->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer_intfltptr)
         << PointerArg->getType() << 0 << PointerArg->getSourceRange();

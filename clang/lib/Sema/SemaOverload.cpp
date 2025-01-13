@@ -301,7 +301,8 @@ isPointerConversionToVoidPointer(ASTContext& Context) const {
   if (First == ICK_Array_To_Pointer)
     FromType = Context.getArrayDecayedType(FromType);
 
-  if (Second == ICK_Pointer_Conversion && FromType->isPointerOrObjCObjectPointerType())
+  if (Second == ICK_Pointer_Conversion &&
+      FromType->isPointerOrObjCObjectPointerType())
     if (const PointerType* ToPtrType = ToType->getAs<PointerType>())
       return ToPtrType->getPointeeType()->isVoidType();
 
@@ -3439,7 +3440,8 @@ bool Sema::CheckPointerConversion(Expr *From, QualType ToType,
 
   Kind = CK_BitCast;
 
-  if (Diagnose && !IsCStyleOrFunctionalCast && !FromType->isPointerOrObjCObjectPointerType() &&
+  if (Diagnose && !IsCStyleOrFunctionalCast &&
+      !FromType->isPointerOrObjCObjectPointerType() &&
       From->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNotNull) ==
           Expr::NPCK_ZeroExpression) {
     if (Context.hasSameUnqualifiedType(From->getType(), Context.BoolTy))
@@ -8631,8 +8633,8 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
     // Skip over restrict if no restrict found anywhere in the types, or if
     // the type cannot be restrict-qualified.
     if ((CVR & Qualifiers::Restrict) &&
-        (!hasRestrict ||
-         (!(PointeeTy->isPointerOrObjCObjectPointerType() || PointeeTy->isReferenceType()))))
+        (!hasRestrict || (!(PointeeTy->isPointerOrObjCObjectPointerType() ||
+                            PointeeTy->isReferenceType()))))
       continue;
 
     // Build qualified pointee type.
@@ -9050,7 +9052,6 @@ class BuiltinOperatorOverloadBuilder {
         S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
       }
     }
-
   }
 
   /// Helper to add an overload candidate for a binary builtin with types \p L
