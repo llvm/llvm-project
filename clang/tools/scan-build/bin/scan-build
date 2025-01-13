@@ -1472,9 +1472,8 @@ sub HtmlEscape {
 
 sub URLEscape {
   my $arg = shift || '';
-  my $tmp = $arg;
-  $tmp =~ s/\+/%2B/g;
-  return $tmp;
+  $arg =~ s/\+/%2B/g;
+  return $arg;
 }
 
 ##----------------------------------------------------------------------------##
