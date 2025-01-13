@@ -1,0 +1,108 @@
+name: Trigger mi400 Buildbot Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [amd-mi400]
+    types: [opened, reopened, synchronize]
+
+jobs:
+  trigger-build:
+    runs-on: self-hosted
+    container:
+      image: docker-virtual.mkmartifactory.amd.com/amd/base_docker_images/ubuntu-20.04:compiler-buildbot-trigger-v1
+    steps:
+      - name: Get PR and Repository Details
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "PR_NUMBER=$(jq -r .number < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "PR_TITLE=$(jq -r .pull_request.title < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "PR_BODY=$(jq -r .pull_request.body < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "PR_SHA=$(jq -r .pull_request.head.sha < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "PR_URL=$(jq -r .pull_request.html_url < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "REPO_OWNER=$(jq -r .repository.owner.login < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "REPO_NAME=$(jq -r .repository.name < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+          echo "REPO_URL=$(jq -r .repository.html_url < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+
+      - name: Trigger Buildbot Build
+        run: |          
+          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"${{ env.PR_TITLE }}" -p PR_BODY:"${{ env.PR_BODY }}" -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }} -p REPO_URL:${{ env.REPO_URL }}
+         
+      - name: Poll Buildbot build status
+        run: |
+          python3 -c "
+          import os
+          import time
+          import requests
+          GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+          BUILD_URL = 'http://10.217.78.121:8015/api/v2/builds'
+          TARGET_SHA = os.getenv('PR_SHA')
+          print('debug', TARGET_SHA)
+          MAX_RETRIES = 10
+          RETRY_INTERVAL = 30  # seconds
+
+          def get_build_properties(build_id):
+              build_properties_url = f'http://10.217.78.121:8015/api/v2/builds/{build_id}/properties'
+              response = requests.get(build_properties_url, headers={'Accept': 'application/json', 'Authorization': f'token {GITHUB_TOKEN}'})
+              return response.json()
+
+          for i in range(MAX_RETRIES):
+               response = requests.get(BUILD_URL, headers={'Accept': 'application/json'})
+               response_json = response.json()
+               print(f'Attempt {i + 1}: Buildbot response:', response_json)
+    
+               # Check if any build has the target SHA
+               builds = response_json.get('builds', [])
+               print (builds)
+               build_with_sha = None
+               for build in builds:
+                   build_id = build['buildid']
+                   properties = get_build_properties(build_id)
+                   #print(properties)
+                   #prop = properties.get('revision', [])
+                  
+                   if 'properties' in properties:
+                       print (properties['properties'])
+                       if 'revision' in properties['properties'][0]:
+                           print(properties['properties'][0])
+                       if 'revision' in properties['properties'][0] and properties['properties'][0]['revision'] [0] == TARGET_SHA:                            
+                           build_with_sha = build
+                           break                         
+   
+               if build_with_sha:
+                     print('Build started successfully for SHA:', TARGET_SHA)
+                     break
+               else:
+                     print('Build for SHA not started yet, retrying in', RETRY_INTERVAL, 'seconds')
+                     time.sleep(RETRY_INTERVAL)
+          else:
+                print('Build did not start for SHA:', TARGET_SHA, 'after maximum retries')
+                exit(1)
+          "
+      - name: Set Initial Status to Pending
+        run: |
+          python3 -c "
+          import os
+          import requests
+          GITHUB_TOKEN = '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'
+          BUILD_URL = 'http://10.217.78.121:8015/api/v2/builds'
+          TARGET_SHA = os.getenv('PR_SHA')
+          print('debug', TARGET_SHA)
+          api_url = f'https://api.github.com/repos/AMD-Lightning-Internal/llvm-project/statuses/{TARGET_SHA}'
+          headers = {
+          'Authorization': f'token {GITHUB_TOKEN}',
+          'Content-Type': 'application/json'
+          }
+          payload = {
+          'state': 'pending',
+          'context': 'buildbot',
+          'description': 'Build is in queue'
+          }
+          response = requests.post(api_url, json=payload, headers=headers)
+          if response.status_code == 201:
+            print('Status set to pending successfully.')
+          else:
+            print(f'Failed to set status: {response.status_code} {response.text}')
+            "
+
