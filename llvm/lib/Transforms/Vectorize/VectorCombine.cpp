@@ -1636,6 +1636,10 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
     }
   }
 
+  unsigned NumOpElts = Op0Ty->getNumElements();
+  bool IsIdentity0 = ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
+  bool IsIdentity1 = ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
+
   // Try to merge shuffles across the binop if the new shuffles are not costly.
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opcode, BinOpTy, CostKind) +
@@ -1651,11 +1655,14 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
                                   cast<Instruction>(BinOp->getOperand(1)));
 
   InstructionCost NewCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op0Ty, NewMask0,
-                         CostKind, 0, nullptr, {Op00, Op01}) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op1Ty, NewMask1,
-                         CostKind, 0, nullptr, {Op10, Op11}) +
       TTI.getArithmeticInstrCost(Opcode, ShuffleDstTy, CostKind);
+
+  if (!IsIdentity0)
+    NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op0Ty,
+                                  NewMask0, CostKind, 0, nullptr, {Op00, Op01});
+  if (!IsIdentity1)
+    NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, Op1Ty,
+                                  NewMask1, CostKind, 0, nullptr, {Op10, Op11});
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding a shuffled binop: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1665,16 +1672,18 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
-  Value *Shuf0 = Builder.CreateShuffleVector(Op00, Op01, NewMask0);
-  Value *Shuf1 = Builder.CreateShuffleVector(Op10, Op11, NewMask1);
-  Value *NewBO = Builder.CreateBinOp(Opcode, Shuf0, Shuf1);
+  Value *LHS =
+      IsIdentity0 ? Op00 : Builder.CreateShuffleVector(Op00, Op01, NewMask0);
+  Value *RHS =
+      IsIdentity1 ? Op10 : Builder.CreateShuffleVector(Op10, Op11, NewMask1);
+  Value *NewBO = Builder.CreateBinOp(Opcode, LHS, RHS);
 
   // Intersect flags from the old binops.
   if (auto *NewInst = dyn_cast<Instruction>(NewBO))
     NewInst->copyIRFlags(BinOp);
 
-  Worklist.pushValue(Shuf0);
-  Worklist.pushValue(Shuf1);
+  Worklist.pushValue(LHS);
+  Worklist.pushValue(RHS);
   replaceValue(I, *NewBO);
   return true;
 }
