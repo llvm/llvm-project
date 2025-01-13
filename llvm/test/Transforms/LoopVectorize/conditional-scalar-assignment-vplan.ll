@@ -106,6 +106,25 @@ loop:                                         ; preds = %loop.preheader, %loop
 ; NO-EVL-NEXT: No successors
 ; NO-EVL-NEXT: }
 
+; NO-EVL: Cost of 1 for VF vscale x 1: induction instruction   %iv.next = add nuw nsw i64 %iv, 1
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: induction instruction   %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: exit condition instruction   %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; NO-EVL-NEXT: Cost of 2 for VF vscale x 1: EMIT ir<%t.010> = csa-data-phi ir<poison>, ir<%spec.select>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.mask.phi> = csa-mask-phi ir<false>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: CLONE ir<%arrayidx> = getelementptr inbounds ir<%data>, vp<%4>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: vp<%5> = vector-pointer ir<%arrayidx>
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: WIDEN ir<%0> = load vp<%5>
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%1> = sext ir<%0> to i64
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: WIDEN ir<%cmp1> = icmp slt ir<%a>, ir<%1>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.cond.anyof> = any-of ir<%cmp1>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.mask.sel> = csa-mask-sel ir<%cmp1>, vp<%csa.mask.phi>, vp<%csa.cond.anyof>
+; NO-EVL-NEXT: Cost of 4 for VF vscale x 1: EMIT ir<%spec.select> = csa-data-update ir<%t.010>, ir<%cmp1>, ir<%0>, ir<%t.010>, vp<%csa.mask.sel>, vp<%csa.cond.anyof>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%index.next> = add nuw vp<%3>, vp<%0>
+; NO-EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT branch-on-count vp<%index.next>, vp<%1>
+; NO-EVL-NEXT: Cost of 1 for VF vscale x 1: vector loop backedge
+
 ; EVL: VPlan 'Initial VPlan for VF={vscale x 1},UF>=1' {
 ; EVL-NEXT: Live-in vp<%0> = VF
 ; EVL-NEXT: Live-in vp<%1> = VF * UF
@@ -184,3 +203,21 @@ loop:                                         ; preds = %loop.preheader, %loop
 ; EVL-NEXT:   IR   %spec.select.lcssa = phi i32 [ %spec.select, %loop ] (extra operand: vp<%9> from middle.block)
 ; EVL-NEXT: No successors
 ; EVL-NEXT: }
+
+; EVL: Cost of 1 for VF vscale x 1: induction instruction   %iv.next = add nuw nsw i64 %iv, 1
+; EVL-NEXT: Cost of 1 for VF vscale x 1: induction instruction   %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
+; EVL-NEXT: Cost of 1 for VF vscale x 1: exit condition instruction   %exitcond.not = icmp eq i64 %iv.next, %wide.trip.count
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%5> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: ir<%iv> = WIDEN-INDUCTION  ir<0>, ir<1>, vp<%0>
+; EVL-NEXT: Cost of 2 for VF vscale x 1: EMIT ir<%t.010> = csa-data-phi ir<poison>, ir<%spec.select>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.mask.phi> = csa-mask-phi ir<false>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%6> = icmp ule ir<%iv>, vp<%3>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%data>, ir<%iv>
+; EVL-NEXT: Cost of 1 for VF vscale x 1: WIDEN-CAST ir<%1> = sext vp<%7> to i64
+; EVL-NEXT: Cost of 1 for VF vscale x 1: WIDEN ir<%cmp1> = icmp slt ir<%a>, ir<%1>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.cond.anyof> = any-of ir<%cmp1>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%csa.mask.sel> = csa-mask-sel ir<%cmp1>, vp<%csa.mask.phi>, vp<%csa.cond.anyof>
+; EVL-NEXT: Cost of 4 for VF vscale x 1: EMIT ir<%spec.select> = csa-data-update ir<%t.010>, ir<%cmp1>, vp<%7>, ir<%t.010>, vp<%csa.mask.sel>, vp<%csa.cond.anyof>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT vp<%index.next> = add vp<%5>, vp<%1>
+; EVL-NEXT: Cost of 0 for VF vscale x 1: EMIT branch-on-count vp<%index.next>, vp<%2>
+; EVL-NEXT: Cost of 1 for VF vscale x 1: vector loop backedge
