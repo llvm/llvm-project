@@ -10,12 +10,7 @@
 
 using namespace mlir;
 
-LogicalResult irdl::translateIRDLDialectToCppDeclHeader(irdl::DialectOp dialect,
-                                                        raw_ostream &output) {
-  return failure();
-}
-
-LogicalResult irdl::translateIRDLDialectToCppDef(irdl::DialectOp dialect,
-                                                 raw_ostream &output) {
+LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
+                                              raw_ostream &output) {
   return failure();
 }

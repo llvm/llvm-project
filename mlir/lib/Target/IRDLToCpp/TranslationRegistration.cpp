@@ -22,44 +22,26 @@ namespace mlir {
 // Translation registration
 //===----------------------------------------------------------------------===//
 
-using IRDLDialectTranslationFunction =
-    const std::function<LogicalResult(irdl::DialectOp, raw_ostream &)>;
-
-static LogicalResult
-dispatchTranslation(Operation *op, raw_ostream &output,
-                    IRDLDialectTranslationFunction &translation) {
-  return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<irdl::DialectOp>([&](irdl::DialectOp dialectOp) {
-        return translation(dialectOp, output);
-      })
-      .Case<ModuleOp>([&](ModuleOp moduleOp) {
-        for (Operation &op : moduleOp.getBody()->getOperations())
-          if (auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op))
-            if (failed(translation(dialectOp, output)))
-              return failure();
-        return success();
-      })
-      .Default([](Operation *op) {
-        return op->emitError(
-            "unsupported operation for IRDL to C++ translation");
-      });
-}
-
 void registerIRDLToCppTranslation() {
-  TranslateFromMLIRRegistration regHeader(
-      "irdl-to-cpp-header",
-      "translate IRDL dialect definitions to a C++ declaration",
-      [](Operation *op, raw_ostream &output) {
-        return dispatchTranslation(op, output,
-                                   irdl::translateIRDLDialectToCppDeclHeader);
-      },
-      [](DialectRegistry &registry) { registry.insert<irdl::IRDLDialect>(); });
-
   TranslateFromMLIRRegistration reg(
-      "irdl-to-cpp", "translate IRDL dialect definitions to a C++ definition",
+      "irdl-to-cpp", "translate IRDL dialect definitions to C++ definitions",
       [](Operation *op, raw_ostream &output) {
-        return dispatchTranslation(op, output,
-                                   irdl::translateIRDLDialectToCppDef);
+        return TypeSwitch<Operation *, LogicalResult>(op)
+            .Case<irdl::DialectOp>([&](irdl::DialectOp dialectOp) {
+              return irdl::translateIRDLDialectToCpp(dialectOp, output);
+            })
+            .Case<ModuleOp>([&](ModuleOp moduleOp) {
+              for (Operation &op : moduleOp.getBody()->getOperations())
+                if (auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op))
+                  if (failed(
+                          irdl::translateIRDLDialectToCpp(dialectOp, output)))
+                    return failure();
+              return success();
+            })
+            .Default([](Operation *op) {
+              return op->emitError(
+                  "unsupported operation for IRDL to C++ translation");
+            });
       },
       [](DialectRegistry &registry) { registry.insert<irdl::IRDLDialect>(); });
 }

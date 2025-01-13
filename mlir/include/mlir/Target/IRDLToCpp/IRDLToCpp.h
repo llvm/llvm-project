@@ -18,15 +18,12 @@
 namespace mlir {
 namespace irdl {
 
-/// Translates an IRDL dialect definition to a C++ declaration that can be used
-/// with MLIR.
-LogicalResult translateIRDLDialectToCppDeclHeader(irdl::DialectOp dialect,
-                                                  raw_ostream &output);
-
 /// Translates an IRDL dialect definition to a C++ definition that can be used
 /// with MLIR.
-LogicalResult translateIRDLDialectToCppDef(irdl::DialectOp dialect,
-                                           raw_ostream &output);
+///
+/// TODO: Document define flags to obtain declaration or definition.
+LogicalResult translateIRDLDialectToCpp(irdl::DialectOp dialect,
+                                        raw_ostream &output);
 
 } // namespace irdl
 } // namespace mlir
