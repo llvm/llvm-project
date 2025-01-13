@@ -57,16 +57,103 @@ void X86MatchJumptablePass::recordJumpLocation(MachineInstr* MI,
   GV->setSection(sectionName);
 }
 
+// bool X86MatchJumptablePass::runOnMachineFunction(MachineFunction &MF) {
+//     static int PassRunCount = 0;
+//     PassRunCount++;
+    
+//     LLVM_DEBUG(dbgs() << "\n=== Pass Run #" << PassRunCount << " ===\n");
+//     LLVM_DEBUG(dbgs() << "Current optimization phase: " 
+//                << MF.getFunction().getParent()->getSourceFileName() << "\n");
+//     LLVM_DEBUG(dbgs() << "Analyzing jump tables in function: " << MF.getName() << "\n");
+
+//     // Get jump table information
+//     MachineJumpTableInfo *JumpTableInfo = MF.getJumpTableInfo();
+//     if (!JumpTableInfo) {
+//         LLVM_DEBUG(dbgs() << "No jump tables in this function.\n");
+//         return false;
+//     }
+
+//     bool Modified = false;
+//     for (unsigned JTIndex = 0; JTIndex < JumpTableInfo->getJumpTables().size(); ++JTIndex) {
+//         const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
+
+//         LLVM_DEBUG(dbgs() << "Jump Table #" << JTIndex << " contains " 
+//                          << JTEntry.MBBs.size() << " entries.\n");
+
+//         // Print detailed information about jump table entries
+//         LLVM_DEBUG(dbgs() << "Jump table entries:\n");
+//         for (unsigned i = 0; i < JTEntry.MBBs.size(); ++i) {
+//             if (JTEntry.MBBs[i]) {
+//                 LLVM_DEBUG(dbgs() << "  [" << i << "] -> BB#" 
+//                            << JTEntry.MBBs[i]->getNumber() 
+//                            << " (" << JTEntry.MBBs[i]->getName() << ")\n");
+//             }
+//         }
+
+//         // Find and process indirect jumps
+//         MachineInstr* indirectJumpInstr = traceIndirectJumps(MF, JTIndex, JumpTableInfo);
+
+//         if (indirectJumpInstr) {
+//             LLVM_DEBUG(dbgs() << "Found indirect jump: " << *indirectJumpInstr << "\n");
+//                 std::string VarName = "ijump_addr_"  + std::to_string(JTIndex);
+//                 // Get the parent basic block
+//                 MachineBasicBlock *MBB = indirectJumpInstr->getParent();
+//                 // Get the offset of instruction within the block
+//             uint64_t Offset = 0;
+//             for (auto &MI : *MBB) {
+//                 if (&MI == indirectJumpInstr)
+//                     break;
+//                 Offset += MI.getDesc().getSize();
+//             }
+            
+//             // Now add this offset to the block address
+//             Constant *BlockAddr = BlockAddress::get(&MF.getFunction(), const_cast<BasicBlock*>(MBB->getBasicBlock()));
+//             Constant *OffsetConst = ConstantInt::get(Type::getInt64Ty(M->getContext()), Offset);
+//             Constant *AddrConst = ConstantExpr::getAdd(
+//                 ConstantExpr::getPtrToInt(BlockAddr, Type::getInt64Ty(M->getContext())),
+//                 OffsetConst
+//             );
+            
+                
+//                 auto *GV = new GlobalVariable(
+//                     *M,
+//                     Type::getInt64Ty(M->getContext()),
+//                     true,  // isConstant
+//                     GlobalValue::ExternalLinkage,
+//                     AddrConst,
+//                     VarName,
+//                     nullptr,                    // InsertBefore
+//                     GlobalValue::NotThreadLocal, // Thread Local
+//                     0,                          // AddressSpace
+//                     true                        // Constant
+//                 );
+//                 GV->setVisibility(GlobalValue::DefaultVisibility);
+//                 // Set the section
+//                 GV->setSection(".ijump.addr");
+//                 Modified = true;
+//         }
+//     }
+
+//     return Modified;
+// }
+
 bool X86MatchJumptablePass::runOnMachineFunction(MachineFunction &MF) {
     static int PassRunCount = 0;
     PassRunCount++;
     
     LLVM_DEBUG(dbgs() << "\n=== Pass Run #" << PassRunCount << " ===\n");
-    LLVM_DEBUG(dbgs() << "Current optimization phase: " 
-               << MF.getFunction().getParent()->getSourceFileName() << "\n");
-    LLVM_DEBUG(dbgs() << "Analyzing jump tables in function: " << MF.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Analyzing function: " << MF.getName() << "\n");
 
-    // Get jump table information
+    // Get the function's address as a base
+    Function &F = MF.getFunction();
+    Constant *FuncAddr = ConstantExpr::getPtrToInt(
+    ConstantExpr::getBitCast(&F, PointerType::get(Type::getInt8Ty(F.getContext()), 0)),
+    Type::getInt64Ty(F.getContext())
+);
+
+    LLVM_DEBUG(dbgs() << "Function address: " << *FuncAddr << "\n");
+
+    // Process jump tables
     MachineJumpTableInfo *JumpTableInfo = MF.getJumpTableInfo();
     if (!JumpTableInfo) {
         LLVM_DEBUG(dbgs() << "No jump tables in this function.\n");
@@ -78,41 +165,58 @@ bool X86MatchJumptablePass::runOnMachineFunction(MachineFunction &MF) {
         const MachineJumpTableEntry &JTEntry = JumpTableInfo->getJumpTables()[JTIndex];
 
         LLVM_DEBUG(dbgs() << "Jump Table #" << JTIndex << " contains " 
-                         << JTEntry.MBBs.size() << " entries.\n");
+                          << JTEntry.MBBs.size() << " entries.\n");
 
-        // Print detailed information about jump table entries
-        LLVM_DEBUG(dbgs() << "Jump table entries:\n");
-        for (unsigned i = 0; i < JTEntry.MBBs.size(); ++i) {
-            if (JTEntry.MBBs[i]) {
-                LLVM_DEBUG(dbgs() << "  [" << i << "] -> BB#" 
-                           << JTEntry.MBBs[i]->getNumber() 
-                           << " (" << JTEntry.MBBs[i]->getName() << ")\n");
-            }
-        }
-
-        // Find and process indirect jumps
-        MachineInstr* indirectJumpInstr = traceIndirectJumps(MF, JTIndex, JumpTableInfo);
+        MachineInstr *indirectJumpInstr = traceIndirectJumps(MF, JTIndex, JumpTableInfo);
 
         if (indirectJumpInstr) {
-            // Print more detailed information about the indirect jump
             LLVM_DEBUG(dbgs() << "Found indirect jump: " << *indirectJumpInstr << "\n");
-            LLVM_DEBUG(dbgs() << "Parent basic block: " << indirectJumpInstr->getParent()->getName() << "\n");
-            
-            // Print operand information
-            LLVM_DEBUG(dbgs() << "Jump instruction operands:\n");
-            for (unsigned i = 0; i < indirectJumpInstr->getNumOperands(); ++i) {
-                LLVM_DEBUG(dbgs() << "  Operand " << i << ": " << indirectJumpInstr->getOperand(i) << "\n");
+
+            std::string VarName = "ijump_addr_" + std::to_string(JTIndex);
+
+            // Calculate the offset of the indirect jump from the function's start
+            uint64_t Offset = 0;
+            for (auto &MBB : MF) {
+                for (auto &MI : MBB) {
+                    if (&MI == indirectJumpInstr)
+                        break;
+                    Offset += MI.getDesc().getSize();
+                }
+                if (Offset > 0) break; // Stop after finding the indirect jump
             }
 
-            // Insert marker and record location
-            insertIdentifyingMarker(indirectJumpInstr, MF, JTIndex);
-            recordJumpLocation(indirectJumpInstr, MF, JTIndex);
+            LLVM_DEBUG(dbgs() << "Offset from function base: " << Offset << "\n");
+
+            // Add the offset to the function address
+            Constant *OffsetConst = ConstantInt::get(Type::getInt64Ty(F.getContext()), Offset);
+            Constant *AddrConst = ConstantExpr::getAdd(FuncAddr, OffsetConst);
+
+            // Emit the address as a global variable
+            auto *GV = new GlobalVariable(
+                *F.getParent(),
+                Type::getInt64Ty(F.getContext()),
+                true,  // isConstant
+                GlobalValue::ExternalLinkage,
+                AddrConst,
+                VarName,
+                nullptr,                    // InsertBefore
+                GlobalValue::NotThreadLocal, // Thread Local
+                0,                          // AddressSpace
+                true                        // Constant
+            );
+            GV->setVisibility(GlobalValue::DefaultVisibility);
+            GV->setSection(".ijump.addr");
+
+            LLVM_DEBUG(dbgs() << "Emitted symbol: " << VarName 
+                              << " -> Address: " << *AddrConst << "\n");
+
             Modified = true;
         }
     }
 
     return Modified;
 }
+
 
 MachineInstr* X86MatchJumptablePass::traceIndirectJumps(MachineFunction &MF, 
                                                         unsigned JTIndex,
