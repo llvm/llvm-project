@@ -623,7 +623,8 @@ f_eretaa:
         bl      g
         add     x0, x0, #3
         ldp     x29, x30, [sp], #16
-// CHECK-NOT: function f_eretaa
+// CHECK-LABEL: GS-PACRET: Warning: pac-ret analysis could not analyze this return instruction in function f_eretaa, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:   The return instruction is     {{[0-9a-f]+}}:       eretaa
         eretaa
         .size f_eretaa, .-f_eretaa
 
@@ -636,7 +637,8 @@ f_eretab:
         bl      g
         add     x0, x0, #3
         ldp     x29, x30, [sp], #16
-// CHECK-NOT: function f_eretab
+// CHECK-LABEL: GS-PACRET: Warning: pac-ret analysis could not analyze this return instruction in function f_eretab, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:   The return instruction is     {{[0-9a-f]+}}:       eretab
         eretab
         .size f_eretab, .-f_eretab
 
@@ -649,18 +651,8 @@ f_eret:
         bl      g
         add     x0, x0, #3
         ldp     x29, x30, [sp], #16
-// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_eret, basic block .LBB{{[0-9]+}}, at address
-// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       eret
-// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
-// CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT:  This happens in the following basic block:
-// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
-// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
-// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
-// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g@PLT
-// CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
-// CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
-// CHECK-NEXT: {{[0-9a-f]+}}:   eret
+// CHECK-LABEL: GS-PACRET: Warning: pac-ret analysis could not analyze this return instruction in function f_eret, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:   The return instruction is     {{[0-9a-f]+}}:       eret
         eret
         .size f_eret, .-f_eret
 
@@ -677,5 +669,8 @@ f_movx30reg:
         mov     x30, x22
         ret
         .size f_movx30reg, .-f_movx30reg
+
+// FIXME: add regression tests for the instructions added in v9.5: AUTI{A,B}SPPC{i,r}, RETI{A,B}SPPC{i,r}, AUTI{A,B}171615.
+
 
 // TODO: add test to see if registers clobbered by a call are picked up.

@@ -551,7 +551,7 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual MCPhysReg getAuthenticatedReg(const MCInst &Inst) const {
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }
@@ -562,7 +562,7 @@ public:
     return false;
   }
 
-  virtual MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const {
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }

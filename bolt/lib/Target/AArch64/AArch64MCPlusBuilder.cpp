@@ -149,21 +149,42 @@ public:
     return false;
   }
 
-  MCPhysReg getAuthenticatedReg(const MCInst &Inst) const override {
+  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
     case AArch64::AUTIBZ:
     case AArch64::AUTIASP:
     case AArch64::AUTIBSP:
+    case AArch64::AUTIASPPCi:
+    case AArch64::AUTIBSPPCi:
+    case AArch64::AUTIASPPCr:
+    case AArch64::AUTIBSPPCr:
     case AArch64::RETAA:
     case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
       return AArch64::LR;
+
     case AArch64::AUTIA1716:
     case AArch64::AUTIB1716:
+    case AArch64::AUTIA171615:
+    case AArch64::AUTIB171615:
       return AArch64::X17;
+
     case AArch64::ERETAA:
     case AArch64::ERETAB:
-      return AArch64::LR;
+      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg.... So there is no way to indicate that through the current
+      // API.
+      //
+      // Therefore, return an error to indicate that LLVM/BOLT cannot model
+      // this.
+      return make_error_code(std::errc::result_out_of_range);
 
     case AArch64::AUTIA:
     case AArch64::AUTIB:
@@ -175,29 +196,32 @@ public:
     case AArch64::AUTDZB:
       return Inst.getOperand(0).getReg();
 
+      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
+
     default:
       return getNoRegister();
     }
   }
 
-  bool isAuthenticationOfReg(const MCInst &Inst,
-                             MCPhysReg AuthenticatedReg) const override {
-    if (AuthenticatedReg == getNoRegister())
+  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
+    if (Reg == getNoRegister())
       return false;
-    return getAuthenticatedReg(Inst) == AuthenticatedReg;
+    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
+    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
   }
 
-  MCPhysReg getRegUsedAsRetDest(const MCInst &Inst) const override {
+  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
     assert(isReturn(Inst));
     switch (Inst.getOpcode()) {
     case AArch64::RET:
       return Inst.getOperand(0).getReg();
     case AArch64::RETAA:
     case AArch64::RETAB:
+      return AArch64::LR;
+    case AArch64::ERET:
     case AArch64::ERETAA:
     case AArch64::ERETAB:
-    case AArch64::ERET:
-      return AArch64::LR;
+      return make_error_code(std::errc::result_out_of_range);
     default:
       llvm_unreachable("Unhandled return instruction");
     }
