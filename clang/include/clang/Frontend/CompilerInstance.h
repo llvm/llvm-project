@@ -632,8 +632,6 @@ public:
 
   llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
-
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
     return *FrontendTimer;

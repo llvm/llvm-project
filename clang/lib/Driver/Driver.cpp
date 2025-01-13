@@ -2534,8 +2534,8 @@ enum {
 static unsigned PrintActions1(const Compilation &C, Action *A,
                               std::map<Action *, unsigned> &Ids,
                               Twine Indent = {}, int Kind = TopLevelAction) {
-  if (Ids.count(A)) // A was already visited.
-    return Ids[A];
+  if (auto It = Ids.find(A); It != Ids.end()) // A was already visited.
+    return It->second;
 
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -6397,6 +6397,11 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
 
   if (auto P = SearchPaths(TC.getFilePaths()))
     return *P;
+
+  SmallString<128> R2(ResourceDir);
+  llvm::sys::path::append(R2, "..", "..", Name);
+  if (llvm::sys::fs::exists(Twine(R2)))
+    return std::string(R2);
 
   return std::string(Name);
 }

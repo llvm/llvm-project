@@ -53,6 +53,7 @@ class Name2PairMap;
 static std::string &libSupportInfoOutputFilename();
 static bool trackSpace();
 static bool sortTimers();
+[[maybe_unused]]
 static SignpostEmitter &signposts();
 static sys::SmartMutex<true> &timerLock();
 static TimerGroup &defaultTimerGroup();
@@ -149,7 +150,9 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
 void Timer::startTimer() {
   assert(!Running && "Cannot start a running timer");
   Running = Triggered = true;
+#if LLVM_SUPPORT_XCODE_SIGNPOSTS
   signposts().startInterval(this, getName());
+#endif
   StartTime = TimeRecord::getCurrentTime(true);
 }
 
@@ -158,7 +161,9 @@ void Timer::stopTimer() {
   Running = false;
   Time += TimeRecord::getCurrentTime(false);
   Time -= StartTime;
+#if LLVM_SUPPORT_XCODE_SIGNPOSTS
   signposts().endInterval(this, getName());
+#endif
 }
 
 void Timer::clear() {
