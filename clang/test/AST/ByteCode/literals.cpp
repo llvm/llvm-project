@@ -194,7 +194,7 @@ namespace PointerComparison {
   constexpr void *qv = (void*)&s.b;
   constexpr bool v1 = null < (int*)0;
   constexpr bool v2 = null < pv; // both-error {{must be initialized by a constant expression}} \
-                                 // both-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
+                                 // both-note {{comparison between pointers to unrelated objects 'nullptr' and '&s.a' has unspecified value}}
 
   constexpr bool v3 = null == pv; // ok
   constexpr bool v4 = qv == pv; // ok
@@ -202,7 +202,7 @@ namespace PointerComparison {
   constexpr bool v5 = qv >= pv;
   constexpr bool v8 = qv > (void*)&s.a;
   constexpr bool v6 = qv > null; // both-error {{must be initialized by a constant expression}} \
-                                 // both-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+                                 // both-note {{comparison between pointers to unrelated objects '&s.b' and 'nullptr' has unspecified value}}
 
   constexpr bool v7 = qv <= (void*)&s.b; // ok
 

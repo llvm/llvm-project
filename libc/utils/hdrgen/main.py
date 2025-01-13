@@ -38,6 +38,12 @@ def main():
         type=Path,
     )
     parser.add_argument(
+        "--write-if-changed",
+        help="Write the output file only if its contents have changed",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "-e",
         "--entry-point",
         help="Entry point to include; may be given many times",
@@ -72,9 +78,13 @@ def main():
 
     write_depfile()
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w") as out:
-        out.write(contents)
+    if (
+        not args.write_if_changed
+        or not args.output.exists()
+        or args.output.read_text() != contents
+    ):
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(contents)
 
 
 if __name__ == "__main__":

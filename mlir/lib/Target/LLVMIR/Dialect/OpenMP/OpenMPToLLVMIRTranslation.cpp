@@ -273,7 +273,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);
-        checkPrivate(op, result);
         checkReduction(op, result);
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -1025,6 +1024,11 @@ mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
   }
 }
 
+/// Inline reductions' `init` regions. This functions assumes that the
+/// `builder`'s insertion point is where the user wants the `init` regions to be
+/// inlined; i.e. it does not try to find a proper insertion location for the
+/// `init` regions. It also leaves the `builder's insertions point in a state
+/// where the user can continue the code-gen directly afterwards.
 template <typename OP>
 static LogicalResult
 initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
@@ -1039,9 +1043,6 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
   if (op.getNumReductionVars() == 0)
     return success();
 
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
-
-  builder.SetInsertPoint(latestAllocaBlock->getTerminator());
   llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
   auto allocaIP = llvm::IRBuilderBase::InsertPoint(
       latestAllocaBlock, latestAllocaBlock->getTerminator()->getIterator());
@@ -1061,7 +1062,10 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     }
   }
 
-  builder.SetInsertPoint(&*initBlock->getFirstNonPHIOrDbgOrAlloca());
+  if (initBlock->empty() || initBlock->getTerminator() == nullptr)
+    builder.SetInsertPoint(initBlock);
+  else
+    builder.SetInsertPoint(initBlock->getTerminator());
 
   // store result of the alloc region to the allocated pointer to the real
   // reduction variable
@@ -1086,7 +1090,11 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
 
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    if (builder.GetInsertBlock()->empty() ||
+        builder.GetInsertBlock()->getTerminator() == nullptr)
+      builder.SetInsertPoint(builder.GetInsertBlock());
+    else
+      builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
     if (isByRef[i]) {
       if (!reductionDecls[i].getAllocRegion().empty())
@@ -1271,7 +1279,6 @@ static LogicalResult allocAndInitializeReductionVars(
   if (op.getNumReductionVars() == 0)
     return success();
 
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   SmallVector<DeferredStore> deferredStores;
 
   if (failed(allocReductionVars(op, reductionArgs, builder, moduleTranslation,
@@ -2080,6 +2087,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     assert(afterAllocas.get()->getSinglePredecessor());
+    builder.restoreIP(codeGenIP);
+
     if (failed(
             initReductionVars(opInst, reductionArgs, builder, moduleTranslation,
                               afterAllocas.get()->getSinglePredecessor(),
@@ -2099,7 +2108,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         moduleTranslation, allocaIP);
 
     // ParallelOp has only one region associated with it.
-    builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
         opInst.getRegion(), "omp.par.region", builder, moduleTranslation);
     if (!regionBlock)
@@ -2221,7 +2229,27 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
+  MutableArrayRef<BlockArgument> privateBlockArgs =
+      cast<omp::BlockArgOpenMPOpInterface>(*simdOp).getPrivateBlockArgs();
+  SmallVector<mlir::Value> mlirPrivateVars;
+  SmallVector<llvm::Value *> llvmPrivateVars;
+  SmallVector<omp::PrivateClauseOp> privateDecls;
+  mlirPrivateVars.reserve(privateBlockArgs.size());
+  llvmPrivateVars.reserve(privateBlockArgs.size());
+  collectPrivatizationDecls(simdOp, privateDecls);
+
+  for (mlir::Value privateVar : simdOp.getPrivateVars())
+    mlirPrivateVars.push_back(privateVar);
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      builder, moduleTranslation, privateBlockArgs, privateDecls,
+      mlirPrivateVars, llvmPrivateVars, allocaIP);
+  if (handleError(afterAllocas, opInst).failed())
+    return failure();
 
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
@@ -2322,7 +2350,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   builder.restoreIP(afterIP);
-  return success();
+
+  return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
+                            llvmPrivateVars, privateDecls);
 }
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.

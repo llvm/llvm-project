@@ -1807,12 +1807,12 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           SPIRV::ExecutionMode::VecTypeHint, ST);
 
     if (F.hasOptNone()) {
-      if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
-        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
-        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
-      } else if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+      if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
         MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
         MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+      } else if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_optnone)) {
+        MAI.Reqs.addExtension(SPIRV::Extension::SPV_EXT_optnone);
+        MAI.Reqs.addCapability(SPIRV::Capability::OptNoneEXT);
       }
     }
   }

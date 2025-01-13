@@ -512,6 +512,8 @@ void collectMemAccessInfo(
 
 bool TypeSanitizer::sanitizeFunction(Function &F,
                                      const TargetLibraryInfo &TLI) {
+  if (F.isDeclaration())
+    return false;
   // This is required to prevent instrumenting call to __tysan_init from within
   // the module constructor.
   if (&F == TysanCtorFunction.getCallee() || &F == TysanGlobalsSetTypeFunction)
