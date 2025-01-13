@@ -1177,9 +1177,9 @@ int x = a.^
   EXPECT_THAT(
       CompletionList.Completions,
       Contains(AllOf(named("epsilon"), doc("This one has a comment."))));
-  EXPECT_THAT(
-      CompletionList.Completions,
-      Contains(AllOf(named("delta"), AnyOf(doc("bool overload."), doc("int overload.")))));
+  EXPECT_THAT(CompletionList.Completions,
+              Contains(AllOf(named("delta"), AnyOf(doc("bool overload."),
+                                                   doc("int overload.")))));
 }
 
 TEST(CompletionTest, GlobalCompletionFiltering) {
