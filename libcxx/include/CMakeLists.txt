@@ -547,7 +547,6 @@ set(files
   __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
-  __memory/builtin_new_allocator.h
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
@@ -880,6 +879,7 @@ set(files
   __utility/cmp.h
   __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/element_count.h
   __utility/empty.h
   __utility/exception_guard.h
   __utility/exchange.h
