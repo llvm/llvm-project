@@ -257,6 +257,7 @@ template <class... Types>
 #  include <__type_traits/maybe_const.h>
 #  include <__type_traits/nat.h>
 #  include <__type_traits/negation.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
 #  include <__type_traits/unwrap_ref.h>
@@ -535,7 +536,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up
 
 template <class... _Tp>
 class _LIBCPP_TEMPLATE_VIS tuple {
-  typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> _BaseT;
+  typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, __remove_cv_t<_Tp>...> _BaseT;
 
   _BaseT __base_;
 
