@@ -16,10 +16,10 @@ gpu.module @kernels {
 gpu.func @test_assert(%c0: i1, %c1: i1) kernel {
   %0 = gpu.thread_id x
   cf.assert %c1, "passing assertion"
-  gpu.printf "thread %lld: print after passing assertion\n" %0 : index
+  gpu.printf "thread %lld: print after passing assertion\n", %0 : index
   // Test callsite(callsite(name)) location.
   cf.assert %c0, "failing assertion" loc(callsite(callsite("callee_func_name"("callee_file.cc":7:9) at "caller_file.cc":10:8) at "caller2_file.cc":11:12))
-  gpu.printf "thread %lld: print after failing assertion\n" %0 : index
+  gpu.printf "thread %lld: print after failing assertion\n", %0 : index
   gpu.return
 }
 }

@@ -2202,7 +2202,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCSetConstruct = 330,
 
-  CXCursor_LastStmt = CXCursor_OpenACCSetConstruct,
+  /** OpenACC update Construct.
+   */
+  CXCursor_OpenACCUpdateConstruct = 331,
+
+  CXCursor_LastStmt = CXCursor_OpenACCUpdateConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -4177,6 +4181,14 @@ CINDEX_LINKAGE void clang_PrintingPolicy_dispose(CXPrintingPolicy Policy);
  */
 CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
                                                      CXPrintingPolicy Policy);
+
+/**
+ * Pretty-print the underlying type using a custom printing policy.
+ *
+ * If the type is invalid, an empty string is returned.
+ */
+CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
+                                                   CXPrintingPolicy cxPolicy);
 
 /**
  * Retrieve the display name for the entity referenced by this cursor.
