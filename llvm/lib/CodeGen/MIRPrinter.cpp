@@ -605,17 +605,14 @@ void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
                                       const MachineFunction &MF,
                                       MachineModuleSlotTracker &MST) {
   for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
-    // If the call instruction was dropped, then we don't need to print it.
-    auto BB = CallInst->getParent();
-    if (BB) {
-      yaml::MachineInstrLoc CallSite;
-      CallSite.BlockNum = CallInst->getParent()->getNumber();
-      CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
-                                      CallInst->getIterator());
+    yaml::MachineInstrLoc CallSite;
+    CallSite.BlockNum = CallInst->getParent()->getNumber();
+    CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
+                                    CallInst->getIterator());
 
-      yaml::CalledGlobal YamlCG{CallSite, CG.first->getName().str(), CG.second};
-      YMF.CalledGlobals.push_back(YamlCG);
-    }
+    yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
+                              CG.TargetFlags};
+    YMF.CalledGlobals.push_back(YamlCG);
   }
 
   // Sort by position of call instructions.
