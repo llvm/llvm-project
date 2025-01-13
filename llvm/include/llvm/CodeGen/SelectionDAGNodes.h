@@ -653,7 +653,7 @@ private:
 
   /// The number of entries in the Operand/Value list.
   uint32_t NumOperands = 0;
-  uint32_t NumValues;
+  unsigned short NumValues;
 
   // The ordering of the SDNodes. It roughly corresponds to the ordering of the
   // original LLVM instructions.
@@ -1056,7 +1056,7 @@ public:
   uint32_t getCFIType() const { return CFIType; }
 
   /// Return the number of values defined/returned by this operator.
-  uint32_t getNumValues() const { return NumValues; }
+  unsigned getNumValues() const { return NumValues; }
 
   /// Return the type of a specified result.
   EVT getValueType(unsigned ResNo) const {
