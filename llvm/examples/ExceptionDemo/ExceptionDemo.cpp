@@ -1243,10 +1243,7 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // the exception is foreign.
   llvm::Value *unwindExceptionClass = builder.CreateLoad(
       builder.getInt64Ty(),
-      builder.CreateStructGEP(
-          ourUnwindExceptionType,
-          unwindException,
-          0));
+      builder.CreateStructGEP(ourUnwindExceptionType, unwindException, 0));
 
   // Branch to the externalExceptionBlock if the exception is foreign or
   // to a catch router if not. Either way the finally block will be run.
@@ -1277,8 +1274,8 @@ static llvm::Function *createCatchWrappedInvokeFunction(
   // (OurException instance).
   //
   // Note: ourBaseFromUnwindOffset is usually negative
-  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(builder.getPtrTy(), unwindException,
-                                                           ourBaseFromUnwindOffset);
+  llvm::Value *typeInfoThrown = builder.CreateConstGEP1_64(
+      builder.getInt8Ty(), unwindException, ourBaseFromUnwindOffset);
 
   // Retrieve thrown exception type info type
   //
@@ -1541,8 +1538,7 @@ static void runExceptionThrow(llvm::orc::LLJIT *JIT, std::string function,
 
   // Find test's function pointer
   OurExceptionThrowFunctType functPtr =
-      reinterpret_cast<OurExceptionThrowFunctType>(reinterpret_cast<uintptr_t>(
-          ExitOnErr(JIT->lookup(function)).getValue()));
+      ExitOnErr(JIT->lookup(function)).toPtr<OurExceptionThrowFunctType>();
 
   try {
     // Run test
@@ -1851,7 +1847,8 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   // llvm.eh.typeid.for intrinsic
 
-  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for, builder.getPtrTy());
+  getOrInsertDeclaration(&module, llvm::Intrinsic::eh_typeid_for,
+                         builder.getPtrTy());
 }
 
 
