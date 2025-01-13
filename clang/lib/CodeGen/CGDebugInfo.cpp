@@ -87,32 +87,6 @@ static bool IsDecomposedVarDecl(VarDecl const *VD) {
   if (!Init)
     return false;
 
-  Init = Init->IgnoreUnlessSpelledInSource();
-  if (!Init)
-    return false;
-
-  // For tuple-like decompositions, if the `get` function
-  // is not a member of the decomposed type, but instead a
-  // free function (e.g., how std::get is specialized for
-  // std::pair), then the initializer is a `CallExpr` and
-  // we need to dig into the argument before unwrapping it
-  // with IgnoreUnlessSpelledInSource.
-  if (auto const *CE = llvm::dyn_cast<CallExpr>(Init)) {
-    if (CE->getNumArgs() == 0)
-      return false;
-
-    // The first argument will be the type we're decomposing.
-    // Technically the getter could have more than 1 argument
-    // (e.g., if they're defaulted arguments), but we don't care
-    // about them because we just need to check whether the
-    // first argument is a DecompositionDecl.
-    auto const *Arg = CE->getArg(0);
-    if (!Arg)
-      return false;
-
-    Init = Arg;
-  }
-
   auto const *RefExpr =
       llvm::dyn_cast_or_null<DeclRefExpr>(Init->IgnoreUnlessSpelledInSource());
   if (!RefExpr)
