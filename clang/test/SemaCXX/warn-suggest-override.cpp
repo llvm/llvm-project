@@ -35,5 +35,5 @@ struct F : public C {
 struct G : public C { // expected-note {{mark 'G' as 'final'}}
   void run() final;
   ~G() final;
-  // expected-warning@-1 {{class with destructor marked 'final' can not be inherited from}}
+  // expected-warning@-1 {{class with destructor marked 'final' cannot be inherited from}}
 };
