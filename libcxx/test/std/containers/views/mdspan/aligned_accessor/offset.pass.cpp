@@ -16,6 +16,8 @@
 
 #include <mdspan>
 #include <cassert>
+#include <cstdint>
+#include <concepts>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -29,9 +31,9 @@ constexpr void test_offset() {
   std::aligned_accessor<T, N> acc;
   for (size_t i = 0; i < 10 + N; i++) {
     if (reinterpret_cast<std::uintptr_t>(ptr + i) % N == 0) {
-      static_assert(std::is_same_v<decltype(acc.offset(ptr, i)), typename std::default_accessor<T>::data_handle_type>);
+      std::same_as<typename std::default_accessor<T>::data_handle_type> decltype(auto) x = acc.offset(ptr, i);
       ASSERT_NOEXCEPT(acc.offset(ptr, i));
-      assert(acc.offset(ptr, i) == ptr + i);
+      assert(x == ptr + i);
     }
   }
 }
