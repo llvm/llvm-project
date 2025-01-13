@@ -9462,28 +9462,20 @@ SDValue TargetLowering::expandVectorFindLastActive(SDNode *N,
   EVT BoolVT = MaskVT.getScalarType();
 
   // Find a suitable type for a stepvector.
-  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Dummy value.
+  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Fixed length default.
   if (MaskVT.isScalableVector())
     VScaleRange = getVScaleRange(&DAG.getMachineFunction().getFunction(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   unsigned EltWidth = TLI.getBitWidthForCttzElements(
       BoolVT.getTypeForEVT(*DAG.getContext()), MaskVT.getVectorElementCount(),
       /*ZeroIsPoison=*/true, &VScaleRange);
-
-  // FIXME: If the target selects a VT that's too wide based on the legal types
-  //        for a vecreduce_umax, if will force expansion of the node -- which
-  //        doesn't work on scalable vectors...
-  //        Is there another method we could use to get a smaller VT instead
-  //        of just capping to 32b?
-  EVT StepVT = MVT::getIntegerVT(std::min(EltWidth, 32u));
+  EVT StepVT = MVT::getIntegerVT(EltWidth);
   EVT StepVecVT = MaskVT.changeVectorElementType(StepVT);
 
-  // FIXME: If the target selects a VT that's too small to form a legal vector
-  //        type, we also run into problems if expanding after type
-  //        legalization.
-  //
-  //        I think perhaps we need to revisit how getBitWidthForCttzElements
-  //        works...
+  // If promotion is required to make the type legal, do it here; promotion
+  // of integers within LegalizeVectorOps is looking for types of the same
+  // size but with a smaller number of larger elements, not the usual larger
+  // size with the same number of larger elements.
   if (TLI.getTypeAction(StepVecVT.getSimpleVT()) ==
       TargetLowering::TypePromoteInteger) {
     StepVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), StepVecVT);
