@@ -265,16 +265,10 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     case dxbc::PartType::RTS0:
       if (!P.RootSignature.has_value())
         continue;
-
-      mcdxbc::RootSignatureDesc RS;
-      RS.Flags = P.RootSignature->getEncodedFlags();
-      RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
-      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
-
-      RS.write(OS);
+     dxbc::RootSignatureDesc RS = {P.RootSignature->Version, P.RootSignature->Flags};
+      if (sys::IsBigEndianHost)
+        RS.swapBytes();
+      OS.write(reinterpret_cast<char *>(&RS), sizeof(dxbc::RootSignatureDesc));
       break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;

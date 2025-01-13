@@ -73,20 +73,14 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
-struct RootSignatureYamlDesc {
-  RootSignatureYamlDesc() = default;
-  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
+
+
+struct RootSignatureDesc {
+  RootSignatureDesc() = default;
+  RootSignatureDesc(const dxbc::RootSignatureDesc &Data);
 
   uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
-
-  uint32_t getEncodedFlags();
-
-#include "llvm/BinaryFormat/DXContainerConstants.def"
+  uint32_t Flags;
 };
 
 using ResourceFlags = dxbc::PSV::ResourceFlags;
@@ -176,7 +170,7 @@ struct Part {
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
-  std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
+  std::optional<DXContainerYAML::RootSignatureDesc> RootSignature;
 };
 
 struct Object {
@@ -259,9 +253,9 @@ template <> struct MappingTraits<DXContainerYAML::Signature> {
   static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
-template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
+template <> struct MappingTraits<DXContainerYAML::RootSignatureDesc> {
   static void mapping(IO &IO,
-                      DXContainerYAML::RootSignatureYamlDesc &RootSignature);
+                      DXContainerYAML::RootSignatureDesc &RootSignature);
 };
 
 } // namespace yaml
