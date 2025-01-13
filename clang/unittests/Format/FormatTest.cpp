@@ -11431,6 +11431,16 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "         Foo, Foo>();\n"
                "}",
                Style);
+  // Even a single type in the middle is enough to force it to block indent
+  // style:
+  verifyFormat("void foo() {\n"
+               "  myFunc<\n"
+               "      Foo, Foo, Foo,\n"
+               "      Foooooooooooooooooooooooooooooo,\n"
+               "      Foo, Foo, Foo, Foo\n"
+               "  >();\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, WrapsTemplateParameters) {
