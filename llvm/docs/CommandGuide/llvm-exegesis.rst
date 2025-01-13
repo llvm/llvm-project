@@ -299,18 +299,25 @@ OPTIONS
   However, it is possible to stop at some stage before measuring. Choices are:
   * ``prepare-snippet``: Only generate the minimal instruction sequence.
   * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
-  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but
-    also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
-    If either zlib or zstd is available and we're using either duplicate or
-    loop repetition mode, this phase generates benchmarks with a serialized
-    snippet object file attached to it.
+  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
   * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
   * ``dry-run-measurement``: Same as measure, but does not actually execute the snippet.
 
+.. option:: --serialize-benchmarks
+
+  Generate a fully serialized benchmarks file, including the assembled object
+  files. This is useful to resume the measurement later with ``--run-measurement``.
+
+.. option:: --force-serialized-obj-compress-format=[zlib|zstd]
+
+  When serializing benchmarks with ``--serialize-benchmarks``, always use the
+  compression format designated by this flag.
+
 .. option:: --run-measurement=<benchmarks file>
 
-  Given a benchmarks file generated after the ``assembly-measured-code`` phase,
-  resume the measurement phase from it.
+  Given a fully serialized benchmarks file generated after the
+  ``assembly-measured-code`` phase with ``--serialize-benchmarks``, resume the
+  measurement phase from it.
 
 .. option:: --x86-lbr-sample-period=<nBranches/sample>
 

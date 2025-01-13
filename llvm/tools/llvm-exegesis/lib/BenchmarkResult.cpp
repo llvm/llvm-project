@@ -31,8 +31,9 @@ static constexpr const char kInvalidOperand[] = "INVALID";
 namespace llvm {
 
 static cl::opt<compression::Format> ForceObjectFileCompressionFormat(
-    "exegesis-force-obj-compress-format", cl::Hidden,
-    cl::desc("Force to use this compression format for object files."),
+    "force-serialized-obj-compress-format", cl::Hidden,
+    cl::desc(
+        "Force to use this compression format for serialized object files."),
     cl::values(clEnumValN(compression::Format::Zstd, "zstd", "Using Zstandard"),
                clEnumValN(compression::Format::Zlib, "zlib", "Using LibZ")));
 

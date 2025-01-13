@@ -54,7 +54,7 @@
 namespace llvm {
 
 static cl::opt<bool>
-    SerializeBenchmarks("exegesis-serialize-benchmarks",
+    SerializeBenchmarks("serialize-benchmarks",
                         cl::desc("Generate fully-serialized benchmarks "
                                  "that can later be deserialized and "
                                  "resuming the measurement."),
@@ -679,8 +679,8 @@ BenchmarkRunner::getRunnableConfiguration(
       if (RepetitionMode != Benchmark::Loop &&
           RepetitionMode != Benchmark::Duplicate)
         return make_error<Failure>(
-            "-exegesis-serialize-benchmarks currently "
-            "only supports -repetition-mode of loop and duplicate.");
+            "-serialize-benchmarks currently only supports -repetition-mode "
+            "of loop and duplicate.");
 
       if (Error E = BenchmarkResult.setObjectFile(*Snippet))
         return std::move(E);
