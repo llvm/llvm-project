@@ -47,11 +47,11 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &Ref) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
-  switch (Ref.CurrentLocation) {
-  case MCInstReference::BinaryBasicBlock:
+  switch (Ref.ParentKind) {
+  case MCInstReference::BasicBlockParent:
     OS << Ref.U.BBRef;
     return OS;
-  case MCInstReference::BinaryFunction:
+  case MCInstReference::FunctionParent:
     OS << Ref.U.BFRef;
     return OS;
   }
@@ -432,8 +432,8 @@ void reportFoundGadgetInSingleBBSingleOverwInst(const BinaryContext &BC,
                                                 const MCInstReference OverwInst,
                                                 const MCInstReference RetInst) {
   BinaryBasicBlock *BB = RetInst.getBasicBlock();
-  assert(OverwInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
-  assert(RetInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
+  assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
+  assert(RetInst.ParentKind == MCInstReference::BasicBlockParent);
   MCInstInBBReference OverwInstBB = OverwInst.U.BBRef;
   if (BB == OverwInstBB.BB) {
     // overwriting inst and ret instruction are in the same basic block.
@@ -479,7 +479,7 @@ void reportFoundGadget(const BinaryContext &BC, const MCInst &Inst,
   });
   if (NPPRG.OverwritingRetRegInst.size() == 1) {
     const MCInstReference OverwInst = NPPRG.OverwritingRetRegInst[0];
-    assert(OverwInst.CurrentLocation == MCInstReference::BinaryBasicBlock);
+    assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
     reportFoundGadgetInSingleBBSingleOverwInst(BC, OverwInst, RetInst);
   }
 }

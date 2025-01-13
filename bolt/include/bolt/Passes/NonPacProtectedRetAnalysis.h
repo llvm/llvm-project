@@ -87,8 +87,8 @@ struct MCInstInBFReference {
 raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &);
 
 struct MCInstReference {
-  enum ParentKind { BinaryFunction, BinaryBasicBlock };
-  ParentKind CurrentLocation;
+  enum Kind { FunctionParent, BasicBlockParent };
+  Kind ParentKind;
   union U {
     MCInstInBBReference BBRef;
     MCInstInBFReference BFRef;
@@ -96,73 +96,73 @@ struct MCInstReference {
     U(MCInstInBFReference BFRef) : BFRef(BFRef) {}
   } U;
   MCInstReference(MCInstInBBReference BBRef)
-      : CurrentLocation(BinaryBasicBlock), U(BBRef) {}
+      : ParentKind(BasicBlockParent), U(BBRef) {}
   MCInstReference(MCInstInBFReference BFRef)
-      : CurrentLocation(BinaryFunction), U(BFRef) {}
+      : ParentKind(FunctionParent), U(BFRef) {}
   MCInstReference(class BinaryBasicBlock *BB, int64_t BBIndex)
       : MCInstReference(MCInstInBBReference(BB, BBIndex)) {}
   MCInstReference(class BinaryFunction *BF, uint32_t Offset)
       : MCInstReference(MCInstInBFReference(BF, Offset)) {}
 
   bool operator<(const MCInstReference &RHS) const {
-    if (CurrentLocation != RHS.CurrentLocation)
-      return CurrentLocation < RHS.CurrentLocation;
-    switch (CurrentLocation) {
-    case BinaryBasicBlock:
+    if (ParentKind != RHS.ParentKind)
+      return ParentKind < RHS.ParentKind;
+    switch (ParentKind) {
+    case BasicBlockParent:
       return U.BBRef < RHS.U.BBRef;
-    case BinaryFunction:
+    case FunctionParent:
       return U.BFRef < RHS.U.BFRef;
     }
     llvm_unreachable("");
   }
 
   bool operator==(const MCInstReference &RHS) const {
-    if (CurrentLocation != RHS.CurrentLocation)
+    if (ParentKind != RHS.ParentKind)
       return false;
-    switch (CurrentLocation) {
-    case BinaryBasicBlock:
+    switch (ParentKind) {
+    case BasicBlockParent:
       return U.BBRef == RHS.U.BBRef;
-    case BinaryFunction:
+    case FunctionParent:
       return U.BFRef == RHS.U.BFRef;
     }
     llvm_unreachable("");
   }
 
   operator MCInst &() const {
-    switch (CurrentLocation) {
-    case BinaryBasicBlock:
+    switch (ParentKind) {
+    case BasicBlockParent:
       return U.BBRef;
-    case BinaryFunction:
+    case FunctionParent:
       return U.BFRef;
     }
     llvm_unreachable("");
   }
 
   uint64_t getAddress() const {
-    switch (CurrentLocation) {
-    case BinaryBasicBlock:
+    switch (ParentKind) {
+    case BasicBlockParent:
       return U.BBRef.getAddress();
-    case BinaryFunction:
+    case FunctionParent:
       return U.BFRef.getAddress();
     }
     llvm_unreachable("");
   }
 
-  class BinaryFunction *getFunction() const {
-    switch (CurrentLocation) {
-    case BinaryFunction:
+  BinaryFunction *getFunction() const {
+    switch (ParentKind) {
+    case FunctionParent:
       return U.BFRef.BF;
-    case BinaryBasicBlock:
+    case BasicBlockParent:
       return U.BBRef.BB->getFunction();
     }
     llvm_unreachable("");
   }
 
-  class BinaryBasicBlock *getBasicBlock() const {
-    switch (CurrentLocation) {
-    case BinaryFunction:
+  BinaryBasicBlock *getBasicBlock() const {
+    switch (ParentKind) {
+    case FunctionParent:
       return nullptr;
-    case BinaryBasicBlock:
+    case BasicBlockParent:
       return U.BBRef.BB;
     }
     llvm_unreachable("");
