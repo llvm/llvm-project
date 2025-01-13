@@ -28191,12 +28191,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
   // Check operator >> special case
-  verifyFormat("std::cout\n"
-               "    << longOperand1\n"
-               "    << longOperand2\n"
-               "    << longOperand3\n"
-               "    << longOperand4\n"
-               "    << longOperand5;",
+  verifyFormat("std::cin\n"
+               "    >> longOperand1\n"
+               "    >> longOperand2\n"
+               "    >> longOperand3\n"
+               "    >> longOperand4\n"
+               "    >> longOperand5\n"
+               "    >> longOperand6;",
                Style);
 }
 
