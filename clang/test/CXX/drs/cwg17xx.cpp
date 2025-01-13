@@ -225,8 +225,8 @@ namespace cwg1778 { // cwg1778: 9
 
 // cwg1779 is in cwg177x.cpp
 
-namespace cwg1794 { // cwg1794: yes
-                   // NB: dup 1710
+namespace cwg1794 { // cwg1794: 2.7
+                    // NB: dup 1710
 #if __cplusplus >= 201103L
 template <template <typename> class Template> struct Internal {
   template <typename Arg> using Bind = Template<Arg>;

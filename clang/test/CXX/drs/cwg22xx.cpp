@@ -19,7 +19,7 @@ void f() {
 #endif
 } // namespace cwg2211
 
-namespace cwg2213 { // cwg2213: yes
+namespace cwg2213 { // cwg2213: 2.7
 template <typename T, typename U>
 struct A;
 

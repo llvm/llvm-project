@@ -5123,22 +5123,6 @@ let Predicates = [HasFullFP16] in {
 //===----------------------------------------------------------------------===//
 
 defm FCVT : FPConversion<"fcvt">;
-// Helper to get bf16 into fp32.
-def cvt_bf16_to_fp32 :
-  OutPatFrag<(ops node:$Rn),
-             (f32 (COPY_TO_REGCLASS
-	         (i32 (UBFMWri
-		   (i32 (COPY_TO_REGCLASS (INSERT_SUBREG (f32 (IMPLICIT_DEF)),
-		                           node:$Rn, hsub), GPR32)),
-	           (i64 (i32shift_a (i64 16))),
-                   (i64 (i32shift_b (i64 16))))),
-	         FPR32))>;
-// Pattern for bf16 -> fp32.
-def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
-          (cvt_bf16_to_fp32 FPR16:$Rn)>;
-// Pattern for bf16 -> fp64.
-def : Pat<(f64 (any_fpextend (bf16 FPR16:$Rn))),
-          (FCVTDSr (f32 (cvt_bf16_to_fp32 FPR16:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Floating point single operand instructions.
@@ -8333,8 +8317,6 @@ def : Pat<(v4i32 (anyext (v4i16 V64:$Rn))), (USHLLv4i16_shift V64:$Rn, (i32 0))>
 def : Pat<(v2i64 (sext   (v2i32 V64:$Rn))), (SSHLLv2i32_shift V64:$Rn, (i32 0))>;
 def : Pat<(v2i64 (zext   (v2i32 V64:$Rn))), (USHLLv2i32_shift V64:$Rn, (i32 0))>;
 def : Pat<(v2i64 (anyext (v2i32 V64:$Rn))), (USHLLv2i32_shift V64:$Rn, (i32 0))>;
-// Vector bf16 -> fp32 is implemented morally as a zext + shift.
-def : Pat<(v4f32 (any_fpextend (v4bf16 V64:$Rn))), (SHLLv4i16 V64:$Rn)>;
 // Also match an extend from the upper half of a 128 bit source register.
 def : Pat<(v8i16 (anyext (v8i8 (extract_high_v16i8 (v16i8 V128:$Rn)) ))),
           (USHLLv16i8_shift V128:$Rn, (i32 0))>;

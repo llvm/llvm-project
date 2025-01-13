@@ -17,7 +17,7 @@
 #define __enable_constant_folding
 #endif
 
-namespace cwg300 { // cwg300: yes
+namespace cwg300 { // cwg300: 2.7
   template<typename R, typename A> void f(R (&)(A)) {}
   int g(int);
   void h() { f(g); }
@@ -170,9 +170,9 @@ namespace cwg305 { // cwg305: no
   };
   void k(Z *z) {
     z->~T1<int>();
-    // expected-error@-1 {{no member named 'T1' in 'cwg305::Z'}}
+    // since-cxx11-error@-1 {{no member named 'T1' in 'cwg305::Z'}}
     z->~T2<int>();
-    // expected-error@-1 {{no member named '~int' in 'cwg305::Z'}}
+    // since-cxx11-error@-1 {{no member named '~int' in 'cwg305::Z'}}
     z->~T2<Z>();
   }
 
@@ -182,7 +182,7 @@ namespace cwg305 { // cwg305: no
   }
   template<typename A> using R = Q::R<int>;
   void qr(Q::R<int> x) { x.~R<char>(); }
-  // expected-error@-1 {{no member named '~R' in 'cwg305::Q::R<int>'}}
+  // since-cxx11-error@-1 {{no member named '~R' in 'cwg305::Q::R<int>'}}
 #endif
 } // namespace cwg305
 
@@ -337,7 +337,7 @@ namespace cwg319 { // cwg319: no
   }
 } // namespace cwg319
 
-namespace cwg320 { // cwg320: yes
+namespace cwg320 { // cwg320: 3.1
 #if __cplusplus >= 201103L
   struct X {
     constexpr X() {}
@@ -419,7 +419,7 @@ namespace cwg327 { // cwg327: dup 538
   struct B {};
 } // namespace cwg327
 
-namespace cwg328 { // cwg328: yes
+namespace cwg328 { // cwg328: 2.7
   struct A; // #cwg328-A
   struct B { A a; };
   // expected-error@-1 {{field has incomplete type 'A'}}
@@ -569,14 +569,14 @@ namespace cwg332 { // cwg332: dup 577
   // cxx20-23-warning@-2 {{volatile-qualified parameter type 'volatile void' is deprecated}}
 } // namespace cwg332
 
-namespace cwg333 { // cwg333: yes
+namespace cwg333 { // cwg333: 2.7
   int n = 0;
   int f(int(n));
   int g((int(n)));
   int h = f(g);
 } // namespace cwg333
 
-namespace cwg334 { // cwg334: yes
+namespace cwg334 { // cwg334: 2.7
   template<typename T> void f() {
     T x;
     f((x, 123));
@@ -590,7 +590,7 @@ namespace cwg334 { // cwg334: yes
 
 // cwg335: sup 820
 
-namespace cwg336 { // cwg336: yes
+namespace cwg336 { // cwg336: 2.7
   namespace Pre {
     template<class T1> class A {
       template<class T2> class B {
@@ -622,7 +622,7 @@ namespace cwg336 { // cwg336: yes
   }
 } // namespace cwg336
 
-namespace cwg337 { // cwg337: yes
+namespace cwg337 { // cwg337: 2.7
   template<typename T> void f(T (*)[1]);
   template<typename T> int &f(...);
 
@@ -673,7 +673,7 @@ namespace cwg339 { // cwg339: 2.8
   A<1> c = make_A<char>();
 } // namespace cwg339
 
-namespace cwg340 { // cwg340: yes
+namespace cwg340 { // cwg340: 2.7
   struct A { A(int); };
   struct B { B(A, A, int); };
   int x, y;
@@ -734,7 +734,7 @@ namespace cwg344 { // cwg344: dup 1435
   struct B { friend A::~A(); };
 } // namespace cwg344
 
-namespace cwg345 { // cwg345: yes
+namespace cwg345 { // cwg345: 2.7
   struct A {
     struct X {};
     int X; // #cwg345-int-X
@@ -754,7 +754,7 @@ namespace cwg345 { // cwg345: yes
 
 // cwg346: na
 
-namespace cwg347 { // cwg347: yes
+namespace cwg347 { // cwg347: 2.7
   struct base {
     struct nested;
     static int n;
@@ -949,7 +949,7 @@ namespace cwg352 { // cwg352: 2.8
 
 // cwg353 needs an IRGen test.
 
-namespace cwg354 { // cwg354: yes c++11
+namespace cwg354 { // cwg354: 3.1 c++11
   // FIXME: Should we allow this in C++98 too?
   struct S {};
 
@@ -1007,7 +1007,7 @@ namespace cwg354 { // cwg354: yes c++11
   // since-cxx17-error@#cwg354-m3 {{value of type 'int *' is not implicitly convertible to 'int S::*'}}
 } // namespace cwg354
 
-struct cwg355_S; // cwg355: yes
+struct cwg355_S; // cwg355: 2.7
 struct ::cwg355_S {};
 // expected-warning@-1 {{extra qualification on member 'cwg355_S'}}
 namespace cwg355 {
@@ -1016,7 +1016,7 @@ struct ::cwg355_S s;
 
 // cwg356: na
 
-namespace cwg357 { // cwg357: yes
+namespace cwg357 { // cwg357: 2.7
   template<typename T> struct A { // #cwg357-A
     void f() const; // #cwg357-f
   };
@@ -1033,7 +1033,7 @@ namespace cwg357 { // cwg357: yes
   //   expected-note@#cwg357-B {{defined here}}
 } // namespace cwg357
 
-namespace cwg358 { // cwg358: yes
+namespace cwg358 { // cwg358: 2.7
   extern "C" void cwg358_f();
   namespace N {
     int var;
@@ -1041,7 +1041,7 @@ namespace cwg358 { // cwg358: yes
   }
 } // namespace cwg358
 
-namespace cwg359 { // cwg359: yes
+namespace cwg359 { // cwg359: 3.3
   // Note, the example in the DR is wrong; it doesn't contain an anonymous
   // union.
   struct E {
@@ -1070,7 +1070,7 @@ namespace cwg359 { // cwg359: yes
   };
 } // namespace cwg359
 
-namespace cwg360 { // cwg360: yes
+namespace cwg360 { // cwg360: 2.8
 struct A {
   int foo();
   int bar();
@@ -1102,7 +1102,7 @@ int main() {
 // cwg362: na
 // cwg363: na
 
-namespace cwg364 { // cwg364: yes
+namespace cwg364 { // cwg364: 2.7
   struct S {
     static void f(int);
     void f(char);
@@ -1115,11 +1115,12 @@ namespace cwg364 { // cwg364: yes
   }
 } // namespace cwg364
 
-// cwg366: yes
+namespace cwg366 { // cwg366: 2.7
 #if "foo" // expected-error {{invalid token at start of a preprocessor expression}} 
 #endif
+} // namespace cwg366
 
-namespace cwg367 { // cwg367: yes
+namespace cwg367 { // cwg367: 2.7
   static_assert(__enable_constant_folding(true ? throw 0 : 4), "");
   // expected-error@-1 {{expression is not an integral constant expression}}
   static_assert(__enable_constant_folding(true ? 4 : throw 0), "");
@@ -1288,7 +1289,7 @@ namespace cwg374 { // cwg374: 7
 // cwg375: dup 345
 // cwg376: na
 
-namespace cwg377 { // cwg377: yes
+namespace cwg377 { // cwg377: 2.7
   enum E {
   // expected-error@-1 {{enumeration values exceed range of largest integer}}
     a = -__LONG_LONG_MAX__ - 1,
@@ -1302,7 +1303,7 @@ namespace cwg377 { // cwg377: yes
 // cwg378: dup 276
 // cwg379: na
 
-namespace cwg381 { // cwg381: yes
+namespace cwg381 { // cwg381: 2.7
   struct A {
     int a;
   };
@@ -1322,7 +1323,7 @@ namespace cwg381 { // cwg381: yes
   }
 } // namespace cwg381
 
-namespace cwg382 { // cwg382: yes c++11
+namespace cwg382 { // cwg382: 2.7 c++11
   // FIXME: Should we allow this in C++98 mode?
   struct A { typedef int T; };
   typename A::T t;
@@ -1333,7 +1334,7 @@ namespace cwg382 { // cwg382: yes c++11
   // expected-error@-1 {{expected a qualified name after 'typename'}}
 } // namespace cwg382
 
-namespace cwg383 { // cwg383: yes
+namespace cwg383 { // cwg383: 2.7
   struct A { A &operator=(const A&); };
   struct B { ~B(); };
   union C { C &operator=(const C&); };
@@ -1341,7 +1342,7 @@ namespace cwg383 { // cwg383: yes
   static_assert(!__is_pod(A) && !__is_pod(B) && !__is_pod(C) && !__is_pod(D), "");
 } // namespace cwg383
 
-namespace cwg384 { // cwg384: yes
+namespace cwg384 { // cwg384: 2.7
   namespace N1 {
     template<typename T> struct Base {};
     template<typename T> struct X {
@@ -1722,7 +1723,7 @@ namespace cwg395 { // cwg395: 3.0
   int (S::*q)() = null2;
 } // namespace cwg395
 
-namespace cwg396 { // cwg396: yes
+namespace cwg396 { // cwg396: 3.0
   void f() {
     auto int a();
     // since-cxx11-error@-1 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
@@ -1737,7 +1738,7 @@ namespace cwg396 { // cwg396: yes
 
 // cwg397: sup 1823
 
-namespace cwg398 { // cwg398: yes
+namespace cwg398 { // cwg398: 2.7
   namespace example1 {
     struct S {
       static int const I = 42;

@@ -11,7 +11,7 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg705 { // cwg705: yes
+namespace cwg705 { // cwg705: 2.7
   namespace N {
     struct S {};
     void f(S); // #cwg705-f

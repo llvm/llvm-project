@@ -1942,7 +1942,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
 
   // When end_loop is before end_try_table within the same BB in unwind
   // destinations, we should split the end_loop into another BB.
-  if (WebAssembly::WasmEnableExnref)
+  if (!WebAssembly::WasmUseLegacyEH)
     for (auto &[UnwindDest, _] : UnwindDestToTryRanges)
       splitEndLoopBB(UnwindDest);
 
@@ -1975,10 +1975,10 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
           MBB->removeSuccessor(EHPad);
       }
 
-      if (WebAssembly::WasmEnableExnref)
-        addNestedTryTable(RangeBegin, RangeEnd, UnwindDest);
-      else
+      if (WebAssembly::WasmUseLegacyEH)
         addNestedTryDelegate(RangeBegin, RangeEnd, UnwindDest);
+      else
+        addNestedTryTable(RangeBegin, RangeEnd, UnwindDest);
     }
   }
 
@@ -2188,15 +2188,15 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   for (auto &[EHPad, UnwindDest] : EHPadToUnwindDest) {
     MachineInstr *Try = EHPadToTry[EHPad];
     MachineInstr *EndTry = BeginToEnd[Try];
-    if (WebAssembly::WasmEnableExnref) {
-      addNestedTryTable(Try, EndTry, UnwindDest);
-    } else {
+    if (WebAssembly::WasmUseLegacyEH) {
       addNestedTryDelegate(Try, EndTry, UnwindDest);
       NewEndTryBBs.insert(EndTry->getParent());
+    } else {
+      addNestedTryTable(Try, EndTry, UnwindDest);
     }
   }
 
-  if (WebAssembly::WasmEnableExnref)
+  if (!WebAssembly::WasmUseLegacyEH)
     return true;
 
   // Adding a try-delegate wrapping an existing try-catch-end can make existing
@@ -2387,10 +2387,10 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
       // Place the TRY/TRY_TABLE for MBB if MBB is the EH pad of an exception.
       if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
           MF.getFunction().hasPersonalityFn()) {
-        if (WebAssembly::WasmEnableExnref)
-          placeTryTableMarker(MBB);
-        else
+        if (WebAssembly::WasmUseLegacyEH)
           placeTryMarker(MBB);
+        else
+          placeTryTableMarker(MBB);
       }
     } else {
       // Place the BLOCK for MBB if MBB is branched to from above.
@@ -2576,7 +2576,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
 
   // Remove unnecessary instructions possibly introduced by try/end_trys.
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
-      MF.getFunction().hasPersonalityFn() && !WebAssembly::WasmEnableExnref)
+      MF.getFunction().hasPersonalityFn() && WebAssembly::WasmUseLegacyEH)
     removeUnnecessaryInstrs(MF);
 
   // Convert MBB operands in terminators to relative depth immediates.

@@ -5069,7 +5069,7 @@ static OpFoldResult computeProduct(Location loc, OpBuilder &builder,
     if (maybeConst) {
       result = result * builder.getAffineConstantExpr(*maybeConst);
     } else {
-      dynamicPart.push_back(term.get<Value>());
+      dynamicPart.push_back(cast<Value>(term));
       result = result * builder.getAffineSymbolExpr(nDynamic++);
     }
   }

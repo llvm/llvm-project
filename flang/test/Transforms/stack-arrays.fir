@@ -379,7 +379,8 @@ func.func @placement_loop_declare() {
     %3 = arith.addi %c1, %c2 : index
     // operand is now available
     %4 = fir.allocmem !fir.array<?xi32>, %3
-    %5 = fir.declare %4 {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+    %shape = fir.shape %3 : (index) -> !fir.shape<1>
+    %5 = fir.declare %4(%shape) {uniq_name = "temp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
     // ...
     fir.freemem %5 : !fir.heap<!fir.array<?xi32>>
     fir.result %3, %c1_i32 : index, i32
@@ -400,3 +401,20 @@ func.func @placement_loop_declare() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
+
+// Can we look through fir.convert and fir.declare?
+func.func @lookthrough() {
+  %0 = fir.allocmem !fir.array<42xi32>
+  %c42 = arith.constant 42 : index
+  %shape = fir.shape %c42 : (index) -> !fir.shape<1>
+  %1 = fir.declare %0(%shape) {uniq_name = "name"} : (!fir.heap<!fir.array<42xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<42xi32>>
+  %2 = fir.convert %1 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
+  // use the ref so the converts aren't folded
+  %3 = fir.load %2 : !fir.ref<!fir.array<42xi32>>
+  %4 = fir.convert %2 : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
+  fir.freemem %4 : !fir.heap<!fir.array<42xi32>>
+  return
+}
+// CHECK: func.func @lookthrough() {
+// CHECK:     fir.alloca !fir.array<42xi32>
+// CHECK-NOT: fir.freemem
