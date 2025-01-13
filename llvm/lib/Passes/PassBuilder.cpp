@@ -1315,10 +1315,18 @@ parseBoundsCheckingOptions(StringRef Params) {
     } else if (ParamName == "merge") {
       Options.Merge = true;
     } else {
-      return make_error<StringError>(
-          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
+      StringRef ParamEQ;
+      StringRef Val;
+      std::tie(ParamEQ, Val) = ParamName.split('=');
+      int8_t Id = 0;
+      if (ParamEQ == "guard" && !Val.getAsInteger(0, Id)) {
+        Options.GuardKind = Id;
+      } else {
+        return make_error<StringError>(
+            formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
     }
   }
   return Options;
