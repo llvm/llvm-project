@@ -17,18 +17,12 @@
 // public:
 //     typedef R result_type; // extension
 
-// This is a libc++ extension.
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// This libc++ extension is deprecated. See https://github.com/llvm/llvm-project/issues/112856.
 
 #include <future>
 #include <type_traits>
 
 struct A {};
 
-int main(int, char**) {
-  static_assert((std::is_same<std::packaged_task<A(int, char)>::result_type, A>::value), "");
-  static_assert((std::is_same<std::packaged_task<void(int, char)>::result_type, void>::value), "");
-
-  return 0;
-}
+using RA = std::packaged_task<A(int, char)>::result_type;    // expected-warning {{'result_type' is deprecated}}
+using RV = std::packaged_task<void(int, char)>::result_type; // expected-warning {{'result_type' is deprecated}}
