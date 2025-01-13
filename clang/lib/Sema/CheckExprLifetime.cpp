@@ -1108,12 +1108,12 @@ enum PathLifetimeKind {
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   for (auto Elem : Path) {
-    if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      return PathLifetimeKind::Extend;
-    if (Elem.Kind == IndirectLocalPathEntry::MemberExpr)
+    if (Elem.Kind == IndirectLocalPathEntry::MemberExpr ||
+        Elem.Kind == IndirectLocalPathEntry::LambdaCaptureInit)
       continue;
-    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
-      return PathLifetimeKind::NoExtend;
+    return Elem.Kind == IndirectLocalPathEntry::DefaultInit
+               ? PathLifetimeKind::Extend
+               : PathLifetimeKind::NoExtend;
   }
   return PathLifetimeKind::Extend;
 }
