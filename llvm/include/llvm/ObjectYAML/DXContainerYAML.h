@@ -72,6 +72,16 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
+
+
+struct RootSignatureDesc {
+  RootSignatureDesc() = default;
+  RootSignatureDesc(const dxbc::RootSignatureDesc &Data);
+
+  uint32_t Version;
+  uint32_t Flags;
+};
+
 using ResourceFlags = dxbc::PSV::ResourceFlags;
 using ResourceBindInfo = dxbc::PSV::v2::ResourceBindInfo;
 
@@ -159,6 +169,7 @@ struct Part {
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
+  std::optional<DXContainerYAML::RootSignatureDesc> RootSignature;
 };
 
 struct Object {
@@ -239,6 +250,11 @@ template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
 
 template <> struct MappingTraits<DXContainerYAML::Signature> {
   static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::RootSignatureDesc> {
+  static void mapping(IO &IO,
+                      DXContainerYAML::RootSignatureDesc &RootSignature);
 };
 
 } // namespace yaml

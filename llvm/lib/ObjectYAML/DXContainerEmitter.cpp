@@ -261,6 +261,14 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
+    case dxbc::PartType::RTS0:
+      if (!P.RootSignature.has_value())
+        continue;
+     dxbc::RootSignatureDesc RS = {P.RootSignature->Version, P.RootSignature->Flags};
+      if (sys::IsBigEndianHost)
+        RS.swapBytes();
+      OS.write(reinterpret_cast<char *>(&RS), sizeof(dxbc::RootSignatureDesc));
+      break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

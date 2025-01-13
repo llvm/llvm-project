@@ -45,6 +45,10 @@ DXContainerYAML::ShaderHash::ShaderHash(const dxbc::ShaderHash &Data)
   memcpy(Digest.data(), &Data.Digest[0], 16);
 }
 
+DXContainerYAML::RootSignatureDesc::RootSignatureDesc(const dxbc::RootSignatureDesc &Data)
+    : Version(Data.Version), Flags(Data.Flags) {
+}
+
 DXContainerYAML::PSVInfo::PSVInfo() : Version(0) {
   memset(&Info, 0, sizeof(Info));
 }
@@ -188,6 +192,12 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
+void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
+  IO.mapRequired("Version", S.Version);
+  IO.mapRequired("Flags", S.Flags);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -197,6 +207,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("Hash", P.Hash);
   IO.mapOptional("PSVInfo", P.Info);
   IO.mapOptional("Signature", P.Signature);
+  IO.mapOptional("RootSignature", P.RootSignature);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(

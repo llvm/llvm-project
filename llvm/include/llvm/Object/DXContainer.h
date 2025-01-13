@@ -287,6 +287,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
+  std::optional<dxbc::RootSignatureDesc> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -296,6 +297,7 @@ private:
   Error parseDXILHeader(StringRef Part);
   Error parseShaderFeatureFlags(StringRef Part);
   Error parseHash(StringRef Part);
+  Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
   friend class PartIterator;
@@ -381,6 +383,11 @@ public:
   }
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
+
+  std::optional<dxbc::RootSignatureDesc>
+  getRootSignature() const {
+    return RootSignature;
+  }
 
   const std::optional<DirectX::PSVRuntimeInfo> &getPSVInfo() const {
     return PSVInfo;
