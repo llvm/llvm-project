@@ -9,17 +9,17 @@ typedef __attribute__((neon_vector_type(16))) signed char int8x16_t;
 typedef __MFloat8x8_t mfloat8x8_t;
 typedef __MFloat8x16_t mfloat8x16_t;
 
-// CHECK-LABEL: define dso_local <8 x i8> @f0(
+// CHECK-LABEL: define dso_local <8 x i8> @test_8x8(
 // CHECK-SAME: <8 x i8> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i8> [[X]], <8 x i8> [[X]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
 // CHECK-NEXT:    ret <8 x i8> [[SHUFFLE]]
 //
-mfloat8x8_t f0(mfloat8x8_t x) {
+mfloat8x8_t test_8x8(mfloat8x8_t x) {
   return __builtin_shufflevector(x, x, 3, 2, 1, 0, 3, 2, 1, 0);
 }
 
-// CHECK-LABEL: define dso_local <8 x i8> @f1(
+// CHECK-LABEL: define dso_local <8 x i8> @test_8x8_v(
 // CHECK-SAME: <8 x i8> [[X:%.*]], <8 x i8> noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = and <8 x i8> [[P]], splat (i8 7)
@@ -49,22 +49,22 @@ mfloat8x8_t f0(mfloat8x8_t x) {
 // CHECK-NEXT:    [[SHUF_INS21:%.*]] = insertelement <8 x i8> [[SHUF_INS18]], i8 [[SHUF_ELT20]], i64 7
 // CHECK-NEXT:    ret <8 x i8> [[SHUF_INS21]]
 //
-mfloat8x8_t f1(mfloat8x8_t x, int8x8_t p) {
+mfloat8x8_t test_8x8_v(mfloat8x8_t x, int8x8_t p) {
   return __builtin_shufflevector(x, p);
 }
 
-// CHECK-LABEL: define dso_local <16 x i8> @f3(
+// CHECK-LABEL: define dso_local <16 x i8> @test_8x16(
 // CHECK-SAME: <16 x i8> [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i8> [[X]], <16 x i8> [[X]], <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 // CHECK-NEXT:    ret <16 x i8> [[SHUFFLE]]
 //
-mfloat8x16_t f3(mfloat8x16_t x) {
+mfloat8x16_t test_8x16(mfloat8x16_t x) {
   return __builtin_shufflevector(x, x, 7, 6, 5, 4, 3, 2, 1, 0, 7, 6, 5, 4, 3, 2,
                                  1, 0);
 }
 
-// CHECK-LABEL: define dso_local <16 x i8> @f4(
+// CHECK-LABEL: define dso_local <16 x i8> @test_8x16_v(
 // CHECK-SAME: <16 x i8> [[X:%.*]], <16 x i8> noundef [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[MASK:%.*]] = and <16 x i8> [[P]], splat (i8 15)
@@ -118,6 +118,6 @@ mfloat8x16_t f3(mfloat8x16_t x) {
 // CHECK-NEXT:    [[SHUF_INS45:%.*]] = insertelement <16 x i8> [[SHUF_INS42]], i8 [[SHUF_ELT44]], i64 15
 // CHECK-NEXT:    ret <16 x i8> [[SHUF_INS45]]
 //
-mfloat8x16_t f4(mfloat8x16_t x, int8x16_t p) {
+mfloat8x16_t test_8x16_v(mfloat8x16_t x, int8x16_t p) {
   return __builtin_shufflevector(x, p);
 }

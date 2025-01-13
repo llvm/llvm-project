@@ -2579,8 +2579,10 @@ bool Type::isSveVLSBuiltinType() const {
 bool Type::isNeonVectorBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
-    case BuiltinType::MFloat8x8:
-    case BuiltinType::MFloat8x16:
+#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
+  case BuiltinType::Id:
+#define SVE_TYPE(Name, Id, SingletonId)
+#include "clang/Basic/AArch64SVEACLETypes.def"
       return true;
     default:
       return false;

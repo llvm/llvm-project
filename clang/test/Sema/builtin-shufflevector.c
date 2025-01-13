@@ -6,7 +6,6 @@ typedef __attribute__((neon_vector_type(8))) signed char int8x8_t;
 typedef __attribute__((neon_vector_type(16))) signed char int8x16_t;
 
 typedef __MFloat8x8_t mfloat8x8_t;
-typedef __MFloat8x16_t mfloat8x16_t;
 
 int8x8_t non_vector(int x) {
   return __builtin_shufflevector(x, x, 3, 2, 1, 0, 3, 2, 1, 0);
