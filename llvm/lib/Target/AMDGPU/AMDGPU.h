@@ -380,7 +380,7 @@ extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
 
-void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
+void initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
 void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
