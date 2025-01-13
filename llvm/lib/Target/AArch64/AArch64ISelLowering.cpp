@@ -9664,7 +9664,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getConstant(0, DL, MVT::i64));
     TPIDR2.Uses++;
   } else if (RequiresSaveAllZA) {
-    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
+    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Result,
                                      /*IsSave=*/false);
   }
 
