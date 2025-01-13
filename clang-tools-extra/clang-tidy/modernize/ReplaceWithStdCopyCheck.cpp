@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReplaceWithStdCopyCheck.h"
-#include "ReplaceAutoPtrCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -44,15 +43,13 @@ struct Refs {
 template <typename RefsT> auto createPtrArgMatcher() {
   constexpr Refs Refs = RefsT::Refs;
 
-  auto AllowedContainerNamesM = []() {
-    // return hasAnyName("::std::deque", "::std::forward_list", "::std::list",
-    //                   "::std::vector", "::std::basic_string",
-    //                   "::std::array");
-    return hasAnyName("::std::deque", "::std::forward_list", "::std::list",
-                      "::std::vector", "::std::basic_string", "::std::array",
-                      "::std::basic_string_view", "::std::span");
-  }();
+  auto AllowedContainerNamesM =
+      hasAnyName("::std::vector", "::std::basic_string", "::std::array",
+                 "::std::basic_string_view", "::std::span");
 
+  // Note: a problem with this matcher is that it automatically desugars the
+  // template argument type, so e.g. std::vector<std::int32_t> will bind
+  // ValueType to int and not std::int32_t
   auto AllowedContainerTypeM = hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(recordDecl(classTemplateSpecializationDecl(
           AllowedContainerNamesM,
@@ -71,8 +68,8 @@ template <typename RefsT> auto createPtrArgMatcher() {
   auto StdDataReturnM =
       returns(pointerType(pointee(qualType().bind(Refs.PtrCastFnReturnType))));
 
-  auto StdDataMemberDeclM =
-      cxxMethodDecl(hasName("data"), parameterCountIs(0), StdDataReturnM);
+  auto StdDataMemberDeclM = cxxMethodDecl(hasAnyName("data", "c_str"),
+                                          parameterCountIs(0), StdDataReturnM);
 
   auto StdDataFreeDeclM = functionDecl(hasAnyName("::std::data", "::data"),
                                        parameterCountIs(1), StdDataReturnM);
@@ -86,8 +83,6 @@ template <typename RefsT> auto createPtrArgMatcher() {
   auto StdDataFreeCallM = callExpr(callee(StdDataFreeDeclM), argumentCountIs(1),
                                    hasArgument(0, ArrayOrContainerM));
 
-  // the last expr() in anyOf assumes previous matchers are ran eagerly from
-  // left to right, still need to test this is the actual behaviour
   return expr(anyOf(StdDataMemberCallM, StdDataFreeCallM, VariantCArrayM));
 }
 
@@ -119,9 +114,11 @@ const QualType *extractValueType(const MatchFinder::MatchResult &Result) {
   constexpr Refs Refs = RefT::Refs;
 
   // checking equality is done here as opposed to when matching because the
-  // equalsBoundNode matcher depends on the match order and the
+  // equalsBoundNode matcher depends on the match order.
+  // Already considered swapping the role of the node
+  // matchers, having one bind and the other match using equalsBoundNode, but
   // PtrCastFnReturnType is only present in some scenarios,
-  // making it tricky to swap the binding order
+  // so it's not applicable.
   const auto *MaybeRetType =
       Result.Nodes.getNodeAs<QualType>(Refs.PtrCastFnReturnType);
   const auto *ValueType = Result.Nodes.getNodeAs<QualType>(Refs.ValueType);
@@ -244,7 +241,8 @@ auto createMatcher() {
 
 SizeArg extractNode(const CallExpr &CallNode,
                     const MatchFinder::MatchResult &Result) {
-  auto ConcreteCase = [&Nodes = Result.Nodes]() -> std::optional<SizeArg> {
+  auto TryExtractFromBoundTags =
+      [&Nodes = Result.Nodes]() -> std::optional<SizeArg> {
     if (const auto *Array = Nodes.getNodeAs<Expr>(Refs.SizeOfCArray);
         Array != nullptr)
       return variant::SizeOfCArray{*Array};
@@ -267,7 +265,7 @@ SizeArg extractNode(const CallExpr &CallNode,
     return std::nullopt;
   };
 
-  if (auto MaybeSize = ConcreteCase(); MaybeSize.has_value())
+  if (auto MaybeSize = TryExtractFromBoundTags(); MaybeSize.has_value())
     return *MaybeSize;
   return CallNode.getArg(ArgIndex);
 }
@@ -299,12 +297,6 @@ void ReplaceWithStdCopyCheck::registerMatchers(MatchFinder *Finder) {
   const auto OffendingDeclM =
       functionDecl(parameterCountIs(3), createCalleeMatcher(FlagMemcpy));
 
-  // cases:
-  // 1. One of the arguments is definitely a collection and the other a pointer
-  // - match
-  // 2. Both source and dest are pointers, but size is of the form ((N :=
-  // expr()) * sizeof(bytelike())) - match (false positive if N \in {0, 1})
-
   const auto ExpressionM = callExpr(
       callee(OffendingDeclM), optionally(ReturnValueUsedM),
       allOf(optionally(hasArgument(dst::ArgIndex, dst::createMatcher())),
@@ -324,7 +316,6 @@ void ReplaceWithStdCopyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
-  llvm::errs() << __LINE__ << '\n';
   const auto &CallNode = *Result.Nodes.getNodeAs<CallExpr>(ExpressionRef);
 
   auto Dst = dst::extractNode(CallNode, Result);
@@ -344,7 +335,6 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
                *Result.SourceManager, getLangOpts())
         .str();
   };
-  llvm::errs() << "Call: " << ExprAsString(CallNode) << '\n';
 
   bool DstIsRawPtr = std::holds_alternative<ptrarg::tag::RawPtr>(Dst.Tag);
   bool SrcIsRawPtr = std::holds_alternative<ptrarg::tag::RawPtr>(Src.Tag);
@@ -364,7 +354,8 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(CallNode.getExprLoc(), "prefer std::copy_n to %0")
               << cast<NamedDecl>(CallNode.getCalleeDecl());
 
-  // basis for converting size argument to std::copy_n's when issuing fixit
+  // the value type widths are helpful when translating the size argument
+  // from byte units (memcpy etc.) to element units (std::copy_n),
   auto DstTypeWidth = Result.Context->getTypeSizeInChars(*DstVT);
   auto SrcTypeWidth = Result.Context->getTypeSizeInChars(*SrcVT);
 
@@ -407,28 +398,27 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
   if (not CheckIsFixable())
     return;
 
-  // From here we can assume dst and src have equal value type widths
+  assert(DstTypeWidth == SrcTypeWidth);
   const auto &ValueTypeWidth = DstTypeWidth;
 
   auto SrcFixit = [&]() {
     auto AsString = ExprAsString(Src.Node);
     if (SrcIsRawPtr)
       return AsString;
-    return "std::cbegin(" + AsString + ")";
+    return (llvm::Twine() + "std::cbegin(" + AsString + ")").str();
   }();
 
   auto DstFixit = [&]() {
     auto AsString = ExprAsString(Dst.Node);
     if (DstIsRawPtr)
       return AsString;
-    return "std::begin(" + AsString + ")";
+    return (llvm::Twine() + "std::begin(" + AsString + ")").str();
   }();
 
-  // this function is used to specify when a type from a sizeof(_) call is
+  // This function is used to specify when a type from a sizeof(_) call is
   // considered equivalent to the value type of the collection.
-  // for now it is relaxed because the template specialization matcher
-  // seems to unqualify types automatically (e.g. the value type of
-  // std::vector<std::int32_t> will just be int) and
+  // For now it is relaxed because the matcher desugars
+  // the container value types automatically.
   auto CheckIsEquivValueType = [&DstVT](QualType SizeArgType) {
     return SizeArgType->getCanonicalTypeUnqualified() ==
            (*DstVT)->getCanonicalTypeUnqualified();
@@ -439,7 +429,9 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
             std::get_if<size::variant::SizeOfCArray>(&Size);
         SizeOfCArray != nullptr) {
       // simply replaces sizeof(arr) with std::size(arr)
-      return "std::size(" + ExprAsString(SizeOfCArray->Array) + ")";
+      return (llvm::Twine() + "std::size(" + ExprAsString(SizeOfCArray->Array) +
+              ")")
+          .str();
     }
     if (const auto *NSizeofExprNode =
             std::get_if<size::variant::NSizeOfType>(&Size);
@@ -455,7 +447,7 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
         SizeOfDivSizeOf != nullptr) {
       auto &[Array, DivSizeOfType] = *SizeOfDivSizeOf;
       if (CheckIsEquivValueType(DivSizeOfType) and ValueTypeWidth == CalleeUnit)
-        return "std::size(" + ExprAsString(Array) + ")";
+        return (llvm::Twine() + "std::size(" + ExprAsString(Array) + ")").str();
     }
 
     // In the specific case where the collections' value types are byte-wide,
@@ -466,7 +458,7 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
     // For all other cases where the value type is wider than one byte,
     // and the size argument is of a form that is not easy to factor the unit
     // out of, perform explicit division to ensure it is in element units
-    return (llvm::Twine("") + "(" +
+    return (llvm::Twine() + "(" +
             ExprAsString(*CallNode.getArg(size::ArgIndex)) + ") / sizeof(" +
             DstVT->getAsString() + ")")
         .str();
@@ -478,7 +470,7 @@ void ReplaceWithStdCopyCheck::check(const MatchFinder::MatchResult &Result) {
         SizeOfDivSizeOf != nullptr) {
       auto &[Array, DivSizeOfType] = *SizeOfDivSizeOf;
       if (CheckIsEquivValueType(DivSizeOfType))
-        return "std::size(" + ExprAsString(Array) + ")";
+        return (llvm::Twine() + "std::size(" + ExprAsString(Array) + ")").str();
     }
     // Since we assume wide variants' value type width equals wchar_t,
     // the units should already be unified and no modifications to the size
