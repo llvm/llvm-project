@@ -151,11 +151,11 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
 def make_heartbeat_metric():
     return JobMetrics(
         "metrics_container_heartbeat",
-        1, # queue time seconds
-        2, # run time seconds
-        3, # job result
-        time.time_ns(), # created at ns
-        0, # workflow run ID
+        1,  # queue time seconds
+        2,  # run time seconds
+        3,  # job result
+        time.time_ns(),  # created at ns
+        0,  # workflow run ID
     )
 
 
