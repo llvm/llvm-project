@@ -738,6 +738,15 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
   if (isa<ShardingOp>(op)) {
     return success();
   }
+  if (auto getShardingOp = dyn_cast<GetShardingOp>(op)) {
+    auto shardOp = getShardingOp.getSource().getDefiningOp<ShardOp>();
+    if (!shardOp) {
+      return op.emitError("expected a shard op as source of get_sharding");
+    }
+    auto newSharding = builder.clone(*shardOp.getSharding().getDefiningOp());
+    spmdizationMap.map(op.getResult(0), newSharding->getResult(0));
+    return success();
+  }
 
   ShardOp shardOp = llvm::dyn_cast<ShardOp>(op);
   if (shardOp) {

@@ -454,16 +454,14 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
                        ArrayRef<MeshAxesAttr> split_axes,
                        ArrayRef<MeshAxis> partial_axes,
                        mesh::ReductionKind partial_type,
-                       ArrayRef<int64_t> static_halo_sizes,
-                       ArrayRef<int64_t> static_sharded_dims_offsets) {
+                       ArrayRef<int64_t> static_halos,
+                       ArrayRef<int64_t> static_offsets) {
   return build(
       b, odsState, mesh, MeshAxesArrayAttr::get(b.getContext(), split_axes),
       ::mlir::DenseI16ArrayAttr::get(b.getContext(), partial_axes),
       ::mlir::mesh::ReductionKindAttr::get(b.getContext(), partial_type),
-      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halo_sizes), {},
-      ::mlir::DenseI64ArrayAttr::get(b.getContext(),
-                                     static_sharded_dims_offsets),
-      {});
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halos), {},
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_offsets), {});
 }
 
 void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
@@ -473,6 +471,18 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
       b, odsState, mesh, MeshAxesArrayAttr::get(b.getContext(), split_axes), {},
       ::mlir::mesh::ReductionKindAttr::get(b.getContext(), ReductionKind::Sum),
       {}, {}, {}, {});
+}
+
+void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
+                       llvm::StringRef mesh, ArrayRef<MeshAxesAttr> split_axes,
+                       ArrayRef<int64_t> static_halos,
+                       ArrayRef<int64_t> static_offsets) {
+  return build(
+      b, odsState, FlatSymbolRefAttr::get(b.getContext(), mesh),
+      MeshAxesArrayAttr::get(b.getContext(), split_axes), {},
+      ::mlir::mesh::ReductionKindAttr::get(b.getContext(), ReductionKind::Sum),
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_halos), {},
+      ::mlir::DenseI64ArrayAttr::get(b.getContext(), static_offsets), {});
 }
 
 void ShardingOp::build(

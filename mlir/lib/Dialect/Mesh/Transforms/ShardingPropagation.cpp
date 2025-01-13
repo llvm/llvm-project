@@ -285,7 +285,7 @@ static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
   ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);
   if (op->hasTrait<OpTrait::IsTerminator>() ||
       (op->hasTrait<OpTrait::ConstantLike>() && !shardingOp) ||
-      llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
+      llvm::isa<mesh::ShardOp, mesh::ShardingOp, mesh::GetShardingOp>(op))
     return success();
 
   if (!shardingOp) {
