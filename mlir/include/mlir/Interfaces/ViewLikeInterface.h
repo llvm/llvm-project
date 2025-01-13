@@ -98,13 +98,17 @@ public:
 ///
 /// If `valueTypes` is provided, the corresponding type of each dynamic value is
 /// printed. Otherwise, the type is not printed. Each type must match the type
-/// of the corresponding value in `values`. The type for integer elements is
-/// `i64` by default and never printed.
+/// of the corresponding value in `values`. `valueTypes` is redundant for
+/// printing as we can retrieve the types from the actual `values`. However,
+/// `valueTypes` is needed for parsing and we must keep the API symmetric for
+/// parsing and printing. The type for integer elements is `i64` by default and
+/// never printed.
 ///
-/// Integer indices can also be scalable, denoted with square brackets (e.g.,
-/// "[2, [4], 8]"). For each value in `integers`, the corresponding `bool` in
-/// `scalables` encodes whether it's a scalable index. If `scalables` is empty
-/// then assume that all indices are non-scalable.
+/// Integer indices can also be scalable in the context of scalable vectors,
+/// denoted by square brackets (e.g., "[2, [4], 8]"). For each value in
+/// `integers`, the corresponding `bool` in `scalableFlags` encodes whether it's
+/// a scalable index. If `scalableFlags` is empty then assume that all indices
+/// are non-scalable.
 ///
 /// Examples:
 ///
@@ -122,21 +126,21 @@ public:
 ///
 ///   * Input: `integers = [2, 4, 8]`,
 ///            `values = []` and
-///            `scalables = [false, true, false]`
+///            `scalableFlags = [false, true, false]`
 ///     prints:
 ///       `[2, [4], 8]`
 ///
 void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
-    ArrayRef<int64_t> integers, ArrayRef<bool> scalables,
+    ArrayRef<int64_t> integers, ArrayRef<bool> scalableFlags,
     TypeRange valueTypes = TypeRange(),
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 inline void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
     ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  return printDynamicIndexList(printer, op, values, integers, /*scalables=*/{},
-                               valueTypes, delimiter);
+  return printDynamicIndexList(printer, op, values, integers,
+                               /*scalableFlags=*/{}, valueTypes, delimiter);
 }
 
 /// Parser hooks for custom directive in assemblyFormat.
@@ -151,28 +155,31 @@ inline void printDynamicIndexList(
 /// values to `values` in-order.
 ///
 /// If `valueTypes` is provided, fill it with the types corresponding to each
-/// value in `values`. Otherwise, the caller must handle the types.
+/// value in `values`. Otherwise, the caller must handle the types and parsing
+/// will fail if the type of the value is found (e.g., `[%arg0 : index, 3, %arg1
+/// : index]`).
 ///
-/// Integer indices can also be scalable, denoted by the square bracket (e.g.,
-/// "[2, [4], 8]"). For each value in `integers`, the corresponding `bool` in
-/// `scalables` encodes whether it's a scalable index.
+/// Integer indices can also be scalable in the context of scalable vectors,
+/// denoted by square brackets (e.g., "[2, [4], 8]"). For each value in
+/// `integers`, the corresponding `bool` in `scalableFlags` encodes whether it's
+/// a scalable index.
 ///
 /// Examples:
 ///
 ///   * After parsing "[%arg0 : index, 7, 42, %arg42 : i32]":
 ///       1. `result` is filled with `[kDynamic, 7, 42, kDynamic]`
 ///       2. `values` is filled with "[%arg0, %arg1]".
-///       3. `scalables` is filled with `[false, true, false]`.
+///       3. `scalableFlags` is filled with `[false, true, false]`.
 ///
 ///   * After parsing `[2, [4], 8]`:
 ///       1. `result` is filled with `[2, 4, 8]`
 ///       2. `values` is empty.
-///       3. `scalables` is filled with `[false, true, false]`.
+///       3. `scalableFlags` is filled with `[false, true, false]`.
 ///
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
     SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 inline ParseResult parseDynamicIndexList(
@@ -180,9 +187,9 @@ inline ParseResult parseDynamicIndexList(
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  DenseBoolArrayAttr scalables;
-  return parseDynamicIndexList(parser, values, integers, scalables, valueTypes,
-                               delimiter);
+  DenseBoolArrayAttr scalableFlags;
+  return parseDynamicIndexList(parser, values, integers, scalableFlags,
+                               valueTypes, delimiter);
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in
