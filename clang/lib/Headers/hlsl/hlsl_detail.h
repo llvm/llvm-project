@@ -42,9 +42,12 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
 }
 
 constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
-  // Use the same scaling factor used by FXC (i.e., 255.001953)
-  // Excerpt from stackoverflow discussion:
-  // "Built-in rounding, necessary because of truncation. 0.001953 * 256 = 0.5"
+  // Use the same scaling factor used by FXC, and DXC for DXIL
+  // (i.e., 255.001953)
+  // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
+  // The DXC implementation refers to a comment on the following stackoverflow
+  // discussion to justify the scaling factor: "Built-in rounding, necessary
+  // because of truncation. 0.001953 * 256 = 0.5"
   // https://stackoverflow.com/questions/52103720/why-does-d3dcolortoubyte4-multiplies-components-by-255-001953f
   return V.zyxw * 255.001953f;
 }
