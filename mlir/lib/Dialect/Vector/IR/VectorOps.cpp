@@ -468,6 +468,48 @@ template <typename T>
 static OpFoldResult computeConstantReduction(T src, T acc, int64_t times,
                                              CombiningKind kind,
                                              ShapedType dstType);
+template <typename T>
+static T power(const T &a, int64_t times);
+
+template <>
+APFloat power(const APFloat &a, int64_t exponent) {
+  assert(exponent >= 0 && "negative exponents not supported.");
+  if (exponent == 0) {
+    return APFloat::getOne(a.getSemantics());
+  }
+  APFloat acc = a;
+  int64_t remainingExponent = exponent;
+  while (remainingExponent > 1) {
+    if (remainingExponent % 2 == 0) {
+      acc = acc * acc;
+      remainingExponent /= 2;
+    } else {
+      acc = acc * a;
+      remainingExponent--;
+    }
+  }
+  return acc;
+};
+
+template <>
+APInt power(const APInt &a, int64_t exponent) {
+  assert(exponent >= 0 && "negative exponents not supported.");
+  if (exponent == 0) {
+    return APInt(a.getBitWidth(), 1);
+  }
+  APInt acc = a;
+  int64_t remainingExponent = exponent;
+  while (remainingExponent > 1) {
+    if (remainingExponent % 2 == 0) {
+      acc = acc * acc;
+      remainingExponent /= 2;
+    } else {
+      acc = acc * a;
+      remainingExponent--;
+    }
+  }
+  return acc;
+};
 
 template <>
 OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
@@ -483,11 +525,7 @@ OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
     return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
   }
   case CombiningKind::MUL: {
-    APFloat result = accVal;
-    for (int i = 0; i < times; ++i) {
-      result = result * srcVal;
-    }
-    return DenseElementsAttr::get(dstType, {result});
+    return DenseElementsAttr::get(dstType, {accVal * power(srcVal, times)});
   }
   case CombiningKind::MINIMUMF:
     return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
@@ -513,11 +551,7 @@ OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
   case CombiningKind::ADD:
     return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
   case CombiningKind::MUL: {
-    APInt result = accVal;
-    for (int i = 0; i < times; ++i) {
-      result *= srcVal;
-    }
-    return DenseElementsAttr::get(dstType, {result});
+    return DenseElementsAttr::get(dstType, {accVal * power(srcVal, times)});
   }
   case CombiningKind::MINSI:
     return DenseElementsAttr::get(dstType,
