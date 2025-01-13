@@ -13,7 +13,8 @@
 
 namespace clang::tidy::performance {
 
-/// Find classes that define an explicit move constructor and a (non-deleted) copy constructor.
+/// Find classes that define an explicit move constructor and a (non-deleted)
+/// copy constructor.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance/explicit-move-constructor.html
@@ -24,7 +25,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
+    return LangOpts.CPlusPlus11;
   }
 };
 

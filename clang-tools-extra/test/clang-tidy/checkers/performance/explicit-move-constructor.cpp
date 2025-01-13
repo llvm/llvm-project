@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s performance-explicit-move-constructor %t
 
+struct Empty {};
+
 class NotReported1 {};
 
 class NotReported2 {
@@ -25,10 +27,39 @@ public:
   NotReported5(const NotReported5&) = default;
 };
 
-class Reported {
+class Reported1 {
 public:
-  explicit Reported(Reported&&) = default;
+  explicit Reported1(Reported1&&) = default;
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor may be called instead of move constructor [performance-explicit-move-constructor]
-  // CHECK-FIXES: {{^  }}Reported(Reported&&) = default;{{$}}
-  Reported(const Reported&) = default;
+  // CHECK-FIXES: {{^  }}Reported1(Reported1&&) = default;{{$}}
+  Reported1(const Reported1&) = default;
+};
+
+template <typename>
+class Reported2 {
+public:
+  explicit Reported2(Reported2&&) = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor may be called instead of move constructor [performance-explicit-move-constructor]
+  // CHECK-FIXES: {{^  }}Reported2(Reported2&&) = default;{{$}}
+  Reported2(const Reported2&) = default;
+};
+
+template <typename T>
+class Reported3 : public T {
+public:
+  explicit Reported3(Reported3&&) = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor may be called instead of move constructor [performance-explicit-move-constructor]
+  // CHECK-FIXES: {{^  }}Reported3(Reported3&&) = default;{{$}}
+  Reported3(const Reported3&) = default;
+};
+
+template <typename T>
+class Reported4 {
+public:
+  explicit Reported4(Reported4&&) = default;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: copy constructor may be called instead of move constructor [performance-explicit-move-constructor]
+  // CHECK-FIXES: {{^  }}Reported4(Reported4&&) = default;{{$}}
+  Reported4(const Reported4&) = default;
+
+  T member;
 };

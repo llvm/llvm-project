@@ -3,9 +3,8 @@
 performance-explicit-move-constructor
 =====================================
 
-Checks for classes that define an explicit move constructor and a copy
-constructor. Moving an instance of such a class will call the copy constructor
-instead.
+Warns when a class defines an explicit move constructor, which may cause
+the copy constructor to get called instead.
 
 Example:
 

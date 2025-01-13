@@ -18,7 +18,7 @@ static SourceRange findExplicitToken(const CXXConstructorDecl *Ctor,
                                      const SourceManager &Source,
                                      const LangOptions &LangOpts) {
   SourceLocation CurrentLoc = Ctor->getBeginLoc();
-  SourceLocation EndLoc = Ctor->getEndLoc();
+  const SourceLocation EndLoc = Ctor->getEndLoc();
   Token Tok;
 
   do {
@@ -38,12 +38,15 @@ static SourceRange findExplicitToken(const CXXConstructorDecl *Ctor,
 
 void ExplicitMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxRecordDecl(
-          has(cxxConstructorDecl(isMoveConstructor(), isExplicit(),
-                                 unless(isDeleted()))
-                  .bind("move-ctor")),
-          has(cxxConstructorDecl(isCopyConstructor(), unless(isDeleted()))
-                  .bind("copy-ctor"))),
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          cxxRecordDecl(
+              has(cxxConstructorDecl(isMoveConstructor(), isExplicit(),
+                                     unless(isDeleted()))
+                      .bind("move-ctor")),
+              has(cxxConstructorDecl(isCopyConstructor(), unless(isDeleted()))
+                      .bind("copy-ctor")),
+              unless(isExpansionInSystemHeader()))),
       this);
 }
 
@@ -60,7 +63,7 @@ void ExplicitMoveConstructorCheck::check(
   auto Diag =
       diag(MoveCtor->getLocation(),
            "copy constructor may be called instead of move constructor");
-  SourceRange ExplicitTokenRange =
+  const SourceRange ExplicitTokenRange =
       findExplicitToken(MoveCtor, *Result.SourceManager, getLangOpts());
 
   if (ExplicitTokenRange.isInvalid())
