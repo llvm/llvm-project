@@ -8,28 +8,30 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
-namespace llvm::sandboxir {
+namespace llvm {
+
+static cl::opt<unsigned>
+    OverrideVecRegBits("sbvec-vec-reg-bits", cl::init(0), cl::Hidden,
+                       cl::desc("Override the vector register size in bits, "
+                                "which is otherwise found by querying TTI."));
+static cl::opt<bool>
+    AllowNonPow2("sbvec-allow-non-pow2", cl::init(false), cl::Hidden,
+                 cl::desc("Allow non-power-of-2 vectorization."));
+
+namespace sandboxir {
 
 BottomUpVec::BottomUpVec(StringRef Pipeline)
     : FunctionPass("bottom-up-vec"),
       RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
-
-// TODO: This is a temporary function that returns some seeds.
-//       Replace this with SeedCollector's function when it lands.
-static llvm::SmallVector<Value *, 4> collectSeeds(BasicBlock &BB) {
-  llvm::SmallVector<Value *, 4> Seeds;
-  for (auto &I : BB)
-    if (auto *SI = llvm::dyn_cast<StoreInst>(&I))
-      Seeds.push_back(SI);
-  return Seeds;
-}
 
 static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
                                           unsigned OpIdx) {
@@ -265,6 +267,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
 
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   DeadInstrCandidates.clear();
+  Legality->clear();
   vectorizeRec(Bndl, /*Depth=*/0);
   tryEraseDeadInstrs();
   return Change;
@@ -275,17 +278,67 @@ bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
       F.getContext());
   Change = false;
+  const auto &DL = F.getParent()->getDataLayout();
+  unsigned VecRegBits =
+      OverrideVecRegBits != 0
+          ? OverrideVecRegBits
+          : A.getTTI()
+                .getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedValue();
+
   // TODO: Start from innermost BBs first
   for (auto &BB : F) {
-    // TODO: Replace with proper SeedCollector function.
-    auto Seeds = collectSeeds(BB);
-    // TODO: Slice Seeds into smaller chunks.
-    // TODO: If vectorization succeeds, run the RegionPassManager on the
-    // resulting region.
-    if (Seeds.size() >= 2)
-      Change |= tryVectorize(Seeds);
+    SeedCollector SC(&BB, A.getScalarEvolution());
+    for (SeedBundle &Seeds : SC.getStoreSeeds()) {
+      unsigned ElmBits =
+          Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
+                                Seeds[Seeds.getFirstUnusedElementIdx()])),
+                            DL);
+
+      auto DivideBy2 = [](unsigned Num) {
+        auto Floor = VecUtils::getFloorPowerOf2(Num);
+        if (Floor == Num)
+          return Floor / 2;
+        return Floor;
+      };
+      // Try to create the largest vector supported by the target. If it fails
+      // reduce the vector size by half.
+      for (unsigned SliceElms = std::min(VecRegBits / ElmBits,
+                                         Seeds.getNumUnusedBits() / ElmBits);
+           SliceElms >= 2u; SliceElms = DivideBy2(SliceElms)) {
+        if (Seeds.allUsed())
+          break;
+        // Keep trying offsets after FirstUnusedElementIdx, until we vectorize
+        // the slice. This could be quite expensive, so we enforce a limit.
+        for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
+                      OE = Seeds.size();
+             Offset + 1 < OE; Offset += 1) {
+          // Seeds are getting used as we vectorize, so skip them.
+          if (Seeds.isUsed(Offset))
+            continue;
+          if (Seeds.allUsed())
+            break;
+
+          auto SeedSlice =
+              Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
+          if (SeedSlice.empty())
+            continue;
+
+          assert(SeedSlice.size() >= 2 && "Should have been rejected!");
+
+          // TODO: If vectorization succeeds, run the RegionPassManager on the
+          // resulting region.
+
+          // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
+          SmallVector<Value *> SeedSliceVals(SeedSlice.begin(),
+                                             SeedSlice.end());
+          Change |= tryVectorize(SeedSliceVals);
+        }
+      }
+    }
   }
   return Change;
 }
 
-} // namespace llvm::sandboxir
+} // namespace sandboxir
+} // namespace llvm

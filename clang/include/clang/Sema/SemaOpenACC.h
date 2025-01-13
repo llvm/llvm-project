@@ -409,6 +409,8 @@ public:
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Reduction ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -553,6 +555,8 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -594,6 +598,8 @@ public:
               ClauseKind == OpenACCClauseKind::UseDevice ||
               ClauseKind == OpenACCClauseKind::Detach ||
               ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::Host ||
+              ClauseKind == OpenACCClauseKind::Device ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&

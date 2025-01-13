@@ -26,7 +26,7 @@ int call() { return fn(); }
 //
 //
 // CHECK-LABEL: define dso_local i32 @call(
-// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn()
 // CHECK-NEXT:    ret i32 [[CALL]]

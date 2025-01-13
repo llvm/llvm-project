@@ -1814,14 +1814,23 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
-    HasUncountableEarlyExit = true;
-    if (!isVectorizableEarlyExitLoop()) {
-      UncountableExitingBlocks.clear();
-      HasUncountableEarlyExit = false;
+    if (TheLoop->getExitingBlock()) {
+      reportVectorizationFailure("Cannot vectorize uncountable loop",
+                                 "UnsupportedUncountableLoop", ORE, TheLoop);
       if (DoExtraAnalysis)
         Result = false;
       else
         return false;
+    } else {
+      HasUncountableEarlyExit = true;
+      if (!isVectorizableEarlyExitLoop()) {
+        UncountableExitingBlocks.clear();
+        HasUncountableEarlyExit = false;
+        if (DoExtraAnalysis)
+          Result = false;
+        else
+          return false;
+      }
     }
   }
 
