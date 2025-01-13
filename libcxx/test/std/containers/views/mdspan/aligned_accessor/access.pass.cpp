@@ -28,13 +28,18 @@ template <class T, size_t N>
 constexpr void test_access() {
   ElementPool<std::remove_const_t<T>, 10 + N> data;
   T* ptr = data.get_ptr();
-  std::aligned_accessor<T, N> acc;
-  for (size_t i = 0; i < 10 + N; i++) {
+  // align ptr
+  for (size_t i = 0; i < N; ++i) {
     if (reinterpret_cast<std::uintptr_t>(ptr + i) % N == 0) {
-      std::same_as<typename std::aligned_accessor<T, N>::reference> decltype(auto) x = acc.access(ptr, i);
-      ASSERT_NOEXCEPT(acc.access(ptr, i));
-      assert(&x == ptr + i);
+      ptr += i;
+      break;
     }
+  }
+  std::aligned_accessor<T, N> acc;
+  for (size_t i = 0; i < 10; ++i) {
+    std::same_as<typename std::aligned_accessor<T, N>::reference> decltype(auto) x = acc.access(ptr, i);
+    ASSERT_NOEXCEPT(acc.access(ptr, i));
+    assert(&x == ptr + i);
   }
 }
 
