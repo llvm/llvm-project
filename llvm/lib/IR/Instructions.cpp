@@ -3940,7 +3940,7 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
 }
 
 CmpInst::Predicate CmpPredicate::getSignedPredicate() const {
-  return HasSameSign ? ICmpInst::getFlippedSignednessPredicate(Pred) : Pred;
+  return HasSameSign ? ICmpInst::getSignedPredicate(Pred) : Pred;
 }
 
 CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
