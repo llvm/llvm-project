@@ -290,75 +290,6 @@ static ThunkAction GetThunkAction(ThunkKind kind) {
   }
 }
 
-/// A thread plan to run to a specific address on a specific async context.
-class ThreadPlanRunToAddressOnAsyncCtx : public ThreadPlan {
-public:
-  /// Creates a thread plan to run to destination_addr of an async function
-  /// whose context is async_ctx.
-  ThreadPlanRunToAddressOnAsyncCtx(Thread &thread, addr_t destination_addr,
-                                   addr_t async_ctx)
-      : ThreadPlan(eKindGeneric, "run-to-funclet", thread, eVoteNoOpinion,
-                   eVoteNoOpinion),
-        m_destination_addr(destination_addr), m_expected_async_ctx(async_ctx) {
-    auto &target = thread.GetProcess()->GetTarget();
-    m_funclet_bp = target.CreateBreakpoint(destination_addr, true, false);
-    m_funclet_bp->SetBreakpointKind("async-run-to-funclet");
-  }
-
-  bool ValidatePlan(Stream *error) override {
-    if (m_funclet_bp->HasResolvedLocations())
-      return true;
-
-    // If we failed to resolve any locations, this plan is invalid.
-    m_funclet_bp->GetTarget().RemoveBreakpointByID(m_funclet_bp->GetID());
-    return false;
-  }
-
-  void GetDescription(Stream *s, lldb::DescriptionLevel level) override {
-    s->PutCString("ThreadPlanRunToAddressOnAsyncCtx to address = ");
-    s->PutHex64(m_destination_addr);
-    s->PutCString(" with async ctx = ");
-    s->PutHex64(m_expected_async_ctx);
-  }
-
-  /// This plan explains the stop if the current async context is the async
-  /// context this plan was created with.
-  bool DoPlanExplainsStop(Event *event) override {
-    if (!HasTID())
-      return false;
-    return GetCurrentAsyncContext() == m_expected_async_ctx;
-  }
-
-  /// If this plan explained the stop, it always stops: its sole purpose is to
-  /// run to the breakpoint it set on the right async function invocation.
-  bool ShouldStop(Event *event) override {
-    SetPlanComplete();
-    return true;
-  }
-
-  /// If this plan said ShouldStop, then its job is complete.
-  bool MischiefManaged() override {
-    return IsPlanComplete();
-  }
-
-  bool WillStop() override { return false; }
-  lldb::StateType GetPlanRunState() override { return eStateRunning; }
-  bool StopOthers() override { return false; }
-  void DidPop() override {
-    m_funclet_bp->GetTarget().RemoveBreakpointByID(m_funclet_bp->GetID());
-  }
-
-private:
-  addr_t GetCurrentAsyncContext() {
-    auto frame_sp = GetThread().GetStackFrameAtIndex(0);
-    return frame_sp->GetStackID().GetCallFrameAddress();
-  }
-
-  addr_t m_destination_addr;
-  addr_t m_expected_async_ctx;
-  BreakpointSP m_funclet_bp;
-};
-
 /// Given a thread that is stopped at the start of swift_task_switch, create a
 /// thread plan that runs to the address of the resume function.
 static ThreadPlanSP
@@ -383,8 +314,8 @@ CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
   if (!async_ctx)
     return {};
 
-  return std::make_shared<ThreadPlanRunToAddressOnAsyncCtx>(
-      thread, resume_fn_ptr, async_ctx);
+  return std::make_shared<ThreadPlanRunToAddress>(thread, resume_fn_ptr,
+                                                  /*stop_others*/ false);
 }
 
 /// Creates a thread plan to step over swift runtime functions that can trigger

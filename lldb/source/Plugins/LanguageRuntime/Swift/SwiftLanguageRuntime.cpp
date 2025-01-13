@@ -2793,7 +2793,11 @@ llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
 #else
   // Compute the thread local storage address for this thread.
   addr_t tsd_addr = LLDB_INVALID_ADDRESS;
-  if (auto info_sp = thread.GetExtendedInfo())
+
+  // Look through backing threads when inspecting TLS.
+  Thread &real_thread =
+      thread.GetBackingThread() ? *thread.GetBackingThread() : thread;
+  if (auto info_sp = real_thread.GetExtendedInfo())
     if (auto *info_dict = info_sp->GetAsDictionary())
       info_dict->GetValueForKeyAsInteger("tsd_address", tsd_addr);
 
