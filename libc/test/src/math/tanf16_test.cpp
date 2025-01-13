@@ -1,4 +1,4 @@
-//===-- Exhaustive test for cosf16 ----------------------------------------===//
+//===-- Exhaustive test for tanf16 ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/cosf16.h"
+#include "src/math/tanf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcCosf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
+using LlvmLibcTanf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -23,18 +23,18 @@ static constexpr uint16_t POS_STOP = 0x7c00U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xfc00U;
 
-TEST_F(LlvmLibcCosf16Test, PositiveRange) {
+TEST_F(LlvmLibcTanf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cosf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
+                                   LIBC_NAMESPACE::tanf16(x), 0.5);
   }
 }
 
-TEST_F(LlvmLibcCosf16Test, NegativeRange) {
+TEST_F(LlvmLibcTanf16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cosf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Tan, x,
+                                   LIBC_NAMESPACE::tanf16(x), 0.5);
   }
 }
