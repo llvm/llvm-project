@@ -821,6 +821,20 @@ Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<LowerAllowCheckOptions> parseLowerAllowCheckPassOptions(StringRef Params) {
+  LowerAllowCheckOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    return make_error<StringError>(
+        formatv("invalid LowerAllowCheck pass parameter '{0}' ", ParamName)
+            .str(),
+        inconvertibleErrorCode());
+  }
+  return Result;
+}
+
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {

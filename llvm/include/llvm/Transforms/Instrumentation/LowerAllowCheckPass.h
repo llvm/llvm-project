@@ -20,13 +20,22 @@
 
 namespace llvm {
 
+struct LowerAllowCheckOptions {
+   std::vector<double> placeholder; // TODO: cutoffs
+};
+
 // This pass is responsible for removing optional traps, like llvm.ubsantrap
 // from the hot code.
 class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
 public:
+  explicit LowerAllowCheckPass(LowerAllowCheckOptions Options)
+      : Options(Options){};
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool IsRequested();
+
+private:
+  LowerAllowCheckOptions Options;
 };
 
 } // namespace llvm
