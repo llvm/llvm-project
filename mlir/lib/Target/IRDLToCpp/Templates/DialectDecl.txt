@@ -9,7 +9,7 @@ class {2} : public ::mlir::Dialect {
 public:
   ~{2}() override;
   static constexpr ::llvm::StringLiteral getDialectNamespace() {
-    return ::llvm::StringLiteral("{3}");
+    return ::llvm::StringLiteral("{4}");
   }
 
   /// Parse an attribute registered to this dialect.
@@ -30,6 +30,6 @@ public:
 
 {1}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({4}::{2})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({3}::{2})
 
 )"

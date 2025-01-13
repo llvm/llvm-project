@@ -24,14 +24,67 @@ constexpr char headerTemplateText[] =
 // 0: Namespace open
 // 1: Namespace close
 // 2: Dialect C++ name
-// 3: Dialect name
-// 4: Dialect namespace
+// 3: Dialect namespace
+// 4: Dialect name
 constexpr char dialectDeclTemplateText[] =
 #include "Templates/DialectDecl.txt"
     ;
 
+// 0: Namespace open
+// 1: Namespace close
+// 2: Dialect C++ name
+// 3: Dialect namespace
+constexpr char dialectDefTemplateText[] =
+#include "Templates/DialectDef.txt"
+    ;
+
 constexpr char declarationMacroFlag[] = "GEN_DIALECT_DECL_HEADER";
 constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
+
+namespace {
+
+struct UsefulStrings {
+  StringRef dialectName;
+  StringRef dialectCppName;
+
+  StringRef namespaceOpen;
+  StringRef namespaceClose;
+  StringRef namespacePathString;
+};
+
+} // namespace
+
+static LogicalResult generateInclude(irdl::DialectOp dialect,
+                                    raw_ostream &output,
+                                    UsefulStrings &usefulStrings) {
+  output << "#ifdef " << declarationMacroFlag << "\n#undef "
+         << declarationMacroFlag << "\n";
+
+  output << llvm::formatv(
+      dialectDeclTemplateText, usefulStrings.namespaceOpen,
+      usefulStrings.namespaceClose, usefulStrings.dialectCppName,
+      usefulStrings.namespacePathString, usefulStrings.dialectName);
+
+  output << "#endif // " << declarationMacroFlag << "\n";
+
+  return success();
+}
+
+static LogicalResult generateLib(irdl::DialectOp dialect,
+                                    raw_ostream &output,
+                                    UsefulStrings &usefulStrings) {
+  output << "#ifdef " << definitionMacroFlag << "\n#undef "
+         << definitionMacroFlag << "\n";
+
+  output << llvm::formatv(
+      dialectDefTemplateText, usefulStrings.namespaceOpen,
+      usefulStrings.namespaceClose, usefulStrings.dialectCppName,
+      usefulStrings.namespacePathString);
+
+  output << "#endif // " << definitionMacroFlag << "\n";
+
+  return success();
+}
 
 LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                               raw_ostream &output) {
@@ -69,16 +122,20 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   cppNameStream << llvm::toUpper(dialectName[0])
                 << dialectName.slice(1, dialectName.size()) << "Dialect";
 
+  UsefulStrings usefulStrings;
+  usefulStrings.dialectName = dialectName;
+  usefulStrings.dialectCppName = cppName;
+  usefulStrings.namespaceOpen = namespaceOpen;
+  usefulStrings.namespaceClose = namespaceClose;
+  usefulStrings.namespacePathString = namespacePathString;
+
   output << headerTemplateText;
 
-  output << "#ifdef " << declarationMacroFlag << "\n#undef "
-         << declarationMacroFlag << "\n";
+  if (failed(generateInclude(dialect, output, usefulStrings)))
+    return failure();
 
-  output << llvm::formatv(dialectDeclTemplateText, namespaceOpen,
-                          namespaceClose, cppName, dialectName,
-                          namespacePathString);
-
-  output << "#endif\n";
+  if (failed(generateLib(dialect, output, usefulStrings)))
+    return failure();
 
   return success();
 }

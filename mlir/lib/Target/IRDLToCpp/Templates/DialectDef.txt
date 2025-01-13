@@ -1,0 +1,12 @@
+R"(
+MLIR_DEFINE_EXPLICIT_TYPE_ID({3}::{2})
+{0}
+{2}::{2}(::mlir::MLIRContext *context)
+    : ::mlir::Dialect(getDialectNamespace(), context, ::mlir::TypeID::get<{2}>())
+{{
+  initialize();
+}
+
+{2}::~{2}() = default;
+{1}
+)"
