@@ -87,6 +87,7 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <limits>
 #include <memory>
 #include <optional>
 using namespace clang;
@@ -121,6 +122,9 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
+namespace clang {
+extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
+}
 
 namespace {
 
@@ -1045,6 +1049,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback([this](FunctionPassManager &FPM,
                                                       OptimizationLevel Level) {
         BoundsCheckingPass::Options Options;
+        if (CodeGenOpts.SanitizeSkipHotCutoffs[SanitizerKind::SO_LocalBounds] ||
+            ClSanitizeGuardChecks) {
+          static_assert(SanitizerKind::SO_LocalBounds <=
+                            std::numeric_limits<
+                                decltype(Options.GuardKind)::value_type>::max(),
+                        "Update type of llvm.allow.ubsan.check.");
+          Options.GuardKind = SanitizerKind::SO_LocalBounds;
+        }
         Options.Merge =
             CodeGenOpts.SanitizeMergeHandlers.has(SanitizerKind::LocalBounds);
         if (!CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {

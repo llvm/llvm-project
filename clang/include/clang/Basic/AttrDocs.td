@@ -1461,7 +1461,7 @@ Mind that many more checkers are affected by dynamic memory modeling changes to
 some extent.
 
 Further reading for other annotations:
-`Source Annotations in the Clang Static Analyzer <https://clang-analyzer.llvm.org/annotations.html>`_.
+`Source Annotations in the Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/user-docs/Annotations.html>`_.
   }];
 }
 

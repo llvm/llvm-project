@@ -1397,6 +1397,42 @@ Currently, only the following parameter attributes are defined:
     function, returning a pointer to allocated storage disjoint from the
     storage for any other object accessible to the caller.
 
+``captures(...)``
+    This attributes restrict the ways in which the callee may capture the
+    pointer. This is not a valid attribute for return values. This attribute
+    applies only to the particular copy of the pointer passed in this argument.
+
+    The arguments of ``captures`` is a list of captured pointer components,
+    which may be ``none``, or a combination of:
+
+    - ``address``: The integral address of the pointer.
+    - ``address_is_null`` (subset of ``address``): Whether the address is null.
+    - ``provenance``: The ability to access the pointer for both read and write
+      after the function returns.
+    - ``read_provenance`` (subset of ``provenance``): The ability to access the
+      pointer only for reads after the function returns.
+
+    Additionally, it is possible to specify that some components are only
+    captured in certain locations. Currently only the return value (``ret``)
+    and other (default) locations are supported.
+
+    The `pointer capture section <pointercapture>` discusses these semantics
+    in more detail.
+
+    Some examples of how to use the attribute:
+
+    - ``captures(none)``: Pointer not captured.
+    - ``captures(address, provenance)``: Equivalent to omitting the attribute.
+    - ``captures(address)``: Address may be captured, but not provenance.
+    - ``captures(address_is_null)``: Only captures whether the address is null.
+    - ``captures(address, read_provenance)``: Both address and provenance
+      captured, but only for read-only access.
+    - ``captures(ret: address, provenance)``: Pointer captured through return
+      value only.
+    - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
+      is captured through the return value, and additionally whether the pointer
+      is null is captured in some other way.
+
 .. _nocapture:
 
 ``nocapture``
@@ -3339,10 +3375,92 @@ Pointer Capture
 ---------------
 
 Given a function call and a pointer that is passed as an argument or stored in
-the memory before the call, a pointer is *captured* by the call if it makes a
-copy of any part of the pointer that outlives the call.
-To be precise, a pointer is captured if one or more of the following conditions
-hold:
+memory before the call, the call may capture two components of the pointer:
+
+  * The address of the pointer, which is its integral value. This also includes
+    parts of the address or any information about the address, including the
+    fact that it does not equal one specific value. We further distinguish
+    whether only the fact that the address is/isn't null is captured.
+  * The provenance of the pointer, which is the ability to perform memory
+    accesses through the pointer, in the sense of the :ref:`pointer aliasing
+    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    are allowed, or both reads and writes.
+
+For example, the following function captures the address of ``%a``, because
+it is compared to a pointer, leaking information about the identitiy of the
+pointer:
+
+.. code-block:: llvm
+
+    @glb = global i8 0
+
+    define i1 @f(ptr %a) {
+      %c = icmp eq ptr %a, @glb
+      ret i1 %c
+    }
+
+The function does not capture the provenance of the pointer, because the
+``icmp`` instruction only operates on the pointer address. The following
+function captures both the address and provenance of the pointer, as both
+may be read from ``@glb`` after the function returns:
+
+.. code-block:: llvm
+
+    @glb = global ptr null
+
+    define void @f(ptr %a) {
+      store ptr %a, ptr @glb
+      ret void
+    }
+
+The following function captures *neither* the address nor the provenance of
+the pointer:
+
+.. code-block:: llvm
+
+    define i32 @f(ptr %a) {
+      %v = load i32, ptr %a
+      ret i32
+    }
+
+While address capture includes uses of the address within the body of the
+function, provenance capture refers exclusively to the ability to perform
+accesses *after* the function returns. Memory accesses within the function
+itself are not considered pointer captures.
+
+We can further say that the capture only occurs through a specific location.
+In the following example, the pointer (both address and provenance) is captured
+through the return value only:
+
+.. code-block:: llvm
+
+    define ptr @f(ptr %a) {
+      %gep = getelementptr i8, ptr %a, i64 4
+      ret ptr %gep
+    }
+
+However, we always consider direct inspection of the pointer address
+(e.g. using ``ptrtoint``) to be location-independent. The following example
+is *not* considered a return-only capture, even though the ``ptrtoint``
+ultimately only contribues to the return value:
+
+.. code-block:: llvm
+
+    @lookup = constant [4 x i8] [i8 0, i8 1, i8 2, i8 3]
+
+    define ptr @f(ptr %a) {
+      %a.addr = ptrtoint ptr %a to i64
+      %mask = and i64 %a.addr, 3
+      %gep = getelementptr i8, ptr @lookup, i64 %mask
+      ret ptr %gep
+    }
+
+This definition is chosen to allow capture analysis to continue with the return
+value in the usual fashion.
+
+The following describes possible ways to capture a pointer in more detail,
+where unqualified uses of the word "capture" refer to capturing both address
+and provenance.
 
 1. The call stores any bit of the pointer carrying information into a place,
    and the stored bits can be read from the place by the caller after this call
@@ -3381,13 +3499,14 @@ hold:
     @lock = global i1 true
 
     define void @f(ptr %a) {
-      store ptr %a, ptr* @glb
+      store ptr %a, ptr @glb
       store atomic i1 false, ptr @lock release ; %a is captured because another thread can safely read @glb
       store ptr null, ptr @glb
       ret void
     }
 
-3. The call's behavior depends on any bit of the pointer carrying information.
+3. The call's behavior depends on any bit of the pointer carrying information
+   (address capture only).
 
 .. code-block:: llvm
 
@@ -3395,7 +3514,7 @@ hold:
 
     define void @f(ptr %a) {
       %c = icmp eq ptr %a, @glb
-      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; escapes %a
+      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; captures address of %a only
     BB_EXIT:
       call void @exit()
       unreachable
@@ -3403,8 +3522,7 @@ hold:
       ret void
     }
 
-4. The pointer is used in a volatile access as its address.
-
+4. The pointer is used as the pointer operand of a volatile access.
 
 .. _volatile:
 
