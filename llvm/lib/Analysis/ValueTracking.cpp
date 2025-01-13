@@ -9495,7 +9495,7 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  CmpInst::Predicate SignedLPred = LPred.getSignedPredicate();
+  CmpInst::Predicate SignedLPred = LPred.getPreferredSignedPredicate();
   if ((SignedLPred == ICmpInst::ICMP_SGT ||
        SignedLPred == ICmpInst::ICMP_SGE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {

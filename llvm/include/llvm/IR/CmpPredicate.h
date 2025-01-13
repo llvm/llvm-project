@@ -57,7 +57,7 @@ public:
   /// the CmpPredicate has samesign, return ICmpInst::getSignedPredicate,
   /// dropping samesign information. Otherwise, return the predicate, dropping
   /// samesign information.
-  CmpInst::Predicate getSignedPredicate() const;
+  CmpInst::Predicate getPreferredSignedPredicate() const;
 
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
