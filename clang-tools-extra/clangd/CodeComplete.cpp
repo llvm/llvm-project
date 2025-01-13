@@ -1890,9 +1890,9 @@ private:
     // Look up documentation from the index.
     if (Opts.Index) {
       Opts.Index->lookup(Req, [&](const Symbol &S) {
-        auto &C = Output.Completions[SymbolToCompletion.at(S.ID)];
         if (S.Documentation.empty())
           return;
+        auto &C = Output.Completions[SymbolToCompletion.at(S.ID)];
         C.Documentation.emplace();
         parseDocumentation(S.Documentation, *C.Documentation);
       });
