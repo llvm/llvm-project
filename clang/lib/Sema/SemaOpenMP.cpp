@@ -14368,8 +14368,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
     // For init-statement: auto .tile.iv = .floor.iv
     SemaRef.AddInitializerToDecl(
-        TileIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef(
-                SemaRef, FloorIndVars, I, IVTy, OrigCntVar)).get(),
+        TileIndVars[I],
+        SemaRef
+            .DefaultLvalueConversion(
+                MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
+            .get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = TileIndVars[I];
     StmtResult InitStmt = new (Context)
@@ -14380,8 +14383,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
 
     // For cond-expression:
     //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
-    ExprResult EndOfTile =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
+    ExprResult EndOfTile = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimTileSize(I));
     if (!EndOfTile.isUsable())
@@ -14457,16 +14460,16 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For cond-expression: .floor.iv < NumIterations
-    ExprResult CondExpr =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+    ExprResult CondExpr = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
-    ExprResult IncrStmt =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
+    ExprResult IncrStmt = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimTileSize(I));
     if (!IncrStmt.isUsable())
@@ -14629,8 +14632,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     SemaRef.AddInitializerToDecl(
         StripeIndVars[I],
         SemaRef
-            .DefaultLvalueConversion(MakeFloorIVRef(
-                SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
+            .DefaultLvalueConversion(
+                MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
             .get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = StripeIndVars[I];
@@ -14642,8 +14645,8 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
     // For cond-expression:
     //   .stripe.iv < min(.floor.iv + DimStripeSize, NumIterations)
-    ExprResult EndOfStripe =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
+    ExprResult EndOfStripe = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimStripeSize(I));
     if (!EndOfStripe.isUsable())
@@ -14719,16 +14722,16 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For cond-expression: .floor.iv < NumIterations
-    ExprResult CondExpr =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+    ExprResult CondExpr = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimStripeSize
-    ExprResult IncrStmt =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
+    ExprResult IncrStmt = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
         MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimStripeSize(I));
     if (!IncrStmt.isUsable())
