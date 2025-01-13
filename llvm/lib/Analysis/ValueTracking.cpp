@@ -9384,19 +9384,6 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
   }
 }
 
-/// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
-/// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
-/// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondMatchingOperands(CmpPredicate LPred,
-                                                         CmpPredicate RPred) {
-  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
-    return true;
-  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
-    return false;
-
-  return std::nullopt;
-}
-
 /// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
 /// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
@@ -9489,25 +9476,27 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
 
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
-    return isImpliedCondMatchingOperands(LPred, RPred);
+    return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
 
   // It only really makes sense in the context of signed comparison for "X - Y
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  if ((LPred == ICmpInst::ICMP_SGT || LPred == ICmpInst::ICMP_SGE) &&
+  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGT) ||
+       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGE)) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonPositive()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == false)
+        ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == false)
       return false;
   }
 
   // Take SLT as an example:  L0:x < L1:y and C <= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is true
-  if ((LPred == ICmpInst::ICMP_SLT || LPred == ICmpInst::ICMP_SLE) &&
+  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLT) ||
+       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLE)) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonNegative()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == true)
+        ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == true)
       return true;
   }
 

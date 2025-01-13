@@ -108,22 +108,19 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
-  the configuration options of the `Clang Static Analyzer Checks
-  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
-
-- Improved :program:`clang-tidy` by accepting parameters file in command line.
-
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
-- Improved :program:`clang-tidy` by fixing incorrect configuration file path
-  resolving when file paths contain ``..``.
+- Improved :program:`clang-tidy`:
 
-- Removed :program:`clang-tidy`'s global options for most of checks. All options
-  are changed to local options except `IncludeStyle`, `StrictMode` and
-  `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
-  and will be removed in further releases.
+  - add support for `--verify-config` flag to check the configuration options of
+    the `Clang Static Analyzer Checks <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
+  - accept parameters file in command line.
+  - fix incorrect configuration file path resolving when file paths contain ``..``.
+  - remove global options for most of checks. All options are changed to local
+    options except `IncludeStyle`, `StrictMode` and `IgnoreMacros`. Global scoped
+    `StrictMode` and `IgnoreMacros` are deprecated and will be removed in further
+    releases.
 
 .. csv-table::
   :header: "Check", "Options removed from global option"
@@ -148,6 +145,13 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-incorrect-enable-shared-from-this
+  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
+
+  Detect classes or structs that do not publicly inherit from 
+  ``std::enable_shared_from_this``, because unintended behavior will 
+  otherwise occur when calling ``shared_from_this``.
+  
 - New :doc:`bugprone-nondeterministic-pointer-iteration-order
   <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
   check.
@@ -341,6 +345,10 @@ Changes in existing checks
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
+
+- Improved :doc:`performance-unnecessary-copy-initialization`
+  <clang-tidy/checks/performance/unnecessary-copy-initialization> check
+  to consider static member functions the same way as free functions.
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
