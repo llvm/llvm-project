@@ -764,7 +764,7 @@ Improvements to Clang's diagnostics
       scope.Unlock();
       require(scope); // Warning!  Requires mu1.
     }
-- Clang now disallows the use of asterisks preceding constructor and destructor names (#GH121706).
+- Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
 Improvements to Clang's time-trace
 ----------------------------------
