@@ -77,7 +77,7 @@ endif()
 
 if (FUCHSIA)
     # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
-    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html 
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html
     add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
 endif()
 
@@ -192,7 +192,7 @@ target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COM
 
 # Build with -fsized-deallocation, which is default in recent versions of Clang.
 # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
-target_add_compile_flags_if_supported(cxxabi_shared_objcts PRIVATE -fsized-deallocation)
+target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
 
 add_library(cxxabi_shared SHARED)
 set_target_properties(cxxabi_shared
@@ -287,7 +287,7 @@ target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COM
 
 # Build with -fsized-deallocation, which is default in recent versions of Clang.
 # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
-target_add_compile_flags_if_supported(cxxabi_static_objcts PRIVATE -fsized-deallocation)
+target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
