@@ -148,6 +148,12 @@ CharSetConverterICU::convertString(StringRef Source,
   Result.resize_for_overwrite(Capacity);
   char *Output = static_cast<char *>(Result.data());
   UErrorCode EC = U_ZERO_ERROR;
+
+  ucnv_setToUCallBack(&*FromConvDesc, UCNV_TO_U_CALLBACK_STOP, NULL, NULL, NULL,
+                      &EC);
+  ucnv_setToUCallBack(&*ToConvDesc, UCNV_TO_U_CALLBACK_STOP, NULL, NULL, NULL,
+                      &EC);
+
   do {
     EC = U_ZERO_ERROR;
     const char *Input = In;
