@@ -2287,8 +2287,8 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.
-    if (!Inits.empty() && !isFuncLocalAndNotCaptured(CurArg, CB, EA) &&
-        !CB->onlyAccessesInaccessibleMemOrArgMem())
+    if (!Inits.empty() && !CB->onlyAccessesInaccessibleMemOrArgMem() &&
+        !isFuncLocalAndNotCaptured(CurArg, CB, EA))
       Inits = ConstantRangeList();
 
     // We don't perform incorrect DSE on unwind edges in the current function,

@@ -39,8 +39,7 @@ define i16 @p1_write_then_read_caller() {
   ret i16 %l
 }
 
-declare void @fn_capture(ptr noundef)
-; Function Attrs: mustprogress nounwind uwtable
+declare void @fn_capture(ptr)
 define i16 @p1_write_then_read_caller_escape() {
 ; CHECK-LABEL: @p1_write_then_read_caller_escape(
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
