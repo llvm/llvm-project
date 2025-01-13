@@ -11884,10 +11884,12 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
 }
 
 void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
-  C->setAllocatorModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
+  C->setFirstAllocateModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
+  C->setSecondAllocateModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
   C->setLParenLoc(Record.readSourceLocation());
   C->setColonLoc(Record.readSourceLocation());
   C->setAllocator(Record.readSubExpr());
+  C->setAlignment(Record.readSubExpr());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
