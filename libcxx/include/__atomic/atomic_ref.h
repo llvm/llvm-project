@@ -252,7 +252,7 @@ public:
   }
 
 protected:
-  using _Aligned_Tp [[__gnu__::__aligned__(required_alignment)]] = _Tp;
+  using _Aligned_Tp [[__gnu__::__aligned__(required_alignment), __gnu__::__nodebug__]] = _Tp;
   _Aligned_Tp* __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __atomic_ref_base(_Tp& __obj) : __ptr_(std::addressof(__obj)) {}
@@ -272,7 +272,7 @@ template <class _Tp>
 struct atomic_ref : public __atomic_ref_base<_Tp> {
   static_assert(is_trivially_copyable_v<_Tp>, "std::atomic_ref<T> requires that 'T' be a trivially copyable type");
 
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
 
@@ -296,7 +296,7 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 template <class _Tp>
   requires(integral<_Tp> && !same_as<bool, __remove_cv_t<_Tp>>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
 
@@ -400,7 +400,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 template <class _Tp>
   requires floating_point<_Tp>
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   static_assert(__base::is_always_lock_free || !is_volatile_v<_Tp>);
 
@@ -461,7 +461,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 template <class _Tp>
   requires(is_pointer_v<_Tp> && is_object_v<remove_pointer_t<_Tp>>)
 struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
-  using __base = __atomic_ref_base<_Tp>;
+  using __base _LIBCPP_NODEBUG = __atomic_ref_base<_Tp>;
 
   using difference_type = ptrdiff_t;
   using value_type      = typename __base::value_type;

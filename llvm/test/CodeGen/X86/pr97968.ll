@@ -4,8 +4,7 @@
 define <2 x i32> @PR97968(<16 x i32> %a0) {
 ; CHECK-LABEL: PR97968:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [2,7,2,7]
-; CHECK-NEXT:    # xmm1 = mem[0,0]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [2,7,2,7]
 ; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; CHECK-NEXT:    vzeroupper

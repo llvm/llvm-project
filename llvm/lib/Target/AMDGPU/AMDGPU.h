@@ -64,6 +64,7 @@ createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
+FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -229,6 +230,9 @@ extern char &AMDGPUPerfHintAnalysisLegacyID;
 
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
+
+void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();

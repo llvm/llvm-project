@@ -9,6 +9,7 @@
 #include "src/compiler/__stack_chk_fail.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/stdlib/abort.h"
+#include <stdint.h> // For uintptr_t
 
 extern "C" {
 

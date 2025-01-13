@@ -350,6 +350,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.wctob
+
+    # sys/uio.h entrypoints
+    libc.src.sys.uio.writev
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)

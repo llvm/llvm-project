@@ -258,11 +258,9 @@ void CodeGenSchedModels::checkSTIPredicates() const {
   // There cannot be multiple declarations with the same name.
   for (const Record *R : Records.getAllDerivedDefinitions("STIPredicateDecl")) {
     StringRef Name = R->getValueAsString("Name");
-    const auto It = Declarations.find(Name);
-    if (It == Declarations.end()) {
-      Declarations[Name] = R;
+    const auto [It, Inserted] = Declarations.try_emplace(Name, R);
+    if (Inserted)
       continue;
-    }
 
     PrintError(R->getLoc(), "STIPredicate " + Name + " multiply declared.");
     PrintFatalNote(It->second->getLoc(), "Previous declaration was here.");
@@ -417,9 +415,9 @@ void CodeGenSchedModels::collectSTIPredicates() {
   for (const Record *R : Records.getAllDerivedDefinitions("STIPredicate")) {
     const Record *Decl = R->getValueAsDef("Declaration");
 
-    const auto It = Decl2Index.find(Decl);
-    if (It == Decl2Index.end()) {
-      Decl2Index[Decl] = STIPredicates.size();
+    const auto [It, Inserted] =
+        Decl2Index.try_emplace(Decl, STIPredicates.size());
+    if (Inserted) {
       STIPredicateFunction Predicate(Decl);
       Predicate.addDefinition(R);
       STIPredicates.emplace_back(std::move(Predicate));

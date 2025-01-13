@@ -236,7 +236,8 @@ public:
 struct VPTransformState {
   VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
-                   InnerLoopVectorizer *ILV, VPlan *Plan, Type *CanonicalIVTy);
+                   InnerLoopVectorizer *ILV, VPlan *Plan,
+                   Loop *CurrentParentLoop, Type *CanonicalIVTy);
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -373,8 +374,8 @@ struct VPTransformState {
   /// Pointer to the VPlan code is generated for.
   VPlan *Plan;
 
-  /// The loop object for the current parent region, or nullptr.
-  Loop *CurrentVectorLoop = nullptr;
+  /// The parent loop object for the current scope, or nullptr.
+  Loop *CurrentParentLoop = nullptr;
 
   /// LoopVersioning.  It's only set up (non-null) if memchecks were
   /// used.
@@ -1350,6 +1351,9 @@ public:
     }
   }
 
+  /// Returns true if the underlying opcode may read from or write to memory.
+  bool opcodeMayReadOrWriteFromMemory() const;
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
@@ -1579,14 +1583,16 @@ class VPScalarCastRecipe : public VPSingleDefRecipe {
   Value *generate(VPTransformState &State);
 
 public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}), Opcode(Opcode),
+  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
+                     DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
         ResultTy(ResultTy) {}
 
   ~VPScalarCastRecipe() override = default;
 
   VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
+    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
+                                  getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
@@ -2092,6 +2098,15 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPDef::VPWidenIntOrFpInductionSC ||
            R->getVPDefID() == VPDef::VPWidenPointerInductionSC;
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
   }
 
   virtual void execute(VPTransformState &State) override = 0;
@@ -3843,9 +3858,13 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  /// Returns the preheader of the vector loop region.
+  /// Returns the preheader of the vector loop region, if one exists, or null
+  /// otherwise.
   VPBasicBlock *getVectorPreheader() {
-    return cast<VPBasicBlock>(getVectorLoopRegion()->getSinglePredecessor());
+    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+    return VectorRegion
+               ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
+               : nullptr;
   }
 
   /// Returns the VPRegionBlock of the vector loop.

@@ -552,7 +552,8 @@ class _LIBCPP_TEMPLATE_VIS tuple {
   get(const tuple<_Up...>&&) _NOEXCEPT;
 
 public:
-  using __trivially_relocatable = __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 
@@ -1125,9 +1126,9 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&...> tie(_T
 }
 
 template <class... _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<typename __unwrap_ref_decay<_Tp>::type...>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<__unwrap_ref_decay_t<_Tp>...>
 make_tuple(_Tp&&... __t) {
-  return tuple<typename __unwrap_ref_decay<_Tp>::type...>(std::forward<_Tp>(__t)...);
+  return tuple<__unwrap_ref_decay_t<_Tp>...>(std::forward<_Tp>(__t)...);
 }
 
 template <class... _Tp>

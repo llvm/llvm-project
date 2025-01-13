@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__type_traits/enable_if.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,23 +19,28 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Hp, class _Tp>
-struct __type_list {
-  typedef _Hp _Head;
-  typedef _Tp _Tail;
+template <class... _Types>
+struct __type_list {};
+
+template <class>
+struct __type_list_head;
+
+template <class _Head, class... _Tail>
+struct __type_list_head<__type_list<_Head, _Tail...> > {
+  using type _LIBCPP_NODEBUG = _Head;
 };
 
-template <class _TypeList, size_t _Size, bool = _Size <= sizeof(typename _TypeList::_Head)>
+template <class _TypeList, size_t _Size, bool = _Size <= sizeof(typename __type_list_head<_TypeList>::type)>
 struct __find_first;
 
-template <class _Hp, class _Tp, size_t _Size>
-struct __find_first<__type_list<_Hp, _Tp>, _Size, true> {
-  using type _LIBCPP_NODEBUG = _Hp;
+template <class _Head, class... _Tail, size_t _Size>
+struct __find_first<__type_list<_Head, _Tail...>, _Size, true> {
+  using type _LIBCPP_NODEBUG = _Head;
 };
 
-template <class _Hp, class _Tp, size_t _Size>
-struct __find_first<__type_list<_Hp, _Tp>, _Size, false> {
-  using type _LIBCPP_NODEBUG = typename __find_first<_Tp, _Size>::type;
+template <class _Head, class... _Tail, size_t _Size>
+struct __find_first<__type_list<_Head, _Tail...>, _Size, false> {
+  using type _LIBCPP_NODEBUG = typename __find_first<__type_list<_Tail...>, _Size>::type;
 };
 
 _LIBCPP_END_NAMESPACE_STD

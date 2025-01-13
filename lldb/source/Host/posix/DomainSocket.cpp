@@ -182,7 +182,7 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
     return {};
 
   struct sockaddr_un addr;
-  bzero(&addr, sizeof(struct sockaddr_un));
+  memset(&addr, 0, sizeof(struct sockaddr_un));
   addr.sun_family = AF_UNIX;
   socklen_t addr_len = sizeof(struct sockaddr_un);
   if (::getsockname(m_socket, (struct sockaddr *)&addr, &addr_len) != 0)

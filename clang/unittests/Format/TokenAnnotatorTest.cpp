@@ -370,6 +370,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T a, T b) { a && b; };");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[18], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T, typename V>\n"
+                    "concept CheckMultiplicableBy = requires(T a, V b) {\n"
+                    "  { a * b } -> std::same_as<T>;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -3615,11 +3630,31 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
 }
 
+TEST_F(TokenAnnotatorTest, VariableTemplate) {
+  auto Style = getLLVMStyle();
+  Style.VariableTemplates.push_back("a");
+
+  auto Tokens = annotate("auto t3 = (a<int>) + b;", Style);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_VariableTemplate);
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[9], tok::plus, TT_BinaryOperator);
+}
+
 TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
   auto Tokens = annotate("FOOBAR(switch);\n"
                          "void f() {}");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, AfterPPDirective) {
+  auto Tokens = annotate("#error -- My error message");
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minusminus, TT_AfterPPDirective);
 }
 
 } // namespace
