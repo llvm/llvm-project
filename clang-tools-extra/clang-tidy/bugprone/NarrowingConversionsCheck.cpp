@@ -38,7 +38,7 @@ AST_MATCHER(FieldDecl, hasIntBitwidth) {
   assert(Node.isBitField());
   const ASTContext &Ctx = Node.getASTContext();
   unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
-  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
+  unsigned CurrentBitWidth = Node.getBitWidthValue();
   return IntBitWidth == CurrentBitWidth;
 }
 

@@ -131,6 +131,9 @@ public:
   /// Clear the timer state.
   void clear();
 
+  /// Stop the timer and start another timer.
+  void yieldTo(Timer &);
+
   /// Return the duration for which this timer has been running.
   TimeRecord getTotalTime() const { return Time; }
 
