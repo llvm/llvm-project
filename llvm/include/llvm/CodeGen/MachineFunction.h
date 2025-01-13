@@ -354,11 +354,6 @@ class LLVM_ABI MachineFunction {
   /// a table of valid targets for Windows EHCont Guard.
   std::vector<MCSymbol *> CatchretTargets;
 
-  /// Mapping of call instruction to the global value and target flags that it
-  /// calls, if applicable.
-  DenseMap<const MachineInstr *, std::pair<const GlobalValue *, unsigned>>
-      CalledGlobalsMap;
-
   /// \name Exception Handling
   /// \{
 
@@ -1185,26 +1180,6 @@ public:
   /// EHCont Guard.
   void addCatchretTarget(MCSymbol *Target) {
     CatchretTargets.push_back(Target);
-  }
-
-  /// Tries to get the global and target flags for a call site, if the
-  /// instruction is a call to a global.
-  std::pair<const GlobalValue *, unsigned>
-  tryGetCalledGlobal(const MachineInstr *MI) const {
-    return CalledGlobalsMap.lookup(MI);
-  }
-
-  /// Notes the global and target flags for a call site.
-  void addCalledGlobal(const MachineInstr *MI,
-                       std::pair<const GlobalValue *, unsigned> Details) {
-    assert(MI && "MI must not be null");
-    assert(Details.first && "Global must not be null");
-    CalledGlobalsMap.insert({MI, Details});
-  }
-
-  /// Iterates over the full set of call sites and their associated globals.
-  auto getCalledGlobals() const {
-    return llvm::make_range(CalledGlobalsMap.begin(), CalledGlobalsMap.end());
   }
 
   /// \name Exception Handling
