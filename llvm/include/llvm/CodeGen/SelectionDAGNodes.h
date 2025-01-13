@@ -78,7 +78,7 @@ void checkForCycles(const SDNode *N, const SelectionDAG *DAG = nullptr,
 ///
 struct SDVTList {
   const EVT *VTs;
-  unsigned int NumVTs;
+  uint32_t NumVTs;
 };
 
 namespace ISD {
@@ -652,8 +652,8 @@ private:
   SDUse *UseList = nullptr;
 
   /// The number of entries in the Operand/Value list.
-  unsigned short NumOperands = 0;
-  unsigned short NumValues;
+  uint32_t NumOperands = 0;
+  uint32_t NumValues;
 
   // The ordering of the SDNodes. It roughly corresponds to the ordering of the
   // original LLVM instructions.
@@ -970,10 +970,10 @@ public:
   static bool areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N);
 
   /// Return the number of values used by this operation.
-  unsigned getNumOperands() const { return NumOperands; }
+  uint32_t getNumOperands() const { return NumOperands; }
 
   /// Return the maximum number of operands that a SDNode can hold.
-  static constexpr size_t getMaxNumOperands() {
+  static constexpr uint32_t getMaxNumOperands() {
     return std::numeric_limits<decltype(SDNode::NumOperands)>::max();
   }
 
@@ -1056,7 +1056,7 @@ public:
   uint32_t getCFIType() const { return CFIType; }
 
   /// Return the number of values defined/returned by this operator.
-  unsigned getNumValues() const { return NumValues; }
+  uint32_t getNumValues() const { return NumValues; }
 
   /// Return the type of a specified result.
   EVT getValueType(unsigned ResNo) const {

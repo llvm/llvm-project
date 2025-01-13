@@ -203,8 +203,8 @@ public:
   // find other information elsewhere in the same table.
 
   unsigned short Opcode;         // The opcode number
-  unsigned short NumOperands;    // Num of args (may be more if variable_ops)
-  unsigned char NumDefs;         // Num of args that are definitions
+  uint32_t NumOperands;          // Num of args (may be more if variable_ops)
+  uint32_t NumDefs;              // Num of args that are definitions
   unsigned char Size;            // Number of bytes in encoding.
   unsigned short SchedClass;     // enum identifying instr sched class
   unsigned char NumImplicitUses; // Num of regs implicitly used
@@ -245,7 +245,7 @@ public:
   /// definitions.  Register definitions always occur at the start of the
   /// machine operand list.  This is the number of "outs" in the .td file,
   /// and does not include implicit defs.
-  unsigned getNumDefs() const { return NumDefs; }
+  uint32_t getNumDefs() const { return NumDefs; }
 
   /// Return flags of this instruction.
   uint64_t getFlags() const { return Flags; }
