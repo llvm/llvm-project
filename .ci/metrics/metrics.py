@@ -147,6 +147,15 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
             f"Failed to submit data to Grafana: {response.status_code}", file=sys.stderr
         )
 
+def make_heartbeat_metric():
+  return JobMetrics(
+      "metrics_container_heartbeat",
+      1, # queue time seconds
+      2, # run time seconds
+      3, # job result
+      time.time_ns(), # created at ns
+      0, # workflow run ID
+  )
 
 def main():
     # Authenticate with Github
@@ -166,11 +175,14 @@ def main():
     while True:
         current_metrics = get_metrics(github_repo, workflows_to_track)
         if len(current_metrics) == 0:
-            print("No metrics found to upload.", file=sys.stderr)
-            continue
+            print("No metrics found to upload.", file=sys.stdout)
+
+        # Always send a hearbeat metric so we can monitor is this container
+        # is still able to log to Grafana.
+        current_metrics.append(make_heartbeat_metric())
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
-        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
+        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stdout)
 
         for workflow_metric in reversed(current_metrics):
             workflows_to_track[workflow_metric.job_name] = workflow_metric.workflow_id
