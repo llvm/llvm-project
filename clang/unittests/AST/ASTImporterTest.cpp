@@ -6052,7 +6052,7 @@ TEST_P(ASTImporterLookupTableTest, EnumConstantDecl) {
   EXPECT_EQ(*Res.begin(), A);
 }
 
-TEST_P(ASTImporterLookupTableTest, LookupSearchesInTheWholeRedeclChain) {
+TEST_P(ASTImporterLookupTableTest, LookupSearchesInActualNamespaceOnly) {
   TranslationUnitDecl *ToTU = getToTuDecl(
       R"(
       namespace N {
@@ -6062,7 +6062,9 @@ TEST_P(ASTImporterLookupTableTest, LookupSearchesInTheWholeRedeclChain) {
       }
       )",
       Lang_CXX03);
-  auto *N1 =
+  auto *N1 = FirstDeclMatcher<NamespaceDecl>().match(
+      ToTU, namespaceDecl(hasName("N")));
+  auto *N2 =
       LastDeclMatcher<NamespaceDecl>().match(ToTU, namespaceDecl(hasName("N")));
   auto *A = FirstDeclMatcher<VarDecl>().match(ToTU, varDecl(hasName("A")));
   DeclarationName Name = A->getDeclName();
@@ -6071,6 +6073,7 @@ TEST_P(ASTImporterLookupTableTest, LookupSearchesInTheWholeRedeclChain) {
   auto Res = LT.lookup(N1, Name);
   ASSERT_EQ(Res.size(), 1u);
   EXPECT_EQ(*Res.begin(), A);
+  EXPECT_TRUE(LT.lookup(N2, Name).empty());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
@@ -10168,6 +10171,151 @@ TEST_P(ImportTemplateParmDeclDefaultValue,
 
   testTemplateParmDeclCircularDependency<TemplateTemplateParmDecl>(
       FromD, FromDInherited);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceNoMatch1) {
+  const char *ToCode =
+      R"(
+      namespace a {
+      }
+      namespace a {
+        struct X { int A; };
+      }
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  const char *Code =
+      R"(
+      namespace a {
+        struct X { char A; };
+      }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+  EXPECT_FALSE(ImportedX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceNoMatch2) {
+  const char *ToCode =
+      R"(
+      namespace a {
+        struct X { int A; };
+      }
+      namespace a {
+      }
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  const char *Code =
+      R"(
+      namespace a {
+        struct X { char A; };
+      }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+  EXPECT_FALSE(ImportedX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceMatch1) {
+  const char *ToCode =
+      R"(
+      namespace a {
+      }
+      namespace a {
+        struct X { int A; };
+      }
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  const char *Code =
+      R"(
+      namespace a {
+        struct X { int A; };
+      }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ToX = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+  EXPECT_EQ(ImportedX, ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceMatch2) {
+  const char *ToCode =
+      R"(
+      namespace a {
+        struct X { int A; };
+      }
+      namespace a {
+      }
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  const char *Code =
+      R"(
+      namespace a {
+        struct X { int A; };
+      }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ToX = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+  EXPECT_EQ(ImportedX, ToX);
+}
+
+TEST_P(ASTImporterLookupTableTest, PrimaryDCChangeAtImport) {
+  const char *ToCode =
+      R"(
+      template <class T>
+      struct X;
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  auto *ToX = FirstDeclMatcher<ClassTemplateDecl>().match(
+      ToTU, classTemplateDecl(hasName("X")));
+  NamedDecl *ToParm = ToX->getTemplateParameters()->getParam(0);
+  DeclContext *OldPrimaryDC = ToX->getTemplatedDecl()->getPrimaryContext();
+  ASSERT_EQ(ToParm->getDeclContext(), ToX->getTemplatedDecl());
+  ASSERT_EQ(SharedStatePtr->getLookupTable()
+                ->lookup(ToX->getTemplatedDecl(), ToParm->getDeclName())
+                .size(),
+            1u);
+  ASSERT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToX->getTemplatedDecl(), ToParm));
+
+  const char *Code =
+      R"(
+      template <class T>
+      struct X;
+      template <class T>
+      struct X {};
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromX = LastDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("X")));
+
+  auto *ImportedX = Import(FromX, Lang_CXX11);
+
+  EXPECT_TRUE(ImportedX);
+  EXPECT_EQ(ImportedX->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ImportedX->getTemplatedDecl());
+
+  // ToX did not change at the import.
+  // Verify that primary context has changed after import of class definition.
+  DeclContext *NewPrimaryDC = ToX->getTemplatedDecl()->getPrimaryContext();
+  EXPECT_NE(OldPrimaryDC, NewPrimaryDC);
+  // The lookup table should not be different than it was before.
+  EXPECT_EQ(SharedStatePtr->getLookupTable()
+                ->lookup(ToX->getTemplatedDecl(), ToParm->getDeclName())
+                .size(),
+            1u);
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToX->getTemplatedDecl(), ToParm));
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

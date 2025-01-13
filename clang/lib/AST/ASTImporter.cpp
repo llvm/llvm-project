@@ -3165,6 +3165,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                 if (Error Err = ImportImplicitMethods(DCXX, FoundCXX))
                   return std::move(Err);
             }
+            // FIXME: We can return FoundDef here.
           }
           PrevDecl = FoundRecord->getMostRecentDecl();
           break;
@@ -9064,9 +9065,26 @@ ASTImporter::findDeclsInToCtx(DeclContext *DC, DeclarationName Name) {
   // We can diagnose this only if we search in the redecl context.
   DeclContext *ReDC = DC->getRedeclContext();
   if (SharedState->getLookupTable()) {
-    ASTImporterLookupTable::LookupResult LookupResult =
-        SharedState->getLookupTable()->lookup(ReDC, Name);
-    return FoundDeclsTy(LookupResult.begin(), LookupResult.end());
+    if (ReDC->isNamespace()) {
+      // Namespaces can be reopened.
+      // Lookup table does not handle this, we must search here in all linked
+      // namespaces.
+      FoundDeclsTy Result;
+      SmallVector<Decl *, 2> NSChain =
+          getCanonicalForwardRedeclChain<NamespaceDecl>(
+              dyn_cast<NamespaceDecl>(ReDC));
+      for (auto *D : NSChain) {
+        ASTImporterLookupTable::LookupResult LookupResult =
+            SharedState->getLookupTable()->lookup(dyn_cast<NamespaceDecl>(D),
+                                                  Name);
+        Result.append(LookupResult.begin(), LookupResult.end());
+      }
+      return Result;
+    } else {
+      ASTImporterLookupTable::LookupResult LookupResult =
+          SharedState->getLookupTable()->lookup(ReDC, Name);
+      return FoundDeclsTy(LookupResult.begin(), LookupResult.end());
+    }
   } else {
     DeclContext::lookup_result NoloadLookupResult = ReDC->noload_lookup(Name);
     FoundDeclsTy Result(NoloadLookupResult.begin(), NoloadLookupResult.end());
