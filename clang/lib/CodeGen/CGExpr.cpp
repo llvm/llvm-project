@@ -52,11 +52,13 @@
 using namespace clang;
 using namespace CodeGen;
 
+namespace clang {
 // TODO: Introduce frontend options to enabled per sanitizers, similar to
 // `fsanitize-trap`.
-static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
+} // namespace clang
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
