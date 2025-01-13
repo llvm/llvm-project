@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/Affine/Passes.h"
 
@@ -29,12 +28,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -187,56 +184,9 @@ gatherProducerConsumerMemrefs(unsigned srcId, unsigned dstId,
                                 producerConsumerMemrefs);
 }
 
-/// Checks the shapes of the loads and stores of each memref in
-/// the producer/consumer chains. If the load shapes are larger
-/// than the stores then we cannot fuse the loops. The loads
-/// would have a dependency on the values stored.
-static bool checkLoadStoreShapes(unsigned srcId, unsigned dstId,
-                                 DenseSet<Value> &producerConsumerMemrefs,
-                                 MemRefDependenceGraph *mdg) {
-  SmallVector<Operation *> storeOps;
-  SmallVector<Operation *> loadOps;
-
-  auto *srcNode = mdg->getNode(srcId);
-  auto *dstNode = mdg->getNode(dstId);
-
-  for (Value memref : producerConsumerMemrefs) {
-    srcNode->getStoreOpsForMemref(memref, &storeOps);
-    dstNode->getLoadOpsForMemref(memref, &loadOps);
-
-    for (Operation *storeOp : storeOps) {
-      Value storeValue =
-          cast<AffineWriteOpInterface>(storeOp).getValueToStore();
-      auto storeShapedType = dyn_cast<ShapedType>(storeValue.getType());
-
-      if (!storeShapedType)
-        continue;
-
-      for (Operation *loadOp : loadOps) {
-        Value loadValue = cast<AffineReadOpInterface>(loadOp).getValue();
-        auto loadShapedType = dyn_cast<ShapedType>(loadValue.getType());
-
-        if (!loadShapedType)
-          continue;
-
-        for (int i = 0; i < loadShapedType.getRank(); ++i) {
-          auto loadDim = loadShapedType.getDimSize(i);
-          auto storeDim = storeShapedType.getDimSize(i);
-
-          if (loadDim > storeDim)
-            return false;
-        }
-      }
-    }
-
-    storeOps.clear();
-    loadOps.clear();
-  }
-
-  return true;
-}
-
-/// Checks the shapes of the loads and stores of each memref in
+/// Performs two checks:
+/// Firstly, checks if both src/dst ops are vector operations.
+/// Secondly, the shapes of the loads and stores of each memref in
 /// the producer/consumer chains. If the load shapes are larger
 /// than the stores then we cannot fuse the loops. The loads
 /// would have a dependency on the values stored.
