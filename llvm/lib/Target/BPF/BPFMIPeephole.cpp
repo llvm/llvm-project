@@ -24,6 +24,7 @@
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -322,6 +323,7 @@ private:
   bool eliminateRedundantMov();
   bool adjustBranch();
   bool insertMissingCallerSavedSpills();
+  bool removeMayGotoZero();
 
 public:
 
@@ -337,6 +339,7 @@ public:
     if (SupportGotol)
       Changed = adjustBranch() || Changed;
     Changed |= insertMissingCallerSavedSpills();
+    Changed |= removeMayGotoZero();
     return Changed;
   }
 };
@@ -679,6 +682,65 @@ bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
       }
     }
   }
+  return Changed;
+}
+
+bool BPFMIPreEmitPeephole::removeMayGotoZero() {
+  bool Changed = false;
+  MachineBasicBlock *Prev_MBB, *Curr_MBB = nullptr;
+  MachineBasicBlock *ToErase = nullptr;
+
+  for (MachineBasicBlock &MBB : reverse(*MF)) {
+    if (ToErase) {
+      ToErase->eraseFromParent();
+      ToErase = nullptr;
+    }
+
+    Prev_MBB = Curr_MBB;
+    Curr_MBB = &MBB;
+    if (Prev_MBB == nullptr)
+      continue;
+
+    MachineInstr &MI = MBB.back();
+    if (!MI.isInlineAsm())
+      continue;
+
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    SmallVector<StringRef, 4> AsmPieces;
+    SplitString(AsmStr, AsmPieces, ";\n");
+
+    // Do not support multiple insns in one inline asm.
+    if (AsmPieces.size() != 1)
+      continue;
+
+    // The asm insn must be a may_goto insn.
+    SmallVector<StringRef, 4> AsmOpPieces;
+    SplitString(AsmPieces[0], AsmOpPieces, " ");
+    if (AsmOpPieces[0] != "may_goto")
+      continue;
+
+    // Get the may_goto branch target.
+    MachineOperand &MO = MI.getOperand(InlineAsm::MIOp_FirstOperand + 1);
+    if (MO.getMBB() != Prev_MBB)
+      continue;
+
+    Changed = true;
+    if (MBB.begin() == MI) {
+      // Single 'may_goto' insn in the same basic block.
+      ToErase = Curr_MBB;
+      Curr_MBB->removeSuccessor(Prev_MBB);
+      for (MachineBasicBlock *Pred : Curr_MBB->predecessors())
+        Pred->replaceSuccessor(Curr_MBB, Prev_MBB);
+      Curr_MBB = Prev_MBB;
+    } else {
+      // Remove 'may_goto' insn.
+      MI.eraseFromParent();
+    }
+  }
+
+  if (ToErase)
+    ToErase->eraseFromParent();
+
   return Changed;
 }
 
