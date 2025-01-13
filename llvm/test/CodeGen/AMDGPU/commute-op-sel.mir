@@ -62,7 +62,7 @@ body:             |
 name: test_machine_cse_op_sel_v_mad_u16
 tracksRegLiveness: true
 body:             |
-  ; GCN-LABEL: name: test_machine_cse_op_sel_v_MAD_u16
+  ; GCN-LABEL: name: test_machine_cse_op_sel_v_mad_u16
   ; GCN: %3:vgpr_32 = V_MAD_U32_U16_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %5:vgpr_32, %3, %3, 0, 1, 0, implicit $exec
   bb.0:
@@ -79,7 +79,7 @@ body:             |
 name: test_machine_cse_op_sel_const_v_mad_u16
 tracksRegLiveness: true
 body:             |
-  ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_MAD_u16
+  ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_mad_u16
   ; GCN: %1:vgpr_32 = V_MAD_U32_U16_e64 0, 1, 0, 64, 0, %0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %3:vgpr_32, %1, %1, 0, 1, 0, implicit $exec
   bb.0:
@@ -94,7 +94,7 @@ body:             |
 name: test_machine_cse_op_sel_v_mad_i16
 tracksRegLiveness: true
 body:             |
-  ; GCN-LABEL: name: test_machine_cse_op_sel_v_MAD_i16
+  ; GCN-LABEL: name: test_machine_cse_op_sel_v_mad_i16
   ; GCN: %3:vgpr_32 = V_MAD_I32_I16_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %5:vgpr_32, %3, %3, 0, 1, 0, implicit $exec
   bb.0:
@@ -111,7 +111,7 @@ body:             |
 name: test_machine_cse_op_sel_const_v_mad_i16
 tracksRegLiveness: true
 body:             |
-  ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_MAD_i16
+  ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_mad_i16
   ; GCN: %1:vgpr_32 = V_MAD_I32_I16_e64 0, 1, 0, 64, 0, %0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %3:vgpr_32, %1, %1, 0, 1, 0, implicit $exec
   bb.0:
