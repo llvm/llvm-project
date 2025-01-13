@@ -173,13 +173,10 @@ public:
   MPFRNumber(const MPFRNumber &other, unsigned int precision);
   MPFRNumber(const mpfr_t x, unsigned int precision, RoundingMode rounding);
 
-  // Destructor
   ~MPFRNumber();
 
-  // Assignment operator
   MPFRNumber &operator=(const MPFRNumber &rhs);
 
-  // Member functions (declarations only)
   bool is_nan() const;
   MPFRNumber abs() const;
   MPFRNumber acos() const;
@@ -234,7 +231,6 @@ public:
   MPFRNumber mul(const MPFRNumber &b);
   cpp::string str() const;
 
-  // Template member functions
   template <typename T> T as() const;
   void dump(const char *msg) const;
 
