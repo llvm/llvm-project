@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include <algorithm>
 
@@ -154,9 +156,10 @@ dumpDXContainer(MemoryBufferRef Source) {
     case dxbc::PartType::Unknown:
       break;
     case dxbc::PartType::RTS0:
-      std::optional<DirectX::RootSignature> RS = Container.getRootSignature();
-      if (RS.has_value())
-        NewPart.RootSignature = DXContainerYAML::RootSignatureYamlDesc(*RS);
+      std::optional<dxbc::RootSignatureDesc> RS = Container.getRootSignature();
+      if (RS && RS.has_value())
+        NewPart.RootSignature = DXContainerYAML::RootSignatureDesc(*RS);
+      break;
       break;
     }
   }

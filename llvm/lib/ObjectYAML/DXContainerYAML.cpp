@@ -66,6 +66,10 @@ DXContainerYAML::ShaderHash::ShaderHash(const dxbc::ShaderHash &Data)
   memcpy(Digest.data(), &Data.Digest[0], 16);
 }
 
+DXContainerYAML::RootSignatureDesc::RootSignatureDesc(const dxbc::RootSignatureDesc &Data)
+    : Version(Data.Version), Flags(Data.Flags) {
+}
+
 DXContainerYAML::PSVInfo::PSVInfo() : Version(0) {
   memset(&Info, 0, sizeof(Info));
 }
@@ -209,15 +213,10 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
-void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
-    IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
+void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
   IO.mapRequired("Version", S.Version);
-  IO.mapRequired("NumParameters", S.NumParameters);
-  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
-  IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
-  IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
-#define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
-#include "llvm/BinaryFormat/DXContainerConstants.def"
+  IO.mapRequired("Flags", S.Flags);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,

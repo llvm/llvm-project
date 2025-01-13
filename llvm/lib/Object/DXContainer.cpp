@@ -10,7 +10,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -98,11 +98,10 @@ Error DXContainer::parseHash(StringRef Part) {
 }
 
 Error DXContainer::parseRootSignature(StringRef Part) {
-  if (RootSignature)
-    return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature();
-  if (Error Err = RootSignature->parse(Part))
+  dxbc::RootSignatureDesc Desc;
+  if (Error Err = readStruct(Part, Part.begin(), Desc))
     return Err;
+  RootSignature = Desc;
   return Error::success();
 }
 
@@ -210,6 +209,7 @@ Error DXContainer::parsePartOffsets() {
     case dxbc::PartType::RTS0:
       if (Error Err = parseRootSignature(PartData))
         return Err;
+
       break;
     }
   }

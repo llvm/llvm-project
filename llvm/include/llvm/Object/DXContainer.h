@@ -309,7 +309,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
-  std::optional<DirectX::RootSignature> RootSignature;
+  std::optional<dxbc::RootSignatureDesc> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -406,7 +406,8 @@ public:
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 
-  std::optional<DirectX::RootSignature> getRootSignature() const {
+  std::optional<dxbc::RootSignatureDesc>
+  getRootSignature() const {
     return RootSignature;
   }
 
