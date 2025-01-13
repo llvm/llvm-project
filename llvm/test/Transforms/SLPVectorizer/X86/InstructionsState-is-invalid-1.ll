@@ -5,6 +5,15 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @_Z4blurN6Halide5Tools5ImageItEE(i1 %0, i1 %1, i1 %ident.check, i1 %ident.check56) {
+; CHECK-LABEL: @_Z4blurN6Halide5Tools5ImageItEE(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[IDENT_CHECK:%.*]], [[IDENT_CHECK56:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_BODY6_US_I_I:%.*]], label [[FOR_BODY6_US_I_I]]
+; CHECK:       for.body6.us.i.i:
+; CHECK-NEXT:    ret void
+;
 entry:
   %2 = or i1 %0, %1
   %3 = or i1 %ident.check, %ident.check56

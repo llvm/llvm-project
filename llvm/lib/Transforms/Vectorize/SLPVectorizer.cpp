@@ -12097,7 +12097,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // somewhere.
   bool IsAllowedSingleBVNode =
       VectorizableTree.size() > 1 ||
-      (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+      (VectorizableTree.size() == 1 && VectorizableTree.front()->hasState() &&
        !VectorizableTree.front()->isAltShuffle() &&
        VectorizableTree.front()->getOpcode() != Instruction::PHI &&
        VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
