@@ -1392,6 +1392,8 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
           Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result"));
     }
   }
+
+  llvm_unreachable("unable to handle expression");
 }
 
 /// Returns a Value corresponding to the size of the given expression.
