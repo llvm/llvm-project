@@ -2871,8 +2871,15 @@ public:
   /// This should never be used when type qualifiers are meaningful.
   const Type *getPointerOrObjCPointerOrArrayElementType() const;
 
-  /// If this is a pointer, ObjC object pointer, or block
-  /// pointer, this returns the respective pointee.
+  /// Return the 'pointee type' for any of the following kinds of types,
+  /// and an empty QualType otherwise.
+  ///
+  ///   - PointerType
+  ///   - ObjCObjectPointerType
+  ///   - BlockPointerType
+  ///   - ReferenceType
+  ///   - MemberPointerType
+  ///   - DecayedType
   QualType getPointeeType() const;
 
   /// Return the specified type with any "sugar" removed from the type,
