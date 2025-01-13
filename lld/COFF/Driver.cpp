@@ -479,7 +479,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
 
   // Handle /include: in bulk.
   for (StringRef inc : directives.includes)
-    addUndefined(inc);
+    file->symtab.addGCRoot(inc);
 
   // Handle /exclude-symbols: in bulk.
   for (StringRef e : directives.excludes) {
@@ -505,13 +505,13 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      ctx.config.entry = addUndefined(mangle(arg->getValue()), true);
+      ctx.config.entry = file->symtab.addGCRoot(mangle(arg->getValue()), true);
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
       break;
     case OPT_incl:
-      addUndefined(arg->getValue());
+      file->symtab.addGCRoot(arg->getValue());
       break;
     case OPT_manifestdependency:
       ctx.config.manifestDependencies.insert(arg->getValue());
@@ -805,35 +805,6 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Symbol *LinkerDriver::addUndefined(StringRef name, bool aliasEC) {
-  Symbol *b = ctx.symtab.addUndefined(name);
-  if (!b->isGCRoot) {
-    b->isGCRoot = true;
-    ctx.config.gcroot.push_back(b);
-  }
-
-  // On ARM64EC, a symbol may be defined in either its mangled or demangled form
-  // (or both). Define an anti-dependency symbol that binds both forms, similar
-  // to how compiler-generated code references external functions.
-  if (aliasEC && isArm64EC(ctx.config.machine)) {
-    if (std::optional<std::string> mangledName =
-            getArm64ECMangledFunctionName(name)) {
-      auto u = dyn_cast<Undefined>(b);
-      if (u && !u->weakAlias) {
-        Symbol *t = ctx.symtab.addUndefined(saver().save(*mangledName));
-        u->setWeakAlias(t, true);
-      }
-    } else if (std::optional<std::string> demangledName =
-                   getArm64ECDemangledFunctionName(name)) {
-      Symbol *us = ctx.symtab.addUndefined(saver().save(*demangledName));
-      auto u = dyn_cast<Undefined>(us);
-      if (u && !u->weakAlias)
-        u->setWeakAlias(b, true);
-    }
-  }
-  return b;
-}
-
 void LinkerDriver::addUndefinedGlob(StringRef arg) {
   Expected<GlobPattern> pat = GlobPattern::create(arg);
   if (!pat) {
@@ -849,7 +820,7 @@ void LinkerDriver::addUndefinedGlob(StringRef arg) {
   });
 
   for (Symbol *sym : syms)
-    addUndefined(sym->getName());
+    ctx.symtab.addGCRoot(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -1487,7 +1458,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
     expName = saver().save("EXP+" + *mangledName);
   else
     expName = saver().save("EXP+" + name);
-  sym = addUndefined(expName);
+  sym = ctx.symtabEC->addGCRoot(expName);
   if (auto undef = dyn_cast<Undefined>(sym)) {
     if (!undef->getWeakAlias()) {
       auto thunk = make<ECExportThunkChunk>(def);
@@ -1537,7 +1508,8 @@ void LinkerDriver::createECExportThunks() {
 
 void LinkerDriver::pullArm64ECIcallHelper() {
   if (!ctx.config.arm64ECIcallHelper)
-    ctx.config.arm64ECIcallHelper = addUndefined("__icall_helper_arm64ec");
+    ctx.config.arm64ECIcallHelper =
+        ctx.symtabEC->addGCRoot("__icall_helper_arm64ec");
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -1976,6 +1948,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       setMachine(machine);
     }
   }
+  SymbolTable &mainSymtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
 
   // Handle /nodefaultlib:<filename>
   {
@@ -2062,7 +2035,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /include
   for (auto *arg : args.filtered(OPT_incl))
-    addUndefined(arg->getValue());
+    mainSymtab.addGCRoot(arg->getValue());
 
   // Handle /implib
   if (auto *arg = args.getLastArg(OPT_implib))
@@ -2493,22 +2466,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      config->entry = addUndefined(mangle(arg->getValue()), true);
+      config->entry = ctx.symtab.addGCRoot(mangle(arg->getValue()), true);
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = addUndefined(s, true);
+        config->entry = ctx.symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry = addUndefined(mangle("_NtProcessStartup"), true);
+        config->entry = ctx.symtab.addGCRoot(mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
         StringRef s = findDefaultEntry();
         if (s.empty())
           Fatal(ctx) << "entry point must be defined";
-        config->entry = addUndefined(s, true);
+        config->entry = ctx.symtab.addGCRoot(s, true);
         Log(ctx) << "Entry name inferred: " << s;
       }
     }
@@ -2520,9 +2493,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     for (auto *arg : args.filtered(OPT_delayload)) {
       config->delayLoads.insert(StringRef(arg->getValue()).lower());
       if (config->machine == I386) {
-        config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
+        config->delayLoadHelper = ctx.symtab.addGCRoot("___delayLoadHelper2@8");
       } else {
-        config->delayLoadHelper = addUndefined("__delayLoadHelper2", true);
+        config->delayLoadHelper =
+            ctx.symtab.addGCRoot("__delayLoadHelper2", true);
       }
     }
   }
@@ -2659,7 +2633,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       for (Export &e : config->exports) {
         if (!e.forwardTo.empty())
           continue;
-        e.sym = addUndefined(e.name, !e.data);
+        e.sym = ctx.symtab.addGCRoot(e.name, !e.data);
         if (e.source != ExportSource::Directives)
           e.symbolName = mangleMaybe(e.sym);
       }
@@ -2701,13 +2675,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
       // Windows specific -- if __load_config_used can be resolved, resolve it.
       if (ctx.symtab.findUnderscore("_load_config_used"))
-        addUndefined(mangle("_load_config_used"));
+        ctx.symtab.addGCRoot(mangle("_load_config_used"));
 
       if (args.hasArg(OPT_include_optional)) {
         // Handle /includeoptional
         for (auto *arg : args.filtered(OPT_include_optional))
           if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            addUndefined(arg->getValue());
+            ctx.symtab.addGCRoot(arg->getValue());
       }
     } while (run());
   }

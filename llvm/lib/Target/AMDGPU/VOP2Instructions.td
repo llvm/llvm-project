@@ -1261,22 +1261,38 @@ class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
                      $src)
 >;
 
-foreach vt = [i16, v2i16] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
-  (and vt:$src0, vt:$src1),
+  (and i16:$src0, i16:$src1),
   (V_AND_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
-  (or vt:$src0, vt:$src1),
+  (or i16:$src0, i16:$src1),
   (V_OR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
-  (xor vt:$src0, vt:$src1),
+  (xor i16:$src0, i16:$src1),
   (V_XOR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 }
+
+def : GCNPat <
+  (and v2i16:$src0, v2i16:$src1),
+  (V_AND_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
+
+def : GCNPat <
+  (or v2i16:$src0, v2i16:$src1),
+  (V_OR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
+
+def : GCNPat <
+  (xor v2i16:$src0, v2i16:$src1),
+  (V_XOR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
 
 let Predicates = [Has16BitInsts, isGFX8GFX9] in {
 
