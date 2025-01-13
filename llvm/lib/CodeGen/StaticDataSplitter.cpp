@@ -92,23 +92,31 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
     MachineFunction &MF, MachineJumpTableInfo &MJTI) {
   int NumChangedJumpTables = 0;
 
+  // Jump table could be used by either terminating instructions or
+  // non-terminating ones, so we walk all instructions and use
+  // `MachineOperand::isJTI()` to identify jump table operands.
+  // Similarly, `MachineOperand::isCPI()` can identify constant pool usages
+  // in the same loop.
   for (const auto &MBB : MF) {
-    // IMPORTANT, `getJumpTableIndex` is a thin wrapper around per-target
-    // interface `TargetInstrInfo::getjumpTableIndex`, and only X86 implements
-    // it so far.
-    const int JTI = MBB.getJumpTableIndex();
-    // This is not a source block of jump table.
-    if (JTI == -1)
-      continue;
+    for (const MachineInstr &I : MBB) {
+      for (const MachineOperand &Op : I.operands()) {
+        if (!Op.isJTI())
+          continue;
+        const int JTI = Op.getIndex();
+        // This is not a source block of jump table.
+        if (JTI == -1)
+          continue;
 
-    auto Hotness = MachineFunctionDataHotness::Hot;
+        auto Hotness = MachineFunctionDataHotness::Hot;
 
-    // Hotness is based on source basic block hotness.
-    if (PSI->isColdBlock(&MBB, MBFI))
-      Hotness = MachineFunctionDataHotness::Cold;
+        // Hotness is based on source basic block hotness.
+        if (PSI->isColdBlock(&MBB, MBFI))
+          Hotness = MachineFunctionDataHotness::Cold;
 
-    if (MF.getJumpTableInfo()->updateJumpTableEntryHotness(JTI, Hotness))
-      ++NumChangedJumpTables;
+        if (MF.getJumpTableInfo()->updateJumpTableEntryHotness(JTI, Hotness))
+          ++NumChangedJumpTables;
+      }
+    }
   }
   return NumChangedJumpTables > 0;
 }
