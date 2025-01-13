@@ -1292,6 +1292,27 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
   return 0;
 }
 
+static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
+                                                RelExpr expr, RelType type,
+                                                uint64_t offset, Symbol &sym,
+                                                int64_t addend) {
+  // Do not optimize signed TLSDESC to LE/IE (as described in pauthabielf64).
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
+  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
+    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+    sec->addReloc({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
+  // TLSDESC enabled.
+  if (expr == R_TLSDESC_CALL)
+    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
+
+  return 0;
+}
+
 // Notes about General Dynamic and Local Dynamic TLS models below. They may
 // require the generation of a pair of GOT entries that have associated dynamic
 // relocations. The pair of GOT entries created are of the form GOT[e0] Module
@@ -1302,6 +1323,11 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
 unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 uint64_t offset, Symbol &sym,
                                                 int64_t addend) {
+  if (ctx.arg.emachine == EM_AARCH64)
+    if (unsigned processed = handleAArch64PAuthTlsRelocation(
+            sec, expr, type, offset, sym, addend))
+      return processed;
+
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
       auto diag = Err(ctx);
@@ -1328,20 +1354,6 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  // Do not optimize signed TLSDESC (as described in pauthabielf64 to LE/IE).
-  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
-  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
-  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
-    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
-    sec->addReloc({expr, type, offset, addend, &sym});
-    return 1;
-  }
-
-  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
-  // TLSDESC enabled.
-  if (expr == R_TLSDESC_CALL)
-    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
-
   bool isRISCV = ctx.arg.emachine == EM_RISCV;
 
   if (oneof<RE_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
@@ -1351,7 +1363,9 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
       if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
-        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
+        sym.setFlags(
+            NEEDS_TLSDESC |
+            (ctx.arg.emachine == EM_AARCH64 ? NEEDS_TLSDESC_NONAUTH : 0));
       sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
@@ -1862,10 +1876,10 @@ void elf::postScanRelocations(Ctx &ctx) {
 
     if (flags & NEEDS_TLSDESC) {
       if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
-        auto diag = Err(ctx);
-        diag << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
-             << "' requested, but only one type of TLSDESC entry per symbol is "
-                "supported";
+        Err(ctx)
+            << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+            << "' requested, but only one type of TLSDESC entry per symbol is "
+               "supported";
         return;
       }
       got->addTlsDescEntry(sym);
