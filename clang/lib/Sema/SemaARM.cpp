@@ -1337,6 +1337,14 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
   bool UsesZA = Attr && Attr->isNewZA();
   bool UsesZT0 = Attr && Attr->isNewZT0();
 
+  if (UsesZA || UsesZT0) {
+    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask)
+        Diag(FD->getLocation(), diag::err_sme_unsupported_agnostic_new);
+    }
+  }
+
   if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
     if (FD->getReturnType()->isSizelessVectorType())
       Diag(FD->getLocation(),
