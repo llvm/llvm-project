@@ -91,7 +91,7 @@ if (FLANG_STANDALONE_BUILD)
 
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
-  IF (LLVM_DIR)
+  if (LLVM_DIR)
     get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
       REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
     list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
@@ -109,7 +109,7 @@ if (FLANG_STANDALONE_BUILD)
   #   * a path relative to the path of this script.
   # Append the absolute path to CLANG_DIR so that find_package works in both
   # cases.
-  IF (CLANG_DIR)
+  if (CLANG_DIR)
     get_filename_component(
       CLANG_DIR_ABSOLUTE
       ${CLANG_DIR}
