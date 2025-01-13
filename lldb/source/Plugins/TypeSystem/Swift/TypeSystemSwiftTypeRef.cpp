@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
-#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntimeImpl.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "Plugins/TypeSystem/Swift/SwiftDWARFImporterForClangTypes.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
@@ -84,7 +83,6 @@ public:
         m_compiler_invocation.getSymbolGraphOptions(),
         m_compiler_invocation.getCASOptions(),
         m_source_manager, m_diagnostic_engine));
-
     m_clang_importer = swift::ClangImporter::create(*m_ast_context, "", {}, {});
   }
   std::string ImportName(const clang::NamedDecl *decl) {
@@ -1074,8 +1072,8 @@ TypeSystemSwiftTypeRef::GetTupleElement(lldb::opaque_compiler_type_t type,
   using namespace swift::Demangle;
   Demangler dem;
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(AsMangledName(type));
-
-  NodePointer node = TypeSystemSwiftTypeRef::DemangleCanonicalType(dem, type);
+  NodePointer node =
+      TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(dem, type);
   if (!node || node->getKind() != Node::Kind::Tuple)
     return {};
   if (node->getNumChildren() < idx)
@@ -1181,6 +1179,59 @@ Desugar(swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
   return desugared;
 }
 
+swift::Demangle::NodePointer
+TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
+                                     swift::Demangle::NodePointer node,
+                                     swift::Mangle::ManglingFlavor flavor) {
+  assert(node);
+  auto kind = node->getKind();
+  switch (kind) {
+  case Node::Kind::SugaredOptional:
+    // FIXME: Factor these three cases out.
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    return Desugar(dem, node, Node::Kind::BoundGenericEnum, Node::Kind::Enum,
+                   "Optional");
+  case Node::Kind::SugaredArray: {
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                   Node::Kind::Structure, "Array");
+  }
+  case Node::Kind::SugaredDictionary:
+    // FIXME: This isnt covered by any test.
+    assert(node->getNumChildren() == 2);
+    if (node->getNumChildren() != 2)
+      return node;
+    return Desugar(dem, node, Node::Kind::BoundGenericStructure,
+                   Node::Kind::Structure, "Dictionary");
+  case Node::Kind::SugaredParen:
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    return node->getFirstChild();
+
+  case Node::Kind::BoundGenericTypeAlias:
+  case Node::Kind::TypeAlias: {
+    auto node_clangtype = ResolveTypeAlias(dem, node, flavor);
+    if (CompilerType clang_type = node_clangtype.second) {
+      if (auto result = GetClangTypeNode(clang_type, dem))
+        return result;
+      else
+        return node;
+    }
+    if (node_clangtype.first)
+      return node_clangtype.first;
+    return node;
+  }
+  default:
+    break;
+  }
+  return node;
+}
+
 /// Iteratively resolve all type aliases in \p node by looking up their
 /// desugared types in the debug info of module \p M.
 swift::Demangle::NodePointer
@@ -1189,52 +1240,7 @@ TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
                                          swift::Mangle::ManglingFlavor flavor) {
   using namespace swift::Demangle;
   return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
-    auto kind = node->getKind();
-    switch (kind) {
-    case Node::Kind::SugaredOptional:
-      // FIXME: Factor these three cases out.
-      assert(node->getNumChildren() == 1);
-      if (node->getNumChildren() != 1)
-        return node;
-      return Desugar(dem, node, Node::Kind::BoundGenericEnum, Node::Kind::Enum,
-                     "Optional");
-    case Node::Kind::SugaredArray: {
-      assert(node->getNumChildren() == 1);
-      if (node->getNumChildren() != 1)
-        return node;
-      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
-                     Node::Kind::Structure, "Array");
-    }
-    case Node::Kind::SugaredDictionary:
-      // FIXME: This isnt covered by any test.
-      assert(node->getNumChildren() == 2);
-      if (node->getNumChildren() != 2)
-        return node;
-      return Desugar(dem, node, Node::Kind::BoundGenericStructure,
-                     Node::Kind::Structure, "Dictionary");
-    case Node::Kind::SugaredParen:
-      assert(node->getNumChildren() == 1);
-      if (node->getNumChildren() != 1)
-        return node;
-      return node->getFirstChild();
-
-    case Node::Kind::BoundGenericTypeAlias:
-    case Node::Kind::TypeAlias: {
-      auto node_clangtype = ResolveTypeAlias(dem, node, flavor);
-      if (CompilerType clang_type = node_clangtype.second) {
-        if (auto result = GetClangTypeNode(clang_type, dem))
-          return result;
-        else
-          return node;
-      }
-      if (node_clangtype.first)
-        return node_clangtype.first;
-      return node;
-    }
-    default:
-      break;
-    }
-    return node;
+    return Canonicalize(dem, node, flavor);
   });
 }
 
@@ -2443,6 +2449,7 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
            ast_ctx->ReconstructType(l.GetMangledTypeName()))
            .value_or(nullptr)) == r.GetOpaqueQualType())
     return true;
+
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();
   if (lhs == ConstString("$sSiD") && rhs == ConstString("$sSuD"))
@@ -2718,10 +2725,32 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
 }
 
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
-    swift::Demangle::Demangler &dem, opaque_compiler_type_t opaque_type) {
+    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t opaque_type) {
   using namespace swift::Demangle;
   CompilerType type = GetCanonicalType(opaque_type);
   return GetDemangledType(dem, type.GetMangledTypeName().GetStringRef());
+}
+
+swift::Demangle::NodePointer
+TypeSystemSwiftTypeRef::DemangleCanonicalOutermostType(
+    swift::Demangle::Demangler &dem, lldb::opaque_compiler_type_t type) {
+  using namespace swift::Demangle;
+  const auto *mangled_name = AsMangledName(type);
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+  NodePointer node = GetDemangledType(dem, mangled_name);
+
+  if (!node)
+    return nullptr;
+  NodePointer canonical = Canonicalize(dem, node, flavor);
+  if (canonical &&
+      canonical->getKind() == swift::Demangle::Node::Kind::TypeAlias) {
+    // If this is a typealias defined in the expression evaluator,
+    // then we don't have debug info to resolve it from.
+    CompilerType ast_type =
+        ReconstructType({weak_from_this(), type}, nullptr).GetCanonicalType();
+    return GetDemangledType(dem, ast_type.GetMangledTypeName());
+  }
+  return canonical;
 }
 
 CompilerType TypeSystemSwiftTypeRef::CreateGenericTypeParamType(
@@ -2753,7 +2782,7 @@ bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || node->getNumChildren() != 2 ||
         node->getKind() != Node::Kind::BoundGenericStructure)
       return false;
@@ -2779,7 +2808,9 @@ bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
       return false;
     elem_node = elem_node->getFirstChild();
     if (element_type)
-      *element_type = RemangleAsType(dem, elem_node, flavor);
+      // FIXME: This expensive canonicalization is only there for
+      // SwiftASTContext compatibility.
+      *element_type = RemangleAsType(dem, elem_node, flavor).GetCanonicalType();
 
     if (is_incomplete)
       *is_incomplete = true;
@@ -2796,7 +2827,7 @@ bool TypeSystemSwiftTypeRef::IsAggregateType(opaque_compiler_type_t type) {
   auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
 
     if (!node)
       return false;
@@ -2834,7 +2865,7 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type) {
   auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     // Note: There are a number of other candidates, and this list may need
     // updating. Ex: `NoEscapeFunctionType`, `ThinFunctionType`, etc.
     return node && (node->getKind() == Node::Kind::FunctionType ||
@@ -2849,7 +2880,7 @@ size_t TypeSystemSwiftTypeRef::GetNumberOfFunctionArguments(
   auto impl = [&]() -> size_t {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || (node->getKind() != Node::Kind::FunctionType &&
                   node->getKind() != Node::Kind::NoEscapeFunctionType &&
                   node->getKind() != Node::Kind::ImplFunctionType))
@@ -2883,7 +2914,7 @@ TypeSystemSwiftTypeRef::GetFunctionArgumentAtIndex(opaque_compiler_type_t type,
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || (node->getKind() != Node::Kind::FunctionType &&
                   node->getKind() != Node::Kind::NoEscapeFunctionType &&
                   node->getKind() != Node::Kind::ImplFunctionType))
@@ -3012,7 +3043,7 @@ bool TypeSystemSwiftTypeRef::IsPointerType(opaque_compiler_type_t type,
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || node->getKind() != Node::Kind::BuiltinTypeName ||
         !node->hasText())
       return false;
@@ -3028,7 +3059,7 @@ bool TypeSystemSwiftTypeRef::IsVoidType(opaque_compiler_type_t type) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     return node && node->getNumChildren() == 0 &&
            node->getKind() == Node::Kind::Tuple;
   };
@@ -3217,7 +3248,7 @@ TypeSystemSwiftTypeRef::GetFunctionReturnType(opaque_compiler_type_t type) {
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || (node->getKind() != Node::Kind::FunctionType &&
                   node->getKind() != Node::Kind::NoEscapeFunctionType &&
                   node->getKind() != Node::Kind::ImplFunctionType))
@@ -3450,7 +3481,7 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
 
     using namespace swift::Demangle;
     Demangler dem;
-    auto *node = DemangleCanonicalType(dem, type);
+    auto *node = DemangleCanonicalOutermostType(dem, type);
     if (!node)
       return lldb::eEncodingInvalid;
     auto kind = node->getKind();
@@ -4030,7 +4061,7 @@ TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type,
   auto impl = [&]() -> size_t {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
 
     if (!node)
       return 0;
@@ -4170,7 +4201,7 @@ bool TypeSystemSwiftTypeRef::IsExistentialType(
     lldb::opaque_compiler_type_t type) {
   using namespace swift::Demangle;
   Demangler dem;
-  NodePointer node = DemangleCanonicalType(dem, type);
+  NodePointer node = DemangleCanonicalOutermostType(dem, type);
   if (!node || node->getNumChildren() != 1)
     return false;
   switch (node->getKind()) {
@@ -4197,7 +4228,7 @@ bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type) {
   auto impl = [&]() -> bool {
     using namespace swift::Demangle;
     Demangler dem;
-    NodePointer protocol_list = DemangleCanonicalType(dem, type);
+    NodePointer protocol_list = DemangleCanonicalOutermostType(dem, type);
     if (protocol_list && protocol_list->getKind() == Node::Kind::ProtocolList)
       for (auto type_list : *protocol_list)
         if (type_list && type_list->getKind() == Node::Kind::TypeList)
@@ -4998,7 +5029,7 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || node->getNumChildren() != 1 ||
         node->getKind() != Node::Kind::InOut)
       return false;
@@ -5028,7 +5059,7 @@ TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
     Demangler dem;
-    NodePointer node = DemangleCanonicalType(dem, type);
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || node->getNumChildren() != 2)
       return {};
 
