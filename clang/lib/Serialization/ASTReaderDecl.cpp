@@ -451,9 +451,8 @@ public:
   void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
   void VisitOMPRequiresDecl(OMPRequiresDecl *D);
   void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
-  };
-
-  } // namespace clang
+};
+} // namespace clang
 
 namespace {
 
