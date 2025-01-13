@@ -19431,38 +19431,23 @@ class HorizontalReduction {
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
-    case RecurKind::FMax:
-      return Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS);
-    case RecurKind::FMin:
-      return Builder.CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS);
-    case RecurKind::FMaximum:
-      return Builder.CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS);
-    case RecurKind::FMinimum:
-      return Builder.CreateBinaryIntrinsic(Intrinsic::minimum, LHS, RHS);
     case RecurKind::SMax:
-      if (UseSelect) {
-        Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      }
-      return Builder.CreateBinaryIntrinsic(Intrinsic::smax, LHS, RHS);
     case RecurKind::SMin:
-      if (UseSelect) {
-        Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      }
-      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, LHS, RHS);
     case RecurKind::UMax:
-      if (UseSelect) {
-        Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      }
-      return Builder.CreateBinaryIntrinsic(Intrinsic::umax, LHS, RHS);
     case RecurKind::UMin:
       if (UseSelect) {
-        Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
+        CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
+        Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
-      return Builder.CreateBinaryIntrinsic(Intrinsic::umin, LHS, RHS);
+      [[fallthrough]];
+    case RecurKind::FMax:
+    case RecurKind::FMin:
+    case RecurKind::FMaximum:
+    case RecurKind::FMinimum: {
+      Intrinsic::ID Id = llvm::getMinMaxReductionIntrinsicOp(Kind);
+      return Builder.CreateBinaryIntrinsic(Id, LHS, RHS);
+    }
     default:
       llvm_unreachable("Unknown reduction operation.");
     }
