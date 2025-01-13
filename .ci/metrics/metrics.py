@@ -80,6 +80,18 @@ def get_metrics(github_repo: github.Repository, workflows_to_track: dict[str, in
         completed_at = workflow_jobs[0].completed_at
 
         job_result = int(workflow_jobs[0].conclusion == "success")
+        if job_result:
+            # We still might want to mark the job as a failure if one of the steps
+            # failed. This is required due to use setting continue-on-error in
+            # the premerge pipeline to prevent sending emails while we are
+            # testing the infrastructure.
+            # TODO(boomanaiden154): Remove this once the premerge pipeline is no
+            # longer in a testing state and we can directly assert the workflow
+            # result.
+            for step in workflow_jobs[0].steps:
+                if step.conclusion != "success":
+                    job_result = 0
+                    break
 
         queue_time = started_at - created_at
         run_time = completed_at - started_at

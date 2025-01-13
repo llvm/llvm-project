@@ -569,20 +569,17 @@ def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rd),
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in
 def C_FSDSP  : CStackStore<0b101, "c.fsdsp", FPR64, uimm9_lsb000>,
                Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]> {
-  let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
 
 def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
              Sched<[WriteSTW, ReadStoreData, ReadMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
 let isCodeGenOnly = 1 in
 def C_SWSP_INX : CStackStore<0b110, "c.swsp", GPRF32, uimm8_lsb00>,
                  Sched<[WriteSTW, ReadStoreData, ReadMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
@@ -590,14 +587,12 @@ let DecoderNamespace = "RISCV32Only_",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
-  let Inst{12-9} = imm{5-2};
   let Inst{8-7}  = imm{7-6};
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000>,
              Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
-  let Inst{12-10} = imm{5-3};
   let Inst{9-7}   = imm{8-6};
 }
 

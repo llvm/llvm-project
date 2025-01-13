@@ -801,8 +801,8 @@ const struct InstructionSizeData {
   size_t size;  // hold instruction size or 0 for failure,
                 // e.g. on control instructions
   u8 instr[16];
-  size_t rel_offset;  // filled just for instructions with two operands
-                      // and displacement length of four bytes.
+  size_t rel_offset;  // adjustment for RIP-relative addresses when copying
+                      // instructions during hooking via hotpatch or trampoline.
   const char *comment;
 } data[] = {
     // clang-format off
@@ -858,6 +858,7 @@ const struct InstructionSizeData {
     { 5, {0x68, 0x71, 0x72, 0x73, 0x74}, 0, "68 XX XX XX XX : push imm32"},
     { 5, {0xb8, 0x71, 0x72, 0x73, 0x74}, 0, "b8 XX XX XX XX : mov eax, XX XX XX XX"},
     { 5, {0xB9, 0x71, 0x72, 0x73, 0x74}, 0, "b9 XX XX XX XX : mov ecx, XX XX XX XX"},
+    { 7, {0x8D, 0xA4, 0x24, 0x73, 0x74, 0x75, 0x76}, 0, "8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]"},
 #if SANITIZER_WINDOWS_x64
     // sorted list
     { 2, {0x40, 0x50}, 0, "40 50 : push rax"},
