@@ -40,7 +40,7 @@
 // SVE-BITPERM-REVERT: "-target-feature" "-sve-bitperm"
 
 // RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+sve2-bitperm+nosve2-bitperm %s -### 2>&1 | FileCheck %s --check-prefix=SVE2-BITPERM-REVERT
-// SVE2-BITPERM-REVERT: "-target-feature" "+sve" "-target-feature" "-sve-bitperm" "-target-feature" "+sve2" "-target-feature" "-sve2-bitperm"
+// SVE2-BITPERM-REVERT: "-target-feature" "+sve" "-target-feature" "-sve-bitperm" "-target-feature" "-sve2" "-target-feature" "-sve2-bitperm"
 
 // RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+sve2-aes+nosve2-aes %s -### 2>&1 | FileCheck %s --check-prefix=SVE2-AES-REVERT
 // SVE2-AES-REVERT: "-target-feature" "+sve" "-target-feature" "-sve-aes" "-target-feature" "+sve2" "-target-feature" "-sve2-aes"
