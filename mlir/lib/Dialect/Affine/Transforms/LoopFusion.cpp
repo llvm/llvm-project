@@ -299,6 +299,10 @@ static void sinkSequentialLoops(MemRefDependenceGraph::Node *node) {
   node->op = newRootForOp;
 }
 
+/// Creates a private memref to be used by vector operations.
+/// TODO: The difference between this and 'createPrivateMemRef' is that
+/// the system for calculating the bounds and constraints doesn't
+/// support vector operations.
 static Value createPrivateVectorOpMemRef(
     AffineForOp forOp, Operation *srcStoreOpInst, unsigned dstLoopDepth,
     std::optional<unsigned> fastMemorySpace, uint64_t localBufSizeThreshold) {
