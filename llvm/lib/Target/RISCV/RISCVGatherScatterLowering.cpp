@@ -484,20 +484,17 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
 bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
   VectorType *DataType;
-  Value *StoreVal, *Ptr, *Mask, *EVL;
+  Value *StoreVal = nullptr, *Ptr, *Mask, *EVL = nullptr;
   MaybeAlign MA;
   switch (II->getIntrinsicID()) {
   case Intrinsic::masked_gather:
     DataType = cast<VectorType>(II->getType());
-    StoreVal = nullptr;
     Ptr = II->getArgOperand(0);
     MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
     Mask = II->getArgOperand(2);
-    EVL = nullptr;
     break;
   case Intrinsic::vp_gather:
     DataType = cast<VectorType>(II->getType());
-    StoreVal = nullptr;
     Ptr = II->getArgOperand(0);
     MA = II->getParamAlign(0).value_or(
         DL->getABITypeAlign(DataType->getElementType()));
@@ -510,7 +507,6 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
     Ptr = II->getArgOperand(1);
     MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
     Mask = II->getArgOperand(3);
-    EVL = nullptr;
     break;
   case Intrinsic::vp_scatter:
     DataType = cast<VectorType>(II->getArgOperand(0)->getType());
