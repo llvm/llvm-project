@@ -415,6 +415,13 @@ Changes to LLDB
 
 * LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
 
+* It is now possible to implement lldb commands in Python that use lldb's native command-line parser.  In particular, that allows per-option/argument completion,
+  with all the basic completers automatically supported and auto-generated help.
+  The command template file in the lldb/examples/python/cmdtemplate.py has been updated to show how to use this. 
+
+* Breakpoints on "inlined call sites" are now supported.  Previous to this fix, breakpoints on source lines that only contained inlined call sites would be
+  moved to the next source line, causing you to miss the inlined executions.
+
 * On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
 
   Old:
