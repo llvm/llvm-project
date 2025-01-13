@@ -342,4 +342,52 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
+define i32 @sixteenload() {
+; CHECK-LABEL: @sixteenload(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[A1:%.*]] = add i32 0, 0
+; CHECK-NEXT:    [[A2:%.*]] = add i32 [[A1]], 0
+; CHECK-NEXT:    ret i32 [[A2]]
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  %l2 = load i32, ptr %a
+  %l3 = load i32, ptr %a
+  %l4 = load i32, ptr %a
+  %l5 = load i32, ptr %a
+  %l6 = load i32, ptr %a
+  %l7 = load i32, ptr %a
+  %l8 = load i32, ptr %a
+  %l9 = load i32, ptr %a
+  %l10 = load i32, ptr %a
+  %l11 = load i32, ptr %a
+  %l12 = load i32, ptr %a
+  %l13 = load i32, ptr %a
+  %l14 = load i32, ptr %a
+  %l15 = load i32, ptr %a
+  %l16 = load i32, ptr %a
+  %a1 = add i32 %l1, %l2
+  %a2 = add i32 %a1, %l3
+  ret i32 %a2
+}
+
+define i32 @testcallalloca() {
+; CHECK-LABEL: @testcallalloca(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void [[A]]()
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+  %a = alloca i32
+  store i32 0, ptr %a
+  call void %a()
+  %l1 = load i32, ptr %a
+  ret i32 %l1
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

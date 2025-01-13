@@ -997,32 +997,27 @@ define i1 @fpclass(float %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    slli a2, a0, 33
-; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    li a3, 1
 ; RV64I-NEXT:    lui a4, 2048
+; RV64I-NEXT:    lui a5, 520192
 ; RV64I-NEXT:    srli a2, a2, 33
-; RV64I-NEXT:    seqz a5, a2
-; RV64I-NEXT:    xor a6, a2, a1
-; RV64I-NEXT:    seqz a6, a6
-; RV64I-NEXT:    or a5, a5, a6
-; RV64I-NEXT:    lui a6, 520192
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    addiw a6, a4, -1
 ; RV64I-NEXT:    xor a0, a0, a2
-; RV64I-NEXT:    sub a3, a2, a3
+; RV64I-NEXT:    subw a3, a2, a3
+; RV64I-NEXT:    sltu a3, a3, a6
+; RV64I-NEXT:    xor a6, a2, a1
 ; RV64I-NEXT:    sltu a1, a1, a2
-; RV64I-NEXT:    sub a2, a2, a4
-; RV64I-NEXT:    addiw a4, a4, -1
+; RV64I-NEXT:    subw a4, a2, a4
+; RV64I-NEXT:    seqz a2, a2
 ; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    slli a3, a3, 32
-; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    srli a3, a3, 32
-; RV64I-NEXT:    srli a2, a2, 32
-; RV64I-NEXT:    sltu a3, a3, a4
-; RV64I-NEXT:    or a1, a5, a1
-; RV64I-NEXT:    sltu a2, a2, a6
+; RV64I-NEXT:    seqz a6, a6
+; RV64I-NEXT:    sltu a4, a4, a5
 ; RV64I-NEXT:    and a3, a3, a0
+; RV64I-NEXT:    or a2, a2, a6
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    or a1, a1, a3
-; RV64I-NEXT:    and a0, a2, a0
+; RV64I-NEXT:    and a0, a4, a0
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %cmp = call i1 @llvm.is.fpclass.f32(float %x, i32 639)
@@ -1200,8 +1195,7 @@ define i1 @isposinf_fpclass(float %x) {
 ; RV64I-LABEL: isposinf_fpclass:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 522240
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -1233,10 +1227,8 @@ define i1 @isneginf_fpclass(float %x) {
 ;
 ; RV64I-LABEL: isneginf_fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    li a1, 511
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a1, a1, 23
+; RV64I-NEXT:    lui a1, 1046528
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
@@ -1302,8 +1294,7 @@ define i1 @isposfinite_fpclass(float %x) {
 ; RV64I-LABEL: isposfinite_fpclass:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 522240
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    sltu a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 448)  ; 0x1c0 = "+finite"
@@ -1340,9 +1331,8 @@ define i1 @isnegfinite_fpclass(float %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    slli a2, a0, 33
-; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    srli a2, a2, 33
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    sltu a1, a2, a1

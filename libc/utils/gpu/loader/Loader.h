@@ -113,7 +113,7 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
     return 0;
   index = port->get_index() + 1;
 
-  int status = rpc::SUCCESS;
+  int status = rpc::RPC_SUCCESS;
   switch (port->get_opcode()) {
   case RPC_TEST_INCREMENT: {
     port->recv_and_send([](rpc::Buffer *buffer, uint32_t) {
@@ -186,7 +186,7 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
   }
 
   // Handle all of the `libc` specific opcodes.
-  if (status != rpc::SUCCESS)
+  if (status != rpc::RPC_SUCCESS)
     handle_error("Error handling RPC server");
 
   port->close();

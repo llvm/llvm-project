@@ -16,6 +16,7 @@
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -185,6 +186,9 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+
+  TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
+
   CallLoweringInfo = std::make_unique<AMDGPUCallLowering>(*getTargetLowering());
   InlineAsmLoweringInfo =
       std::make_unique<InlineAsmLowering>(getTargetLowering());
@@ -192,6 +196,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
       std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+}
+
+const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {

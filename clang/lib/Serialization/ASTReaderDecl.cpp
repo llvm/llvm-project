@@ -1134,8 +1134,19 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // the presence of a sycl_kernel_entry_point attribute, register it so that
   // associated metadata is recreated.
   if (FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     ASTContext &C = Reader.getContext();
-    C.registerSYCLEntryPointFunction(FD);
+    const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
+    if (SKI) {
+      if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
+                    diag::note_previous_declaration);
+        SKEPAttr->setInvalidAttr();
+      }
+    } else {
+      C.registerSYCLEntryPointFunction(FD);
+    }
   }
 }
 
@@ -2663,7 +2674,8 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  if (D->hasTypeConstraint()) {
+  bool TypeConstraintInitialized = D->hasTypeConstraint() && Record.readBool();
+  if (TypeConstraintInitialized) {
     ConceptReference *CR = nullptr;
     if (Record.readBool())
       CR = Record.readConceptReference();
@@ -4329,13 +4341,12 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     DC->setHasExternalVisibleStorage(true);
   }
 
-  // Load any pending lambdas for the function.
-  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
-    if (auto IT = FunctionToLambdasMap.find(ID);
-        IT != FunctionToLambdasMap.end()) {
+  // Load any pending related decls.
+  if (D->isCanonicalDecl()) {
+    if (auto IT = RelatedDeclsMap.find(ID); IT != RelatedDeclsMap.end()) {
       for (auto LID : IT->second)
         GetDecl(LID);
-      FunctionToLambdasMap.erase(IT);
+      RelatedDeclsMap.erase(IT);
     }
   }
 

@@ -491,16 +491,20 @@ def OpFNegate: UnOpTyped<"OpFNegate", 127, fID, fneg>;
 def OpFNegateV: UnOpTyped<"OpFNegate", 127, vfID, fneg>;
 defm OpIAdd: BinOpTypedGen<"OpIAdd", 128, add, 0, 1>;
 defm OpFAdd: BinOpTypedGen<"OpFAdd", 129, fadd, 1, 1>;
+defm OpStrictFAdd: BinOpTypedGen<"OpFAdd", 129, strict_fadd, 1, 1>;
 
 defm OpISub: BinOpTypedGen<"OpISub", 130, sub, 0, 1>;
 defm OpFSub: BinOpTypedGen<"OpFSub", 131, fsub, 1, 1>;
+defm OpStrictFSub: BinOpTypedGen<"OpFSub", 131, strict_fsub, 1, 1>;
 
 defm OpIMul: BinOpTypedGen<"OpIMul", 132, mul, 0, 1>;
 defm OpFMul: BinOpTypedGen<"OpFMul", 133, fmul, 1, 1>;
+defm OpStrictFMul: BinOpTypedGen<"OpFMul", 133, strict_fmul, 1, 1>;
 
 defm OpUDiv: BinOpTypedGen<"OpUDiv", 134, udiv, 0, 1>;
 defm OpSDiv: BinOpTypedGen<"OpSDiv", 135, sdiv, 0, 1>;
 defm OpFDiv: BinOpTypedGen<"OpFDiv", 136, fdiv, 1, 1>;
+defm OpStrictFDiv: BinOpTypedGen<"OpFDiv", 136, strict_fdiv, 1, 1>;
 
 defm OpUMod: BinOpTypedGen<"OpUMod", 137, urem, 0, 1>;
 defm OpSRem: BinOpTypedGen<"OpSRem", 138, srem, 0, 1>;
@@ -508,6 +512,8 @@ defm OpSRem: BinOpTypedGen<"OpSRem", 138, srem, 0, 1>;
 def OpSMod: BinOp<"OpSMod", 139>;
 
 defm OpFRem: BinOpTypedGen<"OpFRem", 140, frem, 1, 1>;
+defm OpStrictFRem: BinOpTypedGen<"OpFRem", 140, strict_frem, 1, 1>;
+
 def OpFMod: BinOp<"OpFMod", 141>;
 
 def OpVectorTimesScalar: BinOp<"OpVectorTimesScalar", 142>;

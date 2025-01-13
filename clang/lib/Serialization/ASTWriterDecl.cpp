@@ -798,6 +798,17 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
+  if (D->getFriendObjectKind()) {
+    // For a function defined inline within a class template, we have to force
+    // the canonical definition to be the one inside the canonical definition of
+    // the template. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
+      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
+        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+            Writer.GetDeclRef(D));
+      }
+  }
+
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
     Record.AddDeclRef(P);
@@ -1563,7 +1574,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // For lambdas inside canonical FunctionDecl remember the mapping.
     if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && FD->isCanonicalDecl()) {
-      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
   } else {
@@ -1940,7 +1951,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   Record.push_back(D->wasDeclaredWithTypename());
 
   const TypeConstraint *TC = D->getTypeConstraint();
-  assert((bool)TC == D->hasTypeConstraint());
+  if (D->hasTypeConstraint())
+    Record.push_back(/*TypeConstraintInitialized=*/TC != nullptr);
   if (TC) {
     auto *CR = TC->getConceptReference();
     Record.push_back(CR != nullptr);
@@ -1958,7 +1970,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (OwnsDefaultArg)
     Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
-  if (!TC && !OwnsDefaultArg &&
+  if (!D->hasTypeConstraint() && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->isInvalidDecl() && !D->hasAttrs() &&
       !D->isTopLevelDeclInObjCContainer() && !D->isImplicit() &&

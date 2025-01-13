@@ -1099,6 +1099,36 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  // The SVE calling convention preserves registers Z8-Z23. As a result, there
+  // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
+  // callee-saved registers and so by default these will be pushed to the back
+  // of the allocation order for the ZPRStridedOrContiguous classes.
+  // If any of the instructions which define VirtReg are used by the
+  // FORM_TRANSPOSED_REG_TUPLE pseudo, we want to favour reducing copy
+  // instructions over reducing the number of clobbered callee-save registers,
+  // so we add the strided registers as a hint.
+  unsigned RegID = MRI.getRegClass(VirtReg)->getID();
+  // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
+  if ((RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
+       RegID == AArch64::ZPR4StridedOrContiguousRegClassID) &&
+      any_of(MRI.use_nodbg_instructions(VirtReg), [](const MachineInstr &Use) {
+        return Use.getOpcode() ==
+                   AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+               Use.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
+      })) {
+    const TargetRegisterClass *StridedRC =
+        RegID == AArch64::ZPR2StridedOrContiguousRegClassID
+            ? &AArch64::ZPR2StridedRegClass
+            : &AArch64::ZPR4StridedRegClass;
+
+    for (MCPhysReg Reg : Order)
+      if (StridedRC->contains(Reg))
+        Hints.push_back(Reg);
+
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
+  }
+
   for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
     if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
         MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)

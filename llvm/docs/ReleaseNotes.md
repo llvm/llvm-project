@@ -131,6 +131,8 @@ Changes to the AArch64 Backend
 * Assembler/disassembler support has been added for Armv9.6-A (2024)
   architecture extensions.
 
+* Added support for the FUJITSU-MONAKA CPU.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -195,6 +197,8 @@ Changes to the RISC-V Backend
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
 * `-mcpu=tt-ascalon-d8` was added.
+* `-mcpu=mips-p8700` was added.
+* `-mcpu=sifive-p550` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
@@ -221,24 +225,43 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciac` (Load-Store Address Calculation)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciint` (Interrupts)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
+* The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+  and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+  and [Non-trapping float-to-int Conversions] language features, which are
+  [widely implemented in engines].
 
-A new Lime1 target CPU is added, -mcpu=lime1. This CPU follows the definition of
-the Lime1 CPU [here], and enables -mmultivalue, -mmutable-globals,
--mcall-indirect-overlong, -msign-ext, -mbulk-memory-opt, -mnontrapping-fptoint,
-and -mextended-const.
+* A new Lime1 target CPU is added, `-mcpu=lime1`. This CPU follows the
+  definition of the Lime1 CPU [here], and enables `-mmultivalue`,
+  `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
+  `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
+
+* Support for the new standardized [Exception Handling] proposal is added.
+  The [legacy Exception Handling] proposal is still supported, and turned on by
+  the newly added `-wasm-use-legacy-eh` option. Given that major web browsers
+  still default to the legacy EH proposal, this option is turned on by default
+  for the moment.
 
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+[legacy Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
 [widely implemented in engines]: https://webassembly.org/features/
 [here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
@@ -347,10 +370,20 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the following options for Mach-O:
+  `--globalize-symbol`, `--globalize-symbols`,
+  `--keep-global-symbol`, `--keep-global-symbols`,
+  `--localize-symbol`, `--localize-symbols`,
+  `--skip-symbol`, `--skip-symbols`.
+
 Changes to LLDB
 ---------------------------------
 
-* LLDB now now supports inline diagnostics for the expression evaluator and command line parser.
+* It is now recommended that LLDB be built with Python >= 3.8, but no changes
+  have been made to the supported Python versions. The next release, LLDB 21,
+  will require Python >= 3.8.
+
+* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
   ```

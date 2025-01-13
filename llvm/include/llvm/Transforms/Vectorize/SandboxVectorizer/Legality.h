@@ -177,6 +177,7 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
+  void clear() { Sched.clear(); }
 };
 
 } // namespace llvm::sandboxir

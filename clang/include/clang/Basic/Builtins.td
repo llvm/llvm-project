@@ -1462,13 +1462,13 @@ def ElementwiseSubSat : Builtin {
 
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ReduceMin : Builtin {
   let Spellings = ["__builtin_reduce_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -3568,6 +3568,19 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+def Sincos : FPMathTemplate, GNULibBuiltin<"math.h"> {
+  let Spellings = ["sincos"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(T, T*, T*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def SincosF16F128 : F16F128MathTemplate, Builtin {
+  let Spellings = ["__builtin_sincos"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
+}
+
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["ldexp"];
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
@@ -4762,6 +4775,12 @@ def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveActiveAllTrue : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_all_true"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
+}
+
 def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_any_true"];
   let Attributes = [NoThrow, Const];
@@ -4842,12 +4861,6 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
-def HLSLLength : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

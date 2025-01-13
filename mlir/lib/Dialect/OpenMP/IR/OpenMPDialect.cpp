@@ -1709,13 +1709,13 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
   // inReductionByref, inReductionSyms.
   TargetOp::build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
-                  makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                  clauses.device, clauses.hasDeviceAddrVars, clauses.ifExpr,
-                  /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
-                  /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
-                  clauses.mapVars, clauses.nowait, clauses.privateVars,
-                  makeArrayAttr(ctx, clauses.privateSyms), clauses.threadLimit,
-                  /*private_maps=*/nullptr);
+                  clauses.bare, makeArrayAttr(ctx, clauses.dependKinds),
+                  clauses.dependVars, clauses.device, clauses.hasDeviceAddrVars,
+                  clauses.ifExpr, /*in_reduction_vars=*/{},
+                  /*in_reduction_byref=*/nullptr, /*in_reduction_syms=*/nullptr,
+                  clauses.isDevicePtrVars, clauses.mapVars, clauses.nowait,
+                  clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+                  clauses.threadLimit, /*private_maps=*/nullptr);
 }
 
 LogicalResult TargetOp::verify() {
@@ -2116,7 +2116,7 @@ void SimdOp::build(OpBuilder &builder, OperationState &state,
                 makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
                 /*linear_vars=*/{}, /*linear_step_vars=*/{},
                 clauses.nontemporalVars, clauses.order, clauses.orderMod,
-                /*private_vars=*/{}, /*private_syms=*/nullptr,
+                clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
                 clauses.reductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                 makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,

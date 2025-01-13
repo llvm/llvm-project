@@ -38,5 +38,11 @@ ENUM_LOWERINGOPT(Underscoring, unsigned, 1, 1)
 /// (i.e. wraps around as two's complement). Off by default.
 ENUM_LOWERINGOPT(IntegerWrapAround, unsigned, 1, 0)
 
+/// If true (default), follow Fortran 2003 rules for (re)allocating
+/// the allocatable on the left side of the intrinsic assignment,
+/// if LHS and RHS have mismatching shapes/types.
+/// If false, assume that the shapes/types/allocation-status match.
+ENUM_LOWERINGOPT(ReallocateLHS, unsigned, 1, 1)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

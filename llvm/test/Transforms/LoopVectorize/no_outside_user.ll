@@ -23,7 +23,7 @@ define i32 @test1()  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -44,12 +44,12 @@ define i32 @test1()  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
-; CHECK:       [[_LR_PH_I]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
+; CHECK:       [[_LR_PH_I1]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I1:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
+; CHECK:       [[_LR_PH_I:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP8]], 10
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
@@ -96,7 +96,7 @@ define i32 @test2()  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -117,12 +117,12 @@ define i32 @test2()  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
-; CHECK:       [[_LR_PH_I]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
+; CHECK:       [[_LR_PH_I1]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I1:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
+; CHECK:       [[_LR_PH_I:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP8]], 10
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
@@ -169,7 +169,7 @@ define i32 @test3(i32 %N)  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -196,12 +196,12 @@ define i32 @test3(i32 %N)  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[PREDPHI1]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
-; CHECK:       [[_LR_PH_I]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
+; CHECK:       [[_LR_PH_I1]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I1:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
+; CHECK:       [[_LR_PH_I:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP8]], 10
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
@@ -258,7 +258,7 @@ define i32 @test4(i32 %N)  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -279,12 +279,12 @@ define i32 @test4(i32 %N)  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
-; CHECK:       [[_LR_PH_I]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
+; CHECK:       [[_LR_PH_I1]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[DOTLR_PH_I_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I1:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
+; CHECK:       [[_LR_PH_I:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP8]], 10
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
@@ -520,7 +520,7 @@ define i8 @outside_user_non_phi()  {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[B_PROMOTED]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[_LR_PH_I1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
@@ -542,12 +542,12 @@ define i8 @outside_user_non_phi()  {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
-; CHECK:       [[_LR_PH_I]]:
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I1]]
+; CHECK:       [[_LR_PH_I1]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
-; CHECK:       [[_LR_PH_I1:.*:]]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]
+; CHECK:       [[_LR_PH_I:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP18:%.*]], %[[BB16:.*]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP8]], 10
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16]], label %[[BB10:.*]]
 ; CHECK:       [[BB10]]:
@@ -687,7 +687,7 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[F1_EXIT_LOOPEXIT:.*]], label %[[_LR_PH_I]]
 ; CHECK:       [[_LR_PH_I]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[BB]] ], [ [[B_PROMOTED]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[OFFSET_IDX]], %[[MIDDLE_BLOCK]] ], [ [[B_PROMOTED]], %[[VECTOR_MEMCHECK]] ], [ [[B_PROMOTED]], %[[BB]] ]
 ; CHECK-NEXT:    br label %[[DOTLR_PH_I:.*]]
 ; CHECK:       [[_LR_PH_I1:.*:]]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IVNEXT:%.*]], %[[DOTLR_PH_I]] ], [ [[BC_RESUME_VAL]], %[[_LR_PH_I]] ]

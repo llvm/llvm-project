@@ -24,19 +24,25 @@ using namespace llvm;
 using namespace llvm::LegalizeActions;
 using namespace llvm::LegalityPredicates;
 
+// clang-format off
 static const std::set<unsigned> TypeFoldingSupportingOpcs = {
     TargetOpcode::G_ADD,
     TargetOpcode::G_FADD,
+    TargetOpcode::G_STRICT_FADD,
     TargetOpcode::G_SUB,
     TargetOpcode::G_FSUB,
+    TargetOpcode::G_STRICT_FSUB,
     TargetOpcode::G_MUL,
     TargetOpcode::G_FMUL,
+    TargetOpcode::G_STRICT_FMUL,
     TargetOpcode::G_SDIV,
     TargetOpcode::G_UDIV,
     TargetOpcode::G_FDIV,
+    TargetOpcode::G_STRICT_FDIV,
     TargetOpcode::G_SREM,
     TargetOpcode::G_UREM,
     TargetOpcode::G_FREM,
+    TargetOpcode::G_STRICT_FREM,
     TargetOpcode::G_FNEG,
     TargetOpcode::G_CONSTANT,
     TargetOpcode::G_FCONSTANT,
@@ -49,6 +55,7 @@ static const std::set<unsigned> TypeFoldingSupportingOpcs = {
     TargetOpcode::G_SELECT,
     TargetOpcode::G_EXTRACT_VECTOR_ELT,
 };
+// clang-format on
 
 bool isTypeFoldingSupported(unsigned Opcode) {
   return TypeFoldingSupportingOpcs.count(Opcode) > 0;
@@ -219,7 +226,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
-  getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
+      .legalFor(allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+      .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct(allIntScalarsAndVectors,
@@ -308,7 +319,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
-  getActionDefinitionsBuilder({G_FPOW,
+  getActionDefinitionsBuilder({G_STRICT_FSQRT,
+                               G_FPOW,
                                G_FEXP,
                                G_FEXP2,
                                G_FLOG,

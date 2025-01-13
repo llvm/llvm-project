@@ -56,10 +56,10 @@ rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
     break;
   }
   default:
-    return rpc::UNHANDLED_OPCODE;
+    return rpc::RPC_UNHANDLED_OPCODE;
     break;
   }
-  return rpc::SUCCESS;
+  return rpc::RPC_SUCCESS;
 }
 
 static rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
@@ -72,7 +72,7 @@ static rpc::Status handle_offload_opcodes(plugin::GenericDeviceTy &Device,
   else if (NumLanes == 64)
     return handle_offload_opcodes<64>(Device, Port);
   else
-    return rpc::ERROR;
+    return rpc::RPC_ERROR;
 }
 
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
@@ -125,12 +125,12 @@ Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
 
   // Let the `libc` library handle any other unhandled opcodes.
 #ifdef LIBOMPTARGET_RPC_SUPPORT
-  if (Status == rpc::UNHANDLED_OPCODE)
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = handle_libc_opcodes(*Port, Device.getWarpSize());
 #endif
 
   Port->close();
-  if (Status != rpc::SUCCESS)
+  if (Status != rpc::RPC_SUCCESS)
     return createStringError("RPC server given invalid opcode!");
 
   return Error::success();

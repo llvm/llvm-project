@@ -1842,7 +1842,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasArg(OPT_irpgo_profile_sort_eq))
     warn("--irpgo-profile-sort is deprecated. Please use "
          "--bp-startup-sort=function");
-  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_eq))
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile))
     config->irpgoProfilePath = arg->getValue();
 
   if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {

@@ -654,6 +654,64 @@ join:
   ret ptr %gep
 }
 
+define ptr @gep_of_phi_of_gep_flags1(i1 %c, ptr %p) {
+; CHECK-LABEL: @gep_of_phi_of_gep_flags1(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr inbounds i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, ptr %p, i64 2
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  ret ptr %gep
+}
+
+define ptr @gep_of_phi_of_gep_flags2(i1 %c, ptr %p) {
+; CHECK-LABEL: @gep_of_phi_of_gep_flags2(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr nuw i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr nuw i32, ptr %p, i64 2
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  ret ptr %gep
+}
+
 define ptr @gep_of_phi_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @gep_of_phi_of_gep_different_type(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]

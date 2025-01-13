@@ -758,7 +758,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
 /// AArch64 reentry trampoline.
 ///
 /// Contains the instruction sequence for a trampoline that stores its return
-/// address on the stack and passes its own address in x0:
+/// address (and stack pointer) on the stack and calls the given reentry symbol:
 ///   STP  x29, x30, [sp, #-16]!
 ///   BL   <reentry-symbol>
 extern const char ReentryTrampolineContent[8];

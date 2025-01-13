@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=mips < %s | FileCheck %s --check-prefix=BE
-; RUN: llc -mtriple=mipsel < %s | FileCheck %s --check-prefix=LE
+; RUN: llc -mtriple=mips-elf < %s | FileCheck %s --check-prefix=BE
+; RUN: llc -mtriple=mipsel-elf < %s | FileCheck %s --check-prefix=LE
 ; Check assembly printing of odd constants.
 
 ; BE-LABEL: bigCst:

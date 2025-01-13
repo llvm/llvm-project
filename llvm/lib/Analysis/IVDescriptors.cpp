@@ -630,7 +630,7 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
                                      Instruction *I, InstDesc &Prev) {
   // We must handle the select(cmp(),x,y) as a single instruction. Advance to
   // the select.
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
     if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
       return InstDesc(Select, Prev.getRecKind());
@@ -759,7 +759,7 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
 
   // We must handle the select(cmp()) as a single instruction. Advance to the
   // select.
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
     if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
       return InstDesc(Select, Prev.getRecKind());

@@ -16,7 +16,6 @@
 #include "Clauses.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
-#include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Common/OpenMP-utils.h"
@@ -24,6 +23,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -923,13 +923,24 @@ static void genBodyOfTargetOp(
   while (!valuesDefinedAbove.empty()) {
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
-      if (mlir::isMemoryEffectFree(valOp)) {
+      assert(valOp != nullptr);
+
+      // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
+      // indices separately, as the alternative is to eventually map the Box,
+      // which comes with a fairly large overhead comparatively. We could be
+      // more robust about this and check using a BackwardsSlice to see if we
+      // run the risk of mapping a box.
+      if (mlir::isMemoryEffectFree(valOp) &&
+          !mlir::isa<fir::BoxDimsOp>(valOp)) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);
-        val.replaceUsesWithIf(clonedOp->getResult(0),
-                              [entryBlock](mlir::OpOperand &use) {
-                                return use.getOwner()->getBlock() == entryBlock;
-                              });
+
+        auto replace = [entryBlock](mlir::OpOperand &use) {
+          return use.getOwner()->getBlock() == entryBlock;
+        };
+
+        valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
+        valOp->replaceUsesWithIf(clonedOp, replace);
       } else {
         auto savedIP = firOpBuilder.getInsertionPoint();
         firOpBuilder.setInsertionPointAfter(valOp);
@@ -937,9 +948,36 @@ static void genBodyOfTargetOp(
             firOpBuilder.createTemporary(val.getLoc(), val.getType());
         firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
 
-        llvm::SmallVector<mlir::Value> bounds;
+        lower::AddrAndBoundsInfo info = lower::getDataOperandBaseAddr(
+            firOpBuilder, val, /*isOptional=*/false, val.getLoc());
+        llvm::SmallVector<mlir::Value> bounds =
+            Fortran::lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                 mlir::omp::MapBoundsType>(
+                firOpBuilder, info,
+                hlfir::translateToExtendedValue(val.getLoc(), firOpBuilder,
+                                                hlfir::Entity{val})
+                    .first,
+                /*dataExvIsAssumedSize=*/false, val.getLoc());
+
         std::stringstream name;
         firOpBuilder.setInsertionPoint(targetOp);
+
+        llvm::omp::OpenMPOffloadMappingFlags mapFlag =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        mlir::omp::VariableCaptureKind captureKind =
+            mlir::omp::VariableCaptureKind::ByRef;
+
+        mlir::Type eleType = copyVal.getType();
+        if (auto refType =
+                mlir::dyn_cast<fir::ReferenceType>(copyVal.getType()))
+          eleType = refType.getElementType();
+
+        if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+          captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+        } else if (!fir::isa_builtin_cptr_type(eleType)) {
+          mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+        }
+
         mlir::Value mapOp = createMapInfoOp(
             firOpBuilder, copyVal.getLoc(), copyVal,
             /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
@@ -947,8 +985,8 @@ static void genBodyOfTargetOp(
             /*membersIndex=*/mlir::ArrayAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-                llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
-            mlir::omp::VariableCaptureKind::ByCopy, copyVal.getType());
+                mapFlag),
+            captureKind, copyVal.getType());
 
         // Get the index of the first non-map argument before modifying mapVars,
         // then append an element to mapVars and an associated entry block
@@ -1184,6 +1222,7 @@ static void genTargetClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDevicePtrSyms,
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processBare(clauseOps);
   cp.processDepend(clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(clauseOps, hasDeviceAddrSyms);
@@ -1297,19 +1336,18 @@ static void genWorkshareClauses(lower::AbstractConverter &converter,
   cp.processNowait(clauseOps);
 }
 
-static void genTeamsClauses(lower::AbstractConverter &converter,
-                            semantics::SemanticsContext &semaCtx,
-                            lower::StatementContext &stmtCtx,
-                            const List<Clause> &clauses, mlir::Location loc,
-                            mlir::omp::TeamsOperands &clauseOps) {
+static void genTeamsClauses(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    lower::StatementContext &stmtCtx, const List<Clause> &clauses,
+    mlir::Location loc, mlir::omp::TeamsOperands &clauseOps,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_teams, clauseOps);
   cp.processNumTeams(stmtCtx, clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
+  cp.processReduction(loc, clauseOps, reductionSyms);
   // TODO Support delayed privatization.
-
-  cp.processTODO<clause::Reduction>(loc, llvm::omp::Directive::OMPD_teams);
 }
 
 static void genWsloopClauses(
@@ -1734,32 +1772,25 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (const auto *details =
               sym.template detailsIf<semantics::HostAssocDetails>())
         converter.copySymbolBinding(details->symbol(), sym);
-      llvm::SmallVector<mlir::Value> bounds;
       std::stringstream name;
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
       lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
           converter, firOpBuilder, sym, converter.getCurrentLocation());
-      mlir::Value baseOp = info.rawInput;
-      if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(baseOp.getType())))
-        bounds = lower::genBoundsOpsFromBox<mlir::omp::MapBoundsOp,
-                                            mlir::omp::MapBoundsType>(
-            firOpBuilder, converter.getCurrentLocation(), dataExv, info);
-      if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(baseOp.getType()))) {
-        bool dataExvIsAssumedSize =
-            semantics::IsAssumedSizeArray(sym.GetUltimate());
-        bounds = lower::genBaseBoundsOps<mlir::omp::MapBoundsOp,
-                                         mlir::omp::MapBoundsType>(
-            firOpBuilder, converter.getCurrentLocation(), dataExv,
-            dataExvIsAssumedSize);
-      }
+      llvm::SmallVector<mlir::Value> bounds =
+          lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                      mlir::omp::MapBoundsType>(
+              firOpBuilder, info, dataExv,
+              semantics::IsAssumedSizeArray(sym.GetUltimate()),
+              converter.getCurrentLocation());
 
       llvm::omp::OpenMPOffloadMappingFlags mapFlag =
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
       mlir::omp::VariableCaptureKind captureKind =
           mlir::omp::VariableCaptureKind::ByRef;
 
+      mlir::Value baseOp = info.rawInput;
       mlir::Type eleType = baseOp.getType();
       if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
         eleType = refType.getElementType();
@@ -1983,13 +2014,29 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
            mlir::Location loc, const ConstructQueue &queue,
            ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
+
   mlir::omp::TeamsOperands clauseOps;
-  genTeamsClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps);
+  llvm::SmallVector<const semantics::Symbol *> reductionSyms;
+  genTeamsClauses(converter, semaCtx, stmtCtx, item->clauses, loc, clauseOps,
+                  reductionSyms);
+
+  EntryBlockArgs args;
+  // TODO: Add private syms and vars.
+  args.reduction.syms = reductionSyms;
+  args.reduction.vars = clauseOps.reductionVars;
+
+  auto genRegionEntryCB = [&](mlir::Operation *op) {
+    genEntryBlock(converter.getFirOpBuilder(), args, op->getRegion(0));
+    bindEntryBlockArgs(
+        converter, llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op), args);
+    return llvm::to_vector(args.getSyms());
+  };
 
   return genOpWithBody<mlir::omp::TeamsOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_teams)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setGenRegionEntryCb(genRegionEntryCB),
       queue, item, clauseOps);
 }
 
@@ -2112,11 +2159,10 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-  // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, symTable);
-  dsp.processStep1();
+                           enableDelayedPrivatization, symTable);
+  dsp.processStep1(&simdClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -2124,7 +2170,8 @@ static void genStandaloneSimd(lower::AbstractConverter &converter,
                      loopNestClauseOps, iv);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
+  simdArgs.priv.syms = dsp.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -2592,6 +2639,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
 //===----------------------------------------------------------------------===//
 // OpenMPDeclarativeConstruct visitors
 //===----------------------------------------------------------------------===//
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPUtilityConstruct &);
 
 static void
 genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -2860,6 +2911,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Nowait>(clause.u) &&
         !std::holds_alternative<clause::NumTeams>(clause.u) &&
         !std::holds_alternative<clause::NumThreads>(clause.u) &&
+        !std::holds_alternative<clause::OmpxBare>(clause.u) &&
         !std::holds_alternative<clause::Priority>(clause.u) &&
         !std::holds_alternative<clause::Private>(clause.u) &&
         !std::holds_alternative<clause::ProcBind>(clause.u) &&
@@ -2907,6 +2959,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::Location currentLocation = converter.getCurrentLocation();
   genCriticalOp(converter, symTable, semaCtx, eval, currentLocation, queue,
                 queue.begin(), name);
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPUtilityConstruct &) {
+  TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

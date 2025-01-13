@@ -170,6 +170,8 @@ def transform(module, boilerplate):
     pm.add("convert-vector-to-llvm")
     pm.add("finalize-memref-to-llvm")
     pm.add("convert-func-to-llvm")
+    pm.add("convert-arith-to-llvm")
+    pm.add("convert-cf-to-llvm")
     pm.add("reconcile-unrealized-casts")
     pm.run(mod.operation)
     return mod

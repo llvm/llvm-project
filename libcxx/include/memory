@@ -934,8 +934,9 @@ template<class Pointer = void, class Smart, class... Args>
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/memory>
+#else
 #  include <__config>
 #  include <__memory/addressof.h>
 #  include <__memory/align.h>
@@ -996,6 +997,6 @@ template<class Pointer = void, class Smart, class... Args>
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_MEMORY

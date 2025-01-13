@@ -255,6 +255,7 @@ charconv cstdlib
 charconv cstring
 charconv iosfwd
 charconv limits
+charconv new
 charconv type_traits
 charconv version
 chrono algorithm

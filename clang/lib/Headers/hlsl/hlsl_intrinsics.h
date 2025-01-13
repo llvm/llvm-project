@@ -872,6 +872,35 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_degrees)
 float4 degrees(float4);
 
 //===----------------------------------------------------------------------===//
+// distance builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn K distance(T X, T Y)
+/// \brief Returns a distance scalar between \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(half X, half Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+const inline float distance(float X, float Y) {
+  return __detail::distance_impl(X, Y);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half distance(vector<half, N> X, vector<half, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+template <int N>
+const inline float distance(vector<float, N> X, vector<float, N> Y) {
+  return __detail::distance_vec_impl(X, Y);
+}
+
+//===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
 
@@ -1298,26 +1327,18 @@ float4 lerp(float4, float4, float4);
 /// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half2);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half3);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-half length(half4);
+const inline half length(half X) { return __detail::length_impl(X); }
+const inline float length(float X) { return __detail::length_impl(X); }
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float2);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float3);
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_length)
-float length(float4);
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half length(vector<half, N> X) {
+  return __detail::length_vec_impl(X);
+}
+
+template <int N> const inline float length(vector<float, N> X) {
+  return __detail::length_vec_impl(X);
+}
 
 //===----------------------------------------------------------------------===//
 // log builtins
@@ -2240,6 +2261,15 @@ float4 trunc(float4);
 //===----------------------------------------------------------------------===//
 // Wave* builtins
 //===----------------------------------------------------------------------===//
+
+/// \brief Returns true if the expression is true in all active lanes in the
+/// current wave.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return True if the expression is true in all lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_true)
+__attribute__((convergent)) bool WaveActiveAllTrue(bool Val);
 
 /// \brief Returns true if the expression is true in any active lane in the
 /// current wave.

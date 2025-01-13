@@ -1125,7 +1125,6 @@ exit:
 define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
 ; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:  .LBB27_1: # %for.body
@@ -1133,9 +1132,7 @@ define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    bnez a1, .LBB27_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v10, v8, v8
-; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
 entry:

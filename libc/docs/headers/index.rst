@@ -4,6 +4,8 @@ Implementation Status
 .. toctree::
    :maxdepth: 1
 
+   aio
+   arpa/inet
    assert
    complex
    ctype
@@ -13,6 +15,8 @@ Implementation Status
    inttypes
    locale
    math/index.rst
+   net/if
+   netinet/in
    search
    setjmp
    signal
@@ -21,6 +25,7 @@ Implementation Status
    stdlib
    string
    strings
+   sys/mman
    threads
    time
    uchar

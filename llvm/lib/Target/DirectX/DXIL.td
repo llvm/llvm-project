@@ -42,8 +42,10 @@ def FloatTy : DXILOpParamType;
 def DoubleTy : DXILOpParamType;
 def ResRetHalfTy : DXILOpParamType;
 def ResRetFloatTy : DXILOpParamType;
+def ResRetDoubleTy : DXILOpParamType;
 def ResRetInt16Ty : DXILOpParamType;
 def ResRetInt32Ty : DXILOpParamType;
+def ResRetInt64Ty : DXILOpParamType;
 def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
@@ -890,6 +892,43 @@ def SplitDouble :  DXILOp<102, splitDouble> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def RawBufferLoad : DXILOp<139, rawBufferLoad> {
+  let Doc = "reads from a raw buffer and structured buffer";
+  // Handle, Coord0, Coord1, Mask, Alignment
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_2,
+              [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,
+    Overloads<DXIL1_3,
+              [
+                ResRetHalfTy, ResRetFloatTy, ResRetDoubleTy, ResRetInt16Ty,
+                ResRetInt32Ty, ResRetInt64Ty
+              ]>
+  ];
+  let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
+def RawBufferStore : DXILOp<140, rawBufferStore> {
+  let Doc = "writes to a RWByteAddressBuffer or RWStructuredBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask, Alignment
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty, Int32Ty
+  ];
+  let result = VoidTy;
+  let overloads = [
+    Overloads<DXIL1_2,
+              [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,
+    Overloads<DXIL1_3,
+              [
+                ResRetHalfTy, ResRetFloatTy, ResRetDoubleTy, ResRetInt16Ty,
+                ResRetInt32Ty, ResRetInt64Ty
+              ]>
+  ];
+  let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let Doc = "signed dot product of 4 x i8 vectors packed into i32, with "
             "accumulate to i32";
@@ -922,6 +961,14 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
+}
+
+def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
+  let Doc = "returns true if the expression is true in all of the active lanes in the current wave";
+  let intrinsics = [ IntrinSelect<int_dx_wave_all> ];
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {

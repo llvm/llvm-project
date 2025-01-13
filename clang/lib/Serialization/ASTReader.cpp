@@ -3963,14 +3963,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
-    case FUNCTION_DECL_TO_LAMBDAS_MAP:
+    case RELATED_DECLS_MAP:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
         GlobalDeclID ID = ReadDeclID(F, Record, I);
-        auto &Lambdas = FunctionToLambdasMap[ID];
+        auto &RelatedDecls = RelatedDeclsMap[ID];
         unsigned NN = Record[I++];
-        Lambdas.reserve(NN);
+        RelatedDecls.reserve(NN);
         for (unsigned II = 0; II < NN; II++)
-          Lambdas.push_back(ReadDeclID(F, Record, I));
+          RelatedDecls.push_back(ReadDeclID(F, Record, I));
       }
       break;
 
@@ -10278,19 +10278,6 @@ void ASTReader::finishPendingActions() {
                                PBEnd = PendingBodies.end();
        PB != PBEnd; ++PB) {
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(PB->first)) {
-      // For a function defined inline within a class template, force the
-      // canonical definition to be the one inside the canonical definition of
-      // the template. This ensures that we instantiate from a correct view
-      // of the template.
-      //
-      // Sadly we can't do this more generally: we can't be sure that all
-      // copies of an arbitrary class definition will have the same members
-      // defined (eg, some member functions may not be instantiated, and some
-      // special members may or may not have been implicitly defined).
-      if (auto *RD = dyn_cast<CXXRecordDecl>(FD->getLexicalParent()))
-        if (RD->isDependentContext() && !RD->isThisDeclarationADefinition())
-          continue;
-
       // FIXME: Check for =delete/=default?
       const FunctionDecl *Defn = nullptr;
       if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn)) {
@@ -10655,7 +10642,8 @@ void ASTReader::FinishedDeserializing() {
     // We do this now rather than in finishPendingActions because we want to
     // be able to walk the complete redeclaration chains of the updated decls.
     while (!PendingExceptionSpecUpdates.empty() ||
-           !PendingDeducedTypeUpdates.empty()) {
+           !PendingDeducedTypeUpdates.empty() ||
+           !PendingUndeducedFunctionDecls.empty()) {
       auto ESUpdates = std::move(PendingExceptionSpecUpdates);
       PendingExceptionSpecUpdates.clear();
       for (auto Update : ESUpdates) {
@@ -11836,10 +11824,12 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
 }
 
 void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
-  C->setAllocatorModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
+  C->setFirstAllocateModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
+  C->setSecondAllocateModifier(Record.readEnum<OpenMPAllocateClauseModifier>());
   C->setLParenLoc(Record.readSourceLocation());
   C->setColonLoc(Record.readSourceLocation());
   C->setAllocator(Record.readSubExpr());
+  C->setAlignment(Record.readSubExpr());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
   Vars.reserve(NumVars);
@@ -12399,9 +12389,18 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Self: {
     SourceLocation LParenLoc = readSourceLocation();
-    Expr *CondExpr = readBool() ? readSubExpr() : nullptr;
-    return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc,
-                                     CondExpr, EndLoc);
+    bool isConditionExprClause = readBool();
+    if (isConditionExprClause) {
+      Expr *CondExpr = readBool() ? readSubExpr() : nullptr;
+      return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       CondExpr, EndLoc);
+    }
+    unsigned NumVars = readInt();
+    llvm::SmallVector<Expr *> VarList;
+    for (unsigned I = 0; I < NumVars; ++I)
+      VarList.push_back(readSubExpr());
+    return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
   }
   case OpenACCClauseKind::NumGangs: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12418,6 +12417,18 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCNumWorkersClause::Create(getContext(), BeginLoc, LParenLoc,
                                            IntExpr, EndLoc);
   }
+  case OpenACCClauseKind::DeviceNum: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *IntExpr = readSubExpr();
+    return OpenACCDeviceNumClause::Create(getContext(), BeginLoc, LParenLoc,
+                                           IntExpr, EndLoc);
+  }
+  case OpenACCClauseKind::DefaultAsync: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *IntExpr = readSubExpr();
+    return OpenACCDefaultAsyncClause::Create(getContext(), BeginLoc, LParenLoc,
+                                             IntExpr, EndLoc);
+  }
   case OpenACCClauseKind::VectorLength: {
     SourceLocation LParenLoc = readSourceLocation();
     Expr *IntExpr = readSubExpr();
@@ -12430,6 +12441,18 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
                                         VarList, EndLoc);
   }
+  case OpenACCClauseKind::Host: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCHostClause::Create(getContext(), BeginLoc, LParenLoc, VarList,
+                                     EndLoc);
+  }
+  case OpenACCClauseKind::Device: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDeviceClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VarList, EndLoc);
+  }
   case OpenACCClauseKind::FirstPrivate: {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
@@ -12441,6 +12464,24 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCAttachClause::Create(getContext(), BeginLoc, LParenLoc,
                                        VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Detach: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDetachClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Delete: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDeleteClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VarList, EndLoc);
+  }
+  case OpenACCClauseKind::UseDevice: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCUseDeviceClause::Create(getContext(), BeginLoc, LParenLoc,
+                                          VarList, EndLoc);
   }
   case OpenACCClauseKind::DevicePtr: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12534,6 +12575,10 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Finalize:
+    return OpenACCFinalizeClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::IfPresent:
+    return OpenACCIfPresentClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Independent:
     return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Auto:
@@ -12579,19 +12624,10 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                        VectorExpr, EndLoc);
   }
 
-  case OpenACCClauseKind::Finalize:
-  case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::UseDevice:
-  case OpenACCClauseKind::Delete:
-  case OpenACCClauseKind::Detach:
-  case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::DeviceNum:
-  case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

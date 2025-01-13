@@ -11,9 +11,10 @@
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VEC_TC]]> * ir<1>
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
@@ -72,7 +73,11 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
+; DBG-NEXT: ir-bb<entry>:
+; DBG-NEXT: Successor(s): vector.ph
+; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<false> + vp<[[VEC_TC]]> * ir<true>
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
@@ -113,11 +118,13 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; DBG-NEXT:  EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
 ; DBG-NEXT: Successor(s): ir-bb<loop.header>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop.header>:
-; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; DBG-NEXT:   IR   %d = phi i1 [ false, %entry ], [ %d.next, %loop.latch ]
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; DBG-NEXT:   IR   %d = phi i1 [ false, %entry ], [ %d.next, %loop.latch ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
 ; DBG-NEXT:   IR   %d.next = xor i1 %d, true
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -192,7 +199,7 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
@@ -219,11 +226,12 @@ exit:
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: Successor(s): ir-bb<loop>
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<loop>:
-; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
 ; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]> from scalar.ph)
 ; DBG:        IR   %ec = icmp slt i32 %iv.next.trunc, %n
 ; DBG-NEXT: No successors

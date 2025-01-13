@@ -212,6 +212,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.complex.conj
     libc.src.complex.conjf
     libc.src.complex.conjl
+    libc.src.complex.cproj
+    libc.src.complex.cprojf
+    libc.src.complex.cprojl
     
     # fenv.h entrypoints
     libc.src.fenv.feclearexcept
