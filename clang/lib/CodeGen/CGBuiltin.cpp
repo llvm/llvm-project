@@ -1068,10 +1068,17 @@ namespace {
 struct StructFieldAccess
     : public ConstStmtVisitor<StructFieldAccess, const MemberExpr *> {
   const ArraySubscriptExpr *ASE = nullptr;
+  bool AddrOfSeen = false;
 
-  const MemberExpr *VisitMemberExpr(const MemberExpr *E) { return E; }
+  const MemberExpr *VisitMemberExpr(const MemberExpr *E) {
+    if (AddrOfSeen && E->getType()->isArrayType())
+      // Avoid forms like '&ptr->array'.
+      return nullptr;
+    return E;
+  }
 
   const MemberExpr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
     ASE = E;
     return Visit(E->getBase());
   }
@@ -1082,9 +1089,11 @@ struct StructFieldAccess
     return Visit(E->getSubExpr());
   }
   const MemberExpr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
+    AddrOfSeen = true;
     return Visit(E->getSubExpr());
   }
   const MemberExpr *VisitUnaryDeref(const clang::UnaryOperator *E) {
+    AddrOfSeen = false;
     return Visit(E->getSubExpr());
   }
 };
