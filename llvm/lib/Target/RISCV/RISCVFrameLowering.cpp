@@ -548,7 +548,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
 
   // If we have a dynamic allocation later we need to probe any residuals.
   MachineBasicBlock *NextMBB = MBBI->getParent()->getSingleSuccessor();
-  if (NextMBB != NULL && NextMBB->begin()->getFlag(MachineInstr::FrameSetup)) {
+  if (NextMBB && NextMBB->begin()->getFlag(MachineInstr::FrameSetup)) {
     BuildMI(MBB, MBBI, DL, TII->get(STI.is64Bit() ? RISCV::SD : RISCV::SW))
         .addReg(RISCV::X0)
         .addReg(SPReg)
@@ -650,13 +650,13 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.is64Bit();
-  bool dyn_alloca = false;
+  bool DynAllocation = false;
 
   // If we have a dynamic allocation later we need to probe any residuals.
   if (NeedProbe) {
     MachineBasicBlock *NextMBB = MBBI->getParent()->getSingleSuccessor();
-    dyn_alloca = (NextMBB != NULL &&
-                  NextMBB->begin()->getFlag(MachineInstr::FrameSetup));
+    DynAllocation =
+        (NextMBB && NextMBB->begin()->getFlag(MachineInstr::FrameSetup));
   }
 
   // Simply allocate the stack if it's not big enough to require a probe.
@@ -673,7 +673,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
-    if (dyn_alloca) {
+    if (DynAllocation) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
@@ -724,7 +724,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
             .setMIFlag(MachineInstr::FrameSetup);
       }
 
-      if (dyn_alloca) {
+      if (DynAllocation) {
         // s[d|w] zero, 0(sp)
         BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
             .addReg(RISCV::X0)
@@ -775,7 +775,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   if (Residual) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Residual),
                   MachineInstr::FrameSetup, getStackAlign());
-    if (dyn_alloca) {
+    if (DynAllocation) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)

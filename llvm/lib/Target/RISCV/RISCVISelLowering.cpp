@@ -7685,7 +7685,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                            Op.getOperand(2), Flags, DL);
   }
   case ISD::DYNAMIC_STACKALLOC:
-    return LowerDYNAMIC_STACKALLOC(Op, DAG);
+    return lowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:
     return lowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:
@@ -19601,7 +19601,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
   case RISCV::PROBED_STACKALLOC_DYN:
-    return EmitDynamicProbedAlloc(MI, BB);
+    return emitDynamicProbedAlloc(MI, BB);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while jal call instruction (where statepoint will be lowered at the end)
@@ -22565,7 +22565,7 @@ unsigned RISCVTargetLowering::getStackProbeSize(const MachineFunction &MF,
   return StackProbeSize ? StackProbeSize : StackAlign.value();
 }
 
-SDValue RISCVTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+SDValue RISCVTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   if (!hasInlineStackProbe(MF))
@@ -22592,19 +22592,17 @@ SDValue RISCVTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   // Set the real SP to the new value with a probing loop.
   Chain = DAG.getNode(RISCVISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
-  SDValue Ops[2] = {SP, Chain};
-  return DAG.getMergeValues(Ops, dl);
+  return DAG.getMergeValues({SP, Chain}, dl);
 }
 
 MachineBasicBlock *
-RISCVTargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
+RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   DebugLoc DL = MBB->findDebugLoc(MBBI);
   Register TargetReg = MI.getOperand(1).getReg();
 
-  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   bool IsRV64 = Subtarget.is64Bit();
   Align StackAlign = Subtarget.getFrameLowering()->getStackAlign();

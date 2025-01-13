@@ -926,7 +926,7 @@ public:
 
   unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
 
-  MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
+  MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
 private:
@@ -1022,7 +1022,7 @@ private:
 
   SDValue lowerVectorStrictFSetcc(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
