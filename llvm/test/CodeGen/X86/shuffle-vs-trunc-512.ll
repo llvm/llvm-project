@@ -442,11 +442,9 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BW-LABEL: PR34175:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
-; AVX512BW-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512BW-NEXT:    vmovdqu 32(%rdi), %ymm2
-; AVX512BW-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
+; AVX512BW-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512BW-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512BW-NEXT:    retq
 ;
@@ -460,11 +458,9 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512VBMI-LABEL: PR34175:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
-; AVX512VBMI-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %ymm2
-; AVX512VBMI-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
-; AVX512VBMI-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512VBMI-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
+; AVX512VBMI-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512VBMI-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VBMI-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VBMI-NEXT:    retq
 ;

@@ -41711,9 +41711,10 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                                     SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   MVT VT = N.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
-
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -42435,6 +42436,24 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         SDValue NewMask = getConstVector(Mask, MaskVT, DAG, DL,
                                          /*IsMask=*/true);
         return DAG.getNode(X86ISD::VPERMV, DL, VT, NewMask, N.getOperand(0));
+      }
+      // If sources are half width, then concat and use VPERMV with adjusted
+      // mask.
+      SDValue Ops[2];
+      MVT HalfVT = VT.getHalfNumVectorElementsVT();
+      if (sd_match(V1,
+                   m_InsertSubvector(m_Undef(), m_Value(Ops[0]), m_Zero())) &&
+          sd_match(V2,
+                   m_InsertSubvector(m_Undef(), m_Value(Ops[1]), m_Zero())) &&
+          Ops[0].getValueType() == HalfVT && Ops[1].getValueType() == HalfVT) {
+        if (SDValue ConcatSrc =
+                combineConcatVectorOps(DL, VT, Ops, DAG, DCI, Subtarget)) {
+          for (int &M : Mask)
+            M = (M < (int)NumElts ? M : (M - (NumElts / 2)));
+          SDValue NewMask = getConstVector(Mask, MaskVT, DAG, DL,
+                                           /*IsMask=*/true);
+          return DAG.getNode(X86ISD::VPERMV, DL, VT, NewMask, ConcatSrc);
+        }
       }
       // Commute foldable source to the RHS.
       if (isShuffleFoldableLoad(N.getOperand(0)) &&
