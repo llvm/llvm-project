@@ -12,7 +12,6 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
-#include "bolt/Passes/ContinuityStats.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
@@ -27,6 +26,7 @@
 #include "bolt/Passes/MCF.h"
 #include "bolt/Passes/PLTCall.h"
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
@@ -58,10 +58,10 @@ extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                llvm::bolt::DeprecatedICFNumericOptionParser>
     ICF;
 
-static cl::opt<bool>
-DynoStatsAll("dyno-stats-all",
-  cl::desc("print dyno stats after each stage"),
-  cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool> DynoStatsAll("dyno-stats-all",
+                                  cl::desc("print dyno stats after each stage"),
+                                  cl::ZeroOrMore, cl::Hidden,
+                                  cl::cat(BoltCategory));
 
 static cl::opt<bool>
     EliminateUnreachable("eliminate-unreachable",
@@ -82,25 +82,24 @@ cl::opt<bool>
 cl::opt<bool> NeverPrint("never-print", cl::desc("never print"),
                          cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-PrintAfterBranchFixup("print-after-branch-fixup",
-  cl::desc("print function after fixing local branches"),
-  cl::Hidden, cl::cat(BoltOptCategory));
+cl::opt<bool> PrintAfterBranchFixup(
+    "print-after-branch-fixup",
+    cl::desc("print function after fixing local branches"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-PrintAfterLowering("print-after-lowering",
-  cl::desc("print function after instruction lowering"),
-  cl::Hidden, cl::cat(BoltOptCategory));
+    PrintAfterLowering("print-after-lowering",
+                       cl::desc("print function after instruction lowering"),
+                       cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool> PrintEstimateEdgeCounts(
     "print-estimate-edge-counts",
     cl::desc("print function after edge counts are set for no-LBR profile"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-PrintFinalized("print-finalized",
-  cl::desc("print function after CFG is finalized"),
-  cl::Hidden, cl::cat(BoltOptCategory));
+cl::opt<bool> PrintFinalized("print-finalized",
+                             cl::desc("print function after CFG is finalized"),
+                             cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintFOP("print-fop",
@@ -235,12 +234,13 @@ static cl::opt<bool> SimplifyRODataLoads(
              "operand with the constant found in the corresponding section"),
     cl::cat(BoltOptCategory));
 
-static cl::list<std::string>
-SpecializeMemcpy1("memcpy1-spec",
-  cl::desc("list of functions with call sites for which to specialize memcpy() "
-           "for size 1"),
-  cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."),
-  cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::list<std::string> SpecializeMemcpy1(
+    "memcpy1-spec",
+    cl::desc(
+        "list of functions with call sites for which to specialize memcpy() "
+        "for size 1"),
+    cl::value_desc("func1,func2:cs1:cs2,func3:cs1,..."), cl::ZeroOrMore,
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool> Stoke("stoke", cl::desc("turn on the stoke analysis"),
                            cl::cat(BoltOptCategory));
@@ -379,7 +379,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
-  Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
+  Manager.registerPass(std::make_unique<PrintProfileQualityStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
