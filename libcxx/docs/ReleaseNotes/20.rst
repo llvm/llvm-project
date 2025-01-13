@@ -146,6 +146,8 @@ Deprecations and Removals
   ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial
   way, making it very unlikely that any binary depends on them.
 
+- Non-conforming extension ``packaged_task::result_type`` is deprecated. It will be removed in LLVM 21.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -163,6 +165,8 @@ LLVM 21
 
 - The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
   unconditionally ``noexcept``.
+
+- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
 
 
 ABI Affecting Changes

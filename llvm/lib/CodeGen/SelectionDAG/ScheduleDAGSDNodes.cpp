@@ -908,10 +908,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
         It->setMMRAMetadata(MF, MMRA);
     }
 
-    if (auto CalledGlobal = DAG->getCalledGlobal(Node))
-      if (CalledGlobal->first)
-        MF.addCalledGlobal(MI, *CalledGlobal);
-
     return MI;
   };
 

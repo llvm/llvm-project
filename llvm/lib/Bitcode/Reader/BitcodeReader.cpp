@@ -2252,6 +2252,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::CoroElideSafe;
   case bitc::ATTR_KIND_NO_EXT:
     return Attribute::NoExt;
+  case bitc::ATTR_KIND_CAPTURES:
+    return Attribute::Captures;
   }
 }
 
@@ -2391,6 +2393,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
           else if (Kind == Attribute::Memory)
             B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
+          else if (Kind == Attribute::Captures)
+            B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
