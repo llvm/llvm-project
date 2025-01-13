@@ -1546,6 +1546,13 @@ value llvm_set_global_constant(value Flag, value GlobalVar) {
   return Val_unit;
 }
 
+/* llvalue -> llmdkind -> llmetadata -> unit */
+value llvm_global_set_metadata(value Value, value MetadataKind, value Metadata) {
+  LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
+                        Metadata_val(Metadata));
+  return Val_unit;
+}
+
 /*--... Operations on aliases ..............................................--*/
 
 /* llmodule -> lltype -> int -> llvalue -> string -> llvalue */
