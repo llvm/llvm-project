@@ -98,11 +98,47 @@ namespace PR38286 {
 }
 
 namespace GH121706 {
-struct S {
-  *S();  // expected-error {{invalid constructor declaration}}
-  **S(); // expected-error {{invalid constructor declaration}}
+struct A {
+  *&A(); // expected-error {{invalid constructor declaration}}
+};
 
-  **S(const S &); // expected-error {{invalid constructor declaration}}
-  *S(S &&);       // expected-error {{invalid constructor declaration}}
+struct B {
+  *&&B(); // expected-error {{invalid constructor declaration}}
+};
+
+struct C {
+  *const C(); // expected-error {{invalid constructor declaration}}
+};
+
+struct D {
+  *const *D(); // expected-error {{invalid constructor declaration}}
+};
+
+struct E {
+  *E::*E(); // expected-error {{invalid constructor declaration}}
+};
+
+struct F {
+  *F::*const F(); // expected-error {{invalid constructor declaration}}
+};
+
+struct G {
+  ****G(); // expected-error {{invalid constructor declaration}}
+};
+
+struct H {
+  **H(const H &); // expected-error {{invalid constructor declaration}}
+};
+
+struct I {
+  *I(I &&); // expected-error {{invalid constructor declaration}}
+};
+
+struct J {
+  *&(J)(); // expected-error {{invalid constructor declaration}}
+};
+
+struct K {
+  **&&(K)(); // expected-error {{invalid constructor declaration}}
 };
 }
