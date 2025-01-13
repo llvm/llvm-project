@@ -1,5 +1,9 @@
-! Check that the driver passes through -fno-zero-init-global-without-init:
-! RUN: %flang -### -S -fno-zero-init-global-without-init %s -o - 2>&1 | FileCheck %s
-! Check that the compiler accepts -fno-zero-init-global-without-init:
-! RUN: %flang_fc1 -emit-hlfir -fno-zero-init-global-without-init %s -o - 
-! CHECK: "-fc1"{{.*}}"-fno-zero-init-global-without-init"
+! Check that the driver passes through -f[no-]init-global-zero:
+! RUN: %flang -### -S -finit-global-zero %s -o - 2>&1 | FileCheck --check-prefix=CHECK-POS %s
+! RUN: %flang -### -S -fno-init-global-zero %s -o - 2>&1 | FileCheck --check-prefix=CHECK-NEG %s
+! Check that the compiler accepts -f[no-]init-global-zero:
+! RUN: %flang_fc1 -emit-hlfir -finit-global-zero %s -o -
+! RUN: %flang_fc1 -emit-hlfir -fno-init-global-zero %s -o -
+
+! CHECK-POS: "-fc1"{{.*}}"-finit-global-zero"
+! CHECK-NEG: "-fc1"{{.*}}"-fno-init-global-zero"

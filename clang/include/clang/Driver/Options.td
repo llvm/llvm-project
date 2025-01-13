@@ -3494,9 +3494,12 @@ def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
 def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
-def fno_zero_init_global_without_init : Flag<["-"], "fno-zero-init-global-without-init">, Group<f_Group>,
-  Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Do not zero initialize globals without default initialization">;
+defm init_global_zero : BoolFOption<"init-global-zero",
+  CodeGenOpts<"InitGlobalZero">, DefaultTrue,
+  NegFlag<SetFalse, [], [FlangOption, FC1Option],
+          "Zero initialize globals without default initialization">,
+  PosFlag<SetTrue, [], [FlangOption, FC1Option],
+          "Do not zero initialize globals without default initialization">>;
 def fno_pointer_tbaa : Flag<["-"], "fno-pointer-tbaa">, Group<f_Group>;
 def fno_temp_file : Flag<["-"], "fno-temp-file">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>, HelpText<

@@ -1,5 +1,6 @@
 ! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -fno-zero-init-global-without-init -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -finit-global-zero -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -fno-init-global-zero -emit-hlfir -o - %s | FileCheck %s
 
 ! Test that the flag does not affect globals with default init
 

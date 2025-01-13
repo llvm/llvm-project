@@ -46,6 +46,6 @@ ENUM_LOWERINGOPT(ReallocateLHS, unsigned, 1, 1)
 
 /// If true, initialize globals without initialization to zero.
 /// On by default.
-ENUM_LOWERINGOPT(ZeroInitGlobalsWithoutInit, unsigned, 1, 1)
+ENUM_LOWERINGOPT(InitGlobalZero, unsigned, 1, 1)
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

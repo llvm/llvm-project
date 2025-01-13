@@ -636,7 +636,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           mlir::Value initValue;
-          if (converter.getLoweringOptions().getZeroInitGlobalsWithoutInit())
+          if (converter.getLoweringOptions().getInitGlobalZero())
             initValue = builder.create<fir::ZeroOp>(loc, symTy);
           else
             initValue = builder.create<fir::UndefOp>(loc, symTy);
