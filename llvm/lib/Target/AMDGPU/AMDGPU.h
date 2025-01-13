@@ -444,9 +444,9 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
+ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
+void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;

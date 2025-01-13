@@ -814,7 +814,7 @@ tgtok::TokKind TGLexer::lexPreprocessor(tgtok::TokKind Kind,
     if (PrepIncludeStack.back().empty())
       return ReturnError(TokStart, "#endif without #ifdef");
 
-    auto &IfdefOrElseEntry = PrepIncludeStack.back().back();
+    [[maybe_unused]] auto &IfdefOrElseEntry = PrepIncludeStack.back().back();
 
     assert((IfdefOrElseEntry.Kind == tgtok::Ifdef ||
             IfdefOrElseEntry.Kind == tgtok::Else) &&
