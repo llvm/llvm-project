@@ -1274,11 +1274,11 @@ func.func @while_two_arg(%arg0: index) {
 // CHECK-LABEL: func @while_fun
 func.func @while_fun() {
     %c0 = arith.constant 0 : i1
+    %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<i32>
     %4 = scf.while (%arg1 = %c0) : (i1) -> (i1) {
       scf.condition(%c0) %arg1 : i1
     } do {
     ^bb0(%arg1: i1):
-      %alloc_1 = memref.alloc() {alignment = 64 : i64} : memref<i32>
       %7 = func.call @foo(%alloc_1, %arg1) : (memref<i32>, i1) -> (i1)
       scf.yield %7#0: i1
     }
