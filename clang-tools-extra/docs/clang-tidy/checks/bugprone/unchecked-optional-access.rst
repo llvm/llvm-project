@@ -84,9 +84,8 @@ determine which methods are accessors. Specifically, parameter-free ``const``
 methods and smart pointer-like APIs (non ``const`` overloads of ``*`` when
 there is a parallel ``const`` overload) are treated as accessors. Note that
 this is not guaranteed to be safe -- but, it is widely used (safely) in
-practice, and so we have chosen to treat it as generally safe. Calls to non
-``const`` methods are assumed to modify the state of the object and affect
-the stability of earlier accessor calls.
+practice. Calls to non ``const`` methods are assumed to modify the state of
+the object and affect the stability of earlier accessor calls.
 
 Rely on invariants of uncommon APIs
 -----------------------------------
