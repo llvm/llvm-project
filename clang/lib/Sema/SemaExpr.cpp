@@ -17069,8 +17069,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
       return Type->isSpecificBuiltinType(BuiltinType::Char_S) ||
              Type->isSpecificBuiltinType(BuiltinType::Char_U);
     };
-    FDiag << (isPlainChar(FirstType->getPointerOrObjCPointerOrArrayElementType()) ||
-              isPlainChar(SecondType->getPointerOrObjCPointerOrArrayElementType()));
+    FDiag << (isPlainChar(
+                  FirstType->getPointerOrObjCPointerOrArrayElementType()) ||
+              isPlainChar(
+                  SecondType->getPointerOrObjCPointerOrArrayElementType()));
   }
 
   // If we can fix the conversion, suggest the FixIts.

@@ -9672,7 +9672,8 @@ static void checkIsValidOpenCLKernelParameter(
       // walk around RecordDecl::fields().
       assert((FieldTy->isArrayType() || FieldTy->isRecordType()) &&
              "Unexpected type.");
-      const Type *FieldRecTy = FieldTy->getPointerOrObjCPointerOrArrayElementType();
+      const Type *FieldRecTy =
+          FieldTy->getPointerOrObjCPointerOrArrayElementType();
 
       RD = FieldRecTy->castAs<RecordType>()->getDecl();
     } else {

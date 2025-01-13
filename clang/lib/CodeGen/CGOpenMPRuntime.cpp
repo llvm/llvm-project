@@ -7551,7 +7551,8 @@ private:
           // For the case that having pointer as base, we need to remove one
           // level of indirection.
           if (&Component != &*Components.begin())
-            ElementType = ElementType->getPointerOrObjCPointerOrArrayElementType();
+            ElementType =
+                ElementType->getPointerOrObjCPointerOrArrayElementType();
           ElementTypeSize =
               Context.getTypeSizeInChars(ElementType).getQuantity();
           CurStrides.push_back(
@@ -8628,7 +8629,8 @@ public:
     llvm::SmallVector<const FieldDecl *, 4> Layout;
     if (!OverlappedData.empty()) {
       const Type *BaseType = VD->getType().getCanonicalType().getTypePtr();
-      const Type *OrigType = BaseType->getPointerOrObjCPointerOrArrayElementType();
+      const Type *OrigType =
+          BaseType->getPointerOrObjCPointerOrArrayElementType();
       while (BaseType != OrigType) {
         BaseType = OrigType->getCanonicalTypeInternal().getTypePtr();
         OrigType = BaseType->getPointerOrObjCPointerOrArrayElementType();
