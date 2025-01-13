@@ -596,15 +596,15 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     auto m = map.getSubMap({r});
     LLVM_DEBUG(llvm::dbgs() << "computeSliceParameters: submap: " << m << "\n");
     IRRewriter rewriter(builder);
-    // The offset of the slice is map(lbs) - map(0).
+    // The offset of the slice is m(lbs) - m(0).
     SmallVector<Attribute> zeros(lbs.size(), rewriter.getIndexAttr(0));
     SmallVector<Attribute> mAtZero;
     auto res = m.constantFold(zeros, mAtZero);
-    assert(succeeded(res));
-    auto atZeroInt = getConstantIntValue(mAtZero[0]);
-    assert(atZeroInt);
+    assert(succeeded(res) && "affine_map must be evaluatable (not symbols)");
+    int64_t mAtZeroInt =
+        cast<IntegerAttr>(mAtZero[0]).getValue().getSExtValue();
     OpFoldResult offset = makeComposedFoldedAffineApply(
-        rewriter, loc, m.getResult(0) - *atZeroInt, lbs);
+        rewriter, loc, m.getResult(0) - mAtZeroInt, lbs);
     sliceParams.offsets.push_back(offset);
 
     OpFoldResult closedIntSize =
