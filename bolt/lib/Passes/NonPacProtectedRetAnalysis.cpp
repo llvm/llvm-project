@@ -9,9 +9,6 @@
 // This file implements a pass that looks for any AArch64 return instructions
 // that may not be protected by PAuth authentication instructions when needed.
 //
-// When needed = the register used to return (almost always X30), is potentially
-// written to between the AUThentication instruction and the RETurn instruction.
-//
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/NonPacProtectedRetAnalysis.h"
@@ -76,14 +73,12 @@ raw_ostream &operator<<(raw_ostream &OS,
 //     the function started, or
 // (b) the last write to the register must be by an authentication instruction.
 
-// This property is checked by using data flow analysis to keep track of which
+// This property is checked by using dataflow analysis to keep track of which
 // registers have been written (def-ed), since last authenticated. Those are
 // exactly the registers containing values that should not be trusted (as they
 // could have changed since the last time they were authenticated). For pac-ret,
 // any return instruction using such a register is a gadget to be reported. For
 // PAuthABI, any indirect control flow using such a register should be reported?
-
-// This security property is verified using a dataflow analysis.
 
 // Furthermore, when producing a diagnostic for a found non-pac-ret protected
 // return, the analysis also lists the last instructions that wrote to the
@@ -96,12 +91,11 @@ raw_ostream &operator<<(raw_ostream &OS,
 // 1. In the first run, the dataflow analysis only keeps track of the security
 //    property: i.e. which registers have been overwritten since the last
 //    time they've been authenticated.
-// 2. If the first run finds any return instructions using a
-//    written-to-last-by-an-non-authenticating instruction, the data flow
-//    analysis will be run a second time. The first run will return which
-//    registers are used in the gadgets to be reported. This information is
-//    used in the second run to also track with instructions last wrote to
-//    those registers.
+// 2. If the first run finds any return instructions using a register last
+//    written by a non-authenticating instruction, the dataflow analysis will
+//    be run a second time. The first run will return which registers are used
+//    in the gadgets to be reported. This information is used in the second run
+//    to also track with instructions last wrote to those registers.
 
 struct State {
   /// A BitVector containing the registers that have been clobbered, and
@@ -110,7 +104,7 @@ struct State {
   /// A vector of sets, only used in the second data flow run.
   /// Each element in the vector represent one registers for which we
   /// track the set of last instructions that wrote to this register.
-  /// For pac-ret analysis, the expectations is that almost all return
+  /// For pac-ret analysis, the expectation is that almost all return
   /// instructions only use register `X30`, and therefore, this vector
   /// will have length 1 in the second run.
   std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
