@@ -347,26 +347,15 @@ define i64 @bitcast_combine_scalar_to_vector_v4i16(i16 %arg) {
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v3
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-LABEL: bitcast_combine_scalar_to_vector_v4i16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
-; VI-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; VI-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: bitcast_combine_scalar_to_vector_v4i16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
-; GFX9-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0xffff
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; GFX9-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX9-NEXT:    v_and_or_b32 v0, v0, s4, v2
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: bitcast_combine_scalar_to_vector_v4i16:
+; GFX89:       ; %bb.0:
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
+; GFX89-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX89-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; GFX89-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
   %arg.cast = bitcast i16 %arg to <2 x i8>
   %tmp1 = shufflevector <2 x i8> %arg.cast, <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
