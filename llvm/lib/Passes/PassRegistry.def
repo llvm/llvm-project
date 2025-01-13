@@ -554,7 +554,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "vectorize-forced-only")
 FUNCTION_PASS_WITH_PARAMS(
     "lower-allow-check", "LowerAllowCheckPass",
-    [](LowerAllowCheckOptions Opts) { return LowerAllowCheckPass(Opts); },
+    [](LowerAllowCheckPass::Options Opts) { return LowerAllowCheckPass(Opts); },
     parseLowerAllowCheckPassOptions, "")
 FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",

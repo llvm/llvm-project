@@ -821,9 +821,9 @@ Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<LowerAllowCheckOptions>
+Expected<LowerAllowCheckPass::Options>
 parseLowerAllowCheckPassOptions(StringRef Params) {
-  LowerAllowCheckOptions Result;
+  LowerAllowCheckPass::Options Result;
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
