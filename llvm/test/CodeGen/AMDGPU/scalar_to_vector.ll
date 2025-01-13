@@ -332,3 +332,33 @@ define amdgpu_kernel void @scalar_to_vector_test6(ptr addrspace(1) %out, i8 zero
   store <2 x half> %bc, ptr addrspace(1) %out
   ret void
 }
+
+; bitcast (scalar_to_vector x) -> any_extend x
+define i64 @bitcast_combine_scalar_to_vector_v4i16(i16 %arg) {
+; SI-LABEL: bitcast_combine_scalar_to_vector_v4i16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v0
+; SI-NEXT:    v_and_b32_e32 v2, 0xff00, v0
+; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
+; SI-NEXT:    v_or_b32_e32 v2, v0, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; SI-NEXT:    v_or_b32_e32 v0, v1, v3
+; SI-NEXT:    v_or_b32_e32 v1, v2, v3
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX89-LABEL: bitcast_combine_scalar_to_vector_v4i16:
+; GFX89:       ; %bb.0:
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_and_b32_e32 v1, 0xffffff00, v0
+; GFX89-NEXT:    v_or_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX89-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; GFX89-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
+  %arg.cast = bitcast i16 %arg to <2 x i8>
+  %tmp1 = shufflevector <2 x i8> %arg.cast, <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %cast = bitcast <8 x i8> %tmp2 to i64
+  ret i64 %cast
+}
