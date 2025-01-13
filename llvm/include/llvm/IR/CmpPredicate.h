@@ -53,6 +53,12 @@ public:
   static std::optional<CmpPredicate> getMatching(CmpPredicate A,
                                                  CmpPredicate B);
 
+  /// Attempts to return a signed CmpInst::Predicate from the CmpPredicate. If
+  /// the CmpPredicate has samesign, return the signedness-flipped predicate
+  /// (which would be signed), dropping samesign information. Otherwise, return
+  /// the predicate, dropping samesign information.
+  CmpInst::Predicate getSignedPredicate() const;
+
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
   bool operator!=(CmpInst::Predicate P) const { return Pred != P; }
