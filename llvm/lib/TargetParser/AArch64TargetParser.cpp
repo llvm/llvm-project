@@ -276,6 +276,11 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
   if (E == AEK_SVE2AES)
     disable(AEK_SVEAES);
 
+  if (E == AEK_SVE2BITPERM){
+    disable(AEK_SVEBITPERM);
+    disable(AEK_SVE2);
+  }
+
   if (!Enabled.test(E))
     return;
 
