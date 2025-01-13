@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-LABEL: Checking a loop in 'simple_memset'
 ; VPLANS:      VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF>=1' {
 ; VPLANS-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
-; VPLANS-NEXT: vp<[[TC:%[0-9]+]]> = original trip-count
+; VPLANS:      vp<[[TC:%[0-9]+]]> = original trip-count
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: ir-bb<entry>:
 ; VPLANS-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1 umax %n)

@@ -102,12 +102,13 @@ void PCHGenerator::anchor() {}
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
                                              InMemoryModuleCache &ModuleCache,
                                              StringRef OutputFile,
-                                             bool GeneratingReducedBMI)
+                                             bool GeneratingReducedBMI,
+                                             bool AllowASTWithErrors)
     : PCHGenerator(
           PP, ModuleCache, OutputFile, llvm::StringRef(),
           std::make_shared<PCHBuffer>(),
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
-          /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
+          AllowASTWithErrors, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
           GeneratingReducedBMI) {}
 

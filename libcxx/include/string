@@ -586,8 +586,9 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/string>
+#else
 #  include <__algorithm/max.h>
 #  include <__algorithm/min.h>
 #  include <__algorithm/remove.h>
@@ -763,7 +764,7 @@ struct __padding<0> {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
-  using __default_allocator_type = allocator<_CharT>;
+  using __default_allocator_type _LIBCPP_NODEBUG = allocator<_CharT>;
 
 public:
   typedef basic_string __self;
@@ -797,7 +798,7 @@ public:
   // Therefore it's crucial to ensure the destructor is called.
   using __trivially_relocatable = void;
 #  else
-  using __trivially_relocatable = __conditional_t<
+  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
       basic_string,
       void>;
@@ -2495,7 +2496,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
       __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
     throw;
   }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+#  endif                       // _LIBCPP_HAS_EXCEPTIONS
   __annotate_new(__sz);
 }
 
@@ -4347,6 +4348,6 @@ _LIBCPP_POP_MACROS
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STRING

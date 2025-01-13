@@ -633,7 +633,7 @@ ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset)
+    if (ConstantLength && Offset && !ConstantLength->isNegative())
       return ConstantRange(
           APInt(64, *Offset, true),
           APInt(64, *Offset + ConstantLength->getSExtValue(), true));

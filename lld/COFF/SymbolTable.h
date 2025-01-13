@@ -51,8 +51,6 @@ public:
               llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
       : ctx(c), machine(machine) {}
 
-  void addFile(InputFile *file);
-
   // Emit errors for symbols that cannot be resolved.
   void reportUnresolvable();
 
@@ -138,6 +136,10 @@ public:
       callback(pair.second);
   }
 
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
@@ -151,7 +153,6 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
-  bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
 };

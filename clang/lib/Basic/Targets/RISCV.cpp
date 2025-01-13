@@ -489,7 +489,7 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
-unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+uint64_t RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   // Priority is explicitly specified on RISC-V unlike on other targets, where
   // it is derived by all the features of a specific version. Therefore if a
   // feature contains the priority string, then return it immediately.
@@ -501,7 +501,7 @@ unsigned RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       Feature = RHS;
     else
       continue;
-    unsigned Priority;
+    uint64_t Priority;
     if (!Feature.getAsInteger(0, Priority))
       return Priority;
   }

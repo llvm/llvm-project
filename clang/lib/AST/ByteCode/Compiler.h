@@ -205,6 +205,7 @@ public:
   bool VisitCXXNewExpr(const CXXNewExpr *E);
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *E);
   bool VisitBlockExpr(const BlockExpr *E);
+  bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);

@@ -17,11 +17,11 @@
 define void @RWBufferLoad_Vec4_I32() #0 {
 ; CHECK: [[buffer:%[0-9]+]] = OpLoad [[RWBufferTypeInt]] [[IntBufferVar]]
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 0)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_5_2_0_0_2_0(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0(
           i32 16, i32 7, i32 1, i32 0, i1 false)
 
 ; CHECK: OpImageRead [[v4_int]] [[buffer]] [[zero]]
-  %data0 = call <4 x i32> @llvm.spv.typedBufferLoad(
+  %data0 = call <4 x i32> @llvm.spv.resource.load.typedbuffer(
       target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %buffer0, i32 0)
 
   ret void

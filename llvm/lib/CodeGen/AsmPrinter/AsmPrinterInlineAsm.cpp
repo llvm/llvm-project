@@ -153,7 +153,7 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
     AsmPrinterVariant = MMI->getTarget().unqualifiedInlineAsmVariant();
 
   // FIXME: Should this happen for `asm inteldialect` as well?
-  if (!InputIsIntelDialect && MAI->getEmitGNUAsmStartIndentationMarker())
+  if (!InputIsIntelDialect && !MAI->isHLASM())
     OS << '\t';
 
   while (*LastEmitted) {

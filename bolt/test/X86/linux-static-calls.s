@@ -54,6 +54,15 @@ __start_static_call_sites:
   .type __stop_static_call_sites, %object
 __stop_static_call_sites:
 
+## Linux kernel version
+  .rodata
+  .align 16
+  .globl linux_banner
+  .type linux_banner, @object
+linux_banner:
+  .string "Linux version 6.6.61\n"
+  .size linux_banner, . - linux_banner
+
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits
   .section __ksymtab_gpl,"a",@progbits

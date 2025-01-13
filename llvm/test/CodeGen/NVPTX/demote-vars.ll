@@ -67,7 +67,7 @@ define void @define_private_global(i64 %val) {
 ; Also check that the if-then is still here, otherwise we may not be testing
 ; the "more-than-one-use" part.
 ; CHECK: st.shared.u64   [private_global_used_more_than_once_in_same_fct],
-; CHECK: mov.u64 %[[VAR:.*]], 25
+; CHECK: mov.b64 %[[VAR:.*]], 25
 ; CHECK: st.shared.u64   [private_global_used_more_than_once_in_same_fct], %[[VAR]]
 define void @define_private_global_more_than_one_use(i64 %val, i1 %cond) {
   store i64 %val, ptr addrspace(3) @private_global_used_more_than_once_in_same_fct

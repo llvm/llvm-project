@@ -70,7 +70,8 @@ enum NodeType : unsigned {
   BrxEnd,
   Dummy,
 
-  LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  FIRST_MEMORY_OPCODE,
+  LoadV2 = FIRST_MEMORY_OPCODE,
   LoadV4,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
@@ -87,6 +88,7 @@ enum NodeType : unsigned {
   StoreRetval,
   StoreRetvalV2,
   StoreRetvalV4,
+  LAST_MEMORY_OPCODE = StoreRetvalV4,
 };
 }
 

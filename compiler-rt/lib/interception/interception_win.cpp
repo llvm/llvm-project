@@ -213,6 +213,18 @@ static char* _strchr(char* str, char c) {
   return nullptr;
 }
 
+static int _strcmp(const char *s1, const char *s2) {
+  while (true) {
+    unsigned c1 = *s1;
+    unsigned c2 = *s2;
+    if (c1 != c2) return (c1 < c2) ? -1 : 1;
+    if (c1 == 0) break;
+    s1++;
+    s2++;
+  }
+  return 0;
+}
+
 static void _memset(void *p, int value, size_t sz) {
   for (size_t i = 0; i < sz; ++i)
     ((char*)p)[i] = (char)value;
@@ -1177,8 +1189,7 @@ static void **InterestingDLLsAvailable() {
     "libc++.dll",     // libc++
     "libunwind.dll",  // libunwind
 #  endif
-    // NTDLL should go last as it exports some functions that we should
-    // override in the CRT [presumably only used internally].
+    // NTDLL must go last as it gets special treatment in OverrideFunction.
     "ntdll.dll",
     NULL
   };
@@ -1235,7 +1246,7 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
   for (DWORD i = 0; i < exports->NumberOfNames; i++) {
     RVAPtr<char> name(module, names[i]);
-    if (!strcmp(func_name, name)) {
+    if (!_strcmp(func_name, name)) {
       DWORD index = ordinals[i];
       RVAPtr<char> func(module, functions[index]);
 
@@ -1281,9 +1292,22 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
 bool OverrideFunction(
     const char *func_name, uptr new_func, uptr *orig_old_func) {
+  static const char *kNtDllIgnore[] = {
+    "memcmp", "memcpy", "memmove", "memset"
+  };
+
   bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
   for (size_t i = 0; DLLs[i]; ++i) {
+    if (DLLs[i + 1] == nullptr) {
+      // This is the last DLL, i.e. NTDLL. It exports some functions that
+      // we only want to override in the CRT.
+      for (const char *ignored : kNtDllIgnore) {
+        if (_strcmp(func_name, ignored) == 0)
+          return hooked;
+      }
+    }
+
     uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
     if (func_addr &&
         OverrideFunction(func_addr, new_func, orig_old_func)) {
@@ -1337,7 +1361,7 @@ bool OverrideImportedFunction(const char *module_to_patch,
       RVAPtr<IMAGE_IMPORT_BY_NAME> import_by_name(
           module, name_table->u1.ForwarderString);
       const char *funcname = &import_by_name->Name[0];
-      if (strcmp(funcname, function_name) == 0)
+      if (_strcmp(funcname, function_name) == 0)
         break;
     }
   }

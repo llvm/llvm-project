@@ -2,5 +2,4 @@
 
 paciasp
 
-// CHECK: .text
 // CHECK: paciasp // encoding: [0x3f,0x23,0x03,0xd5]

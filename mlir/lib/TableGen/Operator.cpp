@@ -231,7 +231,7 @@ unsigned Operator::getNumVariableLengthOperands() const {
 }
 
 bool Operator::hasSingleVariadicArg() const {
-  return getNumArgs() == 1 && getArg(0).is<NamedTypeConstraint *>() &&
+  return getNumArgs() == 1 && isa<NamedTypeConstraint *>(getArg(0)) &&
          getOperand(0).isVariadic();
 }
 
@@ -829,7 +829,7 @@ void Operator::print(llvm::raw_ostream &os) const {
     if (auto *attr = llvm::dyn_cast_if_present<NamedAttribute *>(arg))
       os << "[attribute] " << attr->name << '\n';
     else
-      os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
+      os << "[operand] " << cast<NamedTypeConstraint *>(arg)->name << '\n';
   }
 }
 

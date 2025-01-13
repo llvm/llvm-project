@@ -59,6 +59,7 @@ public:
   llvm::ArrayRef<uint8_t> GetData();
 
   llvm::ArrayRef<uint8_t> GetStream(StreamType stream_type);
+  std::optional<llvm::ArrayRef<uint8_t>> GetRawStream(StreamType stream_type);
 
   UUID GetModuleUUID(const minidump::Module *module);
 

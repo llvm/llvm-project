@@ -109,8 +109,9 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/scoped_allocator>
+#else
 #  include <__config>
 #  include <__memory/allocator_traits.h>
 #  include <__memory/uses_allocator_construction.h>
@@ -571,6 +572,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <variant>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SCOPED_ALLOCATOR

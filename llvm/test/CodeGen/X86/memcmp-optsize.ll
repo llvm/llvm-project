@@ -107,14 +107,14 @@ define i1 @length3_eq(ptr %X, ptr %Y) nounwind optsize {
 define i32 @length4(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %ecx
-; X64-NEXT:    movl (%rsi), %edx
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl (%rsi), %ecx
+; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    bswapl %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl %edx, %ecx
+; X64-NEXT:    cmpl %ecx, %eax
 ; X64-NEXT:    seta %al
-; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    sbbb $0, %al
+; X64-NEXT:    movsbl %al, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 4) nounwind
   ret i32 %m
@@ -186,14 +186,14 @@ define i1 @length5_eq(ptr %X, ptr %Y) nounwind optsize {
 define i32 @length8(ptr %X, ptr %Y) nounwind optsize {
 ; X64-LABEL: length8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rcx
-; X64-NEXT:    movq (%rsi), %rdx
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq (%rsi), %rcx
+; X64-NEXT:    bswapq %rax
 ; X64-NEXT:    bswapq %rcx
-; X64-NEXT:    bswapq %rdx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpq %rdx, %rcx
+; X64-NEXT:    cmpq %rcx, %rax
 ; X64-NEXT:    seta %al
-; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    sbbb $0, %al
+; X64-NEXT:    movsbl %al, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 8) nounwind
   ret i32 %m
