@@ -599,7 +599,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     // The offset of the slice is m(lbs) - m(0).
     SmallVector<Attribute> zeros(lbs.size(), rewriter.getIndexAttr(0));
     SmallVector<Attribute> mAtZero;
-    auto res = m.constantFold(zeros, mAtZero);
+    [[maybe_unused]] auto res = m.constantFold(zeros, mAtZero);
     assert(succeeded(res) && "affine_map must be evaluatable (not symbols)");
     int64_t mAtZeroInt =
         cast<IntegerAttr>(mAtZero[0]).getValue().getSExtValue();
