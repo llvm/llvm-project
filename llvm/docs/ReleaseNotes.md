@@ -379,6 +379,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* It is now recommended that LLDB be built with Python >= 3.8, but no changes
+  have been made to the supported Python versions. The next release, LLDB 21,
+  will require Python >= 3.8.
+
 * LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
