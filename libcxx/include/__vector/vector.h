@@ -780,8 +780,13 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) const _NOEXCEPT {
-    return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) _NOEXCEPT {
+    if constexpr (is_pointer<pointer>::value) {
+      if (!__libcpp_is_constant_evaluated()) {
+        return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
+      }
+    }
+    return __p;
   }
 };
 
