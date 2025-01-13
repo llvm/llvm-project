@@ -86,7 +86,11 @@ struct ConvertCIRToMLIRPass
   }
   void runOnOperation() final;
 
-  virtual StringRef getArgument() const override { return "cir-to-mlir"; }
+  StringRef getDescription() const override {
+    return "Convert the CIR dialect module to MLIR standard dialects";
+  }
+
+  StringRef getArgument() const override { return "cir-to-mlir"; }
 };
 
 class CIRCallOpLowering : public mlir::OpConversionPattern<cir::CallOp> {

@@ -49,7 +49,12 @@ struct ConvertMLIRToLLVMPass
   }
   void runOnOperation() final;
 
-  virtual StringRef getArgument() const override { return "cir-mlir-to-llvm"; }
+  StringRef getDescription() const override {
+    return "Convert the MLIR standard dialects produced from CIR to MLIR LLVM "
+           "dialect";
+  }
+
+  StringRef getArgument() const override { return "cir-mlir-to-llvm"; }
 };
 
 void ConvertMLIRToLLVMPass::runOnOperation() {

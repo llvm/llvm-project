@@ -1356,7 +1356,11 @@ struct ConvertCIRToLLVMPass
 
   void processCIRAttrs(mlir::ModuleOp moduleOp);
 
-  virtual StringRef getArgument() const override { return "cir-flat-to-llvm"; }
+  StringRef getDescription() const override {
+    return "Convert the prepared CIR dialect module to LLVM dialect";
+  }
+
+  StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
 mlir::LogicalResult
