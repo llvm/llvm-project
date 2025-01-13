@@ -9541,7 +9541,7 @@ static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
 
   // Look into an array argument to check if it has a forbidden type.
   if (PT->isArrayType()) {
-    const Type *UnderlyingTy = PT->getPointeeOrArrayElementType();
+    const Type *UnderlyingTy = PT->getPointerOrObjCPointerOrArrayElementType();
     // Call ourself to check an underlying type of an array. Since the
     // getPointeeOrArrayElementType returns an innermost type which is not an
     // array, this recursive call only happens once.
@@ -9644,7 +9644,7 @@ static void checkIsValidOpenCLKernelParameter(
   // an ArrayType of a RecordType.
   assert((PT->isArrayType() || PT->isRecordType()) && "Unexpected type.");
   const RecordType *RecTy =
-      PT->getPointeeOrArrayElementType()->getAs<RecordType>();
+      PT->getPointerOrObjCPointerOrArrayElementType()->getAs<RecordType>();
   const RecordDecl *OrigRecDecl = RecTy->getDecl();
 
   VisitStack.push_back(RecTy->getDecl());
@@ -9672,7 +9672,7 @@ static void checkIsValidOpenCLKernelParameter(
       // walk around RecordDecl::fields().
       assert((FieldTy->isArrayType() || FieldTy->isRecordType()) &&
              "Unexpected type.");
-      const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
+      const Type *FieldRecTy = FieldTy->getPointerOrObjCPointerOrArrayElementType();
 
       RD = FieldRecTy->castAs<RecordType>()->getDecl();
     } else {

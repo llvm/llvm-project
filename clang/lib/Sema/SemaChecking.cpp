@@ -13424,7 +13424,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     return;
 
   const Type *EffectiveType =
-      BaseExpr->getType()->getPointeeOrArrayElementType();
+      BaseExpr->getType()->getPointerOrObjCPointerOrArrayElementType();
   BaseExpr = BaseExpr->IgnoreParenCasts();
   const ConstantArrayType *ArrayTy =
       Context.getAsConstantArrayType(BaseExpr->getType());

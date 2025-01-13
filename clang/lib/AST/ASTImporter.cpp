@@ -1942,7 +1942,7 @@ Error ASTNodeImporter::ImportDeclParts(
       FunDecl->hasBody()) {
     auto getLeafPointeeType = [](const Type *T) {
       while (T->isPointerType() || T->isArrayType()) {
-        T = T->getPointeeOrArrayElementType();
+        T = T->getPointerOrObjCPointerOrArrayElementType();
       }
       return T;
     };

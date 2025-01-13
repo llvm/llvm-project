@@ -290,7 +290,7 @@ calculateElementType(const ASTContext &Context, const clang::Type *ResourceTy) {
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
-  const Type *Ty = D->getType()->getPointeeOrArrayElementType();
+  const Type *Ty = D->getType()->getPointerOrObjCPointerOrArrayElementType();
   if (!Ty)
     return;
   const auto *RD = Ty->getAsCXXRecordDecl();

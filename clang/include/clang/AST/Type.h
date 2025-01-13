@@ -2863,10 +2863,13 @@ public:
   /// This should never be used when type qualifiers are meaningful.
   const Type *getArrayElementTypeNoTypeQual() const;
 
-  /// If this is a pointer type, return the pointee type.
+  /// If this is a C or ObjC pointer type, return the pointee type. Notably,
+  /// this does not handle things like member pointers or block pointers.
+  ///
   /// If this is an array type, return the array element type.
+  ///
   /// This should never be used when type qualifiers are meaningful.
-  const Type *getPointeeOrArrayElementType() const;
+  const Type *getPointerOrObjCPointerOrArrayElementType() const;
 
   /// If this is a pointer, ObjC object pointer, or block
   /// pointer, this returns the respective pointee.
@@ -8691,7 +8694,7 @@ inline const Type *Type::getBaseElementTypeUnsafe() const {
   return type;
 }
 
-inline const Type *Type::getPointeeOrArrayElementType() const {
+inline const Type *Type::getPointerOrObjCPointerOrArrayElementType() const {
   const Type *type = this;
   if (type->isPointerOrObjCObjectPointerType())
     return type->getPointeeType().getTypePtr();
