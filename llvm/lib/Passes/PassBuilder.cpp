@@ -821,7 +821,8 @@ Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   return Result;
 }
 
-Expected<LowerAllowCheckOptions> parseLowerAllowCheckPassOptions(StringRef Params) {
+Expected<LowerAllowCheckOptions>
+parseLowerAllowCheckPassOptions(StringRef Params) {
   LowerAllowCheckOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
