@@ -570,3 +570,17 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  getentropy
+  SRCS
+    getentropy.cpp
+  HDRS
+    ../getentropy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.hdr.errno_macros
+    libc.src.sys.random.getrandom
+    libc.src.errno.errno
+)
