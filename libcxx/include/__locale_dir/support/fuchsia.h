@@ -10,11 +10,11 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
 
 #include <__config>
+#include <__utility/forward.h>
 #include <clocale> // uselocale & friends
 #include <cstdio>
 #include <cstdlib>
 #include <cwchar>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
