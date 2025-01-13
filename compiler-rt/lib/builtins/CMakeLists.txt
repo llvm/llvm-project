@@ -356,6 +356,7 @@ if (NOT MSVC)
   set(i386_SOURCES
     ${GENERIC_SOURCES}
     ${x86_ARCH_SOURCES}
+    ${GENERIC_TF_SOURCES}
     i386/ashldi3.S
     i386/ashrdi3.S
     i386/divdi3.S
@@ -906,7 +907,7 @@ else ()
 
       # For RISCV32, we must force enable int128 for compiling long
       # double routines.
-      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
+      if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32" OR "${arch}" STREQUAL "i386")
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
