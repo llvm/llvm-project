@@ -3290,7 +3290,7 @@ bool Sema::checkTargetClonesAttrString(
         DefaultIsDupe = HasDefault;
         HasDefault = true;
       } else if (!Context.getTargetInfo().isValidFeatureName(Cur) ||
-                 Context.getTargetInfo().multiVersionSortPriority(Cur) == 0)
+                 Context.getTargetInfo().getFMVPriority(Cur) == 0)
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << Cur << TargetClones;
       if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)

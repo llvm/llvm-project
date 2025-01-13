@@ -11109,8 +11109,7 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 
       if (!TargetInfo.validateCpuSupports(BareFeat) ||
           !TargetInfo.isValidFeatureName(BareFeat) ||
-          (BareFeat != "default" &&
-           TargetInfo.multiVersionSortPriority(BareFeat) == 0)) {
+          (BareFeat != "default" && TargetInfo.getFMVPriority(BareFeat) == 0)) {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
             << Feature << BareFeat;
         return true;
