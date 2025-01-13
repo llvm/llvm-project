@@ -2453,8 +2453,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
       !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
     return false;
-  // FIXME: Use CmpPredicate::getMatching here.
-  if (P1 != static_cast<CmpInst::Predicate>(P2) || LHS1 != LHS2)
+  auto MatchingPred = CmpPredicate::getMatching(P1, P2);
+  if (!MatchingPred || LHS1 != LHS2)
     return false;
 
   // Everything is fine, we can do the transform.
@@ -2462,7 +2462,7 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   assert(
       (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
       "Relational predicate is either less (or equal) or greater (or equal)!");
-  Intrinsic::ID id = ICmpInst::isSigned(P1)
+  Intrinsic::ID id = ICmpInst::isSigned(*MatchingPred)
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
                          : (UseMin ? Intrinsic::umin : Intrinsic::umax);
   auto *Preheader = L.getLoopPreheader();
@@ -2479,7 +2479,7 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                                    (ICmpInst::isSigned(P1) ? "s" : "u") +
                                    (UseMin ? "min" : "max"));
   Builder.SetInsertPoint(&I);
-  ICmpInst::Predicate P = P1;
+  ICmpInst::Predicate P = *MatchingPred;
   if (Inverse)
     P = ICmpInst::getInversePredicate(P);
   Value *NewCond = Builder.CreateICmp(P, LHS1, NewRHS);

@@ -245,12 +245,11 @@ exit:
 define i32 @test_sgt_samesign(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_sgt_samesign(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_UMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[INV_1:%.*]], i32 [[INV_2:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp samesign ugt i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i32 [[IV]], [[INVARIANT_UMAX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -305,14 +304,13 @@ exit:
 define i32 @test_sge_samesign(i32 %start, i32 %inv_1, i32 %inv_2) {
 ; CHECK-LABEL: @test_sge_samesign(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_1:%.*]] = call i32 @llvm.smax.i32(i32 [[INV_3:%.*]], i32 [[INV_2:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sge i32 [[IV]], [[INV_1:%.*]]
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp samesign uge i32 [[IV]], [[INV_2:%.*]]
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = and i1 [[CMP_1]], [[CMP_2]]
+; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sge i32 [[IV]], [[INV_1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA]]
