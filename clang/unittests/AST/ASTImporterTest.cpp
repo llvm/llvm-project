@@ -10182,7 +10182,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceNoMatch1) {
         struct X { int A; };
       }
       )";
-  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  getToTuDecl(ToCode, Lang_CXX11);
   const char *Code =
       R"(
       namespace a {
@@ -10205,7 +10205,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportIntoReopenedNamespaceNoMatch2) {
       namespace a {
       }
       )";
-  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  getToTuDecl(ToCode, Lang_CXX11);
   const char *Code =
       R"(
       namespace a {
