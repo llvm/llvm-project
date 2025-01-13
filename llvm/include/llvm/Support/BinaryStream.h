@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
@@ -31,7 +32,7 @@ enum BinaryStreamFlags {
 /// single contiguous buffer (or even in memory at all), in such cases a it may
 /// be necessary for an implementation to cache such a buffer so that it can
 /// return it.
-class BinaryStream {
+class LLVM_ABI BinaryStream {
 public:
   virtual ~BinaryStream() = default;
 
@@ -69,7 +70,7 @@ protected:
 /// buffer to the stream's backing store.  Streams are assumed to be buffered
 /// so that to be portable it is necessary to call commit() on the stream when
 /// all data has been written.
-class WritableBinaryStream : public BinaryStream {
+class LLVM_ABI WritableBinaryStream : public BinaryStream {
 public:
   ~WritableBinaryStream() override = default;
 

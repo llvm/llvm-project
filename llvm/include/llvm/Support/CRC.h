@@ -13,17 +13,18 @@
 #ifndef LLVM_SUPPORT_CRC_H
 #define LLVM_SUPPORT_CRC_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 template <typename T> class ArrayRef;
 
 // Compute the CRC-32 of Data.
-uint32_t crc32(ArrayRef<uint8_t> Data);
+LLVM_ABI uint32_t crc32(ArrayRef<uint8_t> Data);
 
 // Compute the running CRC-32 of Data, with CRC being the previous value of the
 // checksum.
-uint32_t crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
+LLVM_ABI uint32_t crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
 
 // Class for computing the JamCRC.
 //
@@ -42,7 +43,7 @@ uint32_t crc32(uint32_t CRC, ArrayRef<uint8_t> Data);
 //
 // N.B.  We permit flexibility of the "Init" value.  Some consumers of this need
 //       it to be zero.
-class JamCRC {
+class LLVM_ABI JamCRC {
 public:
   JamCRC(uint32_t Init = 0xFFFFFFFFU) : CRC(Init) {}
 

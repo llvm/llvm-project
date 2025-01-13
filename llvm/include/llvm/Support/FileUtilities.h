@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -29,57 +30,56 @@ namespace llvm {
   /// option, it will set the string to an error message if an error occurs, or
   /// if the files are different.
   ///
-  int DiffFilesWithTolerance(StringRef FileA,
-                             StringRef FileB,
-                             double AbsTol, double RelTol,
-                             std::string *Error = nullptr);
+LLVM_ABI int DiffFilesWithTolerance(StringRef FileA, StringRef FileB,
+                                    double AbsTol, double RelTol,
+                                    std::string *Error = nullptr);
 
+/// FileRemover - This class is a simple object meant to be stack allocated.
+/// If an exception is thrown from a region, the object removes the filename
+/// specified (if deleteIt is true).
+///
+class FileRemover {
+  SmallString<128> Filename;
+  bool DeleteIt;
 
-  /// FileRemover - This class is a simple object meant to be stack allocated.
-  /// If an exception is thrown from a region, the object removes the filename
-  /// specified (if deleteIt is true).
-  ///
-  class FileRemover {
-    SmallString<128> Filename;
-    bool DeleteIt;
-  public:
-    FileRemover() : DeleteIt(false) {}
+public:
+  FileRemover() : DeleteIt(false) {}
 
-    explicit FileRemover(const Twine& filename, bool deleteIt = true)
+  explicit FileRemover(const Twine &filename, bool deleteIt = true)
       : DeleteIt(deleteIt) {
-      filename.toVector(Filename);
+    filename.toVector(Filename);
+  }
+
+  ~FileRemover() {
+    if (DeleteIt) {
+      // Ignore problems deleting the file.
+      sys::fs::remove(Filename);
+    }
+  }
+
+  /// setFile - Give ownership of the file to the FileRemover so it will
+  /// be removed when the object is destroyed.  If the FileRemover already
+  /// had ownership of a file, remove it first.
+  void setFile(const Twine &filename, bool deleteIt = true) {
+    if (DeleteIt) {
+      // Ignore problems deleting the file.
+      sys::fs::remove(Filename);
     }
 
-    ~FileRemover() {
-      if (DeleteIt) {
-        // Ignore problems deleting the file.
-        sys::fs::remove(Filename);
-      }
-    }
+    Filename.clear();
+    filename.toVector(Filename);
+    DeleteIt = deleteIt;
+  }
 
-    /// setFile - Give ownership of the file to the FileRemover so it will
-    /// be removed when the object is destroyed.  If the FileRemover already
-    /// had ownership of a file, remove it first.
-    void setFile(const Twine& filename, bool deleteIt = true) {
-      if (DeleteIt) {
-        // Ignore problems deleting the file.
-        sys::fs::remove(Filename);
-      }
-
-      Filename.clear();
-      filename.toVector(Filename);
-      DeleteIt = deleteIt;
-    }
-
-    /// releaseFile - Take ownership of the file away from the FileRemover so it
-    /// will not be removed when the object is destroyed.
-    void releaseFile() { DeleteIt = false; }
-  };
+  /// releaseFile - Take ownership of the file away from the FileRemover so it
+  /// will not be removed when the object is destroyed.
+  void releaseFile() { DeleteIt = false; }
+};
 
   /// FilePermssionsApplier helps to copy permissions from an input file to
   /// an output one. It memorizes the status of the input file and can apply
   /// permissions and dates to the output file.
-  class FilePermissionsApplier {
+  class LLVM_ABI FilePermissionsApplier {
   public:
     static Expected<FilePermissionsApplier> create(StringRef InputFilename);
 

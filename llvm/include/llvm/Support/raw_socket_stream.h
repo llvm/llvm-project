@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_RAW_SOCKET_STREAM_H
 #define LLVM_SUPPORT_RAW_SOCKET_STREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,7 +29,7 @@ class raw_socket_stream;
 /// Ensures proper initialization and cleanup of winsock resources
 ///
 /// Make sure that calls to WSAStartup and WSACleanup are balanced.
-class WSABalancer {
+class LLVM_ABI WSABalancer {
 public:
   WSABalancer();
   ~WSABalancer();
@@ -56,7 +57,7 @@ public:
 /// }
 /// \endcode
 ///
-class ListeningSocket {
+class LLVM_ABI ListeningSocket {
 
   std::atomic<int> FD;
   std::string SocketPath; // Not modified after construction
@@ -117,7 +118,7 @@ public:
 //  raw_socket_stream
 //===----------------------------------------------------------------------===//
 
-class raw_socket_stream : public raw_fd_stream {
+class LLVM_ABI raw_socket_stream : public raw_fd_stream {
   uint64_t current_pos() const override { return 0; }
 #ifdef _WIN32
   WSABalancer _;

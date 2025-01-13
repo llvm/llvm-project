@@ -14,6 +14,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -26,7 +27,7 @@ namespace llvm {
 /// null-terminated strings, integers in various flavors of endianness, etc.
 /// Can be subclassed to provide reading of custom datatypes, although no
 /// are overridable.
-class BinaryStreamReader {
+class LLVM_ABI BinaryStreamReader {
 public:
   BinaryStreamReader() = default;
   explicit BinaryStreamReader(BinaryStreamRef Ref);

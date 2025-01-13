@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_SHA1_H
 #define LLVM_SUPPORT_SHA1_H
 
+#include "llvm/Support/Compiler.h"
 #include <array>
 #include <cstdint>
 
@@ -23,7 +24,7 @@ template <typename T> class ArrayRef;
 class StringRef;
 
 /// A class that wrap the SHA1 algorithm.
-class SHA1 {
+class LLVM_ABI SHA1 {
 public:
   SHA1() { init(); }
 

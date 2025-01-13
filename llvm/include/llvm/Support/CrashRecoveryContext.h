@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_CRASHRECOVERYCONTEXT_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CrashRecoveryContextCleanup;
@@ -43,7 +44,7 @@ class CrashRecoveryContextCleanup;
 /// To assist recovery the class allows specifying set of actions that will be
 /// executed in any case, whether crash occurs or not. These actions may be used
 /// to reclaim resources in the case of crash.
-class CrashRecoveryContext {
+class LLVM_ABI CrashRecoveryContext {
   void *Impl = nullptr;
   CrashRecoveryContextCleanup *head = nullptr;
 
@@ -124,7 +125,7 @@ public:
 ///
 /// Cleanup handlers are stored in a double list, which is owned and managed by
 /// a crash recovery context.
-class CrashRecoveryContextCleanup {
+class LLVM_ABI CrashRecoveryContextCleanup {
 protected:
   CrashRecoveryContext *context = nullptr;
   CrashRecoveryContextCleanup(CrashRecoveryContext *context)

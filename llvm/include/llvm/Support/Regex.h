@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_REGEX_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 struct llvm_regex;
@@ -25,7 +26,7 @@ namespace llvm {
   class StringRef;
   template<typename T> class SmallVectorImpl;
 
-  class Regex {
+  class LLVM_ABI Regex {
   public:
     enum RegexFlags : unsigned {
       NoFlags = 0,

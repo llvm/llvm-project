@@ -13,6 +13,7 @@
 #define LLVM_EXPONENTIALBACKOFF_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <chrono>
 #include <random>
@@ -30,7 +31,7 @@ namespace llvm {
 ///   } while (Backoff.waitForNextAttempt());
 ///   return Timeout;
 /// \endcode
-class ExponentialBackoff {
+class LLVM_ABI ExponentialBackoff {
 public:
   using duration = std::chrono::steady_clock::duration;
   using time_point = std::chrono::steady_clock::time_point;

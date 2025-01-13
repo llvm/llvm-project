@@ -46,6 +46,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <string>
 
@@ -53,9 +54,9 @@ namespace llvm {
 
 class raw_ostream;
 
-class DebugCounter {
+class LLVM_ABI DebugCounter {
 public:
-  struct Chunk {
+  struct LLVM_ABI Chunk {
     int64_t Begin;
     int64_t End;
     void print(llvm::raw_ostream &OS);

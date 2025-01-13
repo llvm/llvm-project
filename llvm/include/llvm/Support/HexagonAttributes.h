@@ -9,12 +9,13 @@
 #ifndef LLVM_SUPPORT_HEXAGONATTRIBUTES_H
 #define LLVM_SUPPORT_HEXAGONATTRIBUTES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {
 namespace HexagonAttrs {
 
-const TagNameMap &getHexagonAttributeTags();
+LLVM_ABI const TagNameMap &getHexagonAttributeTags();
 
 enum AttrType : unsigned {
   ARCH = 4,
