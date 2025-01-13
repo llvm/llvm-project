@@ -9897,6 +9897,7 @@ void BoUpSLP::transformNodes() {
           buildTree_rec(Slice, 0, EdgeInfo(&E, UINT_MAX));
           if (PrevSize + 1 == VectorizableTree.size() &&
               VectorizableTree[PrevSize]->isGather() &&
+              VectorizableTree[PrevSize]->hasState() &&
               VectorizableTree[PrevSize]->getOpcode() !=
                   Instruction::ExtractElement &&
               !isSplat(Slice)) {
@@ -13608,9 +13609,11 @@ BoUpSLP::isGatherShuffledEntry(
   if (!TE->UserTreeIndices.empty() &&
       TE->UserTreeIndices.front().UserTE->isGather() &&
       TE->UserTreeIndices.front().EdgeIdx == UINT_MAX) {
-    assert((TE->Idx == 0 || TE->getOpcode() == Instruction::ExtractElement ||
-            isSplat(TE->Scalars)) &&
-           "Expected splat or extractelements only node.");
+    assert(
+        (TE->Idx == 0 ||
+         (TE->hasState() && TE->getOpcode() == Instruction::ExtractElement) ||
+         isSplat(TE->Scalars)) &&
+        "Expected splat or extractelements only node.");
     return {};
   }
   unsigned SliceSize = getPartNumElems(VL.size(), NumParts);

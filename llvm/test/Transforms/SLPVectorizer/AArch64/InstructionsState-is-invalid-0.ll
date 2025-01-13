@@ -5,6 +5,29 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i6
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @foo(ptr %0) {
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:  vector.scevcheck:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], i64 4
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr null, i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[SCEVGEP]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x ptr> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[SCEVGEP3]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x ptr> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[OP_RDX]], label [[DOTLR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    ret void
+; CHECK:       .lr.ph:
+; CHECK-NEXT:    ret void
+;
 vector.scevcheck:
   %scevgep = getelementptr i8, ptr %0, i64 4
   %scevgep3 = getelementptr i8, ptr null, i64 4
