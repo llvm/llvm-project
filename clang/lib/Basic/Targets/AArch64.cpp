@@ -1671,6 +1671,10 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
+    const llvm::Triple &Triple, const TargetOptions &Opts)
+    : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}
+
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
@@ -1695,9 +1699,9 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
     TheCXXABI.set(TargetCXXABI::AppleARM64);
 }
 
-void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
-                                           const llvm::Triple &Triple,
-                                           MacroBuilder &Builder) const {
+void clang::targets::getAppleMachOAArch64Defines(MacroBuilder &Builder,
+                                                 const LangOptions &Opts,
+                                                 const llvm::Triple &Triple) {
   Builder.defineMacro("__AARCH64_SIMD__");
   if (Triple.isArch32Bit())
     Builder.defineMacro("__ARM64_ARCH_8_32__");
@@ -1710,7 +1714,20 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
 
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
+}
 
+void AppleMachOAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                               const llvm::Triple &Triple,
+                                               MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
+  AppleMachOTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple,
+                                                          Builder);
+}
+
+void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
   DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 

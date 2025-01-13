@@ -7635,6 +7635,32 @@ The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
   }];
 }
 
+def ArmAgnosticDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_agnostic`` keyword applies to prototyped function types and
+affects the function's calling convention for a given state S. This
+attribute allows the user to describe a function that preserves S, without
+requiring the function to share S with its callers and without making
+the assumption that S exists.
+
+If a function has the ``__arm_agnostic(S)`` attribute and calls a function
+without this attribute, then the function's object code will contain code
+to preserve state S. Otherwise, the function's object code will be the same
+as if it did not have the attribute.
+
+The attribute takes string arguments to describe state S. The supported
+states are:
+
+* ``"sme_za_state"`` for state enabled by PSTATE.ZA, such as ZA and ZT0.
+
+The attribute ``__arm_agnostic("sme_za_state")`` cannot be used in conjunction
+with ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` or
+``__arm_preserves(S)`` where state S describes state enabled by PSTATE.ZA,
+such as "za" or "zt0".
+  }];
+}
+
 def ArmSmeLocallyStreamingDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
