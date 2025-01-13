@@ -7691,6 +7691,20 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
+  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+                 RdxDesc.getRecurrenceKind())) {
+    using namespace llvm::PatternMatch;
+    Value *Cmp, *OrigResumeV;
+    bool IsExpectedPattern =
+        match(MainResumeValue, m_Select(m_OneUse(m_Value(Cmp)),
+                                        m_Specific(RdxDesc.getSentinelValue()),
+                                        m_Value(OrigResumeV))) &&
+        match(Cmp,
+              m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
+                             m_Specific(RdxDesc.getRecurrenceStartValue())));
+    assert(IsExpectedPattern && "Unexpected reduction resume pattern");
+    (void)IsExpectedPattern;
+    MainResumeValue = OrigResumeV;
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
@@ -10413,6 +10427,19 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
             cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
+      } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+        // VPReductionPHIRecipe for FindLastIV reductions requires an adjustment
+        // to the resume value. The resume value is adjusted to the sentinel
+        // value when the final value from the main vector loop equals the start
+        // value. This ensures correctness when the start value might not be
+        // less than the minimum value of a monotonically increasing induction
+        // variable.
+        IRBuilder<> Builder(
+            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        Value *Cmp =
+            Builder.CreateICmpEQ(ResumeV, RdxDesc.getRecurrenceStartValue());
+        ResumeV =
+            Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
       }
     } else {
       // Retrieve the induction resume values for wide inductions from
