@@ -1114,6 +1114,10 @@ public:
   /// addressed later.
   RValue GetUndefRValue(clang::QualType Ty);
 
+  /// Given a value and its clang type, returns the value casted from its memory
+  /// representation.
+  /// Note: CIR defers most of the special casting to the final lowering passes
+  /// to conserve the high level information.
   mlir::Value emitFromMemory(mlir::Value Value, clang::QualType Ty);
 
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &S);
@@ -1339,7 +1343,12 @@ public:
   }
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  /// Given a value and its clang type, returns the value casted to its memory
+  /// representation.
+  /// Note: CIR defers most of the special casting to the final lowering passes
+  /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value Value, clang::QualType Ty);
+
   void emitDeclRefExprDbgValue(const DeclRefExpr *E, const APValue &Init);
 
   /// Store the specified rvalue into the specified

@@ -186,7 +186,8 @@ public:
   /// convertType in that it is used to convert to the memory representation
   /// for a type. For example, the scalar representation for _Bool is i1, but
   /// the memory representation is usually i8 or i32, depending on the target.
-  // TODO: convert this comment to account for MLIR's equivalence
+  /// Note: CIR defers most of the special conversions to the final lowering
+  /// passes to conserve the high level information.
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
 
   /// Get the CIR function type for \arg Info.
