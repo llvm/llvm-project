@@ -486,16 +486,16 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
+  "Enable FP8 4-way dot instructions", [FeatureNEON, FeatureFP8]>;
 
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
+  "Enable FP8 2-way dot instructions", [FeatureNEON, FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
-  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
+  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FEAT_SSVE_FP8DOT2",
-  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
+  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
@@ -504,7 +504,7 @@ def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F3
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSMEF8F16 : ExtensionWithMArch<"sme-f8f16", "SMEF8F16", "FEAT_SME_F8F16",
-  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSMEF8F32]>;
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureCPA : ExtensionWithMArch<"cpa", "CPA", "FEAT_CPA",
   "Enable Armv9.5-A Checked Pointer Arithmetic">;
