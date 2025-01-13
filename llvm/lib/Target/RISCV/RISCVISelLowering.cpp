@@ -17397,21 +17397,12 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
-  MVT NarrowContainerVT = NarrowVT;
-  MVT ContainerVT = VT;
   SDLoc DL(N);
   SDValue Passthru, Mask, VL;
   switch (N->getOpcode()) {
   case ISD::SHL:
-    if (VT.isFixedLengthVector()) {
-      NarrowContainerVT =
-          getContainerForFixedLengthVector(DAG, NarrowVT, Subtarget);
-      NarrowOp =
-          convertToScalableVector(NarrowContainerVT, NarrowOp, DAG, Subtarget);
-      ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-    }
     Passthru = DAG.getUNDEF(VT);
-    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+    std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
     break;
   case RISCVISD::SHL_VL:
     Passthru = N->getOperand(2);
@@ -17421,13 +17412,10 @@ static SDValue combineSHL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   default:
     llvm_unreachable("Expected SHL");
   }
-  SDValue Mul =
-      DAG.getNode(Opcode, DL, ContainerVT, NarrowOp,
-                  DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), ContainerVT),
-                  Passthru, Mask, VL);
-  if (VT.isFixedLengthVector())
-    return convertFromScalableVector(VT, Mul, DAG, Subtarget);
-  return Mul;
+  return DAG.getNode(
+      Opcode, DL, VT, NarrowOp,
+      DAG.getConstant(1ULL << ShAmtInt, SDLoc(RHS), NarrowVT),
+      Passthru, Mask, VL);
 }
 
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
