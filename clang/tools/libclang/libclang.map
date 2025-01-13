@@ -436,6 +436,7 @@ LLVM_19 {
 
 LLVM_20 {
   global:
+    clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
 };
 

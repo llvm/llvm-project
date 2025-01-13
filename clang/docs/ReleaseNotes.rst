@@ -58,6 +58,29 @@ code bases.
   containing strict-aliasing violations. The new default behavior can be
   disabled using ``-fno-pointer-tbaa``.
 
+- Clang will now more aggressively use undefined behavior on pointer addition
+  overflow for optimization purposes. For example, a check like
+  ``ptr + unsigned_offset < ptr`` will now optimize to ``false``, because
+  ``ptr + unsigned_offset`` will cause undefined behavior if it overflows (or
+  advances past the end of the object).
+
+  Previously, ``ptr + unsigned_offset < ptr`` was optimized (by both Clang and
+  GCC) to ``(ssize_t)unsigned_offset < 0``. This also results in an incorrect
+  overflow check, but in a way that is less apparent when only testing with
+  pointers in the low half of the address space.
+
+  To avoid pointer addition overflow, it is necessary to perform the addition
+  on integers, for example using
+  ``(uintptr_t)ptr + unsigned_offset < (uintptr_t)ptr``. Sometimes, it is also
+  possible to rewrite checks by only comparing the offset. For example,
+  ``ptr + offset < end_ptr && ptr + offset >= ptr`` can be written as
+  ``offset < (uintptr_t)(end_ptr - ptr)``.
+
+  Undefined behavior due to pointer addition overflow can be reliably detected
+  using ``-fsanitize=pointer-overflow``. It is also possible to use
+  ``-fno-strict-overflow`` to opt-in to a language dialect where signed integer
+  and pointer overflow are well-defined.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -444,6 +467,10 @@ Non-comprehensive list of changes in this release
 
 - Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
   which allows them to be stored in STL containers.
+
+- In the ``-ftime-report`` output, the new "Clang time report" group replaces
+  the old "Clang front-end time report" and includes "Front end", "LLVM IR
+  generation", "Optimizer", and "Machine code generation".
 
 New Compiler Flags
 ------------------
@@ -922,6 +949,7 @@ Bug Fixes to C++ Support
   (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
 - Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
+- Fixed a crash when __PRETTY_FUNCTION__ or __FUNCSIG__ (clang-cl) appears in the trailing return type of the lambda (#GH121274)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1083,6 +1111,12 @@ CUDA Support
 - Clang now supports CUDA SDK up to 12.6
 - Added support for sm_100
 - Added support for `__grid_constant__` attribute.
+- CUDA now uses the new offloading driver by default. The new driver supports
+  device-side LTO, interoperability with OpenMP and other languages, and native ``-fgpu-rdc``
+  support with static libraries. The old behavior can be returned using the
+  ``--no-offload-new-driver`` flag. The binary format is no longer compatible
+  with the NVIDIA compiler's RDC-mode support. More information can be found at:
+  https://clang.llvm.org/docs/OffloadingDesign.html
 
 AIX Support
 ^^^^^^^^^^^
@@ -1176,6 +1210,8 @@ libclang
 --------
 - Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
   whether the first one comes strictly before the second in the source code.
+- Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
+  to pretty-print a type.
 
 Static Analyzer
 ---------------
@@ -1316,10 +1352,13 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
-- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
-  which allow changing the formatting of pretty-printed code.
-- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
-  a declaration is an anonymous union or anonymous struct.
+- Added ``Cursor.pretty_printed``, a binding for ``clang_getCursorPrettyPrinted``,
+  and related functions, which allow changing the formatting of pretty-printed code.
+- Added ``Cursor.is_anonymous_record_decl``, a binding for
+  ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if a
+  declaration is an anonymous union or anonymous struct.
+- Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
+  which allows changing the formatting of pretty-printed types.
 
 OpenMP Support
 --------------

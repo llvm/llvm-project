@@ -1166,6 +1166,10 @@ uint32_t ImportThunkChunkARM64EC::extendRanges() {
   return sizeof(arm64Thunk) - sizeof(uint32_t);
 }
 
+uint64_t Arm64XRelocVal::get() const {
+  return (sym ? sym->getRVA() : 0) + value;
+}
+
 size_t Arm64XDynamicRelocEntry::getSize() const {
   switch (type) {
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
@@ -1186,13 +1190,13 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
     *out |= ((bit_width(size) - 1) << 14); // Encode the size.
     switch (size) {
     case 2:
-      out[1] = value;
+      out[1] = value.get();
       break;
     case 4:
-      *reinterpret_cast<ulittle32_t *>(out + 1) = value;
+      *reinterpret_cast<ulittle32_t *>(out + 1) = value.get();
       break;
     case 8:
-      *reinterpret_cast<ulittle64_t *>(out + 1) = value;
+      *reinterpret_cast<ulittle64_t *>(out + 1) = value.get();
       break;
     default:
       llvm_unreachable("invalid size");

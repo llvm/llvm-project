@@ -145,9 +145,8 @@ private:
 ///
 /// It is important that .subsections_via_symbols is used to ensure functions
 /// and data are in their own sections and thus can be reordered.
-llvm::DenseMap<const lld::macho::InputSection *, size_t>
-runBalancedPartitioning(size_t &highestAvailablePriority,
-                        llvm::StringRef profilePath,
+llvm::DenseMap<const lld::macho::InputSection *, int>
+runBalancedPartitioning(llvm::StringRef profilePath,
                         bool forFunctionCompression, bool forDataCompression,
                         bool compressionSortStartupFunctions, bool verbose);
 
