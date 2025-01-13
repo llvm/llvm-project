@@ -343,7 +343,7 @@ static bool extractFieldType(SmallVectorImpl<FieldEncoding> &FE,
     if (Field->isBitField()) {
       Enc += "b(";
       llvm::raw_svector_ostream OS(Enc);
-      OS << Field->getBitWidthValue(CGM.getContext());
+      OS << Field->getBitWidthValue();
       Enc += ':';
     }
     if (!appendType(Enc, Field->getType(), CGM, TSC))

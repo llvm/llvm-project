@@ -442,7 +442,7 @@ define <4 x double> @PR34175(ptr %p) {
 ;
 ; AVX512BW-LABEL: PR34175:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
+; AVX512BW-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
 ; AVX512BW-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512BW-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512BW-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
@@ -453,15 +453,14 @@ define <4 x double> @PR34175(ptr %p) {
 ; AVX512BWVL-LABEL: PR34175:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512BWVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
-; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512BWVL-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512BWVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512BWVL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: PR34175:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [0,8,32,40,0,8,32,40,0,8,32,40,0,8,32,40]
+; AVX512VBMI-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,32,40,0,0,0,0]
 ; AVX512VBMI-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX512VBMI-NEXT:    vmovdqu 32(%rdi), %ymm2
 ; AVX512VBMI-NEXT:    vpermt2w %zmm2, %zmm0, %zmm1
@@ -472,9 +471,8 @@ define <4 x double> @PR34175(ptr %p) {
 ; AVX512VBMIVL-LABEL: PR34175:
 ; AVX512VBMIVL:       # %bb.0:
 ; AVX512VBMIVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
-; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512VBMIVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
-; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512VBMIVL-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VBMIVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VBMIVL-NEXT:    retq
   %v = load <32 x i16>, ptr %p, align 2

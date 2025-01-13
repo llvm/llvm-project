@@ -164,18 +164,20 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   return Result;
 }
 
-// Calculate the size of a legacy cbuffer type based on
+// Calculate the size of a legacy cbuffer type in bytes based on
 // https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-packing-rules
 static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
                                            QualType T) {
   unsigned Size = 0;
-  constexpr unsigned CBufferAlign = 128;
+  constexpr unsigned CBufferAlign = 16;
   if (const RecordType *RT = T->getAs<RecordType>()) {
     const RecordDecl *RD = RT->getDecl();
     for (const FieldDecl *Field : RD->fields()) {
       QualType Ty = Field->getType();
       unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
-      unsigned FieldAlign = 32;
+      // FIXME: This is not the correct alignment, it does not work for 16-bit
+      // types. See llvm/llvm-project#119641.
+      unsigned FieldAlign = 4;
       if (Ty->isAggregateType())
         FieldAlign = CBufferAlign;
       Size = llvm::alignTo(Size, FieldAlign);
@@ -194,17 +196,19 @@ static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
         calculateLegacyCbufferSize(Context, VT->getElementType());
     Size = ElementSize * ElementCount;
   } else {
-    Size = Context.getTypeSize(T);
+    Size = Context.getTypeSize(T) / 8;
   }
   return Size;
 }
 
-void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
-  auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
-  BufDecl->setRBraceLoc(RBrace);
-
-  // Validate packoffset.
+// Validate packoffset:
+// - if packoffset it used it must be set on all declarations inside the buffer
+// - packoffset ranges must not overlap
+static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
   llvm::SmallVector<std::pair<VarDecl *, HLSLPackOffsetAttr *>> PackOffsetVec;
+
+  // Make sure the packoffset annotations are either on all declarations
+  // or on none.
   bool HasPackOffset = false;
   bool HasNonPackOffset = false;
   for (auto *Field : BufDecl->decls()) {
@@ -219,33 +223,41 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
     }
   }
 
-  if (HasPackOffset && HasNonPackOffset)
-    Diag(BufDecl->getLocation(), diag::warn_hlsl_packoffset_mix);
+  if (!HasPackOffset)
+    return;
 
-  if (HasPackOffset) {
-    ASTContext &Context = getASTContext();
-    // Make sure no overlap in packoffset.
-    // Sort PackOffsetVec by offset.
-    std::sort(PackOffsetVec.begin(), PackOffsetVec.end(),
-              [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
-                 const std::pair<VarDecl *, HLSLPackOffsetAttr *> &RHS) {
-                return LHS.second->getOffset() < RHS.second->getOffset();
-              });
+  if (HasNonPackOffset)
+    S.Diag(BufDecl->getLocation(), diag::warn_hlsl_packoffset_mix);
 
-    for (unsigned i = 0; i < PackOffsetVec.size() - 1; i++) {
-      VarDecl *Var = PackOffsetVec[i].first;
-      HLSLPackOffsetAttr *Attr = PackOffsetVec[i].second;
-      unsigned Size = calculateLegacyCbufferSize(Context, Var->getType());
-      unsigned Begin = Attr->getOffset() * 32;
-      unsigned End = Begin + Size;
-      unsigned NextBegin = PackOffsetVec[i + 1].second->getOffset() * 32;
-      if (End > NextBegin) {
-        VarDecl *NextVar = PackOffsetVec[i + 1].first;
-        Diag(NextVar->getLocation(), diag::err_hlsl_packoffset_overlap)
-            << NextVar << Var;
-      }
+  // Make sure there is no overlap in packoffset - sort PackOffsetVec by offset
+  // and compare adjacent values.
+  ASTContext &Context = S.getASTContext();
+  std::sort(PackOffsetVec.begin(), PackOffsetVec.end(),
+            [](const std::pair<VarDecl *, HLSLPackOffsetAttr *> &LHS,
+               const std::pair<VarDecl *, HLSLPackOffsetAttr *> &RHS) {
+              return LHS.second->getOffsetInBytes() <
+                     RHS.second->getOffsetInBytes();
+            });
+  for (unsigned i = 0; i < PackOffsetVec.size() - 1; i++) {
+    VarDecl *Var = PackOffsetVec[i].first;
+    HLSLPackOffsetAttr *Attr = PackOffsetVec[i].second;
+    unsigned Size = calculateLegacyCbufferSize(Context, Var->getType());
+    unsigned Begin = Attr->getOffsetInBytes();
+    unsigned End = Begin + Size;
+    unsigned NextBegin = PackOffsetVec[i + 1].second->getOffsetInBytes();
+    if (End > NextBegin) {
+      VarDecl *NextVar = PackOffsetVec[i + 1].first;
+      S.Diag(NextVar->getLocation(), diag::err_hlsl_packoffset_overlap)
+          << NextVar << Var;
     }
   }
+}
+
+void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
+  auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
+  BufDecl->setRBraceLoc(RBrace);
+
+  validatePackoffset(SemaRef, BufDecl);
 
   SemaRef.PopDeclContext();
 }
