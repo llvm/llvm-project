@@ -81,13 +81,15 @@ define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, ptr nocap
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    vinsertps $0, 12(%eax,%ecx), %xmm0, %xmm0 ## xmm0 = mem[0],xmm0[1,2,3]
+; X86-NEXT:    vmovss 12(%eax,%ecx), %xmm1 ## xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: insertps_from_vector_load_offset_2:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    shlq $4, %rsi
-; X64-NEXT:    vinsertps $0, 12(%rdi,%rsi), %xmm0, %xmm0 ## xmm0 = mem[0],xmm0[1,2,3]
+; X64-NEXT:    vmovss 12(%rdi,%rsi), %xmm1 ## xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
   %1 = getelementptr inbounds <4 x float>, ptr %pb, i64 %index
   %2 = load <4 x float>, ptr %1, align 16

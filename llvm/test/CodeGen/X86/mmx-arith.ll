@@ -76,15 +76,13 @@ define void @test0(ptr %A, ptr %B) nounwind {
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    packuswb %xmm1, %xmm1
 ; X64-NEXT:    movq %xmm1, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pand %xmm1, %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    por %xmm0, %xmm1
-; X64-NEXT:    movq %xmm1, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
+; X64-NEXT:    movq %xmm1, %rax
+; X64-NEXT:    andq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    orq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    xorq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -178,21 +176,17 @@ define void @test1(ptr %A, ptr %B) nounwind {
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; X64-NEXT:    pmuludq %xmm0, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; X64-NEXT:    pmuludq %xmm2, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; X64-NEXT:    movq %xmm1, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pand %xmm1, %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    por %xmm0, %xmm1
-; X64-NEXT:    movq %xmm1, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
+; X64-NEXT:    movq %xmm1, %rax
+; X64-NEXT:    andq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    orq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    xorq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:
@@ -325,14 +319,11 @@ define void @test2(ptr %A, ptr %B) nounwind {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    movq %mm0, (%rdi)
 ; X64-NEXT:    andq (%rsi), %rax
-; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    movq %rax, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    por %xmm0, %xmm1
-; X64-NEXT:    movq %xmm1, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    movq %xmm0, (%rdi)
+; X64-NEXT:    orq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    xorq (%rsi), %rax
+; X64-NEXT:    movq %rax, (%rdi)
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq
 entry:

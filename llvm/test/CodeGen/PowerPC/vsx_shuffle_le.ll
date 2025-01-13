@@ -45,18 +45,16 @@ define <2 x double> @test01(ptr %p1, ptr %p2) {
 define <2 x double> @test02(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test02:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxmrgld 34, 1, 0
+; CHECK-NEXT:    lfd 0, 0(3)
+; CHECK-NEXT:    lfd 1, 0(4)
+; CHECK-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test02:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxmrgld 34, 1, 0
+; CHECK-P9-NEXT:    lfd 0, 0(3)
+; CHECK-P9-NEXT:    lfd 1, 0(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -67,18 +65,16 @@ define <2 x double> @test02(ptr %p1, ptr %p2) {
 define <2 x double> @test03(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test03:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxpermdi 34, 1, 0, 1
+; CHECK-NEXT:    lfd 0, 0(3)
+; CHECK-NEXT:    lfd 1, 8(4)
+; CHECK-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test03:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxpermdi 34, 1, 0, 1
+; CHECK-P9-NEXT:    lfd 0, 0(3)
+; CHECK-P9-NEXT:    lfd 1, 8(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -123,18 +119,16 @@ define <2 x double> @test11(ptr %p1, ptr %p2) {
 define <2 x double> @test12(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxpermdi 34, 1, 0, 2
+; CHECK-NEXT:    lfd 0, 8(3)
+; CHECK-NEXT:    lfd 1, 0(4)
+; CHECK-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test12:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxpermdi 34, 1, 0, 2
+; CHECK-P9-NEXT:    lfd 0, 8(3)
+; CHECK-P9-NEXT:    lfd 1, 0(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -145,17 +139,15 @@ define <2 x double> @test12(ptr %p1, ptr %p2) {
 define <2 x double> @test13(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
+; CHECK-NEXT:    lfd 0, 8(3)
+; CHECK-NEXT:    lfd 1, 8(4)
 ; CHECK-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test13:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
+; CHECK-P9-NEXT:    lfd 0, 8(3)
+; CHECK-P9-NEXT:    lfd 1, 8(4)
 ; CHECK-P9-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
@@ -167,18 +159,16 @@ define <2 x double> @test13(ptr %p1, ptr %p2) {
 define <2 x double> @test20(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxmrgld 34, 0, 1
+; CHECK-NEXT:    lfd 0, 0(3)
+; CHECK-NEXT:    lfd 1, 0(4)
+; CHECK-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test20:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxmrgld 34, 0, 1
+; CHECK-P9-NEXT:    lfd 0, 0(3)
+; CHECK-P9-NEXT:    lfd 1, 0(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -189,18 +179,16 @@ define <2 x double> @test20(ptr %p1, ptr %p2) {
 define <2 x double> @test21(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test21:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxpermdi 34, 0, 1, 1
+; CHECK-NEXT:    lfd 0, 8(3)
+; CHECK-NEXT:    lfd 1, 0(4)
+; CHECK-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test21:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxpermdi 34, 0, 1, 1
+; CHECK-P9-NEXT:    lfd 0, 8(3)
+; CHECK-P9-NEXT:    lfd 1, 0(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -244,18 +232,16 @@ define <2 x double> @test23(ptr %p1, ptr %p2) {
 define <2 x double> @test30(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test30:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
-; CHECK-NEXT:    xxpermdi 34, 0, 1, 2
+; CHECK-NEXT:    lfd 0, 0(3)
+; CHECK-NEXT:    lfd 1, 8(4)
+; CHECK-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test30:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
-; CHECK-P9-NEXT:    xxpermdi 34, 0, 1, 2
+; CHECK-P9-NEXT:    lfd 0, 0(3)
+; CHECK-P9-NEXT:    lfd 1, 8(4)
+; CHECK-P9-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1
   %v2 = load <2 x double>, ptr %p2
@@ -266,17 +252,15 @@ define <2 x double> @test30(ptr %p1, ptr %p2) {
 define <2 x double> @test31(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: test31:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    lxvd2x 1, 0, 4
-; CHECK-NEXT:    xxswapd 0, 0
-; CHECK-NEXT:    xxswapd 1, 1
+; CHECK-NEXT:    lfd 0, 8(3)
+; CHECK-NEXT:    lfd 1, 8(4)
 ; CHECK-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test31:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    lxv 0, 0(3)
-; CHECK-P9-NEXT:    lxv 1, 0(4)
+; CHECK-P9-NEXT:    lfd 0, 8(3)
+; CHECK-P9-NEXT:    lfd 1, 8(4)
 ; CHECK-P9-NEXT:    xxmrghd 34, 0, 1
 ; CHECK-P9-NEXT:    blr
   %v1 = load <2 x double>, ptr %p1

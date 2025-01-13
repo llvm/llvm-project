@@ -495,10 +495,11 @@ define float @ftrunc_freeze_fround(float %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-NEXT:    andps %xmm0, %xmm1
-; X64-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    addss %xmm0, %xmm1
+; X64-NEXT:    movss {{.*#+}} xmm2 = [4.9999997E-1,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    orps %xmm1, %xmm2
+; X64-NEXT:    addss %xmm0, %xmm2
 ; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    roundss $11, %xmm1, %xmm0
+; X64-NEXT:    roundss $11, %xmm2, %xmm0
 ; X64-NEXT:    retq
   %f0 = call float @llvm.round.f32(float %a0)
   %fr = freeze float %f0

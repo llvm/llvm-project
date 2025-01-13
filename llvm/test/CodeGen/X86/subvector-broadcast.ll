@@ -1647,13 +1647,13 @@ define <4 x double> @broadcast_v4f64_v2f64_4u61(ptr %vp, <4 x double> %default) 
 ; X86-LABEL: broadcast_v4f64_v2f64_4u61:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vinsertf128 $1, (%eax), %ymm0, %ymm1
+; X86-NEXT:    vbroadcastsd 8(%eax), %ymm1
 ; X86-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: broadcast_v4f64_v2f64_4u61:
 ; X64:       # %bb.0:
-; X64-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm1
+; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; X64-NEXT:    retq
   %vec = load <2 x double>, ptr %vp

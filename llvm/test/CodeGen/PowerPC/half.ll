@@ -928,12 +928,12 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; P9-LABEL: test_extend32_vec4:
 ; P9:       # %bb.0:
 ; P9-NEXT:    lwz r4, 4(r3)
-; P9-NEXT:    stw r4, -16(r1)
 ; P9-NEXT:    lwz r3, 0(r3)
-; P9-NEXT:    lxv vs34, -16(r1)
-; P9-NEXT:    stw r3, -32(r1)
+; P9-NEXT:    mtfprwz f0, r4
+; P9-NEXT:    xxinsertw vs34, vs0, 12
+; P9-NEXT:    mtfprwz f0, r3
 ; P9-NEXT:    li r3, 0
-; P9-NEXT:    lxv vs35, -32(r1)
+; P9-NEXT:    xxinsertw vs35, vs0, 12
 ; P9-NEXT:    vextuhrx r4, r3, v3
 ; P9-NEXT:    vextuhrx r3, r3, v2
 ; P9-NEXT:    clrlwi r4, r4, 16

@@ -93,18 +93,18 @@ define <2 x float> @fma_shufflevector_non_coalescable(ptr addrspace(3) %p, <2 x 
 define <2 x float> @fma_mixed_extract_and_scalar(ptr addrspace(3) %p, float %s, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_mixed_extract_and_scalar(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [fma_mixed_extract_and_scalar_param_0];
-; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    ld.param.b32 %r5, [fma_mixed_extract_and_scalar_param_1];
-; CHECK-NEXT:    ld.param.v2.b32 {%r6, %r7}, [fma_mixed_extract_and_scalar_param_2];
-; CHECK-NEXT:    ld.param.v2.b32 {%r8, %r9}, [fma_mixed_extract_and_scalar_param_3];
-; CHECK-NEXT:    fma.rn.f32 %r10, %r7, %r5, %r9;
-; CHECK-NEXT:    fma.rn.f32 %r11, %r6, %r3, %r8;
-; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r11, %r10};
+; CHECK-NEXT:    ld.shared.b32 %r1, [%rd1+8];
+; CHECK-NEXT:    ld.param.b32 %r2, [fma_mixed_extract_and_scalar_param_1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [fma_mixed_extract_and_scalar_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r5, %r6}, [fma_mixed_extract_and_scalar_param_3];
+; CHECK-NEXT:    fma.rn.f32 %r7, %r4, %r2, %r6;
+; CHECK-NEXT:    fma.rn.f32 %r8, %r3, %r1, %r5;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-NEXT:    ret;
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e2  = extractelement <4 x float> %ld, i32 2

@@ -2705,8 +2705,10 @@ define i32 @sext_known_nonzero_vec(<8 x i16> %xx, ptr %p) {
 ; X86-NEXT:    pxor %xmm1, %xmm1
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    pslld $23, %xmm0
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1065353216,1065353216,1065353216,1065353216]
-; X86-NEXT:    cvttps2dq %xmm0, %xmm0
+; X86-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
+; X86-NEXT:    paddd %xmm0, %xmm2
+; X86-NEXT:    cvttps2dq %xmm2, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,2,2,4,5,6,7]
@@ -2721,9 +2723,10 @@ define i32 @sext_known_nonzero_vec(<8 x i16> %xx, ptr %p) {
 ;
 ; X64-LABEL: sext_known_nonzero_vec:
 ; X64:       # %bb.0:
+; X64-NEXT:    vpinsrd $2, {{\.?LCPI[0-9]+_[0-9]+}}+8(%rip), %xmm0, %xmm1
 ; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-NEXT:    vpslld $23, %xmm0, %xmm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1065353216,1065353216,1065353216,1065353216]
+; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1

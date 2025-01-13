@@ -9,32 +9,38 @@
 define half @test_fneg(half %a) nounwind {
 ; SSE2-LABEL: test_fneg:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE2-FAST-LABEL: test_fneg:
 ; SSE2-FAST:       # %bb.0:
-; SSE2-FAST-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-FAST-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-FAST-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-FAST-NEXT:    retq
 ;
 ; AVX-LABEL: test_fneg:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: test_fneg:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-FAST-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-FAST-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
 ;
 ; F16C-LABEL: test_fneg:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; F16C-FAST-LABEL: test_fneg:
 ; F16C-FAST:       # %bb.0:
-; F16C-FAST-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-FAST-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-FAST-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; F16C-FAST-NEXT:    retq
   %ext = fpext half %a to float
   %neg = fneg float %ext
@@ -45,32 +51,38 @@ define half @test_fneg(half %a) nounwind {
 define half @test_fabs(half %a) nounwind {
 ; SSE2-LABEL: test_fabs:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE2-FAST-LABEL: test_fabs:
 ; SSE2-FAST:       # %bb.0:
-; SSE2-FAST-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-FAST-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-FAST-NEXT:    pand %xmm1, %xmm0
 ; SSE2-FAST-NEXT:    retq
 ;
 ; AVX-LABEL: test_fabs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: test_fabs:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-FAST-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-FAST-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
 ;
 ; F16C-LABEL: test_fabs:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; F16C-FAST-LABEL: test_fabs:
 ; F16C-FAST:       # %bb.0:
-; F16C-FAST-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-FAST-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-FAST-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; F16C-FAST-NEXT:    retq
   %ext = fpext half %a to float
   %abs = call float @llvm.fabs.f32(float %ext)

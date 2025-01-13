@@ -19,7 +19,7 @@ define void @pull_bitcast(ptr %pA, ptr %pB) {
 define <4 x i32> @multi_use_swizzle(ptr %pA, ptr %pB) {
 ; CHECK-LABEL: multi_use_swizzle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-NEXT:    vbroadcastss 4(%rdi), %xmm0
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1],mem[1,2]
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[1,3,2,2]
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,1,0,2]

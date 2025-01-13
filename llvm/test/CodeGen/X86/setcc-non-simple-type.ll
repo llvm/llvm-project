@@ -119,22 +119,18 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:  .LBB0_2: # %vector.body
 ; CHECK-AVX2-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-AVX2-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-AVX2-NEXT:    vmovdqu 1024(%rdx,%rsi), %xmm5
-; CHECK-AVX2-NEXT:    vmovdqu 1040(%rdx,%rsi), %xmm6
-; CHECK-AVX2-NEXT:    vpextrq $1, %xmm5, %rdi
-; CHECK-AVX2-NEXT:    vpextrq $1, %xmm6, %r8
-; CHECK-AVX2-NEXT:    vmovq %xmm5, %r9
-; CHECK-AVX2-NEXT:    vmovq %xmm6, %r10
-; CHECK-AVX2-NEXT:    negq %r10
-; CHECK-AVX2-NEXT:    movq %rcx, %r10
-; CHECK-AVX2-NEXT:    sbbq %r8, %r10
-; CHECK-AVX2-NEXT:    setge %r8b
-; CHECK-AVX2-NEXT:    movzbl %r8b, %r8d
+; CHECK-AVX2-NEXT:    movq 1040(%rdx,%rsi), %rdi
+; CHECK-AVX2-NEXT:    movq 1024(%rdx,%rsi), %r8
+; CHECK-AVX2-NEXT:    negq %rdi
+; CHECK-AVX2-NEXT:    movq %rcx, %rdi
+; CHECK-AVX2-NEXT:    sbbq 1048(%rdx,%rsi), %rdi
+; CHECK-AVX2-NEXT:    setge %dil
+; CHECK-AVX2-NEXT:    movzbl %dil, %edi
+; CHECK-AVX2-NEXT:    negq %rdi
+; CHECK-AVX2-NEXT:    vmovq %rdi, %xmm5
 ; CHECK-AVX2-NEXT:    negq %r8
-; CHECK-AVX2-NEXT:    vmovq %r8, %xmm5
-; CHECK-AVX2-NEXT:    negq %r9
-; CHECK-AVX2-NEXT:    movq %rcx, %r8
-; CHECK-AVX2-NEXT:    sbbq %rdi, %r8
+; CHECK-AVX2-NEXT:    movq %rcx, %rdi
+; CHECK-AVX2-NEXT:    sbbq 1032(%rdx,%rsi), %rdi
 ; CHECK-AVX2-NEXT:    setge %dil
 ; CHECK-AVX2-NEXT:    movzbl %dil, %edi
 ; CHECK-AVX2-NEXT:    negq %rdi

@@ -108,7 +108,7 @@ define i8 @to_f8e5m2_dynamic(float %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm2
 ; CHECK-NEXT:    cmovnel %r9d, %eax
 ; CHECK-NEXT:    cmovpl %r9d, %eax
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm2, %xmm1
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cmovnel %eax, %edx
@@ -184,7 +184,7 @@ define i8 @to_f8e5m2_round_towardzero(float %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm2
 ; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    cmovpl %ecx, %eax
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm2, %xmm1
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cmovnel %eax, %esi
@@ -2156,8 +2156,8 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-NEXT:    ucomiss %xmm2, %xmm0
 ; CHECK-NEXT:    cmovnel %ecx, %ebx
 ; CHECK-NEXT:    cmovpl %ecx, %ebx
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovnel %ebx, %ebp
@@ -2276,7 +2276,7 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm2
 ; CHECK-NEXT:    cmovnel %r8d, %ebx
 ; CHECK-NEXT:    cmovpl %r8d, %ebx
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    andps %xmm2, %xmm1
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cmovnel %ebx, %ecx
@@ -2389,7 +2389,7 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm2
 ; CHECK-NEXT:    cmovneq %r9, %rax
 ; CHECK-NEXT:    cmovpq %r9, %rax
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [NaN,0.0E+0]
 ; CHECK-NEXT:    andpd %xmm2, %xmm1
 ; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cmovneq %rax, %rdx

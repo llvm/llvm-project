@@ -1388,10 +1388,11 @@ define i8 @pow2_trunc_vec(i8 %x8, <4 x i32> %a, ptr %p) {
 define i8 @pow2_truncc_vec_fail(<4 x i32> %x, <4 x i32> %a) {
 ; CHECK-LABEL: pow2_truncc_vec_fail:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movd {{.*#+}} xmm2 = [78,0,0,0]
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    movd %xmm2, %ecx
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    movd %xmm1, %ecx
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax

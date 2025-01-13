@@ -150,18 +150,19 @@ define i512 @shl_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    andl $63, %ecx
 ; AVX512F-NEXT:    vmovq %rcx, %xmm1
 ; AVX512F-NEXT:    vpbroadcastq %xmm1, %xmm1
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm2 = [63,0]
+; AVX512F-NEXT:    vpandn %xmm2, %xmm1, %xmm2
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
 ; AVX512F-NEXT:    negl %eax
 ; AVX512F-NEXT:    cltq
-; AVX512F-NEXT:    vmovdqu64 -64(%rsp,%rax), %zmm2
-; AVX512F-NEXT:    vpsllq %xmm1, %zmm2, %zmm3
-; AVX512F-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm2[0,1,2,3,4,5,6]
+; AVX512F-NEXT:    vmovdqu64 -64(%rsp,%rax), %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm3[0,1,2,3,4,5,6]
 ; AVX512F-NEXT:    vpsrlq $1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512F-NEXT:    vpsrlq %xmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpsrlq %xmm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vpsllq %xmm1, %zmm3, %zmm1
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    vporq %zmm0, %zmm3, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
@@ -370,16 +371,17 @@ define i512 @lshr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    andl $63, %ecx
 ; AVX512F-NEXT:    vmovq %rcx, %xmm0
 ; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm2 = [63,0]
+; AVX512F-NEXT:    vpandn %xmm2, %xmm0, %xmm2
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
-; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm2
-; AVX512F-NEXT:    vpsrlq %xmm0, %zmm2, %zmm3
-; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm2[1,2,3,4,5,6,7],zmm1[0]
+; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm3[1,2,3,4,5,6,7],zmm1[0]
 ; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
-; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpsllq %xmm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vpsrlq %xmm0, %zmm3, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    vporq %zmm3, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
@@ -600,17 +602,18 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    andl $63, %ecx
 ; AVX512F-NEXT:    vmovq %rcx, %xmm0
 ; AVX512F-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm1 = [63,0]
 ; AVX512F-NEXT:    shrl $3, %eax
 ; AVX512F-NEXT:    andl $56, %eax
-; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm1
-; AVX512F-NEXT:    vpsrlq %xmm0, %zmm1, %zmm2
-; AVX512F-NEXT:    vpsraq $63, -72(%rsp,%rax){1to8}, %zmm3
-; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm1[1,2,3,4,5,6,7],zmm3[0]
-; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
-; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vpsllq %xmm0, %zmm1, %zmm0
+; AVX512F-NEXT:    vpsraq $63, -72(%rsp,%rax){1to8}, %zmm2
+; AVX512F-NEXT:    vpandn %xmm1, %xmm0, %xmm1
+; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm3
+; AVX512F-NEXT:    valignq {{.*#+}} zmm2 = zmm3[1,2,3,4,5,6,7],zmm2[0]
+; AVX512F-NEXT:    vpaddq %zmm2, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsllq %xmm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vpsrlq %xmm0, %zmm3, %zmm0
 ; AVX512F-NEXT:    movq %rdi, %rax
-; AVX512F-NEXT:    vporq %zmm2, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512F-NEXT:    popq %rcx
 ; AVX512F-NEXT:    retq
