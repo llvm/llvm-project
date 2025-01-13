@@ -3444,7 +3444,8 @@ the configuration (without a prefix: ``Auto``).
            typename Bar>
 
   * ``BBTCS_BlockIndent`` (in configuration: ``BlockIndent``)
-    Break before a template closer if the template has broken into block indent style.
+    Break before a template closer if the template has broken into block
+    indent style.
 
     .. code-block:: c++
 
