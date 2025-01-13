@@ -1259,6 +1259,17 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
       FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
+
+  if (MFI.hasVarSizedObjects()) {
+    assert(TRI.hasBasePointer(MF) &&
+           "Variable sized objects require base pointer to be setup!");
+    Register BasePtrReg = TRI.getBaseRegister();
+    // Restore SP to fixed frame size
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
+        .addReg(BasePtrReg)
+        .addImm(RoundedSize * getScratchScaleFactor(ST))
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
   if (FPSaved) {
     // CSR spill restores should use FP as base register. If
     // SGPRForFPSaveRestoreCopy is not true, restore the previous value of FP

@@ -525,8 +525,11 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // When we need stack realignment, we can't reference off of the
   // stack pointer, so we reserve a base pointer.
+  // For functions with dynamically sized stack objects, we need to reference
+  // off the base pointer in the epilog to restore the stack frame.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.getNumFixedObjects() && shouldRealignStack(MF);
+  return (MFI.getNumFixedObjects() && shouldRealignStack(MF)) ||
+         MFI.hasVarSizedObjects();
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
