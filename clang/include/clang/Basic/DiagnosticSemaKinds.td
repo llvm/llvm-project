@@ -2202,8 +2202,8 @@ def err_invalid_qualified_constructor : Error<
   "'%0' qualifier is not allowed on a constructor">;
 def err_ref_qualifier_constructor : Error<
   "ref-qualifier '%select{&&|&}0' is not allowed on a constructor">;
-def err_invalid_constructor_decl : Error<
-  "invalid constructor declaration">;
+def err_invalid_ctor_dtor_decl : Error<
+  "invalid %select{constructor|destructor}0 declaration">;
 
 def err_constructor_return_type : Error<
   "constructor cannot have a return type">;
@@ -2225,8 +2225,6 @@ def err_destructor_not_member : Error<
 def err_destructor_cannot_be : Error<"destructor cannot be declared '%0'">;
 def err_invalid_qualified_destructor : Error<
   "'%0' qualifier is not allowed on a destructor">;
-def err_invalid_destructor_decl : Error<
-  "invalid destructor declaration">;
 def err_ref_qualifier_destructor : Error<
   "ref-qualifier '%select{&&|&}0' is not allowed on a destructor">;
 def err_destructor_return_type : Error<"destructor cannot have a return type">;
