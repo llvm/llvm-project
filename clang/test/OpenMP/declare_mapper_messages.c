@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify=omp50,expected -fopenmp -fopenmp-version=50 -ferror-limit 100 -DOMP50 %s
 // RUN: %clang_cc1 -verify=omp51,expected -fopenmp -ferror-limit 100 %s
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -ferror-limit 100 -DOMP52 %s
-// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp -fopenmp-version=60 -ferror-limit 100 -DOMP52 %s
+// RUN: %clang_cc1 -verify=expected,omp60 -fopenmp -fopenmp-version=60 -ferror-limit 100 -DOMP60 %s
 
 // RUN: %clang_cc1 -verify=omp50,expected -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -DOMP50 %s
 // RUN: %clang_cc1 -verify=omp51-simd,expected -fopenmp-simd -ferror-limit 100 %s
@@ -34,7 +34,7 @@ struct vec {                                                            // expec
 #pragma omp declare mapper(struct vec v) map(v.len)                     // expected-error {{redefinition of user-defined mapper for type 'struct vec' with name 'default'}}
 #pragma omp declare mapper(int v) map(v)                                // expected-error {{mapper type must be of struct, union or class type}}
 
-#ifndef OMP52
+#if !defined(OMP52) && !defined(OMP60)
 // omp51-simd-error@+6 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'ompx_hold'}}
 // omp50-error@+5 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'ompx_hold'}}
 // omp51-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'ompx_hold'}}
@@ -74,8 +74,10 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper(ab) :arr[0:2])                            // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
       {}
+#ifndef OMP60
 #pragma omp target map(mapper(aa) :vv)                                  // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}}
       {}
+#endif
 #pragma omp target map(mapper(aa) to:d)                                 // expected-error {{mapper type must be of struct, union or class type}} omp52-error{{missing ',' after map type modifier}} omp60-error{{missing ',' after map type modifier}} omp60-simd-error{{missing ',' after map type modifier}}
       {}
 #pragma omp target map(mapper(aa) to:vv) map(close mapper(aa) from:v1) map(mapper(aa) to:arr[0]) // omp52-error 4 {{missing ',' after map type modifier}} omp60-error 4 {{missing ',' after map type modifier}} omp60-simd-error 4 {{missing ',' after map type modifier}}

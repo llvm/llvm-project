@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=50 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -triple x86_64-apple-darwin10 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -triple x86_64-apple-darwin10 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=50 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -triple x86_64-apple-darwin10 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-apple-darwin10 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 
@@ -19,8 +19,6 @@ typedef void *omp_depend_t;
 void foo() {}
 void tmainc(){
    omp_depend_t obj;
-   int omp_all_memory;
-
 #pragma omp depobj(obj) depend(inout: omp_all_memory)
 {
    volatile omp_depend_t temp = obj;
@@ -52,22 +50,19 @@ int main(int argc, char **argv) {
 }
 // CHECK-LABEL: tmainc
 // CHECK: [[D_ADDR:%obj]] = alloca ptr,
-// CHECK: [[OMP_ADDR:%omp_all_memory]] = alloca i32
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[DEP_ADDR_ADDR2:%.+]] = call ptr @__kmpc_alloc(i32 [[GTID]], i64 48, ptr null)
 // CHECK: [[SZ_DEOOBJ:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 1, ptr [[SZ_DEOOBJ]], align 8
-// CHECK: [[ALL_MEM_ADDR:%.+]] = ptrtoint ptr [[OMP_ADDR]] to i64
 // CHECK: [[DEPOBJ_BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 1
 // CHECK: [[ADDR_ONE:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
-// CHECK: store i64 [[ALL_MEM_ADDR]], ptr [[ADDR_ONE]], align 8
+// CHECK: store i64 0, ptr [[ADDR_ONE]], align 8
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
-// CHECK: store i64 4, ptr [[SZ_ADDR]], align 8
+// CHECK: store i64 0, ptr [[SZ_ADDR]], align 8
 // CHECK: [[SZ_ADDR_NEW:%.+]] = getelementptr inbounds nuw %struct.kmp_depend_info, ptr [[DEPOBJ_BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store {{i[0-9]+}} {{-?[0-9]+}}, ptr [[SZ_ADDR_NEW]], align 8
 // CHECK: [[DEP_NEW:%.+]] = getelementptr   %struct.kmp_depend_info, ptr [[DEP_ADDR_ADDR2]], i{{.+}} 1
 // CHECK: store ptr [[DEP_NEW]], ptr [[D_ADDR]], align 8
-
 // CHECK-LABEL: @main
 // CHECK: [[B_ADDR:%b]] = alloca ptr,
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
