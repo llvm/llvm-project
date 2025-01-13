@@ -1253,6 +1253,8 @@ private:
   /// pointer.
   StringRef StackProbeSymbolName;
 
+  unsigned NumRegs = 0;
+
   /// Tests whether this instruction is a spill to a stack slot.
   std::optional<SpillLocationNo> isSpillInstruction(const MachineInstr &MI,
                                                     MachineFunction *MF);
