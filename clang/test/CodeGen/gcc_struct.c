@@ -7,12 +7,12 @@ struct {
     int a : 24;
     char b : 8;
 } __attribute__((gcc_struct)) t1;
-static int a1[(sizeof(t1) == 4) - 1];
+_Static_assert(sizeof(t1) == 4, "");
 
 #pragma ms_struct on
 struct {
     int a : 24;
     char b : 8;
 } __attribute__((gcc_struct)) t2;
-static int a2[(sizeof(t2) == 4) - 1];
+_Static_assert(sizeof(t2) == 4, "");
 #pragma ms_struct off
