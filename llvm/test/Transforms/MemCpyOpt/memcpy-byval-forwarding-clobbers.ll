@@ -11,8 +11,8 @@ declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-; %a.2's lifetime ends before the call to @check. Cannot replace
-; %a.1 with %a.2 in the call to @check.
+; %a.2's lifetime ends before the call to @check. We must remove the call to
+; @llvm.lifetime.end in order to replace %a.1 with %a.2 in the call to @check.
 define i1 @alloca_forwarding_lifetime_end_clobber() {
 ; CHECK-LABEL: @alloca_forwarding_lifetime_end_clobber(
 ; CHECK-NEXT:  entry:
