@@ -168,14 +168,12 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       break;
     case AArch64BuildAttributes::VENDOR_UNKNOWN:
       if (unsigned(-1) != Value) {
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t" << Tag
-           << ", " << Value;
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
       }
       if ("" != String) {
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t" << Tag
-           << ", " << String;
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << String;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1),
                                              String, Override);
       }
@@ -184,34 +182,20 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS:
       switch (Tag) {
       default: // allow emitting any attribute by number
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t" << Tag
-           << ", " << Value;
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         // Keep the data structure consistent with the case of ELF emission
         // (important for llvm-mc asm parsing)
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
       case AArch64BuildAttributes::TAG_FEATURE_BTI:
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t"
-           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(
-                  AArch64BuildAttributes::TAG_FEATURE_BTI)
-           << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
-        break;
+        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_FEATURE_GCS:
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t"
-           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(
-                  AArch64BuildAttributes::TAG_FEATURE_GCS)
-           << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
-        break;
+        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_FEATURE_PAC:
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t"
-           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(
-                  AArch64BuildAttributes::TAG_FEATURE_PAC)
-           << ", " << Value;
+        OS << "\t.aeabi_attribute" << "\t"
+           << AArch64BuildAttributes::getFeatureAndBitsTagsStr(Tag) << ", "
+           << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
@@ -221,26 +205,17 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     case AArch64BuildAttributes::AEABI_PAUTHABI:
       switch (Tag) {
       default: // allow emitting any attribute by number
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t" << Tag
-           << ", " << Value;
+        OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         // Keep the data structure consistent with the case of ELF emission
         // (important for llvm-mc asm parsing)
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
       case AArch64BuildAttributes::TAG_PAUTH_PLATFORM:
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t"
-           << AArch64BuildAttributes::getPauthABITagsStr(
-                  AArch64BuildAttributes::TAG_PAUTH_PLATFORM)
-           << ", " << Value;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
-                                             Override);
-        break;
+        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_PAUTH_SCHEMA:
-        OS << "\t." << AArch64BuildAttributes::getAttrTag() << "\t"
-           << AArch64BuildAttributes::getPauthABITagsStr(
-                  AArch64BuildAttributes::TAG_PAUTH_SCHEMA)
-           << ", " << Value;
+        OS << "\t.aeabi_attribute" << "\t"
+           << AArch64BuildAttributes::getPauthABITagsStr(Tag) << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "",
                                              Override);
         break;
@@ -265,8 +240,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     assert((0 == ParameterType || 1 == ParameterType) &&
            AArch64BuildAttributes::getSubsectionTypeUnknownError().data());
 
-    std::string SubsectionTag =
-        ("." + AArch64BuildAttributes::getSubsectionTag()).str();
+    std::string SubsectionTag = ".aeabi_subsection";
     StringRef OptionalStr = getOptionalStr(Optional);
     StringRef ParameterStr = getTypeStr(ParameterType);
 
@@ -296,7 +270,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
                                                      ParameterType);
       break;
-    } break;
+    }
     case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS: {
       assert(AArch64BuildAttributes::OPTIONAL == Optional &&
              "subsection .aeabi_feature_and_bits should be "
@@ -309,7 +283,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
                                                      ParameterType);
       break;
-    } break;
+    }
     }
     OS << "\n";
   }

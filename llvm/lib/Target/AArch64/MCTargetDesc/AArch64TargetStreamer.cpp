@@ -210,13 +210,13 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                 ("" != String && Item.StringValue != String)) {
               assert(0 &&
                      "Can not add AArch64 build attribute: An attribute with "
-                     "the same tag and a different value allready exists");
+                     "the same tag and a different value already exists");
               return;
             } else {
               // Case Item.IntValue == Value, no need to emit twice
               assert(0 &&
                      "AArch64 build attribute: An attribute with the same tag "
-                     "and a same value allready exists");
+                     "and a same value already exists");
               return;
             }
           }
@@ -233,7 +233,7 @@ void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
     }
   }
   assert(0 && "Can not add AArch64 build attribute: required subsection does "
-              "not exists");
+              "not exist");
 }
 
 void AArch64TargetStreamer::activateAtributesSubsection(StringRef VendorName) {
