@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "spirv-isel"
 
@@ -3030,6 +3031,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
+  case Intrinsic::spv_reflect:
+    if (!STI.canUseExtInstSet(
+            SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
+      std::string DiagMsg;
+      raw_string_ostream OS(DiagMsg);
+      I.print(OS);
+      DiagMsg = "Intrinsic selection not supported for this instruction set: " +
+                DiagMsg;
+      report_fatal_error(DiagMsg.c_str(), false);
+    }
+    return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
