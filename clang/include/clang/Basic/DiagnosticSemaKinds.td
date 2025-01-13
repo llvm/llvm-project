@@ -3835,6 +3835,9 @@ def err_sme_unimplemented_za_save_restore : Error<
   "call to a function that shares state other than 'za' from a "
   "function that has live 'za' state requires a spill/fill of ZA, which is not yet "
   "implemented">;
+def err_sme_unsupported_agnostic_new : Error<
+  "__arm_agnostic(\"sme_za_state\") is not supported together with "
+  "__arm_new(\"za\") or __arm_new(\"zt0\")">;
 def note_sme_use_preserves_za : Note<
   "add '__arm_preserves(\"za\")' to the callee if it preserves ZA">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
@@ -3851,6 +3854,8 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_conflicting_attributes_arm_agnostic : Error<
+  "__arm_agnostic(\"sme_za_state\") cannot share ZA state with its caller">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
