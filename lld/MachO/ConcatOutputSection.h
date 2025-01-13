@@ -72,7 +72,7 @@ public:
   void finalizeContents() override {}
   void finalize() override;
   bool needsThunks() const;
-  ArrayRef<ConcatInputSection *> getThunks() const { return thunks; }
+  const std::vector<ConcatInputSection *> &getThunks() const { return thunks; }
   void writeTo(uint8_t *buf) const override;
 
   static bool classof(const OutputSection *sec) {
