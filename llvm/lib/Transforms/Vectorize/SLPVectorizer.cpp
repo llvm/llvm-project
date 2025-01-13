@@ -11945,8 +11945,8 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                TE->getOpcode() == Instruction::ExtractElement) ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
              isFixedVectorShuffle(TE->Scalars, Mask, AC)) ||
-            ((TE->hasState() && TE->getOpcode() == Instruction::Load) &&
-             (!TE->hasState() || !TE->isAltShuffle())) ||
+            (TE->hasState() && TE->getOpcode() == Instruction::Load &&
+             !TE->isAltShuffle()) ||
             any_of(TE->Scalars, IsaPred<LoadInst>));
   };
 
