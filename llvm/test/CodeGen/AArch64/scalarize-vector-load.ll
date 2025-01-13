@@ -172,11 +172,11 @@ define i16 @scalarize_v4i16(ptr %p) {
 define i32 @scalarize_v4i32(ptr %p) {
 ; CHECK-LABEL: scalarize_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w9, w8, [x0]
-; CHECK-NEXT:    ldp w10, w11, [x0, #8]
+; CHECK-NEXT:    ldp w9, w8, [x0, #8]
+; CHECK-NEXT:    ldp w11, w10, [x0]
 ; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    add w9, w10, w11
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    add w10, w11, w10
+; CHECK-NEXT:    add w0, w10, w8
 ; CHECK-NEXT:    ret
   %wide.load = load <4 x i32>, ptr %p, align 4
   %l0 = extractelement <4 x i32> %wide.load, i32 0
@@ -192,11 +192,11 @@ define i32 @scalarize_v4i32(ptr %p) {
 define i64 @scalarize_v4i64(ptr %p) {
 ; CHECK-LABEL: scalarize_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x0, #16]
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    add x9, x10, x11
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    ldp x9, x8, [x0, #16]
+; CHECK-NEXT:    ldp x11, x10, [x0]
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    add x10, x11, x10
+; CHECK-NEXT:    add x0, x10, x8
 ; CHECK-NEXT:    ret
   %wide.load = load <4 x i64>, ptr %p, align 4
   %l0 = extractelement <4 x i64> %wide.load, i32 0
@@ -212,10 +212,14 @@ define i64 @scalarize_v4i64(ptr %p) {
 define i64 @scalarize_v4i32_sext(ptr %p) {
 ; CHECK-LABEL: scalarize_v4i32_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldpsw x9, x8, [x0, #8]
-; CHECK-NEXT:    ldpsw x11, x10, [x0]
-; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    add x8, x0, #12
+; CHECK-NEXT:    ldrsw x11, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[3], [x8]
+; CHECK-NEXT:    ldpsw x10, x9, [x0, #4]
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #0
 ; CHECK-NEXT:    add x10, x11, x10
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    add x0, x10, x8
 ; CHECK-NEXT:    ret
   %wide.load = load <4 x i32>, ptr %p, align 4
@@ -233,10 +237,14 @@ define i64 @scalarize_v4i32_sext(ptr %p) {
 define i64 @scalarize_v4i32_zext(ptr %p) {
 ; CHECK-LABEL: scalarize_v4i32_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp w9, w8, [x0, #8]
-; CHECK-NEXT:    ldp w11, w10, [x0]
-; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    add x8, x0, #12
+; CHECK-NEXT:    ldr w11, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[3], [x8]
+; CHECK-NEXT:    ldp w10, w9, [x0, #4]
+; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
 ; CHECK-NEXT:    add x10, x11, x10
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    add x0, x10, x8
 ; CHECK-NEXT:    ret
   %wide.load = load <4 x i32>, ptr %p, align 4
@@ -326,43 +334,43 @@ define double @scalarize_v4f64(ptr %p) {
 define float @scalarize_into_load(i64 %22, ptr %23, ptr %rawA, ptr %rawB) {
 ; CHECK-LABEL: scalarize_into_load:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x8, x9, [x1]
-; CHECK-NEXT:    ldp x10, x11, [x1, #16]
-; CHECK-NEXT:    ldp x12, x13, [x1, #64]
-; CHECK-NEXT:    ldr s0, [x2, x8, lsl #2]
-; CHECK-NEXT:    ldr s1, [x2, x9, lsl #2]
-; CHECK-NEXT:    ldp x8, x9, [x1, #32]
-; CHECK-NEXT:    ldr s2, [x2, x10, lsl #2]
-; CHECK-NEXT:    ldr s3, [x2, x11, lsl #2]
+; CHECK-NEXT:    ldp x9, x8, [x1]
+; CHECK-NEXT:    ldp x11, x10, [x1, #16]
+; CHECK-NEXT:    ldp x13, x12, [x1, #48]
+; CHECK-NEXT:    ldr s0, [x2, x9, lsl #2]
+; CHECK-NEXT:    ldr s1, [x2, x8, lsl #2]
+; CHECK-NEXT:    ldp x9, x8, [x1, #112]
+; CHECK-NEXT:    ldr s2, [x2, x11, lsl #2]
+; CHECK-NEXT:    ldr s3, [x2, x10, lsl #2]
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ldr s6, [x2, x12, lsl #2]
-; CHECK-NEXT:    ldp x10, x11, [x1, #48]
-; CHECK-NEXT:    ldr s7, [x2, x13, lsl #2]
+; CHECK-NEXT:    ldr s4, [x2, x13, lsl #2]
+; CHECK-NEXT:    ldp x11, x10, [x1, #96]
+; CHECK-NEXT:    ldr s5, [x2, x12, lsl #2]
 ; CHECK-NEXT:    fadd s1, s2, s3
-; CHECK-NEXT:    ldr s2, [x2, x8, lsl #2]
-; CHECK-NEXT:    ldr s3, [x2, x9, lsl #2]
-; CHECK-NEXT:    ldp x14, x15, [x1, #80]
+; CHECK-NEXT:    ldr s20, [x2, x9, lsl #2]
+; CHECK-NEXT:    ldr s21, [x2, x8, lsl #2]
+; CHECK-NEXT:    ldp x15, x14, [x1, #32]
+; CHECK-NEXT:    ldr s18, [x2, x11, lsl #2]
+; CHECK-NEXT:    ldr s19, [x2, x10, lsl #2]
+; CHECK-NEXT:    ldp x17, x16, [x1, #80]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ldr s2, [x2, x15, lsl #2]
+; CHECK-NEXT:    ldr s3, [x2, x14, lsl #2]
+; CHECK-NEXT:    ldp x0, x18, [x1, #64]
 ; CHECK-NEXT:    fadd s2, s2, s3
-; CHECK-NEXT:    ldr s4, [x2, x10, lsl #2]
-; CHECK-NEXT:    ldr s5, [x2, x11, lsl #2]
-; CHECK-NEXT:    ldp x16, x17, [x1, #96]
 ; CHECK-NEXT:    fadd s3, s4, s5
-; CHECK-NEXT:    fadd s4, s6, s7
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ldp x18, x0, [x1, #112]
-; CHECK-NEXT:    ldr s16, [x2, x14, lsl #2]
-; CHECK-NEXT:    ldr s17, [x2, x15, lsl #2]
-; CHECK-NEXT:    ldr s18, [x2, x16, lsl #2]
-; CHECK-NEXT:    ldr s19, [x2, x17, lsl #2]
-; CHECK-NEXT:    ldr s20, [x2, x18, lsl #2]
-; CHECK-NEXT:    ldr s21, [x2, x0, lsl #2]
+; CHECK-NEXT:    ldr s16, [x2, x17, lsl #2]
+; CHECK-NEXT:    ldr s17, [x2, x16, lsl #2]
+; CHECK-NEXT:    ldr s6, [x2, x0, lsl #2]
+; CHECK-NEXT:    ldr s7, [x2, x18, lsl #2]
 ; CHECK-NEXT:    fadd s5, s16, s17
+; CHECK-NEXT:    fadd s4, s6, s7
 ; CHECK-NEXT:    fadd s6, s18, s19
-; CHECK-NEXT:    fadd s1, s2, s3
 ; CHECK-NEXT:    fadd s7, s20, s21
+; CHECK-NEXT:    fadd s1, s2, s3
 ; CHECK-NEXT:    fadd s2, s4, s5
-; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    fadd s3, s6, s7
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    fadd s1, s2, s3
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
@@ -437,44 +445,60 @@ entry:
 define float @scalarize_into_load_sext(i64 %22, ptr %23, ptr %rawA, ptr %rawB) {
 ; CHECK-LABEL: scalarize_into_load_sext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldpsw x9, x8, [x1]
-; CHECK-NEXT:    ldpsw x11, x10, [x1, #8]
-; CHECK-NEXT:    ldpsw x13, x12, [x1, #24]
-; CHECK-NEXT:    ldr s0, [x2, x9, lsl #2]
-; CHECK-NEXT:    ldr s1, [x2, x8, lsl #2]
-; CHECK-NEXT:    ldpsw x9, x8, [x1, #56]
-; CHECK-NEXT:    ldr s2, [x2, x11, lsl #2]
-; CHECK-NEXT:    ldr s3, [x2, x10, lsl #2]
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ldpsw x11, x10, [x1, #48]
-; CHECK-NEXT:    ldpsw x15, x14, [x1, #16]
-; CHECK-NEXT:    ldpsw x17, x16, [x1, #40]
-; CHECK-NEXT:    ldpsw x0, x18, [x1, #32]
-; CHECK-NEXT:    fadd s1, s2, s3
-; CHECK-NEXT:    ldr s2, [x2, x15, lsl #2]
+; CHECK-NEXT:    add x8, x1, #12
+; CHECK-NEXT:    add x9, x1, #28
+; CHECK-NEXT:    add x10, x1, #44
+; CHECK-NEXT:    add x11, x1, #60
+; CHECK-NEXT:    ld1 { v0.s }[3], [x8]
+; CHECK-NEXT:    ld1 { v1.s }[3], [x9]
+; CHECK-NEXT:    ld1 { v2.s }[3], [x10]
+; CHECK-NEXT:    ld1 { v3.s }[3], [x11]
+; CHECK-NEXT:    ldrsw x18, [x1]
+; CHECK-NEXT:    ldpsw x15, x11, [x1, #16]
+; CHECK-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    ldrsw x9, [x1, #48]
+; CHECK-NEXT:    sshll2 v2.2d, v2.4s, #0
+; CHECK-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-NEXT:    ldrsw x14, [x1, #32]
+; CHECK-NEXT:    ldpsw x17, x16, [x1, #4]
+; CHECK-NEXT:    mov x0, v0.d[1]
+; CHECK-NEXT:    mov x3, v1.d[1]
+; CHECK-NEXT:    ldr s0, [x2, x18, lsl #2]
+; CHECK-NEXT:    mov x18, v2.d[1]
+; CHECK-NEXT:    ldr s5, [x2, x11, lsl #2]
+; CHECK-NEXT:    mov x11, v3.d[1]
+; CHECK-NEXT:    ldpsw x8, x12, [x1, #52]
+; CHECK-NEXT:    ldpsw x13, x10, [x1, #36]
+; CHECK-NEXT:    ldrsw x1, [x1, #24]
+; CHECK-NEXT:    ldr s1, [x2, x17, lsl #2]
+; CHECK-NEXT:    ldr s2, [x2, x16, lsl #2]
+; CHECK-NEXT:    ldr s4, [x2, x15, lsl #2]
 ; CHECK-NEXT:    ldr s3, [x2, x14, lsl #2]
-; CHECK-NEXT:    ldr s4, [x2, x13, lsl #2]
-; CHECK-NEXT:    ldr s5, [x2, x12, lsl #2]
-; CHECK-NEXT:    ldr s16, [x2, x17, lsl #2]
-; CHECK-NEXT:    ldr s6, [x2, x0, lsl #2]
-; CHECK-NEXT:    fadd s2, s2, s3
-; CHECK-NEXT:    ldr s7, [x2, x18, lsl #2]
-; CHECK-NEXT:    ldr s17, [x2, x16, lsl #2]
-; CHECK-NEXT:    fadd s3, s4, s5
-; CHECK-NEXT:    ldr s18, [x2, x11, lsl #2]
-; CHECK-NEXT:    ldr s19, [x2, x10, lsl #2]
-; CHECK-NEXT:    fadd s4, s6, s7
-; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ldr s7, [x2, x0, lsl #2]
+; CHECK-NEXT:    ldr s6, [x2, x1, lsl #2]
+; CHECK-NEXT:    ldr s16, [x2, x3, lsl #2]
+; CHECK-NEXT:    ldr s17, [x2, x13, lsl #2]
+; CHECK-NEXT:    ldr s18, [x2, x10, lsl #2]
+; CHECK-NEXT:    ldr s19, [x2, x18, lsl #2]
 ; CHECK-NEXT:    ldr s20, [x2, x9, lsl #2]
 ; CHECK-NEXT:    ldr s21, [x2, x8, lsl #2]
-; CHECK-NEXT:    fadd s5, s16, s17
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ldr s1, [x2, x12, lsl #2]
+; CHECK-NEXT:    ldr s22, [x2, x11, lsl #2]
+; CHECK-NEXT:    fadd s2, s2, s7
+; CHECK-NEXT:    fadd s4, s4, s5
+; CHECK-NEXT:    fadd s5, s6, s16
+; CHECK-NEXT:    fadd s3, s3, s17
 ; CHECK-NEXT:    fadd s6, s18, s19
 ; CHECK-NEXT:    fadd s7, s20, s21
-; CHECK-NEXT:    fadd s1, s2, s3
+; CHECK-NEXT:    fadd s1, s1, s22
+; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    fadd s2, s4, s5
-; CHECK-NEXT:    fadd s3, s6, s7
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    fadd s1, s2, s3
+; CHECK-NEXT:    fadd s3, s3, s6
+; CHECK-NEXT:    fadd s1, s7, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s1, s3, s1
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
@@ -549,44 +573,60 @@ entry:
 define float @scalarize_into_load_zext(i64 %22, ptr %23, ptr %rawA, ptr %rawB) {
 ; CHECK-LABEL: scalarize_into_load_zext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp w9, w8, [x1]
-; CHECK-NEXT:    ldp w11, w10, [x1, #8]
-; CHECK-NEXT:    ldp w13, w12, [x1, #24]
-; CHECK-NEXT:    ldr s0, [x2, x9, lsl #2]
-; CHECK-NEXT:    ldr s1, [x2, x8, lsl #2]
-; CHECK-NEXT:    ldp w9, w8, [x1, #56]
-; CHECK-NEXT:    ldr s2, [x2, x11, lsl #2]
-; CHECK-NEXT:    ldr s3, [x2, x10, lsl #2]
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ldp w11, w10, [x1, #48]
-; CHECK-NEXT:    ldp w15, w14, [x1, #16]
-; CHECK-NEXT:    ldp w17, w16, [x1, #40]
-; CHECK-NEXT:    ldp w0, w18, [x1, #32]
-; CHECK-NEXT:    fadd s1, s2, s3
-; CHECK-NEXT:    ldr s2, [x2, x15, lsl #2]
-; CHECK-NEXT:    ldr s3, [x2, x14, lsl #2]
-; CHECK-NEXT:    ldr s4, [x2, x13, lsl #2]
+; CHECK-NEXT:    add x9, x1, #12
+; CHECK-NEXT:    add x10, x1, #28
+; CHECK-NEXT:    add x11, x1, #44
+; CHECK-NEXT:    add x12, x1, #60
+; CHECK-NEXT:    ld1 { v0.s }[3], [x9]
+; CHECK-NEXT:    ld1 { v1.s }[3], [x10]
+; CHECK-NEXT:    ld1 { v2.s }[3], [x11]
+; CHECK-NEXT:    ld1 { v3.s }[3], [x12]
+; CHECK-NEXT:    ldr w18, [x1]
+; CHECK-NEXT:    ldp w15, w12, [x1, #16]
+; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    ldr w10, [x1, #48]
+; CHECK-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-NEXT:    ushll2 v3.2d, v3.4s, #0
+; CHECK-NEXT:    ldr w14, [x1, #32]
+; CHECK-NEXT:    ldp w17, w16, [x1, #4]
+; CHECK-NEXT:    mov x0, v0.d[1]
+; CHECK-NEXT:    mov x3, v1.d[1]
+; CHECK-NEXT:    ldr s0, [x2, x18, lsl #2]
+; CHECK-NEXT:    mov x18, v2.d[1]
 ; CHECK-NEXT:    ldr s5, [x2, x12, lsl #2]
-; CHECK-NEXT:    ldr s16, [x2, x17, lsl #2]
-; CHECK-NEXT:    ldr s6, [x2, x0, lsl #2]
-; CHECK-NEXT:    fadd s2, s2, s3
-; CHECK-NEXT:    ldr s7, [x2, x18, lsl #2]
-; CHECK-NEXT:    ldr s17, [x2, x16, lsl #2]
-; CHECK-NEXT:    fadd s3, s4, s5
+; CHECK-NEXT:    mov x12, v3.d[1]
+; CHECK-NEXT:    ldp w9, w8, [x1, #52]
+; CHECK-NEXT:    ldp w13, w11, [x1, #36]
+; CHECK-NEXT:    ldr w1, [x1, #24]
+; CHECK-NEXT:    ldr s1, [x2, x17, lsl #2]
+; CHECK-NEXT:    ldr s2, [x2, x16, lsl #2]
+; CHECK-NEXT:    ldr s4, [x2, x15, lsl #2]
+; CHECK-NEXT:    ldr s3, [x2, x14, lsl #2]
+; CHECK-NEXT:    ldr s7, [x2, x0, lsl #2]
+; CHECK-NEXT:    ldr s6, [x2, x1, lsl #2]
+; CHECK-NEXT:    ldr s16, [x2, x3, lsl #2]
+; CHECK-NEXT:    ldr s17, [x2, x13, lsl #2]
 ; CHECK-NEXT:    ldr s18, [x2, x11, lsl #2]
-; CHECK-NEXT:    ldr s19, [x2, x10, lsl #2]
-; CHECK-NEXT:    fadd s4, s6, s7
+; CHECK-NEXT:    ldr s19, [x2, x18, lsl #2]
+; CHECK-NEXT:    ldr s20, [x2, x10, lsl #2]
+; CHECK-NEXT:    ldr s21, [x2, x9, lsl #2]
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ldr s20, [x2, x9, lsl #2]
-; CHECK-NEXT:    ldr s21, [x2, x8, lsl #2]
-; CHECK-NEXT:    fadd s5, s16, s17
+; CHECK-NEXT:    ldr s1, [x2, x8, lsl #2]
+; CHECK-NEXT:    ldr s22, [x2, x12, lsl #2]
+; CHECK-NEXT:    fadd s2, s2, s7
+; CHECK-NEXT:    fadd s4, s4, s5
+; CHECK-NEXT:    fadd s5, s6, s16
+; CHECK-NEXT:    fadd s3, s3, s17
 ; CHECK-NEXT:    fadd s6, s18, s19
 ; CHECK-NEXT:    fadd s7, s20, s21
-; CHECK-NEXT:    fadd s1, s2, s3
+; CHECK-NEXT:    fadd s1, s1, s22
+; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    fadd s2, s4, s5
-; CHECK-NEXT:    fadd s3, s6, s7
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    fadd s1, s2, s3
+; CHECK-NEXT:    fadd s3, s3, s6
+; CHECK-NEXT:    fadd s1, s7, s1
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s1, s3, s1
 ; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:

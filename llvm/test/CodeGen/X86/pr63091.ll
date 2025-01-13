@@ -35,9 +35,10 @@ define <4 x i32> @dont_merge_pcmpgt(<16 x i8> %0, <4 x i32> %1) {
 define <4 x i32> @merge_and(<16 x i8> %0, <4 x i32> %1) {
 ; SSE-LABEL: merge_and:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pinsrd $3, {{\.?LCPI[0-9]+_[0-9]+}}+12(%rip), %xmm2
+; SSE-NEXT:    pand %xmm1, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],xmm2[6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: merge_and:

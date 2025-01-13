@@ -13,7 +13,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define double @mag_pos0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_pos0_double:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double 0.0, double %x)
   ret double %y
@@ -25,7 +26,8 @@ define double @mag_pos0_double(double %x) nounwind {
 define double @mag_neg0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg0_double:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double -0.0, double %x)
   ret double %y
@@ -41,7 +43,8 @@ define double @mag_pos1_double(double %x) nounwind {
 ; CHECK-LABEL: mag_pos1_double:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double 1.0, double %x)
   ret double %y
@@ -58,7 +61,8 @@ define double @mag_neg1_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg1_double:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double -1.0, double %x)
   ret double %y
@@ -73,7 +77,8 @@ define double @mag_neg1_double(double %x) nounwind {
 define float @mag_pos0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos0_float:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float 0.0, float %x)
   ret float %y
@@ -85,7 +90,8 @@ define float @mag_pos0_float(float %x) nounwind {
 define float @mag_neg0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg0_float:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float -0.0, float %x)
   ret float %y
@@ -103,7 +109,8 @@ define float @mag_pos1_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos1_float:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float 1.0, float %x)
   ret float %y
@@ -124,7 +131,8 @@ define float @mag_neg1_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg1_float:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    orps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float -1.0, float %x)
   ret float %y

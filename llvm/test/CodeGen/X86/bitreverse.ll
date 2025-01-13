@@ -467,8 +467,9 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ;
 ; X86XOP-LABEL: test_bitreverse_i8:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86XOP-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    # kill: def $al killed $al killed $eax
 ; X86XOP-NEXT:    retl
@@ -533,8 +534,9 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ;
 ; X86XOP-LABEL: test_bitreverse_i4:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86XOP-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86XOP-NEXT:    vpperm %xmm0, %xmm1, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    shrb $4, %al
 ; X86XOP-NEXT:    # kill: def $al killed $al killed $eax

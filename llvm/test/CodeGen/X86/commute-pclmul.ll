@@ -8,12 +8,14 @@ declare <2 x i64> @llvm.x86.pclmulqdq(<2 x i64>, <2 x i64>, i8) nounwind readnon
 define <2 x i64> @commute_lq_lq(ptr %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_lq_lq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pclmulqdq $0, (%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    pclmulqdq $0, %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_lq_lq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpclmulqdq $0, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, ptr %a0
   %2 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %1, <2 x i64> %a1, i8 0)
@@ -23,12 +25,14 @@ define <2 x i64> @commute_lq_lq(ptr %a0, <2 x i64> %a1) #0 {
 define <2 x i64> @commute_lq_hq(ptr %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_lq_hq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pclmulqdq $1, (%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    pclmulqdq $1, %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_lq_hq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpclmulqdq $1, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpclmulqdq $16, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, ptr %a0
   %2 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %1, <2 x i64> %a1, i8 16)
@@ -38,12 +42,14 @@ define <2 x i64> @commute_lq_hq(ptr %a0, <2 x i64> %a1) #0 {
 define <2 x i64> @commute_hq_lq(ptr %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_hq_lq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pclmulqdq $16, (%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    pclmulqdq $0, %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_hq_lq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpclmulqdq $16, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrq $1, 8(%rdi), %xmm0, %xmm1
+; AVX-NEXT:    vpclmulqdq $1, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, ptr %a0
   %2 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %1, <2 x i64> %a1, i8 1)
@@ -53,12 +59,14 @@ define <2 x i64> @commute_hq_lq(ptr %a0, <2 x i64> %a1) #0 {
 define <2 x i64> @commute_hq_hq(ptr %a0, <2 x i64> %a1) #0 {
 ; SSE-LABEL: commute_hq_hq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pclmulqdq $17, (%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    pclmulqdq $1, %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: commute_hq_hq:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpclmulqdq $17, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrq $1, 8(%rdi), %xmm0, %xmm1
+; AVX-NEXT:    vpclmulqdq $17, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = load <2 x i64>, ptr %a0
   %2 = call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %1, <2 x i64> %a1, i8 17)

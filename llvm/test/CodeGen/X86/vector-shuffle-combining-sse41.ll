@@ -218,7 +218,8 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 define <4 x float> @PR178538(<4 x float> %a0) {
 ; SSE-LABEL: PR178538:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],mem[2,3]
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[0,3]
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]

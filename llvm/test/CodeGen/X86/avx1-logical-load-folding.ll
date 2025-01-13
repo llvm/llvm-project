@@ -9,14 +9,16 @@ define void @test1(ptr %A, ptr %C) #0 {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
   %tmp2 = load <8 x float>, ptr %A, align 32
@@ -34,15 +36,15 @@ define void @test2(ptr %A, ptr %C) #0 {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovaps (%ecx), %xmm0
-; X86-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = [2147483647,0,0,0]
+; X86-NEXT:    vorps (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = [2147483647,0,0,0]
+; X64-NEXT:    vorps (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
   %tmp2 = load <8 x float>, ptr %A, align 32
@@ -60,15 +62,15 @@ define void @test3(ptr %A, ptr %C) #0 {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovaps (%ecx), %xmm0
-; X86-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = [2147483647,0,0,0]
+; X86-NEXT:    vxorps (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = [2147483647,0,0,0]
+; X64-NEXT:    vxorps (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
   %tmp2 = load <8 x float>, ptr %A, align 32
@@ -86,14 +88,16 @@ define void @test4(ptr %A, ptr %C) #0 {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovaps (%ecx), %xmm0
-; X86-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = [2147483647,0,0,0]
+; X86-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vandnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vmovss {{.*#+}} xmm1 = [2147483647,0,0,0]
+; X64-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovss %xmm0, (%rsi)
 ; X64-NEXT:    retq
   %tmp2 = load <8 x float>, ptr %A, align 32

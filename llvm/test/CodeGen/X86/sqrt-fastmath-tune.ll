@@ -20,7 +20,8 @@ define float @f32_no_daz(float %f) #0 {
 ; NHM-NEXT:    mulss %xmm1, %xmm2
 ; NHM-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; NHM-NEXT:    mulss %xmm3, %xmm2
-; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NHM-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; NHM-NEXT:    andps %xmm1, %xmm0
 ; NHM-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    andnps %xmm2, %xmm0
 ; NHM-NEXT:    retq

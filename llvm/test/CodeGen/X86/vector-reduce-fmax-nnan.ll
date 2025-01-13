@@ -216,25 +216,15 @@ define double @test_v2f64(<2 x double> %a0) {
 }
 
 define double @test_v3f64(<3 x double> %a0) {
-; SSE2-LABEL: test_v3f64:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    shufpd {{.*#+}} xmm2 = xmm2[0],mem[1]
-; SSE2-NEXT:    maxpd %xmm2, %xmm0
-; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2-NEXT:    maxsd %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test_v3f64:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    blendpd {{.*#+}} xmm2 = xmm2[0],mem[1]
-; SSE41-NEXT:    maxpd %xmm2, %xmm0
-; SSE41-NEXT:    movapd %xmm0, %xmm1
-; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE41-NEXT:    maxsd %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: test_v3f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE-NEXT:    maxpd %xmm2, %xmm0
+; SSE-NEXT:    movapd %xmm0, %xmm1
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    maxsd %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v3f64:
 ; AVX:       # %bb.0:

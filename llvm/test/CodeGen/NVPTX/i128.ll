@@ -290,12 +290,12 @@ define i128 @srem_i128_pow2k(i128 %lhs) {
 define i128 @urem_i128_pow2k(i128 %lhs) {
 ; CHECK-LABEL: urem_i128_pow2k(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [urem_i128_pow2k_param_0];
-; CHECK-NEXT:    and.b64 %rd3, %rd1, 8589934591;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd3, 0};
+; CHECK-NEXT:    ld.param.b64 %rd1, [urem_i128_pow2k_param_0];
+; CHECK-NEXT:    and.b64 %rd2, %rd1, 8589934591;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, 0};
 ; CHECK-NEXT:    ret;
   %div = urem i128 %lhs, 8589934592
   ret i128 %div

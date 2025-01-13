@@ -13,10 +13,16 @@ define i32 @t(ptr %val) nounwind  {
 ; X86-SSE2-NEXT:    movl 8(%eax), %eax
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-LABEL: t:
-; X64:       # %bb.0:
-; X64-NEXT:    movl 8(%rdi), %eax
-; X64-NEXT:    retq
+; X64-SSSE3-LABEL: t:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movl 8(%rdi), %eax
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: t:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vextractps $2, %xmm0, %eax
+; X64-AVX-NEXT:    retq
   %tmp2 = load <2 x i64>, ptr %val, align 16		; <<2 x i64>> [#uses=1]
   %tmp3 = bitcast <2 x i64> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
   %tmp4 = extractelement <4 x i32> %tmp3, i32 2		; <i32> [#uses=1]
@@ -76,9 +82,11 @@ bb:
 define i64 @t4(ptr %a) {
 ; X86-SSE2-LABEL: t4:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%ecx), %eax
-; X86-SSE2-NEXT:    movl 4(%ecx), %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movd %xmm0, %edx
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: t4:
@@ -126,8 +134,7 @@ define float @t6(ptr%a0) {
 ; X86-SSE2-NEXT:    pushl %eax
 ; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movaps (%eax), %xmm0
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
@@ -142,7 +149,7 @@ define float @t6(ptr%a0) {
 ;
 ; X64-SSSE3-LABEL: t6:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
@@ -226,8 +233,7 @@ define float @PR43971_1(ptr%a0) nounwind {
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    pushl %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movaps (%eax), %xmm0
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE2-NEXT:    xorps %xmm1, %xmm1
 ; X86-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
 ; X86-SSE2-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
@@ -241,7 +247,7 @@ define float @PR43971_1(ptr%a0) nounwind {
 ;
 ; X64-SSSE3-LABEL: PR43971_1:
 ; X64-SSSE3:       # %bb.0: # %entry
-; X64-SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = mem[1,1,3,3]
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
 ; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
 ; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
@@ -317,12 +323,27 @@ define void @subextract_broadcast_load_constant(ptr nocapture %0, ptr nocapture 
 ; X86-SSE2-NEXT:    movw $-24160, (%eax) # imm = 0xA1A0
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-LABEL: subextract_broadcast_load_constant:
-; X64:       # %bb.0:
-; X64-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
-; X64-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
-; X64-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
-; X64-NEXT:    retq
+; X64-SSSE3-LABEL: subextract_broadcast_load_constant:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
+; X64-SSSE3-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
+; X64-SSSE3-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX1-LABEL: subextract_broadcast_load_constant:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
+; X64-AVX1-NEXT:    movzwl {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %eax
+; X64-AVX1-NEXT:    movw %ax, (%rsi)
+; X64-AVX1-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: subextract_broadcast_load_constant:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    movl $-1583308898, (%rdi) # imm = 0xA1A09F9E
+; X64-AVX2-NEXT:    movw $-24674, (%rsi) # imm = 0x9F9E
+; X64-AVX2-NEXT:    movw $-24160, (%rdx) # imm = 0xA1A0
+; X64-AVX2-NEXT:    retq
   store i8 -98, ptr %0, align 1
   %4 = getelementptr inbounds i8, ptr %0, i64 1
   store i8 -97, ptr %4, align 1

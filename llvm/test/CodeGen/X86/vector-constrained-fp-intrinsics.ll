@@ -6319,31 +6319,28 @@ define <3 x double> @constrained_vector_round_v3f64_var(ptr %a) #0 {
 ;
 ; AVX-LABEL: constrained_vector_round_v3f64_var:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    subq $48, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 64
-; AVX-NEXT:    .cfi_offset %rbx, -16
-; AVX-NEXT:    movq %rdi, %rbx
+; AVX-NEXT:    subq $72, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 80
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; AVX-NEXT:    # xmm0 = mem[0],zero
 ; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; AVX-NEXT:    # xmm0 = mem[0],zero
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    callq round@PLT
 ; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    addq $48, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    addq $72, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:

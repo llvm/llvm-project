@@ -8,7 +8,8 @@ define float @pr36553(float %a, float %b, float %c) nounwind {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq _fmaf
-; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    xorps %xmm1, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 entry:
