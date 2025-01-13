@@ -3392,12 +3392,11 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportBitfields) {
       FirstDeclMatcher<FieldDecl>().match(FromTU, fieldDecl(hasName("x")));
 
   ASSERT_TRUE(FromF->isBitField());
-  ASSERT_EQ(3u, FromF->getBitWidthValue(FromTU->getASTContext()));
+  ASSERT_EQ(3u, FromF->getBitWidthValue());
   auto *ToField = Import(FromF, Lang_CXX03);
-  auto *ToTU = ToField->getTranslationUnitDecl();
 
   EXPECT_TRUE(ToField->isBitField());
-  EXPECT_EQ(3u, ToField->getBitWidthValue(ToTU->getASTContext()));
+  EXPECT_EQ(3u, ToField->getBitWidthValue());
 
   const auto *FromBT = FromF->getBitWidth()->getType()->getAs<BuiltinType>();
   const auto *ToBT = ToField->getBitWidth()->getType()->getAs<BuiltinType>();

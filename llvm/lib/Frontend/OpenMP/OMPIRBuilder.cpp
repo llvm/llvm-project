@@ -5203,12 +5203,7 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   Function *F = CanonicalLoop->getFunction();
 
   // Define where if branch should be inserted
-  Instruction *SplitBefore;
-  if (Instruction::classof(IfCond)) {
-    SplitBefore = dyn_cast<Instruction>(IfCond);
-  } else {
-    SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
-  }
+  Instruction *SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
 
   // TODO: We should not rely on pass manager. Currently we use pass manager
   // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo

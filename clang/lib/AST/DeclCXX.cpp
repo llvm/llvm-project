@@ -993,7 +993,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++ [meta.unary.prop]p4: [LWG2358]
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
-      if (data().Empty && !Field->isZeroLengthBitField(Context) &&
+      if (data().Empty && !Field->isZeroLengthBitField() &&
           Context.getLangOpts().getClangABICompat() >
               LangOptions::ClangABI::Ver6)
         data().Empty = false;

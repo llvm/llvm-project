@@ -2701,6 +2701,10 @@ class Type(Structure):
         """Retrieve the spelling of this Type."""
         return _CXString.from_result(conf.lib.clang_getTypeSpelling(self))
 
+    def pretty_printed(self, policy):
+        """Pretty-prints this Type with the given PrintingPolicy"""
+        return _CXString.from_result(conf.lib.clang_getTypePrettyPrinted(self, policy))
+
     def __eq__(self, other):
         if type(other) != type(self):
             return False
@@ -3955,6 +3959,7 @@ functionList: list[LibFunc] = [
     ("clang_getTypedefDeclUnderlyingType", [Cursor], Type),
     ("clang_getTypedefName", [Type], _CXString),
     ("clang_getTypeKindSpelling", [c_uint], _CXString),
+    ("clang_getTypePrettyPrinted", [Type, PrintingPolicy], _CXString),
     ("clang_getTypeSpelling", [Type], _CXString),
     ("clang_hashCursor", [Cursor], c_uint),
     ("clang_isAttribute", [CursorKind], bool),
