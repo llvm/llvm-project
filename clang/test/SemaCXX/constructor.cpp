@@ -98,6 +98,7 @@ namespace PR38286 {
 }
 
 namespace GH121706 {
+
 struct A {
   *&A(); // expected-error {{invalid constructor declaration}}
 };
@@ -141,4 +142,34 @@ struct J {
 struct K {
   **&&(K)(); // expected-error {{invalid constructor declaration}}
 };
+
+struct L {
+  *L(L&& other); // expected-error {{invalid constructor declaration}}
+};
+
+struct M {
+  *M(M& other); // expected-error {{invalid constructor declaration}}
+};
+
+struct N {
+  int N(); // expected-error {{constructor cannot have a return type}}
+};
+
+struct O {
+  static O(); // expected-error {{constructor cannot be declared 'static'}}
+};
+
+struct P {
+  explicit P();
+};
+
+struct Q {
+  constexpr Q();
+};
+
+struct R {
+  R();
+  friend R::R();
+};
+
 }
