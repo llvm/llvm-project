@@ -103,8 +103,8 @@ namespace {
 
 /// Helper class to make it possible to use `ValueVector` as a key in DenseMap.
 struct ValueVectorMapInfo {
-  static ValueVector getEmptyKey() { return ValueVector{}; }
-  static ValueVector getTombstoneKey() { return ValueVector{}; }
+  static ValueVector getEmptyKey() { return ValueVector{Value()}; }
+  static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
     return ::llvm::hash_combine_range(val.begin(), val.end());
   }
@@ -1040,10 +1040,6 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationRewrite *>
       unresolvedMaterializations;
 
-  /// A set of all N:1 materializations that were added to work around
-  /// incomplete 1:N support in the dialect conversion driver.
-  DenseSet<UnrealizedConversionCastOp> nTo1TempMaterializations;
-
   /// The current type converter, or nullptr if no type converter is currently
   /// active.
   const TypeConverter *currentTypeConverter = nullptr;
@@ -1180,7 +1176,6 @@ void UnresolvedMaterializationRewrite::rollback() {
   if (!mappedValues.empty())
     rewriterImpl.mapping.erase(mappedValues);
   rewriterImpl.unresolvedMaterializations.erase(getOperation());
-  rewriterImpl.nTo1TempMaterializations.erase(getOperation());
   op->erase();
 }
 
@@ -1435,13 +1430,8 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     UnrealizedConversionCastOp *castOp) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
-
-  // Avoid materializing an unnecessary cast.
-  if (TypeRange(inputs) == outputTypes) {
-    if (!valuesToMap.empty())
-      mapping.map(std::move(valuesToMap), inputs);
-    return inputs;
-  }
+  assert(TypeRange(inputs) != outputTypes &&
+         "materialization is not necessary");
 
   // Create an unresolved materialization. We use a new OpBuilder to avoid
   // tracking the materialization like we do for other operations.
@@ -1460,7 +1450,9 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
 
 Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
     Value value, const TypeConverter *converter) {
-  // Find a replacement value with the same type.
+  // Try to find a replacement value with the same type in the conversion value
+  // mapping. This includes cached materializations. We try to reuse those
+  // instead of generating duplicate IR.
   ValueVector repl = mapping.lookupOrNull(value, value.getType());
   if (!repl.empty())
     return repl.front();
@@ -1494,18 +1486,13 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // in the conversion value mapping.) The insertion point of the
   // materialization must be valid for all future users that may be created
   // later in the conversion process.
-  //
-  // Note: Instead of creating new IR, `buildUnresolvedMaterialization` may
-  // return an already existing, cached materialization from the conversion
-  // value mapping.
   Value castValue =
       buildUnresolvedMaterialization(MaterializationKind::Source,
                                      computeInsertPoint(repl), value.getLoc(),
-                                     /*valuesToMap=*/{value}, /*inputs=*/repl,
+                                     /*valuesToMap=*/repl, /*inputs=*/repl,
                                      /*outputType=*/value.getType(),
                                      /*originalType=*/Type(), converter)
           .front();
-  mapping.map(value, castValue);
   return castValue;
 }
 

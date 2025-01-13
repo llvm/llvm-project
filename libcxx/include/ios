@@ -629,9 +629,9 @@ private:
   basic_ostream<char_type, traits_type>* __tie_;
 
 #    if defined(_LIBCPP_ABI_IOS_ALLOW_ARBITRARY_FILL_VALUE)
-  using _FillType = _FillHelper<traits_type>;
+  using _FillType _LIBCPP_NODEBUG = _FillHelper<traits_type>;
 #    else
-  using _FillType = _SentinelValueFill<traits_type>;
+  using _FillType _LIBCPP_NODEBUG = _SentinelValueFill<traits_type>;
 #    endif
   mutable _FillType __fill_;
 };

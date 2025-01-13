@@ -49,8 +49,8 @@ struct __mask_storage<_Tp, simd_abi::__scalar> : __simd_storage<bool, simd_abi::
 
 template <class _Tp>
 struct __simd_operations<_Tp, simd_abi::__scalar> {
-  using _SimdStorage = __simd_storage<_Tp, simd_abi::__scalar>;
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+  using _SimdStorage _LIBCPP_NODEBUG = __simd_storage<_Tp, simd_abi::__scalar>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__scalar>;
 
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept { return {__v}; }
 
@@ -86,7 +86,7 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
 
 template <class _Tp>
 struct __mask_operations<_Tp, simd_abi::__scalar> {
-  using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+  using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__scalar>;
 
   static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
 

@@ -1,4 +1,5 @@
 header: pthread.h
+header_template: pthread.h.def
 macros: []
 types:
   - type_name: pthread_t

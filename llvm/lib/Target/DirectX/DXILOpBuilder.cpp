@@ -263,10 +263,14 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResRetType(Type::getHalfTy(Ctx));
   case OpParamType::ResRetFloatTy:
     return getResRetType(Type::getFloatTy(Ctx));
+  case OpParamType::ResRetDoubleTy:
+    return getResRetType(Type::getDoubleTy(Ctx));
   case OpParamType::ResRetInt16Ty:
     return getResRetType(Type::getInt16Ty(Ctx));
   case OpParamType::ResRetInt32Ty:
     return getResRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::ResRetInt64Ty:
+    return getResRetType(Type::getInt64Ty(Ctx));
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
   case OpParamType::ResBindTy:

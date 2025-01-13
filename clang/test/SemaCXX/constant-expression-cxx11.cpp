@@ -380,19 +380,35 @@ static_assert(string == string, "");
 static_assert(string == also_string, "");
 
 // These strings may overlap, and so the result of the comparison is unknown.
-constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of literals}}
-constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of literals}}
+constexpr bool may_overlap_1 = +"foo" == +"foo"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_2 = +"foo" == +"foo\0bar"; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_3 = +"foo" == "bar\0foo" + 4; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
+constexpr bool may_overlap_4 = "xfoo" + 1 == "xfoo" + 1; // expected-error {{}} expected-note {{addresses of potentially overlapping literals}}
 
 // These may overlap even though they have different encodings.
 // One of these two comparisons is non-constant, but due to endianness we don't
 // know which one.
 constexpr bool may_overlap_different_encoding[] =
   {fold((const char*)u"A" != (const char*)"xA\0\0\0x" + 1), fold((const char*)u"A" != (const char*)"x\0A\0\0x" + 1)};
-  // expected-error@-2 {{}} expected-note@-1 {{addresses of literals}}
+  // expected-error@-2 {{}} expected-note@-1 {{addresses of potentially overlapping literals}}
 
 }
+
+constexpr const char *getStr() {
+  return "abc"; // expected-note {{repeated evaluation of the same literal expression can produce different objects}}
+}
+constexpr int strMinus() {
+  (void)(getStr() - getStr()); // expected-note {{arithmetic on addresses of potentially overlapping literals has unspecified value}} \
+                               // cxx11-warning {{C++14 extension}}
+  return 0;
+}
+static_assert(strMinus() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                    // expected-note {{in call to}}
+
+constexpr int a = 0;
+constexpr int b = 1;
+constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
+                           // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
 
 namespace MaterializeTemporary {
 

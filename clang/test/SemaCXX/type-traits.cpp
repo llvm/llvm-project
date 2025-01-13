@@ -5031,3 +5031,18 @@ void remove_all_extents() {
   using SomeArray = int[1][2];
   static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int));
 }
+
+namespace GH121278 {
+// https://cplusplus.github.io/LWG/lwg-active.html#3929
+#if __cplusplus >= 202002L
+template <typename B, typename D>
+concept C = __is_base_of(B, D);
+// expected-error@-1 {{incomplete type 'GH121278::S' used in type trait expression}}
+// expected-note@-2 {{while substituting template arguments into constraint expression here}}
+
+struct T;
+struct S;
+bool b = C<T, S>;
+// expected-note@-1 {{while checking the satisfaction of concept 'C<GH121278::T, GH121278::S>' requested here}}
+#endif
+}
