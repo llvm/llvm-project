@@ -382,3 +382,99 @@ define i1 @icmp_ult_sremsmax_smax(i32 %x) {
   %c = icmp ult i32 %r, 2147483647
   ret i1 %c
 }
+
+define i1 @icmp_slt_srem_pos_range(i32 %x, i32 range(i32 999, -2147483648) %y) {
+; CHECK-LABEL: define i1 @icmp_slt_srem_pos_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 999, -2147483648) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp slt i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sle_srem_pos_range(i32 %x, i32 range(i32 999, -2147483648) %y) {
+; CHECK-LABEL: define i1 @icmp_sle_srem_pos_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 999, -2147483648) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sle i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sgt_srem_pos_range(i32 %x, i32 range(i32 999, -2147483648) %y) {
+; CHECK-LABEL: define i1 @icmp_sgt_srem_pos_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 999, -2147483648) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sgt i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sge_srem_pos_range(i32 %x, i32 range(i32 999, -2147483648) %y) {
+; CHECK-LABEL: define i1 @icmp_sge_srem_pos_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 999, -2147483648) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sge i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_slt_srem_neg_range(i32 %x, i32 range(i32 -2147483648, -999) %y) {
+; CHECK-LABEL: define i1 @icmp_slt_srem_neg_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 -2147483648, -999) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp slt i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sle_srem_neg_range(i32 %x, i32 range(i32 -2147483648, -999) %y) {
+; CHECK-LABEL: define i1 @icmp_sle_srem_neg_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 -2147483648, -999) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sle i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sgt_srem_neg_range(i32 %x, i32 range(i32 -2147483648, -999) %y) {
+; CHECK-LABEL: define i1 @icmp_sgt_srem_neg_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 -2147483648, -999) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sgt i32 %r, %y
+  ret i1 %c
+}
+
+define i1 @icmp_sge_srem_neg_range(i32 %x, i32 range(i32 -2147483648, -999) %y) {
+; CHECK-LABEL: define i1 @icmp_sge_srem_neg_range(
+; CHECK-SAME: i32 [[X:%.*]], i32 range(i32 -2147483648, -999) [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], 1000
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %r = srem i32 %x, 1000
+  %c = icmp sge i32 %r, %y
+  ret i1 %c
+}
