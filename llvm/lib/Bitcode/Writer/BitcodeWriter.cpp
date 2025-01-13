@@ -755,6 +755,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_MEMORY;
   case Attribute::NoFPClass:
     return bitc::ATTR_KIND_NOFPCLASS;
+  case Attribute::Negated:
+    return bitc::ATTR_KIND_NEGATED;
   case Attribute::Naked:
     return bitc::ATTR_KIND_NAKED;
   case Attribute::Nest:
