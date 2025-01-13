@@ -7699,7 +7699,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
               m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
                              m_Specific(RdxDesc.getRecurrenceStartValue())));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    (void) IsExpectedPattern;
+    (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
