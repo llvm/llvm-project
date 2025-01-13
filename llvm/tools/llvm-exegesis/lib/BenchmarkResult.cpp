@@ -287,13 +287,6 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
   static const bool flow = true;
 };
 
-template <> struct ScalarEnumerationTraits<compression::Format> {
-  static void enumeration(IO &Io, compression::Format &Format) {
-    Io.enumCase(Format, "zstd", compression::Format::Zstd);
-    Io.enumCase(Format, "zlib", compression::Format::Zlib);
-  }
-};
-
 template <> struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   static void mapping(IO &Io, exegesis::BenchmarkKey &Obj,
                       YamlContext &Context) {

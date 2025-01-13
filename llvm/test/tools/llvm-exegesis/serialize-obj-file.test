@@ -1,16 +1,22 @@
-# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --benchmark-phase=assemble-measured-code --mode=latency --benchmarks-file=%t.yaml
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --exegesis-serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --mode=latency --benchmarks-file=%t.yaml
 # RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=CHECK,SERIALIZE
 # RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --run-measurement=%t.yaml --mode=latency --benchmark-phase=dry-run-measurement --use-dummy-perf-counters \
 # RUN:    --dump-object-to-disk=%t.o | FileCheck %s --check-prefixes=CHECK,DESERIALIZE
 # RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=OBJDUMP
-# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --benchmark-phase=dry-run-measurement --use-dummy-perf-counters | \
+
+# We should not serialie benchmarks by default.
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --benchmark-phase=assemble-measured-code --mode=latency | \
 # RUN:    FileCheck %s --check-prefix=NO-SERIALIZE
-# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --benchmark-phase=assemble-measured-code --repetition-mode=min | \
-# RUN:    FileCheck %s --check-prefix=NO-SERIALIZE
-# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --benchmark-phase=assemble-measured-code --repetition-mode=middle-half-loop | \
-# RUN:    FileCheck %s --check-prefix=NO-SERIALIZE
-# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --benchmark-phase=assemble-measured-code --repetition-mode=middle-half-duplicate | \
-# RUN:    FileCheck %s --check-prefix=NO-SERIALIZE
+
+# We currently don't support serialization for repetition modes that require more than one snippets.
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --exegesis-serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=min 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --exegesis-serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=middle-half-loop 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --exegesis-serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=middle-half-duplicate 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+
 # REQUIRES: riscv-registered-target && native-registered-exegesis-target
 # REQUIRES: zlib || zstd
 
@@ -29,6 +35,7 @@
 
 # OBJDUMP: sh3add
 
-# Negative tests: we shouldn't serialize object files in some scenarios.
+# Negative tests.
 
+# NOT-SUPPORTED: -exegesis-serialize-benchmarks currently only supports -repetition-mode of loop and duplicate.
 # NO-SERIALIZE-NOT: object_file:

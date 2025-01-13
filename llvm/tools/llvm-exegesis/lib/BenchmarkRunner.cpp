@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -51,6 +52,14 @@
 #endif // __linux__
 
 namespace llvm {
+
+static cl::opt<bool>
+    SerializeBenchmarks("exegesis-serialize-benchmarks",
+                        cl::desc("Generate fully-serialized benchmarks "
+                                 "that can later be deserialized and "
+                                 "resuming the measurement."),
+                        cl::init(false));
+
 namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
@@ -664,16 +673,19 @@ BenchmarkRunner::getRunnableConfiguration(
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
-    // There is no need to serialize/deserialize the object file if we're
-    // simply running end-to-end measurements.
-    // Same goes for any repetition mode that requires more than a single
-    // snippet.
-    if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure &&
-        (RepetitionMode == Benchmark::Loop ||
-         RepetitionMode == Benchmark::Duplicate)) {
+
+    // Generate fully-serialized benchmarks.
+    if (SerializeBenchmarks) {
+      if (RepetitionMode != Benchmark::Loop &&
+          RepetitionMode != Benchmark::Duplicate)
+        return make_error<Failure>(
+            "-exegesis-serialize-benchmarks currently "
+            "only supports -repetition-mode of loop and duplicate.");
+
       if (Error E = BenchmarkResult.setObjectFile(*Snippet))
         return std::move(E);
     }
+
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
