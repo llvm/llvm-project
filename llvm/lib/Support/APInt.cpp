@@ -3108,3 +3108,22 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   APInt C2Ext = C2.zext(FullWidth);
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
+
+APInt APIntOps::pow(const APInt &X, const int &N) {
+  assert(N >= 0 && "negative exponents not supported.");
+  if (N == 0) {
+    return APInt(X.getBitWidth(), 1);
+  }
+  APInt Acc = X;
+  int64_t RemainingExponent = N;
+  while (RemainingExponent > 1) {
+    if (RemainingExponent % 2 == 0) {
+      Acc = Acc * Acc;
+      RemainingExponent /= 2;
+    } else {
+      Acc = Acc * X;
+      RemainingExponent--;
+    }
+  }
+  return Acc;
+};
