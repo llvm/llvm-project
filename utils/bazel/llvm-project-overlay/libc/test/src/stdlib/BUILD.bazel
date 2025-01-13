@@ -115,36 +115,30 @@ libc_support_library(
     hdrs = ["SortingTest.h"],
     deps = [
         "//libc:__support_macros_config",
-        "//libc:qsort_util",
+        "//libc:qsort",
         "//libc/test/UnitTest:LibcUnitTest",
-    ],
-)
-
-libc_test(
-    name = "qsort_test",
-    srcs = ["qsort_test.cpp"],
-    libc_function_deps = ["//libc:qsort"],
-    deps = [
-        ":qsort_test_helper",
-        "//libc:types_size_t",
     ],
 )
 
 libc_test(
     name = "quick_sort_test",
     srcs = ["quick_sort_test.cpp"],
+    libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
         "//libc:qsort_util",
+        "//libc:types_size_t",
     ],
 )
 
 libc_test(
     name = "heap_sort_test",
     srcs = ["heap_sort_test.cpp"],
+    libc_function_deps = ["//libc:qsort"],
     deps = [
         ":qsort_test_helper",
         "//libc:qsort_util",
+        "//libc:types_size_t",
     ],
 )
 

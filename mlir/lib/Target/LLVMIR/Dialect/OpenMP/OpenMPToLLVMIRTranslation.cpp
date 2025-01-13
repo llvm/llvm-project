@@ -150,10 +150,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
                           << " operation";
   };
 
-  auto checkAligned = [&todo](auto op, LogicalResult &result) {
-    if (!op.getAlignedVars().empty() || op.getAlignments())
-      result = todo("aligned");
-  };
   auto checkAllocate = [&todo](auto op, LogicalResult &result) {
     if (!op.getAllocateVars().empty() || !op.getAllocatorVars().empty())
       result = todo("allocate");
@@ -275,10 +271,8 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
       .Case([&](omp::SimdOp op) {
-        checkAligned(op, result);
         checkLinear(op, result);
         checkNontemporal(op, result);
-        checkPrivate(op, result);
         checkReduction(op, result);
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
@@ -1030,6 +1024,11 @@ mapInitializationArgs(T loop, LLVM::ModuleTranslation &moduleTranslation,
   }
 }
 
+/// Inline reductions' `init` regions. This functions assumes that the
+/// `builder`'s insertion point is where the user wants the `init` regions to be
+/// inlined; i.e. it does not try to find a proper insertion location for the
+/// `init` regions. It also leaves the `builder's insertions point in a state
+/// where the user can continue the code-gen directly afterwards.
 template <typename OP>
 static LogicalResult
 initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
@@ -1044,9 +1043,6 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
   if (op.getNumReductionVars() == 0)
     return success();
 
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
-
-  builder.SetInsertPoint(latestAllocaBlock->getTerminator());
   llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
   auto allocaIP = llvm::IRBuilderBase::InsertPoint(
       latestAllocaBlock, latestAllocaBlock->getTerminator()->getIterator());
@@ -1066,7 +1062,10 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     }
   }
 
-  builder.SetInsertPoint(&*initBlock->getFirstNonPHIOrDbgOrAlloca());
+  if (initBlock->empty() || initBlock->getTerminator() == nullptr)
+    builder.SetInsertPoint(initBlock);
+  else
+    builder.SetInsertPoint(initBlock->getTerminator());
 
   // store result of the alloc region to the allocated pointer to the real
   // reduction variable
@@ -1091,7 +1090,11 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
 
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    if (builder.GetInsertBlock()->empty() ||
+        builder.GetInsertBlock()->getTerminator() == nullptr)
+      builder.SetInsertPoint(builder.GetInsertBlock());
+    else
+      builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
     if (isByRef[i]) {
       if (!reductionDecls[i].getAllocRegion().empty())
@@ -1276,7 +1279,6 @@ static LogicalResult allocAndInitializeReductionVars(
   if (op.getNumReductionVars() == 0)
     return success();
 
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   SmallVector<DeferredStore> deferredStores;
 
   if (failed(allocReductionVars(op, reductionArgs, builder, moduleTranslation,
@@ -2085,6 +2087,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       return llvm::make_error<PreviouslyReportedError>();
 
     assert(afterAllocas.get()->getSinglePredecessor());
+    builder.restoreIP(codeGenIP);
+
     if (failed(
             initReductionVars(opInst, reductionArgs, builder, moduleTranslation,
                               afterAllocas.get()->getSinglePredecessor(),
@@ -2104,7 +2108,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         moduleTranslation, allocaIP);
 
     // ParallelOp has only one region associated with it.
-    builder.restoreIP(codeGenIP);
     llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
         opInst.getRegion(), "omp.par.region", builder, moduleTranslation);
     if (!regionBlock)
@@ -2226,7 +2229,27 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
+  MutableArrayRef<BlockArgument> privateBlockArgs =
+      cast<omp::BlockArgOpenMPOpInterface>(*simdOp).getPrivateBlockArgs();
+  SmallVector<mlir::Value> mlirPrivateVars;
+  SmallVector<llvm::Value *> llvmPrivateVars;
+  SmallVector<omp::PrivateClauseOp> privateDecls;
+  mlirPrivateVars.reserve(privateBlockArgs.size());
+  llvmPrivateVars.reserve(privateBlockArgs.size());
+  collectPrivatizationDecls(simdOp, privateDecls);
+
+  for (mlir::Value privateVar : simdOp.getPrivateVars())
+    mlirPrivateVars.push_back(privateVar);
+
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      builder, moduleTranslation, privateBlockArgs, privateDecls,
+      mlirPrivateVars, llvmPrivateVars, allocaIP);
+  if (handleError(afterAllocas, opInst).failed())
+    return failure();
 
   // Generator of the canonical loop body.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
@@ -2302,6 +2325,24 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   llvm::omp::OrderKind order = convertOrderKind(simdOp.getOrder());
+  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
+  std::optional<ArrayAttr> alignmentValues = simdOp.getAlignments();
+  mlir::OperandRange operands = simdOp.getAlignedVars();
+  for (size_t i = 0; i < operands.size(); ++i) {
+    llvm::Value *alignment = nullptr;
+    llvm::Value *llvmVal = moduleTranslation.lookupValue(operands[i]);
+    llvm::Type *ty = llvmVal->getType();
+    if (auto intAttr = llvm::dyn_cast<IntegerAttr>((*alignmentValues)[i])) {
+      alignment = builder.getInt64(intAttr.getInt());
+      assert(ty->isPointerTy() && "Invalid type for aligned variable");
+      assert(alignment && "Invalid alignment value");
+      auto curInsert = builder.saveIP();
+      builder.SetInsertPoint(sourceBlock->getTerminator());
+      llvmVal = builder.CreateLoad(ty, llvmVal);
+      builder.restoreIP(curInsert);
+      alignedVars[llvmVal] = alignment;
+    }
+  }
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
@@ -2309,7 +2350,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   builder.restoreIP(afterIP);
-  return success();
+
+  return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
+                            llvmPrivateVars, privateDecls);
 }
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
@@ -2575,6 +2618,7 @@ static LogicalResult
 convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
                         LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto threadprivateOp = cast<omp::ThreadprivateOp>(opInst);
 
   if (failed(checkImplementationStatus(opInst)))
@@ -2582,6 +2626,10 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
 
   Value symAddr = threadprivateOp.getSymAddr();
   auto *symOp = symAddr.getDefiningOp();
+
+  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
+    symOp = asCast.getOperand().getDefiningOp();
+
   if (!isa<LLVM::AddressOfOp>(symOp))
     return opInst.emitError("Addressing symbol not found");
   LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
@@ -2589,17 +2637,20 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   LLVM::GlobalOp global =
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
-  llvm::Type *type = globalValue->getValueType();
-  llvm::TypeSize typeSize =
-      builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
-          type);
-  llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedValue());
-  llvm::StringRef suffix = llvm::StringRef(".cache", 6);
-  std::string cacheName = (Twine(global.getSymName()).concat(suffix)).str();
-  llvm::Value *callInst =
-      moduleTranslation.getOpenMPBuilder()->createCachedThreadPrivate(
-          ompLoc, globalValue, size, cacheName);
-  moduleTranslation.mapValue(opInst.getResult(0), callInst);
+
+  if (!ompBuilder->Config.isTargetDevice()) {
+    llvm::Type *type = globalValue->getValueType();
+    llvm::TypeSize typeSize =
+        builder.GetInsertBlock()->getModule()->getDataLayout().getTypeStoreSize(
+            type);
+    llvm::ConstantInt *size = builder.getInt64(typeSize.getFixedValue());
+    llvm::Value *callInst = ompBuilder->createCachedThreadPrivate(
+        ompLoc, globalValue, size, global.getSymName() + ".cache");
+    moduleTranslation.mapValue(opInst.getResult(0), callInst);
+  } else {
+    moduleTranslation.mapValue(opInst.getResult(0), globalValue);
+  }
+
   return success();
 }
 
@@ -4197,6 +4248,14 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 static bool isTargetDeviceOp(Operation *op) {
   // Assumes no reverse offloading
   if (op->getParentOfType<omp::TargetOp>())
+    return true;
+
+  // Certain operations return results, and whether utilised in host or
+  // target there is a chance an LLVM Dialect operation depends on it
+  // by taking it in as an operand, so we must always lower these in
+  // some manner or result in an ICE (whether they end up in a no-op
+  // or otherwise).
+  if (mlir::isa<omp::ThreadprivateOp>(op))
     return true;
 
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>())

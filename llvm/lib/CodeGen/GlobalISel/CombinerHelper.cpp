@@ -7062,6 +7062,34 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   }
 }
 
+// (neg (min/max x, (neg x))) --> (max/min x, (neg x))
+bool CombinerHelper::matchSimplifyNegMinMax(MachineInstr &MI,
+                                            BuildFnTy &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+  Register DestReg = MI.getOperand(0).getReg();
+  LLT DestTy = MRI.getType(DestReg);
+
+  Register X;
+  Register Sub0;
+  auto NegPattern = m_all_of(m_Neg(m_DeferredReg(X)), m_Reg(Sub0));
+  if (mi_match(DestReg, MRI,
+               m_Neg(m_OneUse(m_any_of(m_GSMin(m_Reg(X), NegPattern),
+                                       m_GSMax(m_Reg(X), NegPattern),
+                                       m_GUMin(m_Reg(X), NegPattern),
+                                       m_GUMax(m_Reg(X), NegPattern)))))) {
+    MachineInstr *MinMaxMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+    unsigned NewOpc = getInverseGMinMaxOpcode(MinMaxMI->getOpcode());
+    if (isLegal({NewOpc, {DestTy}})) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.buildInstr(NewOpc, {DestReg}, {X, Sub0});
+      };
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const {
   GSelect *Select = cast<GSelect>(&MI);
 

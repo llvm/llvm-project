@@ -8,6 +8,7 @@
 
 #include "SymbolLocatorDebuginfod.h"
 
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
@@ -141,6 +142,24 @@ SymbolLocator *SymbolLocatorDebuginfod::CreateInstance() {
   return new SymbolLocatorDebuginfod();
 }
 
+static llvm::StringRef getFileName(const ModuleSpec &module_spec,
+                                   std::string url_path) {
+  // Check if the URL path requests an executable file or a symbol file
+  bool is_executable = url_path.find("debuginfo") == std::string::npos;
+  if (is_executable)
+    return module_spec.GetFileSpec().GetFilename().GetStringRef();
+  llvm::StringRef symbol_file =
+      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
+  // Remove llvmcache- prefix and hash, keep origin file name
+  if (symbol_file.starts_with("llvmcache-")) {
+    size_t pos = symbol_file.rfind('-');
+    if (pos != llvm::StringRef::npos) {
+      symbol_file = symbol_file.substr(pos + 1);
+    }
+  }
+  return symbol_file;
+}
+
 static std::optional<FileSpec>
 GetFileForModule(const ModuleSpec &module_spec,
                  std::function<std::string(llvm::object::BuildID)> UrlBuilder) {
@@ -154,11 +173,14 @@ GetFileForModule(const ModuleSpec &module_spec,
   // Grab LLDB's Debuginfod overrides from the
   // plugin.symbol-locator.debuginfod.* settings.
   PluginProperties &plugin_props = GetGlobalPluginProperties();
-  llvm::Expected<std::string> cache_path_or_err = plugin_props.GetCachePath();
-  // A cache location is *required*.
-  if (!cache_path_or_err)
-    return {};
-  std::string cache_path = *cache_path_or_err;
+  // Grab the lldb index cache settings from the global module list properties.
+  ModuleListProperties &properties =
+      ModuleList::GetGlobalModuleListProperties();
+  std::string cache_path = properties.GetLLDBIndexCachePath().GetPath();
+
+  llvm::CachePruningPolicy pruning_policy =
+      DataFileCache::GetLLDBIndexCachePolicy();
+
   llvm::SmallVector<llvm::StringRef> debuginfod_urls =
       llvm::getDefaultDebuginfodUrls();
   std::chrono::milliseconds timeout = plugin_props.GetTimeout();
@@ -166,9 +188,13 @@ GetFileForModule(const ModuleSpec &module_spec,
   // We're ready to ask the Debuginfod library to find our file.
   llvm::object::BuildID build_id(module_uuid.GetBytes());
   std::string url_path = UrlBuilder(build_id);
-  std::string cache_key = llvm::getDebuginfodCacheKey(url_path);
+  llvm::StringRef file_name = getFileName(module_spec, url_path);
+  std::string cache_file_name = llvm::toHex(build_id, true);
+  if (!file_name.empty())
+    cache_file_name += "-" + file_name.str();
   llvm::Expected<std::string> result = llvm::getCachedOrDownloadArtifact(
-      cache_key, url_path, cache_path, debuginfod_urls, timeout);
+      cache_file_name, url_path, cache_path, debuginfod_urls, timeout,
+      pruning_policy);
   if (result)
     return FileSpec(*result);
 

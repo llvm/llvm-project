@@ -4243,7 +4243,11 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   // Create outer "dispatch" loop for enumerating the chunks.
   BasicBlock *DispatchEnter = splitBB(Builder, true);
   Value *DispatchCounter;
-  Expected<CanonicalLoopInfo *> LoopResult = createCanonicalLoop(
+
+  // It is safe to assume this didn't return an error because the callback
+  // passed into createCanonicalLoop is the only possible error source, and it
+  // always returns success.
+  CanonicalLoopInfo *DispatchCLI = cantFail(createCanonicalLoop(
       {Builder.saveIP(), DL},
       [&](InsertPointTy BodyIP, Value *Counter) {
         DispatchCounter = Counter;
@@ -4251,15 +4255,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
       },
       FirstChunkStart, CastedTripCount, NextChunkStride,
       /*IsSigned=*/false, /*InclusiveStop=*/false, /*ComputeIP=*/{},
-      "dispatch");
-  if (!LoopResult) {
-    // It is safe to assume this didn't return an error because the callback
-    // passed into createCanonicalLoop is the only possible error source, and it
-    // always returns success. Need to still cast the result into bool to avoid
-    // runtime errors.
-    llvm_unreachable("unexpected error creating canonical loop");
-  }
-  CanonicalLoopInfo *DispatchCLI = *LoopResult;
+      "dispatch"));
 
   // Remember the BasicBlocks of the dispatch loop we need, then invalidate to
   // not have to preserve the canonical invariant.
@@ -5207,12 +5203,7 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   Function *F = CanonicalLoop->getFunction();
 
   // Define where if branch should be inserted
-  Instruction *SplitBefore;
-  if (Instruction::classof(IfCond)) {
-    SplitBefore = dyn_cast<Instruction>(IfCond);
-  } else {
-    SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
-  }
+  Instruction *SplitBefore = CanonicalLoop->getPreheader()->getTerminator();
 
   // TODO: We should not rely on pass manager. Currently we use pass manager
   // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
@@ -5302,10 +5293,11 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
   if (AlignedVars.size()) {
     InsertPointTy IP = Builder.saveIP();
-    Builder.SetInsertPoint(CanonicalLoop->getPreheader()->getTerminator());
     for (auto &AlignedItem : AlignedVars) {
       Value *AlignedPtr = AlignedItem.first;
       Value *Alignment = AlignedItem.second;
+      Instruction *loadInst = dyn_cast<Instruction>(AlignedPtr);
+      Builder.SetInsertPoint(loadInst->getNextNode());
       Builder.CreateAlignmentAssumption(F->getDataLayout(),
                                         AlignedPtr, Alignment);
     }
@@ -6560,16 +6552,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
       };
 
       bool RequiresOuterTargetTask = Info.HasNoWait;
-      if (!RequiresOuterTargetTask) {
-        Error Err = TaskBodyCB(/*DeviceID=*/nullptr, /*RTLoc=*/nullptr,
-                               /*TargetTaskAllocaIP=*/{});
-        assert(!Err && "TaskBodyCB expected to succeed");
-      } else {
-        InsertPointOrErrorTy AfterIP =
-            emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
-                           /*Dependencies=*/{}, Info.HasNoWait);
-        assert(AfterIP && "TaskBodyCB expected to succeed");
-      }
+      if (!RequiresOuterTargetTask)
+        cantFail(TaskBodyCB(/*DeviceID=*/nullptr, /*RTLoc=*/nullptr,
+                            /*TargetTaskAllocaIP=*/{}));
+      else
+        cantFail(emitTargetTask(TaskBodyCB, DeviceID, SrcLocInfo, AllocaIP,
+                                /*Dependencies=*/{}, Info.HasNoWait));
     } else {
       Function *BeginMapperFunc = getOrCreateRuntimeFunctionPtr(
           omp::OMPRTL___tgt_target_data_begin_mapper);

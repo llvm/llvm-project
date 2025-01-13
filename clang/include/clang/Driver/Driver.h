@@ -741,6 +741,11 @@ private:
   /// \returns true if error occurred.
   bool loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx);
 
+  /// Tries to load options from customization file.
+  ///
+  /// \returns true if error occurred.
+  bool loadZOSCustomizationFile(llvm::cl::ExpansionContext &);
+
   /// Read options from the specified file.
   ///
   /// \param [in] FileName File to read.

@@ -149,11 +149,19 @@ std::vector<MemoryBufferRef>
 lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = file->isThin() && ctx.driver.tar;
+
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               file->getFileName() +
                   ": could not get the buffer for a child of the archive");
+    if (addToTar) {
+      ctx.driver.tar->append(relativeToRoot(check(c.getFullName())),
+                             mbref.getBuffer());
+    }
     v.push_back(mbref);
   }
   if (err)

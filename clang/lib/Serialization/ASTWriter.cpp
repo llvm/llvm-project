@@ -7230,6 +7230,10 @@ void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   if (!D->isFromASTFile())
     return; // Declaration not imported from PCH.
 
+  // The function definition may not have a body due to parsing errors.
+  if (!D->doesThisDeclarationHaveABody())
+    return;
+
   // Implicit function decl from a PCH was defined.
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
 }
@@ -7247,6 +7251,10 @@ void ASTWriter::FunctionDefinitionInstantiated(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
   if (!D->isFromASTFile())
+    return;
+
+  // The function definition may not have a body due to parsing errors.
+  if (!D->doesThisDeclarationHaveABody())
     return;
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_CXX_ADDED_FUNCTION_DEFINITION));
@@ -7916,10 +7924,12 @@ void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
 
 void OMPClauseWriter::VisitOMPAllocateClause(OMPAllocateClause *C) {
   Record.push_back(C->varlist_size());
-  Record.writeEnum(C->getAllocatorModifier());
+  Record.writeEnum(C->getFirstAllocateModifier());
+  Record.writeEnum(C->getSecondAllocateModifier());
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddStmt(C->getAllocator());
+  Record.AddStmt(C->getAlignment());
   for (auto *VE : C->varlist())
     Record.AddStmt(VE);
 }
@@ -8313,9 +8323,16 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Self: {
     const auto *SC = cast<OpenACCSelfClause>(C);
     writeSourceLocation(SC->getLParenLoc());
-    writeBool(SC->hasConditionExpr());
-    if (SC->hasConditionExpr())
-      AddStmt(const_cast<Expr*>(SC->getConditionExpr()));
+    writeBool(SC->isConditionExprClause());
+    if (SC->isConditionExprClause()) {
+      writeBool(SC->hasConditionExpr());
+      if (SC->hasConditionExpr())
+        AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
+    } else {
+      writeUInt32(SC->getVarList().size());
+      for (Expr *E : SC->getVarList())
+        AddStmt(E);
+    }
     return;
   }
   case OpenACCClauseKind::NumGangs: {
@@ -8330,6 +8347,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *DNC = cast<OpenACCDeviceNumClause>(C);
     writeSourceLocation(DNC->getLParenLoc());
     AddStmt(const_cast<Expr*>(DNC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::DefaultAsync: {
+    const auto *DAC = cast<OpenACCDefaultAsyncClause>(C);
+    writeSourceLocation(DAC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(DAC->getIntExpr()));
     return;
   }
   case OpenACCClauseKind::NumWorkers: {
@@ -8348,6 +8371,18 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *PC = cast<OpenACCPrivateClause>(C);
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::Host: {
+    const auto *HC = cast<OpenACCHostClause>(C);
+    writeSourceLocation(HC->getLParenLoc());
+    writeOpenACCVarList(HC);
+    return;
+  }
+  case OpenACCClauseKind::Device: {
+    const auto *DC = cast<OpenACCDeviceClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeOpenACCVarList(DC);
     return;
   }
   case OpenACCClauseKind::FirstPrivate: {
@@ -8523,12 +8558,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   }
 
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

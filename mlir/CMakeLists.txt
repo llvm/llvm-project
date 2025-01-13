@@ -170,7 +170,7 @@ configure_file(
 #   The pybind11 library can be found (set with -DPYBIND_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
 # By default, find_package and probing for installed pybind11 is performed.
-# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to 
+# Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to
 # disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
 

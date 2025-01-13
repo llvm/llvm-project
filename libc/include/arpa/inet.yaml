@@ -1,4 +1,5 @@
-header: arpa-inet.h
+header: arpa/inet.h
+header_template: inet.h.def
 macros: []
 types: []
 enums: []
