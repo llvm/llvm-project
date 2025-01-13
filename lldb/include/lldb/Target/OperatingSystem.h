@@ -14,6 +14,7 @@
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
+class ThreadPlanStackMap;
 
 /// \class OperatingSystem OperatingSystem.h "lldb/Target/OperatingSystem.h"
 /// A plug-in interface definition class for halted OS helpers.
@@ -45,7 +46,8 @@ public:
   // Plug-in Methods
   virtual bool UpdateThreadList(ThreadList &old_thread_list,
                                 ThreadList &real_thread_list,
-                                ThreadList &new_thread_list) = 0;
+                                ThreadList &new_thread_list,
+                                ThreadPlanStackMap &plan_stack_map) = 0;
 
   virtual void ThreadWasSelected(Thread *thread) = 0;
 

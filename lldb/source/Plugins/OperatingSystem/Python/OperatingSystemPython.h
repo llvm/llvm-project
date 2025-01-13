@@ -44,9 +44,11 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // lldb_private::OperatingSystem Methods
-  bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,
-                        lldb_private::ThreadList &real_thread_list,
-                        lldb_private::ThreadList &new_thread_list) override;
+  bool
+  UpdateThreadList(lldb_private::ThreadList &old_thread_list,
+                   lldb_private::ThreadList &real_thread_list,
+                   lldb_private::ThreadList &new_thread_list,
+                   lldb_private::ThreadPlanStackMap &plan_stack_map) override;
 
   void ThreadWasSelected(lldb_private::Thread *thread) override;
 

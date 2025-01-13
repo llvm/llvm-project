@@ -179,6 +179,13 @@ public:
                        
   bool PrunePlansForTID(lldb::tid_t tid);
 
+  std::vector<lldb::tid_t> GetKnownTIDs() const {
+    std::vector<lldb::tid_t> TIDs;
+    for (auto &plan_stack : m_plans_up_container)
+      TIDs.push_back(plan_stack->GetTID());
+    return TIDs;
+  }
+
 private:
   Process &m_process;
   mutable std::recursive_mutex m_stack_map_mutex;

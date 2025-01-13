@@ -1202,8 +1202,9 @@ void Process::UpdateThreadListIfNeeded() {
               real_thread_list, // The actual thread list full of threads
                                 // created by each lldb_private::Process
                                 // subclass
-              new_thread_list); // The new thread list that we will show to the
+              new_thread_list,  // The new thread list that we will show to the
                                 // user that gets filled in
+              m_thread_plans);
 
           if (saved_prefer_dynamic != lldb::eNoDynamicValues)
             target.SetPreferDynamicValue(saved_prefer_dynamic);
