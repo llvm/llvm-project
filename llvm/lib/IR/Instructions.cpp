@@ -3886,11 +3886,17 @@ bool CmpInst::isFalseWhenEqual(Predicate predicate) {
   }
 }
 
-bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+bool ICmpInst::isImpliedTrueByMatchingCmp(CmpPredicate Pred1,
+                                          CmpPredicate Pred2) {
   // If the predicates match, then we know the first condition implies the
   // second is true.
-  if (Pred1 == Pred2)
+  if (CmpPredicate::getMatching(Pred1, Pred2))
     return true;
+
+  if (Pred1.hasSameSign() && CmpInst::isSigned(Pred2))
+    Pred1 = ICmpInst::getFlippedSignednessPredicate(Pred1);
+  else if (Pred2.hasSameSign() && CmpInst::isSigned(Pred1))
+    Pred2 = ICmpInst::getFlippedSignednessPredicate(Pred2);
 
   switch (Pred1) {
   default:
@@ -3911,7 +3917,8 @@ bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
   return false;
 }
 
-bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+bool ICmpInst::isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
+                                           CmpPredicate Pred2) {
   return isImpliedTrueByMatchingCmp(Pred1, getInversePredicate(Pred2));
 }
 

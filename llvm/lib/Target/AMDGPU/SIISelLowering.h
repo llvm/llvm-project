@@ -315,9 +315,9 @@ public:
                                       SmallVectorImpl<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-  bool getAddrModeArguments(IntrinsicInst * /*I*/,
-                            SmallVectorImpl<Value*> &/*Ops*/,
-                            Type *&/*AccessTy*/) const override;
+  bool getAddrModeArguments(const IntrinsicInst *I,
+                            SmallVectorImpl<Value *> &Ops,
+                            Type *&AccessTy) const override;
 
   bool isLegalFlatAddressingMode(const AddrMode &AM, unsigned AddrSpace) const;
   bool isLegalGlobalAddressingMode(const AddrMode &AM) const;

@@ -41,7 +41,13 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-using BuilderTy = IRBuilder<TargetFolder>;
+class BuilderTy : public IRBuilder<TargetFolder> {
+public:
+  BuilderTy(BasicBlock *TheBB, BasicBlock::iterator IP, TargetFolder Folder)
+      : IRBuilder<TargetFolder>(TheBB, IP, Folder) {
+    SetNoSanitizeMetadata();
+  }
+};
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///

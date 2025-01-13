@@ -2795,9 +2795,9 @@ public:
   /// possible to be done in the address mode for that operand. This hook lets
   /// targets also pass back when this should be done on intrinsics which
   /// load/store.
-  virtual bool getAddrModeArguments(IntrinsicInst * /*I*/,
-                                    SmallVectorImpl<Value*> &/*Ops*/,
-                                    Type *&/*AccessTy*/) const {
+  virtual bool getAddrModeArguments(const IntrinsicInst * /*I*/,
+                                    SmallVectorImpl<Value *> & /*Ops*/,
+                                    Type *& /*AccessTy*/) const {
     return false;
   }
 
