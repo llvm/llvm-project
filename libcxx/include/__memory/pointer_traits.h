@@ -162,15 +162,6 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*> {
   };
 #endif
 
-#if _LIBCPP_STD_VER >= 26
-#if __aarch64__
-  static constexpr uintptr_t _upper_bits = 0xFFull << (sizeof(void *) * 8ull) - 8ull;
-#else 
-  static constexpr uintptr_t _upper_bits = 0ull;
-#endif
-  static constexpr uintptr_t unused_bits = (alignof(element_type) - 1ull) | _upper_bits;
-#endif
-
 private:
   struct __nat {};
 
