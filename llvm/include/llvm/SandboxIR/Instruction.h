@@ -2511,13 +2511,6 @@ public:
   WRAP_STATIC_PREDICATE(isOrdered);
   WRAP_STATIC_PREDICATE(isUnordered);
 
-  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-    return llvm::CmpInst::isImpliedTrueByMatchingCmp(Pred1, Pred2);
-  }
-  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-    return llvm::CmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
-  }
-
   /// Method for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ICmp ||
@@ -2553,6 +2546,11 @@ public:
   WRAP_STATIC_PREDICATE(isLT);
   WRAP_STATIC_PREDICATE(isGE);
   WRAP_STATIC_PREDICATE(isLE);
+
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2) {
+    return llvm::ICmpInst::isImpliedByMatchingCmp(Pred1, Pred2);
+  }
 
   static auto predicates() { return llvm::ICmpInst::predicates(); }
   static bool compare(const APInt &LHS, const APInt &RHS,
