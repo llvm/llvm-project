@@ -424,8 +424,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BOS_All);
 
   Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Never;
-  CHECK_PARSE("BreakBeforeTemplateCloser: Multiline", BreakBeforeTemplateCloser,
-              FormatStyle::BBTCS_Multiline);
+  CHECK_PARSE("BreakBeforeTemplateCloser: BlockIndent",
+              BreakBeforeTemplateCloser, FormatStyle::BBTCS_BlockIndent);
   CHECK_PARSE("BreakBeforeTemplateCloser: Never", BreakBeforeTemplateCloser,
               FormatStyle::BBTCS_Never);
 

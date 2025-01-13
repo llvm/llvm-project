@@ -261,7 +261,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeTemplateCloserStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BreakBeforeTemplateCloserStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::BBTCS_Never);
-    IO.enumCase(Value, "Multiline", FormatStyle::BBTCS_Multiline);
+    IO.enumCase(Value, "BlockIndent", FormatStyle::BBTCS_BlockIndent);
   }
 };
 

@@ -2258,21 +2258,28 @@ struct FormatStyle {
     /// \code
     ///    template <typename Foo, typename Bar>
     ///
+    ///    template <typename Foo,
+    ///              typename Bar>
+    ///
     ///    template <
     ///        typename Foo,
     ///        typename Bar>
     /// \endcode
     BBTCS_Never,
-    /// Break before a template closer if the template spans more than one line.
+    /// Break before a template closer if the template has broken into block
+    /// indent style.
     /// \code
     ///    template <typename Foo, typename Bar>
+    ///
+    ///    template <typename Foo,
+    ///              typename Bar>
     ///
     ///    template <
     ///        typename Foo,
     ///        typename Bar
     ///    >
     /// \endcode
-    BBTCS_Multiline,
+    BBTCS_BlockIndent,
   };
 
   /// The style of when a line break will be placed before the ``>`` that closes

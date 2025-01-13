@@ -11134,7 +11134,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "void foo() {}",
                Style);
 
-  Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_Multiline;
+  Style.BreakBeforeTemplateCloser = FormatStyle::BBTCS_BlockIndent;
   // BreakBeforeTemplateCloser should NOT force template declarations onto
   // multiple lines.
   verifyFormat("template <typename Foo>\n"
@@ -11154,6 +11154,10 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                  "    typename Foo,\n"
                  "    typename Bar\n"
                  ">\n"
+                 "void foo() {}",
+                 Style);
+  verifyNoChange("template <typename Foo,\n"
+                 "          typename Bar>\n"
                  "void foo() {}",
                  Style);
   // It should add a line break before > if not already present:
@@ -11285,17 +11289,29 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                ">\n"
                "void foo() {}",
                Style);
-  // But not when the name is looong:
+  // But not when the name is looong. Note that these names are exactly 1
+  // character too long for the ColumnLimit.
   verifyFormat("template <\n"
                "    typename Foo,\n"
-               "    typename Barrrrrrrrrrrrrrrrrrrrrrrrrr\n"
+               "    typename Barrrrrrrrrrrrrrrrrrrr\n"
                ">\n"
                "void foo() {}",
                Style);
+  // Note that this "Foo" is 1 character shorter than the previous "Bar" because
+  // of the comma.
   verifyFormat("template <\n"
-               "    typename Fooooooooooooooooooooooooooo,\n"
+               "    typename Foooooooooooooooooooo,\n"
                "    typename Bar\n"
                ">\n"
+               "void foo() {}",
+               Style);
+  // BlockIndent style is used when the ColumnLimit allows it:
+  verifyFormat("template <typename Foo,\n"
+               "          typename Barrrrrrrrrrrrrrrrrr>\n"
+               "void foo() {}",
+               Style);
+  verifyFormat("template <typename Fooooooooooooooooooo,\n"
+               "          typename Bar>\n"
                "void foo() {}",
                Style);
   // Additionally, long names should be split in one step:
@@ -11346,16 +11362,31 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
       "      []<typename T,\n"
       "         typename Loooooooooooooooooooooooooooooooooong\n"
       "      >(T t) {};\n"
+      // Because this is not BlockIndent style, and the [] is empty,
+      // and the "T" is short, then the ">" is placed on the same line.
+      "  auto lambda =\n"
+      "      []<typename Loooooooooooooooooooooooooooooooooong,\n"
+      "         typename T>(T t) {};\n"
       // Nested:
       "  auto lambda =\n"
       "      []<template <typename, typename>\n"
       "         typename Looooooooooooooooooong\n"
       "      >(T t) {};\n"
-      // Nested with long capture:
+      // Same idea, the "T" is now short rather than Looong:
+      "  auto lambda =\n"
+      "      []<template <typename, typename>\n"
+      "         typename T>(T t) {};\n"
+      // Nested with long capture forces the style to block indent:
       "  auto lambda =\n"
       "      [loooooooooooooooooooong]<\n"
       "          template <typename, typename>\n"
       "          typename Looooooooooooooooooong\n"
+      "      >(T t) {};\n"
+      // But *now* it stays block indented even when T is short:
+      "  auto lambda =\n"
+      "      [loooooooooooooooooooong]<\n"
+      "          template <typename, typename>\n"
+      "          typename T\n"
       "      >(T t) {};\n"
       // Nested, with long name and long captures:
       "  auto lambda =\n"
@@ -11364,6 +11395,13 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
       "              typename Foooooooooooooooo,\n"
       "              typename\n"
       "          >\n"
+      "          typename T\n"
+      "      >(T t) {};\n"
+      // Allow the nested template to be on the same line:
+      "  auto lambda =\n"
+      "      [loooooooooooooooooooong]<\n"
+      "          template <typename Fooooooooo,\n"
+      "                    typename>\n"
       "          typename T\n"
       "      >(T t) {};\n"
       "}",
@@ -11385,6 +11423,12 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "  myFunc<\n"
                "      Loooooooooooooooooooooooooooooooooooooooong\n"
                "  >();\n"
+               "}",
+               Style);
+  // But if the type is short, we don't need block indent style:
+  verifyFormat("void foo() {\n"
+               "  myFunc<Foo, Foo, Foo, Foo, Foo, Foo,\n"
+               "         Foo, Foo>();\n"
                "}",
                Style);
 }

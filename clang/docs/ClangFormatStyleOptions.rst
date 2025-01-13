@@ -3436,16 +3436,22 @@ the configuration (without a prefix: ``Auto``).
 
        template <typename Foo, typename Bar>
 
+       template <typename Foo,
+                 typename Bar>
+
        template <
            typename Foo,
            typename Bar>
 
-  * ``BBTCS_Multiline`` (in configuration: ``Multiline``)
-    Break before a template closer if the template spans more than one line.
+  * ``BBTCS_BlockIndent`` (in configuration: ``BlockIndent``)
+    Break before a template closer if the template has broken into block indent style.
 
     .. code-block:: c++
 
        template <typename Foo, typename Bar>
+
+       template <typename Foo,
+                 typename Bar>
 
        template <
            typename Foo,

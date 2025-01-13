@@ -407,7 +407,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
     return true;
   if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser) &&
-      Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_Multiline) {
+      Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent) {
     return true;
   }
   if (Style.Language == FormatStyle::LK_ObjC &&
