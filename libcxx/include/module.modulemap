@@ -760,6 +760,8 @@ module std [system] {
     module ranges_sort {
       header "__algorithm/ranges_sort.h"
       export std.functional.ranges_operations
+      export std.algorithm.sort
+      export std.algorithm.make_projected
     }
     module ranges_stable_partition {
       header "__algorithm/ranges_stable_partition.h"
