@@ -1790,10 +1790,6 @@ gentbl(
 
 gentbl(
     name = "headers_arm_sme_gen",
-    copts = [
-        "-Wno-implicit-fallthrough",
-        "-Wno-error=frame-larger-than=",
-    ],
     tbl_outs = [(
         "-gen-arm-sme-header",
         "lib/Headers/arm_sme.h",
