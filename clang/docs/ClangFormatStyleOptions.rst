@@ -6333,7 +6333,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpaceInEmptyBraces:
 
-**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 19` :ref:`¶ <SpaceInEmptyBraces>`
+**SpaceInEmptyBraces** (``SpaceInEmptyBracesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <SpaceInEmptyBraces>`
   Defines in which cases spaces will be inserted in empty braces.
 
   Possible values:
@@ -6362,7 +6362,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpaceInEmptyBracesOptions:
 
-**SpaceInEmptyBracesOptions** (``SpaceInEmptyBracesCustom``) :versionbadge:`clang-format 19` :ref:`¶ <SpaceInEmptyBracesOptions>`
+**SpaceInEmptyBracesOptions** (``SpaceInEmptyBracesCustom``) :versionbadge:`clang-format 20` :ref:`¶ <SpaceInEmptyBracesOptions>`
   Control of individual spaces in empty braces.
 
   If ``SpaceInEmptyBraces`` is set to ``Custom``, use this to specify

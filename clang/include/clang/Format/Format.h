@@ -4932,7 +4932,7 @@ struct FormatStyle {
   };
 
   /// Defines in which cases spaces will be inserted in empty braces.
-  /// \version 19
+  /// \version 20
   SpaceInEmptyBracesStyle SpaceInEmptyBraces;
 
   /// Precise control over the spacing in empty braces.
@@ -5009,7 +5009,7 @@ struct FormatStyle {
   ///     InitList: true
   ///     Block: false
   /// \endcode
-  /// \version 19
+  /// \version 20
   SpaceInEmptyBracesCustom SpaceInEmptyBracesOptions;
 
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
