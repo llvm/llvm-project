@@ -609,6 +609,15 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_umin:
   case Intrinsic::vp_bswap:
   case Intrinsic::vp_bitreverse:
+  case Intrinsic::vp_ctpop:
+  case Intrinsic::vp_ctlz:
+  case Intrinsic::vp_cttz:
+  case Intrinsic::vp_sadd_sat:
+  case Intrinsic::vp_uadd_sat:
+  case Intrinsic::vp_ssub_sat:
+  case Intrinsic::vp_usub_sat:
+  case Intrinsic::vp_fshl:
+  case Intrinsic::vp_fshr:
     return expandPredicationToIntCall(Builder, VPI);
   case Intrinsic::vp_fabs:
   case Intrinsic::vp_sqrt:
