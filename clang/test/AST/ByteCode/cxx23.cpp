@@ -217,13 +217,16 @@ namespace UndefinedThreeWay {
                                                 // all-note {{undefined function 'operator<=>' cannot be used in a constant expression}}
 }
 
+/// FIXME: The new interpreter is missing the "initializer of q is not a constant expression" diagnostics.a
+/// That's because the cast from void* to int* is considered fine, but diagnosed. So we don't consider
+/// q to be uninitialized.
 namespace VoidCast {
   constexpr void* p = nullptr;
   constexpr int* q = static_cast<int*>(p); // all-error {{must be initialized by a constant expression}} \
                                            // all-note {{cast from 'void *' is not allowed in a constant expression}} \
-                                           // all-note {{declared here}}
-  static_assert(q == nullptr); // all-error {{not an integral constant expression}} \
-                               // all-note {{initializer of 'q' is not a constant expression}}
+                                           // ref-note {{declared here}}
+  static_assert(q == nullptr); // ref-error {{not an integral constant expression}} \
+                               // ref-note {{initializer of 'q' is not a constant expression}}
 }
 
 namespace ExplicitLambdaInstancePointer {
