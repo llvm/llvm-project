@@ -66,15 +66,10 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   }
 }
 
-bool IntrinsicInst::canAccessFPEnvironment(Intrinsic::ID IID) {
-  switch (IID) {
-#define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return true;
-  default:
-    return false;
-  }
+bool IntrinsicInst::canAccessFPEnvironment(LLVMContext &C, Intrinsic::ID IID) {
+  AttributeList Attrs = Intrinsic::getAttributes(C, IID);
+  MemoryEffects ME = Attrs.getMemoryEffects();
+  return ME.onlyAccessesInaccessibleMem();
 }
 
 //===----------------------------------------------------------------------===//

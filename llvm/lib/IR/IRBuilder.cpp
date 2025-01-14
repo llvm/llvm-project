@@ -96,7 +96,8 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
       // Some intrinsic functions in non-default FP mode must have FP operand
       // bundles to indicate a side effect due to read/write FP environment.
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
-        CallAccessesFPEnv = IntrinsicInst::canAccessFPEnvironment(ID);
+        LLVMContext &C = Func->getContext();
+        CallAccessesFPEnv = IntrinsicInst::canAccessFPEnvironment(C, ID);
       }
       // A call to a function that has the 'StrictFP' attribute makes the call
       // site 'StrictFP' also.
