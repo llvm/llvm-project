@@ -3194,7 +3194,9 @@ void ASTRecordReader::readAttributes(AttrVec &Attrs) {
 /// Reads one attribute from the current stream position, advancing Idx.
 /// For some attributes (where type depends on itself recursively), defer
 /// reading the attribute until the type has been read.
-Attr *ASTRecordReader::readOrDeferAttr(Decl *D) { return readOrDeferAttrImpl(D); }
+Attr *ASTRecordReader::readOrDeferAttr(Decl *D) {
+  return readOrDeferAttrImpl(D);
+}
 
 /// Reads attributes from the current stream position, advancing Idx.
 /// For some attributes (where type depends on itself recursively), defer
@@ -4461,8 +4463,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
 }
 
-void ASTReader::loadDeferredAttribute(
-    const DeferredAttribute &DA) {
+void ASTReader::loadDeferredAttribute(const DeferredAttribute &DA) {
   Decl *D = DA.ParentDecl;
   ModuleFile *M = getOwningModuleFile(D);
 
