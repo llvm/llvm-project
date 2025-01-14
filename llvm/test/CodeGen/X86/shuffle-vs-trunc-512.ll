@@ -453,9 +453,8 @@ define <4 x double> @PR34175(ptr %p) {
 ; AVX512BWVL-LABEL: PR34175:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
-; AVX512BWVL-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512BWVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
-; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512BWVL-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BWVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512BWVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512BWVL-NEXT:    retq
 ;
@@ -472,9 +471,8 @@ define <4 x double> @PR34175(ptr %p) {
 ; AVX512VBMIVL-LABEL: PR34175:
 ; AVX512VBMIVL:       # %bb.0:
 ; AVX512VBMIVL-NEXT:    vmovq {{.*#+}} xmm0 = [0,8,16,24,0,0,0,0]
-; AVX512VBMIVL-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX512VBMIVL-NEXT:    vpermt2w 32(%rdi), %ymm0, %ymm1
-; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX512VBMIVL-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512VBMIVL-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX512VBMIVL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; AVX512VBMIVL-NEXT:    retq
   %v = load <32 x i16>, ptr %p, align 2
