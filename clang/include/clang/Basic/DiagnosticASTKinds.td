@@ -396,6 +396,16 @@ def note_constexpr_assumption_failed : Note<
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
+  InGroup<IgnoredAttributes>;
+
+def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
+
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
