@@ -32,8 +32,8 @@
 #include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
-#include <vector>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -100,7 +100,7 @@ void writeStringToFile(std::string_view Content, StringRef Path) {
 }
 
 void writeSplitModulesAsTable(ArrayRef<SYCLSplitModule> SplitModules,
-                             StringRef Path) {
+                              StringRef Path) {
   std::vector<std::string> Columns = {"Code", "Symbols"};
   SYCLStringTable Table;
   Table.emplace_back(std::move(Columns));

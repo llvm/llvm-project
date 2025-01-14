@@ -21,6 +21,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -37,7 +38,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sycl_module_split"
+#define DEBUG_TYPE "sycl-module-split"
 
 static bool isKernel(const Function &F) {
   return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
@@ -75,7 +76,8 @@ struct EntryPointGroup {
                   EntryPointSet Functions = EntryPointSet())
       : GroupName(GroupName), Functions(std::move(Functions)) {}
 
-  void dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
     constexpr size_t INDENT = 4;
     dbgs().indent(INDENT) << "ENTRY POINTS"
                           << " " << GroupName << " {\n";
@@ -84,6 +86,7 @@ struct EntryPointGroup {
 
     dbgs().indent(INDENT) << "}\n";
   }
+#endif
 };
 
 /// Annotates an llvm::Module with information necessary to perform and track
@@ -133,11 +136,13 @@ public:
     return std::string(ST);
   }
 
-  void dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
     dbgs() << "ModuleDesc[" << M->getName() << "] {\n";
     EntryPoints.dump();
     dbgs() << "}\n";
   }
+#endif
 };
 
 // Represents "dependency" or "use" graph of global objects (functions and
