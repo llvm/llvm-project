@@ -249,6 +249,9 @@ loopend:
   ret void
 }
 
+; From a miscompile originally reported at
+; https://github.com/llvm/llvm-project/issues/122681
+
 define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d) {
 ; IF-EVL-LABEL: @multiple_reverse_vector_pointer(
 ; IF-EVL-NEXT:  entry:
