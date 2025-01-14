@@ -24878,6 +24878,41 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
   }
 }
 
+static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
+  AArch64CC::CondCode OpCC =
+      static_cast<AArch64CC::CondCode>(Op->getConstantOperandVal(2));
+
+  if (OpCC != AArch64CC::NE)
+    return SDValue();
+
+  SDValue PTest = Op->getOperand(3);
+  if (PTest.getOpcode() != AArch64ISD::PTEST_ANY)
+    return SDValue();
+
+  SDValue TruePred = PTest.getOperand(0);
+  SDValue AnyPred = PTest.getOperand(1);
+
+  if (TruePred.getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    TruePred = TruePred.getOperand(0);
+
+  if (AnyPred.getOpcode() == AArch64ISD::REINTERPRET_CAST)
+    AnyPred = AnyPred.getOperand(0);
+
+  if (TruePred != AnyPred && TruePred.getOpcode() != AArch64ISD::PTRUE)
+    return SDValue();
+
+  SDValue LastB = Op->getOperand(0);
+  SDValue Default = Op->getOperand(1);
+
+  if (LastB.getOpcode() != AArch64ISD::LASTB || LastB.getOperand(0) != AnyPred)
+    return SDValue();
+
+  SDValue Vec = LastB.getOperand(1);
+
+  return DAG.getNode(AArch64ISD::CLASTB_N, SDLoc(Op), Op->getValueType(0),
+                     AnyPred, Default, Vec);
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -24922,6 +24957,10 @@ static SDValue performCSELCombine(SDNode *N,
                          Sub.getValue(1));
     }
   }
+
+  // CSEL (LASTB P, Z), X, NE(ANY P) -> CLASTB P, X, Z
+  if (SDValue CondLast = foldCSELofLASTB(N, DAG))
+    return CondLast;
 
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }

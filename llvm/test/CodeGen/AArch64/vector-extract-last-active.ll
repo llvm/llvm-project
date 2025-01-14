@@ -293,9 +293,7 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i8_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb w8, p0, z0.b
-; CHECK-NEXT:    ptest p0, p0.b
-; CHECK-NEXT:    csel w0, w8, w0, ne
+; CHECK-NEXT:    clastb w0, p0, w0, z0.b
 ; CHECK-NEXT:    ret
   %res = call i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru)
   ret i8 %res
@@ -304,10 +302,7 @@ define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1>
 define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i16_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb w8, p0, z0.h
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    csel w0, w8, w0, ne
+; CHECK-NEXT:    clastb w0, p0, w0, z0.h
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
   ret i16 %res
@@ -316,10 +311,7 @@ define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1
 define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i32_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb w8, p0, z0.s
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    csel w0, w8, w0, ne
+; CHECK-NEXT:    clastb w0, p0, w0, z0.s
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru)
   ret i32 %res
@@ -328,10 +320,7 @@ define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1
 define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1> %mask, i64 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i64_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb x8, p0, z0.d
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    csel x0, x8, x0, ne
+; CHECK-NEXT:    clastb x0, p0, x0, z0.d
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x i1> %mask, i64 %passthru)
   ret i64 %res
@@ -340,10 +329,8 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru) #0 {
 ; CHECK-LABEL: extract_last_float_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb s0, p0, z0.s
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    fcsel s0, s0, s1, ne
+; CHECK-NEXT:    clastb s1, p0, s1, z0.s
+; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
   %res = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru)
   ret float %res
@@ -352,10 +339,8 @@ define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 
 define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru) #0 {
 ; CHECK-LABEL: extract_last_double_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lastb d0, p0, z0.d
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    fcsel d0, d0, d1, ne
+; CHECK-NEXT:    clastb d1, p0, d1, z0.d
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %res = call double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru)
   ret double %res
