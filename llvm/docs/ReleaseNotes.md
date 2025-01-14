@@ -457,6 +457,11 @@ Changes to LLDB
 
 * [New Core File API](https://lldb.llvm.org/python_api/lldb.SBSaveCoreOptions.html). This gives greater control on the data captured into the core file, relative to the existing `process save-core` styles.
 
+* `lldb-server` now listens to a single port for gdbserver connections and provides
+  that port to the connection handler processes. This means that only 2 ports need
+  to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
+  In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+
 Changes to BOLT
 ---------------------------------
 
