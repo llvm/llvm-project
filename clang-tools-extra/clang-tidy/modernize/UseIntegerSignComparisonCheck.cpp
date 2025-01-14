@@ -81,12 +81,12 @@ UseIntegerSignComparisonCheck::UseIntegerSignComparisonCheck(
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
-      ConsideringIntSize(Options.get("ConsideringIntegerSize", true)) {}
+      CheckIntegerSize(Options.get("CheckIntegerSize", true)) {}
 
 void UseIntegerSignComparisonCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "ConsideringIntegerSize", ConsideringIntSize);
+  Options.store(Opts, "CheckIntegerSize", CheckIntegerSize);
 }
 
 void UseIntegerSignComparisonCheck::registerMatchers(MatchFinder *Finder) {
@@ -141,11 +141,10 @@ void UseIntegerSignComparisonCheck::check(
   if (LHS == nullptr || RHS == nullptr)
     return;
 
-  if (ConsideringIntSize &&
-      (Result.Context->getTypeSize(
-           SignedCastExpression->getSubExpr()->getType()) >
-       Result.Context->getTypeSize(
-           UnSignedCastExpression->getSubExpr()->getType())))
+  if (CheckIntegerSize && (Result.Context->getTypeSize(
+                              SignedCastExpression->getSubExpr()->getType()) >
+                          Result.Context->getTypeSize(
+                              UnSignedCastExpression->getSubExpr()->getType())))
     return;
 
   const Expr *SubExprLHS = nullptr;

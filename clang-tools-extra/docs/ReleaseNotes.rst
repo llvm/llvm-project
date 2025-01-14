@@ -303,8 +303,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-integer-sign-comparison
   <clang-tidy/checks/modernize/use-integer-sign-comparison>` check to
-  add an option ``ConsideringIntegerSize``, that ignores a comparison between
-  a signed wide and an unsigned narrow integer types.
+  ignore comparisons between signed wide and unsigned narrow integer types,
+  configurable via the ``CheckIntegerSize`` option.
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize

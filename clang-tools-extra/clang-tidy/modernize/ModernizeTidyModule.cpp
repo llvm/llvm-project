@@ -126,14 +126,6 @@ public:
         "modernize-use-uncaught-exceptions");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
-
-  ClangTidyOptions getModuleOptions() override {
-    ClangTidyOptions Options;
-    Options.CheckOptions
-        ["modernize-use-integer-sign-comparison.ConsideringIntegerSize"] =
-        "true";
-    return Options;
-  }
 };
 
 // Register the ModernizeTidyModule using this statically initialized variable.

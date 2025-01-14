@@ -35,7 +35,7 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
-  const bool ConsideringIntSize;
+  const bool CheckIntegerSize;
 };
 
 } // namespace clang::tidy::modernize

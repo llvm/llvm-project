@@ -35,6 +35,7 @@ Options
   A string specifying which include-style is used, `llvm` or `google`.
   Default is `llvm`.
 
-.. option:: ConsideringIntegerSize
-  Ignores a comparison between a signed wide and an unsigned narrow
-  integer types. Default is `true`.
+.. option:: CheckIntegerSize
+
+  Ignore comparisons between signed wide and unsigned narrow integer
+  types. Default is `true`.
