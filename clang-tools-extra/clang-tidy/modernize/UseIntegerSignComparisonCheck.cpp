@@ -141,10 +141,11 @@ void UseIntegerSignComparisonCheck::check(
   if (LHS == nullptr || RHS == nullptr)
     return;
 
-  if (CheckIntegerSize && (Result.Context->getTypeSize(
-                              SignedCastExpression->getSubExpr()->getType()) >
-                          Result.Context->getTypeSize(
-                              UnSignedCastExpression->getSubExpr()->getType())))
+  if (CheckIntegerSize &&
+      (Result.Context->getTypeSize(
+           SignedCastExpression->getSubExpr()->getType()) >
+       Result.Context->getTypeSize(
+           UnSignedCastExpression->getSubExpr()->getType())))
     return;
 
   const Expr *SubExprLHS = nullptr;
