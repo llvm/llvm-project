@@ -124,6 +124,10 @@ public:
 
   ArrayRef<unsigned> getUnavailableRegisters() const override;
 
+  bool allowAsBackToBack(const Instruction &Instr) const override {
+    return !Instr.Description.isPseudo();
+  }
+
   Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
                                  MCOperand &AssignedValue,
                                  const BitVector &ForbiddenRegs) const override;
