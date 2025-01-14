@@ -59,6 +59,45 @@ static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                             "stores to their single precision "
                                             "counterparts"));
 
+// Widen the v2 vectors to the register width, i.e. v2i16 -> v8i16,
+// v2i32 -> v4i32, etc, to ensure the correct rail size is used, i.e.
+// INST.h for v16, INST.w for v32, INST.d for v64.
+TargetLoweringBase::LegalizeTypeAction
+MipsSETargetLowering::getPreferredVectorAction(MVT VT) const {
+  if (this->Subtarget.hasMSA()) {
+    switch (VT.SimpleTy) {
+    // Leave v2i1 vectors to be promoted to larger ones.
+    // Other i1 types will be promoted by default.
+    case MVT::v2i1:
+      return TypePromoteInteger;
+      break;
+    // 16-bit vector types (v2 and longer)
+    case MVT::v2i8:
+    // 32-bit vector types (v2 and longer)
+    case MVT::v2i16:
+    case MVT::v4i8:
+    // 64-bit vector types (v2 and longer)
+    case MVT::v2i32:
+    case MVT::v4i16:
+    case MVT::v8i8:
+      return TypeWidenVector;
+      break;
+    // Only word (.w) and doubleword (.d) are available for floating point
+    // vectors. That means floating point vectors should be either v2f64
+    // or v4f32.
+    // Here we only explicitly widen the f32 types - f16 will be promoted
+    // by default.
+    case MVT::v2f32:
+    case MVT::v3f32:
+      return TypeWidenVector;
+    // v2i64 is already 128-bit wide.
+    default:
+      break;
+    }
+  }
+  return TargetLoweringBase::getPreferredVectorAction(VT);
+}
+
 MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                                            const MipsSubtarget &STI)
     : MipsTargetLowering(TM, STI) {
