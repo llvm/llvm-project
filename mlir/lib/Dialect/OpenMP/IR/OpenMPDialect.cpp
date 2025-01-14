@@ -504,6 +504,7 @@ struct ReductionParseArgs {
       : vars(vars), types(types), byref(byref), syms(syms) {}
 };
 struct AllRegionParseArgs {
+  std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
   std::optional<MapParseArgs> mapArgs;
   std::optional<PrivateParseArgs> privateArgs;
@@ -646,6 +647,11 @@ static ParseResult parseBlockArgClause(
 static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
+
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "host_eval",
+                                 args.hostEvalArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `host_eval` format";
 
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "in_reduction",
                                  args.inReductionArgs)))
@@ -812,6 +818,7 @@ struct ReductionPrintArgs {
       : vars(vars), types(types), byref(byref), syms(syms) {}
 };
 struct AllRegionPrintArgs {
+  std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
   std::optional<MapPrintArgs> mapArgs;
   std::optional<PrivatePrintArgs> privateArgs;
@@ -902,6 +909,8 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
   MLIRContext *ctx = op->getContext();
 
+  printBlockArgClause(p, ctx, "host_eval", iface.getHostEvalBlockArgs(),
+                      args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
                       args.inReductionArgs);
   printBlockArgClause(p, ctx, "map_entries", iface.getMapBlockArgs(),
