@@ -76,9 +76,9 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   if (auto *CI = dyn_cast<CallInst>(&I)) {
     const Function *CF = CI->getCalledFunction();
     // Merge-in shader flags mask of the called function in the current module
-    if (FunctionFlags.contains(CF)) {
+    if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
-    }
+
     // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
     // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
   }
