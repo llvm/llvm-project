@@ -27,7 +27,9 @@ end subroutine
 ! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
-! CHECK-NEXT:     %[[EMBOX_2:.*]] = fir.embox %[[PRIV_ARG_BOX]]
+! CHECK-NEXT:     %[[C0_2:.*]] = arith.constant 0 : index
+! CHECK-NEXT:     %[[SHAPE:.*]] = fir.shape %[[C0_2]]
+! CHECK-NEXT:     %[[EMBOX_2:.*]] = fir.embox %[[PRIV_ARG_BOX]](%[[SHAPE]])
 ! CHECK-NEXT:     fir.store %[[EMBOX_2]] to %[[PRIV_ALLOC]]
 ! CHECK-NEXT:   } else {
 ! CHECK-NEXT:     %[[C0:.*]] = arith.constant 0 : index

@@ -115,6 +115,25 @@ fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(fir::FirOpBuilder &builder,
   return shapeShift;
 }
 
+static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Value moldArg) {
+  mlir::Type moldVal = fir::unwrapRefType(moldArg.getType());
+  mlir::Type eleType = fir::dyn_cast_ptrOrBoxEleTy(moldVal);
+  fir::SequenceType seqTy =
+      mlir::dyn_cast_if_present<fir::SequenceType>(eleType);
+  if (!seqTy)
+    return nullptr;
+
+  unsigned rank = seqTy.getShape().size();
+  mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+  mlir::SmallVector<mlir::Value> dims;
+  dims.resize(rank, zero);
+  mlir::Type shapeTy = fir::ShapeType::get(builder.getContext(), rank);
+  return builder.create<fir::ShapeOp>(loc, shapeTy, dims);
+}
+
 void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
@@ -156,8 +175,12 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
                                                /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     // just embox the null address and return
+    // we have to give the embox a shape so that the LLVM box structure has the
+    // right rank. This returns nullptr if the types don't match.
+    mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
+
     mlir::Value nullBox =
-        builder.create<fir::EmboxOp>(loc, ty, addr, /*shape=*/mlir::Value{},
+        builder.create<fir::EmboxOp>(loc, ty, addr, shape,
                                      /*slice=*/mlir::Value{}, lenParams);
     builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
     return ifOp;
@@ -174,9 +197,17 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     // The initial state of a private pointer is undefined so we don't need to
     // match the mold argument (OpenMP 5.2 end of page 106).
     if (isPrivate && mlir::isa<fir::PointerType>(boxTy.getEleTy())) {
+      // we need a shape with the right rank so that the embox op is lowered
+      // to an llvm struct of the right type. This returns nullptr if the types
+      // aren't right.
+      mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
       // Just incase, do initialize the box with a null value
       mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
-      mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null);
+      mlir::Value nullBox;
+      if (shape)
+        nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null, shape);
+      else
+        nullBox = builder.create<fir::EmboxOp>(loc, boxTy, null);
       builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
       yield(boxAlloca);
       return;
