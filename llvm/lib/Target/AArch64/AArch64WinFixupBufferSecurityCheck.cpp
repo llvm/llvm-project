@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Module.h"
 
@@ -40,14 +42,14 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  std::pair<MachineBasicBlock *, MachineInstr *>
-  getSecurityCheckerBasicBlock(MachineFunction &MF);
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  MachineInstr *cloneLoadStackGuard(MachineBasicBlock *CurMBB,
-                                    MachineInstr *CheckCall);
+  std::pair<MachineInstr *, MachineInstr *>
+  findSecurityCheckAndLoadStackGuard(MachineFunction &MF);
 
-  void getGuardCheckSequence(MachineBasicBlock *CurMBB, MachineInstr *CheckCall,
-                             MachineInstr *SeqMI[5]);
+  MachineInstr *cloneLoadStackGuard(MachineFunction &MF, MachineInstr *MI);
+
+  bool getGuardCheckSequence(MachineInstr *CheckCall, MachineInstr *SeqMI[5]);
 
   void finishBlock(MachineBasicBlock *MBB);
 
@@ -64,93 +66,113 @@ FunctionPass *llvm::createAArch64WinFixupBufferSecurityCheckPass() {
   return new AArch64WinFixupBufferSecurityCheckPass();
 }
 
-std::pair<MachineBasicBlock *, MachineInstr *>
-AArch64WinFixupBufferSecurityCheckPass::getSecurityCheckerBasicBlock(
+void AArch64WinFixupBufferSecurityCheckPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+std::pair<MachineInstr *, MachineInstr *>
+AArch64WinFixupBufferSecurityCheckPass::findSecurityCheckAndLoadStackGuard(
     MachineFunction &MF) {
+
+  MachineInstr *SecurityCheckCall = nullptr;
+  MachineInstr *LoadStackGuard = nullptr;
+
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
+      if (!LoadStackGuard && MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD) {
+        LoadStackGuard = &MI;
+      }
+
       if (MI.isCall() && MI.getNumExplicitOperands() == 1) {
         auto MO = MI.getOperand(0);
         if (MO.isGlobal()) {
           auto Callee = dyn_cast<Function>(MO.getGlobal());
           if (Callee && Callee->getName() == "__security_check_cookie") {
-            return std::make_pair(&MBB, &MI);
+            SecurityCheckCall = &MI;
           }
         }
       }
+
+      // If both are found, return them
+      if (LoadStackGuard && SecurityCheckCall) {
+        return std::make_pair(LoadStackGuard, SecurityCheckCall);
+      }
     }
   }
+
   return std::make_pair(nullptr, nullptr);
 }
 
-MachineInstr *AArch64WinFixupBufferSecurityCheckPass::cloneLoadStackGuard(
-    MachineBasicBlock *CurMBB, MachineInstr *CheckCall) {
-  // Ensure that we have a valid MachineBasicBlock and CheckCall
-  if (!CurMBB || !CheckCall)
-    return nullptr;
+MachineInstr *
+AArch64WinFixupBufferSecurityCheckPass::cloneLoadStackGuard(MachineFunction &MF,
+                                                            MachineInstr *MI) {
 
-  MachineFunction &MF = *CurMBB->getParent();
+  MachineInstr *ClonedInstr = MF.CloneMachineInstr(MI);
+
+  // Get the register class of the original destination register
+  Register OrigReg = MI->getOperand(0).getReg();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterClass *RegClass = MRI.getRegClass(OrigReg);
 
-  // Initialize reverse iterator starting just before CheckCall
-  MachineBasicBlock::reverse_iterator DIt(CheckCall);
-  MachineBasicBlock::reverse_iterator DEnd = CurMBB->rend();
+  // Create a new virtual register in the same register class
+  Register NewReg = MRI.createVirtualRegister(RegClass);
 
-  // Reverse iterate from CheckCall to find LOAD_STACK_GUARD
-  for (; DIt != DEnd; ++DIt) {
-    MachineInstr &MI = *DIt;
-    if (MI.getOpcode() == TargetOpcode::LOAD_STACK_GUARD) {
-      // Clone the LOAD_STACK_GUARD instruction
-      MachineInstr *ClonedInstr = MF.CloneMachineInstr(&MI);
-
-      // Get the register class of the original destination register
-      Register OrigReg = MI.getOperand(0).getReg();
-      const TargetRegisterClass *RegClass = MRI.getRegClass(OrigReg);
-
-      // Create a new virtual register in the same register class
-      Register NewReg = MRI.createVirtualRegister(RegClass);
-
-      // Update operand 0 (destination) of the cloned instruction
-      MachineOperand &DestOperand = ClonedInstr->getOperand(0);
-      if (DestOperand.isReg() && DestOperand.isDef()) {
-        DestOperand.setReg(NewReg); // Set the new virtual register
-      }
-
-      // Return the modified cloned instruction
-      return ClonedInstr;
-    }
+  // Update operand 0 (destination) of the cloned instruction
+  MachineOperand &DestOperand = ClonedInstr->getOperand(0);
+  if (DestOperand.isReg() && DestOperand.isDef()) {
+    DestOperand.setReg(NewReg); // Set the new virtual register
   }
 
-  // If no LOAD_STACK_GUARD instruction was found, return nullptr
-  return nullptr;
+  return ClonedInstr;
 }
 
-void AArch64WinFixupBufferSecurityCheckPass::getGuardCheckSequence(
-    MachineBasicBlock *CurMBB, MachineInstr *CheckCall,
-    MachineInstr *SeqMI[5]) {
+bool AArch64WinFixupBufferSecurityCheckPass::getGuardCheckSequence(
+    MachineInstr *CheckCall, MachineInstr *SeqMI[5]) {
+
+  MachineBasicBlock *MBB = CheckCall->getParent();
 
   MachineBasicBlock::iterator UIt(CheckCall);
   MachineBasicBlock::reverse_iterator DIt(CheckCall);
 
   // Move forward to find the stack adjustment after the call
-  // to __security_check_cookie
   ++UIt;
+  if (UIt == MBB->end() || UIt->getOpcode() != AArch64::ADJCALLSTACKUP) {
+    return false;
+  }
   SeqMI[4] = &*UIt;
 
   // Assign the BL instruction (call to __security_check_cookie)
   SeqMI[3] = CheckCall;
 
-  // COPY function slot cookie
+  // Move backward to find the COPY instruction for the function slot cookie
+  // argument passing
   ++DIt;
+  if (DIt == MBB->rend() || DIt->getOpcode() != AArch64::COPY) {
+    return false;
+  }
   SeqMI[2] = &*DIt;
 
   // Move backward to find the instruction that loads the security cookie from
   // the stack
   ++DIt;
+  if (DIt == MBB->rend() || DIt->getOpcode() != AArch64::LDRXui) {
+    return false;
+  }
   SeqMI[1] = &*DIt;
 
-  ++DIt; // Find ADJCALLSTACKDOWN
+  // Move backward to find the stack adjustment before the call
+  ++DIt;
+  if (DIt == MBB->rend() || DIt->getOpcode() != AArch64::ADJCALLSTACKDOWN) {
+    return false;
+  }
   SeqMI[0] = &*DIt;
+
+  // If all instructions are matched and stored, the sequence is valid
+  return true;
 }
 
 void AArch64WinFixupBufferSecurityCheckPass::finishBlock(
@@ -185,21 +207,23 @@ bool AArch64WinFixupBufferSecurityCheckPass::runOnMachineFunction(
   if (!GV)
     return Changed;
 
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-
-  // Check if security check cookie call was installed or not
-  auto [CurMBB, CheckCall] = getSecurityCheckerBasicBlock(MF);
-  if (!CheckCall)
+  // Find LOAD_STACK_GUARD and __security_check_cookie instructions
+  auto [StackGuard, CheckCall] = findSecurityCheckAndLoadStackGuard(MF);
+  if (!CheckCall || !StackGuard)
     return Changed;
 
-  // Get sequence of instruction in CurMBB responsible for calling
+  // Get sequence of instructions in current basic block responsible for calling
   // __security_check_cookie
   MachineInstr *SeqMI[5];
-  getGuardCheckSequence(CurMBB, CheckCall, SeqMI);
+  if (!getGuardCheckSequence(CheckCall, SeqMI))
+    return Changed;
+
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  MachineBasicBlock *CurMBB = CheckCall->getParent();
 
   // Find LOAD_STACK_GUARD in CurrMBB and build a new LOAD_STACK_GUARD
   // instruction with new destination register
-  MachineInstr *ClonedInstr = cloneLoadStackGuard(CurMBB, CheckCall);
+  MachineInstr *ClonedInstr = cloneLoadStackGuard(MF, StackGuard);
   if (!ClonedInstr)
     return Changed;
 
@@ -216,13 +240,14 @@ bool AArch64WinFixupBufferSecurityCheckPass::runOnMachineFunction(
   CurMBB->splice(InsertPt, CurMBB, std::next(InsertPt));
 
   // Create a new virtual register for the CMP instruction result
-  Register DiscardReg =
-      MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register DiscardReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
 
   // Emit the CMP instruction to compare stack cookie with global cookie
   BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(AArch64::SUBSXrr))
-      .addReg(DiscardReg, RegState::Define | RegState::Dead) // Result discarded
-      .addReg(CookieLoadReg)    // First operand: stack cookie
+      .addReg(DiscardReg,
+              RegState::Define | RegState::Dead) // Result discarded
+      .addReg(CookieLoadReg)                     // First operand: stack cookie
       .addReg(GlobalCookieReg); // Second operand: global cookie
 
   // Create FailMBB basic block to call __security_check_cookie
@@ -257,6 +282,15 @@ bool AArch64WinFixupBufferSecurityCheckPass::runOnMachineFunction(
   // Restructure Basic Blocks
   CurMBB->addSuccessor(NewRetMBB);
   CurMBB->addSuccessor(FailMBB);
+
+  MachineDominatorTreeWrapperPass *WrapperPass =
+      getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT =
+      WrapperPass ? &WrapperPass->getDomTree() : nullptr;
+  if (MDT) {
+    MDT->addNewBlock(FailMBB, CurMBB);
+    MDT->addNewBlock(NewRetMBB, CurMBB);
+  }
 
   finishFunction(FailMBB, NewRetMBB);
 
