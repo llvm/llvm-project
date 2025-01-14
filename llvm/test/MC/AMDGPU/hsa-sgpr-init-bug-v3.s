@@ -1,10 +1,10 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj < %s > %t
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
 // Check that SGPR init bug on gfx803 is corrected by the assembler, setting
 // GRANULATED_WAVEFRONT_SGPR_COUNT to 11.
 
-// OBJDUMP: Contents of section .rodata
+// OBJDUMP: Contents of section .amdhsa.kd
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000

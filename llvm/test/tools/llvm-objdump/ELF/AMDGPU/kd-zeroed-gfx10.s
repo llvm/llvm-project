@@ -1,7 +1,7 @@
 ;; Entirely zeroed kernel descriptor (for GFX10).
 
 ; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-xnack -filetype=obj -o %t
-; RUN: llvm-objdump -s -d -j .text %t | FileCheck --check-prefix=OBJDUMP %s
+; RUN: llvm-objdump --section=.amdhsa.kd -s -d -j .text %t | FileCheck --check-prefix=OBJDUMP %s
 
 ;; TODO:
 ;; This file and kd-zeroed-raw.s should produce the same output for the kernel
@@ -11,14 +11,14 @@
 
 ;; Check the raw bytes right now.
 
-; OBJDUMP-LABEL: Contents of section .text:
+; OBJDUMP-LABEL: Contents of section .amdhsa.kd:
 ; OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
 ; OBJDUMP-NEXT: 0030 01000000 00000000 00000000 00000000
 ; OBJDUMP-EMPTY:
 
-; OBJDUMP-LABEL: Disassembly of section .text:
+; OBJDUMP-LABEL: Disassembly of section .amdhsa.kd:
 ; OBJDUMP-EMPTY:
 ; OBJDUMP-NEXT: 0000000000000000 <my_kernel.kd>:
 ; OBJDUMP-NEXT: .amdhsa_kernel my_kernel

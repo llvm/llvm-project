@@ -1,8 +1,8 @@
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack,+tgsplit < %s | FileCheck --check-prefix=ASM %s
 // RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack,+tgsplit -filetype=obj < %s > %t
-// RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-objdump -s -j .amdhsa.kd %t | FileCheck --check-prefix=OBJDUMP %s
 
-// OBJDUMP: Contents of section .rodata
+// OBJDUMP: Contents of section .amdhsa.kd
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000100

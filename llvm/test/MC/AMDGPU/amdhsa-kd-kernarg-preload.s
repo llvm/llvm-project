@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=obj < %s -o - | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=obj < %s -o - | llvm-objdump -s -j .amdhsa.kd - | FileCheck --check-prefix=OBJDUMP %s
 
 .amdgcn_target "amdgcn-amd-amdhsa--gfx940"
 
@@ -6,7 +6,7 @@
 
 // Account for preload kernarg SGPRs in KD field GRANULATED_WAVEFRONT_SGPR_COUNT.
 
-// OBJDUMP:      Contents of section .rodata:
+// OBJDUMP:      Contents of section .amdhsa.kd:
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000  ................
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000  ................
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000  ................

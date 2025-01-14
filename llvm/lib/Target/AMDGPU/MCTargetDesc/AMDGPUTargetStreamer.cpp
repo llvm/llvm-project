@@ -980,7 +980,12 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   if (KernelCodeSymbol->getVisibility() == ELF::STV_DEFAULT)
     KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
+  Streamer.pushSection();
+  Streamer.switchSection(Context.getELFSection(
+      ".amdhsa.kd", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_GNU_RETAIN));
   Streamer.emitLabel(KernelDescriptorSymbol);
+  Streamer.emitValueToAlignment(Align(alignof(amdhsa::kernel_descriptor_t)), 0,
+                                1, 0);
   Streamer.emitValue(
       KernelDescriptor.group_segment_fixed_size,
       sizeof(amdhsa::kernel_descriptor_t::group_segment_fixed_size));
@@ -1020,4 +1025,5 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
                      sizeof(amdhsa::kernel_descriptor_t::kernarg_preload));
   for (uint32_t i = 0; i < sizeof(amdhsa::kernel_descriptor_t::reserved3); ++i)
     Streamer.emitInt8(0u);
+  Streamer.popSection();
 }
