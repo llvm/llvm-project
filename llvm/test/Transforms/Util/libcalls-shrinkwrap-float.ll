@@ -223,8 +223,6 @@ entry:
 ; CHECK-NEXT: %call_11 = call float @log1pf(float %value)
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
-
-  %call_12 = call i32 @ilogb(float %value)
   ret void
 }
 
@@ -336,8 +334,6 @@ entry:
 ; CHECK-NEXT: %call_11 = call float @log1pf(float %value)
 ; CHECK-NEXT: br label %[[END_LABEL]]
 ; CHECK: [[END_LABEL]]:
-
-  %call_12 = call i32 @ilogb(float %value) strictfp
   ret void
 }
 
@@ -353,6 +349,5 @@ declare float @log10f(float)
 declare float @log2f(float)
 declare float @logbf(float)
 declare float @log1pf(float)
-declare i32 @ilogb(float)
 
 ; CHECK: ![[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 1048575}
