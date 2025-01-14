@@ -38,6 +38,7 @@ enum class BenchmarkPhaseSelectorE {
   PrepareAndAssembleSnippet,
   AssembleMeasuredCode,
   Measure,
+  DryRunMeasure,
 };
 
 enum class BenchmarkFilter { All, RegOnly, WithMem };

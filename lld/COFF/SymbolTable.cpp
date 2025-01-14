@@ -651,6 +651,35 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
   return s;
 }
 
+Symbol *SymbolTable::addGCRoot(StringRef name, bool aliasEC) {
+  Symbol *b = addUndefined(name);
+  if (!b->isGCRoot) {
+    b->isGCRoot = true;
+    ctx.config.gcroot.push_back(b);
+  }
+
+  // On ARM64EC, a symbol may be defined in either its mangled or demangled form
+  // (or both). Define an anti-dependency symbol that binds both forms, similar
+  // to how compiler-generated code references external functions.
+  if (aliasEC && isEC()) {
+    if (std::optional<std::string> mangledName =
+            getArm64ECMangledFunctionName(name)) {
+      auto u = dyn_cast<Undefined>(b);
+      if (u && !u->weakAlias) {
+        Symbol *t = addUndefined(saver().save(*mangledName));
+        u->setWeakAlias(t, true);
+      }
+    } else if (std::optional<std::string> demangledName =
+                   getArm64ECDemangledFunctionName(name)) {
+      Symbol *us = addUndefined(saver().save(*demangledName));
+      auto u = dyn_cast<Undefined>(us);
+      if (u && !u->weakAlias)
+        u->setWeakAlias(b, true);
+    }
+  }
+  return b;
+}
+
 // On ARM64EC, a function symbol may appear in both mangled and demangled forms:
 // - ARM64EC archives contain only the mangled name, while the demangled symbol
 //   is defined by the object file as an alias.

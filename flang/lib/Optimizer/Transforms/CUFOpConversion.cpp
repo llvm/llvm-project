@@ -366,6 +366,23 @@ private:
   const fir::LLVMTypeConverter *typeConverter;
 };
 
+static mlir::Value genGetDeviceAddress(mlir::PatternRewriter &rewriter,
+                                       mlir::ModuleOp mod, mlir::Location loc,
+                                       mlir::Value inputArg) {
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::func::FuncOp callee =
+      fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(loc, builder);
+  auto fTy = callee.getFunctionType();
+  mlir::Value conv = createConvertOp(rewriter, loc, fTy.getInput(0), inputArg);
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+      builder, loc, fTy, conv, sourceFile, sourceLine)};
+  auto call = rewriter.create<fir::CallOp>(loc, callee, args);
+  return createConvertOp(rewriter, loc, inputArg.getType(), call->getResult(0));
+}
+
 struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -382,26 +399,10 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
         if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
           auto mod = op->getParentOfType<mlir::ModuleOp>();
-          fir::FirOpBuilder builder(rewriter, mod);
-          mlir::Location loc = op.getLoc();
-          mlir::func::FuncOp callee =
-              fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(
-                  loc, builder);
-          auto fTy = callee.getFunctionType();
-          mlir::Type toTy = fTy.getInput(0);
-          mlir::Value inputArg =
-              createConvertOp(rewriter, loc, toTy, addrOfOp.getResult());
-          mlir::Value sourceFile =
-              fir::factory::locationToFilename(builder, loc);
-          mlir::Value sourceLine =
-              fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-          llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-              builder, loc, fTy, inputArg, sourceFile, sourceLine)};
-          auto call = rewriter.create<fir::CallOp>(loc, callee, args);
-          mlir::Value cast = createConvertOp(
-              rewriter, loc, op.getMemref().getType(), call->getResult(0));
+          mlir::Value devAddr = genGetDeviceAddress(rewriter, mod, op.getLoc(),
+                                                    addrOfOp.getResult());
           rewriter.startOpModification(op);
-          op.getMemrefMutable().assign(cast);
+          op.getMemrefMutable().assign(devAddr);
           rewriter.finalizeOpModification(op);
           return success();
         }
@@ -771,10 +772,32 @@ public:
             loc, clusterDimsAttr.getZ().getInt());
       }
     }
+    llvm::SmallVector<mlir::Value> args;
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    for (mlir::Value arg : op.getArgs()) {
+      // If the argument is a global descriptor, make sure we pass the device
+      // copy of this descriptor and not the host one.
+      if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()))) {
+        if (auto declareOp =
+                mlir::dyn_cast_or_null<fir::DeclareOp>(arg.getDefiningOp())) {
+          if (auto addrOfOp = mlir::dyn_cast_or_null<fir::AddrOfOp>(
+                  declareOp.getMemref().getDefiningOp())) {
+            if (auto global = symTab.lookup<fir::GlobalOp>(
+                    addrOfOp.getSymbol().getRootReference().getValue())) {
+              if (cuf::isRegisteredDeviceGlobal(global)) {
+                arg = genGetDeviceAddress(rewriter, mod, op.getLoc(),
+                                          declareOp.getResult());
+              }
+            }
+          }
+        }
+      }
+      args.push_back(arg);
+    }
+
     auto gpuLaunchOp = rewriter.create<mlir::gpu::LaunchFuncOp>(
         loc, kernelName, mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
-        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero,
-        op.getArgs());
+        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero, args);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
