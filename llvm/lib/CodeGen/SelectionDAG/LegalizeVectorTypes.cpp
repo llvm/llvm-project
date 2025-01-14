@@ -3059,8 +3059,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
           Inputs[Idx] = Output;
         },
         [&AccumulateResults, &Output, &DAG = DAG, NewVT, &DL, &Inputs,
-         &TmpInputs,
-         &BuildVector](ArrayRef<int> Mask, unsigned Idx1, unsigned Idx2) {
+         &TmpInputs, &BuildVector](ArrayRef<int> Mask, unsigned Idx1,
+                                   unsigned Idx2, bool /*Unused*/) {
           if (AccumulateResults(Idx1)) {
             if (Inputs[Idx1]->getOpcode() == ISD::BUILD_VECTOR &&
                 Inputs[Idx2]->getOpcode() == ISD::BUILD_VECTOR)
