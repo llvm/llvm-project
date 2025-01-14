@@ -26,6 +26,7 @@ Implementation Status
    string
    strings
    sys/mman
+   sys/resource
    threads
    time
    uchar
