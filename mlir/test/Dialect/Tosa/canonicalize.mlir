@@ -588,7 +588,8 @@ func.func @slice_nofold(%arg0: tensor<?x4xf32>) -> tensor<?x4xf32> {
 // CHECK-LABEL: @tile_fold
 func.func @tile_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
   // CHECK: return %arg0
-  %0 = tosa.tile %arg0 { multiples = array<i64: 1, 1> }: (tensor<3x4xf32>) -> tensor<3x4xf32>
+  %cst = tosa.const_shape { value = dense<1> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %0 = tosa.tile %arg0, %cst: (tensor<3x4xf32>, !tosa.shape<2>) -> tensor<3x4xf32>
   return %0 : tensor<3x4xf32>
 }
 
@@ -597,7 +598,8 @@ func.func @tile_fold(%arg0: tensor<3x4xf32>) -> tensor<3x4xf32> {
 // CHECK-LABEL: @tile_nofold
 func.func @tile_nofold(%arg0: tensor<3x4xf32>) -> tensor<3x8xf32> {
   // CHECK: tosa.tile
-  %0 = tosa.tile %arg0 { multiples = array<i64: 1, 2> }: (tensor<3x4xf32>) -> tensor<3x8xf32>
+  %cst = tosa.const_shape { value = dense<[1, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %0 = tosa.tile %arg0, %cst: (tensor<3x4xf32>, !tosa.shape<2>) -> tensor<3x8xf32>
   return %0 : tensor<3x8xf32>
 }
 
@@ -763,7 +765,8 @@ func.func @fold_reduce_rank_zero() {
 func.func nested @fold_tile_rank_zero() -> tensor<i32> {
   // CHECK-NOT: tosa.tile
   %0 = tensor.empty() : tensor<i32>
-  %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<i32>) -> tensor<i32>
+  %cst = tosa.const_shape { value = dense<> : tensor<0xindex> } : () -> !tosa.shape<0>
+  %1 = tosa.tile %0, %cst : (tensor<i32>, !tosa.shape<0>) -> tensor<i32>
   return %1 : tensor<i32>
 }
 

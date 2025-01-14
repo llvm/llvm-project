@@ -306,7 +306,7 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
 
 bool CodeGen::isEmptyFieldForLayout(const ASTContext &Context,
                                     const FieldDecl *FD) {
-  if (FD->isZeroLengthBitField(Context))
+  if (FD->isZeroLengthBitField())
     return true;
 
   if (FD->isUnnamedBitField())

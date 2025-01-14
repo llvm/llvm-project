@@ -1652,7 +1652,7 @@ define void @splat2_v4f64_load_store(ptr %s, ptr %d) nounwind {
 ; AVX512-LABEL: splat2_v4f64_load_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -1689,7 +1689,7 @@ define void @splat2_v4i64_load_store(ptr %s, ptr %d) nounwind {
 ; AVX512-LABEL: splat2_v4i64_load_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper

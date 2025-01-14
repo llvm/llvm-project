@@ -122,9 +122,9 @@ static cl::opt<unsigned>
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
 
-// By default enable cloning of callsites involved with recursive cycles
+// Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
-    "memprof-allow-recursive-callsites", cl::init(true), cl::Hidden,
+    "memprof-allow-recursive-callsites", cl::init(false), cl::Hidden,
     cl::desc("Allow cloning of callsites involved in recursive cycles"));
 
 // When disabled, try to detect and prevent cloning of recursive contexts.
@@ -3610,7 +3610,7 @@ IndexCallsiteContextGraph::cloneFunctionForCallsite(
   // Confirm this matches the CloneNo provided by the caller, which is based on
   // the number of function clones we have.
   assert(CloneNo ==
-         (Call.call().is<AllocInfo *>()
+         (isa<AllocInfo *>(Call.call().getBase())
               ? Call.call().dyn_cast<AllocInfo *>()->Versions.size()
               : Call.call().dyn_cast<CallsiteInfo *>()->Clones.size()));
   // Walk all the instructions in this function. Create a new version for
