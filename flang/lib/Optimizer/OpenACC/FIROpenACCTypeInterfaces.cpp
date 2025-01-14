@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
 
 namespace fir::acc {
@@ -71,11 +72,16 @@ OpenACCMappableModel<fir::SequenceType>::getSizeInBytes(
   if (seqType.hasDynamicExtents() || seqType.hasUnknownShape())
     return {};
 
-  // Without a defining op, cannot look up appropriate kindMapping for the
-  // current context.
-  if (!var.getDefiningOp())
-    return {};
-  auto kindMap = fir::getKindMapping(var.getDefiningOp());
+  // Attempt to find an operation that a lookup for KindMapping can be done
+  // from.
+  mlir::Operation *kindMapSrcOp = var.getDefiningOp();
+  if (!kindMapSrcOp) {
+    kindMapSrcOp = var.getParentRegion()->getParentOp();
+    if (!kindMapSrcOp)
+      return {};
+  }
+  auto kindMap = fir::getKindMapping(kindMapSrcOp);
+
   auto sizeAndAlignment =
       fir::getTypeSizeAndAlignment(var.getLoc(), type, dataLayout, kindMap);
   if (!sizeAndAlignment.has_value())
