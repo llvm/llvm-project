@@ -2521,33 +2521,11 @@ static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
   return DAG.getFPExtendOrRound(Res, DL, VT);
 }
 
-SDValue NVPTXTargetLowering::LowerFADD(SDValue Op, SelectionDAG &DAG) const {
-  // No fma.ftz for bf16, so fall back to promotion
+SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   if (useF32FTZ(DAG.getMachineFunction())) {
     return PromoteBinOpToF32(Op.getNode(), DAG);
   }
-
-  // Legal
-  return Op;
-}
-
-SDValue NVPTXTargetLowering::LowerFSUB(SDValue Op, SelectionDAG &DAG) const {
-  // No fma.ftz for bf16, so fall back to promotion
-  if (useF32FTZ(DAG.getMachineFunction())) {
-    return PromoteBinOpToF32(Op.getNode(), DAG);
-  }
-
-  // Legal
-  return Op;
-}
-
-SDValue NVPTXTargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
-  // No fma.ftz for bf16, so fall back to promotion
-  if (useF32FTZ(DAG.getMachineFunction())) {
-    return PromoteBinOpToF32(Op.getNode(), DAG);
-  }
-
-  // Legal
   return Op;
 }
 
@@ -2743,11 +2721,10 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::CopyToReg:
     return LowerCopyToReg_128(Op, DAG);
   case ISD::FADD:
-    return LowerFADD(Op, DAG);
   case ISD::FSUB:
-    return LowerFSUB(Op, DAG);
   case ISD::FMUL:
-    return LowerFMUL(Op, DAG);
+    // Used only for bf16 on SM80, where we select fma for non-ftz operation
+    return PromoteBinOpIfF32FTZ(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
