@@ -5,11 +5,11 @@
 
 // CHECK-LABEL: @unroll
 // CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
-func.func @unroll(%arg0: !fir.ref<!fir.array<1000xf64>> {fir.bindc_name = "a"}) {
+func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a"}) {
   %scope = fir.dummy_scope : !fir.dscope
   %c1000 = arith.constant 1000 : index
   %shape = fir.shape %c1000 : (index) -> !fir.shape<1>
-  %a:2 = hlfir.declare %arg0(%shape) dummy_scope %scope {uniq_name = "unrollEa"} : (!fir.ref<!fir.array<1000xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1000xf64>>, !fir.ref<!fir.array<1000xf64>>)
+  %a:2 = hlfir.declare %arg0(%shape) dummy_scope %scope {uniq_name = "unrollEa"} : (!fir.ref<!fir.array<1000xindex>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<1000 x index>>, !fir.ref<!fir.array<1000 x index>>)
   %c1 = arith.constant 1 : index
   fir.do_loop %arg1 = %c1 to %c1000 step %c1 {
     // CHECK: br label %[[BLK:.*]]
@@ -17,27 +17,23 @@ func.func @unroll(%arg0: !fir.ref<!fir.array<1000xf64>> {fir.bindc_name = "a"}) 
     // CHECK-NEXT: %[[IND:.*]] = phi i64 [ 0, %{{.*}} ], [ %[[NIV:.*]], %[[BLK]] ]
     // CHECK-NEXT: %[[VIND:.*]] = phi <2 x i64> [ <i64 1, i64 2>, %{{.*}} ], [ %[[NVIND:.*]], %[[BLK]] ]
 
-    // NO-UNROLL-NEXT: %[[IV_D:.*]] = uitofp nneg <2 x i64> %[[VIND]] to <2 x double>
-    // NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr double, ptr %[[ARG0]], i64 %[[IND]]
-    // NO-UNROLL-NEXT: store <2 x double> %[[IV_D]], ptr %[[GEP]]
+    // NO-UNROLL-NEXT: %[[GEP:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
+    // NO-UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP]]
     // NO-UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %{{.*}}, 2
     // NO-UNROLL-NEXT: %[[NVIND]] = add <2 x i64> %[[VIND]], splat (i64 2)
 
     // UNROLL-NEXT: %[[VIND1:.*]] = add <2 x i64> %[[VIND]], splat (i64 2)
-    // UNROLL-NEXT: %[[IV0_D:.*]] = uitofp nneg <2 x i64> %[[VIND]] to <2 x double>
-    // UNROLL-NEXT: %[[IV1_D:.*]] = uitofp nneg <2 x i64> %[[VIND1]] to <2 x double>
-    // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr double, ptr %[[ARG0]], i64 %[[IND]]
+    // UNROLL-NEXT: %[[GEP0:.*]] = getelementptr i64, ptr %[[ARG0]], i64 %[[IND]]
     // UNROLL-NEXT: %[[GEP1:.*]] = getelementptr i8, ptr %[[GEP0]], i64 16
-    // UNROLL-NEXT: store <2 x double> %[[IV0_D]], ptr %[[GEP0]]
-    // UNROLL-NEXT: store <2 x double> %[[IV1_D]], ptr %[[GEP1]]
+    // UNROLL-NEXT: store <2 x i64> %[[VIND]], ptr %[[GEP0]]
+    // UNROLL-NEXT: store <2 x i64> %[[VIND1]], ptr %[[GEP1]]
     // UNROLL-NEXT: %[[NIV:.*]] = add nuw i64 %[[IND]], 4
     // UNROLL-NEXT: %[[NVIND:.*]] = add <2 x i64> %[[VIND]], splat (i64 4)
 
     // CHECK-NEXT: %[[EXIT:.*]] = icmp eq i64 %[[NIV]], 1000
     // CHECK-NEXT: br i1 %[[EXIT]], label %{{.*}}, label %[[BLK]]
-    %iv = fir.convert %arg1 : (index) -> f64
-    %ai = hlfir.designate %a#0 (%arg1)  : (!fir.ref<!fir.array<1000xf64>>, index) -> !fir.ref<f64>
-    hlfir.assign %iv to %ai : f64, !fir.ref<f64>
+    %ai = hlfir.designate %a#0 (%arg1)  : (!fir.ref<!fir.array<1000 x index>>, index) -> !fir.ref<index>
+    hlfir.assign %arg1 to %ai : index, !fir.ref<index>
   }
   return
 }
