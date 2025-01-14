@@ -1202,6 +1202,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   Info.flags = MachineMemOperand::MONone;
   if (CI.hasMetadata(LLVMContext::MD_invariant_load))
     Info.flags |= MachineMemOperand::MOInvariant;
+  if (CI.hasMetadata(LLVMContext::MD_nontemporal))
+    Info.flags |= MachineMemOperand::MONonTemporal;
+  Info.flags |= getTargetMMOFlags(CI);
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
