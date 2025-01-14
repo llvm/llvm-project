@@ -1344,7 +1344,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
-      AArch64::AEK_SME_TMOP,      AArch64::AEK_SVEBITPERM,
+      AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM,
   };
 
