@@ -29,6 +29,29 @@ TEST(APIntTest, ValueInit) {
   EXPECT_TRUE(!Zero.sext(64));
 }
 
+// Test that 0^5 == 0
+TEST(APIntTest, PowZeroTo5) {
+  APInt Zero = APInt();
+  EXPECT_TRUE(!Zero);
+  APInt ZeroTo5 = APIntOps::pow(Zero, 5);
+  EXPECT_TRUE(!ZeroTo5);
+}
+
+// Test that 1^16 == 1
+TEST(APIntTest, PowOneTo16) {
+  APInt One = APInt::getZero(32) + 1;
+  APInt OneTo16 = APIntOps::pow(One, 16);
+  EXPECT_EQ(One, OneTo16);
+}
+
+// Test that 2^10 == 1024
+TEST(APIntTest, PowerTwoTo10) {
+  APInt Two = APInt::getZero(32) + 2;
+  APInt TwoTo20 = APIntOps::pow(Two, 10);
+  APInt V_1024 = APInt::getZero(32) + 1024;
+  EXPECT_EQ(TwoTo20, V_1024);
+}
+
 // Test that APInt shift left works when bitwidth > 64 and shiftamt == 0
 TEST(APIntTest, ShiftLeftByZero) {
   APInt One = APInt::getZero(65) + 1;
