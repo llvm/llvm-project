@@ -479,7 +479,7 @@ public:
   NODE(parser, OmpTraitPropertyName)
   NODE(parser, OmpTraitScore)
   NODE(parser, OmpTraitPropertyExtension)
-  NODE(OmpTraitPropertyExtension, ExtensionValue)
+  NODE(OmpTraitPropertyExtension, Complex)
   NODE(parser, OmpTraitProperty)
   NODE(parser, OmpTraitSelectorName)
   NODE_ENUM(OmpTraitSelectorName, Value)

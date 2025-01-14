@@ -2075,10 +2075,11 @@ public:
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const OmpTraitPropertyExtension &x) {
+  void Unparse(const OmpTraitPropertyExtension::Complex &x) {
+    using PropList = std::list<common::Indirection<OmpTraitPropertyExtension>>;
     Walk(std::get<OmpTraitPropertyName>(x.t));
     Put("(");
-    Walk(std::get<OmpTraitPropertyExtension::ExtensionList>(x.t), ",");
+    Walk(std::get<PropList>(x.t), ",");
     Put(")");
   }
   void Unparse(const OmpTraitSelector &x) {
