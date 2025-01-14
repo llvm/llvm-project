@@ -168,7 +168,8 @@ Dynamic Memory Modeling Annotations
 
 If a project uses custom functions for dynamic memory management (that e.g. act as wrappers around ``malloc``/``free`` or ``new``/``delete`` in C++) and the analyzer cannot "see" the _definitions_ of these functions, it's possible to annotate their declarations to let the analyzer model their behavior. (Otherwise the analyzer cannot know that the opaque ``my_free()`` is basically equivalent to a standard ``free()`` call.)
 
-**This page only provides a brief list of these annotations.** For a full documentation, see the main `Attributes in Clang <../../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_ page.
+.. note::
+  **This page only provides a brief list of these annotations.** For a full documentation, see the main `Attributes in Clang <../../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_ page.
 
 Attribute 'ownership_returns' (Clang-specific)
 ----------------------------------------------
