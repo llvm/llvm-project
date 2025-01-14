@@ -11529,7 +11529,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                      ? CmpInst::BAD_FCMP_PREDICATE
                                      : CmpInst::BAD_ICMP_PREDICATE;
       auto MatchCmp = m_Cmp(CurrentPred, m_Value(), m_Value());
-      // FIXME: Use CmpPredicate::getMatching here.
       if ((!match(VI, m_Select(MatchCmp, m_Value(), m_Value())) &&
            !match(VI, MatchCmp)) ||
           (CurrentPred != static_cast<CmpInst::Predicate>(VecPred) &&
