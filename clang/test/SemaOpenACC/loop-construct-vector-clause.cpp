@@ -18,12 +18,12 @@ void TemplUses(Int I, NotInt NI, ConvertsToInt CTI) {
 #pragma acc loop vector(length: NI)
   for(int j = 0; j < 5; ++j);
 
-  // expected-error@+2{{'num' argument on 'vector' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
+  // expected-error@+2{{'length' argument on 'vector' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop vector(length: I)
   for(int j = 0; j < 5; ++j);
 
-  // expected-error@+3{{'num' argument to 'vector' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'vector_length' clause}}
+  // expected-error@+3{{'length' argument to 'vector' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'vector_length' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels vector_length(I)
 #pragma acc loop vector(length: CTI)
@@ -87,12 +87,12 @@ void uses() {
 #pragma acc loop vector(length: NI)
   for(int j = 0; j < 5; ++j);
 
-  // expected-error@+2{{'num' argument on 'vector' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
+  // expected-error@+2{{'length' argument on 'vector' clause is not permitted on a 'loop' construct associated with a 'serial' compute construct}}
 #pragma acc serial
 #pragma acc loop vector(length: i)
   for(int j = 0; j < 5; ++j);
 
-  // expected-error@+3{{'num' argument to 'vector' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'vector_length' clause}}
+  // expected-error@+3{{'length' argument to 'vector' clause not allowed on a 'loop' construct associated with a 'kernels' construct that has a 'vector_length' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc kernels vector_length(i)
 #pragma acc loop vector(length: i)

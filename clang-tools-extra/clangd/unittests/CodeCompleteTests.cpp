@@ -920,6 +920,41 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
                           AllOf(named("Y"), Not(insertInclude()))));
 }
 
+TEST(CompletionTest, IncludeInsertionRespectsQuotedAngledConfig) {
+  TestTU TU;
+  TU.ExtraArgs.push_back("-I" + testPath("sub"));
+  TU.AdditionalFiles["sub/bar.h"] = "";
+  auto BarURI = URI::create(testPath("sub/bar.h")).toString();
+
+  Symbol Sym = cls("ns::X");
+  Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
+  Sym.IncludeHeaders.emplace_back(BarURI, 1, Symbol::Include);
+  Annotations Test("int main() { ns::^ }");
+  TU.Code = Test.code().str();
+  auto Results = completions(TU, Test.point(), {Sym});
+  // Default for a local path is quoted include
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
+  {
+    Config C;
+    C.Style.AngledHeaders.push_back(
+        [](auto header) { return header == "bar.h"; });
+    WithContextValue WithCfg(Config::Key, std::move(C));
+    Results = completions(TU, Test.point(), {Sym});
+    EXPECT_THAT(Results.Completions,
+                ElementsAre(AllOf(named("X"), insertInclude("<bar.h>"))));
+  }
+  {
+    Config C;
+    C.Style.QuotedHeaders.push_back(
+        [](auto header) { return header == "bar.h"; });
+    WithContextValue WithCfg(Config::Key, std::move(C));
+    Results = completions(TU, Test.point(), {Sym});
+    EXPECT_THAT(Results.Completions,
+                ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
+  }
+}
+
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   Annotations Test(R"cpp(
       #include "bar.h"
@@ -1138,8 +1173,8 @@ TEST(CodeCompleteTest, NoColonColonAtTheEnd) {
 }
 
 TEST(CompletionTests, EmptySnippetDoesNotCrash) {
-    // See https://github.com/clangd/clangd/issues/1216
-    auto Results = completions(R"cpp(
+  // See https://github.com/clangd/clangd/issues/1216
+  auto Results = completions(R"cpp(
         int main() {
           auto w = [&](auto &&f) { return f(f); };
           auto f = w([&](auto &&f) {
@@ -1155,18 +1190,18 @@ TEST(CompletionTests, EmptySnippetDoesNotCrash) {
 }
 
 TEST(CompletionTest, Issue1427Crash) {
-    // Need to provide main file signals to ensure that the branch in
-    // SymbolRelevanceSignals::computeASTSignals() that tries to
-    // compute a symbol ID is taken.
-    ASTSignals MainFileSignals;
-    CodeCompleteOptions Opts;
-    Opts.MainFileSignals = &MainFileSignals;
-    completions(R"cpp(
+  // Need to provide main file signals to ensure that the branch in
+  // SymbolRelevanceSignals::computeASTSignals() that tries to
+  // compute a symbol ID is taken.
+  ASTSignals MainFileSignals;
+  CodeCompleteOptions Opts;
+  Opts.MainFileSignals = &MainFileSignals;
+  completions(R"cpp(
       auto f = []() {
         1.0_^
       };
     )cpp",
-                {}, Opts);
+              {}, Opts);
 }
 
 TEST(CompletionTest, BacktrackCrashes) {
@@ -1700,6 +1735,12 @@ public:
 
   bool refs(const RefsRequest &,
             llvm::function_ref<void(const Ref &)>) const override {
+    return false;
+  }
+
+  bool containedRefs(
+      const ContainedRefsRequest &,
+      llvm::function_ref<void(const ContainedRefsResult &)>) const override {
     return false;
   }
 

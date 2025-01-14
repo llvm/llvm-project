@@ -2782,7 +2782,7 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   // Apply IDF calculator to the designated set of location defs, storing
   // required PHIs into PHIBlocks. Uses the dominator tree stored in the
   // InstrRefBasedLDV object.
-  IDFCalculatorBase<MachineBasicBlock, false> IDF(DomTree->getBase());
+  IDFCalculatorBase<MachineBasicBlock, false> IDF(*DomTree);
 
   IDF.setLiveInBlocks(AllBlocks);
   IDF.setDefiningBlocks(DefBlocks);
@@ -2927,7 +2927,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
     SmallVector<LocIdx, 4> NewCandidates;
     std::set_intersection(CandidateLocs.begin(), CandidateLocs.end(),
                           LocVec.begin(), LocVec.end(), std::inserter(NewCandidates, NewCandidates.begin()));
-    CandidateLocs = NewCandidates;
+    CandidateLocs = std::move(NewCandidates);
   }
   if (CandidateLocs.empty())
     return std::nullopt;

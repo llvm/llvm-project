@@ -164,8 +164,6 @@ void CallStackTrie::addCallStack(
   assert(Curr);
   Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
                                ContextSizeInfo.begin(), ContextSizeInfo.end());
-  std::vector<ContextTotalSize> AllContextSizeInfo;
-  collectContextSizeInfo(Curr, AllContextSizeInfo);
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -280,26 +278,30 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   return true;
 }
 
+void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                                StringRef Descriptor) {
+  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  if (MemProfReportHintedSizes) {
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Alloc, ContextSizeInfo);
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+      errs() << "MemProf hinting: Total size for full allocation context hash "
+             << FullStackId << " and " << Descriptor << " alloc type "
+             << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
+    }
+  }
+}
+
 // Build and attach the minimal necessary MIB metadata. If the alloc has a
 // single allocation type, add a function attribute instead. Returns true if
 // memprof metadata attached, false if not (attribute added).
 bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
-  auto &Ctx = CI->getContext();
   if (hasSingleAllocType(Alloc->AllocTypes)) {
-    addAllocTypeAttribute(Ctx, CI, (AllocationType)Alloc->AllocTypes);
-    if (MemProfReportHintedSizes) {
-      std::vector<ContextTotalSize> ContextSizeInfo;
-      collectContextSizeInfo(Alloc, ContextSizeInfo);
-      for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
-        errs()
-            << "MemProf hinting: Total size for full allocation context hash "
-            << FullStackId << " and single alloc type "
-            << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
-            << ": " << TotalSize << "\n";
-      }
-    }
+    addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                "single");
     return false;
   }
+  auto &Ctx = CI->getContext();
   std::vector<uint64_t> MIBCallStack;
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
@@ -316,8 +318,9 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   // If there exists corner case that CallStackTrie has one chain to leaf
   // and all node in the chain have multi alloc type, conservatively give
   // it non-cold allocation type.
-  // FIXME: Avoid this case before memory profile created.
-  addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
+  // FIXME: Avoid this case before memory profile created. Alternatively, select
+  // hint based on fraction cold.
+  addSingleAllocTypeAttribute(CI, AllocationType::NotCold, "indistinguishable");
   return false;
 }
 
@@ -343,4 +346,21 @@ template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
   assert(N);
   return mdconst::dyn_extract<ConstantInt>(N->operands().back())
       ->getZExtValue();
+}
+
+MDNode *MDNode::getMergedMemProfMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, such as selecting the one with
+  // more bytes allocated, or implement support for carrying multiple allocation
+  // leaf contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
+
+MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, which will require support for
+  // carrying multiple contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
 }

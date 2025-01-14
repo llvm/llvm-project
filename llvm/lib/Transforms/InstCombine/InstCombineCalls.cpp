@@ -505,8 +505,10 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
   // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
   if (II.hasOneUse() && match(Op1, m_Zero()) &&
-      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II)))) {
+    II.dropUBImplyingAttrsAndMetadata();
     return IC.replaceOperand(II, 1, IC.Builder.getTrue());
+  }
 
   Constant *C;
 
@@ -584,6 +586,19 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
           IC.Builder.CreateBinaryIntrinsic(Intrinsic::ctlz, C, Op1);
       return BinaryOperator::CreateSub(ConstCtlz, X);
     }
+  }
+
+  // cttz(Pow2) -> Log2(Pow2)
+  // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
+  if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
+    if (IsTZ)
+      return IC.replaceInstUsesWith(II, R);
+    BinaryOperator *BO = BinaryOperator::CreateSub(
+        ConstantInt::get(R->getType(), R->getType()->getScalarSizeInBits() - 1),
+        R);
+    BO->setHasNoSignedWrap();
+    BO->setHasNoUnsignedWrap();
+    return BO;
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
@@ -837,6 +852,35 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   if (OptimizeOverflowCheck(WO->getBinaryOp(), WO->isSigned(), WO->getLHS(),
                             WO->getRHS(), *WO, OperationResult, OverflowResult))
     return createOverflowTuple(WO, OperationResult, OverflowResult);
+
+  // See whether we can optimize the overflow check with assumption information.
+  for (User *U : WO->users()) {
+    if (!match(U, m_ExtractValue<1>(m_Value())))
+      continue;
+
+    for (auto &AssumeVH : AC.assumptionsFor(U)) {
+      if (!AssumeVH)
+        continue;
+      CallInst *I = cast<CallInst>(AssumeVH);
+      if (!match(I->getArgOperand(0), m_Not(m_Specific(U))))
+        continue;
+      if (!isValidAssumeForContext(I, II, /*DT=*/nullptr,
+                                   /*AllowEphemerals=*/true))
+        continue;
+      Value *Result =
+          Builder.CreateBinOp(WO->getBinaryOp(), WO->getLHS(), WO->getRHS());
+      Result->takeName(WO);
+      if (auto *Inst = dyn_cast<Instruction>(Result)) {
+        if (WO->isSigned())
+          Inst->setHasNoSignedWrap();
+        else
+          Inst->setHasNoUnsignedWrap();
+      }
+      return createOverflowTuple(WO, Result,
+                                 ConstantInt::getFalse(U->getType()));
+    }
+  }
+
   return nullptr;
 }
 
@@ -1734,9 +1778,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     if (match(IIOperand, m_Neg(m_Value(X))))
       return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Value(X), m_Neg(m_Deferred(X)))))
-      return replaceOperand(*II, 0, X);
-    if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
+    if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
     Value *Y;
@@ -2200,6 +2242,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BitOp;
     }
 
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
+    }
+
     // Left or right might be masked.
     if (SimplifyDemandedInstructionBits(*II))
       return &CI;
@@ -2644,8 +2695,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Propagate sign argument through nested calls:
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
-    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
-      return replaceOperand(*II, 1, X);
+    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
+      Value *CopySign =
+          Builder.CreateCopySign(Mag, X, FMFSource::intersect(II, Sign));
+      return replaceInstUsesWith(*II, CopySign);
+    }
 
     // Clear sign-bit of constant magnitude:
     // copysign -MagC, X --> copysign MagC, X

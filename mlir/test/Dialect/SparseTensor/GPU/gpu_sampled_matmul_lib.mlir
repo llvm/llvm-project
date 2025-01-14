@@ -28,11 +28,11 @@
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
-// CHECK:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
+// CHECK:           %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK:           %[[VAL_7:.*]] = gpu.wait async
 // CHECK:           %[[VAL_8:.*]], %[[VAL_9:.*]] = gpu.alloc async {{\[}}%[[VAL_7]]] () : memref<8x8xf64>
 // CHECK:           %[[VAL_10:.*]] = gpu.memcpy async {{\[}}%[[VAL_9]]] %[[VAL_8]], %[[VAL_6]] : memref<8x8xf64>, memref<8x8xf64>
-// CHECK:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
+// CHECK:           %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<8x8xf64> to memref<8x8xf64>
 // CHECK:           %[[VAL_12:.*]] = gpu.wait async
 // CHECK:           %[[VAL_13:.*]], %[[VAL_14:.*]] = gpu.alloc async {{\[}}%[[VAL_12]]] () : memref<8x8xf64>
 // CHECK:           %[[VAL_15:.*]] = gpu.memcpy async {{\[}}%[[VAL_14]]] %[[VAL_13]], %[[VAL_11]] : memref<8x8xf64>, memref<8x8xf64>

@@ -546,9 +546,9 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForDestructor = true;
   }
 
-  // C++2a [dcl.constexpr]p4:
-  //   The definition of a constexpr destructor [shall] satisfy the
-  //   following requirement:
+  // C++20 [dcl.constexpr]p5:
+  //  The definition of a constexpr destructor whose function-body is not
+  //  = delete shall additionally satisfy the following requirement:
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
@@ -993,7 +993,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++ [meta.unary.prop]p4: [LWG2358]
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
-      if (data().Empty && !Field->isZeroLengthBitField(Context) &&
+      if (data().Empty && !Field->isZeroLengthBitField() &&
           Context.getLangOpts().getClangABICompat() >
               LangOptions::ClangABI::Ver6)
         data().Empty = false;
@@ -1213,8 +1213,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedCopyAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
-          if (FieldRec->hasNonTrivialDestructor())
+          if (FieldRec->hasNonTrivialDestructor()) {
             data().DefaultedDestructorIsDeleted = true;
+            // C++20 [dcl.constexpr]p5:
+            //   The definition of a constexpr destructor whose function-body is
+            //   not = delete shall additionally satisfy...
+            data().DefaultedDestructorIsConstexpr = true;
+          }
         }
 
         // For an anonymous union member, our overload resolution will perform
@@ -2597,8 +2602,6 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
 
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {
   assert(MD->isCanonicalDecl() && "Method is not canonical!");
-  assert(!MD->getParent()->isDependentContext() &&
-         "Can't add an overridden method to a class template!");
   assert(MD->isVirtual() && "Method is not virtual!");
 
   getASTContext().addOverriddenMethod(this, MD);
@@ -2733,14 +2736,14 @@ int64_t CXXCtorInitializer::getID(const ASTContext &Context) const {
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getTypeLoc();
+    return cast<TypeSourceInfo *>(Initializee)->getTypeLoc();
   else
     return {};
 }
 
 const Type *CXXCtorInitializer::getBaseClass() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getType().getTypePtr();
+    return cast<TypeSourceInfo *>(Initializee)->getType().getTypePtr();
   else
     return nullptr;
 }
@@ -2752,7 +2755,7 @@ SourceLocation CXXCtorInitializer::getSourceLocation() const {
   if (isAnyMemberInitializer())
     return getMemberLocation();
 
-  if (const auto *TSInfo = Initializee.get<TypeSourceInfo *>())
+  if (const auto *TSInfo = cast<TypeSourceInfo *>(Initializee))
     return TSInfo->getTypeLoc().getBeginLoc();
 
   return {};
@@ -2964,6 +2967,28 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
+}
+
+bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
+  // C++20 [expr.delete]p6: If the value of the operand of the delete-
+  // expression is not a null pointer value and the selected deallocation
+  // function (see below) is not a destroying operator delete, the delete-
+  // expression will invoke the destructor (if any) for the object or the
+  // elements of the array being deleted.
+  //
+  // This means we should not look at the destructor for a destroying
+  // delete operator, as that destructor is never called, unless the
+  // destructor is virtual (see [expr.delete]p8.1) because then the
+  // selected operator depends on the dynamic type of the pointer.
+  const FunctionDecl *SelectedOperatorDelete = OpDel ? OpDel : OperatorDelete;
+  if (!SelectedOperatorDelete)
+    return true;
+
+  if (!SelectedOperatorDelete->isDestroyingOperatorDelete())
+    return true;
+
+  // We have a destroying operator delete, so it depends on the dtor.
+  return isVirtual();
 }
 
 void CXXConversionDecl::anchor() {}

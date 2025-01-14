@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FLOAT_H
-#define _LIBCPP_FLOAT_H
+#ifndef _LIBCPP___CXX03_FLOAT_H
+#define _LIBCPP___CXX03_FLOAT_H
 
 /*
     float.h synopsis
@@ -92,4 +92,4 @@ Macros:
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_FLOAT_H
+#endif // _LIBCPP___CXX03_FLOAT_H

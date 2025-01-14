@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that the cost model makes vectorization non-profitable.

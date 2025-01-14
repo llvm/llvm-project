@@ -58,7 +58,11 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::BUILD_VECTOR:      R = ScalarizeVecRes_BUILD_VECTOR(N); break;
   case ISD::EXTRACT_SUBVECTOR: R = ScalarizeVecRes_EXTRACT_SUBVECTOR(N); break;
   case ISD::FP_ROUND:          R = ScalarizeVecRes_FP_ROUND(N); break;
-  case ISD::FPOWI:             R = ScalarizeVecRes_ExpOp(N); break;
+  case ISD::AssertZext:
+  case ISD::AssertSext:
+  case ISD::FPOWI:
+    R = ScalarizeVecRes_UnaryOpWithExtraInput(N);
+    break;
   case ISD::INSERT_VECTOR_ELT: R = ScalarizeVecRes_INSERT_VECTOR_ELT(N); break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
@@ -149,6 +153,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FLDEXP:
   case ISD::ABDS:
   case ISD::ABDU:
@@ -434,7 +440,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FP_ROUND(SDNode *N) {
                      N->getOperand(1));
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_ExpOp(SDNode *N) {
+SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N) {
   SDValue Op = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op.getValueType(), Op,
                      N->getOperand(1));
@@ -3053,8 +3059,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
           Inputs[Idx] = Output;
         },
         [&AccumulateResults, &Output, &DAG = DAG, NewVT, &DL, &Inputs,
-         &TmpInputs,
-         &BuildVector](ArrayRef<int> Mask, unsigned Idx1, unsigned Idx2) {
+         &TmpInputs, &BuildVector](ArrayRef<int> Mask, unsigned Idx1,
+                                   unsigned Idx2, bool /*Unused*/) {
           if (AccumulateResults(Idx1)) {
             if (Inputs[Idx1]->getOpcode() == ISD::BUILD_VECTOR &&
                 Inputs[Idx2]->getOpcode() == ISD::BUILD_VECTOR)
@@ -3235,6 +3241,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::VP_SETCC:
   case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
   case ISD::SETCC:             Res = SplitVecOp_VSETCC(N); break;
   case ISD::BITCAST:           Res = SplitVecOp_BITCAST(N); break;
   case ISD::EXTRACT_SUBVECTOR: Res = SplitVecOp_EXTRACT_SUBVECTOR(N); break;
@@ -4236,7 +4243,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
-  bool isStrict = N->getOpcode() == ISD::STRICT_FSETCC;
+  unsigned Opc = N->getOpcode();
+  bool isStrict = Opc == ISD::STRICT_FSETCC || Opc == ISD::STRICT_FSETCCS;
   assert(N->getValueType(0).isVector() &&
          N->getOperand(isStrict ? 1 : 0).getValueType().isVector() &&
          "Operand types must be vectors");
@@ -4252,21 +4260,19 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   EVT PartResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt);
   EVT WideResVT = EVT::getVectorVT(Context, MVT::i1, PartEltCnt*2);
 
-  if (N->getOpcode() == ISD::SETCC) {
+  if (Opc == ISD::SETCC) {
     LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
     HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
-  } else if (N->getOpcode() == ISD::STRICT_FSETCC) {
-    LoRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
-                        DAG.getVTList(PartResVT, N->getValueType(1)),
+  } else if (isStrict) {
+    LoRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Lo0, Lo1, N->getOperand(3));
-    HiRes = DAG.getNode(ISD::STRICT_FSETCC, DL,
-                        DAG.getVTList(PartResVT, N->getValueType(1)),
+    HiRes = DAG.getNode(Opc, DL, DAG.getVTList(PartResVT, N->getValueType(1)),
                         N->getOperand(0), Hi0, Hi1, N->getOperand(3));
     SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                    LoRes.getValue(1), HiRes.getValue(1));
     ReplaceValueWith(SDValue(N, 1), NewChain);
   } else {
-    assert(N->getOpcode() == ISD::VP_SETCC && "Expected VP_SETCC opcode");
+    assert(Opc == ISD::VP_SETCC && "Expected VP_SETCC opcode");
     SDValue MaskLo, MaskHi, EVLLo, EVLHi;
     std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(3));
     std::tie(EVLLo, EVLHi) =
@@ -6421,16 +6427,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   SDValue InOp2 = GetWidenedVector(N->getOperand(1));
 
   // Adjust mask based on new input vector length.
-  SmallVector<int, 16> NewMask;
+  SmallVector<int, 16> NewMask(WidenNumElts, -1);
   for (unsigned i = 0; i != NumElts; ++i) {
     int Idx = N->getMaskElt(i);
     if (Idx < (int)NumElts)
-      NewMask.push_back(Idx);
+      NewMask[i] = Idx;
     else
-      NewMask.push_back(Idx - NumElts + WidenNumElts);
+      NewMask[i] = Idx - NumElts + WidenNumElts;
   }
-  for (unsigned i = NumElts; i != WidenNumElts; ++i)
-    NewMask.push_back(-1);
   return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
@@ -6478,12 +6482,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
 
   // Use VECTOR_SHUFFLE to combine new vector from 'ReverseVal' for
   // fixed-vectors.
-  SmallVector<int, 16> Mask;
-  for (unsigned i = 0; i != VTNumElts; ++i) {
-    Mask.push_back(IdxVal + i);
-  }
-  for (unsigned i = VTNumElts; i != WidenNumElts; ++i)
-    Mask.push_back(-1);
+  SmallVector<int, 16> Mask(WidenNumElts, -1);
+  std::iota(Mask.begin(), Mask.begin() + VTNumElts, IdxVal);
 
   return DAG.getVectorShuffle(WidenVT, dl, ReverseVal, DAG.getUNDEF(WidenVT),
                               Mask);

@@ -271,16 +271,12 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
-  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
+  bool isInSemaDC() const { return isa<DeclContext *>(DeclCtx); }
+  bool isOutOfSemaDC() const { return isa<MultipleDC *>(DeclCtx); }
 
-  MultipleDC *getMultipleDC() const {
-    return DeclCtx.get<MultipleDC*>();
-  }
+  MultipleDC *getMultipleDC() const { return cast<MultipleDC *>(DeclCtx); }
 
-  DeclContext *getSemanticDC() const {
-    return DeclCtx.get<DeclContext*>();
-  }
+  DeclContext *getSemanticDC() const { return cast<DeclContext *>(DeclCtx); }
 
   /// Loc - The location of this decl.
   SourceLocation Loc;
@@ -1338,9 +1334,9 @@ public:
 
     reference operator*() const {
       assert(Ptr && "dereferencing end() iterator");
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         return CurNode->D;
-      return Ptr.get<NamedDecl*>();
+      return cast<NamedDecl *>(Ptr);
     }
     void operator->() const { } // Unsupported.
     bool operator==(const iterator &X) const { return Ptr == X.Ptr; }
@@ -1348,7 +1344,7 @@ public:
     inline iterator &operator++() { // ++It
       assert(!Ptr.isNull() && "Advancing empty iterator");
 
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         Ptr = CurNode->Rest;
       else
         Ptr = nullptr;

@@ -41,13 +41,23 @@ def ApplyEraseUnnecessaryInputsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyGeneralizeTensorPackUnpackPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.linalg.generalize_pack_unpack",
+def ApplyDecomposeTensorPackUnpackPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pack_unpack",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to generalize tensor.pack and tensor.unpack (i.e. to
-    decompose it into e.g. tensor::PadOp, linalg::transposeOp etc). Requires
-    all outer dims to be unit.
+    Collect patterns to decompose tensor.pack and tensor.unpack into e.g.
+    tensor::PadOp, linalg::transposeOp Ops. Requires all outer dims to be unit.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyDecomposeTensorPadPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.linalg.decompose_pad",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect patterns to decompose tensor.pad into e.g. tensor::EmptyOp,
+    linalg::FillOp and tensor::InsertSliceOp.
   }];
 
   let assemblyFormat = "attr-dict";
@@ -549,7 +559,8 @@ def LowerPackOp : Op<Transform_Dialect, "structured.lower_pack", [
     Return handles to the newly produced pad, expand_shape and transpose ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.pack">:$target,
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerPadLikeWithInsertSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.pad">:$pad_op,
                       Transform_ConcreteOpType<"tensor.expand_shape">:$expand_shape_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op);
@@ -589,7 +600,8 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
     Return handles to the newly produced empty, transpose, collapse_shape and extract_slice ops.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target);
+  let arguments = (ins Transform_ConcreteOpType<"tensor.unpack">:$target,
+                       DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
                       Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
                       Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
@@ -1753,8 +1765,8 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$tile_sizes);
   let results = (outs Variadic<TransformHandleTypeInterface>:$fill_op,
-                      TransformHandleTypeInterface:$split_linalg_op,
-                      TransformHandleTypeInterface:$combining_linalg_op,
+                      TransformHandleTypeInterface:$split_op,
+                      TransformHandleTypeInterface:$combining_op,
                       TransformHandleTypeInterface:$for_op);
 
   let builders = [
@@ -1772,7 +1784,7 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::linalg::LinalgOp target,
+        Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

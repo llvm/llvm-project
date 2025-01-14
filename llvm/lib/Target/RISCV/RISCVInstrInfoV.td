@@ -66,15 +66,9 @@ def simm5 : RISCVSImmLeafOp<5> {
   }];
 }
 
-def SImm5Plus1AsmOperand : AsmOperandClass {
-  let Name = "SImm5Plus1";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidSImm5Plus1";
-}
-
 def simm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
-  let ParserMatchClass = SImm5Plus1AsmOperand;
+  let ParserMatchClass = SImmAsmOperand<5, "Plus1">;
   let OperandType = "OPERAND_SIMM5_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -1726,7 +1720,7 @@ foreach n = [1, 2, 4, 8] in {
   def VMV#n#R_V  : RVInstV<0b100111, !add(n, -1), OPIVI, (outs vrc:$vd),
                            (ins vrc:$vs2), "vmv" # n # "r.v", "$vd, $vs2">,
                    VMVRSched<n> {
-    let Uses = [];
+    let Uses = [VTYPE];
     let vm = 1;
   }
 }

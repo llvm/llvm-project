@@ -113,6 +113,26 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
     break;
+  case Triple::spirv:
+    switch (SubArch) {
+    case Triple::SPIRVSubArch_v10:
+      return "spirv1.0";
+    case Triple::SPIRVSubArch_v11:
+      return "spirv1.1";
+    case Triple::SPIRVSubArch_v12:
+      return "spirv1.2";
+    case Triple::SPIRVSubArch_v13:
+      return "spirv1.3";
+    case Triple::SPIRVSubArch_v14:
+      return "spirv1.4";
+    case Triple::SPIRVSubArch_v15:
+      return "spirv1.5";
+    case Triple::SPIRVSubArch_v16:
+      return "spirv1.6";
+    default:
+      break;
+    }
+    break;
   case Triple::dxil:
     switch (SubArch) {
     case Triple::NoSubArch:
@@ -241,6 +261,8 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case Freescale: return "fsl";
   case IBM: return "ibm";
   case ImaginationTechnologies: return "img";
+  case Intel:
+    return "intel";
   case Mesa: return "mesa";
   case MipsTechnologies: return "mti";
   case NVIDIA: return "nvidia";
@@ -360,6 +382,8 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case OpenHOS: return "ohos";
   case PAuthTest:
     return "pauthtest";
+  case LLVM:
+    return "llvm";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -625,21 +649,22 @@ static Triple::ArchType parseArch(StringRef ArchName) {
 
 static Triple::VendorType parseVendor(StringRef VendorName) {
   return StringSwitch<Triple::VendorType>(VendorName)
-    .Case("apple", Triple::Apple)
-    .Case("pc", Triple::PC)
-    .Case("scei", Triple::SCEI)
-    .Case("sie", Triple::SCEI)
-    .Case("fsl", Triple::Freescale)
-    .Case("ibm", Triple::IBM)
-    .Case("img", Triple::ImaginationTechnologies)
-    .Case("mti", Triple::MipsTechnologies)
-    .Case("nvidia", Triple::NVIDIA)
-    .Case("csr", Triple::CSR)
-    .Case("amd", Triple::AMD)
-    .Case("mesa", Triple::Mesa)
-    .Case("suse", Triple::SUSE)
-    .Case("oe", Triple::OpenEmbedded)
-    .Default(Triple::UnknownVendor);
+      .Case("apple", Triple::Apple)
+      .Case("pc", Triple::PC)
+      .Case("scei", Triple::SCEI)
+      .Case("sie", Triple::SCEI)
+      .Case("fsl", Triple::Freescale)
+      .Case("ibm", Triple::IBM)
+      .Case("img", Triple::ImaginationTechnologies)
+      .Case("mti", Triple::MipsTechnologies)
+      .Case("nvidia", Triple::NVIDIA)
+      .Case("csr", Triple::CSR)
+      .Case("amd", Triple::AMD)
+      .Case("mesa", Triple::Mesa)
+      .Case("suse", Triple::SUSE)
+      .Case("oe", Triple::OpenEmbedded)
+      .Case("intel", Triple::Intel)
+      .Default(Triple::UnknownVendor);
 }
 
 static Triple::OSType parseOS(StringRef OSName) {
@@ -740,6 +765,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
+      .StartsWith("llvm", Triple::LLVM)
       .Default(Triple::UnknownEnvironment);
 }
 

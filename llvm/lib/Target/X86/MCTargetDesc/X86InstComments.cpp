@@ -40,19 +40,30 @@ using namespace llvm;
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
+#define CASE_MASK_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##k_Int:
+
+#define CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##kz_Int:
+
+#define CASE_AVX512_INS_COMMON_INT(Inst, Suffix, src) \
+  CASE_AVX_INS_COMMON(Inst, Suffix, src##_Int)        \
+  CASE_MASK_INS_COMMON_INT(Inst, Suffix, src)         \
+  CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src)
+
 #define CASE_FPCLASS_PACKED(Inst, src)    \
-  CASE_AVX_INS_COMMON(Inst, Z, r##src)    \
-  CASE_AVX_INS_COMMON(Inst, Z256, r##src) \
-  CASE_AVX_INS_COMMON(Inst, Z128, r##src) \
-  CASE_MASK_INS_COMMON(Inst, Z, r##src)
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
+  CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
+  CASE_AVX_INS_COMMON(Inst, Z128, src##i) \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
 
 #define CASE_FPCLASS_PACKED_MEM(Inst) \
   CASE_FPCLASS_PACKED(Inst, m)        \
   CASE_FPCLASS_PACKED(Inst, mb)
 
 #define CASE_FPCLASS_SCALAR(Inst, src)  \
-  CASE_AVX_INS_COMMON(Inst, Z, r##src)  \
-  CASE_MASK_INS_COMMON(Inst, Z, r##src)
+  CASE_AVX_INS_COMMON(Inst, Z, src##i)  \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)
 
 #define CASE_PTERNLOG(Inst, src)                                               \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
@@ -196,8 +207,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, r)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, r)
 
 #define CASE_FMA_SCALAR_MEM(Inst)                 \
   CASE_AVX_INS_COMMON(Inst##SD, , m)              \
@@ -206,8 +217,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, m)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, m)
 
 #define CASE_FMA4(Inst, suf)                      \
   CASE_AVX_INS_COMMON(Inst, 4, suf)               \
@@ -1122,15 +1133,21 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   case X86::VINSERTPSrri:
   case X86::VINSERTPSZrri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
-    [[fallthrough]];
+    DestName = getRegName(MI->getOperand(0).getReg());
+    Src1Name = getRegName(MI->getOperand(1).getReg());
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/false);
+    break;
+
   case X86::INSERTPSrmi:
   case X86::VINSERTPSrmi:
   case X86::VINSERTPSZrmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(),
-                         ShuffleMask);
+      DecodeINSERTPSMask(MI->getOperand(NumOperands - 1).getImm(), ShuffleMask,
+                         /*SrcIsMem=*/true);
     break;
 
   case X86::MOVLHPSrr:

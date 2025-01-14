@@ -475,7 +475,7 @@ not first appear on a declaration that follows a definition of the function.
 The attribute only appertains to functions and only those that meet the
 following requirements.
 
-* Has a ``void`` return type.
+* Has a non-deduced ``void`` return type.
 * Is not a non-static member function, constructor, or destructor.
 * Is not a C variadic function.
 * Is not a coroutine.
@@ -1155,6 +1155,15 @@ Query for this feature with ``__has_attribute(diagnose_if)``.
   }];
 }
 
+def NoSpecializationsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+``[[clang::no_specializations]]`` can be applied to function, class, or variable
+templates which should not be explicitly specialized by users. This is primarily
+used to diagnose user specializations of standard library type traits.
+  }];
+}
+
 def PassObjectSizeDocs : Documentation {
   let Category = DocCatVariable; // Technically it's a parameter doc, but eh.
   let Heading = "pass_object_size, pass_dynamic_object_size";
@@ -1377,6 +1386,82 @@ Support for unmarked overloads is not present in some versions of clang. You may
 query for it using ``__has_extension(overloadable_unmarked)``.
 
 Query for this attribute with ``__has_attribute(overloadable)``.
+  }];
+}
+
+def OwnershipDocs : Documentation {
+  let Heading = "ownership_holds, ownership_returns, ownership_takes (Clang "
+                "Static Analyzer)";
+  let Category = DocCatFunction;
+  let Label = "analyzer-ownership-attrs";
+  let Content = [{
+
+.. note::
+
+  In order for the Clang Static Analyzer to acknowledge these attributes, the
+  ``Optimistic`` config needs to be set to true for the checker
+  ``unix.DynamicMemoryModeling``:
+
+  ``-Xclang -analyzer-config -Xclang unix.DynamicMemoryModeling:Optimistic=true``
+
+These attributes are used by the Clang Static Analyzer's dynamic memory modeling
+facilities to mark custom allocating/deallocating functions.
+
+All 3 attributes' first parameter of type string is the type of the allocation:
+``malloc``, ``new``, etc. to allow for catching :ref:`mismatched deallocation
+<unix-MismatchedDeallocator>` bugs. The allocation type can be any string, e.g.
+a function annotated with
+returning a piece of memory of type ``lasagna`` but freed with a function
+annotated to release ``cheese`` typed memory will result in mismatched
+deallocation warning.
+
+The (currently) only allocation type having special meaning is ``malloc`` --
+the Clang Static Analyzer makes sure that allocating functions annotated with
+``malloc`` are treated like they used the standard ``malloc()``, and can be
+safely deallocated with the standard ``free()``.
+
+* Use ``ownership_returns`` to mark a function as an allocating function. Takes
+  1 parameter to denote the allocation type.
+* Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
+  parameters: the allocation type, and the index of the parameter that is being
+  deallocated (counting from 1).
+* Use ``ownership_holds`` to mark that a function takes over the ownership of a
+  piece of memory and will free it at some unspecified point in the future. Like
+  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  index of the parameter whose ownership will be taken over (counting from 1).
+
+The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
+leak reports (concerning the specified argument); the difference between them
+is that using taken memory is a use-after-free error, while using held memory
+is assumed to be legitimate.
+
+Example:
+
+.. code-block:: c
+
+  // Denotes that my_malloc will return with a dynamically allocated piece of
+  // memory using malloc().
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+
+  // Denotes that my_free will deallocate its parameter using free().
+  void __attribute((ownership_takes(malloc, 1))) my_free(void *);
+
+  // Denotes that my_hold will take over the ownership of its parameter that was
+  // allocated via malloc().
+  void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
+
+Further reading about dynamic memory modeling in the Clang Static Analyzer is
+found in these checker docs:
+:ref:`unix.Malloc <unix-Malloc>`, :ref:`unix.MallocSizeof <unix-MallocSizeof>`,
+:ref:`unix.MismatchedDeallocator <unix-MismatchedDeallocator>`,
+:ref:`cplusplus.NewDelete <cplusplus-NewDelete>`,
+:ref:`cplusplus.NewDeleteLeaks <cplusplus-NewDeleteLeaks>`,
+:ref:`optin.taint.TaintedAlloc <optin-taint-TaintedAlloc>`.
+Mind that many more checkers are affected by dynamic memory modeling changes to
+some extent.
+
+Further reading for other annotations:
+`Source Annotations in the Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/user-docs/Annotations.html>`_.
   }];
 }
 
@@ -3351,9 +3436,8 @@ def NoSanitizeAddressDocs : Documentation {
   // This function has multiple distinct spellings, and so it requires a custom
   // heading to be specified. The most common spelling is sufficient.
   let Heading = "no_sanitize_address, no_address_safety_analysis";
+  let Label = "langext-address_sanitizer";
   let Content = [{
-.. _langext-address_sanitizer:
-
 Use ``__attribute__((no_sanitize_address))`` on a function or a global
 variable declaration to specify that address safety instrumentation
 (e.g. AddressSanitizer) should not be applied.
@@ -3363,9 +3447,8 @@ variable declaration to specify that address safety instrumentation
 def NoSanitizeThreadDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_thread";
+  let Label = "langext-thread_sanitizer";
   let Content = [{
-.. _langext-thread_sanitizer:
-
 Use ``__attribute__((no_sanitize_thread))`` on a function declaration to
 specify that checks for data races on plain (non-atomic) memory accesses should
 not be inserted by ThreadSanitizer. The function is still instrumented by the
@@ -3376,9 +3459,8 @@ tool to avoid false positives and provide meaningful stack traces.
 def NoSanitizeMemoryDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "no_sanitize_memory";
+  let Label = "langext-memory_sanitizer";
   let Content = [{
-.. _langext-memory_sanitizer:
-
 Use ``__attribute__((no_sanitize_memory))`` on a function declaration to
 specify that checks for uninitialized memory should not be inserted
 (e.g. by MemorySanitizer). The function may still be instrumented by the tool
@@ -3389,9 +3471,8 @@ to avoid false positives in other places.
 def CFICanonicalJumpTableDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "cfi_canonical_jump_table";
+  let Label = "langext-cfi_canonical_jump_table";
   let Content = [{
-.. _langext-cfi_canonical_jump_table:
-
 Use ``__attribute__((cfi_canonical_jump_table))`` on a function declaration to
 make the function's CFI jump table canonical. See :ref:`the CFI documentation
 <cfi-canonical-jump-tables>` for more details.
@@ -3921,19 +4002,44 @@ have their lifetimes extended.
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-    Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a function
-parameter or implicit object parameter indicates that that objects that are referred to
-by that parameter may also be referred to by the capturing entity ``X``.
+Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
+function parameter or implicit object parameter indicates that the capturing
+entity ``X`` may refer to the object referred by that parameter.
 
-By default, a reference is considered to refer to its referenced object, a
-pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
-is considered to refer to its underlying array, and aggregates (arrays and
-simple ``struct``\s) are considered to refer to all objects that their
-transitive subobjects refer to.
+Below is a list of types of the parameters and what they're considered to refer to:
+
+- A reference param (of non-view type) is considered to refer to its referenced object.
+- A pointer param (of non-view type) is considered to refer to its pointee.
+- View type param (type annotated with ``[[gsl::Pointer()]]``) is considered to refer
+  to its pointee (gsl owner). This holds true even if the view type appears as a reference
+  in the parameter. For example, both ``std::string_view`` and
+  ``const std::string_view &`` are considered to refer to a ``std::string``.
+- A ``std::initializer_list<T>`` is considered to refer to its underlying array.
+- Aggregates (arrays and simple ``struct``\s) are considered to refer to all
+  objects that their transitive subobjects refer to.
+
+Clang would diagnose when a temporary object is used as an argument to such an
+annotated parameter.
+In this case, the capturing entity ``X`` could capture a dangling reference to this
+temporary object.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
+    s.insert(a);
+  }
+  void use() {
+    std::set<std::string_view> s;
+    addToSet(std::string(), s); // Warning: object whose reference is captured by 's' will be destroyed at the end of the full-expression.
+    //       ^^^^^^^^^^^^^
+    std::string local;
+    addToSet(local, s); // Ok.
+  }
 
 The capturing entity ``X`` can be one of the following:
-- Another (named) function parameter. 
-  
+
+- Another (named) function parameter.
+
   .. code-block:: c++
 
     void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s) {
@@ -3941,7 +4047,7 @@ The capturing entity ``X`` can be one of the following:
     }
 
 - ``this`` (in case of member functions).
-  
+
   .. code-block:: c++
 
     class S {
@@ -3951,8 +4057,10 @@ The capturing entity ``X`` can be one of the following:
       std::set<std::string_view> s;
     };
 
-- 'global', 'unknown' (without quotes).
-  
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+
+- `global`, `unknown`.
+
   .. code-block:: c++
 
     std::set<std::string_view> s;
@@ -3975,12 +4083,28 @@ function by writing the attribute after the function type:
 The attribute supports specifying more than one capturing entities:
 
 .. code-block:: c++
-  
+
   void addToSets(std::string_view a [[clang::lifetime_capture_by(s1, s2)]],
                  std::set<std::string_view>& s1,
                  std::set<std::string_view>& s2) {
     s1.insert(a);
     s2.insert(a);
+  }
+
+Limitation: The capturing entity ``X`` is not used by the analysis and is
+used for documentation purposes only. This is because the analysis is
+statement-local and only detects use of a temporary as an argument to the
+annotated parameter.
+
+.. code-block:: c++
+
+  void addToSet(std::string_view a [[clang::lifetime_capture_by(s)]], std::set<std::string_view>& s);
+  void use() {
+    std::set<std::string_view> s;
+    if (foo()) {
+      std::string str;
+      addToSet(str, s); // Not detected.
+    }
   }
 
 .. _`lifetimebound`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
@@ -7133,8 +7257,8 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress 
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached. 
+* Attribute attached to functions: The attribute does not suppress
+  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
   These warnings still need to be addressed.
 
   The attribute is warranted even if the only way a function can overflow
@@ -7197,10 +7321,10 @@ alternatives, though the attribute can be used even when the fix can't be automa
   and then use the attribute on the original ``baz()`` to help the users
   update their code to use the new function.
 
-* Attribute attached to fields: The attribute should only be attached to 
-  struct fields, if the fields can not be updated to a safe type with bounds 
-  check, such as std::span. In other words, the buffers prone to unsafe accesses 
-  should always be updated to use safe containers/views and attaching the attribute 
+* Attribute attached to fields: The attribute should only be attached to
+  struct fields, if the fields can not be updated to a safe type with bounds
+  check, such as std::span. In other words, the buffers prone to unsafe accesses
+  should always be updated to use safe containers/views and attaching the attribute
   must be last resort when such an update is infeasible.
 
   The attribute can be placed on individual fields or a set of them as shown below.
@@ -7218,7 +7342,7 @@ alternatives, though the attribute can be used even when the fix can't be automa
       size_t sz;
     };
 
-  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning 
+  Here, every read/write to the fields ptr1, ptr2, buf and sz will trigger a warning
   that the field has been explcitly marked as unsafe due to unsafe-buffer operations.
 
   }];
@@ -7511,6 +7635,32 @@ The attributes ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` and
   }];
 }
 
+def ArmAgnosticDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_agnostic`` keyword applies to prototyped function types and
+affects the function's calling convention for a given state S. This
+attribute allows the user to describe a function that preserves S, without
+requiring the function to share S with its callers and without making
+the assumption that S exists.
+
+If a function has the ``__arm_agnostic(S)`` attribute and calls a function
+without this attribute, then the function's object code will contain code
+to preserve state S. Otherwise, the function's object code will be the same
+as if it did not have the attribute.
+
+The attribute takes string arguments to describe state S. The supported
+states are:
+
+* ``"sme_za_state"`` for state enabled by PSTATE.ZA, such as ZA and ZT0.
+
+The attribute ``__arm_agnostic("sme_za_state")`` cannot be used in conjunction
+with ``__arm_in(S)``, ``__arm_out(S)``, ``__arm_inout(S)`` or
+``__arm_preserves(S)`` where state S describes state enabled by PSTATE.ZA,
+such as "za" or "zt0".
+  }];
+}
+
 def ArmSmeLocallyStreamingDocs : Documentation {
   let Category = DocCatArmSmeAttributes;
   let Content = [{
@@ -7773,10 +7923,10 @@ def HLSLLoopHintDocs : Documentation {
   let Content = [{
 The ``[loop]`` directive allows loop optimization hints to be
 specified for the subsequent loop. The directive allows unrolling to
-be disabled and is not compatible with [unroll(x)]. 
+be disabled and is not compatible with [unroll(x)].
 
 Specifying the parameter, ``[loop]``, directs the
-unroller to not unroll the loop. 
+unroller to not unroll the loop.
 
 .. code-block:: hlsl
 
@@ -7890,6 +8040,27 @@ otherwise.
 The attribute ``no_randomize_layout``, when attached to a C structure,
 instructs the compiler that this structure should not have its field layout
 randomized.
+  }];
+}
+
+def HLSLSV_GroupThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
+individual thread within a thread group is executing in. This attribute is
+only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
+  }];
+}
+
+def HLSLSV_GroupIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
+thread group a shader is executing in. This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
   }];
 }
 
@@ -8716,6 +8887,18 @@ Attribute used by `clspv`_ (OpenCL-C to Vulkan SPIR-V compiler) to identify func
 
 .. _`clspv`: https://github.com/google/clspv
 .. _`libclc`: https://libclc.llvm.org
+}];
+}
+
+def NoTrivialAutoVarInitDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``__declspec(no_init_all)`` attribute disables the automatic initialization that the
+`-ftrivial-auto-var-init`_ flag would have applied to locals in a marked function, or instances of
+a marked type. Note that this attribute has no effect for locals that are automatically initialized
+without the `-ftrivial-auto-var-init`_ flag.
+
+.. _`-ftrivial-auto-var-init`: ClangCommandLineReference.html#cmdoption-clang-ftrivial-auto-var-init
 }];
 }
 

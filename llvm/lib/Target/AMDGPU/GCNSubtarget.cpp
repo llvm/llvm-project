@@ -16,6 +16,7 @@
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -54,7 +55,7 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
 static cl::opt<unsigned>
     NSAThreshold("amdgpu-nsa-threshold",
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
-                 cl::init(3), cl::Hidden);
+                 cl::init(2), cl::Hidden);
 
 GCNSubtarget::~GCNSubtarget() = default;
 
@@ -100,14 +101,16 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (Gen == AMDGPUSubtarget::INVALID) {
     Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
-  }
-
-  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
-      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // Assume wave64 for the unknown target, if not explicitly set.
+    if (getWavefrontSizeLog2() == 0)
+      WavefrontSizeLog2 = 6;
+  } else if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+             !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    WavefrontSizeLog2 = getGeneration() >= AMDGPUSubtarget::GFX10 ? 5 : 6;
   }
 
   // We don't support FP64 for EG/NI atm.
@@ -147,10 +150,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       !getFeatureBits().test(AMDGPU::FeatureCuMode))
     LocalMemorySize *= 2;
 
-  // Don't crash on invalid devices.
-  if (WavefrontSizeLog2 == 0)
-    WavefrontSizeLog2 = 5;
-
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
 
@@ -166,7 +165,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   LLVMContext &Ctx = F.getContext();
-  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
@@ -187,6 +186,9 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+
+  TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
+
   CallLoweringInfo = std::make_unique<AMDGPUCallLowering>(*getTargetLowering());
   InlineAsmLoweringInfo =
       std::make_unique<InlineAsmLowering>(getTargetLowering());
@@ -194,6 +196,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
       std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+}
+
+const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {

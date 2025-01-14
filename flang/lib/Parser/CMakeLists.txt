@@ -30,6 +30,7 @@ add_flang_library(FortranParser
   LINK_COMPONENTS
   Support
   FrontendOpenACC
+  FrontendOpenMP
 
   DEPENDS
   omp_gen

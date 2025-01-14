@@ -93,9 +93,12 @@ private:
 
     Edge::Kind Kind = Edge::Invalid;
     const char *FixupPtr = BlockToFix.getContent().data() + Offset;
+    Symbol *ImageBase = GetImageBaseSymbol()(getGraph());
 
     switch (Rel.getType()) {
     case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_ADDR32NB: {
+      if (!ImageBase)
+        ImageBase = &addImageBaseSymbol();
       Kind = EdgeKind_coff_x86_64::Pointer32NB;
       Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
       break;
@@ -148,6 +151,7 @@ private:
         SectionIdx = getObject().getNumberOfSections() + 1;
       else
         SectionIdx = COFFSymbol.getSectionNumber();
+
       auto *AbsSym = &getGraph().addAbsoluteSymbol(
           "secidx", orc::ExecutorAddr(SectionIdx), 2, Linkage::Strong,
           Scope::Local, false);
@@ -181,24 +185,25 @@ private:
   }
 
 public:
-  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj, const Triple T,
-                              const SubtargetFeatures Features)
-      : COFFLinkGraphBuilder(Obj, std::move(T), std::move(Features),
+  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              const Triple T, const SubtargetFeatures Features)
+      : COFFLinkGraphBuilder(Obj, std::move(SSP), std::move(T),
+                             std::move(Features),
                              getCOFFX86RelocationKindName) {}
 };
 
 class COFFLinkGraphLowering_x86_64 {
 public:
   // Lowers COFF x86_64 specific edges to generic x86_64 edges.
-  Error lowerCOFFRelocationEdges(LinkGraph &G, JITLinkContext &Ctx) {
+  Error operator()(LinkGraph &G) {
     for (auto *B : G.blocks()) {
       for (auto &E : B->edges()) {
         switch (E.getKind()) {
         case EdgeKind_coff_x86_64::Pointer32NB: {
-          auto ImageBase = getImageBaseAddress(G, Ctx);
-          if (!ImageBase)
-            return ImageBase.takeError();
-          E.setAddend(E.getAddend() - ImageBase->getValue());
+          auto ImageBase = GetImageBase(G);
+          assert(ImageBase && "__ImageBase symbol must be defined");
+          E.setAddend(E.getAddend() - ImageBase->getAddress().getValue());
           E.setKind(x86_64::Pointer32);
           break;
         }
@@ -230,58 +235,18 @@ public:
   }
 
 private:
-  static StringRef getImageBaseSymbolName() { return "__ImageBase"; }
-
   orc::ExecutorAddr getSectionStart(Section &Sec) {
     if (!SectionStartCache.count(&Sec)) {
       SectionRange Range(Sec);
       SectionStartCache[&Sec] = Range.getStart();
+      return Range.getStart();
     }
     return SectionStartCache[&Sec];
   }
 
-  Expected<orc::ExecutorAddr> getImageBaseAddress(LinkGraph &G,
-                                                  JITLinkContext &Ctx) {
-    if (this->ImageBase)
-      return this->ImageBase;
-    for (auto *S : G.defined_symbols())
-      if (S->getName() == getImageBaseSymbolName()) {
-        this->ImageBase = S->getAddress();
-        return this->ImageBase;
-      }
-
-    JITLinkContext::LookupMap Symbols;
-    Symbols[getImageBaseSymbolName()] = SymbolLookupFlags::RequiredSymbol;
-    orc::ExecutorAddr ImageBase;
-    Error Err = Error::success();
-    Ctx.lookup(Symbols,
-               createLookupContinuation([&](Expected<AsyncLookupResult> LR) {
-                 ErrorAsOutParameter EAO(&Err);
-                 if (!LR) {
-                   Err = LR.takeError();
-                   return;
-                 }
-                 ImageBase = LR->begin()->second.getAddress();
-               }));
-    if (Err)
-      return std::move(Err);
-    this->ImageBase = ImageBase;
-    return ImageBase;
-  }
-
+  GetImageBaseSymbol GetImageBase;
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
-  orc::ExecutorAddr ImageBase;
 };
-
-Error lowerEdges_COFF_x86_64(LinkGraph &G, JITLinkContext *Ctx) {
-  LLVM_DEBUG(dbgs() << "Lowering COFF x86_64 edges:\n");
-  COFFLinkGraphLowering_x86_64 GraphLowering;
-
-  if (auto Err = GraphLowering.lowerCOFFRelocationEdges(G, *Ctx))
-    return Err;
-
-  return Error::success();
-}
 } // namespace
 
 namespace llvm {
@@ -305,8 +270,8 @@ const char *getCOFFX86RelocationKindName(Edge::Kind R) {
   }
 }
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromCOFFObject_x86_64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -320,7 +285,8 @@ createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return COFFLinkGraphBuilder_x86_64(**COFFObj, (*COFFObj)->makeTriple(),
+  return COFFLinkGraphBuilder_x86_64(**COFFObj, std::move(SSP),
+                                     (*COFFObj)->makeTriple(),
                                      std::move(*Features))
       .buildGraph();
 }
@@ -338,9 +304,7 @@ void link_COFF_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add COFF edge lowering passes.
-    JITLinkContext *CtxPtr = Ctx.get();
-    Config.PreFixupPasses.push_back(
-        [CtxPtr](LinkGraph &G) { return lowerEdges_COFF_x86_64(G, CtxPtr); });
+    Config.PreFixupPasses.push_back(COFFLinkGraphLowering_x86_64());
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))

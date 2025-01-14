@@ -22,7 +22,7 @@ call_interface_impl::resolveCallable(CallOpInterface call,
     return symbolVal.getDefiningOp();
 
   // If the callable isn't a value, lookup the symbol reference.
-  auto symbolRef = callable.get<SymbolRefAttr>();
+  auto symbolRef = cast<SymbolRefAttr>(callable);
   if (symbolTable)
     return symbolTable->lookupNearestSymbolFrom(call.getOperation(), symbolRef);
   return SymbolTable::lookupNearestSymbolFrom(call.getOperation(), symbolRef);

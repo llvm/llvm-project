@@ -14,6 +14,7 @@
 // type.
 
 #include <flat_map>
+#include <vector>
 
 struct A {
   using Map = std::flat_map<A, A>;

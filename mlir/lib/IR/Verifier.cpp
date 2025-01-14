@@ -274,9 +274,9 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
     WorkItemEntry &top = worklist.back();
 
     auto visit = [](auto &&visitor, WorkItem w) {
-      if (w.is<Operation *>())
-        return visitor(w.get<Operation *>());
-      return visitor(w.get<Block *>());
+      if (auto *o = dyn_cast<Operation *>(w))
+        return visitor(o);
+      return visitor(cast<Block *>(w));
     };
 
     const bool isExit = top.getInt();
@@ -299,10 +299,9 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
             item)))
       return failure();
 
-    if (item.is<Block *>()) {
-      Block &currentBlock = *item.get<Block *>();
+    if (Block *currentBlock = dyn_cast<Block *>(item)) {
       // Skip "isolated from above operations".
-      for (Operation &o : llvm::reverse(currentBlock)) {
+      for (Operation &o : llvm::reverse(*currentBlock)) {
         if (o.getNumRegions() == 0 ||
             !o.hasTrait<OpTrait::IsIsolatedFromAbove>())
           worklist.emplace_back(&o);
@@ -310,7 +309,7 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
       continue;
     }
 
-    Operation &currentOp = *item.get<Operation *>();
+    Operation &currentOp = *cast<Operation *>(item);
     if (verifyRecursively)
       for (Region &region : llvm::reverse(currentOp.getRegions()))
         for (Block &block : llvm::reverse(region))

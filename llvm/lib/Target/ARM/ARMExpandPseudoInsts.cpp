@@ -2300,10 +2300,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
-
-      // Update call site info and delete the pseudo instruction TCRETURN.
-      if (MI.isCandidateForCallSiteEntry())
-        MI.getMF()->moveCallSiteInfo(&MI, &*NewMI);
+      // Update call info and delete the pseudo instruction TCRETURN.
+      if (MI.isCandidateForAdditionalCallInfo())
+        MI.getMF()->moveAdditionalCallInfo(&MI, &*NewMI);
       // Copy nomerge flag over to new instruction.
       if (MI.getFlag(MachineInstr::NoMerge))
         NewMI->setFlag(MachineInstr::NoMerge);
@@ -2414,8 +2413,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         NewCall->addOperand(MO);
-      if (MI.isCandidateForCallSiteEntry())
-        MI.getMF()->moveCallSiteInfo(&MI, NewCall.getInstr());
+      if (MI.isCandidateForAdditionalCallInfo())
+        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall.getInstr());
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
@@ -2590,14 +2589,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
-    case ARM::MOVsrl_glue:
-    case ARM::MOVsra_glue: {
+    case ARM::LSRs1:
+    case ARM::ASRs1: {
       // These are just fancy MOVs instructions.
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVsi),
               MI.getOperand(0).getReg())
           .add(MI.getOperand(1))
           .addImm(ARM_AM::getSORegOpc(
-              (Opcode == ARM::MOVsrl_glue ? ARM_AM::lsr : ARM_AM::asr), 1))
+              (Opcode == ARM::LSRs1 ? ARM_AM::lsr : ARM_AM::asr), 1))
           .add(predOps(ARMCC::AL))
           .addReg(ARM::CPSR, RegState::Define);
       MI.eraseFromParent();
@@ -2652,9 +2651,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       MIB.cloneMemRefs(MI);
       MIB.copyImplicitOps(MI);
-      // Update the call site info.
-      if (MI.isCandidateForCallSiteEntry())
-        MF->moveCallSiteInfo(&MI, &*MIB);
+      // Update the call info.
+      if (MI.isCandidateForAdditionalCallInfo())
+        MF->moveAdditionalCallInfo(&MI, &*MIB);
       MI.eraseFromParent();
       return true;
     }
@@ -3254,8 +3253,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MIB.cloneMemRefs(MI);
       for (unsigned i = 0; i < MI.getNumOperands(); ++i)
         MIB.add(MI.getOperand(i));
-      if (MI.isCandidateForCallSiteEntry())
-        MF.moveCallSiteInfo(&MI, MIB.getInstr());
+      if (MI.isCandidateForAdditionalCallInfo())
+        MF.moveAdditionalCallInfo(&MI, MIB.getInstr());
       MIBundleBuilder Bundler(MBB, MI);
       Bundler.append(MIB);
       Bundler.append(BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::t2BTI)));

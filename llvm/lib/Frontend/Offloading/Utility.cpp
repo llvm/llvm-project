@@ -16,7 +16,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;

@@ -4,12 +4,14 @@
 // REQUIRES: lld
 
 // Test against logging to see if we print the fully qualified names correctly.
-// RUN: %clangxx --target=x86_64-pc-linux -g -gsimple-template-names %s -o %t
-// RUN: %lldb %t -o "log enable dwarf comp" -o "target variable v3" -o exit | FileCheck %s --check-prefix=LOG
+// RUN: %clangxx --target=x86_64-pc-linux -g -gsimple-template-names %s -c -o %t1.o
+// RUN: ld.lld %t1.o -o %t1
+// RUN: %lldb %t1 -o "log enable dwarf comp" -o "target variable v3" -o exit | FileCheck %s --check-prefix=LOG
 
 // Test that we following DW_AT_signature correctly. If not, lldb might confuse the types of v1 and v2.
-// RUN: %clangxx --target=x86_64-pc-linux -g -gsimple-template-names -fdebug-types-section %s -o %t
-// RUN: %lldb %t -o "target variable v1 v2" -o exit | FileCheck %s --check-prefix=TYPE
+// RUN: %clangxx --target=x86_64-pc-linux -g -gsimple-template-names -fdebug-types-section %s -c -o %t2.o
+// RUN: ld.lld %t2.o -o %t2
+// RUN: %lldb %t2 -o "target variable v1 v2" -o exit | FileCheck %s --check-prefix=TYPE
 
 // LOG: unique name: t3<t2<int> >::t4
 
@@ -32,5 +34,3 @@ template <typename> struct t3 {
   struct t4 {};
 };
 t3<t2<int>>::t4 v3;
-
-int main() {}

@@ -1160,7 +1160,8 @@ The return type and each parameter of a function type may have a set of
 used to communicate additional information about the result or
 parameters of a function. Parameter attributes are considered to be part
 of the function, not of the function type, so functions with different
-parameter attributes can have the same function type.
+parameter attributes can have the same function type. Parameter attributes can
+be placed both on function declarations/definitions, and at call-sites.
 
 Parameter attributes are either simple keywords or strings that follow the
 specified type. Multiple parameter attributes, when required, are separated by
@@ -1168,13 +1169,30 @@ spaces. For example:
 
 .. code-block:: llvm
 
+    ; On function declarations/definitions:
     declare i32 @printf(ptr noalias nocapture, ...)
     declare i32 @atoi(i8 zeroext)
     declare signext i8 @returns_signed_char()
     define void @baz(i32 "amdgpu-flat-work-group-size"="1,256" %x)
 
+    ; On call-sites:
+    call i32 @atoi(i8 zeroext %x)
+    call signext i8 @returns_signed_char()
+
 Note that any attributes for the function result (``nonnull``,
 ``signext``) come before the result type.
+
+Parameter attributes can be broadly separated into two kinds: ABI attributes
+that affect how values are passed to/from functions, like ``zeroext``,
+``inreg``, ``byval``, or ``sret``. And optimization attributes, which provide
+additional optimization guarantees, like ``noalias``, ``nonnull`` and
+``dereferenceable``.
+
+ABI attributes must be specified *both* at the function declaration/definition
+and call-site, otherwise the behavior may be undefined. ABI attributes cannot
+be safely dropped. Optimization attributes do not have to match between
+call-site and function: The intersection of their implied semantics applies.
+Optimization attributes can also be freely dropped.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1379,6 +1397,42 @@ Currently, only the following parameter attributes are defined:
     function, returning a pointer to allocated storage disjoint from the
     storage for any other object accessible to the caller.
 
+``captures(...)``
+    This attributes restrict the ways in which the callee may capture the
+    pointer. This is not a valid attribute for return values. This attribute
+    applies only to the particular copy of the pointer passed in this argument.
+
+    The arguments of ``captures`` is a list of captured pointer components,
+    which may be ``none``, or a combination of:
+
+    - ``address``: The integral address of the pointer.
+    - ``address_is_null`` (subset of ``address``): Whether the address is null.
+    - ``provenance``: The ability to access the pointer for both read and write
+      after the function returns.
+    - ``read_provenance`` (subset of ``provenance``): The ability to access the
+      pointer only for reads after the function returns.
+
+    Additionally, it is possible to specify that some components are only
+    captured in certain locations. Currently only the return value (``ret``)
+    and other (default) locations are supported.
+
+    The `pointer capture section <pointercapture>` discusses these semantics
+    in more detail.
+
+    Some examples of how to use the attribute:
+
+    - ``captures(none)``: Pointer not captured.
+    - ``captures(address, provenance)``: Equivalent to omitting the attribute.
+    - ``captures(address)``: Address may be captured, but not provenance.
+    - ``captures(address_is_null)``: Only captures whether the address is null.
+    - ``captures(address, read_provenance)``: Both address and provenance
+      captured, but only for read-only access.
+    - ``captures(ret: address, provenance)``: Pointer captured through return
+      value only.
+    - ``captures(address_is_null, ret: address, provenance)``: The whole pointer
+      is captured through the return value, and additionally whether the pointer
+      is null is captured in some other way.
+
 .. _nocapture:
 
 ``nocapture``
@@ -1499,6 +1553,9 @@ Currently, only the following parameter attributes are defined:
     representation contains any undefined or poison bits, the behavior is
     undefined. Note that this does not refer to padding introduced by the
     type's storage representation.
+
+    If memory sanitizer is enabled, ``noundef`` becomes an ABI attribute and
+    must match between the call-site and the function definition.
 
 .. _nofpclass:
 
@@ -3318,10 +3375,92 @@ Pointer Capture
 ---------------
 
 Given a function call and a pointer that is passed as an argument or stored in
-the memory before the call, a pointer is *captured* by the call if it makes a
-copy of any part of the pointer that outlives the call.
-To be precise, a pointer is captured if one or more of the following conditions
-hold:
+memory before the call, the call may capture two components of the pointer:
+
+  * The address of the pointer, which is its integral value. This also includes
+    parts of the address or any information about the address, including the
+    fact that it does not equal one specific value. We further distinguish
+    whether only the fact that the address is/isn't null is captured.
+  * The provenance of the pointer, which is the ability to perform memory
+    accesses through the pointer, in the sense of the :ref:`pointer aliasing
+    rules <pointeraliasing>`. We further distinguish whether only read acceses
+    are allowed, or both reads and writes.
+
+For example, the following function captures the address of ``%a``, because
+it is compared to a pointer, leaking information about the identitiy of the
+pointer:
+
+.. code-block:: llvm
+
+    @glb = global i8 0
+
+    define i1 @f(ptr %a) {
+      %c = icmp eq ptr %a, @glb
+      ret i1 %c
+    }
+
+The function does not capture the provenance of the pointer, because the
+``icmp`` instruction only operates on the pointer address. The following
+function captures both the address and provenance of the pointer, as both
+may be read from ``@glb`` after the function returns:
+
+.. code-block:: llvm
+
+    @glb = global ptr null
+
+    define void @f(ptr %a) {
+      store ptr %a, ptr @glb
+      ret void
+    }
+
+The following function captures *neither* the address nor the provenance of
+the pointer:
+
+.. code-block:: llvm
+
+    define i32 @f(ptr %a) {
+      %v = load i32, ptr %a
+      ret i32
+    }
+
+While address capture includes uses of the address within the body of the
+function, provenance capture refers exclusively to the ability to perform
+accesses *after* the function returns. Memory accesses within the function
+itself are not considered pointer captures.
+
+We can further say that the capture only occurs through a specific location.
+In the following example, the pointer (both address and provenance) is captured
+through the return value only:
+
+.. code-block:: llvm
+
+    define ptr @f(ptr %a) {
+      %gep = getelementptr i8, ptr %a, i64 4
+      ret ptr %gep
+    }
+
+However, we always consider direct inspection of the pointer address
+(e.g. using ``ptrtoint``) to be location-independent. The following example
+is *not* considered a return-only capture, even though the ``ptrtoint``
+ultimately only contribues to the return value:
+
+.. code-block:: llvm
+
+    @lookup = constant [4 x i8] [i8 0, i8 1, i8 2, i8 3]
+
+    define ptr @f(ptr %a) {
+      %a.addr = ptrtoint ptr %a to i64
+      %mask = and i64 %a.addr, 3
+      %gep = getelementptr i8, ptr @lookup, i64 %mask
+      ret ptr %gep
+    }
+
+This definition is chosen to allow capture analysis to continue with the return
+value in the usual fashion.
+
+The following describes possible ways to capture a pointer in more detail,
+where unqualified uses of the word "capture" refer to capturing both address
+and provenance.
 
 1. The call stores any bit of the pointer carrying information into a place,
    and the stored bits can be read from the place by the caller after this call
@@ -3360,13 +3499,14 @@ hold:
     @lock = global i1 true
 
     define void @f(ptr %a) {
-      store ptr %a, ptr* @glb
+      store ptr %a, ptr @glb
       store atomic i1 false, ptr @lock release ; %a is captured because another thread can safely read @glb
       store ptr null, ptr @glb
       ret void
     }
 
-3. The call's behavior depends on any bit of the pointer carrying information.
+3. The call's behavior depends on any bit of the pointer carrying information
+   (address capture only).
 
 .. code-block:: llvm
 
@@ -3374,7 +3514,7 @@ hold:
 
     define void @f(ptr %a) {
       %c = icmp eq ptr %a, @glb
-      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; escapes %a
+      br i1 %c, label %BB_EXIT, label %BB_CONTINUE ; captures address of %a only
     BB_EXIT:
       call void @exit()
       unreachable
@@ -3382,8 +3522,7 @@ hold:
       ret void
     }
 
-4. The pointer is used in a volatile access as its address.
-
+4. The pointer is used as the pointer operand of a volatile access.
 
 .. _volatile:
 
@@ -3732,10 +3871,10 @@ Fast-Math Flags
 
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), and :ref:`phi <i_phi>`,
-:ref:`select <i_select>`, or :ref:`call <i_call>` instructions that return
-floating-point types may use the following flags to enable otherwise unsafe
-floating-point transformations.
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
+:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
+:ref:`call <i_call>` instructions that return floating-point types may use the
+following flags to enable otherwise unsafe floating-point transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
@@ -10827,9 +10966,9 @@ Example:
 
 .. code-block:: llvm
 
-      %agg1 = insertvalue {i32, float} undef, i32 1, 0              ; yields {i32 1, float undef}
-      %agg2 = insertvalue {i32, float} %agg1, float %val, 1         ; yields {i32 1, float %val}
-      %agg3 = insertvalue {i32, {float}} undef, float %val, 1, 0    ; yields {i32 undef, {float %val}}
+      %agg1 = insertvalue {i32, float} poison, i32 1, 0              ; yields {i32 1, float poison}
+      %agg2 = insertvalue {i32, float} %agg1, float %val, 1          ; yields {i32 1, float %val}
+      %agg3 = insertvalue {i32, {float}} poison, float %val, 1, 0    ; yields {i32 poison, {float %val}}
 
 .. _memoryops:
 
@@ -11833,6 +11972,8 @@ Example:
       %Y = sext i1 true to i32             ; yields i32:-1
       %Z = sext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
 
+.. _i_fptrunc:
+
 '``fptrunc .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -11841,7 +11982,7 @@ Syntax:
 
 ::
 
-      <result> = fptrunc <ty> <value> to <ty2>             ; yields ty2
+      <result> = fptrunc [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -11873,6 +12014,10 @@ the low order bits leads to an all-0 payload, this cannot be represented as a
 signaling NaN (it would represent an infinity instead), so in that case
 "Unchanged NaN propagation" is not possible.
 
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations.
+
 Example:
 """"""""
 
@@ -11880,6 +12025,8 @@ Example:
 
       %X = fptrunc double 16777217.0 to float    ; yields float:16777216.0
       %Y = fptrunc double 1.0E+300 to half       ; yields half:+infinity
+
+.. _i_fpext:
 
 '``fpext .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -11889,7 +12036,7 @@ Syntax:
 
 ::
 
-      <result> = fpext <ty> <value> to <ty2>             ; yields ty2
+      <result> = fpext [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -11917,6 +12064,10 @@ NaN values follow the usual :ref:`NaN behaviors <floatnan>`, except that _if_ a
 NaN payload is propagated from the input ("Quieting NaN propagation" or
 "Unchanged NaN propagation" cases), then it is copied to the high order bits of
 the resulting payload, and the remaining low order bits are zero.
+
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations.
 
 Example:
 """"""""
@@ -12747,11 +12898,11 @@ This instruction requires several arguments:
    attributes like "disable-tail-calls". The ``musttail`` marker provides these
    guarantees:
 
-   #. The call will not cause unbounded stack growth if it is part of a
+   -  The call will not cause unbounded stack growth if it is part of a
       recursive cycle in the call graph.
-   #. Arguments with the :ref:`inalloca <attr_inalloca>` or
+   -  Arguments with the :ref:`inalloca <attr_inalloca>` or
       :ref:`preallocated <attr_preallocated>` attribute are forwarded in place.
-   #. If the musttail call appears in a function with the ``"thunk"`` attribute
+   -  If the musttail call appears in a function with the ``"thunk"`` attribute
       and the caller and callee both have varargs, then any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
       the return value of the callee is returned to the caller's caller, even
@@ -12762,7 +12913,7 @@ This instruction requires several arguments:
    argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
-.. code-block:: llvm
+   .. code-block:: llvm
 
       declare void @take_byval(ptr byval(i64))
       declare void @take_ptr(ptr)
@@ -12816,31 +12967,30 @@ This instruction requires several arguments:
         ret void
       }
 
-
    Calls marked ``musttail`` must obey the following additional rules:
 
-   - The call must immediately precede a :ref:`ret <i_ret>` instruction,
-     or a pointer bitcast followed by a ret instruction.
-   - The ret instruction must return the (possibly bitcasted) value
-     produced by the call, undef, or void.
-   - The calling conventions of the caller and callee must match.
-   - The callee must be varargs iff the caller is varargs. Bitcasting a
-     non-varargs function to the appropriate varargs type is legal so
-     long as the non-varargs prefixes obey the other rules.
-   - The return type must not undergo automatic conversion to an `sret` pointer.
+   -  The call must immediately precede a :ref:`ret <i_ret>` instruction,
+      or a pointer bitcast followed by a ret instruction.
+   -  The ret instruction must return the (possibly bitcasted) value
+      produced by the call, undef, or void.
+   -  The calling conventions of the caller and callee must match.
+   -  The callee must be varargs iff the caller is varargs. Bitcasting a
+      non-varargs function to the appropriate varargs type is legal so
+      long as the non-varargs prefixes obey the other rules.
+   -  The return type must not undergo automatic conversion to an `sret` pointer.
 
-  In addition, if the calling convention is not `swifttailcc` or `tailcc`:
+   In addition, if the calling convention is not `swifttailcc` or `tailcc`:
 
-   - All ABI-impacting function attributes, such as sret, byval, inreg,
-     returned, and inalloca, must match.
-   - The caller and callee prototypes must match. Pointer types of parameters
-     or return types may differ in pointee type, but not in address space.
+   -  All ABI-impacting function attributes, such as sret, byval, inreg,
+      returned, and inalloca, must match.
+   -  The caller and callee prototypes must match. Pointer types of parameters
+      or return types may differ in pointee type, but not in address space.
 
-  On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
+   On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
-   - Only these ABI-impacting attributes attributes are allowed: sret, byval,
-     swiftself, and swiftasync.
-   - Prototypes are not required to match.
+   -  Only these ABI-impacting attributes attributes are allowed: sret, byval,
+      swiftself, and swiftasync.
+   -  Prototypes are not required to match.
 
    Tail call optimization for calls marked ``tail`` is guaranteed to occur if
    the following conditions are met:
@@ -12848,11 +12998,10 @@ This instruction requires several arguments:
    -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled,
-      ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
-      is ``tailcc``
-   -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tail-call-optimization>`_
+   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is 
+      ``true``, or the calling convention is ``tailcc``.
+   -  `Platform-specific constraints are met. 
+      <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -20876,7 +21025,7 @@ Example:
 
       ;;; Expansion.
       ;; Lanes at and above %pivot are taken from %on_false
-      %atfirst = insertelement <4 x i32> undef, i32 %pivot, i32 0
+      %atfirst = insertelement <4 x i32> poison, i32 %pivot, i32 0
       %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
       %pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
       %mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
@@ -21522,9 +21671,9 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <16 x i32>  @llvm.vp.abs.v16i32 (<16 x i32> <op>, <16 x i1> <mask>, i32 <vector_length>, i1 <is_int_min_poison>)
-      declare <vscale x 4 x i32>  @llvm.vp.abs.nxv4i32 (<vscale x 4 x i32> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>, i1 <is_int_min_poison>)
-      declare <256 x i64>  @llvm.vp.abs.v256i64 (<256 x i64> <op>, <256 x i1> <mask>, i32 <vector_length>, i1 <is_int_min_poison>)
+      declare <16 x i32>  @llvm.vp.abs.v16i32 (<16 x i32> <op>, i1 <is_int_min_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.abs.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_int_min_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.abs.v256i64 (<256 x i64> <op>, i1 <is_int_min_poison>, <256 x i1> <mask>, i32 <vector_length>)
 
 Overview:
 """""""""
@@ -21536,12 +21685,12 @@ Arguments:
 """"""""""
 
 The first argument and the result have the same vector of integer type. The
-second argument is the vector mask and has the same number of elements as the
-result vector type. The third argument is the explicit vector length of the
-operation. The fourth argument must be a constant and is a flag to indicate
-whether the result value of the '``llvm.vp.abs``' intrinsic is a
-:ref:`poison value <poisonvalues>` if the first argument is statically or
-dynamically an ``INT_MIN`` value.
+second argument must be a constant and is a flag to indicate whether the result
+value of the '``llvm.vp.abs``' intrinsic is a :ref:`poison value <poisonvalues>`
+if the first argument is statically or dynamically an ``INT_MIN`` value. The
+third argument is the vector mask and has the same number of elements as the
+result vector type. The fourth argument is the explicit vector length of the
+operation.
 
 Semantics:
 """"""""""
@@ -21554,7 +21703,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %r = call <4 x i32> @llvm.vp.abs.v4i32(<4 x i32> %a, <4 x i1> %mask, i32 %evl, i1 false)
+      %r = call <4 x i32> @llvm.vp.abs.v4i32(<4 x i32> %a, i1 false, <4 x i1> %mask, i32 %evl)
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a, i1 false)
@@ -25260,9 +25409,9 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <16 x i32>  @llvm.vp.ctlz.v16i32 (<16 x i32> <op>, <16 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
-      declare <vscale x 4 x i32>  @llvm.vp.ctlz.nxv4i32 (<vscale x 4 x i32> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
-      declare <256 x i64>  @llvm.vp.ctlz.v256i64 (<256 x i64> <op>, <256 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
+      declare <16 x i32>  @llvm.vp.ctlz.v16i32 (<16 x i32> <op>, i1 <is_zero_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.ctlz.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_zero_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.ctlz.v256i64 (<256 x i64> <op>, i1 <is_zero_poison>, <256 x i1> <mask>, i32 <vector_length>)
 
 Overview:
 """""""""
@@ -25274,11 +25423,11 @@ Arguments:
 """"""""""
 
 The first argument and the result have the same vector of integer type. The
-second argument is the vector mask and has the same number of elements as the
-result vector type. The third argument is the explicit vector length of the
-operation. The fourth argument is a constant flag that indicates whether the
-intrinsic returns a valid result if the first argument is zero. If the first
-argument is zero and the fourth argument is true, the result is poison.
+second argument is a constant flag that indicates whether the intrinsic returns
+a valid result if the first argument is zero. The third argument is the vector
+mask and has the same number of elements as the result vector type. the fourth
+argument is the explicit vector length of the operation. If the first argument
+is zero and the second argument is true, the result is poison.
 
 Semantics:
 """"""""""
@@ -25291,7 +25440,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %r = call <4 x i32> @llvm.vp.ctlz.v4i32(<4 x i32> %a, <4 x i1> %mask, i32 %evl, i1 false)
+      %r = call <4 x i32> @llvm.vp.ctlz.v4i32(<4 x i32> %a, i1 false, <4 x i1> %mask, i32 %evl)
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
@@ -25309,9 +25458,9 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <16 x i32>  @llvm.vp.cttz.v16i32 (<16 x i32> <op>, <16 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
-      declare <vscale x 4 x i32>  @llvm.vp.cttz.nxv4i32 (<vscale x 4 x i32> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
-      declare <256 x i64>  @llvm.vp.cttz.v256i64 (<256 x i64> <op>, <256 x i1> <mask>, i32 <vector_length>, i1 <is_zero_poison>)
+      declare <16 x i32>  @llvm.vp.cttz.v16i32 (<16 x i32> <op>, i1 <is_zero_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i32>  @llvm.vp.cttz.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_zero_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i64>  @llvm.vp.cttz.v256i64 (<256 x i64> <op>, i1 <is_zero_poison>, <256 x i1> <mask>, i32 <vector_length>)
 
 Overview:
 """""""""
@@ -25323,11 +25472,11 @@ Arguments:
 """"""""""
 
 The first argument and the result have the same vector of integer type. The
-second argument is the vector mask and has the same number of elements as the
-result vector type. The third argument is the explicit vector length of the
-operation. The fourth argument is a constant flag that indicates whether the
-intrinsic returns a valid result if the first argument is zero. If the first
-argument is zero and the fourth argument is true, the result is poison.
+second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is zero. The third argument is
+the vector mask and has the same number of elements as the result vector type.
+The fourth argument is the explicit vector length of the operation. If the
+first argument is zero and the second argument is true, the result is poison.
 
 Semantics:
 """"""""""
@@ -25340,7 +25489,7 @@ Examples:
 
 .. code-block:: llvm
 
-      %r = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %a, <4 x i1> %mask, i32 %evl, i1 false)
+      %r = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %a, i1 false, <4 x i1> %mask, i32 %evl)
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)

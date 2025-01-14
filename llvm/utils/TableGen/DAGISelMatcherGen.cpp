@@ -307,9 +307,9 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
     // "MY_PAT:op1:op2". We should already have validated that the uses are
     // consistent.
     std::string PatternName = std::string(N.getOperator()->getName());
-    for (unsigned i = 0; i < N.getNumChildren(); ++i) {
+    for (const TreePatternNode &Child : N.children()) {
       PatternName += ":";
-      PatternName += N.getChild(i).getName();
+      PatternName += Child.getName();
     }
 
     if (recordUniqueNode(PatternName)) {
@@ -588,9 +588,9 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
       NamedComplexPatternOperands[N.getName()] = NextRecordedOperandNo + 1;
     } else {
       unsigned CurOp = NextRecordedOperandNo;
-      for (unsigned i = 0; i < N.getNumChildren(); ++i) {
-        NamedComplexPatternOperands[N.getChild(i).getName()] = CurOp + 1;
-        CurOp += N.getChild(i).getNumMIResults(CGP);
+      for (const TreePatternNode &Child : N.children()) {
+        NamedComplexPatternOperands[Child.getName()] = CurOp + 1;
+        CurOp += Child.getNumMIResults(CGP);
       }
     }
 
@@ -771,8 +771,8 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
   if (mayInstNodeLoadOrStore(N, CGP))
     ++Count;
 
-  for (unsigned i = 0, e = N.getNumChildren(); i != e; ++i)
-    Count += numNodesThatMayLoadOrStore(N.getChild(i), CGP);
+  for (const TreePatternNode &Child : N.children())
+    Count += numNodesThatMayLoadOrStore(Child, CGP);
 
   return Count;
 }
