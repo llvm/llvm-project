@@ -6774,6 +6774,18 @@ static Expected<Function *> createOutlinedFunction(
   auto Func =
       Function::Create(FuncType, GlobalValue::InternalLinkage, FuncName, M);
 
+  // Forward target-cpu and target-features function attributes from the
+  // original function to the new outlined function.
+  Function *ParentFn = Builder.GetInsertBlock()->getParent();
+
+  auto TargetCpuAttr = ParentFn->getFnAttribute("target-cpu");
+  if (TargetCpuAttr.isStringAttribute())
+    Func->addFnAttr(TargetCpuAttr);
+
+  auto TargetFeaturesAttr = ParentFn->getFnAttribute("target-features");
+  if (TargetFeaturesAttr.isStringAttribute())
+    Func->addFnAttr(TargetFeaturesAttr);
+
   if (OMPBuilder.Config.isTargetDevice()) {
     Value *ExecMode =
         OMPBuilder.emitKernelExecutionMode(FuncName, DefaultAttrs.ExecFlags);
