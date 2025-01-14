@@ -17,6 +17,12 @@
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                 "Cortex-A35 ARM processors">;
 
+def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
+                                   "Cortex-A320 ARM processors", [
+                                   FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
+                                   FeaturePostRAScheduler]>;
+
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [
                                    FeatureFuseAES,
@@ -709,6 +715,16 @@ def TuneOryon  : SubtargetFeature<"oryon-1", "ARMProcFamily",
                                     HasV8_6aOps]>;
 
 def ProcessorFeatures {
+  list<SubtargetFeature> A320 = [HasV9_2aOps, FeatureNEON, FeatureMTE,
+                                 FeatureSVEBitPerm, FeatureFP16FML, FeatureFullFP16,
+                                 FeatureETE, FeaturePerfMon, FeatureCCIDX,
+                                 FeatureCCPP, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureJS, FeatureLOR,
+                                 FeatureLSE, FeaturePAN, FeaturePAN_RWV,
+                                 FeaturePAuth, FeaturePsUAO, FeatureRAS,
+                                 FeatureRDM, FeatureTRBE, FeatureVH,
+                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                 FeatureSVE, FeatureSVE2];
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                  FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
   list<SubtargetFeature> A55  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -1109,10 +1125,12 @@ class ProcessorAlias<string n, string alias> {
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
                       FeatureEnableSelectOptimize]>;
-def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA35]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
+def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA35]>;
+def : ProcessorModel<"cortex-a320", CortexA510Model, ProcessorFeatures.A320,
+                     [TuneA320]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;
 def : ProcessorModel<"cortex-a55", CortexA55Model, ProcessorFeatures.A55,
