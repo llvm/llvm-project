@@ -577,7 +577,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
 
       populateByRefInitAndCleanupRegions(
-          firOpBuilder, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
+          converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
           result.getInitPrivateArg(), result.getInitMoldArg(),
           result.getDeallocRegion(),
           isFirstPrivate ? DeclOperationKind::FirstPrivate

@@ -33,6 +33,8 @@ class ShapeShiftOp;
 
 namespace Fortran {
 namespace lower {
+class AbstractConverter;
+
 namespace omp {
 
 enum class DeclOperationKind { Private, FirstPrivate, Reduction };
@@ -49,7 +51,7 @@ inline bool isReduction(DeclOperationKind kind) {
 /// initialization (for privatization). If this is for a privatizer, set
 /// `isPrivate` to `true`.
 void populateByRefInitAndCleanupRegions(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
+    AbstractConverter &converter, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,

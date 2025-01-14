@@ -12,6 +12,8 @@
 
 #include "PrivateReductionUtils.h"
 
+#include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -37,9 +39,11 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static void createCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
-                                mlir::Type argType, mlir::Region &cleanupRegion,
+static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
+                                mlir::Location loc, mlir::Type argType,
+                                mlir::Region &cleanupRegion,
                                 const Fortran::semantics::Symbol *sym) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
                                            {argType}, {loc});
@@ -54,6 +58,29 @@ static void createCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Type valTy = fir::unwrapRefType(argType);
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
+    // TODO: what about undoing init of unboxed derived types?
+    if (auto recTy = mlir::dyn_cast<fir::RecordType>(
+            fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(boxTy)))) {
+      mlir::Type eleTy = boxTy.getEleTy();
+      if (mlir::isa<fir::PointerType, fir::HeapType>(eleTy)) {
+        mlir::Type mutableBoxTy =
+            fir::ReferenceType::get(fir::BoxType::get(eleTy));
+        mlir::Value converted =
+            builder.createConvert(loc, mutableBoxTy, block->getArgument(0));
+        if (recTy.getNumLenParams() > 0)
+          TODO(loc, "Deallocate box with length parameters");
+        fir::MutableBoxValue mutableBox{converted, /*lenParameters=*/{},
+                                        /*mutableProperties=*/{}};
+        Fortran::lower::genDeallocateIfAllocated(converter, mutableBox, loc);
+        builder.create<mlir::omp::YieldOp>(loc);
+        return;
+      }
+    }
+
+    // TODO: just replace this whole body with
+    // Fortran::lower::genDeallocateIfAllocated (not done now to avoid test
+    // churn)
+
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
@@ -194,11 +221,12 @@ static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
 }
 
 void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argType,
-    mlir::Value scalarInitValue, mlir::Block *initBlock,
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Type argType, mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type ty = fir::unwrapRefType(argType);
   builder.setInsertionPointToEnd(initBlock);
   auto yield = [&](mlir::Value ret) {
@@ -316,7 +344,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
           /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
       fir::StoreOp lastOp = builder.create<fir::StoreOp>(loc, box, boxAlloca);
 
-      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
 
       if (ifUnallocated)
         builder.setInsertionPointAfter(ifUnallocated);
@@ -364,7 +392,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
            "createTempFromMold decides this statically");
     if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
       mlir::OpBuilder::InsertionGuard guard(builder);
-      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
     } else {
       assert(!isAllocatableOrPointer &&
              "Pointer-like arrays must be heap allocated");
@@ -418,7 +446,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
         loc, eleTy, /*name=*/{}, /*shape=*/{}, /*lenParams=*/len);
     mlir::Value boxChar = charExprHelper.createEmboxChar(privateAddr, len);
 
-    createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+    createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
 
     builder.setInsertionPointToEnd(initBlock);
     yield(boxChar);
@@ -436,7 +464,7 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
         /*isFirstPrivate=*/kind == DeclOperationKind::FirstPrivate);
 
     if (sym && hasFinalization(*sym))
-      createCleanupRegion(builder, loc, argType, cleanupRegion, sym);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
 
     builder.setInsertionPointToEnd(initBlock);
     yield(allocatedPrivVarArg);
