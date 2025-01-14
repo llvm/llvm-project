@@ -65,6 +65,7 @@ void __clear_cache(void *start, void *end) {
 #elif defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
   FlushInstructionCache(GetCurrentProcess(), start, end - start);
 #elif defined(__arm__) && !defined(__APPLE__)
+#elif defined(__s390__)
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
   struct arm_sync_icache_args arg;
 
