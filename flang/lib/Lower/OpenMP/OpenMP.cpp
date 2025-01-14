@@ -1754,7 +1754,7 @@ static void genTeamsClauses(
     cp.processNumTeams(stmtCtx, clauseOps);
     cp.processThreadLimit(stmtCtx, clauseOps);
   }
-  
+
   cp.processReduction(loc, clauseOps, reductionSyms);
   // TODO Support delayed privatization.
 }
