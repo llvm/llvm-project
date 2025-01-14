@@ -402,14 +402,13 @@ namespace NoInitMapLeak {
 
   constexpr int a[] = {1,2,3,4/0,5}; // both-error {{must be initialized by a constant expression}} \
                                      // both-note {{division by zero}} \
-                                     // ref-note {{declared here}}
+                                     // both-note {{declared here}}
 
-  /// FIXME: This should fail in the new interpreter as well.
-  constexpr int b = a[0]; // ref-error {{must be initialized by a constant expression}} \
-                          // ref-note {{is not a constant expression}} \
-                          // ref-note {{declared here}}
-  static_assert(b == 1, ""); // ref-error {{not an integral constant expression}} \
-                             // ref-note {{not a constant expression}}
+  constexpr int b = a[0]; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{is not a constant expression}} \
+                          // both-note {{declared here}}
+  static_assert(b == 1, ""); // both-error {{not an integral constant expression}} \
+                             // both-note {{not a constant expression}}
 
   constexpr int f() { // both-error {{never produces a constant expression}}
     int a[] = {19,2,3/0,4}; // both-note 2{{division by zero}} \

@@ -141,7 +141,7 @@ static cl::opt<bool> EnableReduceLoadOpStoreWidth(
 static cl::opt<bool> ReduceLoadOpStoreWidthForceNarrowingProfitable(
     "combiner-reduce-load-op-store-width-force-narrowing-profitable",
     cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner force override the narrowing profitable check when"
+    cl::desc("DAG combiner force override the narrowing profitable check when "
              "reducing the width of load/op/store sequences"));
 
 static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
@@ -16011,6 +16011,14 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   if (N0.getOpcode() == ISD::BUILD_PAIR)
     if (SDValue CombineLD = CombineConsecutiveLoads(N0.getNode(), VT))
       return CombineLD;
+
+  // int_vt (bitcast (vec_vt (scalar_to_vector elt_vt:x)))
+  //   => int_vt (any_extend elt_vt:x)
+  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
+    SDValue SrcScalar = N0.getOperand(0);
+    if (SrcScalar.getValueType().isScalarInteger())
+      return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
+  }
 
   // Remove double bitcasts from shuffles - this is often a legacy of
   // XformToShuffleWithZero being used to combine bitmaskings (of

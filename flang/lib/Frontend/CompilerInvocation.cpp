@@ -766,6 +766,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
+  // -fsave-main-program
+  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
+  }
+
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
     opts.features.Enable(Fortran::common::LanguageFeature::OldStyleParameter);
@@ -1430,6 +1435,10 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  // Process the timing-related options.
+  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+    invoc.enableTimers = true;
 
   invoc.setArgv0(argv0);
 

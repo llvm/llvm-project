@@ -21,11 +21,13 @@ MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))
 MODULE_PASS("amdgpu-lower-ctor-dtor", AMDGPUCtorDtorLoweringPass())
 MODULE_PASS("amdgpu-sw-lower-lds", AMDGPUSwLowerLDSPass(*this))
+MODULE_PASS("amdgpu-lower-enqueued-block", AMDGPUOpenCLEnqueuedBlockLoweringPass())
 MODULE_PASS("amdgpu-lower-module-lds", AMDGPULowerModuleLDSPass(*this))
 MODULE_PASS("amdgpu-perf-hint",
             AMDGPUPerfHintAnalysisPass(
               *static_cast<const GCNTargetMachine *>(this)))
 MODULE_PASS("amdgpu-printf-runtime-binding", AMDGPUPrintfRuntimeBindingPass())
+MODULE_PASS("amdgpu-remove-incompatible-functions", AMDGPURemoveIncompatibleFunctionsPass(*this))
 MODULE_PASS("amdgpu-unify-metadata", AMDGPUUnifyMetadataPass())
 #undef MODULE_PASS
 

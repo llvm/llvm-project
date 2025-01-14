@@ -683,17 +683,17 @@ ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
       }
     }
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
-    if (CB->isArgOperand(ArgUse.U)) {
+    if (CB->isArgOperand(ArgUse.U) &&
+        !CB->isByValArgument(CB->getArgOperandNo(ArgUse.U))) {
       unsigned ArgNo = CB->getArgOperandNo(ArgUse.U);
       bool IsInitialize = CB->paramHasAttr(ArgNo, Attribute::Initializes);
-      // Argument is a Write when parameter is writeonly/readnone
-      // and nocapture. Otherwise, it's a WriteWithSideEffect.
-      auto Access = CB->onlyWritesMemory(ArgNo) &&
-                            CB->paramHasAttr(ArgNo, Attribute::NoCapture)
-                        ? ArgumentAccessInfo::AccessType::Write
-                        : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
-      ConstantRangeList AccessRanges;
       if (IsInitialize && ArgUse.Offset) {
+        // Argument is a Write when parameter is writeonly/readnone
+        // and nocapture. Otherwise, it's a WriteWithSideEffect.
+        auto Access = CB->onlyWritesMemory(ArgNo) && CB->doesNotCapture(ArgNo)
+                          ? ArgumentAccessInfo::AccessType::Write
+                          : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
+        ConstantRangeList AccessRanges;
         Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
         ConstantRangeList CBCRL = Attr.getValueAsConstantRangeList();
         for (ConstantRange &CR : CBCRL)
@@ -852,7 +852,7 @@ determinePointerAccessAttrs(Argument *A,
         continue;
       }
 
-      // Given we've explictily handled the callee operand above, what's left
+      // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
       const unsigned UseIndex = CB.getDataOperandNo(U);
 
@@ -890,11 +890,14 @@ determinePointerAccessAttrs(Argument *A,
           // can participate in the speculation.
           break;
 
+      const bool IsByVal =
+          CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U));
+
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
       if (CB.doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex) || IsByVal) {
         IsRead = true;
       } else if (!isRefSet(ArgMR) ||
                  CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {

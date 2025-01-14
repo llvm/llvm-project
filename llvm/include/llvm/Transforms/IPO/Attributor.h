@@ -1478,7 +1478,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 

@@ -121,7 +121,7 @@ define <64 x i8> @shuffle_v64i8_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(<64 x i8> %a) {
 ;
 ; AVX512DQ-LABEL: shuffle_v64i8_0zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovss {{.*#+}} xmm1 = [255,0,0,0]
+; AVX512DQ-NEXT:    vpmovzxbq {{.*#+}} xmm1 = [255,0]
 ; AVX512DQ-NEXT:    vandps %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;

@@ -966,11 +966,14 @@ MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+AppleMachO::AppleMachO(const Driver &D, const llvm::Triple &Triple,
+                       const ArgList &Args)
+    : MachO(D, Triple, Args), CudaInstallation(D, Triple, Args),
+      RocmInstallation(D, Triple, Args), SYCLInstallation(D, Triple, Args) {}
+
 /// Darwin - Darwin tool chain for i386 and x86_64.
 Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
-    : MachO(D, Triple, Args), TargetInitialized(false),
-      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args),
-      SYCLInstallation(D, Triple, Args) {}
+    : AppleMachO(D, Triple, Args), TargetInitialized(false) {}
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
   types::ID Ty = ToolChain::LookupTypeForExtension(Ext);
@@ -1019,18 +1022,18 @@ bool Darwin::hasBlocksRuntime() const {
   }
 }
 
-void Darwin::AddCudaIncludeArgs(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args) const {
+void AppleMachO::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args) const {
   CudaInstallation->AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
-void Darwin::AddHIPIncludeArgs(const ArgList &DriverArgs,
-                               ArgStringList &CC1Args) const {
+void AppleMachO::AddHIPIncludeArgs(const ArgList &DriverArgs,
+                                   ArgStringList &CC1Args) const {
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void Darwin::addSYCLIncludeArgs(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args) const {
+void AppleMachO::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args) const {
   SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
@@ -1124,6 +1127,8 @@ VersionTuple MachO::getLinkerVersion(const llvm::opt::ArgList &Args) const {
 }
 
 Darwin::~Darwin() {}
+
+AppleMachO::~AppleMachO() {}
 
 MachO::~MachO() {}
 
@@ -2488,7 +2493,7 @@ static void AppendPlatformPrefix(SmallString<128> &Path,
 // Returns the effective sysroot from either -isysroot or --sysroot, plus the
 // platform prefix (if any).
 llvm::SmallString<128>
-DarwinClang::GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const {
+AppleMachO::GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallString<128> Path("/");
   if (DriverArgs.hasArg(options::OPT_isysroot))
     Path = DriverArgs.getLastArgValue(options::OPT_isysroot);
@@ -2501,8 +2506,9 @@ DarwinClang::GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const {
   return Path;
 }
 
-void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                                            llvm::opt::ArgStringList &CC1Args) const {
+void AppleMachO::AddClangSystemIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
   llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
@@ -2580,7 +2586,7 @@ bool DarwinClang::AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverAr
   return getVFS().exists(Base);
 }
 
-void DarwinClang::AddClangCXXStdlibIncludeArgs(
+void AppleMachO::AddClangCXXStdlibIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   // The implementation from a base class will pass through the -stdlib to
@@ -2637,55 +2643,60 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   }
 
   case ToolChain::CST_Libstdcxx:
-    llvm::SmallString<128> UsrIncludeCxx = Sysroot;
-    llvm::sys::path::append(UsrIncludeCxx, "usr", "include", "c++");
-
-    llvm::Triple::ArchType arch = getTriple().getArch();
-    bool IsBaseFound = true;
-    switch (arch) {
-    default: break;
-
-    case llvm::Triple::x86:
-    case llvm::Triple::x86_64:
-      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.2.1",
-                                                "i686-apple-darwin10",
-                                                arch == llvm::Triple::x86_64 ? "x86_64" : "");
-      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.0.0", "i686-apple-darwin8",
-                                                 "");
-      break;
-
-    case llvm::Triple::arm:
-    case llvm::Triple::thumb:
-      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.2.1",
-                                                "arm-apple-darwin10",
-                                                "v7");
-      IsBaseFound |= AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.2.1",
-                                                "arm-apple-darwin10",
-                                                 "v6");
-      break;
-
-    case llvm::Triple::aarch64:
-      IsBaseFound = AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx,
-                                                "4.2.1",
-                                                "arm64-apple-darwin10",
-                                                "");
-      break;
-    }
-
-    if (!IsBaseFound) {
-      getDriver().Diag(diag::warn_drv_libstdcxx_not_found);
-    }
-
+    AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args);
     break;
   }
 }
 
-void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,
-                                      ArgStringList &CmdArgs) const {
+void AppleMachO::AddGnuCPlusPlusIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {}
+
+void DarwinClang::AddGnuCPlusPlusIncludePaths(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  llvm::SmallString<128> UsrIncludeCxx = GetEffectiveSysroot(DriverArgs);
+  llvm::sys::path::append(UsrIncludeCxx, "usr", "include", "c++");
+
+  llvm::Triple::ArchType arch = getTriple().getArch();
+  bool IsBaseFound = true;
+  switch (arch) {
+  default:
+    break;
+
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    IsBaseFound = AddGnuCPlusPlusIncludePaths(
+        DriverArgs, CC1Args, UsrIncludeCxx, "4.2.1", "i686-apple-darwin10",
+        arch == llvm::Triple::x86_64 ? "x86_64" : "");
+    IsBaseFound |= AddGnuCPlusPlusIncludePaths(
+        DriverArgs, CC1Args, UsrIncludeCxx, "4.0.0", "i686-apple-darwin8", "");
+    break;
+
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    IsBaseFound =
+        AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx, "4.2.1",
+                                    "arm-apple-darwin10", "v7");
+    IsBaseFound |=
+        AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx, "4.2.1",
+                                    "arm-apple-darwin10", "v6");
+    break;
+
+  case llvm::Triple::aarch64:
+    IsBaseFound =
+        AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args, UsrIncludeCxx, "4.2.1",
+                                    "arm64-apple-darwin10", "");
+    break;
+  }
+
+  if (!IsBaseFound) {
+    getDriver().Diag(diag::warn_drv_libstdcxx_not_found);
+  }
+}
+
+void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
 
   switch (Type) {
@@ -3621,7 +3632,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   return Res;
 }
 
-void Darwin::printVerboseInfo(raw_ostream &OS) const {
+void AppleMachO::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation->print(OS);
   RocmInstallation->print(OS);
 }
