@@ -1,4 +1,4 @@
-//===------ LinkGraphTests.cpp - Unit tests for core JITLink classes ------===//
+//===------ MachOLinkGraphTests.cpp - Unit tests for MachO LinkGraphs -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
