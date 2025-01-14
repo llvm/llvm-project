@@ -284,6 +284,9 @@ public:
   /// Returns memory effects.
   MemoryEffects getMemoryEffects() const;
 
+  /// Returns information from captures attribute.
+  CaptureInfo getCaptureInfo() const;
+
   /// Return the FPClassTest for nofpclass
   FPClassTest getNoFPClass() const;
 
@@ -436,6 +439,7 @@ public:
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
+  CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
@@ -1259,6 +1263,9 @@ public:
 
   /// Add memory effect attribute.
   AttrBuilder &addMemoryAttr(MemoryEffects ME);
+
+  /// Add captures attribute.
+  AttrBuilder &addCapturesAttr(CaptureInfo CI);
 
   // Add nofpclass attribute
   AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);

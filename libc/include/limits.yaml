@@ -1,4 +1,5 @@
 header: limits.h
+header_template: limits.h.def
 standards:
   - stdc
 macros: []

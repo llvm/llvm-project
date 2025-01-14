@@ -1334,7 +1334,7 @@ public:
 
     reference operator*() const {
       assert(Ptr && "dereferencing end() iterator");
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         return CurNode->D;
       return cast<NamedDecl *>(Ptr);
     }
@@ -1344,7 +1344,7 @@ public:
     inline iterator &operator++() { // ++It
       assert(!Ptr.isNull() && "Advancing empty iterator");
 
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         Ptr = CurNode->Rest;
       else
         Ptr = nullptr;

@@ -357,7 +357,7 @@ loop.end:
 
 define i64 @uncountable_exit_infinite_loop() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_infinite_loop'
-; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
+; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]

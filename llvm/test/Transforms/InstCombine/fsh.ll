@@ -1010,3 +1010,61 @@ define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
   %fsh = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 2, i32 0>)
   ret <2 x i32> %fsh
 }
+
+define i16 @fshl_i16_shl(i16 %x, i16 %y) {
+; CHECK-LABEL: @fshl_i16_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i16 [[Y:%.*]], 15
+; CHECK-NEXT:    [[RES:%.*]] = shl i16 [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+entry:
+  %res = call i16 @llvm.fshl.i16(i16 %x, i16 0, i16 %y)
+  ret i16 %res
+}
+
+define i32 @fshl_i32_shl(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_i32_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[Y:%.*]], 31
+; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %res = call i32 @llvm.fshl.i32(i32 %x, i32 0, i32 %y)
+  ret i32 %res
+}
+
+define <2 x i16> @fshl_vi16_shl(<2 x i16> %x, <2 x i16> %y) {
+; CHECK-LABEL: @fshl_vi16_shl(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i16> [[Y:%.*]], splat (i16 15)
+; CHECK-NEXT:    [[RES:%.*]] = shl <2 x i16> [[X:%.*]], [[TMP0]]
+; CHECK-NEXT:    ret <2 x i16> [[RES]]
+;
+entry:
+  %res = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> %x, <2 x i16> zeroinitializer, <2 x i16> %y)
+  ret <2 x i16> %res
+}
+
+define i32 @fshr_i32_shl_negative_test(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshr_i32_shl_negative_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.fshr.i32(i32 [[X:%.*]], i32 0, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %res = call i32 @llvm.fshr.i32(i32 %x, i32 0, i32 %y)
+  ret i32 %res
+}
+
+define <2 x i31> @fshl_vi31_shl_negative_test(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_vi31_shl_negative_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> zeroinitializer, <2 x i31> [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i31> [[RES]]
+;
+entry:
+  %res = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> zeroinitializer, <2 x i31>  %y)
+  ret <2 x i31>  %res
+}

@@ -33,13 +33,13 @@ Macros:
 
 #  if _LIBCPP_STD_VER >= 20
 
-using __standard_header_cstdbool _LIBCPP_DEPRECATED_("removed in C++20.") = void;
-using __use_standard_header_cstdbool                                      = __standard_header_cstdbool;
+using __standard_header_cstdbool _LIBCPP_DEPRECATED_("removed in C++20.") _LIBCPP_NODEBUG = void;
+using __use_standard_header_cstdbool _LIBCPP_NODEBUG                                      = __standard_header_cstdbool;
 
 #  elif _LIBCPP_STD_VER >= 17
 
-using __standard_header_cstdbool _LIBCPP_DEPRECATED = void;
-using __use_standard_header_cstdbool                = __standard_header_cstdbool;
+using __standard_header_cstdbool _LIBCPP_DEPRECATED _LIBCPP_NODEBUG = void;
+using __use_standard_header_cstdbool _LIBCPP_NODEBUG                = __standard_header_cstdbool;
 
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

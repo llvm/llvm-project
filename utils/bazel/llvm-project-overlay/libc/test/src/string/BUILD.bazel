@@ -23,7 +23,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     libc_function_deps = [
-        "//libc:strcpy_sanitized",
+        "//libc:strcpy",
     ],
 )
 

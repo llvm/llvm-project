@@ -2333,7 +2333,7 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
-  /// The break constructor initializers style to use.
+  /// The break binary operations style to use.
   /// \version 20
   BreakBinaryOperationsStyle BreakBinaryOperations;
 
@@ -2545,6 +2545,7 @@ struct FormatStyle {
   /// lists.
   ///
   /// Important differences:
+  ///
   /// * No spaces inside the braced list.
   /// * No line break before the closing brace.
   /// * Indentation with the continuation indent, not with the block indent.
