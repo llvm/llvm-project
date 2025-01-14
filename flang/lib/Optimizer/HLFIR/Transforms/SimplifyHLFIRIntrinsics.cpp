@@ -534,10 +534,14 @@ public:
     // in their lowermost dimensions.
     // Especially, when LLVM can recognize the continuity
     // and vectorize the loops properly.
-    // TODO: we need to recognize the cases when the continuity
+    // Note that the contiguous MATMUL inlining is correct
+    // even when the input arrays are not contiguous.
+    // TODO: we can try to recognize the cases when the continuity
     // is not statically obvious and try to generate an explicitly
-    // continuous version under a dynamic check. The fallback
-    // implementation may use genElementalMatmul() with
+    // continuous version under a dynamic check. This should allow
+    // LLVM to vectorize the loops better. Note that this can
+    // also be postponed up to the LoopVersioning pass.
+    // The fallback implementation may use genElementalMatmul() with
     // an hlfir.assign into the result of eval_in_mem.
     mlir::LogicalResult rewriteResult =
         genContiguousMatmul(loc, builder, hlfir::Entity{resultArray},
@@ -629,6 +633,13 @@ private:
     if (mlir::isa<fir::LogicalType>(type))
       return builder.createConvert(loc, builder.getIntegerType(1), value);
 
+    // TODO: the multiplications/additions by/of zero resulting from
+    // complex * real are optimized by LLVM under -fno-signed-zeros
+    // -fno-honor-nans.
+    // We can make them disappear by default if we:
+    //   * either expand the complex multiplication into real
+    //     operations, OR
+    //   * set nnan nsz fast-math flags to the complex operations.
     if (fir::isa_complex(type) && !fir::isa_complex(value.getType())) {
       mlir::Value zeroCmplx = fir::factory::createZeroValue(builder, loc, type);
       fir::factory::Complex helper(builder, loc);
