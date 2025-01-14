@@ -1379,6 +1379,17 @@ class Base(unittest.TestCase):
             return arch in ["aarch64", "arm64", "arm64e"]
         return False
 
+    def isLoongArch(self):
+        """Returns true if the architecture is LoongArch."""
+        arch = self.getArchitecture().lower()
+        return arch in ["loongarch64", "loongarch32"]
+
+    def isLoongArchLSX(self):
+        return self.isLoongArch() and "lsx" in self.getCPUInfo()
+
+    def isLoongArchLASX(self):
+        return self.isLoongArch() and "lasx" in self.getCPUInfo()
+
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
         return lldbplatformutil.getArchitecture()
