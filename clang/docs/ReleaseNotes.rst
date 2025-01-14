@@ -1076,6 +1076,15 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- SME keyword attributes which apply to function types are now represented in the
+  mangling of the type. This means that ``void foo(void (*f)() __arm_streaming);``
+  now has a different mangling from ``void foo(void (*f)());``.
+
+- The ``__arm_agnostic`` keyword attribute was added to let users describe
+  a function that preserves SME state enabled by PSTATE.ZA without having to share
+  this state with its callers and without making the assumption that this state
+  exists.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   For AArch64:
