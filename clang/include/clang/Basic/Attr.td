@@ -1903,7 +1903,7 @@ def Leaf : InheritableAttr {
 }
 
 def ExplicitInit : InheritableAttr {
-  let Spellings = [Clang<"requires_explicit_initialization">];
+  let Spellings = [Clang<"require_explicit_initialization">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
   let Documentation = [ExplicitInitDocs];
   let SimpleHandler = 1;

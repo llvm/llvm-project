@@ -554,16 +554,16 @@ struct full_of_empty empty_test_2(void) {
 
 struct with_explicit_field {
   int x;
-  int y [[clang::requires_explicit_initialization]]; // #FIELD_Y
+  int y [[clang::require_explicit_initialization]]; // #FIELD_Y
 };
 
 struct with_explicit_array {
-  [[clang::requires_explicit_initialization]] int arr[2]; // #FIELD_ARR
+  [[clang::require_explicit_initialization]] int arr[2]; // #FIELD_ARR
 };
 
 struct with_explicit_flex_array {
   int x;
-  [[clang::requires_explicit_initialization]] int flex_arr[]; // #FIELD_FLEX_ARR
+  [[clang::require_explicit_initialization]] int flex_arr[]; // #FIELD_FLEX_ARR
 };
 
 void aggregate() {

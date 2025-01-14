@@ -1483,14 +1483,14 @@ struct Inherit : Bases... { // #TYPE_INHERIT
 
 template<class... Bases>
 struct InheritWithExplicit : Bases... { // #TYPE_INHERIT_WITH_EXPLICIT
-  int g2 [[clang::requires_explicit_initialization]]; // #FIELD_G2
+  int g2 [[clang::require_explicit_initialization]]; // #FIELD_G2
 };
 
 struct Special {};
 
 template<>
 struct Inherit<Special> {
-  int g3 [[clang::requires_explicit_initialization]]; // #FIELD_G3
+  int g3 [[clang::require_explicit_initialization]]; // #FIELD_G3
 };
 
 template<>
@@ -1501,23 +1501,23 @@ struct InheritWithExplicit<Special> {
 void aggregate() {
   struct NonAgg {
     NonAgg() { }
-    [[clang::requires_explicit_initialization]] int na;  // expected-warning {{'requires_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
+    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
   };
   NonAgg nonagg;  // no-warning
   (void)nonagg;
 
   struct S {
-    [[clang::requires_explicit_initialization]] int s1; // #FIELD_S1
+    [[clang::require_explicit_initialization]] int s1; // #FIELD_S1
     int s2;
     int s3 = 12;
-    [[clang::requires_explicit_initialization]] int s4 = 100; // #FIELD_S4
+    [[clang::require_explicit_initialization]] int s4 = 100; // #FIELD_S4
     static void foo(S) { }
   };
 
   struct C {
 #if __cplusplus < 202002L
     // expected-warning@+1 {{explicit initialization of field 'c1' will not be enforced in C++20 and later because 'C' has a user-declared constructor, making the type no longer an aggregate}}
-    [[clang::requires_explicit_initialization]]
+    [[clang::require_explicit_initialization]]
 #endif
     int c1; // #FIELD_C1
     C() = default;  // Test pre-C++20 aggregates
@@ -1525,7 +1525,7 @@ void aggregate() {
 
   struct D : S { // #TYPE_D
     int d1;
-    int d2 [[clang::requires_explicit_initialization]]; // #FIELD_D2
+    int d2 [[clang::require_explicit_initialization]]; // #FIELD_D2
   };
 
   struct D2 : D {  // #TYPE_D2
@@ -1533,10 +1533,10 @@ void aggregate() {
 
   struct E {  // #TYPE_E
     int e1;
-    D e2 [[clang::requires_explicit_initialization]]; // #FIELD_E2
+    D e2 [[clang::require_explicit_initialization]]; // #FIELD_E2
     struct {
-      [[clang::requires_explicit_initialization]] D e3;
-      D2 e4 [[clang::requires_explicit_initialization]];
+      [[clang::require_explicit_initialization]] D e3;
+      D2 e4 [[clang::require_explicit_initialization]];
     };
   };
 
@@ -1636,7 +1636,7 @@ void aggregate() {
   InheritWithExplicit<> agg;  // expected-warning {{field in 'InheritWithExplicit<>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G2 {{'g2' declared here}}
   (void)agg;
 
-  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'requires_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
+  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
   (void)polymorphic;
 
   Inherit<Special> specialized_explicit;  // expected-warning {{field in 'Inherit<Special>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G3 {{'g3' declared here}}
