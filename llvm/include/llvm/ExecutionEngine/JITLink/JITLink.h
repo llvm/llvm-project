@@ -1269,10 +1269,11 @@ public:
     return splitBlockImpl(std::move(Blocks), Cache);
   }
 
-  //
+  /// Intern the given string in the LinkGraph's SymbolStringPool.
   orc::SymbolStringPtr intern(StringRef SymbolName) {
     return SSP->intern(SymbolName);
   }
+
   /// Add an external symbol.
   /// Some formats (e.g. ELF) allow Symbols to have sizes. For Symbols whose
   /// size is not known, you should substitute '0'.
