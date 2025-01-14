@@ -1210,7 +1210,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
 /// Lex a floating point constant starting with +.
 ///    FPConstant   [-+]?[0-9]+[.][0-9]*([eE][-+]?[0-9]+)?
 ///    HexFPLiteral [-+]?0x[0-9A-Fa-f]+.[0-9A-Fa-f]*[pP][-+]?[0-9]+
-///    HexFPSpecial [-+](inf|qnan|nan\(0x[0-9A-Fa-f]+\))
+///    HexFPSpecial [-+](inf|qnan|s?nan\(0x[0-9A-Fa-f]+\))
 lltok::Kind LLLexer::LexPositive() {
   // If it's not numeric, check for special floating-point values.
   if (!isdigit(static_cast<unsigned char>(CurPtr[0])))
@@ -1251,7 +1251,7 @@ lltok::Kind LLLexer::LexPositive() {
 
 /// Lex all tokens that start with a + or - that could be a float literal.
 ///    HexFPLiteral      [-+]?0x[0-9A-Fa-f]+.[0-9A-Fa-f]*[pP][-+]?[0-9]+
-///    HexFPSpecial      [-+](inf|qnan|nan\(0x[0-9A-Fa-f]+\))
+///    HexFPSpecial      [-+](inf|qnan|s?nan\(0x[0-9A-Fa-f]+\))
 lltok::Kind LLLexer::LexFloatStr() {
   // At the point we enter this function, we may have seen a few characters
   // already, but how many differs based on the entry point. Rewind to the
@@ -1284,7 +1284,7 @@ lltok::Kind LLLexer::LexFloatStr() {
     }
 
     // NaN with payload.
-    if (Label == "nan" && *CurPtr == '(') {
+    if ((Label == "nan" || Label == "snan") && *CurPtr == '(') {
       const char *Payload = ++CurPtr;
       while (*CurPtr && *CurPtr != ')')
         ++CurPtr;

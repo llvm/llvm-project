@@ -4612,34 +4612,38 @@ Simple Constants
 
 Floating-point constants support the following kinds of strings:
 
-   +---------------+---------------------------------------------------+
-   | Syntax        | Description                                       |
-   +===============+===================================================+
-   | ``+4.5e-13``  | Common decimal literal. Signs are optional, as is |
-   |               | the exponent portion. The decimal point is        |
-   |               | required, as is one or more leading digits before |
-   |               | the decimal point.                                |
-   +---------------+---------------------------------------------------+
-   | ``-0x1.fp13`` | Common hexadecimal literal. Signs are optional.   |
-   |               | The decimal point is required, as is the exponent |
-   |               | portion of the literal (after the ``p``).         |
-   +---------------+---------------------------------------------------+
-   | ``+inf``,     | Positive or negative infinity. The sign is        |
-   | ``-inf``      | required.                                         |
-   +---------------+---------------------------------------------------+
-   | ``+qnan``,    | Positive or negative preferred quiet NaN, i.e.,   |
-   | ``-qnan``     | the quiet bit is set, and all other payload bits  |
-   |               | are 0. The sign is required.                      |
-   +---------------+---------------------------------------------------+
-   | ``+nan(0x1)`` | NaN value with a particular payload, specified as |
-   |               | hexadecimal (including the quiet bit as part of   |
-   |               | the payload). The sign is required.               |
-   +---------------+---------------------------------------------------+
-   | ``f0x3c00``   | Value of the floating-point number if bitcast to  |
-   |               | an integer. The number must have exactly as many  |
-   |               | hexadecimal digits as is necessary for the size   |
-   |               | of the floating-point number.                     |
-   +---------------+---------------------------------------------------+
+   +----------------+---------------------------------------------------+
+   | Syntax         | Description                                       |
+   +================+===================================================+
+   | ``+4.5e-13``   | Common decimal literal. Signs are optional, as is |
+   |                | the exponent portion. The decimal point is        |
+   |                | required, as is one or more leading digits before |
+   |                | the decimal point.                                |
+   +----------------+---------------------------------------------------+
+   | ``-0x1.fp13``  | Common hexadecimal literal. Signs are optional.   |
+   |                | The decimal point is required, as is the exponent |
+   |                | portion of the literal (after the ``p``).         |
+   +----------------+---------------------------------------------------+
+   | ``+inf``,      | Positive or negative infinity. The sign is        |
+   | ``-inf``       | required.                                         |
+   +----------------+---------------------------------------------------+
+   | ``+qnan``,     | Positive or negative preferred quiet NaN, i.e.,   |
+   | ``-qnan``      | the quiet bit is set, and all other payload bits  |
+   |                | are 0. The sign is required.                      |
+   +----------------+---------------------------------------------------+
+   | ``+nan(0x1)``  | qNaN value with a particular payload, specified   |
+   |                | as hexadecimal (not including the quiet bit as    |
+   |                | part of the payload). The sign is required.       |
+   +----------------+---------------------------------------------------+
+   | ``+snan(0x1)`` | sNaN value with a particular payload, specified   |
+   |                | as hexadecimal (not including the quiet bit as    |
+   |                | part of the payload). The sign is required.       |
+   +----------------+---------------------------------------------------+
+   | ``f0x3c00``    | Value of the floating-point number if bitcast to  |
+   |                | an integer. The number must have exactly as many  |
+   |                | hexadecimal digits as is necessary for the size   |
+   |                | of the floating-point number.                     |
+   +----------------+---------------------------------------------------+
 
 There are no constants of type x86_amx.
 

@@ -35,6 +35,8 @@
 @3 = global bfloat +qnan
 ; CHECK: @4 = global fp128 0xL00000000DEADBEEF7FFF800000000000
 @4 = global fp128 +nan(0xdeadbeef)
-; CHECK: @5 = global x86_fp80 0xK0001FFFF000000000000
-@5 = global x86_fp80 f0x0000ffff000000000000
+; CHECK: @5 = global float 0x7FF000002000000
+@5 = global float +snan(0x1)
+; CHECK: @6 = global x86_fp80 0xK0001FFFF000000000000
+@6 = global x86_fp80 f0x0000ffff000000000000
 

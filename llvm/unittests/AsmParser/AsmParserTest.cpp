@@ -120,6 +120,13 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(isa<ConstantFP>(V));
   EXPECT_TRUE(cast<ConstantFP>(V)->getValue().isNegInfinity());
 
+  const fltSemantics &Float = APFloatBase::IEEEsingle();
+  V = parseConstantValue("float +nan(0x1)", Error, M);
+  ASSERT_TRUE(V);
+  ASSERT_TRUE(isa<ConstantFP>(V));
+  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(APFloat::getNaN(Float, false, 1)));
+  EXPECT_TRUE(!cast<ConstantFP>(V)->getValue().isSignaling());
+
   V = parseConstantValue("i32 42", Error, M);
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isIntegerTy());

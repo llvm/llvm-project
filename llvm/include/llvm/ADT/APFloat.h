@@ -1347,6 +1347,25 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(
         convertFromZeroExtendedInteger(Input, InputSize, IsSigned, RM));
   }
+
+  /// Fill this APFloat with the result of a string conversion.
+  ///
+  /// The following strings are accepted for conversion purposes:
+  /// * Decimal floating-point literals (e.g., `0.1e-5`)
+  /// * Hexadecimal floating-point literals (e.g., `0x1.0p-5`)
+  /// * Positive infinity via "inf", "INFINITY", "Inf", "+Inf", or "+inf".
+  /// * Negative infinity via "-inf", "-INFINITY", or "-Inf".
+  /// * Quiet NaNs via "nan", "NaN", "nan(...)", or "NaN(...)", where the
+  ///   "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  /// * Signaling NaNs via "snan", "sNaN", "snan(...)", or "sNaN(...)", where
+  ///   the "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  ///
+  /// If the input string is none of these forms, then an error is returned.
+  ///
+  /// If a floating-point exception occurs during conversion, then no error is
+  /// returned, and the exception is indicated via opStatus.
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
