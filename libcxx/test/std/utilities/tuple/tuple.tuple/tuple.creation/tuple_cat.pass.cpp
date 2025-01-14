@@ -38,56 +38,34 @@ struct Unconstrained {
   TEST_CONSTEXPR_CXX14 Unconstrained(Arg arg) : data(arg) {}
 };
 
-TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_lvalue() {
-  auto tup = std::tuple<Unconstrained>(Unconstrained(5));
-  return std::tuple_cat(tup);
-}
-
-TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_rvalue() {
-  return std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(6)));
-}
-
-TEST_CONSTEXPR_CXX14 std::tuple<Unconstrained> test_cat_unary_and_nullary() {
-  return std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(7)), std::tuple<>());
-}
-
-#if TEST_STD_VER >= 17
-constexpr auto test_cat_unary_lvalue_ctad() {
-  auto tup = std::tuple(Unconstrained(8));
-  return std::tuple_cat(tup);
-}
-
-constexpr auto test_cat_unary_rvalue_ctad() { return std::tuple_cat(std::tuple(Unconstrained(9))); }
-
-constexpr auto test_cat_unary_and_nullary_ctad() { return std::tuple_cat(std::tuple(Unconstrained(10)), std::tuple()); }
-#endif
-
 TEST_CONSTEXPR_CXX14 bool test_tuple_cat_with_unconstrained_constructor() {
   {
-    auto tup = test_cat_unary_lvalue();
+    auto tup_src = std::tuple<Unconstrained>(Unconstrained(5));
+    auto tup     = std::tuple_cat(tup_src);
     assert(std::get<0>(tup).data == 5);
   }
   {
-    auto tup = test_cat_unary_rvalue();
+    auto tup = std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(6)));
     assert(std::get<0>(tup).data == 6);
   }
   {
-    auto tup = test_cat_unary_and_nullary();
+    auto tup = std::tuple_cat(std::tuple<Unconstrained>(Unconstrained(7)), std::tuple<>());
     assert(std::get<0>(tup).data == 7);
   }
 #if TEST_STD_VER >= 17
   {
-    auto tup = test_cat_unary_lvalue_ctad();
+    auto tup_src = std::tuple(Unconstrained(8));
+    auto tup     = std::tuple_cat(tup_src);
     ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
     assert(std::get<0>(tup).data == 8);
   }
   {
-    auto tup = test_cat_unary_rvalue_ctad();
+    auto tup = std::tuple_cat(std::tuple(Unconstrained(9)));
     ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
     assert(std::get<0>(tup).data == 9);
   }
   {
-    auto tup = test_cat_unary_and_nullary_ctad();
+    auto tup = std::tuple_cat(std::tuple(Unconstrained(10)), std::tuple());
     ASSERT_SAME_TYPE(decltype(tup), std::tuple<Unconstrained>);
     assert(std::get<0>(tup).data == 10);
   }
