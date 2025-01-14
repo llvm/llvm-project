@@ -1370,6 +1370,7 @@ OpenMP Support
   always build support for AMDGPU and NVPTX targets.
 - Added support for combined masked constructs  'omp parallel masked taskloop',
   'omp parallel masked taskloop simd','omp masked taskloop' and 'omp masked taskloop simd' directive.
+- Added support for align-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^
