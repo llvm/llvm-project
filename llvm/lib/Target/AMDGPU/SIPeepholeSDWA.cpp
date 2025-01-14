@@ -122,14 +122,11 @@ public:
       NewOp = FoldedOp;
       return true;
     }
+
     if (FoldedOp == SdwaSel::DWORD) {
       NewOp = ExistingOp;
       return true;
     }
-
-    if (FoldedOp != SdwaSel::WORD_0 && FoldedOp != SdwaSel::WORD_1 &&
-        FoldedOp != ExistingOp)
-      return false;
 
     if (ExistingOp == SdwaSel::WORD_1 || ExistingOp == SdwaSel::BYTE_2 ||
         ExistingOp == SdwaSel::BYTE_3)
@@ -146,9 +143,15 @@ public:
     }
 
     if (FoldedOp == SdwaSel::WORD_1) {
-      NewOp = (SdwaSel)((unsigned)ExistingOp + 2);
+      if (ExistingOp == SdwaSel::BYTE_0)
+        NewOp = SdwaSel::BYTE_2;
+      else if (ExistingOp == SdwaSel::BYTE_1)
+        NewOp = SdwaSel::BYTE_3;
+      else if (ExistingOp == SdwaSel::WORD_0)
+        NewOp = SdwaSel::WORD_1;
+
       return true;
-    }
+    }    
 
     return false;
   }
