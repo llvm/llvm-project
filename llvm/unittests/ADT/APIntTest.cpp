@@ -74,7 +74,7 @@ TEST(APIntTest, PowerMaxValue) {
   EXPECT_EQ(MaxValue, MaxTo3);
 }
 
-// Test that MaxValue^3 == MaxValue
+// Test that 0^0 == 1
 TEST(APIntTest, ZeroToZero) {
   APInt Zero = APInt::getZero(32);
   APInt One = APInt::getZero(32) + 1;
