@@ -241,6 +241,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
+bool IsAccessible(const Symbol &, const Scope &);
+
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &, const Symbol &);
