@@ -658,6 +658,13 @@ function(add_mlir_python_extension libname extname)
     set(eh_rtti_enable -frtti -fexceptions)
   endif ()
 
+  # Avoids domain conflict with nanobind by specifying NB_DOMAIN.
+  if(NB_DOMAIN)
+    set(_nb_domain ${NB_DOMAIN})
+  else()
+    set(_nb_domain "mlir")
+  endif ()
+
   # The actual extension library produces a shared-object or DLL and has
   # sources that must be compiled in accordance with pybind11 needs (RTTI and
   # exceptions).
@@ -667,7 +674,7 @@ function(add_mlir_python_extension libname extname)
     )
   elseif(ARG_PYTHON_BINDINGS_LIBRARY STREQUAL "nanobind")
     nanobind_add_module(${libname}
-      NB_DOMAIN mlir
+      NB_DOMAIN ${_nb_domain}
       FREE_THREADED
       ${ARG_SOURCES}
     )
