@@ -124,7 +124,8 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   V = parseConstantValue("float +nan(0x1)", Error, M);
   ASSERT_TRUE(V);
   ASSERT_TRUE(isa<ConstantFP>(V));
-  EXPECT_TRUE(cast<ConstantFP>(V)->isExactlyValue(APFloat::getNaN(Float, false, 1)));
+  EXPECT_TRUE(
+      cast<ConstantFP>(V)->isExactlyValue(APFloat::getNaN(Float, false, 1)));
   EXPECT_TRUE(!cast<ConstantFP>(V)->getValue().isSignaling());
 
   V = parseConstantValue("i32 42", Error, M);
