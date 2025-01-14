@@ -169,6 +169,11 @@ New checks
   Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
 
+- New :doc:`modernize-replace-with-std-copy
+  <clang-tidy/checks/modernize-replace-with-std-copy>` check.
+
+  Tries to replace calls to ``memmove`` and ``memcpy`` with an equivalent call to ``std::copy_n``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -318,11 +323,6 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too and to only expand macros starting with ``PRI``
   and ``__PRI`` from ``<inttypes.h>`` in the format string.
-
-- New :doc:`modernize-replace-with-stdcopy
-  <clang-tidy/checks/modernize-replace-with-stdcopy>` check.
-
-  Replaces all occurrences of the C ``memcpy`` function by ``std::copy``.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
