@@ -224,7 +224,7 @@ public:
 
 /// Concrete class used by the front-end to report problems and issues.
 ///
-/// This massages the diagnostics (e.g. handling things like "report warnings
+/// This messages the diagnostics (e.g. handling things like "report warnings
 /// as errors" and passes them off to the DiagnosticConsumer for reporting to
 /// the user. DiagnosticsEngine is tied to one translation unit and one
 /// SourceManager.
