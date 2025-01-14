@@ -644,7 +644,7 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
 /// Create a call to Masked Expand Load intrinsic
 /// \p Ty        - vector type to load
 /// \p Ptr       - base pointer for the load
-/// \p Align     - alignment for one element
+/// \p Align     - alignment of \p Ptr
 /// \p Mask      - vector of booleans which indicates what vector lanes should
 ///                be accessed in memory
 /// \p PassThru  - pass-through value that is used to fill the masked-off lanes
@@ -670,7 +670,7 @@ CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
 /// Create a call to Masked Compress Store intrinsic
 /// \p Val       - data to be stored,
 /// \p Ptr       - base pointer for the store
-/// \p Align     - alignment for one element
+/// \p Align     - alignment of \p Ptr
 /// \p Mask      - vector of booleans which indicates what vector lanes should
 ///                be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
