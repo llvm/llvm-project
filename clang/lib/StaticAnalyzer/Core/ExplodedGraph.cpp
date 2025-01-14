@@ -226,7 +226,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     return;
   }
 
-  ExplodedNodeVector *V = dyn_cast_if_present<ExplodedNodeVector *>(Storage);
+  ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage);
 
   if (!V) {
     // Switch from single-node to multi-node representation.
@@ -251,8 +251,7 @@ unsigned ExplodedNode::NodeGroup::size() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return 0;
-  if (ExplodedNodeVector *V =
-          dyn_cast_if_present<ExplodedNodeVector *>(Storage))
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->size();
   return 1;
 }
@@ -264,8 +263,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::begin() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V =
-          dyn_cast_if_present<ExplodedNodeVector *>(Storage))
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->begin();
   return Storage.getAddrOfPtr1();
 }
@@ -277,8 +275,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V =
-          dyn_cast_if_present<ExplodedNodeVector *>(Storage))
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->end();
   return Storage.getAddrOfPtr1() + 1;
 }
