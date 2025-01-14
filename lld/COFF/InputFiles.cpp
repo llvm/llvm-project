@@ -355,7 +355,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     MergeChunk::addSection(symtab.ctx, c);
   else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
-  else
+  else if (!(sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_INFO))
     chunks.push_back(c);
 
   return c;
