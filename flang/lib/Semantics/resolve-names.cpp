@@ -8215,6 +8215,9 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
+  if (symbol.owner().IsTopLevel()) {
+    return false;
+  }
   const Scope &symbolUnit{GetProgramUnitContaining(symbol)};
   if (symbolUnit == GetProgramUnitContaining(currScope())) {
     return false;
