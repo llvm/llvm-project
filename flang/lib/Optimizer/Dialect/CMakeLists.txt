@@ -6,8 +6,8 @@ add_flang_library(FIRDialect
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
-  FortranVariableInterface.cpp
   FirAliasTagOpInterface.cpp
+  FortranVariableInterface.cpp
   Inliner.cpp
 
   DEPENDS
