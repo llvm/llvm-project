@@ -26,15 +26,14 @@ define void @_Z12lane_pc_testj() #0 !dbg !9 {
 ; GCN-NEXT:    s_cselect_b32 s5, s4, s7
 ; GCN-NEXT:    s_cselect_b32 s4, s8, s6
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    .loc 0 13 1 ; t.cpp:13:1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    .loc 0 13 1 ; t.cpp:13:1
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1
-; GCN-NEXT:    .loc 0 12 1 ; t.cpp:12:1
+; GCN-NEXT:    .loc 0 14 1 ; t.cpp:14:1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    .loc 0 14 1 ; t.cpp:14:1
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
