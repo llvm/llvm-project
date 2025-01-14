@@ -1176,7 +1176,7 @@ struct AAPointerInfoImpl
     // TODO: Use reaching kernels from AAKernelInfo (or move it to
     // AAExecutionDomain) such that we allow scopes other than kernels as long
     // as the reaching kernels are disjoint.
-    bool InstInKernel = Scope.hasFnAttribute("kernel");
+    bool InstInKernel = A.getInfoCache().isKernel(Scope);
     bool ObjHasKernelLifetime = false;
     const bool UseDominanceReasoning =
         FindInterferingWrites && IsKnownNoRecurse;
@@ -1210,7 +1210,7 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
-      ObjHasKernelLifetime = AIFn->hasFnAttribute("kernel");
+      ObjHasKernelLifetime = A.getInfoCache().isKernel(*AIFn);
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
               A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
@@ -1222,8 +1222,8 @@ struct AAPointerInfoImpl
       // as it is "dead" in the (unknown) callees.
       ObjHasKernelLifetime = HasKernelLifetime(GV, *GV->getParent());
       if (ObjHasKernelLifetime)
-        IsLiveInCalleeCB = [](const Function &Fn) {
-          return !Fn.hasFnAttribute("kernel");
+        IsLiveInCalleeCB = [&A](const Function &Fn) {
+          return !A.getInfoCache().isKernel(Fn);
         };
     }
 
@@ -1238,7 +1238,7 @@ struct AAPointerInfoImpl
       // If the object has kernel lifetime we can ignore accesses only reachable
       // by other kernels. For now we only skip accesses *in* other kernels.
       if (InstInKernel && ObjHasKernelLifetime && !AccInSameScope &&
-          AccScope->hasFnAttribute("kernel"))
+          A.getInfoCache().isKernel(*AccScope))
         return true;
 
       if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
