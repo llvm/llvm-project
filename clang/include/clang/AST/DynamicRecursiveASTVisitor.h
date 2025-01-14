@@ -134,7 +134,8 @@ public:
   /// Recursively visit a C++ nested-name-specifier.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseNestedNameSpecifier(MaybeConst<NestedNameSpecifier> *NNS);
+  virtual bool
+  TraverseNestedNameSpecifier(MaybeConst<NestedNameSpecifier> *NNS);
 
   /// Recursively visit a C++ nested-name-specifier with location
   /// information.

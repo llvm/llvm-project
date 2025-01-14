@@ -331,7 +331,8 @@ bool DynamicRecursiveASTVisitorBase<Const>::TraverseLambdaCapture(
 }
 
 template <bool Const>
-bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(MaybeConst<Stmt> *S) {
+bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(
+    MaybeConst<Stmt> *S) {
   return Impl<Const>(*this)
       .template RecursiveASTVisitor<Impl<Const>>::dataTraverseNode(
           const_cast<Stmt *>(S), nullptr);
@@ -371,4 +372,4 @@ bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(MaybeConst<Stmt> *S
 namespace clang {
 template class DynamicRecursiveASTVisitorBase<false>;
 template class DynamicRecursiveASTVisitorBase<true>;
-}
+} // namespace clang
