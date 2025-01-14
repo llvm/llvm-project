@@ -1093,30 +1093,32 @@ def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
 //
 // Integer multiply-add
 //
+def mul_oneuse : PatFrag<(ops node:$a, node:$b), (mul node:$a, node:$b), [{
+  return N->hasOneUse();
+}]>;
 
 multiclass MAD<string Ptx, ValueType VT, NVPTXRegClass Reg, Operand Imm> {
-
   def rrr:
     NVPTXInst<(outs Reg:$dst),
               (ins Reg:$a, Reg:$b, Reg:$c),
               Ptx # " \t$dst, $a, $b, $c;",
-              [(set VT:$dst, (add (mul VT:$a, VT:$b), VT:$c))]>;
+              [(set VT:$dst, (add (mul_oneuse VT:$a, VT:$b), VT:$c))]>;
 
   def rir:
     NVPTXInst<(outs Reg:$dst),
               (ins Reg:$a, Imm:$b, Reg:$c),
               Ptx # " \t$dst, $a, $b, $c;",
-              [(set VT:$dst, (add (mul VT:$a, imm:$b), VT:$c))]>;
+              [(set VT:$dst, (add (mul_oneuse VT:$a, imm:$b), VT:$c))]>;
   def rri:
     NVPTXInst<(outs Reg:$dst),
               (ins Reg:$a, Reg:$b, Imm:$c),
               Ptx # " \t$dst, $a, $b, $c;",
-              [(set VT:$dst, (add (mul VT:$a, VT:$b), imm:$c))]>;
+              [(set VT:$dst, (add (mul_oneuse VT:$a, VT:$b), imm:$c))]>;
   def rii:
     NVPTXInst<(outs Reg:$dst),
               (ins Reg:$a, Imm:$b, Imm:$c),
               Ptx # " \t$dst, $a, $b, $c;",
-              [(set VT:$dst, (add (mul VT:$a, imm:$b), imm:$c))]>;
+              [(set VT:$dst, (add (mul_oneuse VT:$a, imm:$b), imm:$c))]>;
 }
 
 let Predicates = [hasO1] in {

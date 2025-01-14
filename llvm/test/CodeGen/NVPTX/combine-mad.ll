@@ -184,6 +184,41 @@ define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
   ret i32 %add
 }
 
+declare i32 @use(i32 %0, i32 %1)
+
+define i32 @test_mad_multi_use(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: test_mad_multi_use(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u32 %r1, [test_mad_multi_use_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [test_mad_multi_use_param_1];
+; CHECK-NEXT:    mul.lo.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    ld.param.u32 %r4, [test_mad_multi_use_param_2];
+; CHECK-NEXT:    add.s32 %r5, %r3, %r4;
+; CHECK-NEXT:    { // callseq 0, 0
+; CHECK-NEXT:    .param .b32 param0;
+; CHECK-NEXT:    st.param.b32 [param0], %r3;
+; CHECK-NEXT:    .param .b32 param1;
+; CHECK-NEXT:    st.param.b32 [param1], %r5;
+; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    call.uni (retval0),
+; CHECK-NEXT:    use,
+; CHECK-NEXT:    (
+; CHECK-NEXT:    param0,
+; CHECK-NEXT:    param1
+; CHECK-NEXT:    );
+; CHECK-NEXT:    ld.param.b32 %r6, [retval0];
+; CHECK-NEXT:    } // callseq 0
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ret;
+  %mul = mul i32 %a, %b
+  %add = add i32 %mul, %c
+  %res = call i32 @use(i32 %mul, i32 %add)
+  ret i32 %res
+}
+
 ;; This case relies on mad x 1 y => add x y, previously we emit:
 ;;     mad.lo.s32      %r3, %r1, 1, %r2;
 define i32 @test_mad_fold(i32 %x) {
