@@ -7,6 +7,13 @@
 # RUN: llvm-objdump --private-headers %t_xcoff64.o |\
 # RUN:   FileCheck %s --check-prefixes=CHECK64 --match-full-lines
 
+# RUN: yaml2obj --docnum=1 %s -o %t-truncate.o
+# RUN: %python -c "with open('%/t-truncate.o', 'r+b') as input: input.truncate(60)"
+# RUN: llvm-objdump --private-headers %t-truncate.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=WARN %s
+
+# WARN: The end of the file was unexpectedly encountered: loader section with offset 0x3c and size 0x20 goes past the end of the file
+
 --- !XCOFF
 FileHeader:
   MagicNumber:       0x1DF
