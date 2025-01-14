@@ -25,6 +25,7 @@ Parts:
       DenyMeshShaderRootAccess: false
       CBVSRVUAVHeapDirectlyIndexed: false
       SamplerHeapDirectlyIndexed: false
+      
 #CHECK:    - Name: RTS0
 #CHECK-NEXT: Size: 8
 #CHECK-NEXT: RootSignature:
