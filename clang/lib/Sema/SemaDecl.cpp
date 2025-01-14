@@ -20096,7 +20096,7 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
     BestWidth = Context.getIntWidth(BestType);
   } else {
-    const bool EnumTooLarge = Context.computeBestEnumTypes(
+    bool EnumTooLarge = Context.computeBestEnumTypes(
         Packed, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
     BestWidth = Context.getIntWidth(BestType);
     if (EnumTooLarge)

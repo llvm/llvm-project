@@ -5209,7 +5209,7 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
-bool ASTContext::computeBestEnumTypes(bool isPacked, unsigned NumNegativeBits,
+bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
                                       unsigned NumPositiveBits,
                                       QualType &BestType,
                                       QualType &BestPromotionType) {
@@ -5222,11 +5222,11 @@ bool ASTContext::computeBestEnumTypes(bool isPacked, unsigned NumNegativeBits,
     // If there is a negative value, figure out the smallest integer type (of
     // int/long/longlong) that fits.
     // If it's packed, check also if it fits a char or a short.
-    if (isPacked && NumNegativeBits <= CharWidth &&
+    if (IsPacked && NumNegativeBits <= CharWidth &&
         NumPositiveBits < CharWidth) {
       BestType = SignedCharTy;
       BestWidth = CharWidth;
-    } else if (isPacked && NumNegativeBits <= ShortWidth &&
+    } else if (IsPacked && NumNegativeBits <= ShortWidth &&
                NumPositiveBits < ShortWidth) {
       BestType = ShortTy;
       BestWidth = ShortWidth;
@@ -5251,11 +5251,11 @@ bool ASTContext::computeBestEnumTypes(bool isPacked, unsigned NumNegativeBits,
     // If there is no negative value, figure out the smallest type that fits
     // all of the enumerator values.
     // If it's packed, check also if it fits a char or a short.
-    if (isPacked && NumPositiveBits <= CharWidth) {
+    if (IsPacked && NumPositiveBits <= CharWidth) {
       BestType = UnsignedCharTy;
       BestPromotionType = IntTy;
       BestWidth = CharWidth;
-    } else if (isPacked && NumPositiveBits <= ShortWidth) {
+    } else if (IsPacked && NumPositiveBits <= ShortWidth) {
       BestType = UnsignedShortTy;
       BestPromotionType = IntTy;
       BestWidth = ShortWidth;

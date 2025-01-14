@@ -1728,7 +1728,8 @@ public:
 
   /// Compute BestType and BestPromotionType for an enum based on the highest
   /// number of negative and positive bits of its elements.
-  bool computeBestEnumTypes(bool isPacked, unsigned NumNegativeBits,
+  /// Returns true if enum width is too large.
+  bool computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
                             unsigned NumPositiveBits, QualType &BestType,
                             QualType &BestPromotionType);
 
