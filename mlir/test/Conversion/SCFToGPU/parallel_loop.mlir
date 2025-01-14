@@ -575,3 +575,69 @@ func.func @parallel_reduction_1d_tiled() {
 // CHECK-NEXT: gpu.yield %[[sum]] : f32
 // CHECK-NEXT: } : (f32) -> f32
 // CHECK-NEXT: memref.store %[[res]], %[[dst]][] : memref<f32, strided<[], offset: ?>>
+
+// -----
+
+// 1-d parallel reduction, unsigned int. Cannot be mapped.
+
+// CHECK-LABEL: @parallel_reduction_1d_uint
+func.func @parallel_reduction_1d_uint(%cst : ui32) {
+  %alloc = memref.alloc() : memref<ui32>
+  %alloc_0 = memref.alloc() : memref<64xui32>
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c0 = arith.constant 0 : index
+  scf.parallel (%arg1) = (%c0) to (%c1) step (%c1) {
+    %0 = scf.parallel (%arg2) = (%c0) to (%c64) step (%c1) init (%cst) -> ui32 {
+      %1 = memref.load %alloc_0[%arg2] : memref<64xui32>
+      scf.reduce(%1 : ui32) {
+      ^bb0(%arg3: ui32, %arg4: ui32):
+        scf.reduce.return %arg3 : ui32
+      }
+    } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+    memref.store %0, %alloc[] : memref<ui32>
+    scf.reduce 
+  } {mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+  memref.dealloc %alloc : memref<ui32>
+  memref.dealloc %alloc_0 : memref<64xui32>
+  return
+}
+
+// CHECK: scf.parallel
+// CHECK-NEXT: scf.parallel
+// CHECK: scf.reduce
+
+// -----
+
+// 1-d parallel reduction, not isolated from above. Cannot be mapped.
+
+// CHECK-LABEL: @parallel_reduction_1d_outside
+func.func @parallel_reduction_1d_outside() {
+  %alloc = memref.alloc() : memref<f32>
+  %alloc_0 = memref.alloc() : memref<64xf32>
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %const = arith.constant 1.000000e+00 : f32
+  scf.parallel (%arg1) = (%c0) to (%c1) step (%c1) {
+    %0 = scf.parallel (%arg2) = (%c0) to (%c64) step (%c1) init (%cst) -> f32 {
+      %1 = memref.load %alloc_0[%arg2] : memref<64xf32>
+      scf.reduce(%1 : f32) {
+      ^bb0(%arg3: f32, %arg4: f32):
+        %2 = arith.addf %arg3, %arg4 : f32
+        %3 = arith.addf %2, %const : f32
+        scf.reduce.return %3 : f32
+      }
+    } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+    memref.store %0, %alloc[] : memref<f32>
+    scf.reduce 
+  } {mapping = [#gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+  memref.dealloc %alloc : memref<f32>
+  memref.dealloc %alloc_0 : memref<64xf32>
+  return
+}
+
+// CHECK: scf.parallel
+// CHECK-NEXT: scf.parallel
+// CHECK: scf.reduce
