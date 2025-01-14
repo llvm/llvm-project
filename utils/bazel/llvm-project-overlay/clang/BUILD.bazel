@@ -1558,6 +1558,7 @@ cc_library(
         "include/clang/StaticAnalyzer/Core/AnalyzerOptions.def",
     ],
     deps = [
+        ":analysis",
         ":basic",
         ":static_analyzer_checkers_gen",
         "//llvm:Support",
