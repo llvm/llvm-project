@@ -881,10 +881,11 @@ public:
                          StringRef Message)>;
 
   /// Make a specific module visible.
-  void setVisible(Module *M, SourceLocation Loc,
-                  VisibleCallback Vis = [](Module *) {},
-                  ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
-                                           StringRef) {});
+  void setVisible(
+      Module *M, SourceLocation Loc, bool IncludeExports = true,
+      VisibleCallback Vis = [](Module *) {},
+      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
+
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.
