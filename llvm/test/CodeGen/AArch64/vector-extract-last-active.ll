@@ -293,11 +293,8 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i8_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.b, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z1.b
-; CHECK-NEXT:    whilels p1.b, xzr, x8
+; CHECK-NEXT:    lastb w8, p0, z0.b
 ; CHECK-NEXT:    ptest p0, p0.b
-; CHECK-NEXT:    lastb w8, p1, z0.b
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
   %res = call i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru)
@@ -307,10 +304,7 @@ define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1>
 define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i16_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.h, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z1.h
-; CHECK-NEXT:    whilels p1.h, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.h
+; CHECK-NEXT:    lastb w8, p0, z0.h
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    csel w0, w8, w0, ne
@@ -322,10 +316,7 @@ define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1
 define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i32_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.s, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z1.s
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb w8, p1, z0.s
+; CHECK-NEXT:    lastb w8, p0, z0.s
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    csel w0, w8, w0, ne
@@ -337,10 +328,7 @@ define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1
 define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1> %mask, i64 %passthru) #0 {
 ; CHECK-LABEL: extract_last_i64_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    lastb x8, p0, z1.d
-; CHECK-NEXT:    whilels p1.d, xzr, x8
-; CHECK-NEXT:    lastb x8, p1, z0.d
+; CHECK-NEXT:    lastb x8, p0, z0.d
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    csel x0, x8, x0, ne
@@ -352,10 +340,7 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru) #0 {
 ; CHECK-LABEL: extract_last_float_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z2.s, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z2.s
-; CHECK-NEXT:    whilels p1.s, xzr, x8
-; CHECK-NEXT:    lastb s0, p1, z0.s
+; CHECK-NEXT:    lastb s0, p0, z0.s
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    fcsel s0, s0, s1, ne
@@ -367,10 +352,7 @@ define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 
 define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru) #0 {
 ; CHECK-LABEL: extract_last_double_scalable:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z2.d, #0, #1
-; CHECK-NEXT:    lastb x8, p0, z2.d
-; CHECK-NEXT:    whilels p1.d, xzr, x8
-; CHECK-NEXT:    lastb d0, p1, z0.d
+; CHECK-NEXT:    lastb d0, p0, z0.d
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    fcsel d0, d0, d1, ne
@@ -383,9 +365,6 @@ define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale
 define i8 @extract_last_i8_scalable_poison_passthru(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: extract_last_i8_scalable_poison_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    index z1.b, #0, #1
-; CHECK-NEXT:    lastb w8, p0, z1.b
-; CHECK-NEXT:    whilels p0.b, xzr, x8
 ; CHECK-NEXT:    lastb w0, p0, z0.b
 ; CHECK-NEXT:    ret
   %res = call i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 poison)
