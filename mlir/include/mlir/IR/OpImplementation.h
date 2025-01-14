@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
 #include <optional>
+#include <type_traits>
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -711,11 +712,35 @@ public:
                                  APFloat &result) = 0;
 
   /// Parse an integer value from the stream.
+  ParseResult parseInteger(APInt &result, unsigned bitWidth,
+                           IntegerType::SignednessSemantics signedness) {
+    auto loc = getCurrentLocation();
+    APInt apintResult;
+    OptionalParseResult parseResult = parseOptionalInteger(apintResult);
+    if (!parseResult.has_value() || failed(*parseResult))
+      return emitError(loc, "expected integer value");
+
+    // Unlike the parseOptionalInteger used below for integral types, the
+    // virtual APInt version does not check for whether the parsed integer fits
+    // in the width we want or whether its signednes matches the requested one.
+    // Check here.
+    if (signedness == IntegerType::Unsigned && apintResult.isNegative())
+      return emitError(loc, "negative integer when unsigned expected");
+    APInt sextOrTrunc = apintResult.sextOrTrunc(bitWidth);
+    if (sextOrTrunc.sextOrTrunc(apintResult.getBitWidth()) != apintResult)
+      return emitError(loc, "integer value too large");
+
+    result = sextOrTrunc;
+    return success();
+  }
+
+  /// Parse an integer value from the stream.
   template <typename IntT>
   ParseResult parseInteger(IntT &result) {
+    static_assert(std::is_integral<IntT>::value);
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
-    if (!parseResult.has_value())
+    if (!parseResult.has_value() || failed(*parseResult))
       return emitError(loc, "expected integer value");
     return *parseResult;
   }

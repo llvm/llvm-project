@@ -543,3 +543,19 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {nvvm.grid_constant}) attributes {nvvm.k
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant = true}) attributes {nvvm.kernel} {
   llvm.return
 }
+
+// -----
+
+func.func @nvvm_special_regs() {
+  // CHECK: nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 2147483647> : i32
+  %0 = nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 2147483647> : i32
+  func.return
+}
+
+// -----
+
+func.func @nvvm_special_regs() {
+  // expected-error @below {{integer value too large}}
+  %0 = nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 2147483648> : i32
+  func.return
+}

@@ -83,7 +83,8 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
 
     // If there's a **, then the integer exponent is required.
     APInt parsedExponent(apintBitWidth, 0);
-    if (failed(parser.parseInteger(parsedExponent))) {
+    if (failed(parser.parseInteger(parsedExponent, apintBitWidth,
+                                   parsingSignedness))) {
       parser.emitError(parser.getCurrentLocation(),
                        "found invalid integer exponent");
       return failure();

@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 #define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -28,6 +29,8 @@ namespace polynomial {
 /// coefficients. This may be relaxed in the future, but it seems unlikely one
 /// would want to specify 128-bit polynomials statically in the source code.
 constexpr unsigned apintBitWidth = 64;
+constexpr IntegerType::SignednessSemantics parsingSignedness =
+    IntegerType::Signless;
 
 template <class Derived, typename CoefficientType>
 class MonomialBase {
