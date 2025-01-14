@@ -1536,6 +1536,27 @@ inline APFloat abs(APFloat X) {
   return X;
 }
 
+/// Returns X^N for N >= 0.
+/// Returns X^N for N >= 0.
+inline APFloat pow(const APFloat &X, const int &N) {
+  assert(N >= 0 && "negative exponents not supported.");
+  APFloat Acc = APFloat::getOne(X.getSemantics());
+  if (N == 0) {
+    return APFloat::getOne(X.getSemantics());
+  }
+  APFloat Base = X;
+  int64_t RemainingExponent = N;
+  while (RemainingExponent > 0) {
+    while (RemainingExponent % 2 == 0) {
+      Base = Base * Base;
+      RemainingExponent /= 2;
+    }
+    --RemainingExponent;
+    Acc = Acc * Base;
+  }
+  return Acc;
+};
+
 /// Returns the negated value of the argument.
 inline APFloat neg(APFloat X) {
   X.changeSign();

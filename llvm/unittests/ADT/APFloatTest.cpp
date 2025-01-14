@@ -3793,6 +3793,21 @@ TEST(APFloatTest, abs) {
   EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
 }
 
+TEST(APFloatTest, pow) {
+  APFloat One = APFloat(APFloat::IEEEsingle(), "1.0");
+  APFloat Two = APFloat(APFloat::IEEEsingle(), "2.0");
+  APFloat Four = APFloat(APFloat::IEEEsingle(), "4.0");
+  APFloat Eight = APFloat(APFloat::IEEEsingle(), "8.0");
+  APFloat NegTwo = APFloat(APFloat::IEEEsingle(), "-2.0");
+  APFloat NegEight = APFloat(APFloat::IEEEsingle(), "-8.0");
+
+  EXPECT_TRUE(One.bitwiseIsEqual(pow(One, 0)));
+  EXPECT_TRUE(One.bitwiseIsEqual(pow(One, 3)));
+  EXPECT_TRUE(Four.bitwiseIsEqual(pow(Two, 2)));
+  EXPECT_TRUE(Eight.bitwiseIsEqual(pow(Two, 3)));
+  EXPECT_TRUE(NegEight.bitwiseIsEqual(pow(NegTwo, 3)));
+}
+
 TEST(APFloatTest, neg) {
   APFloat One = APFloat(APFloat::IEEEsingle(), "1.0");
   APFloat NegOne = APFloat(APFloat::IEEEsingle(), "-1.0");
