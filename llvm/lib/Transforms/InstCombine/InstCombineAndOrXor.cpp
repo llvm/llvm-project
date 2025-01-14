@@ -39,8 +39,7 @@ static Value *getNewICmpValue(unsigned Code, bool Sign, Value *LHS, Value *RHS,
 /// This is the complement of getFCmpCode, which turns an opcode and two
 /// operands into either a FCmp instruction, or a true/false constant.
 static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
-                           InstCombiner::BuilderTy &Builder,
-                           FastMathFlags FMF) {
+                           InstCombiner::BuilderTy &Builder, FMFSource FMF) {
   FCmpInst::Predicate NewPred;
   if (Constant *TorF = getPredForFCmpCode(Code, LHS->getType(), NewPred))
     return TorF;
@@ -1406,8 +1405,7 @@ static Value *matchIsFiniteTest(InstCombiner::BuilderTy &Builder, FCmpInst *LHS,
     return nullptr;
 
   return Builder.CreateFCmpFMF(FCmpInst::getOrderedPredicate(PredR), RHS0, RHS1,
-                               LHS->getFastMathFlags() &
-                                   RHS->getFastMathFlags());
+                               FMFSource::intersect(LHS, RHS));
 }
 
 Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
@@ -1444,7 +1442,7 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     // Intersect the fast math flags.
     // TODO: We can union the fast math flags unless this is a logical select.
     return getFCmpValue(NewPred, LHS0, LHS1, Builder,
-                        LHS->getFastMathFlags() & RHS->getFastMathFlags());
+                        FMFSource::intersect(LHS, RHS));
   }
 
   // This transform is not valid for a logical select.
@@ -1461,8 +1459,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      return Builder.CreateFCmpFMF(
-          PredL, LHS0, RHS0, LHS->getFastMathFlags() & RHS->getFastMathFlags());
+      return Builder.CreateFCmpFMF(PredL, LHS0, RHS0,
+                                   FMFSource::intersect(LHS, RHS));
     }
   }
 
