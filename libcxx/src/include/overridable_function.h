@@ -90,8 +90,8 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__));                                    \
-    [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
+    static type symbol##_impl__ arglist __asm__(".L" _LIBCPP_TOSTRING(symbol));                                        \
+    [[gnu::weak, gnu::alias(".L" _LIBCPP_TOSTRING(symbol))]] type name arglist;                                        \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
