@@ -8,9 +8,9 @@
 
 #include "src/unistd/getentropy.h"
 #include "hdr/errno_macros.h"
+#include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
-#include "src/__support/OSUtil/syscall.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
