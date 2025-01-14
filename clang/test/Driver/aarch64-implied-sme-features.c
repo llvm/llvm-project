@@ -57,7 +57,7 @@
 // SVE-BITPERM: "-target-feature" "+sme" "-target-feature" "+sme2" "-target-feature" "+ssve-bitperm" "-target-feature" "+sve-bitperm"
 
 // RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+sme-tmop %s -### 2>&1 | FileCheck %s --check-prefix=SME-TMOP
-// SME-TMOP: "-target-feature" "+sme" "-target-feature" "+sme-tmop"
+// SME-TMOP: "-target-feature" "+sme" "-target-feature" "+sme-tmop" "-target-feature" "+sme2"
 
 // RUN: %clang --target=aarch64-linux-gnu -march=armv8-a+sme-mop4 %s -### 2>&1 | FileCheck %s --check-prefix=SME-MOP4
-// SME-MOP4: "-target-feature" "+sme" "-target-feature" "+sme-mop4"
+// SME-MOP4: "-target-feature" "+sme" "-target-feature" "+sme-mop4" "-target-feature" "+sme2"

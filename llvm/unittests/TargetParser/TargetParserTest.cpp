@@ -2041,8 +2041,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve2-aes", "sve-aes"}},
 
         // sme-tmop -> sme
-        {AArch64::ARMV8A, {"nosme", "sme-tmop"}, {"sme", "sme-tmop"}, {}},
-        {AArch64::ARMV8A, {"sme-tmop", "nosme"}, {}, {"sme", "sme-tmop"}},
+        {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
+        {AArch64::ARMV8A, {"sme-tmop", "nosme2"}, {}, {"sme2", "sme-tmop"}},
 
         // sme-mop4 -> sme
         {AArch64::ARMV8A, {"nosme", "sme-mop4"}, {"sme", "sme-mop4"}, {}},
