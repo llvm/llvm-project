@@ -247,6 +247,20 @@ llvm.func @target_has_device_addr(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @target_host_eval(%x : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause host_eval in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target host_eval(%x -> %arg0 : i32) {
+    omp.teams num_teams(to %arg0 : i32) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @target_if(%x : i1) {
   // expected-error@below {{not yet implemented: Unhandled clause if in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}

@@ -3239,6 +3239,42 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+// Returns the number of added attributes.
+template <class T>
+static unsigned propagateAttribute(ParmVarDecl *To, const ParmVarDecl *From,
+                                   Sema &S) {
+  unsigned found = 0;
+  for (const auto *I : From->specific_attrs<T>()) {
+    if (!DeclHasAttr(To, I)) {
+      T *newAttr = cast<T>(I->clone(S.Context));
+      newAttr->setInherited(true);
+      To->addAttr(newAttr);
+      ++found;
+    }
+  }
+  return found;
+}
+
+template <class F>
+static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
+                                F &&propagator) {
+  if (!From->hasAttrs()) {
+    return;
+  }
+
+  bool foundAny = To->hasAttrs();
+
+  // Ensure that any moving of objects within the allocated map is
+  // done before we process them.
+  if (!foundAny)
+    To->setAttrs(AttrVec());
+
+  foundAny |= std::forward<F>(propagator)(To, From) != 0;
+
+  if (!foundAny)
+    To->dropAttrs();
+}
+
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
@@ -3262,26 +3298,17 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
-  if (!oldDecl->hasAttrs())
-    return;
-
-  bool foundAny = newDecl->hasAttrs();
-
-  // Ensure that any moving of objects within the allocated map is
-  // done before we process them.
-  if (!foundAny) newDecl->setAttrs(AttrVec());
-
-  for (const auto *I : oldDecl->specific_attrs<InheritableParamAttr>()) {
-    if (!DeclHasAttr(newDecl, I)) {
-      InheritableAttr *newAttr =
-        cast<InheritableParamAttr>(I->clone(S.Context));
-      newAttr->setInherited(true);
-      newDecl->addAttr(newAttr);
-      foundAny = true;
-    }
-  }
-
-  if (!foundAny) newDecl->dropAttrs();
+  propagateAttributes(
+      newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
+        unsigned found = 0;
+        found += propagateAttribute<InheritableParamAttr>(To, From, S);
+        // Propagate the lifetimebound attribute from parameters to the
+        // most recent declaration. Note that this doesn't include the implicit
+        // 'this' parameter, as the attribute is applied to the function type in
+        // that case.
+        found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        return found;
+      });
 }
 
 static bool EquivalentArrayTypes(QualType Old, QualType New,
@@ -6960,6 +6987,7 @@ static void checkInheritableAttr(Sema &S, NamedDecl &ND) {
 static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   // Check the attributes on the function type and function params, if any.
   if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
+    FD = FD->getMostRecentDecl();
     // Don't declare this variable in the second operand of the for-statement;
     // GCC miscompiles that by ending its lifetime before evaluating the
     // third operand. See gcc.gnu.org/PR86769.
@@ -11108,7 +11136,8 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
       }
 
       if (!TargetInfo.validateCpuSupports(BareFeat) ||
-          !TargetInfo.isValidFeatureName(BareFeat)) {
+          !TargetInfo.isValidFeatureName(BareFeat) ||
+          (BareFeat != "default" && TargetInfo.getFMVPriority(BareFeat) == 0)) {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
             << Feature << BareFeat;
         return true;
