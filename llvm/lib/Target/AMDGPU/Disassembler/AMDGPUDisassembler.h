@@ -210,6 +210,7 @@ public:
   void convertVOP3DPPInst(MCInst &MI) const;
   void convertVOP3PDPPInst(MCInst &MI) const;
   void convertVOPCDPPInst(MCInst &MI) const;
+  void convertVOPC64DPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 

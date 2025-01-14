@@ -157,15 +157,22 @@ if(TARGET clang)
   # TestFullLtoStepping depends on LTO, and only runs when the compiler is clang.
   add_lldb_test_dependency(LTO)
 
-  if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
+  if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
     set(LLDB_HAS_LIBCXX ON)
+    # libc++ can only be used for tests after installing to a fake prefix
+    # which is done by the install-cxx-test-suite-prefix target in libc++. We
+    # ensure this is run by depending on the runtimes-test-depends target.
+    # While this could build too many dependencies, it is currently the only
+    # test dependencies target exposed by the runtimes build.
+    add_lldb_test_dependency(runtimes-test-depends)
+    set(LIBCXX_TEST_INSTALL_DIR "${CMAKE_BINARY_DIR}/runtimes/runtimes-${LLVM_DEFAULT_TARGET_TRIPLE}-bins/libcxx/test-suite-install")
     if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-      set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+      set(LIBCXX_LIBRARY_DIR ${LIBCXX_TEST_INSTALL_DIR}/lib/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${LIBCXX_TEST_INSTALL_DIR}/include/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_TEST_INSTALL_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
     else()
-      set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
-      set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+      set(LIBCXX_LIBRARY_DIR ${LIBCXX_TEST_INSTALL_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${LIBCXX_TEST_INSTALL_DIR}/include/c++/v1")
     endif()
   endif()
 

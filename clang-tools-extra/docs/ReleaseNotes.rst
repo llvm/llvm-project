@@ -351,8 +351,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
 
-- Improved :doc:`performance-unnecessary-copy-initialization`
-  <clang-tidy/checks/performance/unnecessary-copy-initialization> check
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check
   to consider static member functions the same way as free functions.
 
 - Improved :doc:`readability-container-contains
