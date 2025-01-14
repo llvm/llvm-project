@@ -255,9 +255,13 @@ void LinkerDriver::parseStub(StringRef path) {
   // 1. stub must be greater than or equal to 64 bytes
   // 2. stub must be 8-byte aligned
   // 3. stub must be start with a valid dos signature 'MZ'
-  if (bufferSize < 0x40 || bufferSize % 8 != 0 ||
-      (bufferStart[0] != 'M' || bufferStart[1] != 'Z'))
-    Err(ctx) << "/stub: invalid format for MS-DOS stub file: " << path;
+  if (bufferSize < 0x40)
+    Err(ctx) << "/stub: stub must be greater than or equal to 64 bytes: "
+             << path;
+  if (bufferStart[0] != 'M' || bufferStart[1] != 'Z')
+    Err(ctx) << "/stub: invalid DOS signature: " << path;
+  if (bufferSize % 8 != 0)
+    Err(ctx) << "/stub: stub must be aligned to 8 bytes: " << path;
   ctx.config.stub = std::move(stub);
 }
 
