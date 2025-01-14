@@ -282,8 +282,9 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; IF-EVL-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[B:%.*]], <vscale x 16 x i8> [[VP_REVERSE]]
 ; IF-EVL-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> align 1 [[TMP14]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
 ; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[TMP7]]
-; IF-EVL-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP4]]
-; IF-EVL-NEXT:    [[TMP18:%.*]] = sub i64 1, [[TMP4]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP6]] to i64
+; IF-EVL-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP16]]
+; IF-EVL-NEXT:    [[TMP18:%.*]] = sub i64 1, [[TMP16]]
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP15]], i64 [[TMP17]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP19]], i64 [[TMP18]]
 ; IF-EVL-NEXT:    [[VP_REVERSE1:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.reverse.nxv16i8(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP6]])
