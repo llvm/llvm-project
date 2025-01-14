@@ -1340,13 +1340,23 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                     llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
                     const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
+      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  if (allocaTerminator->getNumSuccessors() != 1) {
+    splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
+                allocaIP.getBlock(), allocaTerminator->getIterator()),
+            true, "omp.region.after_alloca");
+  }
+
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  // Update the allocaTerminator in case the alloca block was split above.
+  allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
   builder.SetInsertPoint(allocaTerminator);
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by OpenMPIRBuilder");
+
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   // FIXME: Some of the allocation regions do more than just allocating.
@@ -1875,11 +1885,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
-
-  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-              allocaIP.getBlock(),
-              allocaIP.getBlock()->getTerminator()->getIterator()),
-          true, "omp.region.after_alloca");
 
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
