@@ -5,7 +5,6 @@ define void @store_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    store <2 x float> [[VECL]], ptr [[PTR0]], align 4
 ; CHECK-NEXT:    ret void
@@ -24,9 +23,7 @@ define void @store_fpext_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fpext_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[PTRD0:%.*]] = getelementptr double, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTRD1:%.*]] = getelementptr double, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VCAST:%.*]] = fpext <2 x float> [[VECL]] to <2 x double>
 ; CHECK-NEXT:    store <2 x double> [[VCAST]], ptr [[PTRD0]], align 8
@@ -49,9 +46,7 @@ define void @store_fcmp_zext_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fcmp_zext_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[PTRB0:%.*]] = getelementptr i32, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTRB1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VCMP:%.*]] = fcmp ogt <2 x float> [[VECL]], [[VECL1]]
@@ -80,7 +75,6 @@ define void @store_fadd_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fadd_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VEC:%.*]] = fadd <2 x float> [[VECL]], [[VECL1]]
@@ -104,7 +98,6 @@ define void @store_fneg_load(ptr %ptr) {
 ; CHECK-LABEL: define void @store_fneg_load(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VEC:%.*]] = fneg <2 x float> [[VECL]]
 ; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
@@ -147,7 +140,6 @@ define void @pack_scalars(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: define void @pack_scalars(
 ; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x float> poison, float [[LD0]], i32 0
@@ -191,7 +183,6 @@ define void @pack_vectors(ptr %ptr, ptr %ptr2) {
 ; CHECK-LABEL: define void @pack_vectors(
 ; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 2
 ; CHECK-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x float> [[LD0]], i32 0

@@ -4212,7 +4212,7 @@ defm ms_tls_guards : BoolFOption<"ms-tls-guards",
           "Do not emit code to perform on-demand initialization of thread-local variables">,
   PosFlag<SetTrue>>;
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoFlag<CodeGenOpts<"TimePasses">>;
 def ftime_report_EQ: Joined<["-"], "ftime-report=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>, Values<"per-pass,per-pass-run">,
@@ -4468,7 +4468,7 @@ defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " late function splitting using profile information (x86 ELF)">>;
+  BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,

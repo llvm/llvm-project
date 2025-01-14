@@ -1102,10 +1102,22 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of SVE2.1 and SME2.1 in accordance with the Arm C Language
+  Extensions (ACLE) is now available.
+
 - In the ARM Target, the frame pointer (FP) of a leaf function can be retained
   by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
+
+- SME keyword attributes which apply to function types are now represented in the
+  mangling of the type. This means that ``void foo(void (*f)() __arm_streaming);``
+  now has a different mangling from ``void foo(void (*f)());``.
+
+- The ``__arm_agnostic`` keyword attribute was added to let users describe
+  a function that preserves SME state enabled by PSTATE.ZA without having to share
+  this state with its callers and without making the assumption that this state
+  exists.
 
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
