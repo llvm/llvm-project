@@ -6169,6 +6169,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   OpenMPIRBuilderConfig Config(false, false, false, false, false, false, false);
   OMPBuilder.setConfig(Config);
   F->setName("func");
+  F->addFnAttr("target-cpu", "x86-64");
+  F->addFnAttr("target-features", "+mmx,+sse");
   IRBuilder<> Builder(BB);
   auto *Int32Ty = Builder.getInt32Ty();
 
@@ -6320,6 +6322,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   StringRef FunctionName2 = OutlinedFunc->getName();
   EXPECT_TRUE(FunctionName2.starts_with("__omp_offloading"));
 
+  // Check that target-cpu and target-features were propagated to the outlined
+  // function
+  EXPECT_EQ(OutlinedFunc->getFnAttribute("target-cpu"),
+            F->getFnAttribute("target-cpu"));
+  EXPECT_EQ(OutlinedFunc->getFnAttribute("target-features"),
+            F->getFnAttribute("target-features"));
+
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
@@ -6330,6 +6339,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OMPBuilder.initialize();
 
   F->setName("func");
+  F->addFnAttr("target-cpu", "gfx90a");
+  F->addFnAttr("target-features", "+gfx9-insts,+wavefrontsize64");
   IRBuilder<> Builder(BB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
@@ -6406,6 +6417,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_NE(TargetStore, nullptr);
   Function *OutlinedFn = TargetStore->getFunction();
   EXPECT_NE(F, OutlinedFn);
+
+  // Check that target-cpu and target-features were propagated to the outlined
+  // function
+  EXPECT_EQ(OutlinedFn->getFnAttribute("target-cpu"),
+            F->getFnAttribute("target-cpu"));
+  EXPECT_EQ(OutlinedFn->getFnAttribute("target-features"),
+            F->getFnAttribute("target-features"));
 
   EXPECT_TRUE(OutlinedFn->hasWeakODRLinkage());
   // Account for the "implicit" first argument.
@@ -6656,6 +6674,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
   EXPECT_NE(OutlinedFn, nullptr);
   EXPECT_NE(F, OutlinedFn);
+
+  // Check that target-cpu and target-features were propagated to the outlined
+  // function
+  EXPECT_EQ(OutlinedFn->getFnAttribute("target-cpu"),
+            F->getFnAttribute("target-cpu"));
+  EXPECT_EQ(OutlinedFn->getFnAttribute("target-features"),
+            F->getFnAttribute("target-features"));
 
   EXPECT_TRUE(OutlinedFn->hasWeakODRLinkage());
   // Account for the "implicit" first argument.
