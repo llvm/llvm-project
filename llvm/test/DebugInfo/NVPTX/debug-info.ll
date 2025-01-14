@@ -199,6 +199,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 0                                   // EOM(1)
@@ -223,6 +225,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 11                                  // DW_FORM_data1
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 50                                  // DW_AT_accessibility
@@ -250,6 +254,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 11                                  // DW_FORM_data1
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 50                                  // DW_AT_accessibility
@@ -272,6 +278,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 50                                  // DW_AT_accessibility
@@ -373,6 +381,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 5                                   // DW_FORM_data2
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 0                                   // EOM(1)
@@ -393,6 +403,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 100                                 // DW_AT_object_pointer
+; CHECK-NEXT:.b8 19                                  // DW_FORM_ref4
 ; CHECK-NEXT:.b8 63                                  // DW_AT_external
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 0                                   // EOM(1)
@@ -727,6 +739,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 0                                   // EOM(2)
 ; CHECK-NEXT:.b8 45                                  // Abbreviation Code
 ; CHECK-NEXT:.b8 46                                  // DW_TAG_subprogram
+; CHECK-NEXT:.b8 1                                   // DW_CHILDREN_yes
+; CHECK-NEXT:.b8 3                                   // DW_AT_name
+; CHECK-NEXT:.b8 8                                   // DW_FORM_string
+; CHECK-NEXT:.b8 58                                  // DW_AT_decl_file
+; CHECK-NEXT:.b8 11                                  // DW_FORM_data1
+; CHECK-NEXT:.b8 59                                  // DW_AT_decl_line
+; CHECK-NEXT:.b8 5                                   // DW_FORM_data2
+; CHECK-NEXT:.b8 60                                  // DW_AT_declaration
+; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 63                                  // DW_AT_external
+; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
+; CHECK-NEXT:.b8 0                                   // EOM(1)
+; CHECK-NEXT:.b8 0                                   // EOM(2)
+; CHECK-NEXT:.b8 46                                  // Abbreviation Code
+; CHECK-NEXT:.b8 46                                  // DW_TAG_subprogram
 ; CHECK-NEXT:.b8 0                                   // DW_CHILDREN_no
 ; CHECK-NEXT:.b8 3                                   // DW_AT_name
 ; CHECK-NEXT:.b8 8                                   // DW_FORM_string
@@ -742,7 +769,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 12                                  // DW_FORM_flag
 ; CHECK-NEXT:.b8 0                                   // EOM(1)
 ; CHECK-NEXT:.b8 0                                   // EOM(2)
-; CHECK-NEXT:.b8 46                                  // Abbreviation Code
+; CHECK-NEXT:.b8 47                                  // Abbreviation Code
 ; CHECK-NEXT:.b8 46                                  // DW_TAG_subprogram
 ; CHECK-NEXT:.b8 1                                   // DW_CHILDREN_yes
 ; CHECK-NEXT:.b8 135                                 // DW_AT_MIPS_linkage_name
