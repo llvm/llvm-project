@@ -36,8 +36,8 @@ define <4 x double> @fadd_v4f64_poison_idx(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %post
 }
 
-define <4 x double> @fadd_mixed_types(<4 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: define <4 x double> @fadd_mixed_types(
+define <4 x double> @fadd_v4f64_mixed_types(<4 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: define <4 x double> @fadd_v4f64_mixed_types(
 ; CHECK-SAME: <4 x double> [[A:%.*]], <2 x double> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -49,6 +49,19 @@ define <4 x double> @fadd_mixed_types(<4 x double> %a, <2 x double> %b) {
   %op = fadd <4 x double> %a1, %b1
   %post = shufflevector <4 x double> %op, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   ret <4 x double> %post
+}
+
+define <4 x float> @fadd_v4f32_mixed_types(<4 x float> %a0) {
+; CHECK-LABEL: define <4 x float> @fadd_v4f32_mixed_types(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> zeroinitializer, <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[POST:%.*]] = fmul <4 x float> [[TMP1]], <float 0.000000e+00, float 0.000000e+00, float undef, float undef>
+; CHECK-NEXT:    ret <4 x float> [[POST]]
+;
+  %pre = shufflevector <4 x float> %a0, <4 x float> zeroinitializer, <2 x i32> <i32 1, i32 5>
+  %op = fmul <2 x float> %pre, zeroinitializer
+  %post = shufflevector <2 x float> %op, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  ret <4 x float> %post
 }
 
 ; Negative test - multiple use of fadd
