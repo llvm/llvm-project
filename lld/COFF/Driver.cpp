@@ -2420,7 +2420,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /stub
   if (auto *arg = args.getLastArg(OPT_stub))
-    parseStub(arg->getValue());
+    parseDosStub(arg->getValue());
 
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))

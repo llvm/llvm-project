@@ -246,7 +246,7 @@ void LinkerDriver::parseAligncomm(StringRef s) {
       std::max(ctx.config.alignComm[std::string(name)], 1 << v);
 }
 
-void LinkerDriver::parseStub(StringRef path) {
+void LinkerDriver::parseDosStub(StringRef path) {
   std::unique_ptr<MemoryBuffer> stub =
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);
   size_t bufferSize = stub->getBufferSize();
@@ -262,7 +262,7 @@ void LinkerDriver::parseStub(StringRef path) {
     Err(ctx) << "/stub: invalid DOS signature: " << path;
   if (bufferSize % 8 != 0)
     Err(ctx) << "/stub: stub must be aligned to 8 bytes: " << path;
-  ctx.config.stub = std::move(stub);
+  ctx.config.dosStub = std::move(stub);
 }
 
 // Parses /functionpadmin option argument.
