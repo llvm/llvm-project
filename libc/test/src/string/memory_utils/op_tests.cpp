@@ -72,7 +72,8 @@ void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
   FnImpl(as_byte(dst), as_byte(src), size);
 }
 template <size_t Size, auto FnImpl>
-void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t /*size*/) {
+void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src,
+                      size_t /*size*/) {
   FnImpl(as_byte(dst), as_byte(src));
 }
 

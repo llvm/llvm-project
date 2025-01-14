@@ -112,7 +112,8 @@ long int check_struct_type(int first, ...) {
 
   S s = args.next_var<S>();
   int last = args.next_var<int>();
-  return s.c + s.s + s.i + s.l + static_cast<long>(s.f) + static_cast<long>(s.d) + last;
+  return s.c + s.s + s.i + s.l + static_cast<long>(s.f) +
+         static_cast<long>(s.d) + last;
 }
 
 TEST(LlvmLibcArgListTest, TestStructTypes) {

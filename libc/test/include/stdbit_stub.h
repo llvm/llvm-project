@@ -17,10 +17,10 @@
 #include <stdbool.h> // bool in C
 
 #define STDBIT_STUB_FUNCTION(FUNC_NAME, LEADING_VAL)                           \
-  unsigned FUNC_NAME##_uc(unsigned char) { return LEADING_VAL##AU; }         \
-  unsigned FUNC_NAME##_us(unsigned short) { return LEADING_VAL##BU; }        \
-  unsigned FUNC_NAME##_ui(unsigned int) { return LEADING_VAL##CU; }          \
-  unsigned FUNC_NAME##_ul(unsigned long) { return LEADING_VAL##DU; }         \
+  unsigned FUNC_NAME##_uc(unsigned char) { return LEADING_VAL##AU; }           \
+  unsigned FUNC_NAME##_us(unsigned short) { return LEADING_VAL##BU; }          \
+  unsigned FUNC_NAME##_ui(unsigned int) { return LEADING_VAL##CU; }            \
+  unsigned FUNC_NAME##_ul(unsigned long) { return LEADING_VAL##DU; }           \
   unsigned FUNC_NAME##_ull(unsigned long long) { return LEADING_VAL##EU; }
 
 __BEGIN_C_DECLS
