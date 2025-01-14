@@ -239,11 +239,15 @@ struct TraitSelectorParser {
     auto extParser{Parser<OmpTraitPropertyExtension>{}};
 
     if (auto *v{std::get_if<OmpTraitSelectorName::Value>(&name->u)}) {
+      // (*) The comments below show the sections of the OpenMP spec that
+      // describe given trait. The cases marked with a (*) are those where
+      // the spec doesn't assign any list-type to these traits, but for
+      // convenience they can be treated as if they were.
       switch (*v) {
       // name-list properties
       case OmpTraitSelectorName::Value::Arch: // [6.0:319:18]
       case OmpTraitSelectorName::Value::Extension: // [6.0:319:30]
-      case OmpTraitSelectorName::Value::Isa:  // [6.0:319:15]
+      case OmpTraitSelectorName::Value::Isa: // [6.0:319:15]
       case OmpTraitSelectorName::Value::Kind: // [6.0:319:10]
       case OmpTraitSelectorName::Value::Uid: // [6.0:319:23](*)
       case OmpTraitSelectorName::Value::Vendor: { // [6.0:319:27]
@@ -264,8 +268,6 @@ struct TraitSelectorParser {
         auto pp{propertyListParser(scalarExpr, extParser)};
         return OmpTraitSelector(std::move(*name), std::move(*pp.Parse(state)));
       }
-      // (*) The spec doesn't assign any list-type to these traits, but for
-      // convenience they can be treated as if they were.
       } // switch
     } else {
       // The other alternatives are `llvm::omp::Directive`, and `std::string`.

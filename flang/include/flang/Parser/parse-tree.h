@@ -3520,7 +3520,7 @@ struct OmpTraitScore {
 struct OmpTraitPropertyExtension {
   CharBlock source;
   UNION_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
-  struct Complex {  // name (prop-ext, prop-ext, ...)
+  struct Complex { // name (prop-ext, prop-ext, ...)
     CharBlock source;
     TUPLE_CLASS_BOILERPLATE(Complex);
     std::tuple<OmpTraitPropertyName,
