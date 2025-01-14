@@ -379,6 +379,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* It is now recommended that LLDB be built with Python >= 3.8, but no changes
+  have been made to the supported Python versions. The next release, LLDB 21,
+  will require Python >= 3.8.
+
 * LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
@@ -410,6 +414,13 @@ Changes to LLDB
 * A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
 
 * LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
+
+* It is now possible to implement lldb commands in Python that use lldb's native command-line parser.  In particular, that allows per-option/argument completion,
+  with all the basic completers automatically supported and auto-generated help.
+  The command template file in the lldb/examples/python/cmdtemplate.py has been updated to show how to use this. 
+
+* Breakpoints on "inlined call sites" are now supported.  Previous to this fix, breakpoints on source lines that only contained inlined call sites would be
+  moved to the next source line, causing you to miss the inlined executions.
 
 * On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
 

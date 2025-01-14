@@ -438,10 +438,10 @@ void VPBasicBlock::connectToPredecessors(VPTransformState::CFGState &CFG) {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(
-          (!TermBr->getSuccessor(idx) ||
-           (isa<VPIRBasicBlock>(this) && TermBr->getSuccessor(idx) == NewBB)) &&
-          "Trying to reset an existing successor block.");
+      assert((TermBr && (!TermBr->getSuccessor(idx) ||
+                         (isa<VPIRBasicBlock>(this) &&
+                          TermBr->getSuccessor(idx) == NewBB))) &&
+             "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
     CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, NewBB}});

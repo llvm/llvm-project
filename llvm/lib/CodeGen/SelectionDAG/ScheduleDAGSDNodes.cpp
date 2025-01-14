@@ -888,9 +888,13 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI = &*std::next(Before);
     }
 
-    if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo) {
-      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    if (MI->isCandidateForAdditionalCallInfo()) {
+      if (DAG->getTarget().Options.EmitCallSiteInfo)
+        MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+
+      if (auto CalledGlobal = DAG->getCalledGlobal(Node))
+        if (CalledGlobal->Callee)
+          MF.addCalledGlobal(MI, *CalledGlobal);
     }
 
     if (DAG->getNoMergeSiteInfo(Node)) {
@@ -907,10 +911,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
            It != End; ++It)
         It->setMMRAMetadata(MF, MMRA);
     }
-
-    if (auto CalledGlobal = DAG->getCalledGlobal(Node))
-      if (CalledGlobal->first)
-        MF.addCalledGlobal(MI, *CalledGlobal);
 
     return MI;
   };
