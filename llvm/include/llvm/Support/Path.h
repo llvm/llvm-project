@@ -201,7 +201,8 @@ bool replace_path_prefix(SmallVectorImpl<char> &Path, StringRef OldPrefix,
 ///
 /// @param path Input path.
 /// @result The cleaned-up \a path.
-StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef remove_leading_dotslash(StringRef path LLVM_LIFETIME_BOUND,
+                                  Style style = Style::native);
 
 /// In-place remove any './' and optionally '../' components from a path.
 ///
@@ -297,7 +298,8 @@ std::string convert_to_slash(StringRef path, Style style = Style::native);
 ///
 /// @param path Input path.
 /// @result The root name of \a path if it has one, otherwise "".
-StringRef root_name(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef root_name(StringRef path LLVM_LIFETIME_BOUND,
+                    Style style = Style::native);
 
 /// Get root directory.
 ///
@@ -310,7 +312,8 @@ StringRef root_name(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::nat
 /// @param path Input path.
 /// @result The root directory of \a path if it has one, otherwise
 ///               "".
-StringRef root_directory(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef root_directory(StringRef path LLVM_LIFETIME_BOUND,
+                         Style style = Style::native);
 
 /// Get root path.
 ///
@@ -318,7 +321,8 @@ StringRef root_directory(StringRef path LLVM_LIFETIME_BOUND, Style style = Style
 ///
 /// @param path Input path.
 /// @result The root path of \a path if it has one, otherwise "".
-StringRef root_path(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef root_path(StringRef path LLVM_LIFETIME_BOUND,
+                    Style style = Style::native);
 
 /// Get relative path.
 ///
@@ -330,7 +334,8 @@ StringRef root_path(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::nat
 ///
 /// @param path Input path.
 /// @result The path starting after root_path if one exists, otherwise "".
-StringRef relative_path(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef relative_path(StringRef path LLVM_LIFETIME_BOUND,
+                        Style style = Style::native);
 
 /// Get parent path.
 ///
@@ -357,7 +362,8 @@ StringRef parent_path(StringRef path LLVM_LIFETIME_BOUND,
 /// @param path Input path.
 /// @result The filename part of \a path. This is defined as the last component
 ///         of \a path. Similar to the POSIX "basename" utility.
-StringRef filename(StringRef path LLVM_LIFETIME_BOUND, Style style = Style::native);
+StringRef filename(StringRef path LLVM_LIFETIME_BOUND,
+                   Style style = Style::native);
 
 /// Get stem.
 ///
