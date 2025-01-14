@@ -824,6 +824,10 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
       FuncME |= MemoryEffects::readOnly();
     if (Call->hasClobberingOperandBundles())
       FuncME |= MemoryEffects::writeOnly();
+    if (Call->isVolatile()) {
+      // Volatile operations also access inaccessible memory.
+      FuncME |= MemoryEffects::inaccessibleMemOnly();
+    }
     Min &= FuncME;
   }
 

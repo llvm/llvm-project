@@ -236,7 +236,7 @@ declare void @llvm.memset(ptr %dest, i8 %val, i32 %len, i1 %isvolatile)
 
 ; negative, checking volatile intrinsics.
 define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: @memcpy_volatile(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1:%.*]], ptr [[PTR2:%.*]], i32 8, i1 true)
 ; CHECK-NEXT:    ret i32 4

@@ -615,6 +615,10 @@ MemoryEffects CallBase::getMemoryEffects() const {
       if (hasClobberingOperandBundles())
         FnME |= MemoryEffects::writeOnly();
     }
+    if (isVolatile()) {
+      // Volatile operations also access inaccessible memory.
+      FnME |= MemoryEffects::inaccessibleMemOnly();
+    }
     ME &= FnME;
   }
   return ME;
