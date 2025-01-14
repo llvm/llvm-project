@@ -305,12 +305,14 @@ static Value downcastSelectAndUpcast(OpBuilder &builder, Location loc,
   assert(
       downcastType.getNumElements() * downcastType.getElementTypeBitWidth() ==
           upcastType.getNumElements() * upcastType.getElementTypeBitWidth() &&
-      "expected upcastType size to be twice the size of downcastType");
-  if (trueValue.getType() != downcastType)
+      "expected input and output number of bits to match");
+  if (trueValue.getType() != downcastType) {
     trueValue = builder.create<vector::BitCastOp>(loc, downcastType, trueValue);
-  if (falseValue.getType() != downcastType)
+  }
+  if (falseValue.getType() != downcastType) {
     falseValue =
         builder.create<vector::BitCastOp>(loc, downcastType, falseValue);
+  }
   Value selectedType =
       builder.create<arith::SelectOp>(loc, mask, trueValue, falseValue);
   // Upcast the selected value to the new type.
@@ -454,28 +456,33 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
-    auto foldedNumFrontPadElems =
+    std::optional<int64_t> foldedNumFrontPadElems =
         isUnalignedEmulation
             ? getConstantIntValue(linearizedInfo.intraDataOffset)
             : 0;
 
     if (!foldedNumFrontPadElems) {
-      // Unimplemented case for dynamic front padding size != 0
-      return failure();
+      return failure("subbyte store emulation: dynamic front padding size is "
+                     "not yet implemented");
     }
 
-    auto linearizedMemref = cast<MemRefValue>(adaptor.getBase());
+    auto memrefBase = cast<MemRefValue>(adaptor.getBase());
 
-    // Shortcut: conditions when subbyte store at the front is not needed:
+    // Shortcut: conditions when subbyte emulated store at the front is not
+    // needed:
     // 1. The source vector size is multiple of byte size
     // 2. The address of the store is aligned to the emulated width boundary
+    //
+    // For example, to store a vector<4xi2> to <13xi2> at offset 4, does not
+    // need unaligned emulation because the store address is aligned and the
+    // source is a whole byte.
     if (!isUnalignedEmulation && *foldedNumFrontPadElems == 0) {
       auto numElements = origElements / numSrcElemsPerDest;
       auto bitCast = rewriter.create<vector::BitCastOp>(
           loc, VectorType::get(numElements, newElementType),
           op.getValueToStore());
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
-          op, bitCast.getResult(), linearizedMemref,
+          op, bitCast.getResult(), memrefBase,
           getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
       return success();
     }
@@ -511,7 +518,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           extractSliceIntoByte(rewriter, loc, valueToStore, 0,
                                frontSubWidthStoreElem, *foldedNumFrontPadElems);
 
-      atomicStore(rewriter, loc, linearizedMemref, currentDestIndex,
+      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
                   cast<VectorValue>(value), frontMask.getResult());
     }
 
@@ -537,13 +544,13 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
           numNonFullWidthElements);
 
       auto originType = cast<VectorType>(fullWidthStorePart.getType());
-      auto memrefElemType = getElementTypeOrSelf(linearizedMemref.getType());
+      auto memrefElemType = getElementTypeOrSelf(memrefBase.getType());
       auto storeType = VectorType::get(
           {originType.getNumElements() / numSrcElemsPerDest}, memrefElemType);
       auto bitCast = rewriter.create<vector::BitCastOp>(loc, storeType,
                                                         fullWidthStorePart);
-      rewriter.create<vector::StoreOp>(loc, bitCast.getResult(),
-                                       linearizedMemref, currentDestIndex);
+      rewriter.create<vector::StoreOp>(loc, bitCast.getResult(), memrefBase,
+                                       currentDestIndex);
 
       currentSourceIndex += numNonFullWidthElements;
       currentDestIndex = rewriter.create<arith::AddIOp>(
@@ -565,7 +572,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto backMask = rewriter.create<arith::ConstantOp>(
           loc, DenseElementsAttr::get(subWidthStoreMaskType, maskValues));
 
-      atomicStore(rewriter, loc, linearizedMemref, currentDestIndex,
+      atomicStore(rewriter, loc, memrefBase, currentDestIndex,
                   cast<VectorValue>(subWidthStorePart), backMask.getResult());
     }
 
