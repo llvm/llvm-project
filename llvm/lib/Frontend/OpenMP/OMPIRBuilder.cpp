@@ -6119,10 +6119,12 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
   return Builder.CreateCall(Fn, Args);
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
-                                  int32_t MinThreadsVal, int32_t MaxThreadsVal,
-                                  int32_t MinTeamsVal, int32_t MaxTeamsVal) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
+    const LocationDescription &Loc,
+    const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs) {
+  assert(!Attrs.MaxThreads.empty() && !Attrs.MaxTeams.empty() &&
+         "expected num_threads and num_teams to be specified");
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -6130,8 +6132,9 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Constant *IsSPMDVal = ConstantInt::getSigned(
-      Int8, IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(Int8, !IsSPMD);
+      Int8, Attrs.IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
+  Constant *UseGenericStateMachineVal =
+      ConstantInt::getSigned(Int8, !Attrs.IsSPMD);
   Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
   Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
 
@@ -6149,21 +6152,23 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
-  if (MinTeamsVal > 1 || MaxTeamsVal > 0)
-    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+  if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
+    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  // For max values, < 0 means unset, == 0 means set but unknown.
+  // If MaxThreads not set, select the maximum between the default workgroup
+  // size and the MinThreads value.
+  int32_t MaxThreadsVal = Attrs.MaxThreads.front();
   if (MaxThreadsVal < 0)
     MaxThreadsVal = std::max(
-        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
+        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), Attrs.MinThreads);
 
   if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
+    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
 
-  Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
+  Constant *MinThreads = ConstantInt::getSigned(Int32, Attrs.MinThreads);
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
-  Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
-  Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams);
+  Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
   Constant *ReductionDataSize = ConstantInt::getSigned(Int32, 0);
   Constant *ReductionBufferLength = ConstantInt::getSigned(Int32, 0);
 
@@ -6730,8 +6735,9 @@ FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
 }
 
 static Expected<Function *> createOutlinedFunction(
-    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
-    SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
@@ -6798,7 +6804,7 @@ static Expected<Function *> createOutlinedFunction(
 
   // Insert target init call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())
-    Builder.restoreIP(OMPBuilder.createTargetInit(Builder, /*IsSPMD*/ false));
+    Builder.restoreIP(OMPBuilder.createTargetInit(Builder, DefaultAttrs));
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 
@@ -6997,16 +7003,18 @@ static Function *emitTargetTaskProxyFunction(OpenMPIRBuilder &OMPBuilder,
 
 static Error emitTargetOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, bool IsOffloadEntry,
-    TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
-    Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
+    TargetRegionEntryInfo &EntryInfo,
+    const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+    Function *&OutlinedFn, Constant *&OutlinedFnID,
+    SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&OMPBuilder, &Builder, &Inputs, &CBFunc,
-       &ArgAccessorFuncCB](StringRef EntryFnName) {
-        return createOutlinedFunction(OMPBuilder, Builder, EntryFnName, Inputs,
-                                      CBFunc, ArgAccessorFuncCB);
+      [&](StringRef EntryFnName) {
+        return createOutlinedFunction(OMPBuilder, Builder, DefaultAttrs,
+                                      EntryFnName, Inputs, CBFunc,
+                                      ArgAccessorFuncCB);
       };
 
   return OMPBuilder.emitTargetRegionFunction(
@@ -7302,9 +7310,10 @@ void OpenMPIRBuilder::emitOffloadingArraysAndArgs(
 
 static void
 emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-               OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
-               Constant *OutlinedFnID, ArrayRef<int32_t> NumTeams,
-               ArrayRef<int32_t> NumThreads, SmallVectorImpl<Value *> &Args,
+               OpenMPIRBuilder::InsertPointTy AllocaIP,
+               const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
+               Function *OutlinedFn, Constant *OutlinedFnID,
+               SmallVectorImpl<Value *> &Args,
                OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
                SmallVector<llvm::OpenMPIRBuilder::DependData> Dependencies = {},
                bool HasNoWait = false) {
@@ -7385,9 +7394,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
 
   SmallVector<Value *, 3> NumTeamsC;
   SmallVector<Value *, 3> NumThreadsC;
-  for (auto V : NumTeams)
+  for (auto V : DefaultAttrs.MaxTeams)
     NumTeamsC.push_back(llvm::ConstantInt::get(Builder.getInt32Ty(), V));
-  for (auto V : NumThreads)
+  for (auto V : DefaultAttrs.MaxThreads)
     NumThreadsC.push_back(llvm::ConstantInt::get(Builder.getInt32Ty(), V));
 
   unsigned NumTargetItems = Info.NumberOfPtrs;
@@ -7428,7 +7437,7 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, bool IsOffloadEntry, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo,
-    ArrayRef<int32_t> NumTeams, ArrayRef<int32_t> NumThreads,
+    const TargetKernelDefaultAttrs &DefaultAttrs,
     SmallVectorImpl<Value *> &Args, GenMapInfoCallbackTy GenMapInfoCB,
     OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
@@ -7445,16 +7454,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // the target region itself is generated using the callbacks CBFunc
   // and ArgAccessorFuncCB
   if (Error Err = emitTargetOutlinedFunction(
-          *this, Builder, IsOffloadEntry, EntryInfo, OutlinedFn, OutlinedFnID,
-          Args, CBFunc, ArgAccessorFuncCB))
+          *this, Builder, IsOffloadEntry, EntryInfo, DefaultAttrs, OutlinedFn,
+          OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB))
     return Err;
 
   // If we are not on the target device, then we need to generate code
   // to make a remote call (offload) to the previously outlined function
   // that represents the target region. Do that now.
   if (!Config.isTargetDevice())
-    emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
-                   NumThreads, Args, GenMapInfoCB, Dependencies, HasNowait);
+    emitTargetCall(*this, Builder, AllocaIP, DefaultAttrs, OutlinedFn,
+                   OutlinedFnID, Args, GenMapInfoCB, Dependencies, HasNowait);
   return Builder.saveIP();
 }
 

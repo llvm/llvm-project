@@ -4084,9 +4084,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
     return failure();
 
-  int32_t defaultValTeams = -1;
-  int32_t defaultValThreads = 0;
-
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
                                 builder);
@@ -4118,6 +4115,11 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                                         allocaIP, codeGenIP);
   };
 
+  // TODO: Populate default attributes based on the construct and clauses.
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs = {
+      /*IsSPMD=*/false, /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0},
+      /*MinThreads=*/0};
+
   llvm::SmallVector<llvm::Value *, 4> kernelInput;
   for (size_t i = 0; i < mapVars.size(); ++i) {
     // declare target arguments are not passed to kernels as arguments
@@ -4141,8 +4143,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
-          defaultValTeams, defaultValThreads, kernelInput, genMapInfoCB, bodyCB,
-          argAccessorCB, dds, targetOp.getNowait());
+          defaultAttrs, kernelInput, genMapInfoCB, bodyCB, argAccessorCB, dds,
+          targetOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
