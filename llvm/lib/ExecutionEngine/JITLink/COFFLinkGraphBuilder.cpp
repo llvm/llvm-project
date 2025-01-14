@@ -32,9 +32,8 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
       G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
-                                    createTripleWithCOFFFormat(TT),
-                                    std::move(Features), getPointerSize(Obj),
-                                    getEndianness(Obj),
+                                    createTripleWithCOFFFormat(std::move(TT)),
+                                    std::move(Features),
                                     std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
@@ -43,17 +42,6 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
 }
 
 COFFLinkGraphBuilder::~COFFLinkGraphBuilder() = default;
-
-unsigned
-COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
-  return Obj.getBytesInAddress();
-}
-
-llvm::endianness
-COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
-}
 
 uint64_t COFFLinkGraphBuilder::getSectionSize(const object::COFFObjectFile &Obj,
                                               const object::coff_section *Sec) {
