@@ -297,7 +297,8 @@ arguments for the region of that MLIR operation. This enables, for example, the
 introduction of private copies of the same underlying variable defined outside
 the MLIR operation the clause is attached to. Currently, clauses with this
 property can be classified into three main categories:
-  - Map-like clauses: `map`, `use_device_addr` and `use_device_ptr`.
+  - Map-like clauses: `host_eval` (compiler internal, not defined by the OpenMP
+  specification), `map`, `use_device_addr` and `use_device_ptr`.
   - Reduction-like clauses: `in_reduction`, `reduction` and `task_reduction`.
   - Privatization clauses: `private`.
 
