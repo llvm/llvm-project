@@ -377,6 +377,8 @@ static Value extractSliceIntoByte(ConversionPatternRewriter &rewriter,
                                   int64_t insertOffset) {
   assert(vector.getType().getRank() == 1 && "expected 1-D vector");
   auto vectorElementType = vector.getType().getElementType();
+  // TODO: update and use `alignedConversionPrecondition` in the place of
+  // these asserts.
   assert(
       sliceNumElements * vectorElementType.getIntOrFloatBitWidth() <= 8 &&
       "sliceNumElements * vector element size must be less than or equal to 8");
