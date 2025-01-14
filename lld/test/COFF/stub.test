@@ -21,11 +21,14 @@ CHECK1: OEMid: 0
 CHECK1: OEMinfo: 0
 CHECK1: AddressOfNewExeHeader: 64
 
+## Invalid DOS signature (must be `MZ`)
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub512zz %t.obj 2>&1 | FileCheck -check-prefix=CHECK2 %s
 # CHECK2: lld-link: error: /stub: invalid format for MS-DOS stub file: {{.*}}
 
+## Unaligned stub (must be aligned to 8)
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub516mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK3 %s
 # CHECK3: lld-link: error: /stub: invalid format for MS-DOS stub file: {{.*}}
 
+## Too-small stub (must be at least 64 bytes long)
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub511mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK4 %s
 # CHECK4: lld-link: error: /stub: invalid format for MS-DOS stub file: {{.*}}
