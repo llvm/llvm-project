@@ -247,6 +247,30 @@ llvm.func @target_has_device_addr(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @target_host_eval(%x : i32) {
+  // expected-error@below {{not yet implemented: host evaluation of loop bounds in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
+    omp.teams {
+      omp.parallel {
+        omp.distribute {
+          omp.wsloop {
+            omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+              omp.yield
+            }
+          } {omp.composite}
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @target_if(%x : i1) {
   // expected-error@below {{not yet implemented: Unhandled clause if in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
@@ -308,17 +332,6 @@ llvm.func @target_firstprivate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @target_thread_limit(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause thread_limit in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target thread_limit(%x : i32) {
     omp.terminator
   }
   llvm.return
