@@ -19,7 +19,6 @@ define void @int_and_pointer_predicate(ptr %v, i32 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:      {%v,+,4}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -93,8 +92,6 @@ define void @int_and_multiple_pointer_predicates(ptr %v, ptr %w, i32 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:      {%v,+,4}<%loop> Added Flags: <nusw>
-; CHECK-NEXT:      {%w,+,4}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

@@ -1520,12 +1520,11 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
       GEP && GEP->hasNoUnsignedSignedWrap())
     return Stride;
 
-  // If the null pointer is undefined, then a access sequence which would
-  // otherwise access it can be assumed not to unsigned wrap.  Note that this
-  // assumes the object in memory is aligned to the natural alignment.
+  // If the null pointer dereference is undefined, then a access sequence which
+  // would otherwise access it can be assumed not to unsigned wrap. Note that
+  // this assumes the object in memory is aligned to the natural alignment.
   unsigned AddrSpace = Ty->getPointerAddressSpace();
-  if (!NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace) &&
-      (Stride == 1 || Stride == -1))
+  if (!NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace))
     return Stride;
 
   if (Assume) {

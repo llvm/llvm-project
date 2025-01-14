@@ -39,7 +39,6 @@ define void @f1(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nusw>
-; CHECK-NEXT:      {%a,+,4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
@@ -115,7 +114,6 @@ define void @f2(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nusw>
-; CHECK-NEXT:      {((4 * (zext i31 (trunc i64 %N to i31) to i64))<nuw><nsw> + %a),+,-4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
@@ -176,7 +174,6 @@ define void @f3(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,2}<%for.body> Added Flags: <nssw>
-; CHECK-NEXT:      {%a,+,4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
@@ -233,7 +230,6 @@ define void @f4(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
-; CHECK-NEXT:      {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
