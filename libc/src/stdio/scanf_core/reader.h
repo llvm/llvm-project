@@ -9,12 +9,73 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
+// has the macro subsitution failure
+// #ifdef LIBC_FULL_BUILD
+#include "src/__support/File/file.h"
+// #endif
+
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
+// includes stdio.h
+#include "hdr/types/FILE.h"
+
+
+#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+
+
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
+
+
+namespace internal {
+
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+// The GPU build provides FILE access through the host operating system's
+// library. So here we simply use the public entrypoints like in the SYSTEM_FILE
+// interface. Entrypoints should normally not call others, this is an exception.
+// FIXME: We do not acquire any locks here, so this is not thread safe.
+LIBC_INLINE int getc(void *f) {
+  return LIBC_NAMESPACE::getc(reinterpret_cast<::FILE *>(f));
+}
+
+LIBC_INLINE void ungetc(int c, void *f) {
+  LIBC_NAMESPACE::ungetc(c, reinterpret_cast<::FILE *>(f));
+}
+
+#elif !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+
+LIBC_INLINE int getc(void *f) {
+  unsigned char c;
+  auto result =
+      reinterpret_cast<LIBC_NAMESPACE::File *>(f)->read_unlocked(&c, 1);
+  size_t r = result.value;
+  if (result.has_error() || r != 1)
+    return '\0';
+
+  return c;
+}
+
+LIBC_INLINE void ungetc(int c, void *f) {
+  reinterpret_cast<LIBC_NAMESPACE::File *>(f)->ungetc_unlocked(c);
+}
+
+#else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
+
+// Since ungetc_unlocked isn't always available, we don't acquire the lock for
+// system files.
+LIBC_INLINE int getc(void *f) { return ::getc(reinterpret_cast<::FILE *>(f)); }
+
+LIBC_INLINE void ungetc(int c, void *f) {
+  ::ungetc(c, reinterpret_cast<::FILE *>(f));
+}
+#endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
+
+} // namespace internal
+
 
 // This is intended to be either a raw string or a buffer syncronized with the
 // file's internal buffer.
@@ -52,7 +113,18 @@ public:
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
-  void ungetc(char c);
+  LIBC_INLINE void ungetc(char c) {
+    --cur_chars_read;
+    if (rb != nullptr && rb->buff_cur > 0) {
+      // While technically c should be written back to the buffer, in scanf we
+      // always write the character that was already there. Additionally, the
+      // buffer is most likely to contain a string that isn't part of a file,
+      // which may not be writable.
+      --(rb->buff_cur);
+      return;
+    }
+    internal::ungetc(static_cast<int>(c), input_stream);
+  }
 
   LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
