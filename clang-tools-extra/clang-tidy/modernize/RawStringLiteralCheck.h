@@ -35,7 +35,7 @@ public:
 private:
   void replaceWithRawStringLiteral(
       const ast_matchers::MatchFinder::MatchResult &Result,
-      const StringLiteral *Literal, StringRef Replacement);
+      const StringLiteral *Literal, std::string Replacement);
 
   std::string DelimiterStem;
   CharsBitSet DisallowedChars;
