@@ -227,8 +227,4 @@ class PluginPythonOSPlugin(TestBase):
         # This breakpoint should not be hit.
         breakpoint.SetThreadID(123)
         process.Continue()
-
-        frame = thread.GetFrameAtIndex(0)
-        self.assertFalse(
-            frame.IsValid(), "Should not stop, the breakpoint was not for this thread."
-        )
+        self.assertState(process.GetState(), lldb.eStateExited)
