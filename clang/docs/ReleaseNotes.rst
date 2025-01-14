@@ -1068,6 +1068,9 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of SVE2.1 and SME2.1 in accordance with the Arm C Language
+  Extensions (ACLE) is now available.
+
 - In the ARM Target, the frame pointer (FP) of a leaf function can be retained
   by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
