@@ -2479,17 +2479,28 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 }
 
 // symbol+offset
-bool NVPTXDAGToDAGISel::SelectADDRsi_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
-  if (isAddLike(Addr)) {
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue base = Addr.getOperand(0);
-      if (SelectDirectAddr(base, Base)) {
-        Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode),
-                                           mvt);
-        return true;
+bool NVPTXDAGToDAGISel::SelectADDRsi_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
+  std::function<std::optional<uint64_t>(SDValue, uint64_t)>
+      FindRootAddressAndTotalOffset =
+          [&](SDValue Addr,
+              uint64_t AccumulatedOffset) -> std::optional<uint64_t> {
+    if (isAddLike(Addr)) {
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+        SDValue PossibleBaseAddr = Addr.getOperand(0);
+        AccumulatedOffset += CN->getZExtValue();
+        if (SelectDirectAddr(PossibleBaseAddr, Base))
+          return AccumulatedOffset;
+        return FindRootAddressAndTotalOffset(PossibleBaseAddr,
+                                             AccumulatedOffset);
       }
     }
+    return std::nullopt;
+  };
+  if (auto AccumulatedOffset = FindRootAddressAndTotalOffset(Addr, 0)) {
+    Offset = CurDAG->getTargetConstant(*AccumulatedOffset, SDLoc(OpNode), VT);
+    return true;
   }
   return false;
 }
@@ -2507,11 +2518,12 @@ bool NVPTXDAGToDAGISel::SelectADDRsi64(SDNode *OpNode, SDValue Addr,
 }
 
 // register+offset
-bool NVPTXDAGToDAGISel::SelectADDRri_imp(
-    SDNode *OpNode, SDValue Addr, SDValue &Base, SDValue &Offset, MVT mvt) {
+bool NVPTXDAGToDAGISel::SelectADDRri_imp(SDNode *OpNode, SDValue Addr,
+                                         SDValue &Base, SDValue &Offset,
+                                         MVT VT) {
   if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
-    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), mvt);
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+    Offset = CurDAG->getTargetConstant(0, SDLoc(OpNode), VT);
     return true;
   }
   if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
@@ -2526,7 +2538,7 @@ bool NVPTXDAGToDAGISel::SelectADDRri_imp(
       if (FrameIndexSDNode *FIN =
               dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
         // Constant offset from frame ref.
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), mvt);
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       else
         Base = Addr.getOperand(0);
 

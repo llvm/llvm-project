@@ -588,6 +588,19 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
   }
 
+  // cttz(Pow2) -> Log2(Pow2)
+  // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
+  if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
+    if (IsTZ)
+      return IC.replaceInstUsesWith(II, R);
+    BinaryOperator *BO = BinaryOperator::CreateSub(
+        ConstantInt::get(R->getType(), R->getType()->getScalarSizeInBits() - 1),
+        R);
+    BO->setHasNoSignedWrap();
+    BO->setHasNoUnsignedWrap();
+    return BO;
+  }
+
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
@@ -2227,6 +2240,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               matchBSwapOrBitReverse(*II, /*MatchBSwaps*/ true,
                                      /*MatchBitReversals*/ true))
         return BitOp;
+    }
+
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
     }
 
     // Left or right might be masked.

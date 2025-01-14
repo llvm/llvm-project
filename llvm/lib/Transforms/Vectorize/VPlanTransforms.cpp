@@ -592,30 +592,33 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *PhiR = dyn_cast<VPHeaderPHIRecipe>(&Phi);
+    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!PhiR)
-      break;
+      continue;
 
-    // Check if any uniform VPReplicateRecipes using the phi recipe are used by
-    // ExtractFromEnd. Those must be replaced by a regular VPReplicateRecipe to
-    // ensure the final value is available.
-    // TODO: Remove once uniformity analysis is done on VPlan.
-    for (VPUser *U : collectUsersRecursively(PhiR)) {
-      auto *ExitIRI = dyn_cast<VPIRInstruction>(U);
-      VPValue *Op;
-      if (!ExitIRI || !match(ExitIRI->getOperand(0),
-                             m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                                 m_VPValue(Op), m_VPValue())))
+    // Try to narrow wide and replicating recipes to uniform recipes, based on
+    // VPlan analysis.
+    // TODO: Apply to all recipes in the future, to replace legacy uniformity
+    // analysis.
+    auto Users = collectUsersRecursively(PhiR);
+    for (VPUser *U : reverse(Users)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(U);
+      auto *RepR = dyn_cast<VPReplicateRecipe>(U);
+      // Skip recipes that shouldn't be narrowed.
+      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
+          (RepR && (RepR->isUniform() || RepR->isPredicated())))
         continue;
-      auto *RepR = dyn_cast<VPReplicateRecipe>(Op);
-      if (!RepR || !RepR->isUniform())
+
+      // Skip recipes that may have other lanes than their first used.
+      if (!vputils::isUniformAfterVectorization(Def) &&
+          !vputils::onlyFirstLaneUsed(Def))
         continue;
-      assert(!RepR->isPredicated() && "RepR must not be predicated");
-      Instruction *I = RepR->getUnderlyingInstr();
-      auto *Clone =
-          new VPReplicateRecipe(I, RepR->operands(), /*IsUniform*/ false);
-      Clone->insertAfter(RepR);
-      RepR->replaceAllUsesWith(Clone);
+
+      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
+                                          Def->operands(), /*IsUniform*/ true);
+      Clone->insertAfter(Def);
+      Def->replaceAllUsesWith(Clone);
     }
 
     // Replace wide pointer inductions which have only their scalars used by
@@ -641,9 +644,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!WideIV)
-      continue;
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
@@ -1602,7 +1603,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   LLVMContext &Ctx = CanonicalIVType->getContext();
   VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
 
-  for (VPUser *U : Plan.getVF().users()) {
+  for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }

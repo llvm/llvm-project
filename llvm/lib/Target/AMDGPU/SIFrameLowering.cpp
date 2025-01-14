@@ -1438,7 +1438,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // second VGPR emergency frame index.
     if (HaveSGPRToVMemSpill &&
         allocateScavengingFrameIndexesNearIncomingSP(MF)) {
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(4, Align(4), false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
 }
