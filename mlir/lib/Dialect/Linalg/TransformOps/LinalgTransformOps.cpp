@@ -2244,7 +2244,7 @@ transform::ConvertToLoopsOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<Operation *> loops;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     auto tilingOp = dyn_cast<TilingInterface>(*target);
-    if (!target) {
+    if (!tilingOp) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "expected the payload to implement TilingInterface";
