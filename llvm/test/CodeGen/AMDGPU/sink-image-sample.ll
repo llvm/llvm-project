@@ -11,7 +11,7 @@
 
 define amdgpu_ps float @sinking_img_sample() {
 main_body:
-  %i = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %i = call <3 x float> @llvm.amdgcn.image.sample.l.2d.v3f32.f32(i32 7, float undef, float undef, float undef, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
   br i1 undef, label %endif1, label %if1
 
 if1:                                              ; preds = %main_body
@@ -28,7 +28,7 @@ exit:                                             ; preds = %endif1, %if1
   ret float %i24
 }
 ; Function Attrs: nounwind readonly willreturn
-declare <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
+declare <3 x float> @llvm.amdgcn.image.sample.l.2d.v3f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare float @llvm.fma.f32(float, float, float) #2
