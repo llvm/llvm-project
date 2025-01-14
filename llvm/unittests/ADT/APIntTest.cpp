@@ -74,6 +74,14 @@ TEST(APIntTest, PowerMaxValue) {
   EXPECT_EQ(MaxValue, MaxTo3);
 }
 
+// Test that MaxValue^3 == MaxValue
+TEST(APIntTest, ZeroToZero) {
+  APInt Zero = APInt::getZero(32);
+  APInt One = APInt::getZero(32) + 1;
+  APInt ZeroToZero = APIntOps::pow(Zero, 0);
+  EXPECT_EQ(ZeroToZero, One);
+}
+
 // Test that APInt shift left works when bitwidth > 64 and shiftamt == 0
 TEST(APIntTest, ShiftLeftByZero) {
   APInt One = APInt::getZero(65) + 1;
