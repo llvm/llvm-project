@@ -954,6 +954,12 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
       ID.AddInteger(M);
     break;
   }
+  case ISD::ADDRSPACECAST: {
+    const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(N);
+    ID.AddInteger(ASC->getSrcAddressSpace());
+    ID.AddInteger(ASC->getDestAddressSpace());
+    break;
+  }
   case ISD::TargetBlockAddress:
   case ISD::BlockAddress: {
     const BlockAddressSDNode *BA = cast<BlockAddressSDNode>(N);
