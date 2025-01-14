@@ -80,6 +80,82 @@ define float @test_fmax_1_25_neg_2_xorsign_abs_f() {
 }
 
 ;###############################################################
+;#                   FMax(+Subnormal, 0.0)                     #
+;###############################################################
+
+define double @test_fmax_pos_subnorm_zero_d() {
+; CHECK-LABEL: define double @test_fmax_pos_subnorm_zero_d() {
+; CHECK-NEXT:    ret double 0x380FFFFFC0000000
+;
+  %res = call double @llvm.nvvm.fmax.d(double 0x380FFFFFC0000000, double 0.0)
+  ret double %res
+}
+
+define float @test_fmax_pos_subnorm_zero_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_f() {
+; CHECK-NEXT:    ret float 0x380FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmax.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_ftz_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_ftz_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmax.ftz.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_ftz_nan_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_ftz_nan_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmax.ftz.nan.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_ftz_nan_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_ftz_nan_xorsign_abs_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_ftz_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_ftz_xorsign_abs_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmax.ftz.xorsign.abs.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_nan_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_nan_f() {
+; CHECK-NEXT:    ret float 0x380FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmax.nan.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_nan_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_nan_xorsign_abs_f() {
+; CHECK-NEXT:    ret float 0x380FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmax.nan.xorsign.abs.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmax_pos_subnorm_zero_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmax_pos_subnorm_zero_xorsign_abs_f() {
+; CHECK-NEXT:    ret float 0x380FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmax.xorsign.abs.f(float 0x380FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+;###############################################################
 ;#                   FMax(+Subnormal, -Subnormal)              #
 ;###############################################################
 
@@ -457,6 +533,82 @@ define float @test_fmin_1_25_neg_2_xorsign_abs_f() {
 ; CHECK-NEXT:    ret float -1.250000e+00
 ;
   %res = call float @llvm.nvvm.fmin.xorsign.abs.f(float 1.25, float -2.0)
+  ret float %res
+}
+
+;###############################################################
+;#                   FMin(-Subnormal, 0.0)                     #
+;###############################################################
+
+define double @test_fmin_neg_subnorm_zero_d() {
+; CHECK-LABEL: define double @test_fmin_neg_subnorm_zero_d() {
+; CHECK-NEXT:    ret double 0xB80FFFFFC0000000
+;
+  %res = call double @llvm.nvvm.fmin.d(double 0xB80FFFFFC0000000, double 0.0)
+  ret double %res
+}
+
+define float @test_fmin_neg_subnorm_zero_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_f() {
+; CHECK-NEXT:    ret float 0xB80FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmin.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_ftz_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_ftz_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.ftz.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_ftz_nan_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_ftz_nan_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.ftz.nan.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_ftz_nan_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_ftz_nan_xorsign_abs_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_ftz_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_ftz_xorsign_abs_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.ftz.xorsign.abs.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_nan_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_nan_f() {
+; CHECK-NEXT:    ret float 0xB80FFFFFC0000000
+;
+  %res = call float @llvm.nvvm.fmin.nan.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_nan_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_nan_xorsign_abs_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.nan.xorsign.abs.f(float 0xB80FFFFFC0000000, float 0.0)
+  ret float %res
+}
+
+define float @test_fmin_neg_subnorm_zero_xorsign_abs_f() {
+; CHECK-LABEL: define float @test_fmin_neg_subnorm_zero_xorsign_abs_f() {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %res = call float @llvm.nvvm.fmin.xorsign.abs.f(float 0xB80FFFFFC0000000, float 0.0)
   ret float %res
 }
 
