@@ -82,7 +82,7 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
   addConversion(
       [&](fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-        return convertRecordType(derived, results);
+        return convertRecordType(derived, results, derived.isPacked());
       });
   addConversion(
       [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
@@ -133,8 +133,10 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
-    fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
+std::optional<llvm::LogicalResult>
+LLVMTypeConverter::convertRecordType(fir::RecordType derived,
+                                     llvm::SmallVectorImpl<mlir::Type> &results,
+                                     bool isPacked) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
@@ -156,7 +158,7 @@ std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     else
       members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));
   }
-  if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
+  if (mlir::failed(st.setBody(members, isPacked)))
     return mlir::failure();
   results.push_back(st);
   return mlir::success();

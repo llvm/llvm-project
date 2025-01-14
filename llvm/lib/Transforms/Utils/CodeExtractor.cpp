@@ -975,6 +975,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AllocatedPointer:
       case Attribute::AllocAlign:
       case Attribute::ByVal:
+      case Attribute::Captures:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
       case Attribute::ElementType:

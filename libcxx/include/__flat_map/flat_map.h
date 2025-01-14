@@ -17,7 +17,7 @@
 #include <__algorithm/ranges_inplace_merge.h>
 #include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
-#include <__algorithm/ranges_stable_sort.h>
+#include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
@@ -853,9 +853,7 @@ private:
   // is no invariant state to preserve
   _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
-    // To be consistent with std::map's behaviour, we use stable_sort instead of sort.
-    // As a result, if there are duplicated keys, the first value in the original order will be taken.
-    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
+    ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
     auto __dup_start = ranges::unique(__zv, __key_equiv(__compare_)).begin();
     auto __dist      = ranges::distance(__zv.begin(), __dup_start);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
@@ -886,7 +884,7 @@ private:
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {
-        ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
+        ranges::sort(__zv.begin() + __append_start_offset, __end, __compare_key);
       } else {
         _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
             __is_sorted_and_unique(__containers_.keys | ranges::views::drop(__append_start_offset)),

@@ -183,6 +183,9 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Function creates no aliases of pointer.
 def NoCapture : EnumAttr<"nocapture", IntersectAnd, [ParamAttr]>;
 
+/// Specify how the pointer may be captured.
+def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
+
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
