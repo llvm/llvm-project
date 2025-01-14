@@ -290,7 +290,7 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by extending the
   checker to detect floating point and integer literals in redundant
-  expressions.
+  expressions. Some macro related false positives had been removed.
 
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
