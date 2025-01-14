@@ -41,24 +41,10 @@ LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
   return (value / alignment) * alignment;
 }
 
-/// Returns the value rounded down to the nearest multiple of alignment.
-template <typename T>
-LIBC_INLINE constexpr T *align_down(T *value, size_t alignment) {
-  return reinterpret_cast<T *>(
-      align_down(reinterpret_cast<size_t>(value), alignment));
-}
-
-/// Returns the value rounded up to the nearest multiple of alignment.
+/// Returns the value rounded up to the nearest multiple of alignment. May wrap
+/// around.
 LIBC_INLINE constexpr size_t align_up(size_t value, size_t alignment) {
-  __builtin_add_overflow(value, alignment - 1, &value);
-  return align_down(value, alignment);
-}
-
-/// Returns the value rounded up to the nearest multiple of alignment.
-template <typename T>
-LIBC_INLINE constexpr T *align_up(T *value, size_t alignment) {
-  return reinterpret_cast<T *>(
-      align_up(reinterpret_cast<size_t>(value), alignment));
+  return align_down(value + alignment - 1, alignment);
 }
 
 using ByteSpan = cpp::span<LIBC_NAMESPACE::cpp::byte>;
@@ -326,6 +312,7 @@ public:
   // undefined if allocation is not possible for the given size and alignment.
   static BlockInfo allocate(Block *block, size_t alignment, size_t size);
 
+  // These two functions may wrap around.
   LIBC_INLINE static uintptr_t next_possible_block_start(
       uintptr_t ptr, size_t usable_space_alignment = alignof(max_align_t)) {
     return align_up(ptr + sizeof(Block), usable_space_alignment) -
@@ -377,9 +364,17 @@ optional<Block *> Block::init(ByteSpan region) {
 
   uintptr_t start = reinterpret_cast<uintptr_t>(region.data());
   uintptr_t end = start + region.size();
+  if (end < start)
+    return {};
 
   uintptr_t block_start = next_possible_block_start(start);
+  if (block_start < start)
+    return {};
+
   uintptr_t last_start = prev_possible_block_start(end);
+  if (last_start >= end)
+    return {};
+
   if (block_start + sizeof(Block) > last_start)
     return {};
 
