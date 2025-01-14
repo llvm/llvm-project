@@ -1687,8 +1687,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Write DOS program.
   if (config->stub.size()) {
     memcpy(buf, config->stub.data(), config->stub.size());
-    // MS link.exe accepts an invalid `e_lfanew` and updates it automatically.
-    // Replicate the same behaviour.
+    // MS link.exe accepts an invalid `e_lfanew` (AddressOfNewExeHeader) and
+    // updates it automatically. Replicate the same behaviour.
     dos->AddressOfNewExeHeader = config->stub.size();
     buf += config->stub.size();
   } else {
