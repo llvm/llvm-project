@@ -52,6 +52,14 @@ TEST(APIntTest, PowerTwoTo10) {
   EXPECT_EQ(TwoTo20, V_1024);
 }
 
+// Test that 3^3 == 27
+TEST(APIntTest, PowerThreeTo3) {
+  APInt Three = APInt::getZero(32) + 3;
+  APInt ThreeTo3 = APIntOps::pow(Three, 3);
+  APInt V_27 = APInt::getZero(32) + 27;
+  EXPECT_EQ(ThreeTo3, V_27);
+}
+
 // Test that APInt shift left works when bitwidth > 64 and shiftamt == 0
 TEST(APIntTest, ShiftLeftByZero) {
   APInt One = APInt::getZero(65) + 1;

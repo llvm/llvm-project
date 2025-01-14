@@ -3111,19 +3111,19 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
 
 APInt APIntOps::pow(const APInt &X, int64_t N) {
   assert(N >= 0 && "negative exponents not supported.");
+  APInt Acc = APInt(X.getBitWidth(), 1);
   if (N == 0) {
-    return APInt(X.getBitWidth(), 1);
+    return Acc;
   }
-  APInt Acc = X;
+  APInt Base = X;
   int64_t RemainingExponent = N;
-  while (RemainingExponent > 1) {
-    if (RemainingExponent % 2 == 0) {
-      Acc = Acc * Acc;
+  while (RemainingExponent > 0) {
+    while (RemainingExponent % 2 == 0) {
+      Base = Base * Base;
       RemainingExponent /= 2;
-    } else {
-      Acc = Acc * X;
-      RemainingExponent--;
     }
+    --RemainingExponent;
+    Acc = Acc * Base;
   }
   return Acc;
 };
