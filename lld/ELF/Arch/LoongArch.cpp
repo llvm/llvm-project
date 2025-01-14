@@ -46,6 +46,8 @@ public:
 private:
   void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  bool tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
+                     const Relocation &rLo12, uint64_t secAddr) const;
 };
 } // end anonymous namespace
 
@@ -1152,6 +1154,54 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
+// Try GOT indirection to PC relative optimization when relaxation is enabled.
+// From:
+//  * pcalau12i $a0, %got_pc_hi20(sym_got)
+//  * ld.w/d    $a0, $a0, %got_pc_lo12(sym_got)
+// To:
+//  * pcalau12i $a0, %pc_hi20(sym)
+//  * addi.w/d  $a0, $a0, %pc_lo12(sym)
+//
+// FIXME: Althouth the optimization has been performed, the GOT entries still
+// exists, similarly to AArch64. Eliminating the entries may be require
+// additional marking in the common code.
+bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
+                              const Relocation &rLo12, uint64_t secAddr) const {
+  if (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
+      rHi20.sym->isGnuIFunc() ||
+      (ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section))
+    return false;
+
+  Symbol &sym = *rHi20.sym;
+  uint64_t symLocal = sym.getVA(ctx) + rHi20.addend;
+  // Check if the address difference is within +/-2GB range.
+  // For simplicity, the range mentioned here is an approximate estimate and is
+  // not fully equivalent to the entire region that PC-relative addressing can
+  // cover.
+  int64_t pageOffset =
+      getLoongArchPage(symLocal) - getLoongArchPage(secAddr + rHi20.offset);
+  if (!isInt<20>(pageOffset >> 12))
+    return false;
+
+  Relocation newRHi20 = {RE_LOONGARCH_PAGE_PC, R_LARCH_PCALA_HI20, rHi20.offset,
+                         rHi20.addend, &sym};
+  Relocation newRLo12 = {R_ABS, R_LARCH_PCALA_LO12, rLo12.offset, rLo12.addend,
+                         &sym};
+
+  const uint32_t currInsn = read32le(loc);
+  const uint32_t nextInsn = read32le(loc + 4);
+  uint64_t pageDelta =
+      getLoongArchPageDelta(symLocal, secAddr + rHi20.offset, rHi20.type);
+  // pcalau12i $a0, %pc_hi20
+  write32le(loc, insn(PCALAU12I, getD5(currInsn), 0, 0));
+  relocate(loc, newRHi20, pageDelta);
+  // addi.w/d $a0, $a0, %pc_lo12
+  write32le(loc + 4, insn(ctx.arg.is64 ? ADDI_D : ADDI_W, getD5(nextInsn),
+                          getJ5(nextInsn), 0));
+  relocate(loc + 4, newRLo12, SignExtend64(symLocal, 64));
+  return true;
+}
+
 // During TLSDESC GD_TO_IE, the converted code sequence always includes an
 // instruction related to the Lo12 relocation (ld.[wd]). To obtain correct val
 // in `getRelocTargetVA`, expr of this instruction should be adjusted to
@@ -1261,6 +1311,22 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         tlsdescToLe(loc, rel, val);
       }
       continue;
+    case RE_LOONGARCH_GOT_PAGE_PC:
+      // In LoongArch, we try GOT indirection to PC relative optimization only
+      // when relaxation is enabled. This approach avoids determining whether
+      // relocation types are paired and whether the destination register of
+      // pcalau12i is only used by the immediately following instruction.
+      // Moreover, if the original code sequence can be relaxed to a single
+      // instruction `pcaddi`, the first instruction will be removed and it will
+      // not reach here.
+      if (isPairRelaxable(relocs, i) && rel.type == R_LARCH_GOT_PC_HI20 &&
+          relocs[i + 2].type == R_LARCH_GOT_PC_LO12 &&
+          tryGotToPCRel(loc, rel, relocs[i + 2], secAddr)) {
+        i = i + 3; // skip relocations R_LARCH_RELAX, R_LARCH_GOT_PC_LO12,
+                   // R_LARCH_RELAX
+        continue;
+      }
+      break;
     default:
       break;
     }
