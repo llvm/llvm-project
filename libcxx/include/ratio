@@ -465,7 +465,7 @@ struct _LIBCPP_TEMPLATE_VIS ratio_greater_equal : _BoolConstant<!ratio_less<_R1,
 };
 
 template <class _R1, class _R2>
-using __ratio_gcd = ratio<__static_gcd<_R1::num, _R2::num>, __static_lcm<_R1::den, _R2::den> >;
+using __ratio_gcd _LIBCPP_NODEBUG = ratio<__static_gcd<_R1::num, _R2::num>, __static_lcm<_R1::den, _R2::den> >;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _R1, class _R2>

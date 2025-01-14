@@ -51,24 +51,24 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator = allocator<_Tp> >
 struct __split_buffer {
 public:
-  using value_type      = _Tp;
-  using allocator_type  = _Allocator;
-  using __alloc_rr      = __libcpp_remove_reference_t<allocator_type>;
-  using __alloc_traits  = allocator_traits<__alloc_rr>;
-  using reference       = value_type&;
-  using const_reference = const value_type&;
-  using size_type       = typename __alloc_traits::size_type;
-  using difference_type = typename __alloc_traits::difference_type;
-  using pointer         = typename __alloc_traits::pointer;
-  using const_pointer   = typename __alloc_traits::const_pointer;
-  using iterator        = pointer;
-  using const_iterator  = const_pointer;
+  using value_type                     = _Tp;
+  using allocator_type                 = _Allocator;
+  using __alloc_rr _LIBCPP_NODEBUG     = __libcpp_remove_reference_t<allocator_type>;
+  using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<__alloc_rr>;
+  using reference                      = value_type&;
+  using const_reference                = const value_type&;
+  using size_type                      = typename __alloc_traits::size_type;
+  using difference_type                = typename __alloc_traits::difference_type;
+  using pointer                        = typename __alloc_traits::pointer;
+  using const_pointer                  = typename __alloc_traits::const_pointer;
+  using iterator                       = pointer;
+  using const_iterator                 = const_pointer;
 
   // A __split_buffer contains the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
   // - allocator_type: may be trivially relocatable, so it's checked
   // __split_buffer doesn't have any self-references, so it's trivially relocatable if its members are.
-  using __trivially_relocatable = __conditional_t<
+  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
       __split_buffer,
       void>;

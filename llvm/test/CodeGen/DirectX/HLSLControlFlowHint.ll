@@ -4,7 +4,7 @@
 
 
 ; CHECK: define i32 @test_branch(i32 %X)
-; CHECK-NO: hlsl.controlflow.hint
+; CHECK-NOT: hlsl.controlflow.hint
 ; CHECK: br i1 %cmp, label %if.then, label %if.else, !dx.controlflow.hints [[HINT_BRANCH:![0-9]+]]
 define i32 @test_branch(i32 %X) {
 entry:
@@ -34,7 +34,7 @@ if.end:                                           ; preds = %if.else, %if.then
 
 
 ; CHECK: define i32 @test_flatten(i32 %X)
-; CHECK-NO: hlsl.controlflow.hint
+; CHECK-NOT: hlsl.controlflow.hint
 ; CHECK: br i1 %cmp, label %if.then, label %if.else, !dx.controlflow.hints [[HINT_FLATTEN:![0-9]+]]
 define i32 @test_flatten(i32 %X) {
 entry:
@@ -64,8 +64,8 @@ if.end:                                           ; preds = %if.else, %if.then
 
 
 ; CHECK: define i32 @test_no_attr(i32 %X)
-; CHECK-NO: hlsl.controlflow.hint
-; CHECK-NO: !dx.controlflow.hints
+; CHECK-NOT: hlsl.controlflow.hint
+; CHECK-NOT: !dx.controlflow.hints
 define i32 @test_no_attr(i32 %X) {
 entry:
   %X.addr = alloca i32, align 4
@@ -91,7 +91,7 @@ if.end:                                           ; preds = %if.else, %if.then
   %3 = load i32, ptr %resp, align 4
   ret i32 %3
 }
-; CHECK-NO: hlsl.controlflow.hint
+; CHECK-NOT: hlsl.controlflow.hint
 ; CHECK: [[HINT_BRANCH]] = !{!"dx.controlflow.hints", i32 1}
 ; CHECK: [[HINT_FLATTEN]] = !{!"dx.controlflow.hints", i32 2}
 !0 = !{!"hlsl.controlflow.hint", i32 1}

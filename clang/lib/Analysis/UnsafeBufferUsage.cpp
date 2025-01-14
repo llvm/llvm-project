@@ -453,8 +453,11 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
     return false;
   }
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
+  Expr::EvalResult EVResult;
+  if (Node.getIdx()->EvaluateAsInt(EVResult, Finder->getASTContext())) {
+    llvm::APSInt ArrIdx = EVResult.Val.getInt();
+    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
+    // bug
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
   }

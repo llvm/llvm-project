@@ -66,11 +66,11 @@ public:
 
   /// Reorders sections using balanced partitioning algorithm based on profile
   /// data.
-  static llvm::DenseMap<const BPSectionBase *, size_t>
+  static llvm::DenseMap<const BPSectionBase *, int>
   reorderSectionsByBalancedPartitioning(
-      size_t &highestAvailablePriority, llvm::StringRef profilePath,
-      bool forFunctionCompression, bool forDataCompression,
-      bool compressionSortStartupFunctions, bool verbose,
+      llvm::StringRef profilePath, bool forFunctionCompression,
+      bool forDataCompression, bool compressionSortStartupFunctions,
+      bool verbose,
       llvm::SmallVector<std::unique_ptr<BPSectionBase>> &inputSections);
 };
 

@@ -286,10 +286,10 @@ private:
   bool selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
                                MachineInstr &I) const;
 
-  void selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+  bool selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
 
-  void selectImageWriteIntrinsic(MachineInstr &I) const;
+  bool selectImageWriteIntrinsic(MachineInstr &I) const;
 
   // Utilities
   std::pair<Register, bool>
@@ -317,7 +317,7 @@ private:
                                   Register IndexReg, bool IsNonUniform,
                                   MachineIRBuilder MIRBuilder) const;
   SPIRVType *widenTypeToVec4(const SPIRVType *Type, MachineInstr &I) const;
-  void extractSubvector(Register &ResVReg, const SPIRVType *ResType,
+  bool extractSubvector(Register &ResVReg, const SPIRVType *ResType,
                         Register &ReadReg, MachineInstr &InsertionPoint) const;
   bool BuildCOPY(Register DestReg, Register SrcReg, MachineInstr &I) const;
   bool loadVec3BuiltinInputID(SPIRV::BuiltIn::BuiltIn BuiltInValue,
@@ -3019,12 +3019,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
   case Intrinsic::spv_resource_store_typedbuffer: {
-    selectImageWriteIntrinsic(I);
-    return true;
+    return selectImageWriteIntrinsic(I);
   }
   case Intrinsic::spv_resource_load_typedbuffer: {
-    selectReadImageIntrinsic(ResVReg, ResType, I);
-    return true;
+    return selectReadImageIntrinsic(ResVReg, ResType, I);
   }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
@@ -3066,7 +3064,7 @@ bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-void SPIRVInstructionSelector::selectReadImageIntrinsic(
+bool SPIRVInstructionSelector::selectReadImageIntrinsic(
     Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
 
   // If the load of the image is in a different basic block, then
@@ -3081,35 +3079,40 @@ void SPIRVInstructionSelector::selectReadImageIntrinsic(
 
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   if (ResultSize == 4) {
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageRead))
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpImageRead))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(ImageReg)
-        .addUse(I.getOperand(3).getReg());
-    return;
+        .addUse(I.getOperand(3).getReg())
+        .constrainAllUses(TII, TRI, RBI);
   }
 
   SPIRVType *ReadType = widenTypeToVec4(ResType, I);
   Register ReadReg = MRI->createVirtualRegister(GR.getRegClass(ReadType));
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageRead))
-      .addDef(ReadReg)
-      .addUse(GR.getSPIRVTypeID(ReadType))
-      .addUse(ImageReg)
-      .addUse(I.getOperand(3).getReg());
+  bool Succeed =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageRead))
+          .addDef(ReadReg)
+          .addUse(GR.getSPIRVTypeID(ReadType))
+          .addUse(ImageReg)
+          .addUse(I.getOperand(3).getReg())
+          .constrainAllUses(TII, TRI, RBI);
+  if (!Succeed)
+    return false;
 
   if (ResultSize == 1) {
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(SPIRV::OpCompositeExtract))
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpCompositeExtract))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(ReadReg)
-        .addImm(0);
-    return;
+        .addImm(0)
+        .constrainAllUses(TII, TRI, RBI);
   }
-  extractSubvector(ResVReg, ResType, ReadReg, I);
+  return extractSubvector(ResVReg, ResType, ReadReg, I);
 }
 
-void SPIRVInstructionSelector::extractSubvector(
+bool SPIRVInstructionSelector::extractSubvector(
     Register &ResVReg, const SPIRVType *ResType, Register &ReadReg,
     MachineInstr &InsertionPoint) const {
   SPIRVType *InputType = GR.getResultType(ReadReg);
@@ -3125,12 +3128,16 @@ void SPIRVInstructionSelector::extractSubvector(
   const TargetRegisterClass *ScalarRegClass = GR.getRegClass(ScalarType);
   for (uint64_t I = 0; I < ResultSize; I++) {
     Register ComponentReg = MRI->createVirtualRegister(ScalarRegClass);
-    BuildMI(*InsertionPoint.getParent(), InsertionPoint,
-            InsertionPoint.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-        .addDef(ComponentReg)
-        .addUse(ScalarType->getOperand(0).getReg())
-        .addUse(ReadReg)
-        .addImm(I);
+    bool Succeed = BuildMI(*InsertionPoint.getParent(), InsertionPoint,
+                           InsertionPoint.getDebugLoc(),
+                           TII.get(SPIRV::OpCompositeExtract))
+                       .addDef(ComponentReg)
+                       .addUse(ScalarType->getOperand(0).getReg())
+                       .addUse(ReadReg)
+                       .addImm(I)
+                       .constrainAllUses(TII, TRI, RBI);
+    if (!Succeed)
+      return false;
     ComponentRegisters.emplace_back(ComponentReg);
   }
 
@@ -3142,9 +3149,10 @@ void SPIRVInstructionSelector::extractSubvector(
 
   for (Register ComponentReg : ComponentRegisters)
     MIB.addUse(ComponentReg);
+  return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
-void SPIRVInstructionSelector::selectImageWriteIntrinsic(
+bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
     MachineInstr &I) const {
   // If the load of the image is in a different basic block, then
   // this will generate invalid code. A proper solution is to move
@@ -3159,10 +3167,12 @@ void SPIRVInstructionSelector::selectImageWriteIntrinsic(
   Register DataReg = I.getOperand(3).getReg();
   assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
   assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageWrite))
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpImageWrite))
       .addUse(ImageReg)
       .addUse(CoordinateReg)
-      .addUse(DataReg);
+      .addUse(DataReg)
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 Register SPIRVInstructionSelector::buildPointerToResource(

@@ -472,3 +472,14 @@ bb0:
 #endif // NDEBUG
   }
 }
+
+TEST_F(VecUtilsTest, FloorPowerOf2) {
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(0), 0u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(1 << 0), 1u << 0);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(3), 2u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(4), 4u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(5), 4u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(7), 4u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(8), 8u);
+  EXPECT_EQ(sandboxir::VecUtils::getFloorPowerOf2(9), 8u);
+}

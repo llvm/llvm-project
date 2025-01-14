@@ -2253,6 +2253,21 @@ TEST_P(ASTMatchersTest, HasDependentName_DependentScopeDeclRefExpr) {
                       dependentScopeDeclRefExpr(hasDependentName("foo"))));
 }
 
+TEST_P(ASTMatchersTest, HasDependentName_DependentNameType) {
+  if (!GetParam().isCXX()) {
+    // FIXME: Fix this test to work with delayed template parsing.
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template <typename T> struct declToImport {
+          typedef typename T::type dependent_name;
+        };
+      )",
+      dependentNameType(hasDependentName("type"))));
+}
+
 TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
 
   // Member functions:
