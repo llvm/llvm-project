@@ -189,13 +189,18 @@ public:
 
   /// @returns A pointer to the usable space inside this block.
   ///
-  /// Unless specifically requested otherwise, this will be aligned to
-  /// max_align_t.
+  /// Aligned to some multiple of max_align_t.
   LIBC_INLINE cpp::byte *usable_space() {
-    return reinterpret_cast<cpp::byte *>(this) + BLOCK_OVERHEAD;
+    auto *s = reinterpret_cast<cpp::byte *>(this) + BLOCK_OVERHEAD;
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
+                "usable space must be aligned to a multiple of max_align_t");
+    return s;
   }
   LIBC_INLINE const cpp::byte *usable_space() const {
-    return reinterpret_cast<const cpp::byte *>(this) + BLOCK_OVERHEAD;
+    const auto *s = reinterpret_cast<const cpp::byte *>(this) + BLOCK_OVERHEAD;
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
+                "usable space must be aligned to a multiple of max_align_t");
+    return s;
   }
 
   // @returns The region of memory the block manages, including the header.
@@ -455,6 +460,9 @@ optional<Block *> Block::split(size_t new_inner_size,
   Block *new_block = as_block(new_region);
   mark_free(); // Free status for this block is now stored in new_block.
   new_block->next()->prev_ = new_region.size();
+
+  LIBC_ASSERT(new_block->is_usable_space_aligned(usable_space_alignment) &&
+              "usable space must have requested alignment");
   return new_block;
 }
 
