@@ -81,12 +81,12 @@ UseIntegerSignComparisonCheck::UseIntegerSignComparisonCheck(
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
-      QtFrameworkEnabled(Options.get("QtEnabled", false)) {}
+      EnableQtSupport(Options.get("EnableQtSupport", false)) {}
 
 void UseIntegerSignComparisonCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "QtEnabled", QtFrameworkEnabled);
+  Options.store(Opts, "EnableQtSupport", EnableQtSupport);
 }
 
 void UseIntegerSignComparisonCheck::registerMatchers(MatchFinder *Finder) {
@@ -157,15 +157,16 @@ void UseIntegerSignComparisonCheck::check(
       diag(BinaryOp->getBeginLoc(),
            "comparison between 'signed' and 'unsigned' integers");
   std::string CmpNamespace;
-  std::string CmpHeader;
-  if (getLangOpts().CPlusPlus17 && QtFrameworkEnabled) {
-    CmpHeader = "<QtCore/q20utility.h>";
-    CmpNamespace = llvm::Twine("q20::" + parseOpCode(OpCode)).str();
-  }
+  llvm::StringRef CmpHeader;
+
   if (getLangOpts().CPlusPlus20) {
     CmpHeader = "<utility>";
     CmpNamespace = llvm::Twine("std::" + parseOpCode(OpCode)).str();
+  } else if (getLangOpts().CPlusPlus17 && EnableQtSupport) {
+    CmpHeader = "<QtCore/q20utility.h>";
+    CmpNamespace = llvm::Twine("q20::" + parseOpCode(OpCode)).str();
   }
+
   // Prefer modernize-use-integer-sign-comparison when C++20 is available!
   Diag << FixItHint::CreateReplacement(
       CharSourceRange(R1, SubExprLHS != nullptr),
