@@ -1143,3 +1143,20 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_not_pwr2_logical(i32 %
   %or = select i1 %t2, i1 true, i1 %t4
   ret i1 %or
 }
+
+define i1 @two_types_of_bittest(i8 %x, i8 %c) {
+; CHECK-LABEL: @two_types_of_bittest(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[C:%.*]]
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[T0]]
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %t0 = shl i8 1, %c
+  %icmp1 = icmp slt i8 %x, 0
+  %and = and i8 %x, %t0
+  %icmp2 = icmp ne i8 %and, 0
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}

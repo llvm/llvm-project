@@ -342,6 +342,21 @@ gentbl(
 )
 
 gentbl(
+    name = "basic_builtins_spirv_gen",
+    tbl_outs = [(
+        "-gen-clang-builtins",
+        "include/clang/Basic/BuiltinsSPIRV.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsSPIRV.td",
+    td_srcs = [
+        "include/clang/Basic/Builtins.td",
+        "include/clang/Basic/BuiltinsBase.td",
+        "include/clang/Basic/BuiltinsSPIRV.td",
+    ],
+)
+
+gentbl(
     name = "basic_builtins_riscv_gen",
     tbl_outs = [(
         "-gen-clang-builtins",
@@ -723,6 +738,7 @@ cc_library(
         ":basic_builtins_bpf_gen",
         ":basic_builtins_gen",
         ":basic_builtins_riscv_gen",
+        ":basic_builtins_spirv_gen",
         ":basic_builtins_x86_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_internal_headers",

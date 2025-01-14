@@ -19,11 +19,10 @@ add_header(
 
 # TODO: Can we simplify this macro expansion?
 # https://github.com/llvm/llvm-project/issues/117254
-macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
+macro(add_header_macro TARGET_NAME YAML_FILE GEN_HDR DEPENDS)
   add_gen_header(
     ${TARGET_NAME}
     YAML_FILE ${YAML_FILE}
-    DEF_FILE ${DEF_FILE}
     GEN_HDR ${GEN_HDR}
     ${DEPENDS}
     ${ARGN}
@@ -33,7 +32,6 @@ endmacro()
 add_header_macro(
   ctype
   ../libc/include/ctype.yaml
-  ctype.h.def
   ctype.h
   DEPENDS
     .llvm_libc_common_h
@@ -43,7 +41,6 @@ add_header_macro(
 add_header_macro(
   dirent
   ../libc/include/dirent.yaml
-  dirent.h.def
   dirent.h
   DEPENDS
     .llvm_libc_common_h
@@ -55,7 +52,6 @@ add_header_macro(
 add_header_macro(
   fcntl
   ../libc/include/fcntl.yaml
-  fcntl.h.def
   fcntl.h
   DEPENDS
     .llvm-libc-macros.fcntl_macros
@@ -71,7 +67,6 @@ add_header_macro(
 add_header_macro(
   dlfcn
   ../libc/include/dlfcn.yaml
-  dlfcn.h.def
   dlfcn.h
   DEPENDS
     .llvm-libc-macros.dlfcn_macros
@@ -81,7 +76,6 @@ add_header_macro(
 add_header_macro(
   features
   ../libc/include/features.yaml
-  features.h.def
   features.h
   DEPENDS
     .llvm_libc_common_h
@@ -91,7 +85,6 @@ add_header_macro(
 add_header_macro(
   fenv
   ../libc/include/fenv.yaml
-  fenv.h.def
   fenv.h
   DEPENDS
     .llvm_libc_common_h
@@ -103,7 +96,6 @@ add_header_macro(
 add_header_macro(
   inttypes
   ../libc/include/inttypes.yaml
-  inttypes.h.def
   inttypes.h
   DEPENDS
     .llvm_libc_common_h
@@ -114,7 +106,6 @@ add_header_macro(
 add_header_macro(
   float
   ../libc/include/float.yaml
-  float.h.def
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
@@ -123,7 +114,6 @@ add_header_macro(
 add_header_macro(
   stdint
   ../libc/include/stdint.yaml
-  stdint.h.def
   stdint.h
   DEPENDS
     .llvm-libc-macros.stdint_macros
@@ -132,7 +122,6 @@ add_header_macro(
 add_header_macro(
   limits
   ../libc/include/limits.yaml
-  limits.h.def
   limits.h
   DEPENDS
     .llvm-libc-macros.limits_macros
@@ -141,7 +130,6 @@ add_header_macro(
 add_header_macro(
   malloc
   ../libc/include/malloc.yaml
-  malloc.h.def
   malloc.h
   DEPENDS
     .llvm_libc_common_h
@@ -151,7 +139,6 @@ add_header_macro(
 add_header_macro(
   math
   ../libc/include/math.yaml
-  math.h.def
   math.h
   DEPENDS
     .llvm_libc_common_h
@@ -166,7 +153,6 @@ add_header_macro(
 add_header_macro(
   stdfix
   ../libc/include/stdfix.yaml
-  stdfix.h.def
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
@@ -179,7 +165,6 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 add_header_macro(
   arpa_inet
   ../libc/include/arpa/inet.yaml
-  arpa/inet.h.def
   arpa/inet.h
   DEPENDS
     .llvm_libc_common_h
@@ -188,7 +173,6 @@ add_header_macro(
 add_header_macro(
   assert
   ../libc/include/assert.yaml
-  assert.h.def
   assert.h
   DEPENDS
     .llvm_libc_common_h
@@ -198,7 +182,6 @@ add_header_macro(
 add_header_macro(
   complex
   ../libc/include/complex.yaml
-  complex.h.def
   complex.h
   DEPENDS
     .llvm_libc_common_h
@@ -208,7 +191,6 @@ add_header_macro(
 add_header_macro(
   setjmp
   ../libc/include/setjmp.yaml
-  setjmp.h.def
   setjmp.h
   DEPENDS
     .llvm_libc_common_h
@@ -218,7 +200,6 @@ add_header_macro(
 add_header_macro(
   string
   ../libc/include/string.yaml
-  string.h.def
   string.h
   DEPENDS
     .llvm_libc_common_h
@@ -229,7 +210,6 @@ add_header_macro(
 add_header_macro(
   strings
   ../libc/include/strings.yaml
-  strings.h.def
   strings.h
   DEPENDS
     .llvm_libc_common_h
@@ -239,7 +219,6 @@ add_header_macro(
 add_header_macro(
   search
   ../libc/include/search.yaml
-  search.h.def
   search.h
   DEPENDS
     .llvm_libc_common_h
@@ -253,7 +232,6 @@ add_header_macro(
 add_header_macro(
   time
   ../libc/include/time.yaml
-  time.h.def
   time.h
   DEPENDS
     .llvm_libc_common_h
@@ -269,7 +247,6 @@ add_header_macro(
 add_header_macro(
   threads
   ../libc/include/threads.yaml
-  threads.h.def
   threads.h
   DEPENDS
     .llvm_libc_common_h
@@ -286,7 +263,6 @@ add_header_macro(
 add_header_macro(
   errno
   ../libc/include/errno.yaml
-  errno.h.def
   errno.h
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
@@ -296,7 +272,6 @@ add_header_macro(
 add_header_macro(
   signal
   ../libc/include/signal.yaml
-  signal.h.def
   signal.h
   DEPENDS
     .llvm-libc-macros.signal_macros
@@ -312,7 +287,6 @@ add_header_macro(
 add_header_macro(
   stdbit
   ../libc/include/stdbit.yaml
-  stdbit.h.def
   stdbit.h
   DEPENDS
     .llvm_libc_common_h
@@ -322,7 +296,6 @@ add_header_macro(
 add_header_macro(
   stdckdint
   ../libc/include/stdckdint.yaml
-  stdckdint.h.def
   stdckdint.h
   DEPENDS
     .llvm_libc_common_h
@@ -332,7 +305,6 @@ add_header_macro(
 add_header_macro(
   stdio
   ../libc/include/stdio.yaml
-  stdio.h.def
   stdio.h
   DEPENDS
     .llvm-libc-macros.file_seek_macros
@@ -348,7 +320,6 @@ add_header_macro(
 add_header_macro(
   stdlib
   ../libc/include/stdlib.yaml
-  stdlib.h.def
   stdlib.h
   DEPENDS
     .llvm_libc_common_h
@@ -367,7 +338,6 @@ add_header_macro(
 add_header_macro(
   unistd
   ../libc/include/unistd.yaml
-  unistd.h.def
   unistd.h
   DEPENDS
     .llvm_libc_common_h
@@ -386,7 +356,6 @@ add_header_macro(
 add_header_macro(
   pthread
   ../libc/include/pthread.yaml
-  pthread.h.def
   pthread.h
   DEPENDS
     .llvm-libc-macros.pthread_macros
@@ -410,7 +379,6 @@ add_header_macro(
 add_header_macro(
   sched
   ../libc/include/sched.yaml
-  sched.h.def
   sched.h
   DEPENDS
     .llvm_libc_common_h
@@ -427,7 +395,6 @@ add_header_macro(
 add_header_macro(
   spawn
   ../libc/include/spawn.yaml
-  spawn.h.def
   spawn.h
   DEPENDS
     .llvm_libc_common_h
@@ -440,7 +407,6 @@ add_header_macro(
 add_header_macro(
   link
   ../libc/include/link.yaml
-  link.h.def
   link.h
   DEPENDS
     .llvm_libc_common_h
@@ -450,7 +416,6 @@ add_header_macro(
 add_header_macro(
   elf
   ../libc/include/elf.yaml
-  elf.h.def
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
@@ -464,7 +429,6 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 add_header_macro(
   sys_auxv
   ../libc/include/sys/auxv.yaml
-  sys/auxv.h.def
   sys/auxv.h
   DEPENDS
     .llvm_libc_common_h
@@ -474,7 +438,6 @@ add_header_macro(
 add_header_macro(
   sys_epoll
   ../libc/include/sys/epoll.yaml
-  sys/epoll.h.def
   sys/epoll.h
   DEPENDS
     .llvm_libc_common_h
@@ -487,7 +450,6 @@ add_header_macro(
 add_header_macro(
   sys_ioctl
   ../libc/include/sys/ioctl.yaml
-  sys/ioctl.h.def
   sys/ioctl.h
   DEPENDS
     .llvm_libc_common_h
@@ -497,7 +459,6 @@ add_header_macro(
 add_header_macro(
   sys_mman
   ../libc/include/sys/mman.yaml
-  sys/mman.h.def
   sys/mman.h
   DEPENDS
     .llvm_libc_common_h
@@ -510,7 +471,6 @@ add_header_macro(
 add_header_macro(
   sys_prctl
   ../libc/include/sys/prctl.yaml
-  sys/prctl.h.def
   sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
@@ -527,7 +487,6 @@ add_header(
 add_header_macro(
   sys_random
   ../libc/include/sys/random.yaml
-  sys/random.h.def
   sys/random.h
   DEPENDS
     .llvm_libc_common_h
@@ -539,7 +498,6 @@ add_header_macro(
 add_header_macro(
   sys_resource
   ../libc/include/sys/resource.yaml
-  sys/resource.h.def
   sys/resource.h
   DEPENDS
     .llvm_libc_common_h
@@ -551,7 +509,6 @@ add_header_macro(
 add_header_macro(
   sys_stat
   ../libc/include/sys/stat.yaml
-  sys/stat.h.def
   sys/stat.h
   DEPENDS
     .llvm_libc_common_h
@@ -573,7 +530,6 @@ add_header_macro(
 add_header_macro(
   sys_select
   ../libc/include/sys/select.yaml
-  sys/select.h.def
   sys/select.h
   DEPENDS
     .llvm_libc_common_h
@@ -589,7 +545,6 @@ add_header_macro(
 add_header_macro(
   sys_sendfile
   ../libc/include/sys/sendfile.yaml
-  sys/sendfile.h.def
   sys/sendfile.h
   DEPENDS
     .llvm_libc_common_h
@@ -601,7 +556,6 @@ add_header_macro(
 add_header_macro(
   sys_socket
   ../libc/include/sys/socket.yaml
-  sys/socket.h.def
   sys/socket.h
   DEPENDS
     .llvm_libc_common_h
@@ -617,7 +571,6 @@ add_header_macro(
 add_header_macro(
   sys_statvfs
   ../libc/include/sys/statvfs.yaml
-  sys/statvfs.h.def
   sys/statvfs.h
   DEPENDS
     .llvm_libc_common_h
@@ -627,7 +580,6 @@ add_header_macro(
 add_header_macro(
   sys_syscall
   ../libc/include/sys/syscall.yaml
-  sys/syscall.h.def
   sys/syscall.h
   DEPENDS
 )
@@ -635,7 +587,6 @@ add_header_macro(
 add_header_macro(
   sys_time
   ../libc/include/sys/time.yaml
-  sys/time.h.def
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
@@ -646,7 +597,6 @@ add_header_macro(
 add_header_macro(
   sys_types
   ../libc/include/sys/types.yaml
-  sys/types.h.def
   sys/types.h
   DEPENDS
     .llvm_libc_common_h
@@ -676,7 +626,6 @@ add_header_macro(
 add_header_macro(
   sys_utsname
   ../libc/include/sys/utsname.yaml
-  sys/utsname.h.def
   sys/utsname.h
   DEPENDS
     .llvm_libc_common_h
@@ -686,7 +635,6 @@ add_header_macro(
 add_header_macro(
   sys_wait
   ../libc/include/sys/wait.yaml
-  sys/wait.h.def
   sys/wait.h
   DEPENDS
     .llvm_libc_common_h
@@ -699,7 +647,6 @@ add_header_macro(
 add_header_macro(
   termios
   ../libc/include/termios.yaml
-  termios.h.def
   termios.h
   DEPENDS
     .llvm_libc_common_h
@@ -714,7 +661,6 @@ add_header_macro(
 add_header_macro(
   uchar
   ../libc/include/uchar.yaml
-  uchar.h.def
   uchar.h
   DEPENDS
     .llvm_libc_common_h
@@ -727,7 +673,6 @@ add_header_macro(
 add_header_macro(
   wchar
   ../libc/include/wchar.yaml
-  wchar.h.def
   wchar.h
   DEPENDS
     .llvm_libc_common_h
@@ -741,7 +686,6 @@ add_header_macro(
 add_header_macro(
   locale
   ../libc/include/locale.yaml
-  locale.h.def
   locale.h
   DEPENDS
     .llvm_libc_common_h

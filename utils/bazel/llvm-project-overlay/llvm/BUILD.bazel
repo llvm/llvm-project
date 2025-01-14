@@ -2270,6 +2270,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-register-info", "lib/Target/RISCV/RISCVGenRegisterInfo.inc"),
             ("-gen-subtarget", "lib/Target/RISCV/RISCVGenSubtargetInfo.inc"),
             ("-gen-searchable-tables", "lib/Target/RISCV/RISCVGenSearchableTables.inc"),
+            ("-gen-exegesis", "lib/Target/RISCV/RISCVGenExegesis.inc"),
         ],
         "tbl_deps": [
             ":riscv_isel_target_gen",

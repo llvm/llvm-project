@@ -2,6 +2,7 @@
 module m
   real, device :: a(4,8)
   real, managed, allocatable :: b(:,:)
+  integer, constant :: x = 1
  contains
   attributes(global) subroutine kernel(a,b,c,n,m)
     integer, value :: n
@@ -22,5 +23,11 @@ module m
     do j = 1, 1
       call devsub(c,4) ! not checked in OpenACC construct
     end do
+  end
+  attributes(global) subroutine sub1(x)
+    integer :: x
+  end
+  subroutine sub2()
+    call sub1<<<1,1>>>(x) ! actual constant to device dummy
   end
 end

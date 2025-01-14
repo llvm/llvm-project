@@ -41694,6 +41694,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
   MVT VT = N.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -41979,7 +41981,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       APInt Mask = APInt::getHighBitsSet(64, 32);
       if (DAG.MaskedValueIsZero(In, Mask)) {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, In);
-        MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() * 2);
+        MVT VecVT = MVT::getVectorVT(MVT::i32, NumElts * 2);
         SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Trunc);
         SDValue Movl = DAG.getNode(X86ISD::VZEXT_MOVL, DL, VecVT, SclVec);
         return DAG.getBitcast(VT, Movl);
@@ -41994,7 +41996,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         // Create a vector constant - scalar constant followed by zeros.
         EVT ScalarVT = N0.getOperand(0).getValueType();
         Type *ScalarTy = ScalarVT.getTypeForEVT(*DAG.getContext());
-        unsigned NumElts = VT.getVectorNumElements();
         Constant *Zero = ConstantInt::getNullValue(ScalarTy);
         SmallVector<Constant *, 32> ConstantVec(NumElts, Zero);
         ConstantVec[0] = const_cast<ConstantInt *>(C->getConstantIntValue());
@@ -42045,9 +42046,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         MVT SrcVT = N0.getOperand(0).getSimpleValueType();
         unsigned SrcBits = SrcVT.getScalarSizeInBits();
         if ((EltBits % SrcBits) == 0 && SrcBits >= 32) {
-          unsigned Size = VT.getVectorNumElements();
           unsigned NewSize = SrcVT.getVectorNumElements();
-          APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(Size);
+          APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(NumElts);
           APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
           return DAG.getBitcast(
               VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
@@ -42460,7 +42460,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       int DOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 2;
       DMask[DOffset + 0] = DOffset + 1;
       DMask[DOffset + 1] = DOffset + 0;
-      MVT DVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() / 2);
+      MVT DVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
       V = DAG.getBitcast(DVT, V);
       V = DAG.getNode(X86ISD::PSHUFD, DL, DVT, V,
                       getV4X86ShuffleImm8ForMask(DMask, DL, DAG));

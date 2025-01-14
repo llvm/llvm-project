@@ -1,4 +1,5 @@
 header: unistd.h
+header_template: unistd.h.def
 macros: []
 types:
   - type_name: uid_t
