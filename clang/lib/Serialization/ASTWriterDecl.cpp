@@ -611,6 +611,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDefaultInitializeCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDestructCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveCopyCUnion());
+  RecordDeclBits.addBit(D->hasUninitializedExplicitInitFields());
   RecordDeclBits.addBit(D->isParamDestroyedInCallee());
   RecordDeclBits.addBits(llvm::to_underlying(D->getArgPassingRestrictions()), 2);
   Record.push_back(RecordDeclBits);
@@ -2480,7 +2481,8 @@ void ASTWriter::WriteDeclAbbrevs() {
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,
             // hasNonTrivialToPrimitiveDefaultInitializeCUnion,
             // hasNonTrivialToPrimitiveDestructCUnion,
-            // hasNonTrivialToPrimitiveCopyCUnion, isParamDestroyedInCallee,
+            // hasNonTrivialToPrimitiveCopyCUnion,
+            // hasUninitializedExplicitInitFields, isParamDestroyedInCallee,
             // getArgPassingRestrictions
   // ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 26));
