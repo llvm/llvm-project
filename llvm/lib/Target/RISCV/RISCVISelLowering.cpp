@@ -3525,23 +3525,36 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
-  // If the search vector is smaller than the vector of elements we are searching for,
-  // try to extract the subvector from it
-  if (VT.getVectorMinNumElements() < VecVT.getVectorMinNumElements()) {
-    if (!(VT.isFixedLengthVector() || VecVT.isScalableVector()))
-      return SDValue();
-    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
-                      DAG.getVectorIdxConstant(0, DL));
+  // Check that we know Idx lies within VT
+  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
+     if (CIdx->getZExtValue() >= VT.getVectorElementCount().getKnownMinValue())
+       return SDValue();
   }
+  else if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
+    return SDValue();
 
+  // Convert fixed length vectors to scalable
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
-  Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
-                    DAG.getUNDEF(ContainerVT), Vec,
-                    DAG.getVectorIdxConstant(0, DL));
+  MVT ContainerVecVT = VecVT;
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVecVT = getContainerForFixedLengthVector(DAG, VecVT, Subtarget);
+    Vec = convertToScalableVector(ContainerVecVT, Vec, DAG, Subtarget);
+  }
 
+  // Put Vec in a VT sized vector
+  if (ContainerVecVT.getVectorMinNumElements() <
+      ContainerVT.getVectorMinNumElements())
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  else
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+
+  // We checked that Idx fits inside VT earlier
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
