@@ -20,6 +20,7 @@ target_link_libraries(bbc PRIVATE
   CUFDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
   FIRSupport
   FIRTransforms
   FIRBuilder

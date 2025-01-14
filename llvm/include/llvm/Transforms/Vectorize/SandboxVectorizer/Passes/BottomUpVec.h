@@ -25,7 +25,7 @@ namespace llvm::sandboxir {
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
   std::unique_ptr<LegalityAnalysis> Legality;
-  SmallVector<Instruction *> DeadInstrCandidates;
+  DenseSet<Instruction *> DeadInstrCandidates;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
@@ -35,6 +35,7 @@ class BottomUpVec final : public FunctionPass {
   void tryEraseDeadInstrs();
   /// Packs all elements of \p ToPack into a vector and returns that vector.
   Value *createPack(ArrayRef<Value *> ToPack);
+  void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
   /// Recursively try to vectorize \p Bndl and its operands.
   Value *vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth);
   /// Entry point for vectorization starting from \p Seeds.

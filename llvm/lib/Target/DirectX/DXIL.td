@@ -909,6 +909,26 @@ def RawBufferLoad : DXILOp<139, rawBufferLoad> {
   let stages = [Stages<DXIL1_2, [all_stages]>];
 }
 
+def RawBufferStore : DXILOp<140, rawBufferStore> {
+  let Doc = "writes to a RWByteAddressBuffer or RWStructuredBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask, Alignment
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty, Int32Ty
+  ];
+  let result = VoidTy;
+  let overloads = [
+    Overloads<DXIL1_2,
+              [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,
+    Overloads<DXIL1_3,
+              [
+                ResRetHalfTy, ResRetFloatTy, ResRetDoubleTy, ResRetInt16Ty,
+                ResRetInt32Ty, ResRetInt64Ty
+              ]>
+  ];
+  let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
 def Dot4AddI8Packed : DXILOp<163, dot4AddPacked> {
   let Doc = "signed dot product of 4 x i8 vectors packed into i32, with "
             "accumulate to i32";

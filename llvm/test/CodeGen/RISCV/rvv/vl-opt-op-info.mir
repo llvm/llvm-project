@@ -1423,9 +1423,9 @@ name: vfred_vs1_vs2_incompatible_eew
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1_vs2_incompatible_eew
-    ; CHECK: %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVFREDMAX_VS_M1_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0 /* tu, mu */
-    %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 3 /* e8 */, 0
+    %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 6 /* e64 */, 0
     %y:vr = PseudoVFREDMAX_VS_M1_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0
 ...
 ---
@@ -1437,4 +1437,64 @@ body: |
     ; CHECK-NEXT: %y:vr = PseudoVFREDMAX_VS_MF2_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0 /* tu, mu */
     %x:vr = nofpexcept PseudoVFCVT_X_F_V_M1 $noreg, $noreg, 0, -1, 5 /* e32 */, 0
     %y:vr = PseudoVFREDMAX_VS_MF2_E32 $noreg, %x, %x, 1, 5 /* e32 */, 0
+...
+---
+name: vfirst_v
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfirst_v
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:gpr = PseudoVFIRST_M_B8 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:gpr = PseudoVFIRST_M_B8 %x, 1, 0
+...
+---
+name: vfirst_v_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfirst_v_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:gpr = PseudoVFIRST_M_B8 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:gpr = PseudoVFIRST_M_B8 %x, 1, 0
+...
+---
+name: vfirst_v_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vfirst_v_incompatible_emul
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: %y:gpr = PseudoVFIRST_M_B16 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:gpr = PseudoVFIRST_M_B16 %x, 1, 0
+...
+---
+name: vcpop_v
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vcpop_v
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, 1, 0 /* e8 */
+    ; CHECK-NEXT: %y:gpr = PseudoVCPOP_M_B8 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:gpr = PseudoVCPOP_M_B8 %x, 1, 0
+...
+---
+name: vcopop_v_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vcopop_v_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:gpr = PseudoVCPOP_M_B8 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:gpr = PseudoVCPOP_M_B8 %x, 1, 0
+...
+---
+name: vcpop_v_incompaitble_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vcpop_v_incompaitble_emul
+    ; CHECK: %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0 /* e8 */
+    ; CHECK-NEXT: %y:gpr = PseudoVCPOP_M_B16 %x, 1, 0 /* e8 */
+    %x:vr = PseudoVMAND_MM_B8 $noreg, $noreg, -1, 0
+    %y:gpr = PseudoVCPOP_M_B16 %x, 1, 0
 ...

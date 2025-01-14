@@ -1775,6 +1775,15 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     }
   }
 
+  // (add (add A, 1), (sext (icmp ne A, 0))) => call umax(A, 1)
+  if (match(LHS, m_Add(m_Value(A), m_One())) &&
+      match(RHS, m_OneUse(m_SExt(m_OneUse(m_SpecificICmp(
+                     ICmpInst::ICMP_NE, m_Specific(A), m_ZeroInt())))))) {
+    Value *OneConst = ConstantInt::get(A->getType(), 1);
+    Value *UMax = Builder.CreateBinaryIntrinsic(Intrinsic::umax, A, OneConst);
+    return replaceInstUsesWith(I, UMax);
+  }
+
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
 

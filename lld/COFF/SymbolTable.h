@@ -85,6 +85,9 @@ public:
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
 
+  // Creates an Undefined symbol and marks it as live.
+  Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
+
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);
 
