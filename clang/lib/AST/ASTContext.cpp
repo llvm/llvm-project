@@ -3489,7 +3489,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   }
 }
 
-uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) const {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
 
