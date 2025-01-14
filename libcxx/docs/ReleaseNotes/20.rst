@@ -69,9 +69,13 @@ Improvements and New Features
 - The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
   in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
 
-- The input iterator overload of `assign(_InputIterator, _InputIterator)` in `std::vector<_Tp, _Allocator>` has been
-  optimized, resulting in a performance improvement of up to 2x for trivial element types (e.g., `std::vector<int>`),
-  and up to 3.4x for non-trivial element types (e.g., `std::vector<std::vector<int>>`).
+- The ``input_iterator``-pair overload of ``void assign(InputIt, InputIt)`` has been optimized for ``std::vector``, 
+  resulting in a performance improvement of up to 2x for trivial element types (e.g., ``std::vector<int>``), and up 
+  to 3.4x for non-trivial element types (e.g., ``std::vector<std::vector<int>>``).
+
+- The ``input_iterator``-pair overload of ``iterator insert(const_iterator, InputIt, InputIt)`` has been optimized 
+  for ``std::vector``, resulting in a performance improvement of up to 10x for ``std::vector<int>``, and up to 2.3x 
+  for ``std::vector<std::vector<int>>``.
 
 - On Windows, ``<system_error>``'s ``std::system_category`` is now distinct from ``std::generic_category``. The behavior
   on other operating systems is unchanged.
