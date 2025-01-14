@@ -741,8 +741,7 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"__spirv_GenericCastToPtr_ToPrivate", 0},
         {"__spirv_GenericCastToPtrExplicit_ToGlobal", 0},
         {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
-        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0},
-        {"llvm.spv.resource.getpointer", 0}};
+        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
 
     auto *II = dyn_cast<IntrinsicInst>(I);
