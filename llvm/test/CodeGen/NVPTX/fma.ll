@@ -41,3 +41,10 @@ define ptx_device double @t2_f64(double %x, double %y, double %z, double %w) {
   %d = call double @dummy_f64(double %b, double %c)
   ret double %d
 }
+
+define ptx_device float @f32_iir(float %x) {
+; CHECK: fma.rn.f32 %f{{[0-9]+}}, 0f52E8D4A5, 0f5368D4F6, %f{{[0-9]+}};
+; CHECK: ret;
+  %r = call float @llvm.fma.f32(float 0x425D1A94A0000000, float 0x426D1A9EC0000000, float %x)
+  ret float %r
+}
