@@ -294,12 +294,7 @@ define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1>
 ; CHECK-LABEL: extract_last_i8_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.b, #0, #1
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    umaxv b1, p1, z1.b
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    and x8, x8, #0xff
+; CHECK-NEXT:    lastb w8, p0, z1.b
 ; CHECK-NEXT:    whilels p1.b, xzr, x8
 ; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    lastb w8, p1, z0.b
@@ -313,15 +308,11 @@ define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1
 ; CHECK-LABEL: extract_last_i16_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.h, #0, #1
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    lastb w8, p0, z1.h
+; CHECK-NEXT:    whilels p1.h, xzr, x8
+; CHECK-NEXT:    lastb w8, p1, z0.h
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
-; CHECK-NEXT:    umaxv h1, p1, z1.h
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    and x8, x8, #0xffff
-; CHECK-NEXT:    whilels p2.h, xzr, x8
 ; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    lastb w8, p2, z0.h
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
   %res = call i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
@@ -332,15 +323,11 @@ define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1
 ; CHECK-LABEL: extract_last_i32_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.s, #0, #1
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    lastb w8, p0, z1.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb w8, p1, z0.s
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z2.s
-; CHECK-NEXT:    umaxv s1, p1, z1.s
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov w8, w8
-; CHECK-NEXT:    whilels p2.s, xzr, x8
 ; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    lastb w8, p2, z0.s
 ; CHECK-NEXT:    csel w0, w8, w0, ne
 ; CHECK-NEXT:    ret
   %res = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru)
@@ -351,14 +338,11 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; CHECK-LABEL: extract_last_i64_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.d, #0, #1
-; CHECK-NEXT:    mov z2.d, #0 // =0x0
+; CHECK-NEXT:    lastb x8, p0, z1.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    lastb x8, p1, z0.d
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z2.d
-; CHECK-NEXT:    umaxv d1, p1, z1.d
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    whilels p2.d, xzr, x8
 ; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    lastb x8, p2, z0.d
 ; CHECK-NEXT:    csel x0, x8, x0, ne
 ; CHECK-NEXT:    ret
   %res = call i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64> %data, <vscale x 2 x i1> %mask, i64 %passthru)
@@ -369,15 +353,11 @@ define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 
 ; CHECK-LABEL: extract_last_float_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z2.s, #0, #1
-; CHECK-NEXT:    mov z3.s, #0 // =0x0
+; CHECK-NEXT:    lastb w8, p0, z2.s
+; CHECK-NEXT:    whilels p1.s, xzr, x8
+; CHECK-NEXT:    lastb s0, p1, z0.s
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    sel z2.s, p0, z2.s, z3.s
-; CHECK-NEXT:    umaxv s2, p1, z2.s
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov w8, w8
-; CHECK-NEXT:    whilels p2.s, xzr, x8
 ; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    lastb s0, p2, z0.s
 ; CHECK-NEXT:    fcsel s0, s0, s1, ne
 ; CHECK-NEXT:    ret
   %res = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru)
@@ -388,14 +368,11 @@ define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale
 ; CHECK-LABEL: extract_last_double_scalable:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z2.d, #0, #1
-; CHECK-NEXT:    mov z3.d, #0 // =0x0
+; CHECK-NEXT:    lastb x8, p0, z2.d
+; CHECK-NEXT:    whilels p1.d, xzr, x8
+; CHECK-NEXT:    lastb d0, p1, z0.d
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    sel z2.d, p0, z2.d, z3.d
-; CHECK-NEXT:    umaxv d2, p1, z2.d
-; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    whilels p2.d, xzr, x8
 ; CHECK-NEXT:    ptest p1, p0.b
-; CHECK-NEXT:    lastb d0, p2, z0.d
 ; CHECK-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-NEXT:    ret
   %res = call double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru)
@@ -407,12 +384,7 @@ define i8 @extract_last_i8_scalable_poison_passthru(<vscale x 16 x i8> %data, <v
 ; CHECK-LABEL: extract_last_i8_scalable_poison_passthru:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.b, #0, #1
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
-; CHECK-NEXT:    sel z1.b, p0, z1.b, z2.b
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    umaxv b1, p0, z1.b
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    and x8, x8, #0xff
+; CHECK-NEXT:    lastb w8, p0, z1.b
 ; CHECK-NEXT:    whilels p0.b, xzr, x8
 ; CHECK-NEXT:    lastb w0, p0, z0.b
 ; CHECK-NEXT:    ret
