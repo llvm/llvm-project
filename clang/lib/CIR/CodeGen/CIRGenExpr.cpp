@@ -2636,6 +2636,11 @@ LValue CIRGenFunction::emitLValue(const Expr *E) {
     // bitfield lvalue or some other non-simple lvalue?
     return LV;
   }
+  case Expr::CXXDefaultArgExprClass: {
+    auto *DAE = cast<CXXDefaultArgExpr>(E);
+    CXXDefaultArgExprScope Scope(*this, DAE);
+    return emitLValue(DAE->getExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(E)->getSubExpr());
   case Expr::DeclRefExprClass:
