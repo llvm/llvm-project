@@ -1076,6 +1076,8 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- For ARM baremetal targets, the frame pointer (FP) is now turned off by default.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   For AArch64:
