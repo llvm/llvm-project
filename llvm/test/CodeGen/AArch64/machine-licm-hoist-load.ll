@@ -313,9 +313,8 @@ define void @one_dimensional_with_store(ptr %a, ptr %b, ptr %c, i32 %N) {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w9, w10
 ; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csinv w9, w9, wzr, hs
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    sub w9, w9, w10
 ; CHECK-NEXT:    strb w9, [x2], #1
 ; CHECK-NEXT:    b.ne .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %for.exit

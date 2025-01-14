@@ -1313,7 +1313,8 @@ void fir::ConvertOp::getCanonicalizationPatterns(
   results.insert<ConvertConvertOptPattern, ConvertAscendingIndexOptPattern,
                  ConvertDescendingIndexOptPattern, RedundantConvertOptPattern,
                  CombineConvertOptPattern, CombineConvertTruncOptPattern,
-                 ForwardConstantConvertPattern>(context);
+                 ForwardConstantConvertPattern, ChainedPointerConvertsPattern>(
+      context);
 }
 
 mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {

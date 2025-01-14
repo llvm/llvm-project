@@ -325,12 +325,11 @@ subroutine substring(x, y, i, j)
 ! CHECK:   %[[VAL_230:.*]] = arith.subi %[[VAL_216]], %[[VAL_210]] : index
 ! CHECK:   %[[VAL_231:.*]] = fir.convert %[[VAL_228]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:   %[[VAL_232:.*]] = fir.coordinate_of %[[VAL_231]], %[[VAL_230]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! CHECK:   %[[VAL_233:.*]] = fir.convert %[[VAL_232]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:   %[[VAL_234:.*]] = arith.subi %[[VAL_219]], %[[VAL_216]] : index
 ! CHECK:   %[[VAL_235:.*]] = arith.addi %[[VAL_234]], %[[VAL_210]] : index
 ! CHECK:   %[[VAL_236:.*]] = arith.cmpi slt, %[[VAL_235]], %[[VAL_209]] : index
 ! CHECK:   %[[VAL_237:.*]] = arith.select %[[VAL_236]], %[[VAL_209]], %[[VAL_235]] : index
-! CHECK:   %[[VAL_238:.*]] = fir.convert %[[VAL_233]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:   %[[VAL_238:.*]] = fir.convert %[[VAL_232]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_239:.*]] = fir.convert %[[VAL_237]] : (index) -> i64
 ! CHECK:   %[[VAL_240:.*]] = fir.call @_FortranAioInputAscii(%[[VAL_213]], %[[VAL_238]], %[[VAL_239]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1
 ! CHECK:   %[[VAL_241:.*]] = arith.addi %[[VAL_221]], %[[VAL_210]] overflow<nsw> : index

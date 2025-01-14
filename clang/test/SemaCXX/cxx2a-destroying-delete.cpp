@@ -146,12 +146,12 @@ namespace dtor_access {
   struct S {
     void operator delete(S *p, std::destroying_delete_t);
   private:
-    ~S(); // expected-note {{here}}
+    ~S();
   };
 
-  // FIXME: PR47474: GCC accepts this, and it seems somewhat reasonable to
-  // allow, even though [expr.delete]p12 says this is ill-formed.
-  void f() { delete new S; } // expected-error {{calling a private destructor}}
+  // C++20 [expr.delete]p12 says this is ill-formed, but GCC accepts and we
+  // filed CWG2889 to resolve in the same way.
+  void f() { delete new S; }
 
   struct T {
     void operator delete(T *, std::destroying_delete_t);
@@ -165,7 +165,7 @@ namespace dtor_access {
     ~U() override;
   };
 
-  void g() { delete (T *)new U; } // expected-error {{calling a protected destructor}}
+  void g() { delete (T *)new U; } // expected-error {{calling a protected destructor of class 'T'}}
 }
 
 namespace delete_from_new {

@@ -353,6 +353,31 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
+TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  struct fholder {
+    FILE *fp;
+    size_t read;
+  } fh = {f, 0};
+  auto CookieRead = [](void *cookie, char *buf, size_t size) {
+    fholder *p = reinterpret_cast<fholder *>(cookie);
+    p->read = fread(static_cast<void *>(buf), 1, size, p->fp);
+    EXPECT_NE(0u, p->read);
+  };
+  cookie_io_functions_t funcs = {(cookie_read_function_t *)&CookieRead, nullptr,
+                                 nullptr, nullptr};
+  auto Func = [&fh, &funcs]() {
+    FILE *f = fopencookie(&fh, "w", funcs);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fopencookie");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
   char *buffer;
@@ -374,6 +399,56 @@ TEST_F(RtsanFileTest, FmemOpenDiesWhenRealtime) {
   };
 
   ExpectRealtimeDeath(Func, "fmemopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_SETVBUF
+TEST_F(RtsanFileTest, SetbufDieWhenRealtime) {
+  char buffer[BUFSIZ];
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer]() { setbuf(f, buffer); };
+
+  ExpectRealtimeDeath(Func, "setbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetvbufDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() {
+    int r = setvbuf(f, buffer, _IOFBF, size);
+    EXPECT_THAT(r, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "setvbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetlinebufDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f]() { setlinebuf(f); };
+
+  ExpectRealtimeDeath(Func, "setlinebuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetbufferDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() { setbuffer(f, buffer, size); };
+
+  ExpectRealtimeDeath(Func, "setbuffer");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
@@ -578,6 +653,34 @@ TEST_F(RtsanOpenedFileTest, FputsDiesWhenRealtime) {
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
+
+TEST_F(RtsanFileTest, FflushDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
+  auto Func = [&f]() {
+    int res = fflush(f);
+    EXPECT_THAT(res, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fflush");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if SANITIZER_APPLE
+TEST_F(RtsanFileTest, FpurgeDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
+  auto Func = [&f]() {
+    int res = fpurge(f);
+    EXPECT_THAT(res, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fpurge");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST_F(RtsanOpenedFileTest, ReadDiesWhenRealtime) {
   auto Func = [this]() {
