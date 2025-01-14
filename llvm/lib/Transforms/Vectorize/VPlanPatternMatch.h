@@ -139,7 +139,8 @@ struct MatchRecipeAndOpcode<Opcode, RecipeTy> {
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
                   std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
                   std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
-                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value)
+                  std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
+                  std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
       return DefR;
     else
       return DefR && DefR->getOpcode() == Opcode;
@@ -309,6 +310,12 @@ m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
 }
 
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>
+m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
+  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>(Op0, Op1);
+}
+
 template <typename Op0_t, typename Op1_t>
 inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul>
 m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
@@ -337,6 +344,18 @@ inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
                              /*Commutative*/ true>
 m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+using GEPLikeRecipe_match =
+    BinaryRecipe_match<Op0_t, Op1_t, Instruction::GetElementPtr, false,
+                       VPWidenRecipe, VPReplicateRecipe, VPWidenGEPRecipe,
+                       VPInstruction>;
+
+template <typename Op0_t, typename Op1_t>
+inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
+                                                         const Op1_t &Op1) {
+  return GEPLikeRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>

@@ -1095,9 +1095,6 @@ public:
       return !operator==(x);
     }
 
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only
     defusechain_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
@@ -1202,9 +1199,6 @@ public:
     bool operator!=(const defusechain_instr_iterator &x) const {
       return !operator==(x);
     }
-
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
 
     // Iterator traversal: forward iteration only
     defusechain_instr_iterator &operator++() {          // Preincrement

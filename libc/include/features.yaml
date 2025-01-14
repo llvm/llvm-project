@@ -1,4 +1,5 @@
 header: features.h
+header_template: features.h.def
 standards:
   - stdc
 macros: []

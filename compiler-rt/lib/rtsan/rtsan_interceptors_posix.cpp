@@ -292,10 +292,33 @@ INTERCEPTOR(int, fputs, const char *s, FILE *stream) {
   return REAL(fputs)(s, stream);
 }
 
+INTERCEPTOR(int, fflush, FILE *stream) {
+  __rtsan_notify_intercepted_call("fflush");
+  return REAL(fflush)(stream);
+}
+
+#if SANITIZER_APPLE
+INTERCEPTOR(int, fpurge, FILE *stream) {
+  __rtsan_notify_intercepted_call("fpurge");
+  return REAL(fpurge)(stream);
+}
+#endif
+
 INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
   __rtsan_notify_intercepted_call("fdopen");
   return REAL(fdopen)(fd, mode);
 }
+
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
+INTERCEPTOR(FILE *, fopencookie, void *cookie, const char *mode,
+            cookie_io_functions_t funcs) {
+  __rtsan_notify_intercepted_call("fopencookie");
+  return REAL(fopencookie)(cookie, mode, funcs);
+}
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE INTERCEPT_FUNCTION(fopencookie)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE
+#endif
 
 #if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
 INTERCEPTOR(FILE *, open_memstream, char **buf, size_t *size) {
@@ -312,6 +335,45 @@ INTERCEPTOR(FILE *, fmemopen, void *buf, size_t size, const char *mode) {
 #else
 #define RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM
 #define RTSAN_MAYBE_INTERCEPT_FMEMOPEN
+#endif
+
+#if SANITIZER_INTERCEPT_SETVBUF
+INTERCEPTOR(void, setbuf, FILE *stream, char *buf) {
+  __rtsan_notify_intercepted_call("setbuf");
+  return REAL(setbuf)(stream, buf);
+}
+
+INTERCEPTOR(int, setvbuf, FILE *stream, char *buf, int mode, size_t size) {
+  __rtsan_notify_intercepted_call("setvbuf");
+  return REAL(setvbuf)(stream, buf, mode, size);
+}
+
+#if SANITIZER_LINUX
+INTERCEPTOR(void, setlinebuf, FILE *stream) {
+#else
+INTERCEPTOR(int, setlinebuf, FILE *stream) {
+#endif
+  __rtsan_notify_intercepted_call("setlinebuf");
+  return REAL(setlinebuf)(stream);
+}
+
+#if SANITIZER_LINUX
+INTERCEPTOR(void, setbuffer, FILE *stream, char *buf, size_t size) {
+#else
+INTERCEPTOR(void, setbuffer, FILE *stream, char *buf, int size) {
+#endif
+  __rtsan_notify_intercepted_call("setbuffer");
+  return REAL(setbuffer)(stream, buf, size);
+}
+#define RTSAN_MAYBE_INTERCEPT_SETBUF INTERCEPT_FUNCTION(setbuf)
+#define RTSAN_MAYBE_INTERCEPT_SETVBUF INTERCEPT_FUNCTION(setvbuf)
+#define RTSAN_MAYBE_INTERCEPT_SETLINEBUF INTERCEPT_FUNCTION(setlinebuf)
+#define RTSAN_MAYBE_INTERCEPT_SETBUFFER INTERCEPT_FUNCTION(setbuffer)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SETBUF
+#define RTSAN_MAYBE_INTERCEPT_SETVBUF
+#define RTSAN_MAYBE_INTERCEPT_SETLINEBUF
+#define RTSAN_MAYBE_INTERCEPT_SETBUFFER
 #endif
 
 INTERCEPTOR(int, puts, const char *s) {
@@ -970,10 +1032,16 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_CREAT64;
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
+  INTERCEPT_FUNCTION(fflush);
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
+  RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;
   RTSAN_MAYBE_INTERCEPT_OPEN_MEMSTREAM;
   RTSAN_MAYBE_INTERCEPT_FMEMOPEN;
+  RTSAN_MAYBE_INTERCEPT_SETBUF;
+  RTSAN_MAYBE_INTERCEPT_SETVBUF;
+  RTSAN_MAYBE_INTERCEPT_SETLINEBUF;
+  RTSAN_MAYBE_INTERCEPT_SETBUFFER;
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);

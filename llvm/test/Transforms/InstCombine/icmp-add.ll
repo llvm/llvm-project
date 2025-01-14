@@ -79,6 +79,19 @@ bb:
   ret i1 %i4
 }
 
+define i1 @cvt_icmp_0_zext_plus_zext_eq_i2(i1 %a, i1 %b) {
+; CHECK-LABEL: @cvt_icmp_0_zext_plus_zext_eq_i2(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a.ext = zext i1 %a to i2
+  %b.ext = zext i1 %b to i2
+  %add = add i2 %a.ext, %b.ext
+  %cmp = icmp eq i2 %add, 0
+  ret i1 %cmp
+}
+
 define i1 @cvt_icmp_1_zext_plus_zext_eq(i1 %arg, i1 %arg1) {
 ; CHECK-LABEL: @cvt_icmp_1_zext_plus_zext_eq(
 ; CHECK-NEXT:  bb:

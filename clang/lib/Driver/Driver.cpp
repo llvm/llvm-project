@@ -43,6 +43,8 @@
 #include "ToolChains/PS4CPU.h"
 #include "ToolChains/RISCVToolchain.h"
 #include "ToolChains/SPIRV.h"
+#include "ToolChains/SPIRVOpenMP.h"
+#include "ToolChains/SYCL.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
 #include "ToolChains/UEFI.h"
@@ -780,6 +782,35 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
+static llvm::Triple getSYCLDeviceTriple(StringRef TargetArch) {
+  SmallVector<StringRef, 5> SYCLAlias = {"spir", "spir64", "spirv", "spirv32",
+                                         "spirv64"};
+  if (llvm::is_contained(SYCLAlias, TargetArch)) {
+    llvm::Triple TargetTriple;
+    TargetTriple.setArchName(TargetArch);
+    TargetTriple.setVendor(llvm::Triple::UnknownVendor);
+    TargetTriple.setOS(llvm::Triple::UnknownOS);
+    return TargetTriple;
+  }
+  return llvm::Triple(TargetArch);
+}
+
+static bool addSYCLDefaultTriple(Compilation &C,
+                                 SmallVectorImpl<llvm::Triple> &SYCLTriples) {
+  // Check current set of triples to see if the default has already been set.
+  for (const auto &SYCLTriple : SYCLTriples) {
+    if (SYCLTriple.getSubArch() == llvm::Triple::NoSubArch &&
+        SYCLTriple.isSPIROrSPIRV())
+      return false;
+  }
+  // Add the default triple as it was not found.
+  llvm::Triple DefaultTriple = getSYCLDeviceTriple(
+      C.getDefaultToolChain().getTriple().isArch32Bit() ? "spirv32"
+                                                        : "spirv64");
+  SYCLTriples.insert(SYCLTriples.begin(), DefaultTriple);
+  return true;
+}
+
 void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                               InputList &Inputs) {
 
@@ -841,7 +872,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       return;
     auto *HIPTC = &getOffloadingDeviceToolChain(C.getInputArgs(), *HIPTriple,
                                                 *HostTC, OFK);
-    assert(HIPTC && "Could not create offloading device tool chain.");
     C.addOffloadDeviceToolChain(HIPTC, OFK);
   }
 
@@ -890,9 +920,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                                       HostTC->getTriple());
 
       // Attempt to deduce the offloading triple from the set of architectures.
-      // We can only correctly deduce NVPTX / AMDGPU triples currently. We need
-      // to temporarily create these toolchains so that we can access tools for
-      // inferring architectures.
+      // We can only correctly deduce NVPTX / AMDGPU triples currently.
+      // We need to temporarily create these toolchains so that we can access
+      // tools for inferring architectures.
       llvm::DenseSet<StringRef> Archs;
       if (NVPTXTriple) {
         auto TempTC = std::make_unique<toolchains::CudaToolChain>(
@@ -962,7 +992,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         const ToolChain *TC;
         // Device toolchains have to be selected differently. They pair host
         // and device in their implementation.
-        if (TT.isNVPTX() || TT.isAMDGCN()) {
+        if (TT.isNVPTX() || TT.isAMDGCN() || TT.isSPIRV()) {
           const ToolChain *HostTC =
               C.getSingleOffloadToolChain<Action::OFK_Host>();
           assert(HostTC && "Host toolchain should be always defined.");
@@ -974,6 +1004,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                   *this, TT, *HostTC, C.getInputArgs());
             else if (TT.isAMDGCN())
               DeviceTC = std::make_unique<toolchains::AMDGPUOpenMPToolChain>(
+                  *this, TT, *HostTC, C.getInputArgs());
+            else if (TT.isSPIRV())
+              DeviceTC = std::make_unique<toolchains::SPIRVOpenMPToolChain>(
                   *this, TT, *HostTC, C.getInputArgs());
             else
               assert(DeviceTC && "Device toolchain not defined.");
@@ -993,9 +1026,69 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     return;
   }
 
+  // We need to generate a SYCL toolchain if the user specified -fsycl.
+  bool IsSYCL = C.getInputArgs().hasFlag(options::OPT_fsycl,
+                                         options::OPT_fno_sycl, false);
+
+  auto argSYCLIncompatible = [&](OptSpecifier OptId) {
+    if (!IsSYCL)
+      return;
+    if (Arg *IncompatArg = C.getInputArgs().getLastArg(OptId))
+      Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << IncompatArg->getSpelling() << "-fsycl";
+  };
+  // -static-libstdc++ is not compatible with -fsycl.
+  argSYCLIncompatible(options::OPT_static_libstdcxx);
+  // -ffreestanding cannot be used with -fsycl
+  argSYCLIncompatible(options::OPT_ffreestanding);
+
+  llvm::SmallVector<llvm::Triple, 4> UniqueSYCLTriplesVec;
+
+  if (IsSYCL) {
+    addSYCLDefaultTriple(C, UniqueSYCLTriplesVec);
+
+    // We'll need to use the SYCL and host triples as the key into
+    // getOffloadingDeviceToolChain, because the device toolchains we're
+    // going to create will depend on both.
+    const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
+    for (const auto &TargetTriple : UniqueSYCLTriplesVec) {
+      auto SYCLTC = &getOffloadingDeviceToolChain(
+          C.getInputArgs(), TargetTriple, *HostTC, Action::OFK_SYCL);
+      C.addOffloadDeviceToolChain(SYCLTC, Action::OFK_SYCL);
+    }
+  }
+
   //
   // TODO: Add support for other offloading programming models here.
   //
+}
+
+bool Driver::loadZOSCustomizationFile(llvm::cl::ExpansionContext &ExpCtx) {
+  if (IsCLMode() || IsDXCMode() || IsFlangMode())
+    return false;
+
+  SmallString<128> CustomizationFile;
+  StringRef PathLIBEnv = StringRef(getenv("CLANG_CONFIG_PATH")).trim();
+  // If the env var is a directory then append "/clang.cfg" and treat
+  // that as the config file.  Otherwise treat the env var as the
+  // config file.
+  if (!PathLIBEnv.empty()) {
+    llvm::sys::path::append(CustomizationFile, PathLIBEnv);
+    if (llvm::sys::fs::is_directory(PathLIBEnv))
+      llvm::sys::path::append(CustomizationFile, "/clang.cfg");
+    if (llvm::sys::fs::is_regular_file(CustomizationFile))
+      return readConfigFile(CustomizationFile, ExpCtx);
+    Diag(diag::err_drv_config_file_not_found) << CustomizationFile;
+    return true;
+  }
+
+  SmallString<128> BaseDir(llvm::sys::path::parent_path(Dir));
+  llvm::sys::path::append(CustomizationFile, BaseDir + "/etc/clang.cfg");
+  if (llvm::sys::fs::is_regular_file(CustomizationFile))
+    return readConfigFile(CustomizationFile, ExpCtx);
+
+  // If no customization file, just return
+  return false;
 }
 
 static void appendOneArg(InputArgList &Args, const Arg *Opt) {
@@ -1219,10 +1312,17 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   }
 
   // Otherwise, use the real triple as used by the driver.
+  llvm::Triple RealTriple =
+      computeTargetTriple(*this, TargetTriple, *CLOptions);
   if (Triple.str().empty()) {
-    Triple = computeTargetTriple(*this, TargetTriple, *CLOptions);
+    Triple = RealTriple;
     assert(!Triple.str().empty());
   }
+
+  // On z/OS, start by loading the customization file before loading
+  // the usual default config file(s).
+  if (RealTriple.isOSzOS() && loadZOSCustomizationFile(ExpCtx))
+    return true;
 
   // Search for config files in the following order:
   // 1. <triple>-<mode>.cfg using real driver mode
@@ -1403,9 +1503,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
 
         // Set specific Vulkan version if applicable.
         if (const Arg *A = Args.getLastArg(options::OPT_fspv_target_env_EQ)) {
-          const llvm::StringSet<> ValidValues = {"vulkan1.2", "vulkan1.3"};
-          if (ValidValues.contains(A->getValue())) {
-            T.setOSName(A->getValue());
+          const llvm::StringMap<llvm::Triple::SubArchType> ValidTargets = {
+              {"vulkan1.2", llvm::Triple::SPIRVSubArch_v15},
+              {"vulkan1.3", llvm::Triple::SPIRVSubArch_v16}};
+
+          auto TargetInfo = ValidTargets.find(A->getValue());
+          if (TargetInfo != ValidTargets.end()) {
+            T.setOSName(TargetInfo->getKey());
+            T.setArch(llvm::Triple::spirv, TargetInfo->getValue());
           } else {
             Diag(diag::err_drv_invalid_value)
                 << A->getAsString(Args) << A->getValue();
@@ -2429,8 +2534,8 @@ enum {
 static unsigned PrintActions1(const Compilation &C, Action *A,
                               std::map<Action *, unsigned> &Ids,
                               Twine Indent = {}, int Kind = TopLevelAction) {
-  if (Ids.count(A)) // A was already visited.
-    return Ids[A];
+  if (auto It = Ids.find(A); It != Ids.end()) // A was already visited.
+    return It->second;
 
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -4230,10 +4335,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
+      C.isOffloadingHostKind(Action::OFK_SYCL) ||
       Args.hasFlag(options::OPT_foffload_via_llvm,
                    options::OPT_fno_offload_via_llvm, false) ||
       Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false);
+                   options::OPT_no_offload_new_driver,
+                   C.isOffloadingHostKind(Action::OFK_Cuda));
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -4647,6 +4754,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       Archs.insert(OffloadArchToString(OffloadArch::HIPDefault));
     else if (Kind == Action::OFK_OpenMP)
       Archs.insert(StringRef());
+    else if (Kind == Action::OFK_SYCL)
+      Archs.insert(StringRef());
   } else {
     Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
     Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
@@ -4671,7 +4780,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   OffloadAction::DeviceDependences DDeps;
 
   const Action::OffloadKind OffloadKinds[] = {
-      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP};
+      Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
 
   for (Action::OffloadKind Kind : OffloadKinds) {
     SmallVector<const ToolChain *, 2> ToolChains;
@@ -4708,6 +4817,15 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     if (DeviceActions.empty())
       return HostAction;
 
+    // FIXME: Do not collapse the host side for Darwin targets with SYCL offload
+    // compilations. The toolchain is not properly initialized for the target.
+    if (isa<CompileJobAction>(HostAction) && Kind == Action::OFK_SYCL &&
+        HostAction->getType() != types::TY_Nothing &&
+        C.getSingleOffloadToolChain<Action::OFK_Host>()
+            ->getTriple()
+            .isOSDarwin())
+      HostAction->setCannotBeCollapsedWithNextDependentAction();
+
     auto PL = types::getCompilationPhases(*this, Args, InputType);
 
     for (phases::ID Phase : PL) {
@@ -4715,6 +4833,11 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         assert(Phase == PL.back() && "linking must be final compilation step.");
         break;
       }
+
+      // Assemble actions are not used for the SYCL device side.  Both compile
+      // and backend actions are used to generate IR and textual IR if needed.
+      if (Kind == Action::OFK_SYCL && Phase == phases::Assemble)
+        continue;
 
       auto TCAndArch = TCAndArchs.begin();
       for (Action *&A : DeviceActions) {
@@ -4954,6 +5077,7 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
     if (Args.hasArg(options::OPT_emit_llvm) ||
+        TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
@@ -4966,7 +5090,8 @@ Action *Driver::ConstructPhaseAction(
                    offloadDeviceOnly() ||
                    (TargetDeviceOffloadKind == Action::OFK_HIP &&
                     !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver, false)))
+                                  options::OPT_no_offload_new_driver,
+                                  C.isOffloadingHostKind(Action::OFK_Cuda))))
               ? types::TY_LLVM_IR
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -6273,6 +6398,11 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (auto P = SearchPaths(TC.getFilePaths()))
     return *P;
 
+  SmallString<128> R2(ResourceDir);
+  llvm::sys::path::append(R2, "..", "..", Name);
+  if (llvm::sys::fs::exists(Twine(R2)))
+    return std::string(R2);
+
   return std::string(Name);
 }
 
@@ -6603,6 +6733,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = std::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
+        else if (Target.isAppleMachO())
+          TC = std::make_unique<toolchains::AppleMachO>(*this, Target, Args);
         else if (Target.isOSBinFormatMachO())
           TC = std::make_unique<toolchains::MachO>(*this, Target, Args);
         else
@@ -6640,11 +6772,16 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
                                                            HostTC, Args);
       break;
     }
+    case Action::OFK_SYCL:
+      if (Target.isSPIROrSPIRV())
+        TC = std::make_unique<toolchains::SYCLToolChain>(*this, Target, HostTC,
+                                                         Args);
+      break;
     default:
       break;
     }
   }
-
+  assert(TC && "Could not create offloading device tool chain.");
   return *TC;
 }
 

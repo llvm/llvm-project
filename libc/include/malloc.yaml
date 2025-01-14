@@ -1,4 +1,5 @@
 header: malloc.h
+header_template: malloc.h.def
 macros: []
 types: []
 enums: []

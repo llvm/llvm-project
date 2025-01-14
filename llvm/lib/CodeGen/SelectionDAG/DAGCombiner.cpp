@@ -141,7 +141,7 @@ static cl::opt<bool> EnableReduceLoadOpStoreWidth(
 static cl::opt<bool> ReduceLoadOpStoreWidthForceNarrowingProfitable(
     "combiner-reduce-load-op-store-width-force-narrowing-profitable",
     cl::Hidden, cl::init(false),
-    cl::desc("DAG combiner force override the narrowing profitable check when"
+    cl::desc("DAG combiner force override the narrowing profitable check when "
              "reducing the width of load/op/store sequences"));
 
 static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
@@ -3948,6 +3948,23 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
         !TLI.isOperationLegalOrCustom(ISD::ABS, VT))
       if (SDValue Result = TLI.expandABS(N1.getNode(), DAG, true))
         return Result;
+
+    // Similar to the previous rule, but this time targeting an expanded abs.
+    // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
+    // as well as
+    // (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
+    // Note that these two are applicable to both signed and unsigned min/max.
+    SDValue X;
+    SDValue S0;
+    auto NegPat = m_AllOf(m_Neg(m_Deferred(X)), m_Value(S0));
+    if (sd_match(N1, m_OneUse(m_AnyOf(m_SMax(m_Value(X), NegPat),
+                                      m_UMax(m_Value(X), NegPat),
+                                      m_SMin(m_Value(X), NegPat),
+                                      m_UMin(m_Value(X), NegPat))))) {
+      unsigned NewOpc = ISD::getInverseMinMaxOpcode(N1->getOpcode());
+      if (hasOperation(NewOpc, VT))
+        return DAG.getNode(NewOpc, DL, VT, X, S0);
+    }
 
     // Fold neg(splat(neg(x)) -> splat(x)
     if (VT.isVector()) {
@@ -15995,6 +16012,14 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     if (SDValue CombineLD = CombineConsecutiveLoads(N0.getNode(), VT))
       return CombineLD;
 
+  // int_vt (bitcast (vec_vt (scalar_to_vector elt_vt:x)))
+  //   => int_vt (any_extend elt_vt:x)
+  if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
+    SDValue SrcScalar = N0.getOperand(0);
+    if (SrcScalar.getValueType().isScalarInteger())
+      return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
+  }
+
   // Remove double bitcasts from shuffles - this is often a legacy of
   // XformToShuffleWithZero being used to combine bitmaskings (of
   // float vectors bitcast to integer vectors) into shuffles.
@@ -20438,10 +20463,8 @@ SDValue DAGCombiner::TransformFPLoadStorePair(SDNode *N) {
       Value.hasOneUse()) {
     LoadSDNode *LD = cast<LoadSDNode>(Value);
     EVT VT = LD->getMemoryVT();
-    if (!VT.isFloatingPoint() ||
-        VT != ST->getMemoryVT() ||
-        LD->isNonTemporal() ||
-        ST->isNonTemporal() ||
+    if (!VT.isSimple() || !VT.isFloatingPoint() || VT != ST->getMemoryVT() ||
+        LD->isNonTemporal() || ST->isNonTemporal() ||
         LD->getPointerInfo().getAddrSpace() != 0 ||
         ST->getPointerInfo().getAddrSpace() != 0)
       return SDValue();
@@ -24291,8 +24314,8 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
   EVT SVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
 
   // Keep track of what we encounter.
-  bool AnyInteger = false;
-  bool AnyFP = false;
+  EVT AnyFPVT;
+
   for (const SDValue &Op : N->ops()) {
     if (ISD::BITCAST == Op.getOpcode() &&
         !Op.getOperand(0).getValueType().isVector())
@@ -24306,27 +24329,23 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
     // If it's neither, bail out, it could be something weird like x86mmx.
     EVT LastOpVT = Ops.back().getValueType();
     if (LastOpVT.isFloatingPoint())
-      AnyFP = true;
-    else if (LastOpVT.isInteger())
-      AnyInteger = true;
-    else
+      AnyFPVT = LastOpVT;
+    else if (!LastOpVT.isInteger())
       return SDValue();
   }
 
   // If any of the operands is a floating point scalar bitcast to a vector,
   // use floating point types throughout, and bitcast everything.
   // Replace UNDEFs by another scalar UNDEF node, of the final desired type.
-  if (AnyFP) {
-    SVT = EVT::getFloatingPointVT(OpVT.getSizeInBits());
-    if (AnyInteger) {
-      for (SDValue &Op : Ops) {
-        if (Op.getValueType() == SVT)
-          continue;
-        if (Op.isUndef())
-          Op = DAG.getNode(ISD::UNDEF, DL, SVT);
-        else
-          Op = DAG.getBitcast(SVT, Op);
-      }
+  if (AnyFPVT != EVT()) {
+    SVT = AnyFPVT;
+    for (SDValue &Op : Ops) {
+      if (Op.getValueType() == SVT)
+        continue;
+      if (Op.isUndef())
+        Op = DAG.getNode(ISD::UNDEF, DL, SVT);
+      else
+        Op = DAG.getBitcast(SVT, Op);
     }
   }
 

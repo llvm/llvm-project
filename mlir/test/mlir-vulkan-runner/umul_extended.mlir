@@ -6,7 +6,7 @@
 // RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
 
-// RUN: mlir-opt %s -test-vulkan-runner-pipeline -spirv-webgpu-prepare \
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline=spirv-webgpu-prepare \
 // RUN:   | mlir-vulkan-runner - \
 // RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
