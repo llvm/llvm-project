@@ -220,15 +220,15 @@ void macho::writeMapFile() {
   // array.
   auto printIsecArrSyms = [&](ArrayRef<ConcatInputSection *> arr1,
                               ArrayRef<ConcatInputSection *> arr2 = {}) {
-    size_t i = 0, j = 0;
-    size_t size1 = arr1.size();
-    size_t size2 = arr2.size();
-    while (i < size1 || j < size2) {
-      if (i < size1 &&
-          (j >= size2 || arr1[i]->outSecOff <= arr2[j]->outSecOff)) {
-        printOne(arr1[i++]);
-      } else if (j < size2) {
-        printOne(arr2[j++]);
+    // Print both arrays in sorted order, interleaving as necessary.
+    while (!arr1.empty() || !arr2.empty()) {
+      if (!arr1.empty() && (arr2.empty() || arr1.front()->outSecOff <=
+                                                arr2.front()->outSecOff)) {
+        printOne(arr1.front());
+        arr1 = arr1.drop_front();
+      } else if (!arr2.empty()) {
+        printOne(arr2.front());
+        arr2 = arr2.drop_front();
       }
     }
   };
