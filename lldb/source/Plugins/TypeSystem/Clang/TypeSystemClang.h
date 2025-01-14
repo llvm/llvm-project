@@ -595,6 +595,8 @@ public:
 
   lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) override;
 
+  CompilerDecl DeclContextGetDecl(void *opaque_decl_ctx) override;
+
   std::vector<lldb_private::CompilerContext>
   DeclContextGetCompilerContext(void *opaque_decl_ctx) override;
 

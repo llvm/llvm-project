@@ -132,280 +132,308 @@ CPPLanguageRuntime::GetObjectDescription(Stream &str, Value &value,
   return llvm::createStringError("C++ does not support object descriptions");
 }
 
-bool contains_lambda_identifier(llvm::StringRef &str_ref) {
-  return str_ref.contains("$_") || str_ref.contains("'lambda'");
-}
+llvm::Expected<CPPLanguageRuntime::UnwrappedLibCppFunction>
+CPPLanguageRuntime::UnwrapLibCppFunction(lldb::ValueObjectSP &valobj_sp) {
+  if (!valobj_sp)
+    return llvm::createStringError("valobj in invalid state");
+  
+  // std::function has many variants, try to disambiguate going from most
+  // recent to oldest known implementation
+  ValueObjectSP base_ptr;
+  {
+    ValueObjectSP outer_f = valobj_sp->GetChildMemberWithName("__f_");
 
-CPPLanguageRuntime::LibCppStdFunctionCallableInfo
-line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
-                  llvm::StringRef first_template_param_sref, bool has_invoke) {
-
-  CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
-
-  AddressRange range;
-  sc.GetAddressRange(eSymbolContextEverything, 0, false, range);
-
-  Address address = range.GetBaseAddress();
-
-  Address addr;
-  if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
-                                addr)) {
-    LineEntry line_entry;
-    addr.CalculateSymbolContextLineEntry(line_entry);
-
-    if (contains_lambda_identifier(first_template_param_sref) || has_invoke) {
-      // Case 1 and 2
-      optional_info.callable_case = lldb_private::CPPLanguageRuntime::
-          LibCppStdFunctionCallableCase::Lambda;
-    } else {
-      // Case 3
-      optional_info.callable_case = lldb_private::CPPLanguageRuntime::
-          LibCppStdFunctionCallableCase::CallableObject;
+    if (!base_ptr) {
+      // git: 050b064f15ee56ee0b42c9b957a3dd0f32532394 __functional/function.h
+      //
+      // template<class _Rp, class ..._ArgTypes>
+      // class function<_Rp(_ArgTypes...)> {
+      // #ifndef _LIBCPP_ABI_OPTIMIZED_FUNCTION
+      //   typedef __function::__value_func<_Rp(_ArgTypes...)> __func;
+      // #else
+      //   typedef __function::__policy_func<_Rp(_ArgTypes...)> __func;
+      // #endif
+      //
+      //   __func __f_;
+      // }
+      //
+      // template <class _Fp> class __value_func;
+      // template <class _Fp> class __policy_func;
+      //
+      // template <class _Rp, class... _ArgTypes>
+      // class __value_func<_Rp(_ArgTypes...)> {
+      //   typename aligned_storage<3 * sizeof(void*)>::type __buf_;
+      //
+      //   typedef __base<_Rp(_ArgTypes...)> __func;
+      //   __func* __f_;
+      // }
+      //
+      // template <class _Rp, class... _ArgTypes>
+      // class __policy_func<_Rp(_ArgTypes...)> {
+      //   __policy_storage __buf_;
+      //
+      //   typedef __function::__policy_invoker<_Rp(_ArgTypes...)> __invoker;
+      //   __invoker __invoker_;
+      //
+      //   const __policy* __policy_;
+      // }
+      if (auto outer_f = valobj_sp->GetChildMemberWithName("__f_")) {
+        if (auto inner_f = outer_f->GetChildMemberWithName("__f_"))
+          base_ptr = std::move(inner_f);
+      } else if (valobj_sp->GetChildMemberWithName("__invoker_"))
+        return llvm::createStringError("__policy_func implementation is "
+                                       "not supported");
     }
-
-    optional_info.callable_symbol = *symbol;
-    optional_info.callable_line_entry = line_entry;
-    optional_info.callable_address = addr;
+    
+    if (!base_ptr) {
+      // git: 3e519524c118651123eecf60c2bbc5d65ad9bac3 include/__functional_03
+      //
+      // class function<_Rp()> {
+      //   aligned_storage<3*sizeof(void*)>::type __buf_;
+      //   __base<_Rp>* __f_;
+      // }
+      if (auto outer_f = valobj_sp->GetChildMemberWithName("__f_"))
+        base_ptr = std::move(outer_f);
+    }
+    
+    if (!base_ptr)
+      return llvm::createStringError("unrecognized implementation");
   }
 
-  return optional_info;
+  // __base<...> is a pure virtual class with an interface to manage the
+  // the wrapped value. This interface is implemented by partial specializations
+  // of the __func<_Fp, _Alloc, ...> template where _Fp is the wrapped callable
+  //
+  // We'll try to extract the concrete __func type pointed to by base_ptr by
+  // analysing it's vtable.
+  Status status;
+  ValueObjectSP base = base_ptr->Dereference(status);
+  if (status.Fail())
+    return llvm::createStringError("failed to dereference __base pointer");
+  
+  Address virtual_method_addr;
+  CompilerType func_type;
+  {
+    ValueObjectSP vtable = base->GetVTable();
+
+    llvm::Expected<uint32_t> num_entries = vtable->GetNumChildren();
+    if (auto error = num_entries.takeError())
+      return error;
+    
+    // __base is pure virtual, __func is final. All member function pointers
+    // are equally good candidates to find the enclosing class.
+    //
+    // In practice the first two vtable entries point to artificial destructors
+    // which the type system refuses to elaborate as their artificial
+    // specifications are not added to the enclosing class' declaration
+    // context.
+    //
+    // This causes various warnings, and don't get us any closer to the
+    // concrete type thus we skip them.
+    for (uint32_t idx = 2; idx < *num_entries; idx++) {
+      ValueObjectSP entry = vtable->GetChildAtIndex(idx);
+      
+      // Points to a potentially interesting member function
+      addr_t mfunc_load_addr = entry->GetValueAsUnsigned(0);
+      if (!mfunc_load_addr)
+        continue;
+      
+      if (!valobj_sp->GetTargetSP()->ResolveLoadAddress(mfunc_load_addr,
+                                                        virtual_method_addr))
+        continue;
+      
+      Function* func = virtual_method_addr.CalculateSymbolContextFunction();
+      if (!func)
+        continue;
+      
+      CompilerDeclContext decl_ctx = func->GetDeclContext();
+      if (!decl_ctx.IsClassMethod())
+        continue;
+      
+      // Member functions are contained in their enclosing class' decl context
+      CompilerDeclContext enclosing_class = decl_ctx.GetDecl().GetDeclContext();
+      if (!enclosing_class.IsValid())
+        continue;
+      
+      func_type = enclosing_class.GetDecl().GetType();
+      break;
+    }
+  }
+  
+  if (!func_type)
+    return llvm::createStringError("failed to find suitable virtual function "
+                                   "to determine __func type");
+  
+  ValueObjectSP func = base->Cast(func_type);
+  if (!func)
+    return llvm::createStringError("failed to cast __base to __func type");
+  
+  // Now that the __func is a known type we can dig for the wrapped callable
+  CompilerType callable_type = func_type.GetTypeTemplateArgument(0);
+  if (!callable_type)
+    return llvm::createStringError("failed to get wrapped callable type from "
+                                   "first template parameter");
+  
+  // git: 050b064f15ee56ee0b42c9b957a3dd0f32532394
+  //
+  // class __func<_Fp, _Alloc, _Rp(_ArgTypes...)>
+  //     : __base<_Rp(_ArgTypes...)> {
+  //   __alloc_func<_Fp, _Alloc, _Rp(_ArgTypes...)> __f_;
+  // }
+  //
+  // class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)> {
+  //   __compressed_pair<_Fp, _Ap> __f_;
+  // }
+  //
+  // class __compressed_pair : __compressed_pair_elem<_T1, 0>,
+  //                           __compressed_pair_elem<_T2, 1> {
+  // }
+  //
+  // struct __compressed_pair_elem {
+  //   _Tp __value_;
+  // }
+  ValueObjectSP pair = func->GetChildAtNamePath({"__f_", "__f_"});
+  if (!pair)
+    return llvm::createStringError("__compressed_pair is not where expected");
+  
+  // The callable may be an empty class in which case the empty base class
+  // optimization will eliminate it completely from the type hierarchy
+  //
+  // Serve a dummy value which for all intents and purposes is just as good
+  if (callable_type.IsRecordType() && callable_type.GetNumFields() == 0)
+    return UnwrappedLibCppFunction {
+      .callable = valobj_sp->CreateValueObjectFromAddress(
+        "__value_",
+        pair->GetLoadAddress(),
+        pair->GetExecutionContextRef(),
+        callable_type
+      ),
+      .in_module = virtual_method_addr.CalculateSymbolContextModule()
+    };
+  
+  ValueObjectSP elem0 = pair->GetChildAtIndex(0);
+  if (!elem0)
+    return llvm::createStringError("__compressed_pair element 0 not where "
+                                   "expected");
+  
+  ValueObjectSP callable = elem0->GetChildMemberWithName("__value_");
+  if (!callable)
+    return llvm::createStringError("__compressed_pair element value not "
+                                   "where expected");
+  
+  return UnwrappedLibCppFunction {
+    .callable = std::move(callable),
+    .in_module = virtual_method_addr.CalculateSymbolContextModule(),
+  };
 }
 
 CPPLanguageRuntime::LibCppStdFunctionCallableInfo
 CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
-    lldb::ValueObjectSP &valobj_sp) {
+  lldb::ValueObjectSP &valobj_sp) {
   LLDB_SCOPED_TIMER();
 
   LibCppStdFunctionCallableInfo optional_info;
 
-  if (!valobj_sp)
+  auto unwrap_r = UnwrapLibCppFunction(valobj_sp);
+  if (unwrap_r.takeError())
     return optional_info;
-
-  // Member __f_ has type __base*, the contents of which will hold:
-  // 1) a vtable entry which may hold type information needed to discover the
-  //    lambda being called
-  // 2) possibly hold a pointer to the callable object
-  // e.g.
-  //
-  // (lldb) frame var -R  f_display
-  // (std::__1::function<void (int)>) f_display = {
-  //  __buf_ = {
-  //  …
-  // }
-  //  __f_ = 0x00007ffeefbffa00
-  // }
-  // (lldb) memory read -fA 0x00007ffeefbffa00
-  // 0x7ffeefbffa00: ... `vtable for std::__1::__function::__func<void (*) ...
-  // 0x7ffeefbffa08: ... `print_num(int) at std_function_cppreference_exam ...
-  //
-  // We will be handling five cases below, std::function is wrapping:
-  //
-  // 1) a lambda we know at compile time. We will obtain the name of the lambda
-  //    from the first template pameter from __func's vtable. We will look up
-  //    the lambda's operator()() and obtain the line table entry.
-  // 2) a lambda we know at runtime. A pointer to the lambdas __invoke method
-  //    will be stored after the vtable. We will obtain the lambdas name from
-  //    this entry and lookup operator()() and obtain the line table entry.
-  // 3) a callable object via operator()(). We will obtain the name of the
-  //    object from the first template parameter from __func's vtable. We will
-  //    look up the objects operator()() and obtain the line table entry.
-  // 4) a member function. A pointer to the function will stored after the
-  //    we will obtain the name from this pointer.
-  // 5) a free function. A pointer to the function will stored after the vtable
-  //    we will obtain the name from this pointer.
-  ValueObjectSP member_f_(valobj_sp->GetChildMemberWithName("__f_"));
-
-  if (member_f_) {
-    ValueObjectSP sub_member_f_(member_f_->GetChildMemberWithName("__f_"));
-
-    if (sub_member_f_)
-      member_f_ = sub_member_f_;
-  }
-
-  if (!member_f_)
-    return optional_info;
-
-  lldb::addr_t member_f_pointer_value = member_f_->GetValueAsUnsigned(0);
-
-  optional_info.member_f_pointer_value = member_f_pointer_value;
-
-  if (!member_f_pointer_value)
-    return optional_info;
-
-  ExecutionContext exe_ctx(valobj_sp->GetExecutionContextRef());
-  Process *process = exe_ctx.GetProcessPtr();
-
-  if (process == nullptr)
-    return optional_info;
-
-  uint32_t address_size = process->GetAddressByteSize();
-  Status status;
-
-  // First item pointed to by __f_ should be the pointer to the vtable for
-  // a __base object.
-  lldb::addr_t vtable_address =
-      process->ReadPointerFromMemory(member_f_pointer_value, status);
-
-  if (status.Fail())
-    return optional_info;
-
-  lldb::addr_t vtable_address_first_entry =
-      process->ReadPointerFromMemory(vtable_address + address_size, status);
-
-  if (status.Fail())
-    return optional_info;
-
-  lldb::addr_t address_after_vtable = member_f_pointer_value + address_size;
-  // As commented above we may not have a function pointer but if we do we will
-  // need it.
-  lldb::addr_t possible_function_address =
-      process->ReadPointerFromMemory(address_after_vtable, status);
-
-  if (status.Fail())
-    return optional_info;
-
-  Target &target = process->GetTarget();
-
-  if (target.GetSectionLoadList().IsEmpty())
-    return optional_info;
-
-  Address vtable_first_entry_resolved;
-
-  if (!target.GetSectionLoadList().ResolveLoadAddress(
-          vtable_address_first_entry, vtable_first_entry_resolved))
-    return optional_info;
-
-  Address vtable_addr_resolved;
-  SymbolContext sc;
-  Symbol *symbol = nullptr;
-
-  if (!target.GetSectionLoadList().ResolveLoadAddress(vtable_address,
-                                                      vtable_addr_resolved))
-    return optional_info;
-
-  target.GetImages().ResolveSymbolContextForAddress(
-      vtable_addr_resolved, eSymbolContextEverything, sc);
-  symbol = sc.symbol;
-
-  if (symbol == nullptr)
-    return optional_info;
-
-  llvm::StringRef vtable_name(symbol->GetName().GetStringRef());
-  bool found_expected_start_string =
-      vtable_name.starts_with("vtable for std::__1::__function::__func<");
-
-  if (!found_expected_start_string)
-    return optional_info;
-
-  // Given case 1 or 3 we have a vtable name, we are want to extract the first
-  // template parameter
-  //
-  //  ... __func<main::$_0, std::__1::allocator<main::$_0> ...
-  //             ^^^^^^^^^
-  //
-  // We could see names such as:
-  //    main::$_0
-  //    Bar::add_num2(int)::'lambda'(int)
-  //    Bar
-  //
-  // We do this by find the first < and , and extracting in between.
-  //
-  // This covers the case of the lambda known at compile time.
-  size_t first_open_angle_bracket = vtable_name.find('<') + 1;
-  size_t first_comma = vtable_name.find(',');
-
-  llvm::StringRef first_template_parameter =
-      vtable_name.slice(first_open_angle_bracket, first_comma);
-
-  Address function_address_resolved;
-
-  // Setup for cases 2, 4 and 5 we have a pointer to a function after the
-  // vtable. We will use a process of elimination to drop through each case
-  // and obtain the data we need.
-  if (target.GetSectionLoadList().ResolveLoadAddress(
-          possible_function_address, function_address_resolved)) {
-    target.GetImages().ResolveSymbolContextForAddress(
-        function_address_resolved, eSymbolContextEverything, sc);
-    symbol = sc.symbol;
-  }
-
-  // These conditions are used several times to simplify statements later on.
-  bool has_invoke =
-      (symbol ? symbol->GetName().GetStringRef().contains("__invoke") : false);
-  auto calculate_symbol_context_helper = [](auto &t,
-                                            SymbolContextList &sc_list) {
+  
+  UnwrappedLibCppFunction& wrapped = unwrap_r.get();
+  
+  CompilerType callable_t = wrapped.callable->GetCompilerType();
+  
+  if (callable_t.IsFunctionPointerType() ||
+      callable_t.IsMemberFunctionPointerType()) {
+    // Target is a standard function pointer, or member function pointer.
+    // In either case on Itanium both contain a function address
+    AddressType addr_type;
+    addr_t addr = wrapped.callable->GetPointerValue(&addr_type);
+    
+    if (!addr || addr == LLDB_INVALID_ADDRESS)
+      return optional_info;
+    
+    if (addr_type != eAddressTypeLoad)
+      return optional_info;
+    
+    Address callable_addr;
+    if (!wrapped.in_module->ResolveFileAddress(addr, callable_addr))
+      return optional_info;
+    
     SymbolContext sc;
-    t->CalculateSymbolContext(&sc);
-    sc_list.Append(sc);
-  };
-
-  // Case 2
-  if (has_invoke) {
-    SymbolContextList scl;
-    calculate_symbol_context_helper(symbol, scl);
-
-    return line_entry_helper(target, scl[0], symbol, first_template_parameter,
-                             has_invoke);
-  }
-
-  // Case 4 or 5
-  if (symbol && !symbol->GetName().GetStringRef().starts_with("vtable for") &&
-      !contains_lambda_identifier(first_template_parameter) && !has_invoke) {
-    optional_info.callable_case =
-        LibCppStdFunctionCallableCase::FreeOrMemberFunction;
-    optional_info.callable_address = function_address_resolved;
-    optional_info.callable_symbol = *symbol;
-
-    return optional_info;
-  }
-
-  std::string func_to_match = first_template_parameter.str();
-
-  auto it = CallableLookupCache.find(func_to_match);
-  if (it != CallableLookupCache.end())
-    return it->second;
-
-  SymbolContextList scl;
-
-  CompileUnit *vtable_cu =
-      vtable_first_entry_resolved.CalculateSymbolContextCompileUnit();
-  llvm::StringRef name_to_use = func_to_match;
-
-  // Case 3, we have a callable object instead of a lambda
-  //
-  // TODO
-  // We currently don't support this case a callable object may have multiple
-  // operator()() varying on const/non-const and number of arguments and we
-  // don't have a way to currently distinguish them so we will bail out now.
-  if (!contains_lambda_identifier(name_to_use))
-    return optional_info;
-
-  if (vtable_cu && !has_invoke) {
-    lldb::FunctionSP func_sp =
-        vtable_cu->FindFunction([name_to_use](const FunctionSP &f) {
-          auto name = f->GetName().GetStringRef();
-          if (name.starts_with(name_to_use) && name.contains("operator"))
-            return true;
-
-          return false;
-        });
-
-    if (func_sp) {
-      calculate_symbol_context_helper(func_sp, scl);
+    wrapped.in_module->ResolveSymbolContextForAddress(callable_addr,
+                                                      eSymbolContextSymbol |
+                                                      eSymbolContextLineEntry,
+                                                      sc);
+    if (!sc.symbol)
+      return optional_info;
+    
+    return LibCppStdFunctionCallableInfo {
+      .callable_symbol = *sc.symbol,
+      .callable_address = sc.symbol->GetAddress(),
+      .callable_line_entry = sc.line_entry,
+      .callable_case = LibCppStdFunctionCallableCase::FreeOrMemberFunction
+    };
+  } else if (callable_t.IsRecordType()) {
+    // Target is a lambda, or a generic callable. Search for a single
+    // operator() overload and assume it is the target
+    std::optional<ConstString> mangled_func_name;
+    
+    for (uint32_t idx = 0; idx < callable_t.GetNumMemberFunctions(); idx++) {
+      TypeMemberFunctionImpl mfunc = callable_t.GetMemberFunctionAtIndex(idx);
+      
+      if (mfunc.GetKind() != eMemberFunctionKindInstanceMethod)
+        continue;
+      
+      if (mfunc.GetName() != "operator()")
+        continue;
+        
+      if (mangled_func_name)
+        return optional_info; // Cannot resolve ambiguous target
+      
+      mangled_func_name = mfunc.GetMangledName();
     }
+    
+    // Locate the symbol context corresponding to the target function
+    SymbolContext sc;
+    {
+      // Limit our lookup to callable_type
+      CompilerDeclContext decl_ctx = callable_t.GetTypeSystem()
+        ->GetCompilerDeclContextForType(callable_t);
+      
+      SymbolContextList list;
+      wrapped.in_module->FindFunctions(*mangled_func_name, decl_ctx,
+                                       eFunctionNameTypeFull, {}, list);
+      if (list.GetSize() != 1)
+        return optional_info;
+      
+      list.GetContextAtIndex(0, sc);
+    }
+    
+    // TODO: This feels a bit clunky, I am probably misusing the API?
+    // FindFunctions returns me SymbolContexts with the .function set but not
+    // .symbol ... At first glance it seemed like if we know the function there
+    // must be a symbol too!
+    if (!sc.function)
+      return optional_info;
+    
+    Symbol* symbol = sc.function->GetAddressRange().GetBaseAddress()
+      .CalculateSymbolContextSymbol();
+    if (!symbol)
+      return optional_info;
+    
+    return LibCppStdFunctionCallableInfo {
+      .callable_symbol = *symbol,
+      .callable_address = symbol->GetAddress(),
+      .callable_line_entry = sc.GetFunctionStartLineEntry(),
+      
+      // TODO: Can't tell lambdas apart from generic callables.. do we really
+      //  need to? Is it important to have the correct qualification in the
+      // summary?
+      .callable_case = LibCppStdFunctionCallableCase::Lambda
+    };
   }
-
-  if (symbol == nullptr)
-    return optional_info;
-
-  // Case 1 or 3
-  if (scl.GetSize() >= 1) {
-    optional_info = line_entry_helper(target, scl[0], symbol,
-                                      first_template_parameter, has_invoke);
-  }
-
-  CallableLookupCache[func_to_match] = optional_info;
-
+  
+  // Unrecognized callable type
   return optional_info;
 }
 

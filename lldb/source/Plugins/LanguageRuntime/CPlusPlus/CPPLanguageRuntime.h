@@ -28,6 +28,14 @@ public:
     Invalid
   };
 
+  struct UnwrappedLibCppFunction {
+    lldb::ValueObjectSP callable;
+    lldb::ModuleSP in_module;
+  };
+  
+  llvm::Expected<UnwrappedLibCppFunction>
+  UnwrapLibCppFunction(lldb::ValueObjectSP &valobj_sp);
+  
   struct LibCppStdFunctionCallableInfo {
     Symbol callable_symbol;
     Address callable_address;
@@ -37,6 +45,7 @@ public:
         LibCppStdFunctionCallableCase::Invalid;
   };
 
+  
   LibCppStdFunctionCallableInfo
   FindLibCppStdFunctionCallableInfo(lldb::ValueObjectSP &valobj_sp);
 
@@ -81,12 +90,6 @@ public:
 protected:
   // Classes that inherit from CPPLanguageRuntime can see and modify these
   CPPLanguageRuntime(Process *process);
-
-private:
-  using OperatorStringToCallableInfoMap =
-    llvm::StringMap<CPPLanguageRuntime::LibCppStdFunctionCallableInfo>;
-
-  OperatorStringToCallableInfoMap CallableLookupCache;
 };
 
 } // namespace lldb_private
