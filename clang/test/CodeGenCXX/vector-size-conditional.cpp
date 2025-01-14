@@ -150,12 +150,13 @@ void OneScalarOp() {
 
   four_ints ?: some_float;
   // CHECK: %[[COND:.+]] = load <4 x i32>
+  // CHECK: %[[LHS:.+]] = load <4 x i32>
   // CHECK: %[[RHS:.+]] = load float
   // CHECK: %[[RHS_CONV:.+]] = fptosi float %[[RHS]] to i32
   // CHECK: %[[RHS_SPLAT_INSERT:.+]] = insertelement <4 x i32> poison, i32 %[[RHS_CONV]], i64 0
   // CHECK: %[[RHS_SPLAT:.+]] = shufflevector <4 x i32> %[[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i32> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[COND]], <4 x i32> %[[RHS_SPLAT]]
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[LHS]], <4 x i32> %[[RHS_SPLAT]]
 
   four_ints ? four_ints : 5.0f;
   // CHECK: %[[COND:.+]] = load <4 x i32>
