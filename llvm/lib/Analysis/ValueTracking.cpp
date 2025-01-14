@@ -9482,8 +9482,9 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGE)) &&
+  CmpInst::Predicate SignedLPred = LPred.getPreferredSignedPredicate();
+  if ((SignedLPred == ICmpInst::ICMP_SGT ||
+       SignedLPred == ICmpInst::ICMP_SGE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonPositive()) &&
         ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == false)
@@ -9492,8 +9493,8 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
 
   // Take SLT as an example:  L0:x < L1:y and C <= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is true
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLE)) &&
+  if ((SignedLPred == ICmpInst::ICMP_SLT ||
+       SignedLPred == ICmpInst::ICMP_SLE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonNegative()) &&
         ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == true)
