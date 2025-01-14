@@ -1555,7 +1555,7 @@ inline APFloat pow(const APFloat &X, const int &N) {
     Acc = Acc * Base;
   }
   return Acc;
-};
+}
 
 /// Returns the negated value of the argument.
 inline APFloat neg(APFloat X) {
