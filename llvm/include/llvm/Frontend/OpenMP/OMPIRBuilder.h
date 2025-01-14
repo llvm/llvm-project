@@ -1389,9 +1389,6 @@ public:
 
   /// Supporting functions for Reductions CodeGen.
 private:
-  /// Emit the llvm.used metadata.
-  void emitUsed(StringRef Name, std::vector<llvm::WeakTrackingVH> &List);
-
   /// Get the id of the current thread on the GPU.
   Value *getGPUThreadID();
 
@@ -2013,6 +2010,13 @@ public:
   /// Value.
   GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
 
+  /// Emit the llvm.used metadata.
+  void emitUsed(StringRef Name, ArrayRef<llvm::WeakTrackingVH> List);
+
+  /// Emit the kernel execution mode.
+  GlobalVariable *emitKernelExecutionMode(StringRef KernelName,
+                                          omp::OMPTgtExecModeFlags Mode);
+
   /// Generate control flow and cleanup for cancellation.
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.
@@ -2233,11 +2237,32 @@ public:
   /// time. The number of max values will be 1 except for the case where
   /// ompx_bare is set.
   struct TargetKernelDefaultAttrs {
-    bool IsSPMD = false;
+    omp::OMPTgtExecModeFlags ExecFlags =
+        omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
     SmallVector<int32_t, 3> MaxTeams = {-1};
     int32_t MinTeams = 1;
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
+  };
+
+  /// Container to pass LLVM IR runtime values or constants related to the
+  /// number of teams and threads with which the kernel must be launched, as
+  /// well as the trip count of the loop, if it is an SPMD or Generic-SPMD
+  /// kernel. These must be defined in the host prior to the call to the kernel
+  /// launch OpenMP RTL function.
+  struct TargetKernelRuntimeAttrs {
+    SmallVector<Value *, 3> MaxTeams = {nullptr};
+    Value *MinTeams = nullptr;
+    SmallVector<Value *, 3> TargetThreadLimit = {nullptr};
+    SmallVector<Value *, 3> TeamsThreadLimit = {nullptr};
+
+    /// 'parallel' construct 'num_threads' clause value, if present and it is an
+    /// SPMD kernel.
+    Value *MaxThreads = nullptr;
+
+    /// Total number of iterations of the SPMD or Generic-SPMD kernel or null if
+    /// it is a generic kernel.
+    Value *LoopTripCount = nullptr;
   };
 
   /// Data structure that contains the needed information to construct the
@@ -2971,7 +2996,9 @@ public:
   /// \param CodeGenIP The insertion point where the call to the outlined
   /// function should be emitted.
   /// \param EntryInfo The entry information about the function.
-  /// \param DefaultAttrs Structure containing the default numbers of threads
+  /// \param DefaultAttrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  /// \param RuntimeAttrs Structure containing the runtime numbers of threads
   ///        and teams to launch the kernel with.
   /// \param Inputs The input values to the region that will be passed.
   /// as arguments to the outlined function.
@@ -2987,6 +3014,7 @@ public:
       OpenMPIRBuilder::InsertPointTy CodeGenIP,
       TargetRegionEntryInfo &EntryInfo,
       const TargetKernelDefaultAttrs &DefaultAttrs,
+      const TargetKernelRuntimeAttrs &RuntimeAttrs,
       SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
