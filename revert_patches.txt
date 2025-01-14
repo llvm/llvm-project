@@ -21,12 +21,6 @@ Revert: breaks build of rocFFT
 854d7301f989 [Clang/AMDGPU] Zero sized arrays not allowed in HIP device code. (#113470)
 Ron and Vigneshwar
 ---
-revert: breaks smoke/xteamr  smoke-limbo
-f4ee5a673f6e [OpenMP] Replace AMDGPU fences with generic scoped fences (#119619) 
-b57c0bac [OpenMP] Update atomic helpers to just use headers (#122185)
-f53cb84d [OpenMP] Use __builtin_bit_cast instead of UB type punning (#122325)
-Ron , Dhruva, Joseph 
----
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
