@@ -8964,6 +8964,8 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
               &Plan.getVectorTripCount())) {
+        assert(ResumePhi->getOpcode() == VPInstruction::ResumePhi &&
+               "Expected a ResumePhi");
         IVEndValues[WideIVR] = ResumePhi->getOperand(0);
         ScalarPhiIRI->addOperand(ResumePhi);
         continue;
@@ -9497,6 +9499,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
+  // IVEndValues are not used yet in the native path.
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");

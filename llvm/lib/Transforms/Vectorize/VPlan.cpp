@@ -311,20 +311,18 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
     LastLane = 0;
   }
 
-  auto *LastValue = get(Def, LastLane);
+  auto *LastInst = cast<Instruction>(get(Def, LastLane));
   auto OldIP = Builder.saveIP();
-  if (auto *LastInst = dyn_cast<Instruction>(LastValue)) {
-    // TODO: Remove once VPDerivedIVReicpe can be simplified, which requires
-    // vector trip count being modeled in VPlan.
-    // Set the insert point after the last scalarized instruction or after the
-    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-    // will directly follow the scalar definitions.
-    auto NewIP =
-        isa<PHINode>(LastInst)
-            ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
-            : std::next(BasicBlock::iterator(LastInst));
-    Builder.SetInsertPoint(&*NewIP);
-  }
+  // TODO: Remove once VPDerivedRecipe can be simplified, which requires
+  // vector trip count being modeled in VPlan.
+  // Set the insert point after the last scalarized instruction or after the
+  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+  // will directly follow the scalar definitions.
+  auto NewIP =
+      isa<PHINode>(LastInst)
+          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+          : std::next(BasicBlock::iterator(LastInst));
+  Builder.SetInsertPoint(&*NewIP);
 
   // However, if we are vectorizing, we need to construct the vector values.
   // If the value is known to be uniform after vectorization, we can just
@@ -339,7 +337,7 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   } else {
     // Initialize packing with insertelements to start from undef.
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-    Value *Undef = PoisonValue::get(VectorType::get(LastValue->getType(), VF));
+    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
     set(Def, Undef);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
       packScalarIntoVectorValue(Def, Lane);

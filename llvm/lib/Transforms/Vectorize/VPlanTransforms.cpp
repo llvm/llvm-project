@@ -667,18 +667,16 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   }
 }
 
-/// Return a wide IV, if \p VPV is an optimizable wide IV or wide IV use. That
-/// is, if \p VPV is either an untruncated wide induction, or if it increments a
-/// wide induction by its step.
-static VPWidenInductionRecipe *isOptimizableIVOrUse(VPValue *VPV) {
+/// Check if \p VPV is an untruncated wide induction, either before or after the
+/// increment. If so return the header IV (before the increment), otherwise
+/// return null.
+static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
   auto *WideIV = dyn_cast<VPWidenInductionRecipe>(VPV);
   if (WideIV) {
     // VPV itself is a wide induction, separately compute the end value for exit
     // users if it is not a truncated IV.
-    if (isa<VPWidenPointerInductionRecipe>(WideIV) ||
-        !cast<VPWidenIntOrFpInductionRecipe>(WideIV)->getTruncInst())
-      return WideIV;
-    return nullptr;
+    auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
+    return (IntOrFpIV && IntOrFpIV->getTruncInst()) ? nullptr : WideIV;
   }
 
   // Check if VPV is an optimizable induction increment.
@@ -757,7 +755,7 @@ void VPlanTransforms::optimizeInductionExitUsers(
                    m_VPValue(Incoming), m_SpecificInt(1))))
       continue;
 
-    auto *WideIV = isOptimizableIVOrUse(Incoming);
+    auto *WideIV = getOptimizableIVOf(Incoming);
     if (!WideIV)
       continue;
     VPValue *EndValue = EndValues.lookup(WideIV);
