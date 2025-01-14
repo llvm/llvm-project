@@ -97,3 +97,34 @@ def : CompressPat<(BigInst Regs:$r), (SmallInst5 Regs:$r), [AsmPred1, AsmPred3]>
 // COMPRESS-NEXT: // SmallInst5 $r
 
 // COMPRESS-LABEL: static bool uncompressInst
+
+// COMPRESS-LABEL: static bool isCompressibleInst
+
+// COMPRESS:      if (STI.getFeatureBits()[arch::AsmCond1] &&
+// COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
+// COMPRESS-NEXT: archMCRegisterClasses[arch::RegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// COMPRESS-NEXT: // SmallInst1 $r
+
+// COMPRESS:      if (STI.getFeatureBits()[arch::AsmCond2a] &&
+// COMPRESS-NEXT: STI.getFeatureBits()[arch::AsmCond2b] &&
+// COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
+// COMPRESS-NEXT: archMCRegisterClasses[arch::RegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// COMPRESS-NEXT: // SmallInst2 $r
+
+// COMPRESS:      if ((STI.getFeatureBits()[arch::AsmCond3a] || STI.getFeatureBits()[arch::AsmCond3b]) &&
+// COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
+// COMPRESS-NEXT: archMCRegisterClasses[arch::RegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// COMPRESS-NEXT: // SmallInst3 $r
+
+// COMPRESS:      if (STI.getFeatureBits()[arch::AsmCond1] &&
+// COMPRESS-NEXT: STI.getFeatureBits()[arch::AsmCond2a] &&
+// COMPRESS-NEXT: STI.getFeatureBits()[arch::AsmCond2b] &&
+// COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
+// COMPRESS-NEXT: archMCRegisterClasses[arch::RegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// COMPRESS-NEXT: // SmallInst4 $r
+
+// COMPRESS:      if (STI.getFeatureBits()[arch::AsmCond1] &&
+// COMPRESS-NEXT: (STI.getFeatureBits()[arch::AsmCond3a] || STI.getFeatureBits()[arch::AsmCond3b]) &&
+// COMPRESS-NEXT: MI.getOperand(0).isReg() && MI.getOperand(0).getReg().isPhysical() &&
+// COMPRESS-NEXT: archMCRegisterClasses[arch::RegsRegClassID].contains(MI.getOperand(0).getReg())) {
+// COMPRESS-NEXT: // SmallInst5 $r
