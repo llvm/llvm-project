@@ -974,7 +974,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
   // the table doesn't prevent the removal.
   const Comdat *C = F.getComdat();
   bool EmitUniqueSection = TM.getFunctionSections() || C;
-  if (!EmitUniqueSection)
+  if (!EmitUniqueSection && !TM.getEnableStaticDataPartitioning())
     return ReadOnlySection;
 
   return selectELFSectionForGlobal(getContext(), &F, SectionKind::getReadOnly(),

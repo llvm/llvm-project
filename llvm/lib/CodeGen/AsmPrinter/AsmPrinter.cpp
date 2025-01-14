@@ -168,11 +168,6 @@ static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
              "unnecessary for some PGOAnalysisMap features."),
     cl::Hidden, cl::init(false));
 
-static cl::opt<bool>
-    EmitStaticDataHotnessSuffix("emit-static-data-hotness-suffix", cl::Hidden,
-                                cl::init(false), cl::ZeroOrMore,
-                                cl::desc("Emit static data hotness suffix"));
-
 static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
@@ -2882,7 +2877,7 @@ void AsmPrinter::emitJumpTableInfo() {
       F);
 
   std::vector<unsigned> JumpTableIndices;
-  if (!EmitStaticDataHotnessSuffix) {
+  if (!TM.Options.EnableStaticDataPartitioning) {
     for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI)
       JumpTableIndices.push_back(JTI);
     emitJumpTables(JumpTableIndices, TLOF.getSectionForJumpTable(F, TM),

@@ -312,6 +312,9 @@ namespace llvm {
     /// Enables the MachineFunctionSplitter pass.
     unsigned EnableMachineFunctionSplitter : 1;
 
+    /// Enables the StaticDataSplitter pass.
+    unsigned EnableStaticDataPartitioning : 1;
+
     /// Set if the target supports default outlining behaviour.
     unsigned SupportsDefaultOutlining : 1;
 

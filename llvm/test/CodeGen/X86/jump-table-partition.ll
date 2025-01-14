@@ -6,22 +6,36 @@
 ; RUN: llc -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
 ; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
-; RUN: llc -enable-split-machine-functions -split-static-data -emit-static-data-hotness-suffix=true -function-sections -min-jump-table-entries=2 -disable-block-placement %s -o - 2>&1 | FileCheck %s --check-prefix=SECTION
+; When 'partition-static-data-sections' is enabled, static data splitter pass will
+; categorize jump tables and assembly printer will place hot jump tables in the
+; `.hot`-suffixed read only section, and cold ones in the `.rodata` sections.
+; Section names will optionally have `.<func>` if -function-sections is enabled.
+; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,HOT
+; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=false -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; Tests stat messages are expected.
-; TODO: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
-; TODO: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
+; Tests that jump tables with unknown hotness are categorized as cold if `-static-data-default-hotness` specifies so.
+; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULT
  
+ ; Tests stat messages are expected.
 ; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
-; STAT-DAG: 3 static-data-splitter - Number of hot jump tables seen
+; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
 
-; SECTION: .section .rodata.hot.foo,"a",@progbits
-; SECTION: .LJTI0_0:
-; SECTION: .LJTI0_2:
-; SECTION: .section .rodata.foo,"a",@progbits
-; SECTION: .LJTI0_1:
-; SECTION: .LJTI0_3:
+; Tests that the first and third jump table are placed in a hot-suffixed section,
+; and the second and fourth are placed in the original section.
+; FUNC: .section .rodata.hot.foo,"a",@progbits
+; FUNCLESS: .section .rodata.hot,"a",@progbits
+; JT: .LJTI0_0:
+; JT: .LJTI0_2:
+; FUNC: .section .rodata.foo,"a",@progbits
+; FUNCLESS: .section .rodata,"a",@progbits
+; JT: .LJTI0_1:
+; JT: .LJTI0_3:
+; HOT: .section .rodata.hot.func_without_entry_count,"a",@progbits
+; HOT: .LJTI1_0:
+
+; DEFAULT: .section .rodata.func_without_entry_count,"a",@progbits
+; DEFAULT: .LJTI1_0:
 
 ; @foo has four jump tables, jt0, jt1, jt2 and jt3 in the input basic block
 ; order; jt0 and jt2 are hot, and jt1 and jt3 are cold.
@@ -140,42 +154,6 @@ jt3.epilog:
 
 return:
   ret i32 %mod3
-}
-
-define i32 @func_with_hot_jt() !prof !15 {
-entry:
-  br label %for.body
-
-for.cond.cleanup:
-  ret i32 0
-
-for.body:
-  %lsr.iv = phi i32 [ 100000, %entry ], [ %lsr.iv.next, %loop.exit ]
-  %i.04 = phi i32 [ 0, %entry ], [ %inc, %loop.exit ]
-  %0 = urem i32 %i.04, 100
-  switch i32 %0, label %sw.default [
-    i32 1, label %loop.exit
-    i32 2, label %sw.bb1.i
-    i32 3, label %sw.bb3.i
-  ], !prof !19
-
-sw.bb1.i:
-  br label %loop.exit
-
-sw.bb3.i: 
-  call i32 (ptr, ...) @printf(ptr @case1)
-  br label %sw.default
-
-sw.default:
-  br label %loop.exit
-
-loop.exit:
-  %str.5.sink.i = phi ptr [ @str.10, %sw.default ], [ @str.9, %sw.bb1.i ], [ @case2, %for.body ]
-  call i32 @puts(ptr %str.5.sink.i)
-  %inc = add i32 %i.04, 1
-  %lsr.iv.next = add i32 %lsr.iv, -1
-  %exitcond.not = icmp eq i32 %lsr.iv.next, 0
-  br i1 %exitcond.not, label %for.body, label %for.cond.cleanup, !prof !17
 }
 
 define void @func_without_entry_count(i32 %num) {

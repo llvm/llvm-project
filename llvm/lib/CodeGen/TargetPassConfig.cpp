@@ -1261,7 +1261,7 @@ void TargetPassConfig::addMachinePasses() {
                "performance.\n";
       }
     }
-    if (SplitStaticData)
+    if (SplitStaticData || TM->Options.EnableStaticDataPartitioning)
       addPass(createStaticDataSplitterPass());
     addPass(createMachineFunctionSplitterPass());
   }
