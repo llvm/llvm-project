@@ -68,11 +68,10 @@ define i1 @icmp_xor_v4i32(<4 x i32> %a) {
 
 define i1 @icmp_samesign_xor_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @icmp_samesign_xor_v4i32(
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A]], i32 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[E1]], 42
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[E2]], -8
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A:%.*]], <i32 poison, i32 -8, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <4 x i32> %a, i32 3
@@ -165,12 +164,12 @@ define i1 @icmp_xor_v4i32_multiuse(<4 x i32> %a) {
 
 define i1 @icmp_samesign_xor_v4i32_multiuse(<4 x i32> %a) {
 ; CHECK-LABEL: @icmp_samesign_xor_v4i32_multiuse(
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 1
 ; CHECK-NEXT:    call void @use(i32 [[E2]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[E1]], 42
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[E2]], -8
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
+; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[SHIFT]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    call void @use(i1 [[R]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

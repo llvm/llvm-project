@@ -1097,10 +1097,12 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   Instruction *I0, *I1;
   Constant *C0, *C1;
   CmpPredicate P0, P1;
-  // FIXME: Use CmpPredicate::getMatching here.
   if (!match(B0, m_Cmp(P0, m_Instruction(I0), m_Constant(C0))) ||
-      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))) ||
-      P0 != static_cast<CmpInst::Predicate>(P1))
+      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))))
+    return false;
+
+  auto MatchingPred = CmpPredicate::getMatching(P0, P1);
+  if (!MatchingPred)
     return false;
 
   // The compare operands must be extracts of the same vector with constant
@@ -1121,7 +1123,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 
   // The original scalar pattern is:
   // binop i1 (cmp Pred (ext X, Index0), C0), (cmp Pred (ext X, Index1), C1)
-  CmpInst::Predicate Pred = P0;
+  CmpInst::Predicate Pred = *MatchingPred;
   unsigned CmpOpcode =
       CmpInst::isFPPredicate(Pred) ? Instruction::FCmp : Instruction::ICmp;
   auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
