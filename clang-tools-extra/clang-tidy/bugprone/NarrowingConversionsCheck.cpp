@@ -513,7 +513,9 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       return;
     }
     const BuiltinType *FromType = getBuiltinType(Rhs);
-    if (ToType->getKind() < FromType->getKind())
+    if (!llvm::APFloatBase::isRepresentableBy(
+            Context.getFloatTypeSemantics(FromType->desugar()),
+            Context.getFloatTypeSemantics(ToType->desugar())))
       diagNarrowType(SourceLoc, Lhs, Rhs);
   }
 }
