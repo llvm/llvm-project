@@ -581,6 +581,7 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
     libc.hdr.errno_macros
-    libc.src.sys.random.getrandom
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

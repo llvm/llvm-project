@@ -10,7 +10,9 @@
 #include "hdr/errno_macros.h"
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
-#include "src/sys/random/getrandom.h"
+#include "src/__support/OSUtil/syscall.h"
+
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, getentropy, (void *buffer, size_t length)) {
@@ -24,23 +26,24 @@ LLVM_LIBC_FUNCTION(int, getentropy, (void *buffer, size_t length)) {
   while (length != 0) {
     // 0 flag means urandom and blocking, which meets the assumption of
     // getentropy
-    ssize_t ret = LIBC_NAMESPACE::getrandom(cursor, length, 0);
+    auto ret = syscall_impl<long>(SYS_getrandom, cursor, length, 0);
 
     // on success, advance the buffer pointer
-    if (ret != -1) {
+    if (ret >= 0) {
       length -= static_cast<size_t>(ret);
       cursor += ret;
       continue;
     }
 
+    auto error = -static_cast<int>(ret);
+
     // on EINTR, try again
-    if (libc_errno == EINTR)
+    if (error == EINTR)
       continue;
 
     // on ENOSYS, forward errno and exit;
     // otherwise, set EIO and exit
-    if (libc_errno != ENOSYS)
-      libc_errno = EIO;
+    libc_errno = (error == ENOSYS) ? ENOSYS : EIO;
     return -1;
   }
   return 0;
