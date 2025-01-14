@@ -147,7 +147,8 @@ class GsymCreator {
   bool IsSegment = false;
   bool Finalized = false;
   bool Quiet;
-
+  // Specifies weather the input might contain merged functions
+  bool InputHasMergedFunctions;
 
   /// Get the first function start address.
   ///
@@ -292,7 +293,12 @@ class GsymCreator {
   }
 
 public:
-  GsymCreator(bool Quiet = false);
+  /// Construct a GsymCreator object.
+  ///
+  /// \param Quiet Whether to suppress warning messages
+  /// \param InputHasMergedFunctions Weather the input might contain merged
+  /// functions - functions with identical address ranges.
+  GsymCreator(bool Quiet = false, bool InputHasMergedFunctions = false);
 
   /// Save a GSYM file to a stand alone file.
   ///

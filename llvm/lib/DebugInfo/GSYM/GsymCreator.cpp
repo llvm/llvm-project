@@ -21,8 +21,9 @@
 using namespace llvm;
 using namespace gsym;
 
-GsymCreator::GsymCreator(bool Quiet)
-    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
+GsymCreator::GsymCreator(bool Quiet, bool InputHasMergedFunctions)
+    : StrTab(StringTableBuilder::ELF), Quiet(Quiet),
+      InputHasMergedFunctions(InputHasMergedFunctions) {
   insertFile(StringRef());
 }
 
@@ -315,12 +316,16 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
               std::swap(Prev, Curr);
             }
           } else {
-            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
-              // print warnings about overlaps
-              OS << "warning: function ranges overlap:\n"
-                << Prev << "\n"
-                << Curr << "\n";
-            });
+            // Equal ranges are invalid only in the case where merged functions
+            // are not expected.
+            if (!InputHasMergedFunctions) {
+              Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
+                // print warnings about overlaps
+                OS << "warning: function ranges overlap:\n"
+                   << Prev << "\n"
+                   << Curr << "\n";
+              });
+            }
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {

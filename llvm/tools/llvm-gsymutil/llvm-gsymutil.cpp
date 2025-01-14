@@ -349,7 +349,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
 
-  GsymCreator Gsym(Quiet);
+  GsymCreator Gsym(Quiet, UseMergedFunctions);
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease
