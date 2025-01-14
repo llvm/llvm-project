@@ -66,6 +66,23 @@ define i1 @icmp_xor_v4i32(<4 x i32> %a) {
   ret i1 %r
 }
 
+define i1 @icmp_samesign_xor_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: @icmp_samesign_xor_v4i32(
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ugt i32 [[E1]], 42
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[E2]], -8
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x i32> %a, i32 3
+  %e2 = extractelement <4 x i32> %a, i32 1
+  %cmp1 = icmp samesign ugt i32 %e1, 42
+  %cmp2 = icmp sgt i32 %e2, -8
+  %r = xor i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
 ; add is not canonical (should be xor), but that is ok.
 
 define i1 @icmp_add_v8i32(<8 x i32> %a) {
@@ -141,6 +158,27 @@ define i1 @icmp_xor_v4i32_multiuse(<4 x i32> %a) {
   call void @use(i32 %e2)
   %cmp1 = icmp sgt i32 %e1, 42
   %cmp2 = icmp sgt i32 %e2, -8
+  %r = xor i1 %cmp1, %cmp2
+  call void @use(i1 %r)
+  ret i1 %r
+}
+
+define i1 @icmp_samesign_xor_v4i32_multiuse(<4 x i32> %a) {
+; CHECK-LABEL: @icmp_samesign_xor_v4i32_multiuse(
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[A:%.*]], i32 3
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[A]], i32 1
+; CHECK-NEXT:    call void @use(i32 [[E2]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[E1]], 42
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[E2]], -8
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    call void @use(i1 [[R]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x i32> %a, i32 3
+  %e2 = extractelement <4 x i32> %a, i32 1
+  call void @use(i32 %e2)
+  %cmp1 = icmp sgt i32 %e1, 42
+  %cmp2 = icmp samesign ugt i32 %e2, -8
   %r = xor i1 %cmp1, %cmp2
   call void @use(i1 %r)
   ret i1 %r
