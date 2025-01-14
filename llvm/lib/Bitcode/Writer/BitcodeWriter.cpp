@@ -494,6 +494,9 @@ public:
     // are currently saved in the index in terms of GUID.
     forEachSummary([&](GVInfo I, bool IsAliasee) {
       GUIDToValueIdMap[I.first] = ++GlobalValueId;
+      // If this is invoked for an aliasee, we want to record the above mapping,
+      // but not the information needed for its summary entry (if the aliasee is
+      // to be imported, we will invoke this separately with IsAliasee=false).
       if (IsAliasee)
         return;
       auto *FS = dyn_cast<FunctionSummary>(I.second);
@@ -4847,6 +4850,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // radix tree array are identified based on this order.
   MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
   forEachSummary([&](GVInfo I, bool IsAliasee) {
+    // Don't collect this when invoked for an aliasee, as it is not needed for
+    // the alias summary. If the aliasee is to be imported, we will invoke this
+    // separately with IsAliasee=false.
+    if (IsAliasee)
+      return;
     GlobalValueSummary *S = I.second;
     assert(S);
     auto *FS = dyn_cast<FunctionSummary>(S);
