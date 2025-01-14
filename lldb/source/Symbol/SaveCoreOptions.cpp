@@ -114,20 +114,6 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
-
-lldb::ThreadCollectionSP SaveCoreOptions::GetThreadsToSave() const {
-  lldb::ThreadCollectionSP threadcollection_sp =
-      std::make_shared<ThreadCollection>();
-  if (!m_process_sp)
-    return threadcollection_sp;
-
-  ThreadList &thread_list = m_process_sp->GetThreadList();
-  for (const auto &tid : m_threads_to_save)
-    threadcollection_sp->AddThread(thread_list.FindThreadByID(tid));
-
-  return threadcollection_sp;
-}
-
 Status
 SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
   Status error;
@@ -143,6 +129,21 @@ SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
     error = Status(error_str);
 
   return error;
+}
+
+lldb::ThreadCollectionSP SaveCoreOptions::GetThreadsToSave() const {
+  lldb::ThreadCollectionSP threadcollection_sp =
+      std::make_shared<ThreadCollection>();
+
+  // In cases where no process is set, such as when no threads are specified.
+  if (!m_process_sp)
+    return threadcollection_sp;
+
+  ThreadList &thread_list = m_process_sp->GetThreadList();
+  for (const auto &tid : m_threads_to_save)
+    threadcollection_sp->AddThread(thread_list.FindThreadByID(tid));
+
+  return threadcollection_sp;
 }
 
 void SaveCoreOptions::ClearProcessSpecificData() {

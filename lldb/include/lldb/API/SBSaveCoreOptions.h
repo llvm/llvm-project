@@ -115,7 +115,8 @@ public:
   /// Get an unsorted copy of all threads to save
   ///
   /// \returns
-  ///   An unsorted copy of all threads to save.
+  ///   An unsorted copy of all threads to save. If no process is specified
+  ///   an empty collection will be returned.
   SBThreadCollection GetThreadsToSave() const;
 
   /// Reset all options.
