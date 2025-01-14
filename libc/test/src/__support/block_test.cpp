@@ -347,9 +347,11 @@ TEST(LlvmLibcBlockTest, CanGetConstBlockFromUsableSpace) {
 }
 
 TEST(LlvmLibcBlockTest, Allocate) {
+  constexpr size_t kN = 1024;
+
   // Ensure we can allocate everything up to the block size within this block.
-  for (size_t i = 0; i < 1024; ++i) {
-    array<byte, 1024> bytes;
+  for (size_t i = 0; i < kN; ++i) {
+    array<byte, kN> bytes;
     auto result = Block::init(bytes);
     ASSERT_TRUE(result.has_value());
     Block *block = *result;
@@ -362,8 +364,8 @@ TEST(LlvmLibcBlockTest, Allocate) {
   }
 
   // Ensure we can allocate a byte at every guaranteeable alignment.
-  for (size_t i = 1; i < 1024 / alignof(max_align_t); ++i) {
-    array<byte, 1024> bytes;
+  for (size_t i = 1; i < kN / alignof(max_align_t); ++i) {
+    array<byte, kN> bytes;
     auto result = Block::init(bytes);
     ASSERT_TRUE(result.has_value());
     Block *block = *result;
