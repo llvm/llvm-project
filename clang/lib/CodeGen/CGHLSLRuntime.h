@@ -169,7 +169,7 @@ private:
                                    llvm::hlsl::ElementType ET,
                                    BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
-  void addBufferDecls(const DeclContext *D, Buffer &CB);
+  void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
 
