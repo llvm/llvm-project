@@ -498,7 +498,7 @@ bool X86LowerAMXType::visit() {
             DeadInsts.push_back(Bitcast);
           continue;
         }
-        // If load has mutli-user, duplicate a vector load.
+        // If load has multi-user, duplicate a vector load.
         // %src = load <256 x i32>, <256 x i32>* %addr, align 64
         // %2 = bitcast <256 x i32> %src to x86_amx
         // %add = add <256 x i32> %src, <256 x i32> %src2
