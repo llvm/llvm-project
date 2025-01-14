@@ -45,6 +45,8 @@ private:
   const bool TransformValues;
   const bool TransformReferences;
   const bool TransformPointersAsValues;
+
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace clang::tidy::misc

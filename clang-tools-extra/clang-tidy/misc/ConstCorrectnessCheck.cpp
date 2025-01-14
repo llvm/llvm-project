@@ -8,6 +8,8 @@
 
 #include "ConstCorrectnessCheck.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -41,7 +43,9 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       TransformValues(Options.get("TransformValues", true)),
       TransformReferences(Options.get("TransformReferences", true)),
       TransformPointersAsValues(
-          Options.get("TransformPointersAsValues", false)) {
+          Options.get("TransformPointersAsValues", false)),
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {
   if (AnalyzeValues == false && AnalyzeReferences == false)
     this->configurationDiag(
         "The check 'misc-const-correctness' will not "
@@ -57,6 +61,9 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "TransformValues", TransformValues);
   Options.store(Opts, "TransformReferences", TransformReferences);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
+
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
@@ -73,6 +80,12 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(referenceType(pointee(hasCanonicalType(templateTypeParmType())))),
       hasType(referenceType(pointee(substTemplateTypeParmType()))));
 
+  const auto AllowedType = hasType(qualType(anyOf(
+      hasDeclaration(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      references(namedDecl(matchers::matchesAnyListedName(AllowedTypes))),
+      pointerType(pointee(hasDeclaration(
+          namedDecl(matchers::matchesAnyListedName(AllowedTypes))))))));
+
   const auto AutoTemplateType = varDecl(
       anyOf(hasType(autoType()), hasType(referenceType(pointee(autoType()))),
             hasType(pointerType(pointee(autoType())))));
@@ -87,7 +100,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), AutoTemplateType,
                    RValueReference, FunctionPointerRef,
-                   hasType(cxxRecordDecl(isLambda())), isImplicit())));
+                   hasType(cxxRecordDecl(isLambda())), isImplicit(),
+                   AllowedType)));
 
   // Match the function scope for which the analysis of all local variables
   // shall be run.

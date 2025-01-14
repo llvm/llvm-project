@@ -196,3 +196,13 @@ Options
     // The following pointer may not become a 'int *const'.
     int *changing_pointee = &value;
     changing_pointee = &result;
+
+.. option:: AllowedTypes (default = '')
+
+  A semicolon-separated list of names of types that
+  will be excluded from const-correctness checking.
+  Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches every type
+  with suffix `Ref`, `ref`, `Reference` and `reference`.
+  If a name in the list contains the sequence `::` it is matched against
+  the qualified typename (i.e. `namespace::Type`), otherwise it is matched
+  against only the type name (i.e. `Type`).
