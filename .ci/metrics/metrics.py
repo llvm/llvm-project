@@ -199,6 +199,11 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
       metrics_userid: The userid to use for the upload.
       api_key: The API key to use for the upload.
     """
+
+    if len(workflow_metrics) == 0:
+        print("No metrics found to upload.", file=sys.stdout)
+        return
+
     metrics_batch = []
     for workflow_metric in workflow_metrics:
         if isinstance(workflow_metric, GaugeMetric):
@@ -206,11 +211,13 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
             metrics_batch.append(
                 f"{name} value={workflow_metric.value} {workflow_metric.time_ns}"
             )
-        else:
+        elif isinstance(workflow_metric, JobMetrics):
             name = workflow_metric.job_name.lower().replace(" ", "_")
             metrics_batch.append(
                 f"{name} queue_time={workflow_metric.queue_time},run_time={workflow_metric.run_time},status={workflow_metric.status} {workflow_metric.created_at_ns}"
             )
+        else:
+          raise ValueError(f"Unsupported object type {type(workflow_metric)}: {str(workflow_metric)}")
 
     request_data = "\n".join(metrics_batch)
     response = requests.post(
@@ -244,8 +251,8 @@ def main():
     while True:
         current_metrics = get_per_workflow_metrics(github_repo, workflows_to_track)
         current_metrics += get_sampled_workflow_metrics(github_repo)
-        if len(current_metrics) == 0:
-            print("No metrics found to upload.", file=sys.stdout)
+        # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
+        current_metrics.append(GaugeMetric("metrics_container_heartbeat", 1, time.time_ns()))
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
         print(f"Uploaded {len(current_metrics)} metrics", file=sys.stdout)
