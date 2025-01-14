@@ -11,6 +11,9 @@
 // template<RandomAccessIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
 //   requires ShuffleIterator<Iter> && CopyConstructible<Compare>
 //   constexpr void stable_sort(Iter first, Iter last, Compare comp); // constexpr since C++26
+//
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
 
 #include <algorithm>
 #include <functional>

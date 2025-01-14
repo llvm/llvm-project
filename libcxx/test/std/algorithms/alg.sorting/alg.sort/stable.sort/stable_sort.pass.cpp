@@ -12,7 +12,7 @@
 //     constexpr void               // constexpr since C++26
 //     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
 
 #include <algorithm>
