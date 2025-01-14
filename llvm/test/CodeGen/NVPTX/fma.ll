@@ -48,3 +48,10 @@ define ptx_device float @f32_iir(float %x) {
   %r = call float @llvm.fma.f32(float 0x425D1A94A0000000, float 0x426D1A9EC0000000, float %x)
   ret float %r
 }
+
+define ptx_device float @f32_iii(float %x) {
+; CHECK: mov.f32 %f{{[0-9]+}}, 0f41200000;
+; CHECK: ret;
+  %r = call float @llvm.fma.f32(float 2.0, float 3.0, float 4.0)
+  ret float %r
+}
