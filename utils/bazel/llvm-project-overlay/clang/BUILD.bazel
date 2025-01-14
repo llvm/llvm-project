@@ -2504,6 +2504,11 @@ binary_alias(
     binary = ":clang",
 )
 
+binary_alias(
+    name = "clang-cl",
+    binary = ":clang",
+)
+
 cc_binary(
     name = "clang-check",
     srcs = ["tools/clang-check/ClangCheck.cpp"],
@@ -2521,14 +2526,6 @@ cc_binary(
         "//llvm:Option",
         "//llvm:Support",
     ],
-)
-
-genrule(
-    name = "gen_clang_cl",
-    srcs = [":clang"],
-    outs = ["clang-cl"],
-    cmd = "cp $< $@",
-    output_to_bindir = 1,
 )
 
 cc_binary(
