@@ -676,124 +676,164 @@ v_cmp_eq_f64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_eq_f64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0x45,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, v1, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, v127, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, s1, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, s105, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, m0, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, null, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, null, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, -1, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_eq_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x64,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_eq_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x64,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_eq_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x64,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, v1, v2
-// W64: v_cmp_eq_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x64,0x7c]
+v_cmp_eq_i16 vcc, v1.l, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, v127, v2
-// W64: v_cmp_eq_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x64,0x7c]
+v_cmp_eq_i16 vcc, v127.l, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, s1, v2
-// W64: v_cmp_eq_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, s1, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, s105, v2
-// W64: v_cmp_eq_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, s105, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, vcc_lo, v2
-// W64: v_cmp_eq_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, vcc_hi, v2
-// W64: v_cmp_eq_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, ttmp15, v2
-// W64: v_cmp_eq_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, m0, v2
-// W64: v_cmp_eq_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, m0, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, exec_lo, v2
-// W64: v_cmp_eq_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, exec_hi, v2
-// W64: v_cmp_eq_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, null, v2
-// W64: v_cmp_eq_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, null, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, -1, v2
-// W64: v_cmp_eq_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, -1, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, 0.5, v2
-// W64: v_cmp_eq_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, 0.5, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, src_scc, v2
-// W64: v_cmp_eq_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x64,0x7c]
+v_cmp_eq_i16 vcc, src_scc, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x64,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_eq_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x64,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_eq_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_eq_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x64,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x64,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc, v1.h, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x64,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x64,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc, v127.h, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x64,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_eq_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x64,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_eq_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x64,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_eq_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x65,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc, src_scc, v2.h
+// W64: v_cmp_eq_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x65,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_eq_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x65,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_eq_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x65,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_eq_i32 vcc_lo, v1, v2
@@ -1012,124 +1052,164 @@ v_cmp_eq_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_eq_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xa5,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, v1, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, v127, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, s1, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, s105, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, m0, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, null, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, null, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, -1, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_eq_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x74,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_eq_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x74,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_eq_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x74,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, v1, v2
-// W64: v_cmp_eq_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x74,0x7c]
+v_cmp_eq_u16 vcc, v1.l, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, v127, v2
-// W64: v_cmp_eq_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x74,0x7c]
+v_cmp_eq_u16 vcc, v127.l, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, s1, v2
-// W64: v_cmp_eq_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, s1, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, s105, v2
-// W64: v_cmp_eq_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, s105, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, vcc_lo, v2
-// W64: v_cmp_eq_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, vcc_hi, v2
-// W64: v_cmp_eq_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, ttmp15, v2
-// W64: v_cmp_eq_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, m0, v2
-// W64: v_cmp_eq_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, m0, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, exec_lo, v2
-// W64: v_cmp_eq_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, exec_hi, v2
-// W64: v_cmp_eq_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, null, v2
-// W64: v_cmp_eq_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, null, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, -1, v2
-// W64: v_cmp_eq_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, -1, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, 0.5, v2
-// W64: v_cmp_eq_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, 0.5, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, src_scc, v2
-// W64: v_cmp_eq_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x74,0x7c]
+v_cmp_eq_u16 vcc, src_scc, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x74,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_eq_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_eq_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x74,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_eq_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_eq_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x74,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x74,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc, v1.h, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x74,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x74,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc, v127.h, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x74,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_eq_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x74,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_eq_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x74,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_eq_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x75,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc, src_scc, v2.h
+// W64: v_cmp_eq_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x75,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_eq_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x75,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_eq_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_eq_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x75,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_eq_u32 vcc_lo, v1, v2
@@ -1684,124 +1764,164 @@ v_cmp_ge_f64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_ge_f64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0x4d,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, v1, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, v127, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, s1, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, s105, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, m0, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, null, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, null, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, -1, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_ge_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x6c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_ge_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x6c,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ge_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x6c,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, v1, v2
-// W64: v_cmp_ge_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x6c,0x7c]
+v_cmp_ge_i16 vcc, v1.l, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, v127, v2
-// W64: v_cmp_ge_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x6c,0x7c]
+v_cmp_ge_i16 vcc, v127.l, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, s1, v2
-// W64: v_cmp_ge_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, s1, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, s105, v2
-// W64: v_cmp_ge_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, s105, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, vcc_lo, v2
-// W64: v_cmp_ge_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, vcc_hi, v2
-// W64: v_cmp_ge_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, ttmp15, v2
-// W64: v_cmp_ge_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, m0, v2
-// W64: v_cmp_ge_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, m0, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, exec_lo, v2
-// W64: v_cmp_ge_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, exec_hi, v2
-// W64: v_cmp_ge_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, null, v2
-// W64: v_cmp_ge_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, null, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, -1, v2
-// W64: v_cmp_ge_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, -1, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, 0.5, v2
-// W64: v_cmp_ge_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, 0.5, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, src_scc, v2
-// W64: v_cmp_ge_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x6c,0x7c]
+v_cmp_ge_i16 vcc, src_scc, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x6c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_ge_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x6c,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ge_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_ge_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x6c,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x6c,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x6c,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x6c,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc, v1.h, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x6c,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_ge_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x6c,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc, v127.h, v2.l
+// W64: v_cmp_ge_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x6c,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_ge_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x6d,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc, src_scc, v2.h
+// W64: v_cmp_ge_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x6d,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_ge_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x6d,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_ge_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x6d,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ge_i32 vcc_lo, v1, v2
@@ -2020,124 +2140,164 @@ v_cmp_ge_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_ge_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xad,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, v1, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, v127, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, s1, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, s105, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, m0, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, null, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, null, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, -1, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_ge_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x7c,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_ge_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x7c,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ge_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x7c,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, v1, v2
-// W64: v_cmp_ge_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x7c,0x7c]
+v_cmp_ge_u16 vcc, v1.l, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, v127, v2
-// W64: v_cmp_ge_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x7c,0x7c]
+v_cmp_ge_u16 vcc, v127.l, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, s1, v2
-// W64: v_cmp_ge_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, s1, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, s105, v2
-// W64: v_cmp_ge_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, s105, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, vcc_lo, v2
-// W64: v_cmp_ge_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, vcc_hi, v2
-// W64: v_cmp_ge_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, ttmp15, v2
-// W64: v_cmp_ge_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, m0, v2
-// W64: v_cmp_ge_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, m0, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, exec_lo, v2
-// W64: v_cmp_ge_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, exec_hi, v2
-// W64: v_cmp_ge_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, null, v2
-// W64: v_cmp_ge_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, null, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, -1, v2
-// W64: v_cmp_ge_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, -1, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, 0.5, v2
-// W64: v_cmp_ge_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, 0.5, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, src_scc, v2
-// W64: v_cmp_ge_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x7c,0x7c]
+v_cmp_ge_u16 vcc, src_scc, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x7c,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ge_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_ge_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x7c,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ge_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_ge_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x7c,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x7c,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x7c,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x7c,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc, v1.h, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x7c,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_ge_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x7c,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc, v127.h, v2.l
+// W64: v_cmp_ge_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x7c,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_ge_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x7d,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc, src_scc, v2.h
+// W64: v_cmp_ge_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x7d,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_ge_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x7d,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ge_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_ge_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x7d,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ge_u32 vcc_lo, v1, v2
@@ -2692,124 +2852,164 @@ v_cmp_gt_f64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_gt_f64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0x49,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, v1, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, v127, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, s1, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, s105, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, m0, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, null, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, null, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, -1, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_gt_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x68,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_gt_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x68,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_gt_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x68,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, v1, v2
-// W64: v_cmp_gt_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x68,0x7c]
+v_cmp_gt_i16 vcc, v1.l, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, v127, v2
-// W64: v_cmp_gt_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x68,0x7c]
+v_cmp_gt_i16 vcc, v127.l, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, s1, v2
-// W64: v_cmp_gt_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, s1, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, s105, v2
-// W64: v_cmp_gt_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, s105, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, vcc_lo, v2
-// W64: v_cmp_gt_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, vcc_hi, v2
-// W64: v_cmp_gt_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, ttmp15, v2
-// W64: v_cmp_gt_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, m0, v2
-// W64: v_cmp_gt_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, m0, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, exec_lo, v2
-// W64: v_cmp_gt_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, exec_hi, v2
-// W64: v_cmp_gt_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, null, v2
-// W64: v_cmp_gt_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, null, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, -1, v2
-// W64: v_cmp_gt_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, -1, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, 0.5, v2
-// W64: v_cmp_gt_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, 0.5, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, src_scc, v2
-// W64: v_cmp_gt_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x68,0x7c]
+v_cmp_gt_i16 vcc, src_scc, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x68,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_gt_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x68,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_gt_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_gt_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x68,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x68,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x68,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x68,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc, v1.h, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x68,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_gt_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x68,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc, v127.h, v2.l
+// W64: v_cmp_gt_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x68,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_gt_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x69,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc, src_scc, v2.h
+// W64: v_cmp_gt_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x69,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_gt_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x69,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_gt_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x69,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_gt_i32 vcc_lo, v1, v2
@@ -3028,124 +3228,164 @@ v_cmp_gt_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_gt_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xa9,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, v1, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, v127, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, s1, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, s105, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, m0, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, null, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, null, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, -1, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_gt_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x78,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_gt_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x78,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_gt_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x78,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, v1, v2
-// W64: v_cmp_gt_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x78,0x7c]
+v_cmp_gt_u16 vcc, v1.l, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, v127, v2
-// W64: v_cmp_gt_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x78,0x7c]
+v_cmp_gt_u16 vcc, v127.l, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, s1, v2
-// W64: v_cmp_gt_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, s1, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, s105, v2
-// W64: v_cmp_gt_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, s105, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, vcc_lo, v2
-// W64: v_cmp_gt_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, vcc_hi, v2
-// W64: v_cmp_gt_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, ttmp15, v2
-// W64: v_cmp_gt_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, m0, v2
-// W64: v_cmp_gt_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, m0, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, exec_lo, v2
-// W64: v_cmp_gt_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, exec_hi, v2
-// W64: v_cmp_gt_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, null, v2
-// W64: v_cmp_gt_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, null, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, -1, v2
-// W64: v_cmp_gt_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, -1, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, 0.5, v2
-// W64: v_cmp_gt_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, 0.5, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, src_scc, v2
-// W64: v_cmp_gt_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x78,0x7c]
+v_cmp_gt_u16 vcc, src_scc, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x78,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_gt_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_gt_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x78,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_gt_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_gt_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x78,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x78,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x78,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x78,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc, v1.h, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x78,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_gt_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x78,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc, v127.h, v2.l
+// W64: v_cmp_gt_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x78,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_gt_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x79,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc, src_scc, v2.h
+// W64: v_cmp_gt_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x79,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_gt_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x79,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_gt_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_gt_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x79,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_gt_u32 vcc_lo, v1, v2
@@ -3700,124 +3940,164 @@ v_cmp_le_f64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_le_f64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0x47,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, v1, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, v127, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, s1, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, s105, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, m0, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, null, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, null, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, -1, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_le_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x66,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_le_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x66,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_le_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_le_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x66,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, v1, v2
-// W64: v_cmp_le_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x66,0x7c]
+v_cmp_le_i16 vcc, v1.l, v2.l
+// W64: v_cmp_le_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, v127, v2
-// W64: v_cmp_le_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x66,0x7c]
+v_cmp_le_i16 vcc, v127.l, v2.l
+// W64: v_cmp_le_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, s1, v2
-// W64: v_cmp_le_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, s1, v2.l
+// W64: v_cmp_le_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, s105, v2
-// W64: v_cmp_le_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, s105, v2.l
+// W64: v_cmp_le_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, vcc_lo, v2
-// W64: v_cmp_le_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_le_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, vcc_hi, v2
-// W64: v_cmp_le_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_le_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, ttmp15, v2
-// W64: v_cmp_le_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_le_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, m0, v2
-// W64: v_cmp_le_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, m0, v2.l
+// W64: v_cmp_le_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, exec_lo, v2
-// W64: v_cmp_le_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_le_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, exec_hi, v2
-// W64: v_cmp_le_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_le_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, null, v2
-// W64: v_cmp_le_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, null, v2.l
+// W64: v_cmp_le_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, -1, v2
-// W64: v_cmp_le_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, -1, v2.l
+// W64: v_cmp_le_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, 0.5, v2
-// W64: v_cmp_le_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, 0.5, v2.l
+// W64: v_cmp_le_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, src_scc, v2
-// W64: v_cmp_le_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x66,0x7c]
+v_cmp_le_i16 vcc, src_scc, v2.l
+// W64: v_cmp_le_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x66,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_le_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x66,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_le_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_le_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x66,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x66,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_le_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x66,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x66,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc, v1.h, v2.l
+// W64: v_cmp_le_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x66,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_le_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x66,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc, v127.h, v2.l
+// W64: v_cmp_le_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x66,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_le_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x67,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc, src_scc, v2.h
+// W64: v_cmp_le_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x67,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_le_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x67,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_le_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x67,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_le_i32 vcc_lo, v1, v2
@@ -4036,124 +4316,164 @@ v_cmp_le_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_le_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xa7,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, v1, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, v127, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, s1, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, s105, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, m0, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, null, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, null, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, -1, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_le_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x76,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_le_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x76,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_le_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_le_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x76,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, v1, v2
-// W64: v_cmp_le_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x76,0x7c]
+v_cmp_le_u16 vcc, v1.l, v2.l
+// W64: v_cmp_le_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, v127, v2
-// W64: v_cmp_le_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x76,0x7c]
+v_cmp_le_u16 vcc, v127.l, v2.l
+// W64: v_cmp_le_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, s1, v2
-// W64: v_cmp_le_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, s1, v2.l
+// W64: v_cmp_le_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, s105, v2
-// W64: v_cmp_le_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, s105, v2.l
+// W64: v_cmp_le_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, vcc_lo, v2
-// W64: v_cmp_le_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_le_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, vcc_hi, v2
-// W64: v_cmp_le_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_le_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, ttmp15, v2
-// W64: v_cmp_le_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_le_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, m0, v2
-// W64: v_cmp_le_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, m0, v2.l
+// W64: v_cmp_le_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, exec_lo, v2
-// W64: v_cmp_le_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_le_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, exec_hi, v2
-// W64: v_cmp_le_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_le_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, null, v2
-// W64: v_cmp_le_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, null, v2.l
+// W64: v_cmp_le_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, -1, v2
-// W64: v_cmp_le_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, -1, v2.l
+// W64: v_cmp_le_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, 0.5, v2
-// W64: v_cmp_le_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, 0.5, v2.l
+// W64: v_cmp_le_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, src_scc, v2
-// W64: v_cmp_le_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x76,0x7c]
+v_cmp_le_u16 vcc, src_scc, v2.l
+// W64: v_cmp_le_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x76,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_le_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_le_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x76,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_le_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_le_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x76,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x76,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_le_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x76,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x76,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc, v1.h, v2.l
+// W64: v_cmp_le_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x76,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_le_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x76,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc, v127.h, v2.l
+// W64: v_cmp_le_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x76,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_le_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x77,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc, src_scc, v2.h
+// W64: v_cmp_le_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x77,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_le_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x77,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_le_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_le_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x77,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_le_u32 vcc_lo, v1, v2
@@ -5076,124 +5396,164 @@ v_cmp_lt_f64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_lt_f64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0x43,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, v1, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, v127, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, s1, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, s105, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, m0, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, null, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, null, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, -1, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_lt_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x62,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_lt_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x62,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_lt_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x62,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, v1, v2
-// W64: v_cmp_lt_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x62,0x7c]
+v_cmp_lt_i16 vcc, v1.l, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, v127, v2
-// W64: v_cmp_lt_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x62,0x7c]
+v_cmp_lt_i16 vcc, v127.l, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, s1, v2
-// W64: v_cmp_lt_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, s1, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, s105, v2
-// W64: v_cmp_lt_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, s105, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, vcc_lo, v2
-// W64: v_cmp_lt_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, vcc_hi, v2
-// W64: v_cmp_lt_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, ttmp15, v2
-// W64: v_cmp_lt_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, m0, v2
-// W64: v_cmp_lt_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, m0, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, exec_lo, v2
-// W64: v_cmp_lt_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, exec_hi, v2
-// W64: v_cmp_lt_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, null, v2
-// W64: v_cmp_lt_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, null, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, -1, v2
-// W64: v_cmp_lt_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, -1, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, 0.5, v2
-// W64: v_cmp_lt_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, 0.5, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, src_scc, v2
-// W64: v_cmp_lt_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x62,0x7c]
+v_cmp_lt_i16 vcc, src_scc, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x62,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_lt_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x62,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_lt_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_lt_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x62,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x62,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x62,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x62,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc, v1.h, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x62,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_lt_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x62,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc, v127.h, v2.l
+// W64: v_cmp_lt_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x62,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_lt_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x63,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc, src_scc, v2.h
+// W64: v_cmp_lt_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x63,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_lt_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x63,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_lt_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x63,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_lt_i32 vcc_lo, v1, v2
@@ -5412,124 +5772,164 @@ v_cmp_lt_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_lt_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xa3,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, v1, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, v127, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, s1, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, s105, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, m0, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, null, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, null, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, -1, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_lt_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x72,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_lt_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x72,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_lt_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x72,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, v1, v2
-// W64: v_cmp_lt_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x72,0x7c]
+v_cmp_lt_u16 vcc, v1.l, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, v127, v2
-// W64: v_cmp_lt_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x72,0x7c]
+v_cmp_lt_u16 vcc, v127.l, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, s1, v2
-// W64: v_cmp_lt_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, s1, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, s105, v2
-// W64: v_cmp_lt_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, s105, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, vcc_lo, v2
-// W64: v_cmp_lt_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, vcc_hi, v2
-// W64: v_cmp_lt_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, ttmp15, v2
-// W64: v_cmp_lt_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, m0, v2
-// W64: v_cmp_lt_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, m0, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, exec_lo, v2
-// W64: v_cmp_lt_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, exec_hi, v2
-// W64: v_cmp_lt_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, null, v2
-// W64: v_cmp_lt_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, null, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, -1, v2
-// W64: v_cmp_lt_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, -1, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, 0.5, v2
-// W64: v_cmp_lt_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, 0.5, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, src_scc, v2
-// W64: v_cmp_lt_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x72,0x7c]
+v_cmp_lt_u16 vcc, src_scc, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x72,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_lt_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_lt_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x72,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_lt_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_lt_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x72,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x72,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x72,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x72,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc, v1.h, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x72,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_lt_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x72,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc, v127.h, v2.l
+// W64: v_cmp_lt_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x72,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_lt_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x73,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc, src_scc, v2.h
+// W64: v_cmp_lt_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x73,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_lt_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x73,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_lt_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_lt_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x73,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_lt_u32 vcc_lo, v1, v2
@@ -5748,124 +6148,164 @@ v_cmp_lt_u64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_lt_u64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xb3,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, v1, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, v127, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, s1, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, s1, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, s105, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, s105, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, ttmp15, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, m0, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, m0, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, exec_lo, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, exec_hi, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, null, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, null, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, -1, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, -1, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, 0.5, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, src_scc, v2
-// W32: v_cmp_ne_i16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x6a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_ne_i16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x6a,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ne_i16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x6a,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, v1, v2
-// W64: v_cmp_ne_i16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x6a,0x7c]
+v_cmp_ne_i16 vcc, v1.l, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, v127, v2
-// W64: v_cmp_ne_i16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x6a,0x7c]
+v_cmp_ne_i16 vcc, v127.l, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, s1, v2
-// W64: v_cmp_ne_i16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, s1, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, s105, v2
-// W64: v_cmp_ne_i16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, s105, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, vcc_lo, v2
-// W64: v_cmp_ne_i16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, vcc_lo, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, vcc_hi, v2
-// W64: v_cmp_ne_i16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, vcc_hi, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, ttmp15, v2
-// W64: v_cmp_ne_i16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, ttmp15, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, m0, v2
-// W64: v_cmp_ne_i16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, m0, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, exec_lo, v2
-// W64: v_cmp_ne_i16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, exec_lo, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, exec_hi, v2
-// W64: v_cmp_ne_i16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, exec_hi, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, null, v2
-// W64: v_cmp_ne_i16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, null, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, -1, v2
-// W64: v_cmp_ne_i16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, -1, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, 0.5, v2
-// W64: v_cmp_ne_i16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, 0.5, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, src_scc, v2
-// W64: v_cmp_ne_i16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x6a,0x7c]
+v_cmp_ne_i16 vcc, src_scc, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x6a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_i16 vcc, 0xfe0b, v127
-// W64: v_cmp_ne_i16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x6a,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ne_i16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_ne_i16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x6a,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x6a,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc, 0x3800, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x6a,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x6a,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc, v1.h, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x6a,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_ne_i16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x6a,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc, v127.h, v2.l
+// W64: v_cmp_ne_i16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x6a,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_ne_i16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x6b,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc, src_scc, v2.h
+// W64: v_cmp_ne_i16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x6b,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_ne_i16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x6b,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_i16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_ne_i16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x6b,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ne_i32 vcc_lo, v1, v2
@@ -6084,124 +6524,164 @@ v_cmp_ne_i64 vcc, 0xaf123456, v[254:255]
 // W64: v_cmp_ne_i64_e32 vcc, 0xaf123456, v[254:255] ; encoding: [0xff,0xfc,0xab,0x7c,0x56,0x34,0x12,0xaf]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, v1, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, v1, v2         ; encoding: [0x01,0x05,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, v1.l, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, v1.l, v2.l     ; encoding: [0x01,0x05,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, v127, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, v127, v2       ; encoding: [0x7f,0x05,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, v127.l, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, v127.l, v2.l   ; encoding: [0x7f,0x05,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, s1, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, s1, v2         ; encoding: [0x01,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, s1, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, s1, v2.l       ; encoding: [0x01,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, s105, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, s105, v2       ; encoding: [0x69,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, s105, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, s105, v2.l     ; encoding: [0x69,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, vcc_lo, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, vcc_lo, v2     ; encoding: [0x6a,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, vcc_lo, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, vcc_lo, v2.l   ; encoding: [0x6a,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, vcc_hi, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, vcc_hi, v2     ; encoding: [0x6b,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, vcc_hi, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, vcc_hi, v2.l   ; encoding: [0x6b,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, ttmp15, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, ttmp15, v2     ; encoding: [0x7b,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, ttmp15, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, ttmp15, v2.l   ; encoding: [0x7b,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, m0, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, m0, v2         ; encoding: [0x7d,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, m0, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, m0, v2.l       ; encoding: [0x7d,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, exec_lo, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, exec_lo, v2    ; encoding: [0x7e,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, exec_lo, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, exec_lo, v2.l  ; encoding: [0x7e,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, exec_hi, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, exec_hi, v2    ; encoding: [0x7f,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, exec_hi, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, exec_hi, v2.l  ; encoding: [0x7f,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, null, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, null, v2       ; encoding: [0x7c,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, null, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, null, v2.l     ; encoding: [0x7c,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, -1, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, -1, v2         ; encoding: [0xc1,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, -1, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, -1, v2.l       ; encoding: [0xc1,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, 0.5, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, 0.5, v2        ; encoding: [0xf0,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, 0.5, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, 0.5, v2.l      ; encoding: [0xf0,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, src_scc, v2
-// W32: v_cmp_ne_u16_e32 vcc_lo, src_scc, v2    ; encoding: [0xfd,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc_lo, src_scc, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, src_scc, v2.l  ; encoding: [0xfd,0x04,0x7a,0x7c]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc_lo, 0xfe0b, v127
-// W32: v_cmp_ne_u16_e32 vcc_lo, 0xfe0b, v127   ; encoding: [0xff,0xfe,0x7a,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ne_u16 vcc_lo, 0xfe0b, v127.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0x7a,0x7c,0x0b,0xfe,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, v1, v2
-// W64: v_cmp_ne_u16_e32 vcc, v1, v2            ; encoding: [0x01,0x05,0x7a,0x7c]
+v_cmp_ne_u16 vcc, v1.l, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, v1.l, v2.l        ; encoding: [0x01,0x05,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, v127, v2
-// W64: v_cmp_ne_u16_e32 vcc, v127, v2          ; encoding: [0x7f,0x05,0x7a,0x7c]
+v_cmp_ne_u16 vcc, v127.l, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, v127.l, v2.l      ; encoding: [0x7f,0x05,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, s1, v2
-// W64: v_cmp_ne_u16_e32 vcc, s1, v2            ; encoding: [0x01,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, s1, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, s1, v2.l          ; encoding: [0x01,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, s105, v2
-// W64: v_cmp_ne_u16_e32 vcc, s105, v2          ; encoding: [0x69,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, s105, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, s105, v2.l        ; encoding: [0x69,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, vcc_lo, v2
-// W64: v_cmp_ne_u16_e32 vcc, vcc_lo, v2        ; encoding: [0x6a,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, vcc_lo, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, vcc_lo, v2.l      ; encoding: [0x6a,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, vcc_hi, v2
-// W64: v_cmp_ne_u16_e32 vcc, vcc_hi, v2        ; encoding: [0x6b,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, vcc_hi, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, vcc_hi, v2.l      ; encoding: [0x6b,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, ttmp15, v2
-// W64: v_cmp_ne_u16_e32 vcc, ttmp15, v2        ; encoding: [0x7b,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, ttmp15, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, ttmp15, v2.l      ; encoding: [0x7b,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, m0, v2
-// W64: v_cmp_ne_u16_e32 vcc, m0, v2            ; encoding: [0x7d,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, m0, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, m0, v2.l          ; encoding: [0x7d,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, exec_lo, v2
-// W64: v_cmp_ne_u16_e32 vcc, exec_lo, v2       ; encoding: [0x7e,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, exec_lo, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, exec_lo, v2.l     ; encoding: [0x7e,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, exec_hi, v2
-// W64: v_cmp_ne_u16_e32 vcc, exec_hi, v2       ; encoding: [0x7f,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, exec_hi, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, exec_hi, v2.l     ; encoding: [0x7f,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, null, v2
-// W64: v_cmp_ne_u16_e32 vcc, null, v2          ; encoding: [0x7c,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, null, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, null, v2.l        ; encoding: [0x7c,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, -1, v2
-// W64: v_cmp_ne_u16_e32 vcc, -1, v2            ; encoding: [0xc1,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, -1, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, -1, v2.l          ; encoding: [0xc1,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, 0.5, v2
-// W64: v_cmp_ne_u16_e32 vcc, 0.5, v2           ; encoding: [0xf0,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, 0.5, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, 0.5, v2.l         ; encoding: [0xf0,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, src_scc, v2
-// W64: v_cmp_ne_u16_e32 vcc, src_scc, v2       ; encoding: [0xfd,0x04,0x7a,0x7c]
+v_cmp_ne_u16 vcc, src_scc, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, src_scc, v2.l     ; encoding: [0xfd,0x04,0x7a,0x7c]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_ne_u16 vcc, 0xfe0b, v127
-// W64: v_cmp_ne_u16_e32 vcc, 0xfe0b, v127      ; encoding: [0xff,0xfe,0x7a,0x7c,0x0b,0xfe,0x00,0x00]
+v_cmp_ne_u16 vcc, 0xfe0b, v127.l
+// W64: v_cmp_ne_u16_e32 vcc, 0xfe0b, v127.l    ; encoding: [0xff,0xfe,0x7a,0x7c,0x0b,0xfe,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc_lo, 0x3800, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, 0x3800, v2.l   ; encoding: [0xff,0x04,0x7a,0x7c,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc, 0x3800, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, 0x3800, v2.l      ; encoding: [0xff,0x04,0x7a,0x7c,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc_lo, v1.h, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, v1.h, v2.l     ; encoding: [0x81,0x05,0x7a,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc, v1.h, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, v1.h, v2.l        ; encoding: [0x81,0x05,0x7a,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc_lo, v127.h, v2.l
+// W32: v_cmp_ne_u16_e32 vcc_lo, v127.h, v2.l   ; encoding: [0xff,0x05,0x7a,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc, v127.h, v2.l
+// W64: v_cmp_ne_u16_e32 vcc, v127.h, v2.l      ; encoding: [0xff,0x05,0x7a,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc_lo, src_scc, v2.h
+// W32: v_cmp_ne_u16_e32 vcc_lo, src_scc, v2.h  ; encoding: [0xfd,0x04,0x7b,0x7c]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc, src_scc, v2.h
+// W64: v_cmp_ne_u16_e32 vcc, src_scc, v2.h     ; encoding: [0xfd,0x04,0x7b,0x7c]
+// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc_lo, 0xfe0b, v127.h
+// W32: v_cmp_ne_u16_e32 vcc_lo, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0x7b,0x7c,0x0b,0xfe,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
+
+v_cmp_ne_u16 vcc, 0xfe0b, v127.h
+// W64: v_cmp_ne_u16_e32 vcc, 0xfe0b, v127.h    ; encoding: [0xff,0xfe,0x7b,0x7c,0x0b,0xfe,0x00,0x00]
 // W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_ne_u32 vcc_lo, v1, v2
