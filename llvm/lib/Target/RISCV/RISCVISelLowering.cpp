@@ -22615,48 +22615,45 @@ RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MF.insert(MBBInsertPoint, LoopTestMBB);
   MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MBB->getBasicBlock());
   MF.insert(MBBInsertPoint, ExitMBB);
-  MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
   Register SPReg = RISCV::X2;
   Register ScratchReg =
       MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
 
   // ScratchReg = ProbeSize
-  TII->movImm(*MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
+  TII->movImm(*MBB, MBBI, DL, ScratchReg, ProbeSize, MachineInstr::NoFlags);
 
   // LoopTest:
   //   SUB SP, SP, ProbeSize
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::SUB), SPReg)
       .addReg(SPReg)
-      .addReg(ScratchReg)
-      .setMIFlags(Flags);
+      .addReg(ScratchReg);
 
   //   s[d|w] zero, 0(sp)
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
           TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
       .addReg(RISCV::X0)
       .addReg(SPReg)
-      .addImm(0)
-      .setMIFlags(Flags);
+      .addImm(0);
 
   //  BLT TargetReg, SP, LoopTest
   BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::BLT))
       .addReg(TargetReg)
       .addReg(SPReg)
-      .addMBB(LoopTestMBB)
-      .setMIFlags(Flags);
+      .addMBB(LoopTestMBB);
 
   // Adjust with: MV SP, TargetReg.
   BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(RISCV::ADDI), SPReg)
       .addReg(TargetReg)
-      .addImm(0)
-      .setMIFlags(Flags);
+      .addImm(0);
 
   ExitMBB->splice(ExitMBB->end(), MBB, std::next(MBBI), MBB->end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
   LoopTestMBB->addSuccessor(ExitMBB);
   LoopTestMBB->addSuccessor(LoopTestMBB);
   MBB->addSuccessor(LoopTestMBB);
 
   MI.eraseFromParent();
+  MF.getInfo<RISCVMachineFunctionInfo>()->setDynamicAllocation();
   return ExitMBB->begin()->getParent();
 }

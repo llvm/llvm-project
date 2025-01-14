@@ -502,7 +502,7 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
 void RISCVFrameLowering::allocateAndProbeStackForRVV(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, int64_t Amount,
-    MachineInstr::MIFlag Flag, bool EmitCFI) const {
+    MachineInstr::MIFlag Flag, bool EmitCFI, bool DynAllocation) const {
   assert(Amount != 0 && "Did not need to adjust stack pointer for RVV.");
 
   // Emit a variable-length allocation probing loop.
@@ -547,8 +547,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
       .setMIFlag(Flag);
 
   // If we have a dynamic allocation later we need to probe any residuals.
-  MachineBasicBlock *NextMBB = MBBI->getParent()->getSingleSuccessor();
-  if (NextMBB && NextMBB->begin()->getFlag(MachineInstr::FrameSetup)) {
+  if (DynAllocation) {
     BuildMI(MBB, MBBI, DL, TII->get(STI.is64Bit() ? RISCV::SD : RISCV::SW))
         .addReg(RISCV::X0)
         .addReg(SPReg)
@@ -644,20 +643,12 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        MachineFunction &MF, uint64_t Offset,
                                        uint64_t RealStackSize, bool EmitCFI,
-                                       bool NeedProbe,
-                                       uint64_t ProbeSize) const {
+                                       bool NeedProbe, uint64_t ProbeSize,
+                                       bool DynAllocation) const {
   DebugLoc DL;
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   bool IsRV64 = STI.is64Bit();
-  bool DynAllocation = false;
-
-  // If we have a dynamic allocation later we need to probe any residuals.
-  if (NeedProbe) {
-    MachineBasicBlock *NextMBB = MBBI->getParent()->getSingleSuccessor();
-    DynAllocation =
-        (NextMBB && NextMBB->begin()->getFlag(MachineInstr::FrameSetup));
-  }
 
   // Simply allocate the stack if it's not big enough to require a probe.
   if (!NeedProbe || Offset <= ProbeSize) {
@@ -673,7 +664,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
-    if (DynAllocation) {
+    if (NeedProbe && DynAllocation) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
@@ -914,9 +905,11 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   const RISCVTargetLowering *TLI = Subtarget.getTargetLowering();
   bool NeedProbe = TLI->hasInlineStackProbe(MF);
   uint64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
+  bool DynAllocation =
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasDynamicAllocation();
   if (StackSize != 0)
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, /*EmitCFI=*/true,
-                  NeedProbe, ProbeSize);
+                  NeedProbe, ProbeSize, DynAllocation);
 
   // The frame pointer is callee-saved, and code has been generated for us to
   // save it to the stack. We need to skip over the storing of callee-saved
@@ -959,13 +952,14 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
     allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount,
                   getStackSizeWithRVVPadding(MF), !hasFP(MF), NeedProbe,
-                  ProbeSize);
+                  ProbeSize, DynAllocation);
   }
 
   if (RVVStackSize) {
     if (NeedProbe) {
       allocateAndProbeStackForRVV(MF, MBB, MBBI, DL, RVVStackSize,
-                                  MachineInstr::FrameSetup, !hasFP(MF));
+                                  MachineInstr::FrameSetup, !hasFP(MF),
+                                  DynAllocation);
     } else {
       // We must keep the stack pointer aligned through any intermediate
       // updates.
@@ -2129,10 +2123,9 @@ TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {
 }
 
 // Synthesize the probe loop.
-MachineBasicBlock *RISCVFrameLowering::emitStackProbeInline(
-    MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, DebugLoc DL, Register TargetReg,
-    bool IsRVV) const {
+static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                                 Register TargetReg, bool IsRVV) {
   assert(TargetReg != RISCV::X2 && "New top of stack cannot already be in SP");
 
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -2194,14 +2187,13 @@ MachineBasicBlock *RISCVFrameLowering::emitStackProbeInline(
   }
 
   ExitMBB->splice(ExitMBB->end(), &MBB, std::next(MBBI), MBB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
 
   LoopTestMBB->addSuccessor(ExitMBB);
   LoopTestMBB->addSuccessor(LoopTestMBB);
   MBB.addSuccessor(LoopTestMBB);
   // Update liveins.
   fullyRecomputeLiveIns({ExitMBB, LoopTestMBB});
-
-  return ExitMBB;
 }
 
 void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
@@ -2224,15 +2216,8 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
       Register TargetReg = MI->getOperand(1).getReg();
-      MachineBasicBlock *Succ = MBBI->getParent()->getSingleSuccessor();
-      MachineBasicBlock *Next = emitStackProbeInline(
-          MF, MBB, MBBI, DL, TargetReg,
-          (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
-      // Update the BBs information if we have a BB from a dynamic allocation.
-      if (Succ != NULL && Succ->begin()->getFlag(MachineInstr::FrameSetup)) {
-        MBBI->getParent()->removeSuccessor(Succ);
-        Next->addSuccessor(Succ);
-      }
+      emitStackProbeInline(MF, MBB, MBBI, DL, TargetReg,
+                           (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
       MBBI->eraseFromParent();
     }
   }

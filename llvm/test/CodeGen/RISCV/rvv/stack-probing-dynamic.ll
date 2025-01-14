@@ -360,9 +360,7 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 
 ; If a function has variable-sized stack objects, then any function calls which
 ; need to pass arguments on the stack must allocate the stack space for them
-; dynamically, to ensure they are at the bottom of the frame. We need to probe
-; that space when it is larger than the unprobed space allowed by the ABI, so
-; this needs a very large number of arguments.
+; dynamically, to ensure they are at the bottom of the frame.
 define void @no_reserved_call_frame(i64 %n, i32 %dummy) #0 {
 ; RV64I-LABEL: no_reserved_call_frame:
 ; RV64I:       # %bb.0: # %entry
