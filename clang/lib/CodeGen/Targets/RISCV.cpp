@@ -115,7 +115,48 @@ void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
 }
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  unsigned ABIVLen = 1 << FI.getExtInfo().getLog2RISCVABIVLen();
+  unsigned ABIVLen;
+  switch (FI.getExtInfo().getCC()) {
+  default:
+    ABIVLen = 1;
+    break;
+  case CallingConv::CC_RISCVVLSCall_32:
+    ABIVLen = 32;
+    break;
+  case CallingConv::CC_RISCVVLSCall_64:
+    ABIVLen = 64;
+    break;
+  case CallingConv::CC_RISCVVLSCall_128:
+    ABIVLen = 128;
+    break;
+  case CallingConv::CC_RISCVVLSCall_256:
+    ABIVLen = 256;
+    break;
+  case CallingConv::CC_RISCVVLSCall_512:
+    ABIVLen = 512;
+    break;
+  case CallingConv::CC_RISCVVLSCall_1024:
+    ABIVLen = 1024;
+    break;
+  case CallingConv::CC_RISCVVLSCall_2048:
+    ABIVLen = 2048;
+    break;
+  case CallingConv::CC_RISCVVLSCall_4096:
+    ABIVLen = 4096;
+    break;
+  case CallingConv::CC_RISCVVLSCall_8192:
+    ABIVLen = 8192;
+    break;
+  case CallingConv::CC_RISCVVLSCall_16384:
+    ABIVLen = 16384;
+    break;
+  case CallingConv::CC_RISCVVLSCall_32768:
+    ABIVLen = 32768;
+    break;
+  case CallingConv::CC_RISCVVLSCall_65536:
+    ABIVLen = 65536;
+    break;
+  }
   QualType RetTy = FI.getReturnType();
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(RetTy, ABIVLen);

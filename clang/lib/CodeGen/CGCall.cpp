@@ -76,8 +76,23 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveNone: return llvm::CallingConv::PreserveNone;
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
-  case CC_RISCVVLSCall: return llvm::CallingConv::RISCV_VLSCall;
     // clang-format on
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    return llvm::CallingConv::RISCV_VLSCall_##ABI_VLEN;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
   }
 }
 
@@ -267,8 +282,28 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;
 
-  if (D->hasAttr<RISCVVLSCCAttr>())
-    return CC_RISCVVLSCall;
+  if (RISCVVLSCCAttr *PCS = D->getAttr<RISCVVLSCCAttr>()) {
+    switch (PCS->getVectorWidth()) {
+    default:
+      llvm_unreachable("Invalid RISC-V VLS ABI VLEN");
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case ABI_VLEN:                                                               \
+    return CC_RISCVVLSCall_##ABI_VLEN;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    }
+  }
 
   return CC_C;
 }
@@ -865,7 +900,6 @@ CGFunctionInfo *CGFunctionInfo::create(unsigned llvmCC, bool instanceMethod,
   FI->HasExtParameterInfos = !paramInfos.empty();
   FI->getArgsBuffer()[0].type = resultType;
   FI->MaxVectorWidth = 0;
-  FI->Log2RISCVABIVLen = info.getLog2RISCVABIVLen();
   for (unsigned i = 0, e = argTypes.size(); i != e; ++i)
     FI->getArgsBuffer()[i + 1].type = argTypes[i];
   for (unsigned i = 0, e = paramInfos.size(); i != e; ++i)

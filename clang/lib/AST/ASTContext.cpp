@@ -11108,8 +11108,6 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     return {};
   if (lbaseInfo.getNoCfCheck() != rbaseInfo.getNoCfCheck())
     return {};
-  if (lbaseInfo.getLog2RISCVABIVLen() != rbaseInfo.getLog2RISCVABIVLen())
-    return {};
 
   // When merging declarations, it's common for supplemental information like
   // attributes to only be present in one of the declarations, and we generally

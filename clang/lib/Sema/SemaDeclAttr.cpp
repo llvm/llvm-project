@@ -5248,9 +5248,30 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
     break;
-  case ParsedAttr::AT_RISCVVLSCC:
-    CC = CC_RISCVVLSCall;
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
+    if (Attrs.getNumArgs() &&
+        !checkUInt32Argument(Attrs, Attrs.getArgAsExpr(0), ABIVLen)) {
+    Attrs.setInvalid();
+      return true;
+    }
+    if (Attrs.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
+    Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_invalid_range)
+          << ABIVLen << 32 << 65536;
+      return true;
+    }
+    if (!llvm::isPowerOf2_64(ABIVLen)) {
+    Attrs.setInvalid();
+      Diag(Attrs.getLoc(), diag::err_argument_not_power_of_2);
+      return true;
+    }
+    CC = static_cast<CallingConv>(CallingConv::CC_RISCVVLSCall_32 +
+                                  llvm::Log2_64(ABIVLen) - 5);
     break;
+  }
   default: llvm_unreachable("unexpected attribute kind");
   }
 

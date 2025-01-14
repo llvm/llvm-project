@@ -1136,9 +1136,23 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_RISCVVectorCall:
       OS << "__attribute__((riscv_vector_cc))";
       break;
-    case CC_RISCVVLSCall:
-      OS << "__attribute__((riscv_vls_cc))";
-      break;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    OS << "__attribute__((riscv_vls_cc" #ABI_VLEN "))";                        \
+    break;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
     }
   }
 

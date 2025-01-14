@@ -1946,7 +1946,7 @@ protected:
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
     LLVM_PREFERRED_TYPE(CallingConv)
-    unsigned ExtInfo : 18;
+    unsigned ExtInfo : 14;
 
     /// The ref-qualifier associated with a \c FunctionProtoType.
     ///
@@ -4437,40 +4437,36 @@ public:
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
     // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|
-    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |
-    // |RISCV-ABI-VLEN|
-    // |13    ..    17|
+    // |0 .. 5|   6    |    7   |       8         |9 .. 11|    12   |    13    |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
-    enum { CallConvMask = 0x1F };
-    enum { NoReturnMask = 0x20 };
-    enum { ProducesResultMask = 0x40 };
-    enum { NoCallerSavedRegsMask = 0x80 };
+    enum { CallConvMask = 0x3F };
+    enum { NoReturnMask = 0x40 };
+    enum { ProducesResultMask = 0x80 };
+    enum { NoCallerSavedRegsMask = 0x100 };
     enum {
-      RegParmMask =  0x700,
-      RegParmOffset = 8
+      RegParmMask =  0xe00,
+      RegParmOffset = 9
     };
-    enum { NoCfCheckMask = 0x800 };
-    enum { CmseNSCallMask = 0x1000 };
-    enum { Log2RISCVABIVLenMask = 0x3E000, Log2RISCVABIVLenOffset = 13 };
-    uint32_t Bits = CC_C;
+    enum { NoCfCheckMask = 0x1000 };
+    enum { CmseNSCallMask = 0x2000 };
+    uint16_t Bits = CC_C;
 
-    ExtInfo(unsigned Bits) : Bits(static_cast<uint32_t>(Bits)) {}
+    ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
 
   public:
     // Constructor with no defaults. Use this when you know that you
     // have all the elements (when reading an AST file for example).
     ExtInfo(bool noReturn, bool hasRegParm, unsigned regParm, CallingConv cc,
             bool producesResult, bool noCallerSavedRegs, bool NoCfCheck,
-            bool cmseNSCall, unsigned Log2RISCVABIVLen) {
+            bool cmseNSCall) {
       assert((!hasRegParm || regParm < 7) && "Invalid regparm value");
       Bits = ((unsigned)cc) | (noReturn ? NoReturnMask : 0) |
              (producesResult ? ProducesResultMask : 0) |
              (noCallerSavedRegs ? NoCallerSavedRegsMask : 0) |
              (hasRegParm ? ((regParm + 1) << RegParmOffset) : 0) |
              (NoCfCheck ? NoCfCheckMask : 0) |
-             (cmseNSCall ? CmseNSCallMask : 0) |
-             (Log2RISCVABIVLen << Log2RISCVABIVLenOffset);
+             (cmseNSCall ? CmseNSCallMask : 0);
     }
 
     // Constructor with all defaults. Use when for example creating a
@@ -4496,10 +4492,6 @@ public:
     }
 
     CallingConv getCC() const { return CallingConv(Bits & CallConvMask); }
-
-    unsigned getLog2RISCVABIVLen() const {
-      return (Bits & Log2RISCVABIVLenMask) >> Log2RISCVABIVLenOffset;
-    }
 
     bool operator==(ExtInfo Other) const {
       return Bits == Other.Bits;
@@ -4554,11 +4546,6 @@ public:
 
     ExtInfo withCallingConv(CallingConv cc) const {
       return ExtInfo((Bits & ~CallConvMask) | (unsigned) cc);
-    }
-
-    ExtInfo withLog2RISCVABIVLen(unsigned Log2RISCVABIVLen) const {
-      return ExtInfo((Bits & ~Log2RISCVABIVLenMask) |
-                     (Log2RISCVABIVLen << Log2RISCVABIVLenOffset));
     }
 
     void Profile(llvm::FoldingSetNodeID &ID) const {
@@ -4670,9 +4657,6 @@ public:
 
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
-  unsigned getLog2RISCVABIVLen() const {
-    return getExtInfo().getLog2RISCVABIVLen();
-  }
   ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
 
   static_assert((~Qualifiers::FastMask & Qualifiers::CVRMask) == 0,

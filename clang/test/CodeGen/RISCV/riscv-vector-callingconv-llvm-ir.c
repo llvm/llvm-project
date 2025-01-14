@@ -38,34 +38,34 @@ vint32m1_t test_no_vector_cc_attr(vint32m1_t input, int32_t *base, size_t vl) {
 // CHECK-LLVM: define dso_local void @test_vls_no_cc(i128 noundef %arg.coerce)
 void test_vls_no_cc(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen(<vscale x 2 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen(<vscale x 2 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc)) test_vls_default_abi_vlen(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen_c23(<vscale x 2 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen_c23(<vscale x 2 x i32> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen_c23(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen_unsupported_feature(<vscale x 4 x i16> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen_unsupported_feature(<vscale x 4 x i16> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc)) test_vls_default_abi_vlen_unsupported_feature(__attribute__((vector_size(16))) _Float16 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen_c23_unsupported_feature(<vscale x 4 x i16> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen_c23_unsupported_feature(<vscale x 4 x i16> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen_c23_unsupported_feature(__attribute__((vector_size(16))) _Float16 arg) {}
 
-// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen_unsupported_feature_zve32x(<vscale x 2 x i32> noundef %arg.coerce)
+// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen_unsupported_feature_zve32x(<vscale x 2 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc)) test_vls_default_abi_vlen_unsupported_feature_zve32x(__attribute__((vector_size(16))) float arg) {}
 
-// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc void @test_vls_default_abi_vlen_c23_unsupported_feature_zve32x(<vscale x 2 x i32> noundef %arg.coerce)
+// CHECK-LLVM-ZVE32X: define dso_local riscv_vls_cc(128) void @test_vls_default_abi_vlen_c23_unsupported_feature_zve32x(<vscale x 2 x i32> noundef %arg.coerce)
 [[riscv::vls_cc]] void test_vls_default_abi_vlen_c23_unsupported_feature_zve32x(__attribute__((vector_size(16))) float arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_256_abi_vlen(<vscale x 1 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_vls_256_abi_vlen(<vscale x 1 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc(256))) test_vls_256_abi_vlen(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_256_abi_vlen_c23(<vscale x 1 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_vls_256_abi_vlen_c23(<vscale x 1 x i32> noundef %arg.coerce)
 [[riscv::vls_cc(256)]] void test_vls_256_abi_vlen_c23(__attribute__((vector_size(16))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_least_element(<vscale x 1 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(1024) void @test_vls_least_element(<vscale x 1 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc(1024))) test_vls_least_element(__attribute__((vector_size(8))) int arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_vls_least_element_c23(<vscale x 1 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(1024) void @test_vls_least_element_c23(<vscale x 1 x i32> noundef %arg.coerce)
 [[riscv::vls_cc(1024)]] void test_vls_least_element_c23(__attribute__((vector_size(8))) int arg) {}
 
 
@@ -126,52 +126,52 @@ struct st_i32x4x9{
 
 typedef int __attribute__((vector_size(256))) int32x64_t;
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_too_large(ptr noundef %0)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_too_large(ptr noundef %0)
 void __attribute__((riscv_vls_cc)) test_too_large(int32x64_t arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_too_large_256(<vscale x 16 x i32> noundef %arg.coerce)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_too_large_256(<vscale x 16 x i32> noundef %arg.coerce)
 void __attribute__((riscv_vls_cc(256))) test_too_large_256(int32x64_t arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4(<vscale x 2 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4(<vscale x 2 x i32> %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4(struct st_i32x4 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_256(<vscale x 1 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_256(<vscale x 1 x i32> %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_256(struct st_i32x4 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr1(<vscale x 2 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr1(<vscale x 2 x i32> %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr1(struct st_i32x4_arr1 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr1_256(<vscale x 1 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr1_256(<vscale x 1 x i32> %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr1_256(struct st_i32x4_arr1 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr4(<vscale x 8 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr4(<vscale x 8 x i32> %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr4(struct st_i32x4_arr4 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr4_256(<vscale x 4 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr4_256(<vscale x 4 x i32> %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr4_256(struct st_i32x4_arr4 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr8(<vscale x 16 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr8(<vscale x 16 x i32> %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr8(struct st_i32x4_arr8 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4_arr8_256(<vscale x 8 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr8_256(<vscale x 8 x i32> %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr8_256(struct st_i32x4_arr8 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x2(struct st_i32x4x2 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x2_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x2_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x2_256(struct st_i32x4x2 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x8x2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x8x2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x8x2(struct st_i32x8x2 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x8x2_256(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x8x2_256(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x8x2_256(struct st_i32x8x2 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x64x2(ptr noundef %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x64x2(ptr noundef %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x64x2(struct st_i32x64x2 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x64x2_256(ptr noundef %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x64x2_256(ptr noundef %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x64x2_256(struct st_i32x64x2 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x8(struct st_i32x4x8 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x8_256(struct st_i32x4x8 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x9(ptr noundef %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x9(ptr noundef %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4x9(struct st_i32x4x9 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc void @test_st_i32x4x9_256(ptr noundef %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4x9_256(ptr noundef %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4x9_256(struct st_i32x4x9 arg) {}

@@ -625,9 +625,6 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
-  /// Log2 of ABI_VLEN used in RISCV VLS calling convention.
-  unsigned Log2RISCVABIVLen : 5;
-
   RequiredArgs Required;
 
   /// The struct representing all arguments passed in memory.  Only used when
@@ -738,13 +735,11 @@ public:
   bool getHasRegParm() const { return HasRegParm; }
   unsigned getRegParm() const { return RegParm; }
 
-  unsigned getLog2RISCVABIVLen() const { return Log2RISCVABIVLen; }
-
   FunctionType::ExtInfo getExtInfo() const {
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
-                                 isCmseNSCall(), getLog2RISCVABIVLen());
+                                 isCmseNSCall());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -798,7 +793,6 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
-    ID.AddInteger(Log2RISCVABIVLen);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -826,7 +820,6 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
-    ID.AddInteger(info.getLog2RISCVABIVLen());
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

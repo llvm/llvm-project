@@ -7618,8 +7618,20 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVectorCC:
     return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
-  case ParsedAttr::AT_RISCVVLSCC:
-    return ::new (Ctx) RISCVVLSCCAttr(Ctx, Attr, /*dummy*/ 0);
+  case ParsedAttr::AT_RISCVVLSCC: {
+    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
+    // value 128.
+    unsigned ABIVLen = 128;
+    if (Attr.getNumArgs()) {
+      std::optional<llvm::APSInt> MaybeABIVLen =
+          Attr.getArgAsExpr(0)->getIntegerConstantExpr(Ctx);
+      if (!MaybeABIVLen)
+        llvm_unreachable("Invalid RISC-V ABI VLEN");
+      ABIVLen = MaybeABIVLen->getZExtValue();
+    }
+
+    return ::new (Ctx) RISCVVLSCCAttr(Ctx, Attr, ABIVLen);
+  }
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -8105,28 +8117,6 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   const FunctionType *fn = unwrapped.get();
   CallingConv CCOld = fn->getCallConv();
   Attr *CCAttr = getCCTypeAttr(S.Context, attr);
-
-  if (attr.getKind() == ParsedAttr::AT_RISCVVLSCC) {
-    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
-    // value 128.
-    unsigned ABIVLen = 128;
-    if (attr.getNumArgs() &&
-        !S.checkUInt32Argument(attr, attr.getArgAsExpr(0), ABIVLen))
-      return false;
-    if (attr.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
-      S.Diag(attr.getLoc(), diag::err_argument_invalid_range)
-          << ABIVLen << 32 << 65536;
-      return false;
-    }
-    if (!llvm::isPowerOf2_64(ABIVLen)) {
-      S.Diag(attr.getLoc(), diag::err_argument_not_power_of_2);
-      return false;
-    }
-
-    auto EI = unwrapped.get()->getExtInfo().withLog2RISCVABIVLen(
-        llvm::Log2_64(ABIVLen));
-    type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
-  }
 
   if (CCOld != CC) {
     // Error out on when there's already an attribute on the type
