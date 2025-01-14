@@ -65,7 +65,7 @@ void test_tellg(std::streamoff total_size) {
 int main(int, char**) {
   // This test assumes and requires that std::streamoff is larger than
   // 32 bit - this is not required in the standard itself.
-  static_assert(sizeof(std::streamoff) > 4);
+  static_assert(sizeof(std::streamoff) > 4, "");
   test_tellg(0x100000042ULL);
   return 0;
 }
