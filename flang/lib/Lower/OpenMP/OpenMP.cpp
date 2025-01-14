@@ -600,6 +600,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
   assert(ompEval &&
          llvm::omp::allTargetSet.test(extractOmpDirective(*ompEval)) &&
          "expected TARGET construct evaluation");
+  (void)ompEval;
 
   // Use the whole list of clauses passed to the construct here, rather than the
   // ones only applied to omp.target.
