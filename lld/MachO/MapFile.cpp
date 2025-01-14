@@ -203,42 +203,32 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
+  // Helper lambda that prints all symbols from one ConcatInputSection.
+  auto printOne = [&](const ConcatInputSection *isec) {
+    for (Defined *sym : isec->symbols) {
+      if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0)) {
+        os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                     getSymSizeForMap(sym),
+                     readerToFileOrdinal.lookup(sym->getFile()),
+                     sym->getName().str().data());
+      }
+    }
+  };
   // Shared function to print one or two arrays of ConcatInputSection in
   // ascending outSecOff order. The second array is optional; if provided, we
   // interleave the printing in sorted order without allocating a merged temp
   // array.
-  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr1,
-                              const std::vector<ConcatInputSection *> *arr2 =
-                                  nullptr) {
-    // Helper lambda that prints all symbols from one ConcatInputSection.
-    auto printOne = [&](const ConcatInputSection *isec) {
-      for (Defined *sym : isec->symbols) {
-        if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0)) {
-          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                       getSymSizeForMap(sym),
-                       readerToFileOrdinal.lookup(sym->getFile()),
-                       sym->getName().str().data());
-        }
-      }
-    };
-
-    // If there is only one array, print all symbols from it and return.
-    // This simplifies the logic for the merge case below.
-    if (!arr2) {
-      for (const ConcatInputSection *isec : arr1)
-        printOne(isec);
-      return;
-    }
-
+  auto printIsecArrSyms = [&](ArrayRef<ConcatInputSection *> arr1,
+                              ArrayRef<ConcatInputSection *> arr2 = {}) {
     size_t i = 0, j = 0;
     size_t size1 = arr1.size();
-    size_t size2 = arr2->size();
+    size_t size2 = arr2.size();
     while (i < size1 || j < size2) {
       if (i < size1 &&
-          (j >= size2 || arr1[i]->outSecOff <= (*arr2)[j]->outSecOff)) {
+          (j >= size2 || arr1[i]->outSecOff <= arr2[j]->outSecOff)) {
         printOne(arr1[i++]);
       } else if (j < size2) {
-        printOne((*arr2)[j++]);
+        printOne(arr2[j++]);
       }
     }
   };
@@ -248,7 +238,7 @@ void macho::writeMapFile() {
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
-        printIsecArrSyms(textOsec->inputs, &textOsec->getThunks());
+        printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
       } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {

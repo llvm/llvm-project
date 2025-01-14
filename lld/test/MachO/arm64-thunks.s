@@ -337,6 +337,7 @@ _main:
   # linker will create a symbol for every '0' in the section, leading to
   # dramatic memory usage and a huge linker map file
   .space 0x4000000, 'A'
+  .byte 0
 
 
 .section __TEXT,__lcxx_override,regular,pure_instructions
