@@ -706,7 +706,6 @@ private:
         -> llvm::SmallVector<mlir::Value, 0> {
       hlfir::Entity resultElement =
           hlfir::getElementAt(loc, builder, result, oneBasedIndices);
-      //      builder.create<fir::StoreOp>(loc, initValue, resultElement);
       builder.create<hlfir::AssignOp>(loc, initValue, resultElement);
       return {};
     };
@@ -742,8 +741,6 @@ private:
             loc, builder, resultElementType, resultElementValue,
             lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
-        //        builder.create<fir::StoreOp>(loc, productValue,
-        //        resultElement);
         return {};
       };
 
@@ -781,8 +778,6 @@ private:
             loc, builder, resultElementType, resultElementValue,
             lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
-        //        builder.create<fir::StoreOp>(loc, productValue,
-        //        resultElement);
         return {};
       };
       hlfir::genLoopNestWithReductions(
@@ -815,8 +810,6 @@ private:
             loc, builder, resultElementType, resultElementValue,
             lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
-        //        builder.create<fir::StoreOp>(loc, productValue,
-        //        resultElement);
         return {};
       };
       hlfir::genLoopNestWithReductions(
