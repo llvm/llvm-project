@@ -44,20 +44,16 @@ void test_tellg(std::streamoff total_size) {
     ifs.open(p, std::ios::binary);
     assert(ifs.is_open());
     std::streamoff in_off = ifs.tellg();
-    TEST_REQUIRE(in_off == 0, [&] { test_eprintf("in_off = %ld\n", in_off); });
+    TEST_REQUIRE(in_off == 0, "in_off not zero at start");
     ifs.seekg(total_size - 20, std::ios::beg);
     in_off = ifs.tellg();
-    TEST_REQUIRE(in_off == total_size - 20, [&] {
-      test_eprintf("ref = %zu, in_off = %ld\n", total_size - 20, in_off);
-    });
+    TEST_REQUIRE(in_off == total_size - 20, "in_off incorrect after >32 bit seek");
     ifs.seekg(10, std::ios::cur);
     in_off = ifs.tellg();
-    TEST_REQUIRE(in_off == total_size - 10, [&] {
-      test_eprintf("ref = %zu, in_off = %ld\n", total_size - 10, in_off);
-    });
+    TEST_REQUIRE(in_off == total_size - 10, "in_off incorrect after incremental seek");
     ifs.seekg(0, std::ios::end);
     in_off = ifs.tellg();
-    TEST_REQUIRE(in_off == total_size, [&] { test_eprintf("ref = %zu, in_off = %ld\n", total_size, in_off); });
+    TEST_REQUIRE(in_off == total_size, "in_off incorrect after seek to end");
   }
   std::remove(p.c_str());
 }
