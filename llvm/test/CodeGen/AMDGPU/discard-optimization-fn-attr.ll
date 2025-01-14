@@ -4,7 +4,7 @@
 
 ; GCN-LABEL: {{^}}if_with_kill_true_cond:
 ; GCN:      v_cmp_ne_u32_e32 vcc,
-; GCN-NEXT: s_xor_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], vcc, exec
+; GCN-NEXT: s_andn2_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], exec, vcc
 ; GCN-NEXT: s_andn2_b64 [[LIVE:s\[[0-9+]:[0-9+]\]]], exec, [[KILLED]]
 ; GCN-NEXT: s_cbranch_scc0
 define amdgpu_ps void @if_with_kill_true_cond(i32 %arg) #2 {
@@ -24,7 +24,7 @@ endif:
 
 ; GCN-LABEL: {{^}}if_with_kill_false_cond:
 ; GCN:      v_cmp_eq_u32_e32 vcc,
-; GCN-NEXT: s_xor_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], vcc, exec
+; GCN-NEXT: s_andn2_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], exec, vcc
 ; GCN-NEXT: s_andn2_b64 [[LIVE:s\[[0-9+]:[0-9+]\]]], exec, [[KILLED]]
 ; GCN-NEXT: s_cbranch_scc0
 define amdgpu_ps void @if_with_kill_false_cond(i32 %arg) #2 {
