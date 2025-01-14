@@ -1102,8 +1102,8 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   const int numSrcElemsPerByte = 8 / srcElemBitwidth;
   if ((subByteVecType.getShape().back() % numSrcElemsPerByte) != 0)
     return rewriter.notifyMatchFailure(
-        op, "the trailing dimension of the input vector of sub-bytes must be a multiple of "
-            "8 / <sub-byte-width>");
+        op, "the trailing dimension of the input vector of sub-bytes must be a "
+            "multiple of 8 / <sub-byte-width>");
 
   return success();
 }
@@ -1241,7 +1241,7 @@ static Value extractNBitsPerByteAndSignExtendToI8(PatternRewriter &rewriter,
   return shr;
 }
 
-/// Extracts an unsigned N-bit sequence from each element of an 8-bit vector,
+/// Extracts an unsigned N-bit sequence from each element of a vector of bytes,
 /// starting at the specified bit index.
 /// The `bitIdx` starts at 0 from the LSB and moves to the left.
 ///
@@ -1258,10 +1258,10 @@ static Value extractNBitsPerByteAndSignExtendToI8(PatternRewriter &rewriter,
 /// mask                           = [00 00 00 11]
 /// shr    = arith.shrui(src, 2)   = [00 01 01 10]
 /// result = arith.andi(shr, mask) = [00 00 00 10]
-/// NOTE: Similarly to extractNBitsFromVectorSigned, this could be achieved by
-/// using arith::ShLIOp + arith::ShRUIOp instead of the masking. However, by
-/// using arith::ShRUIOp + arith::AndIOp, we are eliminating shift left when the
-/// index is 0.
+/// NOTE: Similarly to extractNBitsPerByteAndSignExtendToI8, this could be
+/// achieved by using arith::ShLIOp + arith::ShRUIOp instead of the masking.
+/// However, by using arith::ShRUIOp + arith::AndIOp, we are eliminating shift
+/// left when the index is 0.
 static Value extractNBitsPerByteAndExtendToI8(PatternRewriter &rewriter,
                                               Location loc, Value src,
                                               int bitIdx, int numBits) {

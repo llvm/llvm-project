@@ -194,16 +194,18 @@ func.func @f3ext(%a: vector<5xi8>) -> vector<8xi17> {
 }
 
 
-// CHECK-LABEL: func.func @aligned_i4_trailing_dim_not_multiple(
-func.func @aligned_i4_trailing_dim_not_multiple(%a: vector<1xi4>) -> vector<1xi8> {
+// Negative test - the trailing dim 1 is not a multiple of 2 (i.e. 8 / 4).
+// CHECK-LABEL: func.func @unaligned_extsi_i4_to_i8(
+func.func @unaligned_extsi_i4_to_i8(%a: vector<1xi4>) -> vector<1xi8> {
   // CHECK-NOT: arith.bitcast
   // CHECK: arith.extsi %[[IN:.*]] : vector<1xi4> to vector<1xi8>
   %0 = arith.extsi %a : vector<1xi4> to vector<1xi8>
   return %0 : vector<1xi8>
 }
 
-// CHECK-LABEL: func.func @aligned_i2_trailing_dim_not_multiple(
-func.func @aligned_i2_trailing_dim_not_multiple(%a: vector<2xi2>) -> vector<2xi8> {
+// Negative test - the trailing dim 2 is not a multiple of 4 (i.e. 8 / 2).
+// CHECK-LABEL: func.func @unaligned_extsi_i2_to_i8(
+func.func @unaligned_extsi_i2_to_i8(%a: vector<2xi2>) -> vector<2xi8> {
   // CHECK-NOT: arith.bitcast
   // CHECK: arith.extsi %[[IN:.*]] : vector<2xi2> to vector<2xi8>
   %0 = arith.extsi %a : vector<2xi2> to vector<2xi8>
