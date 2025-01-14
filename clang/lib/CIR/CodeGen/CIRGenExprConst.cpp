@@ -736,12 +736,27 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
                                const CXXRecordDecl *VTableClass,
                                CharUnits Offset) {
   const ASTRecordLayout &Layout = CGM.getASTContext().getASTRecordLayout(RD);
-
   if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
     // Add a vtable pointer, if we need one and it hasn't already been added.
-    if (Layout.hasOwnVFPtr())
-      llvm_unreachable("NYI");
-
+    if (Layout.hasOwnVFPtr()) {
+      CIRGenBuilderTy &builder = CGM.getBuilder();
+      cir::GlobalOp vtable =
+          CGM.getCXXABI().getAddrOfVTable(VTableClass, CharUnits());
+      clang::VTableLayout::AddressPointLocation addressPoint =
+          CGM.getItaniumVTableContext()
+              .getVTableLayout(VTableClass)
+              .getAddressPoint(BaseSubobject(CD, Offset));
+      assert(!cir::MissingFeatures::ptrAuth());
+      mlir::ArrayAttr indices = builder.getArrayAttr({
+          builder.getI32IntegerAttr(0),
+          builder.getI32IntegerAttr(addressPoint.VTableIndex),
+          builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
+      });
+      cir::GlobalViewAttr vtableInit =
+          CGM.getBuilder().getGlobalViewAttr(vtable, indices);
+      if (!AppendBytes(Offset, vtableInit))
+        return false;
+    }
     // Accumulate and sort bases, in order to visit them in address order, which
     // may not be the same as declaration order.
     SmallVector<BaseInfo, 8> Bases;
