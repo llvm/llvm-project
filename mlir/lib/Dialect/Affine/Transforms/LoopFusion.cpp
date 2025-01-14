@@ -312,21 +312,18 @@ static Value createPrivateVectorOpMemRef(
   OpBuilder b(forInst);
   // Builder to create constants at the top level.
   OpBuilder top(forInst->getParentRegion());
-  // Create new memref type based on slice bounds.
-  auto srcAffineOp = cast<AffineWriteOpInterface>(srcStoreOpInst);
+
+  auto srcAffineOp = cast<AffineVectorStoreOp>(srcStoreOpInst);
 
   auto oldMemRef = srcAffineOp.getMemRef();
   auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
   unsigned rank = oldMemRefType.getRank();
 
-  auto srcOpResult = srcAffineOp.getValueToStore();
-  auto shapedType = dyn_cast<ShapedType>(srcOpResult.getType());
+  auto vecType = srcAffineOp.getVectorType();
 
-  // Create 'newMemRefType' using 'newShape' from MemRefRegion accessed
-  // by 'srcStoreOpInst'.
   auto eltSize = getMemRefIntOrFloatEltSizeInBytes(oldMemRefType);
   assert(eltSize && "memrefs with size elt types expected");
-  uint64_t bufSize = *eltSize * shapedType.getNumElements();
+  uint64_t bufSize = *eltSize * vecType.getNumElements();
   unsigned newMemSpace;
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.has_value()) {
     newMemSpace = *fastMemorySpace;
@@ -335,10 +332,8 @@ static Value createPrivateVectorOpMemRef(
   }
 
   auto newMemRefType = MemRefType::get(
-      shapedType.getShape(), oldMemRefType.getElementType(), {}, newMemSpace);
+      vecType.getShape(), oldMemRefType.getElementType(), {}, newMemSpace);
 
-  // Create new private memref for fused loop 'forOp'. 'newShape' is always
-  // a constant shape.
   Value newMemRef = top.create<memref::AllocOp>(forOp.getLoc(), newMemRefType);
 
   auto indexRemap = AffineMap::getMultiDimIdentityMap(rank, forOp.getContext());
