@@ -7,7 +7,7 @@
 !===----------------------------------------------------------------------===!
 
 !RUN: %flang_fc1 -emit-llvm -fopenmp %s -o - | FileCheck %s --check-prefixes HOST,ALL
-!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes DEVICE,ALL
+!RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-llvm -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefixes DEVICE,ALL
 
 !HOST: define {{.*}}@{{.*}}before{{.*}}(
 !DEVICE-NOT: define {{.*}}@before{{.*}}(
