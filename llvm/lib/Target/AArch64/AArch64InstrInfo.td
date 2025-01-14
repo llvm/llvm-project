@@ -2802,14 +2802,17 @@ def : Pat<(int_aarch64_ldg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn,  simm9s16:$
 
 def : InstAlias<"ldg $Rt, [$Rn]", (LDG GPR64:$Rt, GPR64sp:$Rn, 0), 1>;
 
+let mayLoad = 1 in
 def LDGM : MemTagVector<1, "ldgm", "\t$Rt, [$Rn]",
                    (outs GPR64:$Rt), (ins GPR64sp:$Rn)>;
+let mayStore = 1 in {
 def STGM : MemTagVector<0, "stgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)>;
 def STZGM : MemTagVector<0, "stzgm", "\t$Rt, [$Rn]",
                    (outs), (ins GPR64:$Rt, GPR64sp:$Rn)> {
   let Inst{23} = 0;
 }
+} // mayStore = 1
 
 defm STG   : MemTagStore<0b00, "stg">;
 defm STZG  : MemTagStore<0b01, "stzg">;
@@ -10031,8 +10034,10 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
 }
 
 let Predicates = [HasLS64] in {
+  let mayLoad = 1 in
   def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
                                           (outs GPR64x8:$Rt)>;
+  let mayStore = 1 in
   def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
