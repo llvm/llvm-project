@@ -774,16 +774,15 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           // Don't check register class if this is a tied operand, it was done
           // for the operand its tied to.
           if (DestOperand.getTiedRegister() == -1) {
-            CondStream.indent(6)
-                << "MI.getOperand(" << OpIdx << ").isReg()";
+            CondStream.indent(6) << "MI.getOperand(" << OpIdx << ").isReg()";
             if (EType == EmitterType::CheckCompress)
-              CondStream
-                  << " && MI.getOperand(" << OpIdx << ").getReg().isPhysical()";
-            CondStream << " &&\n" << indent(6)
-                << TargetName << "MCRegisterClasses[" << TargetName
-                << "::" << ClassRec->getName()
-                << "RegClassID].contains(MI.getOperand(" << OpIdx
-                << ").getReg()) &&\n";
+              CondStream << " && MI.getOperand(" << OpIdx
+                         << ").getReg().isPhysical()";
+            CondStream << " &&\n"
+                       << indent(6) << TargetName << "MCRegisterClasses["
+                       << TargetName << "::" << ClassRec->getName()
+                       << "RegClassID].contains(MI.getOperand(" << OpIdx
+                       << ").getReg()) &&\n";
           }
 
           if (CompressOrUncompress)
