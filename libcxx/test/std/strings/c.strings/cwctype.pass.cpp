@@ -10,6 +10,11 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// towctrans and wctrans were added in Android API 26.
+// TODO: Switch from UNSUPPORTED to XFAIL once the Android CI Docker sysroot is
+// updated.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME && target={{.+}}-android{{(eabi)?(21|22|23|24|25)}}
+
 #include <cwctype>
 #include <type_traits>
 
@@ -111,11 +116,8 @@ int main(int, char**) {
   ASSERT_SAME_TYPE(std::wctype_t, decltype(std::wctype("")));
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towlower(w)));
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towupper(w)));
-  // towctrans and wctrans were added in Android API 26.
-#if !defined(__ANDROID__) || __ANDROID_API__ >= 26
   ASSERT_SAME_TYPE(std::wint_t, decltype(std::towctrans(w, std::wctrans_t())));
   ASSERT_SAME_TYPE(std::wctrans_t, decltype(std::wctrans("")));
-#endif
 
   return 0;
 }
