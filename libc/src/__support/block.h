@@ -427,11 +427,8 @@ optional<Block *> Block::split(size_t new_inner_size,
                                size_t usable_space_alignment) {
   LIBC_ASSERT(usable_space_alignment % alignof(max_align_t) == 0 &&
               "alignment must be a multiple of max_align_t");
-
   if (used())
     return {};
-
-  size_t old_outer_size = outer_size();
 
   // Compute the minimum outer size that produces a block of at least
   // `new_inner_size`.
@@ -440,12 +437,14 @@ optional<Block *> Block::split(size_t new_inner_size,
   uintptr_t start = reinterpret_cast<uintptr_t>(this);
   uintptr_t next_block_start =
       next_possible_block_start(start + min_outer_size, usable_space_alignment);
+  if (next_block_start < start)
+    return {};
   size_t new_outer_size = next_block_start - start;
   LIBC_ASSERT(new_outer_size % alignof(max_align_t) == 0 &&
               "new size must be aligned to max_align_t");
 
-  if (old_outer_size < new_outer_size ||
-      old_outer_size - new_outer_size < sizeof(Block))
+  if (outer_size() < new_outer_size ||
+      outer_size() - new_outer_size < sizeof(Block))
     return {};
 
   ByteSpan new_region = region().subspan(new_outer_size);
