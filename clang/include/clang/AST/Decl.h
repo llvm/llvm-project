@@ -4967,7 +4967,6 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
   bool isCBuffer() const { return IsCBuffer; }
-  const Type *getResourceHandleType() const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

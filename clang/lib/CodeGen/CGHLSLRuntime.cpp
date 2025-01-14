@@ -159,12 +159,10 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   CB.Constants.emplace_back(std::make_pair(GV, LowerBound));
 }
 
-void CGHLSLRuntime::addBufferDecls(const HLSLBufferDecl *D, Buffer &CB) {
-  for (Decl *it : D->decls()) {
+void CGHLSLRuntime::addBufferDecls(const DeclContext *DC, Buffer &CB) {
+  for (Decl *it : DC->decls()) {
     if (auto *ConstDecl = dyn_cast<VarDecl>(it)) {
-      if (ConstDecl->getType().getTypePtr() != D->getResourceHandleType()) {
-        addConstant(ConstDecl, CB);
-      }
+      addConstant(ConstDecl, CB);
     } else if (isa<CXXRecordDecl, EmptyDecl>(it)) {
       // Nothing to do for this declaration.
     } else if (isa<FunctionDecl>(it)) {

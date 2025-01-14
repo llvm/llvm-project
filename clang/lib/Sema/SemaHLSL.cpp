@@ -469,27 +469,6 @@ static CXXRecordDecl *createHostLayoutStructForBuffer(Sema &S,
   return LS;
 }
 
-// Creates a "__handle" declaration for the HLSL Buffer type
-// with the corresponding HLSL resource type and adds it to the HLSLBufferDecl
-static void createHLSLBufferHandle(Sema &S, HLSLBufferDecl *BufDecl,
-                                   CXXRecordDecl *LayoutStruct) {
-  ASTContext &AST = S.getASTContext();
-
-  HLSLAttributedResourceType::Attributes ResAttrs(
-      BufDecl->isCBuffer() ? ResourceClass::CBuffer : ResourceClass::SRV, false,
-      false);
-  QualType ResHandleTy = AST.getHLSLAttributedResourceType(
-      AST.HLSLResourceTy, QualType(LayoutStruct->getTypeForDecl(), 0),
-      ResAttrs);
-
-  IdentifierInfo *II = &AST.Idents.get("__handle", tok::TokenKind::identifier);
-  VarDecl *VD = VarDecl::Create(
-      BufDecl->getASTContext(), BufDecl, SourceLocation(), SourceLocation(), II,
-      ResHandleTy, AST.getTrivialTypeSourceInfo(ResHandleTy, SourceLocation()),
-      SC_None);
-  BufDecl->addDecl(VD);
-}
-
 // Handle end of cbuffer/tbuffer declaration
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
@@ -500,9 +479,6 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   CXXRecordDecl *LayoutStruct =
       createHostLayoutStructForBuffer(SemaRef, BufDecl);
-
-  // create buffer resource handle
-  createHLSLBufferHandle(SemaRef, BufDecl, LayoutStruct);
 
   SemaRef.PopDeclContext();
 }
