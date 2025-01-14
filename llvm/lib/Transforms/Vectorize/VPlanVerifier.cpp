@@ -198,7 +198,10 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     }
     for (const VPValue *V : R.definedValues()) {
       // Verify that recipes' operands have matching types.
-      TypeInfo.inferScalarType(V);
+      if (!TypeInfo.inferScalarType(V)) {
+        errs() << "Failed to infer scalar type!\n";
+        return false;
+      }
 
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
