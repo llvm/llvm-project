@@ -450,7 +450,7 @@ Changes to LLDB
           _regexp-display   -- Evaluate an expression at every stop (see 'h...
   ```
 * DWARF indexing speed (for binaries not using the debug_names index) increased
-  by 30-60%, depending on the configuration.
+  by [30-60%](https://github.com/llvm/llvm-project/pull/118657).
 
 Changes to BOLT
 ---------------------------------
