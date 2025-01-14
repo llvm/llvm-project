@@ -87,6 +87,9 @@ static bool isArgShapesValid(ArrayRef<int64_t> descShape,
   if (!sgMap)
     return false;
 
+  if (valShape.size() != descShape.size())
+    return false;
+
   for (const auto &[factor, dim, expected] :
        llvm::zip_equal(sgMap.getWiLayout(), valShape, descShape)) {
     if (factor * dim != expected)
