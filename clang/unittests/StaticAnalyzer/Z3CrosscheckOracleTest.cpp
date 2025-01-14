@@ -27,22 +27,13 @@ static constexpr std::optional<bool> UNDEF = std::nullopt;
 static unsigned operator""_ms(unsigned long long ms) { return ms; }
 static unsigned operator""_step(unsigned long long rlimit) { return rlimit; }
 
-template <class Ret, class Arg> static Ret makeDefaultOption(Arg Value) {
-  return Value;
-}
-template <> PositiveAnalyzerOption makeDefaultOption(int Value) {
-  auto DefaultVal = PositiveAnalyzerOption::create(Value);
-  assert(DefaultVal.has_value());
-  return DefaultVal.value();
-}
-
 static const AnalyzerOptions DefaultOpts = [] {
   AnalyzerOptions Config;
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEEP_VAL)
 #define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  Config.NAME = makeDefaultOption<TYPE>(DEFAULT_VAL);
+  Config.NAME = DEFAULT_VAL;
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 
   // Remember to update the tests in this file when these values change.

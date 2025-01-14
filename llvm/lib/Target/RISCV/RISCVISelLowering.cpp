@@ -10154,7 +10154,10 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   case ISD::VP_REDUCE_AND: {
     // vcpop ~x == 0
     SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-    Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    if (IsVP || VecVT.isFixedLengthVector())
+      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    else
+      Vec = DAG.getNode(ISD::XOR, DL, ContainerVT, Vec, TrueMask);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     break;
@@ -18382,7 +18385,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
     // Bail if we might break a sh{1,2,3}add pattern.
-    if (Subtarget.hasStdExtZba() && C2->getZExtValue() >= 1 &&
+    if (Subtarget.hasStdExtZba() && C2 && C2->getZExtValue() >= 1 &&
         C2->getZExtValue() <= 3 && N->hasOneUse() &&
         N->user_begin()->getOpcode() == ISD::ADD &&
         !isUsedByLdSt(*N->user_begin(), nullptr) &&

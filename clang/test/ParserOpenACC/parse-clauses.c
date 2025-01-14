@@ -343,23 +343,18 @@ struct HasMembersArray {
 void SelfUpdate() {
   struct Members s;
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+1{{expected '('}}
 #pragma acc update self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+6{{use of undeclared identifier 'zero'}}
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected expression}}
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+4{{use of undeclared identifier 'zero'}}
+  // expected-error@+3{{expected ','}}
+  // expected-error@+2{{expected expression}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 }

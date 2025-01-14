@@ -3320,7 +3320,7 @@ def STRH_preidx: ARMPseudoInst<(outs GPR:$Rn_wb),
 }
 
 
-
+let mayStore = 1, hasSideEffects = 0 in {
 def STRH_PRE  : AI3ldstidx<0b1011, 0, 1, (outs GPR:$Rn_wb),
                            (ins GPR:$Rt, addrmode3_pre:$addr), IndexModePre,
                            StMiscFrm, IIC_iStore_bh_ru,
@@ -3352,6 +3352,7 @@ def STRH_POST : AI3ldstidx<0b1011, 0, 0, (outs GPR:$Rn_wb),
   let Inst{3-0}   = offset{3-0};    // imm3_0/Rm
   let DecoderMethod = "DecodeAddrMode3Instruction";
 }
+} // mayStore = 1, hasSideEffects = 0
 
 let mayStore = 1, hasSideEffects = 0, hasExtraSrcRegAllocReq = 1 in {
 def STRD_PRE : AI3ldstidx<0b1111, 0, 1, (outs GPR:$Rn_wb),

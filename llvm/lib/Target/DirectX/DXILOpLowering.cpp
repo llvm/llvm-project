@@ -415,8 +415,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -723,9 +731,6 @@ public:
         HasErrors |= lowerGetPointer(F);
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
-        break;
-      case Intrinsic::dx_resource_loadchecked_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:

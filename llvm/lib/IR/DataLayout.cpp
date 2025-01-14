@@ -153,7 +153,8 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
          HasUnstableRepresentation == Other.HasUnstableRepresentation &&
-         HasNonIntegralRepresentation == Other.HasNonIntegralRepresentation;
+         HasNonIntegralRepresentation == Other.HasNonIntegralRepresentation &&
+         HasExternalState == Other.HasExternalState;
 }
 
 namespace {
@@ -436,11 +437,14 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     } else if (isAlpha(C)) {
       return createStringError("'%c' is not a valid pointer specification flag",
                                C);
-    } else if (Error Err = parseAddrSpace(AddrSpaceStr, AddrSpace)) {
-      return Err; // Failed to parse the remaining characters as a number
+    } else {
+      break; // not a valid flag, remaining must be the address space number.
     }
     AddrSpaceStr = AddrSpaceStr.drop_front(1);
   }
+  if (!AddrSpaceStr.empty())
+    if (Error Err = parseAddrSpace(AddrSpaceStr, AddrSpace))
+      return Err; // Failed to parse the remaining characters as a number
   if (AddrSpace == 0 && (NonIntegralRepr || UnstableRepr))
     return createStringError(
         "address space 0 cannot be non-integral or unstable");

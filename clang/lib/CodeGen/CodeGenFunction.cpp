@@ -2102,7 +2102,10 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
          MDHelper.createConstant(BranchHintConstant)});
     BrInst->setMetadata("hlsl.controlflow.hint",
                         llvm::MDNode::get(CGM.getLLVMContext(), Vals));
-  } break;
+    break;
+  }
+  case HLSLControlFlowHintAttr::SpellingNotCalculated:
+    break;
   }
 }
 

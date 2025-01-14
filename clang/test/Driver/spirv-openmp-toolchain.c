@@ -1,4 +1,4 @@
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=spirv64-intel \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=spirv64-intel \
 // RUN:        --libomptarget-spirv-bc-path=%t/ -nogpulib %s 2>&1 \
 // RUN: | FileCheck %s
 
