@@ -386,4 +386,8 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
   return ThreadSP();
 }
 
+bool OperatingSystemPython::DoesPluginReportAllThreads() {
+  return m_process->GetOSPluginReportsAllThreads();
+}
+
 #endif // #if LLDB_ENABLE_PYTHON
