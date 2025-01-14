@@ -8,6 +8,7 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -97,6 +98,8 @@ Error DXContainer::parseHash(StringRef Part) {
 }
 
 Error DXContainer::parseRootSignature(StringRef Part) {
+  if (RootSignature)
+    return parseFailed("More than one RTS0 part is present in the file");
   dxbc::RootSignatureDesc Desc;
   if (Error Err = readStruct(Part, Part.begin(), Desc))
     return Err;
