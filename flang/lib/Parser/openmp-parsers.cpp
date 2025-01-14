@@ -210,13 +210,15 @@ static constexpr auto propertyListParser(PropParser... pp) {
   // the entire list in each of the alternative property parsers. Otherwise,
   // the name parser could stop after "foo" in "(foo, bar(1))", without
   // allowing the next parser to give the list a try.
+  auto listOf{[](auto parser) { //
+    return nonemptySeparated(parser, ","_tok);
+  }};
 
   using P = OmpTraitProperty;
-  return maybe("(" >>
+  return maybe("(" >> //
       construct<OmpTraitSelector::Properties>(
           maybe(Parser<OmpTraitScore>{} / ":"_tok),
-          (attempt(nonemptySeparated(construct<P>(pp), ","_tok) / ")"_tok) ||
-              ...)));
+          (attempt(listOf(sourced(construct<P>(pp))) / ")"_tok) || ...)));
 }
 
 // Parser for OmpTraitSelector
@@ -283,8 +285,8 @@ private:
   const Parser<OmpTraitSelectorName> np;
 };
 
-TYPE_PARSER(construct<OmpTraitSelector>(
-    TraitSelectorParser(Parser<OmpTraitSelectorName>{})))
+TYPE_PARSER(sourced(construct<OmpTraitSelector>(
+    sourced(TraitSelectorParser(Parser<OmpTraitSelectorName>{})))))
 
 TYPE_PARSER(construct<OmpTraitSetSelectorName::Value>(
     "CONSTRUCT" >> pure(OmpTraitSetSelectorName::Value::Construct) ||
