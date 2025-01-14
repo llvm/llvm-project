@@ -584,12 +584,9 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
-#  if SANITIZER_WINDOWS
   // Allowing null input is Windows-specific
-  if (UNLIKELY(!s)) {
+  if (SANITIZER_WINDOWS && UNLIKELY(!s))
     return nullptr;
-  }
-#  endif
   if (UNLIKELY(!TryAsanInitFromRtl()))
     return internal_strdup(s);
   uptr length = internal_strlen(s);
