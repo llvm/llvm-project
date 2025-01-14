@@ -115,7 +115,7 @@ struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
-  llvm::SmallVector<uint8_t> stub;
+  std::unique_ptr<MemoryBuffer> stub;
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   bool machineInferred = false;
   size_t wordsize;

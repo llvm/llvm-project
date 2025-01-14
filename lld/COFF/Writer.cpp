@@ -1037,8 +1037,8 @@ void Writer::sortSections() {
 }
 
 void Writer::calculateStubDependentSizes() {
-  if (ctx.config.stub.size())
-    dosStubSize = ctx.config.stub.size();
+  if (ctx.config.stub)
+    dosStubSize = ctx.config.stub->getBufferSize();
   else
     dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 
@@ -1685,12 +1685,12 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   auto *dos = reinterpret_cast<dos_header *>(buf);
 
   // Write DOS program.
-  if (config->stub.size()) {
-    memcpy(buf, config->stub.data(), config->stub.size());
+  if (config->stub) {
+    memcpy(buf, config->stub->getBufferStart(), config->stub->getBufferSize());
     // MS link.exe accepts an invalid `e_lfanew` (AddressOfNewExeHeader) and
     // updates it automatically. Replicate the same behaviour.
-    dos->AddressOfNewExeHeader = config->stub.size();
-    buf += config->stub.size();
+    dos->AddressOfNewExeHeader = config->stub->getBufferSize();
+    buf += config->stub->getBufferSize();
   } else {
     buf += sizeof(dos_header);
     dos->Magic[0] = 'M';

@@ -258,7 +258,7 @@ void LinkerDriver::parseStub(StringRef path) {
   if (bufferSize < 0x40 || bufferSize % 8 != 0 ||
       (bufferStart[0] != 'M' || bufferStart[1] != 'Z'))
     Err(ctx) << "/stub: invalid format for MS-DOS stub file: " << path;
-  ctx.config.stub.append(bufferStart, bufferStart + bufferSize);
+  ctx.config.stub = std::move(stub);
 }
 
 // Parses /functionpadmin option argument.
