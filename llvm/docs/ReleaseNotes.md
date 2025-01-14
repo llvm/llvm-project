@@ -449,6 +449,8 @@ Changes to LLDB
           _regexp-bt        -- Show backtrace of the current thread's call ...
           _regexp-display   -- Evaluate an expression at every stop (see 'h...
   ```
+* DWARF indexing speed (for binaries not using the debug_names index) increased
+  by 30-60%, depending on the configuration.
 
 Changes to BOLT
 ---------------------------------
