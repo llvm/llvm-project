@@ -94,23 +94,10 @@ using SPSRegisterSymbolsArgs =
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
-  unsigned PointerSize;
-  llvm::endianness Endianness;
-  const auto &TT = MOP.getExecutionSession().getTargetTriple();
-
-  switch (TT.getArch()) {
-  case Triple::aarch64:
-  case Triple::x86_64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  default:
-    llvm_unreachable("Unrecognized architecture");
-  }
-
+  auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
-      std::move(Name), MOP.getExecutionSession().getSymbolStringPool(), TT,
-      PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+      std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
