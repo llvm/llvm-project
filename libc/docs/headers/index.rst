@@ -17,6 +17,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   pthread
    search
    setjmp
    signal
@@ -26,6 +27,7 @@ Implementation Status
    string
    strings
    sys/mman
+   sys/resource
    threads
    time
    uchar

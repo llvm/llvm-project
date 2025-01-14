@@ -1446,6 +1446,9 @@ class DeclContext {
   /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
   friend class ASTWriter;
 
+protected:
+  enum { NumOdrHashBits = 25 };
+
   // We use uint64_t in the bit-fields below since some bit-fields
   // cross the unsigned boundary and this breaks the packing.
 
@@ -1667,6 +1670,14 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
 
+    /// True if any field is marked as requiring explicit initialization with
+    /// [[clang::requires_explicit_initialization]].
+    /// In C++, this is also set for types without a user-provided default
+    /// constructor, and is propagated from any base classes and/or member
+    /// variables whose types are aggregates.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t HasUninitializedExplicitInitFields : 1;
+
     /// Indicates whether this struct is destroyed in the callee.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t ParamDestroyedInCallee : 1;
@@ -1681,7 +1692,7 @@ class DeclContext {
 
     /// True if a valid hash is stored in ODRHash. This should shave off some
     /// extra storage and prevent CXXRecordDecl to store unused bits.
-    uint64_t ODRHash : 26;
+    uint64_t ODRHash : NumOdrHashBits;
   };
 
   /// Number of inherited and non-inherited bits in RecordDeclBitfields.

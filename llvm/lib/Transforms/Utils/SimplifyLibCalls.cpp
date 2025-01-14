@@ -3191,8 +3191,6 @@ Value *LibCallSimplifier::optimizeToAscii(CallInst *CI, IRBuilderBase &B) {
 
 // Fold calls to atoi, atol, and atoll.
 Value *LibCallSimplifier::optimizeAtoi(CallInst *CI, IRBuilderBase &B) {
-  CI->addParamAttr(0, Attribute::NoCapture);
-
   StringRef Str;
   if (!getConstantStringInfo(CI->getArgOperand(0), Str))
     return nullptr;
