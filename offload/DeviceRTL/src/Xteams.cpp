@@ -219,7 +219,7 @@ _xteam_scan_phase2(T *storage, int segment_size, T *team_vals, T *segment_vals,
 
   if (is_inclusive_scan) { 
     for (int i = 0; i < segment_size; i++)
-      segment_vals[(k * segment_size) + i] += thread_level_result;
+      (*_rf)(segment_vals + (k * segment_size) + i, thread_level_result);
   } else { // Exclusive scan
     // Populate the non-first element in every segment with scanned result
     for (int i = segment_size - 1; i > 0; i--)
@@ -854,6 +854,158 @@ __kmpc_xteams_phase2_i_8x32(int *storage, int segment_size, int *tvs,
                             bool is_inclusive_scan) {
   _xteam_scan_phase2<int, 8, 32>(storage, segment_size, tvs, seg_vals, rf, rnv,
                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_i_32x32(int *storage, int segment_size, int *tvs,
+                             int *seg_vals, void (*rf)(int *, int),
+                             const int rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<int, 32, 32>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_16x64(double *storage, int segment_size, double *tvs,
+                             double *seg_vals, void (*rf)(double *, double),
+                             const double rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 16, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                     rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_8x64(double *storage, int segment_size, double *tvs,
+                            double *seg_vals, void (*rf)(double *, double),
+                            const double rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 8, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_4x64(double *storage, int segment_size, double *tvs,
+                            double *seg_vals, void (*rf)(double *, double),
+                            const double rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 4, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_8x32(double *storage, int segment_size, double *tvs,
+                            double *seg_vals, void (*rf)(double *, double),
+                            const double rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 8, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_16x32(double *storage, int segment_size, double *tvs,
+                             double *seg_vals, void (*rf)(double *, double),
+                             const double rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 16, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                     rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_d_32x32(double *storage, int segment_size, double *tvs,
+                             double *seg_vals, void (*rf)(double *, double),
+                             const double rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<double, 32, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                     rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_16x64(long *storage, int segment_size, long *tvs,
+                             long *seg_vals, void (*rf)(long *, long),
+                             const long rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 16, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_8x64(long *storage, int segment_size, long *tvs,
+                            long *seg_vals, void (*rf)(long *, long),
+                            const long rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 8, 64>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_4x64(long *storage, int segment_size, long *tvs,
+                            long *seg_vals, void (*rf)(long *, long),
+                            const long rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 4, 64>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_8x32(long *storage, int segment_size, long *tvs,
+                            long *seg_vals, void (*rf)(long *, long),
+                            const long rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 8, 32>(storage, segment_size, tvs, seg_vals, rf, rnv,
+                                  k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_16x32(long *storage, int segment_size, long *tvs,
+                             long *seg_vals, void (*rf)(long *, long),
+                             const long rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 16, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_l_32x32(long *storage, int segment_size, long *tvs,
+                             long *seg_vals, void (*rf)(long *, long),
+                             const long rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<long, 32, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_16x64(float *storage, int segment_size, float *tvs,
+                             float *seg_vals, void (*rf)(float *, float),
+                             const float rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 16, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_8x64(float *storage, int segment_size, float *tvs,
+                            float *seg_vals, void (*rf)(float *, float),
+                            const float rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 8, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_4x64(float *storage, int segment_size, float *tvs,
+                            float *seg_vals, void (*rf)(float *, float),
+                            const float rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 4, 64>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_8x32(float *storage, int segment_size, float *tvs,
+                            float *seg_vals, void (*rf)(float *, float),
+                            const float rnv, const uint64_t k,
+                            bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 8, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                   rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_16x32(float *storage, int segment_size, float *tvs,
+                             float *seg_vals, void (*rf)(float *, float),
+                             const float rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 16, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
+}
+_EXT_ATTR
+__kmpc_xteams_phase2_f_32x32(float *storage, int segment_size, float *tvs,
+                             float *seg_vals, void (*rf)(float *, float),
+                             const float rnv, const uint64_t k,
+                             bool is_inclusive_scan) {
+  _xteam_scan_phase2<float, 32, 32>(storage, segment_size, tvs, seg_vals, rf,
+                                    rnv, k, is_inclusive_scan);
 }
 #undef _CF
 #undef _UI
