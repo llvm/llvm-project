@@ -17,6 +17,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   pthread
    search
    setjmp
    signal
