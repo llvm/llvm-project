@@ -3560,7 +3560,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ShadowTy = getShadowTy(&I);
     Type *ElementShadowTy = cast<VectorType>(ShadowTy)->getElementType();
     auto [ShadowPtr, OriginPtr] =
-        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ false);
+        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, Align, /*isStore*/ false);
 
     Value *Shadow =
         IRB.CreateMaskedExpandLoad(ShadowTy, ShadowPtr, Align, Mask,
@@ -3588,7 +3588,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ElementShadowTy =
         getShadowTy(cast<VectorType>(Values->getType())->getElementType());
     auto [ShadowPtr, OriginPtrs] =
-        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ true);
+        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, Align, /*isStore*/ true);
 
     IRB.CreateMaskedCompressStore(Shadow, ShadowPtr, Align, Mask);
 
