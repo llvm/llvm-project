@@ -1625,6 +1625,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           region_info.SetName(name.c_str());
         } else if (name == "flags") {
           region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+          region_info.SetIsShadowStack(MemoryRegionInfo::eNo);
 
           llvm::StringRef flags = value;
           llvm::StringRef flag;
@@ -1633,10 +1634,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             std::tie(flag, flags) = flags.split(' ');
             // To account for trailing whitespace
             if (flag.size()) {
-              if (flag == "mt") {
+              if (flag == "mt")
                 region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
-                break;
-              }
+              else if (flag == "ss")
+                region_info.SetIsShadowStack(MemoryRegionInfo::eYes);
             }
           }
         } else if (name == "type") {

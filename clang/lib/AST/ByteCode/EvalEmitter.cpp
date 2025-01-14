@@ -71,6 +71,18 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
     EvalResult.setInvalid();
 
+  // Mark global variables as invalid if any diagnostic was produced.
+  if (S.hasPriorDiagnostic() && Context::shouldBeGloballyIndexed(VD)) {
+    if (auto GlobalIndex = P.getGlobal(VD)) {
+      Block *GlobalBlock = P.getGlobal(*GlobalIndex);
+      GlobalInlineDescriptor &GD =
+          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+      GD.InitState = GlobalInitState::InitializerFailed;
+      if (GlobalBlock->isInitialized())
+        GlobalBlock->invokeDtor();
+    }
+  }
+
   S.EvaluatingDecl = nullptr;
   updateGlobalTemporaries();
   return std::move(this->EvalResult);

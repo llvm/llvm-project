@@ -210,6 +210,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improve :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` to avoid incorrect check
+  results when floating point type is not ``float``, ``double`` and
+  ``long double``.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
   conversion directly by ``std::make_unique`` and ``std::make_shared``.
@@ -346,8 +351,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
 
-- Improved :doc:`performance-unnecessary-copy-initialization`
-  <clang-tidy/checks/performance/unnecessary-copy-initialization> check
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check
   to consider static member functions the same way as free functions.
 
 - Improved :doc:`readability-container-contains
