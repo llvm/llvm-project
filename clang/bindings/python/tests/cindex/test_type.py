@@ -546,7 +546,7 @@ class A
         Template<int> instance;
         int bar;
         """
-        tu = get_tu(source, lang="cpp")
+        tu = get_tu(source, lang="cpp", flags=["--target=x86_64-linux-gnu"])
         cursor = get_cursor(tu, "instance")
         cursor_type = cursor.type
         cursor_type_decl = cursor_type.get_declaration()
