@@ -588,7 +588,6 @@ bool ThreadList::WillResume() {
         if (thread_sp->SetupForResume()) {
           // You can't say "stop others" and also want yourself to be suspended.
           assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
-          run_me_only_list.AddThread(thread_sp);
           thread_to_run = thread_sp;
           if (thread_sp->ShouldRunBeforePublicStop()) {
             // This takes precedence, so if we find one of these, service it:
@@ -599,7 +598,7 @@ bool ThreadList::WillResume() {
     }
   }
 
-  if (run_me_only_list.GetSize(false) > 0) {
+  if (thread_to_run != nullptr) {
     Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning on notification of new threads while single "
@@ -615,7 +614,7 @@ bool ThreadList::WillResume() {
 
   bool need_to_resume = true;
 
-  if (run_me_only_list.GetSize(false) == 0) {
+  if (thread_to_run == nullptr) {
     // Everybody runs as they wish:
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
