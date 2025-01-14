@@ -37,6 +37,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
@@ -4906,14 +4907,16 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 
 void ASTRecordWriter::AddAttr(const Attr *A) {
   auto &Record = *this;
-  // FIXME: Clang can't handle the serialization/deserialization of
-  // preferred_name properly now. See
-  // https://github.com/llvm/llvm-project/issues/56490 for example.
-  if (!A || (isa<PreferredNameAttr>(A) &&
-             Writer->isWritingStdCXXNamedModules()))
+  if (!A)
     return Record.push_back(0);
 
   Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
+
+  auto SkipIdx = Record.size();
+  if (A->getKind() == attr::PreferredName) {
+    // Add placeholder for the size of preferred_name attribute.
+    Record.push_back(0);
+  }
 
   Record.AddIdentifierRef(A->getAttrName());
   Record.AddIdentifierRef(A->getScopeName());
@@ -4925,6 +4928,12 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   Record.push_back(A->isRegularKeywordAttribute());
 
 #include "clang/Serialization/AttrPCHWrite.inc"
+
+  if (A->getKind() == attr::PreferredName) {
+    // Record the actual size of preferred_name attribute (-1 to count the
+    // placeholder).
+    Record[SkipIdx] = Record.size() - SkipIdx - 1;
+  }
 }
 
 /// Emit the list of attributes to the specified record.

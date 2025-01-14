@@ -337,6 +337,12 @@ public:
   /// Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs);
 
+  /// Reads one attribute from the current stream position, advancing Idx.
+  Attr *readOrDeferAttr(Decl *D);
+
+  /// Reads attributes from the current stream position, advancing Idx.
+  void readOrDeferAttributes(AttrVec &Attrs, Decl *D);
+
   /// Read an BTFTypeTagAttr object.
   BTFTypeTagAttr *readBTFTypeTagAttr() {
     return cast<BTFTypeTagAttr>(readAttr());
@@ -355,6 +361,10 @@ public:
   SwitchCase *getSwitchCaseWithID(unsigned ID) {
     return Reader->getSwitchCaseWithID(ID);
   }
+
+private:
+  Attr *readOrDeferAttrImpl(Decl *D);
+  void readOrDeferAttributesImpl(AttrVec &Attrs, Decl *D);
 };
 
 /// Helper class that saves the current stream position and
