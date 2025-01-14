@@ -474,6 +474,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_EQ(CC, ISD::SETULT);
   EXPECT_TRUE(sd_match(SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(),
                                      m_SpecificCondCode(ISD::SETULT))));
+
+  SDValue UndefInt32VT = DAG->getUNDEF(Int32VT);
+  SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
+  EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
+  EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {

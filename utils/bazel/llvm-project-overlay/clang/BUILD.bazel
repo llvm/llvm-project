@@ -739,8 +739,8 @@ cc_library(
         ":basic_builtins_gen",
         ":basic_builtins_riscv_gen",
         ":basic_builtins_spirv_gen",
-        ":basic_builtins_x86_gen",
         ":basic_builtins_x86_64_gen",
+        ":basic_builtins_x86_gen",
         ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
@@ -1354,13 +1354,9 @@ cc_library(
 
 cc_library(
     name = "tooling",
-    srcs = glob(
-        [
-            "lib/Tooling/*.cpp",
-        ],
-        # Temporarily disable until we support the generated file.
-        exclude = ["lib/Tooling/NodeIntrospection.cpp"],
-    ),
+    srcs = glob([
+        "lib/Tooling/*.cpp",
+    ]),
     hdrs = glob([
         "include/clang/Tooling/*.h",
     ]),
@@ -2358,6 +2354,17 @@ cc_library(
 )
 
 cc_binary(
+    name = "apinotes-test",
+    testonly = 1,
+    srcs = ["tools/apinotes-test/APINotesTest.cpp"],
+    stamp = 0,
+    deps = [
+        ":apinotes",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "arcmt-test",
     testonly = 1,
     srcs = ["tools/arcmt-test/arcmt-test.cpp"],
@@ -2494,6 +2501,11 @@ filegroup(
 
 binary_alias(
     name = "clang++",
+    binary = ":clang",
+)
+
+binary_alias(
+    name = "clang-cl",
     binary = ":clang",
 )
 
@@ -2727,5 +2739,42 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_binary(
+    name = "clang-fuzzer-dictionary",
+    srcs = ["tools/clang-fuzzer/dictionary/dictionary.c"],
+    deps = [":basic"],
+)
+
+genrule(
+    name = "fuzzer-dictionary",
+    outs = ["fuzzer-dictionary.txt"],
+    cmd = "$(location :clang-fuzzer-dictionary) > $@",
+    tools = [":clang-fuzzer-dictionary"],
+)
+
+cc_library(
+    name = "handle-cxx",
+    srcs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.cpp"],
+    hdrs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.h"],
+    deps = [
+        ":codegen",
+        ":frontend",
+        ":lex",
+        ":tooling",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "clang-fuzzer-initialize",
+    srcs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.cpp"],
+    hdrs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.h"],
+    deps = [
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )

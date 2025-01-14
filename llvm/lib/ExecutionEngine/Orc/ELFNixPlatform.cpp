@@ -40,34 +40,10 @@ getArgDataBufferType(const ArgTs &...Args) {
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(ELFNixPlatform &MOP,
                                                         std::string Name) {
-  unsigned PointerSize;
-  llvm::endianness Endianness;
-  const auto &TT = MOP.getExecutionSession().getTargetTriple();
-
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::aarch64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::ppc64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::big;
-    break;
-  case Triple::ppc64le:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  default:
-    llvm_unreachable("Unrecognized architecture");
-  }
-
+  auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
-      std::move(Name), MOP.getExecutionSession().getSymbolStringPool(), TT,
-      PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+      std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -156,30 +132,22 @@ public:
   StringRef getName() const override { return "DSOHandleMU"; }
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    unsigned PointerSize;
-    llvm::endianness Endianness;
-    jitlink::Edge::Kind EdgeKind;
-    const auto &TT = ENP.getExecutionSession().getTargetTriple();
 
-    switch (TT.getArch()) {
+    auto &ES = ENP.getExecutionSession();
+
+    jitlink::Edge::Kind EdgeKind;
+
+    switch (ES.getTargetTriple().getArch()) {
     case Triple::x86_64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::x86_64::Pointer64;
       break;
     case Triple::aarch64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::aarch64::Pointer64;
       break;
     case Triple::ppc64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::big;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     case Triple::ppc64le:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     default:
@@ -188,13 +156,13 @@ public:
 
     // void *__dso_handle = &__dso_handle;
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<DSOHandleMU>", ENP.getExecutionSession().getSymbolStringPool(), TT,
-        PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+        "<DSOHandleMU>", ES.getSymbolStringPool(), ES.getTargetTriple(),
+        SubtargetFeatures(), jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
         G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
-        DSOHandleSection, getDSOHandleContent(PointerSize), orc::ExecutorAddr(),
-        8, 0);
+        DSOHandleSection, getDSOHandleContent(G->getPointerSize()),
+        orc::ExecutorAddr(), 8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(
         DSOHandleBlock, 0, *R->getInitializerSymbol(), DSOHandleBlock.getSize(),
         jitlink::Linkage::Strong, jitlink::Scope::Default, false, true);

@@ -353,7 +353,7 @@ struct MachineVerifier {
                        LaneBitmask LaneMask = LaneBitmask::getNone());
 
   void verifyStackFrame();
-  // Check that the stack protector is the top-most object in the stack.
+  /// Check that the stack protector is the top-most object in the stack.
   void verifyStackProtector();
 
   void verifySlotIndexes() const;
@@ -4054,26 +4054,28 @@ void MachineVerifier::verifyStackProtector() {
   const TargetFrameLowering &TFI = *MF->getSubtarget().getFrameLowering();
   bool StackGrowsDown =
       TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
-  // Collect the frame indices of the callee-saved registers which are spilled
-  // to the stack. These are the registers that are stored above the stack
-  // protector.
-  SmallSet<unsigned, 4> CalleeSavedFrameIndices;
-  if (MFI.isCalleeSavedInfoValid()) {
-    for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
-      if (!Info.isSpilledToReg())
-        CalleeSavedFrameIndices.insert(Info.getFrameIdx());
-    }
-  }
   unsigned FI = MFI.getStackProtectorIndex();
   int64_t SPStart = MFI.getObjectOffset(FI);
   int64_t SPEnd = SPStart + MFI.getObjectSize(FI);
   for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     if (I == FI)
       continue;
-    // Variable-sized objects do not have a fixed offset.
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+    // FIXME: Skip non-default stack objects, as some targets may place them
+    // above the stack protector. This is a workaround for the fact that
+    // backends such as AArch64 may place SVE stack objects *above* the stack
+    // protector.
+    if (MFI.getStackID(I) != TargetStackID::Default)
+      continue;
+    // Skip variable-sized objects because they do not have a fixed offset.
     if (MFI.isVariableSizedObjectIndex(I))
       continue;
-    if (CalleeSavedFrameIndices.contains(I))
+    // FIXME: Skip spill slots which may be allocated above the stack protector.
+    // Ideally this would only skip callee-saved registers, but we don't have
+    // that information here. For example, spill-slots used for scavenging are
+    // not described in CalleeSavedInfo.
+    if (MFI.isSpillSlotObjectIndex(I))
       continue;
     int64_t ObjStart = MFI.getObjectOffset(I);
     int64_t ObjEnd = ObjStart + MFI.getObjectSize(I);

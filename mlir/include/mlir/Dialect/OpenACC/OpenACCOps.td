@@ -445,7 +445,10 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
     }
     /// Return true if the op has the async attribute for the given device_type.
     bool hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-      for (auto attr : getAsyncOnlyAttr()) {
+      mlir::ArrayAttr asyncOnly = getAsyncOnlyAttr();
+      if (!asyncOnly)
+        return false;
+      for (auto attr : asyncOnly) {
         auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
         if (deviceTypeAttr.getValue() == deviceType)
           return true;
@@ -817,7 +820,10 @@ class OpenACC_DataExitOp<string mnemonic, string clause, string extraDescription
     }
     /// Return true if the op has the async attribute for the given device_type.
     bool hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-      for (auto attr : getAsyncOnlyAttr()) {
+      mlir::ArrayAttr asyncOnly = getAsyncOnlyAttr();
+      if (!asyncOnly)
+        return false;
+      for (auto attr : asyncOnly) {
         auto deviceTypeAttr = mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr);
         if (deviceTypeAttr.getValue() == deviceType)
           return true;

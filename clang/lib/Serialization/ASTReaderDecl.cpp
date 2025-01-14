@@ -451,9 +451,8 @@ public:
   void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
   void VisitOMPRequiresDecl(OMPRequiresDecl *D);
   void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
-  };
-
-  } // namespace clang
+};
+} // namespace clang
 
 namespace {
 
@@ -833,6 +832,7 @@ RedeclarableResult ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
       RecordDeclBits.getNextBit());
   RD->setHasNonTrivialToPrimitiveDestructCUnion(RecordDeclBits.getNextBit());
   RD->setHasNonTrivialToPrimitiveCopyCUnion(RecordDeclBits.getNextBit());
+  RD->setHasUninitializedExplicitInitFields(RecordDeclBits.getNextBit());
   RD->setParamDestroyedInCallee(RecordDeclBits.getNextBit());
   RD->setArgPassingRestrictions(
       (RecordArgPassingKind)RecordDeclBits.getNextBits(/*Width=*/2));

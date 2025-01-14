@@ -566,13 +566,13 @@ MaybeExtentExpr GetExtent(const Subscript &subscript, const NamedEntity &base,
                 MaybeExtentExpr{triplet.stride()});
           },
           [&](const IndirectSubscriptIntegerExpr &subs) -> MaybeExtentExpr {
-            if (auto shape{GetShape(subs.value())}) {
-              if (GetRank(*shape) > 0) {
-                CHECK(GetRank(*shape) == 1); // vector-valued subscript
-                return std::move(shape->at(0));
-              }
+            if (auto shape{GetShape(subs.value())};
+                shape && GetRank(*shape) == 1) {
+              // vector-valued subscript
+              return std::move(shape->at(0));
+            } else {
+              return std::nullopt;
             }
-            return std::nullopt;
           },
       },
       subscript.u);

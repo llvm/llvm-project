@@ -44,7 +44,7 @@ inline constexpr bool is_same_v = is_same<T, U>::value;
 
 template <typename T> struct is_floating_point {
   inline static constexpr bool value =
-      is_same_v<remove_cv<T>, float> || is_same_v<remove_cv<T>, double>;
+      is_same_v<remove_cv_t<T>, float> || is_same_v<remove_cv_t<T>, double>;
 };
 template <typename T>
 inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
