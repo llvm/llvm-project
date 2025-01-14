@@ -1774,9 +1774,9 @@ InstructionCost X86TTIImpl::getShuffleCost(
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
             },
-            [this, SingleOpTy, CostKind, &Cost](ArrayRef<int> RegMask,
-                                                unsigned /*Unused*/,
-                                                unsigned /*Unused*/) {
+            [this, SingleOpTy, CostKind,
+             &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
+                    unsigned /*Unused*/, bool /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                      CostKind, 0, nullptr);
             });
