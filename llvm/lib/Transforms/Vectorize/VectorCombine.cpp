@@ -1639,8 +1639,12 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
 
   unsigned NumOpElts = Op0Ty->getNumElements();
-  bool IsIdentity0 = ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
-  bool IsIdentity1 = ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
+  bool IsIdentity0 =
+      all_of(NewMask0, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
+      ShuffleVectorInst::isIdentityMask(NewMask0, NumOpElts);
+  bool IsIdentity1 =
+      all_of(NewMask1, [NumOpElts](int M) { return M < (int)NumOpElts; }) &&
+      ShuffleVectorInst::isIdentityMask(NewMask1, NumOpElts);
 
   // Try to merge shuffles across the binop if the new shuffles are not costly.
   InstructionCost OldCost =
