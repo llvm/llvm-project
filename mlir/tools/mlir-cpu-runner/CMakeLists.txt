@@ -26,10 +26,3 @@ target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRExecutionEngine
   MLIRJitRunner
   )
-target_link_options(mlir-cpu-runner
-  PRIVATE
-    # On Linux, disable re-export of any static linked libraries that came
-    # through. This prevents our LLVM build from interfering with the version of
-    # LLVM included in certain graphics drivers.
-    $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>
-)
