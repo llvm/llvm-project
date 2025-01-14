@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/BuildID.h"
-#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
@@ -96,8 +95,7 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
 /// found, uses the UniqueKey for the local cache file.
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
-    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout,
-    llvm::CachePruningPolicy policy);
+    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout);
 
 class ThreadPoolInterface;
 

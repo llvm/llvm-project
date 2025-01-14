@@ -391,7 +391,9 @@ public:
 };
 
 template <size_t _Ip, class _Hp>
-class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
+class __tuple_leaf<_Ip, _Hp, true> : private __remove_cv_t<_Hp> {
+  typedef __remove_cv_t<_Hp> _BaseT;
+
 public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
@@ -402,29 +404,29 @@ public:
 
   template <class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a)
-      : _Hp(allocator_arg_t(), __a) {}
+      : _BaseT(allocator_arg_t(), __a) {}
 
   template <class _Alloc>
-  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : _Hp(__a) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a) : _BaseT(__a) {}
 
   template <class _Tp,
             __enable_if_t< _And< _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>, is_constructible<_Hp, _Tp> >::value,
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_leaf(_Tp&& __t) noexcept(is_nothrow_constructible<_Hp, _Tp>::value)
-      : _Hp(std::forward<_Tp>(__t)) {}
+      : _BaseT(std::forward<_Tp>(__t)) {}
 
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
-      : _Hp(std::forward<_Tp>(__t)) {}
+      : _BaseT(std::forward<_Tp>(__t)) {}
 
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a, _Tp&& __t)
-      : _Hp(allocator_arg_t(), __a, std::forward<_Tp>(__t)) {}
+      : _BaseT(allocator_arg_t(), __a, std::forward<_Tp>(__t)) {}
 
   template <class _Tp, class _Alloc>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a, _Tp&& __t)
-      : _Hp(std::forward<_Tp>(__t), __a) {}
+      : _BaseT(std::forward<_Tp>(__t), __a) {}
 
   __tuple_leaf(__tuple_leaf const&) = default;
   __tuple_leaf(__tuple_leaf&&)      = default;
