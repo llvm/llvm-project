@@ -910,7 +910,9 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
   }
 
   void VisitEnumSelect(EnumSelectPiece *P) {
-    // For now, document this as if it were a 'select'.
+    // Document this as if it were a 'select', which properly prints all of the
+    // options correctly in a readable/reasonable manner. There isn't really
+    // anything valuable we could add to readers here.
     VisitSelect(P);
   }
 
@@ -1120,7 +1122,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     };
 
     if (ModType != MT_EnumSelect && Text[0] == '<')
-      Builder.PrintFatalError("modifier '<' syntax not valid with " + Modifier);
+      Builder.PrintFatalError("modifier '<' syntax not valid with %" +
+                              Modifier);
 
     switch (ModType) {
     case MT_Unknown:
