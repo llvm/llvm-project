@@ -1102,8 +1102,8 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   const int numSrcElemsPerByte = 8 / srcElemBitwidth;
   if ((subByteVecType.getShape().back() % numSrcElemsPerByte) != 0)
     return rewriter.notifyMatchFailure(
-        op, "the trailing dimension of subByteVecType must be a multiple of "
-            "the srcElemBitwidth / 8");
+        op, "the trailing dimension of the input vector of sub-bytes must be a multiple of "
+            "8 / <sub-byte-width>");
 
   return success();
 }
