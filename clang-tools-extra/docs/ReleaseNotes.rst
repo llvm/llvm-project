@@ -210,6 +210,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improve :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` to avoid incorrect check
+  results when floating point type is not ``float``, ``double`` and
+  ``long double``.
+
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
   conversion directly by ``std::make_unique`` and ``std::make_shared``.
