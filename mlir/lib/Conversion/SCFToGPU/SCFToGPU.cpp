@@ -656,14 +656,17 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
       // Convert scf.reduction op
       auto parentLoop = op->getParentOfType<ParallelOp>();
-      if (!parentLoop || op->getOperands().size() != 1) {
+      if (!parentLoop || op->getOperands().size() != 1)
         return failure();
-      }
       auto operand = op->getOperands().front();
       auto newValue = cloningMap.lookupOrNull(operand);
-      if (!newValue) {
+      if (!newValue || !operand.getType().isSignlessIntOrFloat())
         return failure();
-      }
+      // Ensure reduction region is isolated from above.
+      llvm::SetVector<Value> externalValues;
+      getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
+      if (externalValues.size())
+        return failure();
       // Replace by gpu.all_reduce.
       auto gpuRedOp = rewriter.create<gpu::AllReduceOp>(loc, newValue);
       cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
