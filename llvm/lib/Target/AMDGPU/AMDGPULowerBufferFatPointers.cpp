@@ -1074,18 +1074,6 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
   Args.push_back(IRB.getInt32(0));
 
   uint32_t Aux = 0;
-  bool IsInvariant =
-      (isa<LoadInst>(I) && I->getMetadata(LLVMContext::MD_invariant_load));
-  bool IsNonTemporal = I->getMetadata(LLVMContext::MD_nontemporal);
-  // Atomic loads and stores need glc, atomic read-modify-write doesn't.
-  bool IsOneWayAtomic =
-      !isa<AtomicRMWInst>(I) && Order != AtomicOrdering::NotAtomic;
-  if (IsOneWayAtomic)
-    Aux |= AMDGPU::CPol::GLC;
-  if (IsNonTemporal && !IsInvariant)
-    Aux |= AMDGPU::CPol::SLC;
-  if (isa<LoadInst>(I) && ST->getGeneration() == AMDGPUSubtarget::GFX10)
-    Aux |= (Aux & AMDGPU::CPol::GLC ? AMDGPU::CPol::DLC : 0);
   if (IsVolatile)
     Aux |= AMDGPU::CPol::VOLATILE;
   Args.push_back(IRB.getInt32(Aux));
