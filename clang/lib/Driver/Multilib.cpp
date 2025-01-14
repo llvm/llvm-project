@@ -95,7 +95,7 @@ void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
 static void DiagnoseUnclaimedMultilibCustomFlags(
     const Driver &D, const SmallVector<StringRef> &UnclaimedCustomFlagValues,
-    const SmallVector<custom_flag::DeclarationPtr> &CustomFlagDecls) {
+    const SmallVector<custom_flag::Declaration> &CustomFlagDecls) {
   struct EditDistanceInfo {
     StringRef FlagValue;
     unsigned EditDistance;
@@ -105,7 +105,7 @@ static void DiagnoseUnclaimedMultilibCustomFlags(
   for (StringRef Unclaimed : UnclaimedCustomFlagValues) {
     std::optional<EditDistanceInfo> BestCandidate;
     for (const auto &Decl : CustomFlagDecls) {
-      for (const auto &Value : Decl->ValueList) {
+      for (const auto &Value : Decl.ValueList) {
         const std::string &FlagValueName = Value.Name;
         unsigned EditDistance =
             Unclaimed.edit_distance(FlagValueName, /*AllowReplacements=*/true,
@@ -136,8 +136,8 @@ public:
   template <typename It>
   ValueNameToDetailMap(It FlagDeclsBegin, It FlagDeclsEnd) {
     for (auto DeclIt = FlagDeclsBegin; DeclIt != FlagDeclsEnd; ++DeclIt) {
-      const DeclarationPtr &Decl = *DeclIt;
-      for (const auto &Value : Decl->ValueList)
+      const Declaration &Decl = *DeclIt;
+      for (const auto &Value : Decl.ValueList)
         Mapping.emplace_back(Value.Name, &Value);
     }
   }
@@ -186,7 +186,7 @@ MultilibSet::processCustomFlags(const Driver &D,
   // declaration (in this case, the last one wins), and secondly, to detect
   // which declarations had no value passed in (in this case, the default value
   // is selected).
-  llvm::SmallSet<custom_flag::DeclarationPtr, 32> TriggeredCustomFlagDecls;
+  llvm::SmallPtrSet<custom_flag::Declaration *, 32> TriggeredCustomFlagDecls;
 
   // Detect multiple values for the same flag declaration. Last one wins.
   for (auto *CustomFlagValue : llvm::reverse(ClaimedCustomFlagValues)) {
@@ -200,10 +200,10 @@ MultilibSet::processCustomFlags(const Driver &D,
 
   // Detect flag declarations with no value passed in. Select default value.
   for (const auto &Decl : CustomFlagDecls) {
-    if (TriggeredCustomFlagDecls.contains(Decl))
+    if (TriggeredCustomFlagDecls.contains(&Decl))
       continue;
-    custom_flag::ValueDetail &CustomFlagValue =
-        Decl->ValueList[*Decl->DefaultValueIdx];
+    const custom_flag::ValueDetail &CustomFlagValue =
+        Decl.ValueList[*Decl.DefaultValueIdx];
     Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue.Name);
     if (CustomFlagValue.MacroDefines)
       MacroDefines.append(CustomFlagValue.MacroDefines->begin(),
