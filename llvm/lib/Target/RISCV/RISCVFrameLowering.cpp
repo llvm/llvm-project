@@ -1595,8 +1595,8 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   ScavSlotsNum = std::max(ScavSlotsNum, getScavSlotsNumForRVV(MF));
 
   for (unsigned I = 0; I < ScavSlotsNum; I++) {
-    int FI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
-                                   RegInfo->getSpillAlign(*RC), false);
+    int FI = MFI.CreateSpillStackObject(RegInfo->getSpillSize(*RC),
+                                        RegInfo->getSpillAlign(*RC));
     RS->addScavengingFrameIndex(FI);
 
     if (IsLargeFunction && RVFI->getBranchRelaxationScratchFrameIndex() == -1)
