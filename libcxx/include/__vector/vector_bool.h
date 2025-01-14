@@ -558,6 +558,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(size_type __n, bool __x) {
+  _LIBCPP_ASSERT_INTERNAL(__n > 0, "This function expects __n > 0");
   iterator __old_end = end();
   this->__size_ += __n;
   this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
@@ -568,6 +569,7 @@ template <class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
+  _LIBCPP_ASSERT_INTERNAL(__n > 0, "This function expects __n > 0");
   iterator __old_end = end();
   this->__size_ += __n;
   this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
