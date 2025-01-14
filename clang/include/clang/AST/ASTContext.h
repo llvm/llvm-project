@@ -1726,6 +1726,12 @@ public:
 
   QualType getEnumType(const EnumDecl *Decl) const;
 
+  /// Compute BestType and BestPromotionType for an enum based on the highest
+  /// number of negative and positive bits of its elements.
+  bool computeBestEnumTypes(bool isPacked, unsigned NumNegativeBits,
+                            unsigned NumPositiveBits, QualType &BestType,
+                            QualType &BestPromotionType);
+
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
