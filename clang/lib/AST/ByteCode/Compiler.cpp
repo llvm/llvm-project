@@ -4805,12 +4805,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
