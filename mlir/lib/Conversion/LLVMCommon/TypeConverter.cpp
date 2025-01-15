@@ -48,7 +48,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
 static bool isBarePointer(ValueRange values) {
   return values.size() == 1 &&
          isa<LLVM::LLVMPointerType>(values.front().getType());
-};
+}
 
 /// Pack SSA values into an unranked memref descriptor struct.
 static Value packUnrankedMemRefDesc(OpBuilder &builder,
@@ -85,7 +85,7 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
                                            UnrankedMemRefType resultType,
                                            ValueRange inputs, Location loc,
                                            const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type
+  // A source materialization must return a value of type
   // `resultType`, so insert a cast from the memref descriptor type
   // (!llvm.struct) to the original memref type.
   Value packed =
@@ -94,14 +94,14 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
     return Value();
   return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
       .getResult(0);
-};
+}
 
 /// MemRef descriptor elements -> MemRefType
 static Value rankedMemRefMaterialization(OpBuilder &builder,
                                          MemRefType resultType,
                                          ValueRange inputs, Location loc,
                                          const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type `resultType`,
+  // A source materialization must return a value of type `resultType`,
   // so insert a cast from the memref descriptor type (!llvm.struct) to the
   // original memref type.
   Value packed =
@@ -234,19 +234,9 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         .getResult(0);
   });
 
-  // Argument materializations convert from the new block argument types
+  // Source materializations convert from the new block argument types
   // (multiple SSA values that make up a memref descriptor) back to the
   // original block argument type.
-  addArgumentMaterialization([&](OpBuilder &builder,
-                                 UnrankedMemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return unrankedMemRefMaterialization(builder, resultType, inputs, loc,
-                                         *this);
-  });
-  addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return rankedMemRefMaterialization(builder, resultType, inputs, loc, *this);
-  });
   addSourceMaterialization([&](OpBuilder &builder,
                                UnrankedMemRefType resultType, ValueRange inputs,
                                Location loc) {
@@ -304,13 +294,21 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
+  // Valid LLVM float types are used directly.
+  if (LLVM::isCompatibleType(type))
+    return type;
+
+  // F4, F6, F8 types are converted to integer types with the same bit width.
   if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
       type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
       type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
       type.isFloat4E2M1FN() || type.isFloat6E2M3FN() || type.isFloat6E3M2FN() ||
       type.isFloat8E8M0FNU())
     return IntegerType::get(&getContext(), type.getWidth());
-  return type;
+
+  // Other floating-point types: A custom type conversion rule must be
+  // specified by the user.
+  return Type();
 }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number

@@ -2335,8 +2335,6 @@ extern const unsigned RMD160_return_length;
 extern const unsigned MD5_CTX_sz;
 extern const unsigned MD5_return_length;
 
-extern const unsigned fpos_t_sz;
-
 extern const unsigned MD2_CTX_sz;
 extern const unsigned MD2_return_length;
 

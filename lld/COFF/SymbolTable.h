@@ -51,8 +51,6 @@ public:
               llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
       : ctx(c), machine(machine) {}
 
-  void addFile(InputFile *file);
-
   // Emit errors for symbols that cannot be resolved.
   void reportUnresolvable();
 
@@ -86,6 +84,9 @@ public:
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
+
+  // Creates an Undefined symbol and marks it as live.
+  Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
 
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);
@@ -138,6 +139,10 @@ public:
       callback(pair.second);
   }
 
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
@@ -151,7 +156,6 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
-  bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
 };

@@ -153,6 +153,83 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
       makeEntityList(std::move(names)));
 }
 
+// --- Parsers for context traits -------------------------------------
+
+static std::string nameToString(Name &&name) { return name.ToString(); }
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyName>( //
+    (space >> charLiteralConstantWithoutKind) ||
+    applyFunction(nameToString, Parser<Name>{}))))
+
+TYPE_PARSER(sourced(construct<OmpTraitScore>( //
+    "SCORE" >> parenthesized(scalarIntExpr))))
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyExtension::ExtensionValue>(
+    // Parse nested extension first.
+    construct<OmpTraitPropertyExtension::ExtensionValue>(
+        indirect(Parser<OmpTraitPropertyExtension>{})) ||
+    construct<OmpTraitPropertyExtension::ExtensionValue>(
+        Parser<OmpTraitPropertyName>{}) ||
+    construct<OmpTraitPropertyExtension::ExtensionValue>(scalarExpr))))
+
+TYPE_PARSER(sourced(construct<OmpTraitPropertyExtension>( //
+    Parser<OmpTraitPropertyName>{},
+    parenthesized(nonemptySeparated(
+        Parser<OmpTraitPropertyExtension::ExtensionValue>{}, ","_tok)))))
+
+TYPE_PARSER(sourced(construct<OmpTraitProperty>(
+    // Try clause first, then extension before OmpTraitPropertyName.
+    construct<OmpTraitProperty>(indirect(Parser<OmpClause>{})) ||
+    construct<OmpTraitProperty>(Parser<OmpTraitPropertyExtension>{}) ||
+    construct<OmpTraitProperty>(Parser<OmpTraitPropertyName>{}) ||
+    construct<OmpTraitProperty>(scalarExpr))))
+
+TYPE_PARSER(construct<OmpTraitSelectorName::Value>(
+    "ARCH" >> pure(OmpTraitSelectorName::Value::Arch) ||
+    "ATOMIC_DEFAULT_MEM_ORDER" >>
+        pure(OmpTraitSelectorName::Value::Atomic_Default_Mem_Order) ||
+    "CONDITION" >> pure(OmpTraitSelectorName::Value::Condition) ||
+    "DEVICE_NUM" >> pure(OmpTraitSelectorName::Value::Device_Num) ||
+    "EXTENSION" >> pure(OmpTraitSelectorName::Value::Extension) ||
+    "ISA" >> pure(OmpTraitSelectorName::Value::Isa) ||
+    "KIND" >> pure(OmpTraitSelectorName::Value::Kind) ||
+    "REQUIRES" >> pure(OmpTraitSelectorName::Value::Requires) ||
+    "SIMD" >> pure(OmpTraitSelectorName::Value::Simd) ||
+    "UID" >> pure(OmpTraitSelectorName::Value::Uid) ||
+    "VENDOR" >> pure(OmpTraitSelectorName::Value::Vendor)))
+
+TYPE_PARSER(sourced(construct<OmpTraitSelectorName>(
+    // Parse predefined names first (because of SIMD).
+    construct<OmpTraitSelectorName>(Parser<OmpTraitSelectorName::Value>{}) ||
+    construct<OmpTraitSelectorName>(OmpDirectiveNameParser{}))))
+
+TYPE_PARSER(construct<OmpTraitSelector::Properties>(
+    maybe(Parser<OmpTraitScore>{} / ":"_tok),
+    nonemptySeparated(Parser<OmpTraitProperty>{}, ","_tok)))
+
+TYPE_PARSER(sourced(construct<OmpTraitSelector>( //
+    Parser<OmpTraitSelectorName>{}, //
+    maybe(parenthesized(Parser<OmpTraitSelector::Properties>{})))))
+
+TYPE_PARSER(construct<OmpTraitSetSelectorName::Value>(
+    "CONSTRUCT" >> pure(OmpTraitSetSelectorName::Value::Construct) ||
+    "DEVICE" >> pure(OmpTraitSetSelectorName::Value::Device) ||
+    "IMPLEMENTATION" >> pure(OmpTraitSetSelectorName::Value::Implementation) ||
+    "TARGET_DEVICE" >> pure(OmpTraitSetSelectorName::Value::Target_Device) ||
+    "USER" >> pure(OmpTraitSetSelectorName::Value::User)))
+
+TYPE_PARSER(sourced(construct<OmpTraitSetSelectorName>(
+    Parser<OmpTraitSetSelectorName::Value>{})))
+
+TYPE_PARSER(sourced(construct<OmpTraitSetSelector>( //
+    Parser<OmpTraitSetSelectorName>{},
+    "=" >> braced(nonemptySeparated(Parser<OmpTraitSelector>{}, ","_tok)))))
+
+TYPE_PARSER(sourced(construct<OmpContextSelectorSpecification>(
+    nonemptySeparated(Parser<OmpTraitSetSelector>{}, ","_tok))))
+
+// Parser<OmpContextSelector> == Parser<traits::OmpContextSelectorSpecification>
+
 // --- Parsers for clause modifiers -----------------------------------
 
 TYPE_PARSER(construct<OmpAlignment>(scalarIntExpr))
@@ -567,6 +644,8 @@ TYPE_PARSER(construct<OmpBindClause>(
     "TEAMS" >> pure(OmpBindClause::Binding::Teams) ||
     "THREAD" >> pure(OmpBindClause::Binding::Thread)))
 
+TYPE_PARSER(construct<OmpAlignClause>(scalarIntExpr))
+
 TYPE_PARSER(construct<OmpAtClause>(
     "EXECUTION" >> pure(OmpAtClause::ActionTime::Execution) ||
     "COMPILATION" >> pure(OmpAtClause::ActionTime::Compilation)))
@@ -582,6 +661,8 @@ TYPE_PARSER(
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "AFFINITY" >> construct<OmpClause>(construct<OmpClause::Affinity>(
                       parenthesized(Parser<OmpAffinityClause>{}))) ||
+    "ALIGN" >> construct<OmpClause>(construct<OmpClause::Align>(
+                   parenthesized(Parser<OmpAlignClause>{}))) ||
     "ALIGNED" >> construct<OmpClause>(construct<OmpClause::Aligned>(
                      parenthesized(Parser<OmpAlignedClause>{}))) ||
     "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(
@@ -737,8 +818,19 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OmpClauseList>(
     many(maybe(","_tok) >> sourced(Parser<OmpClause>{})))))
 
-// 2.1 (variable | /common-block | array-sections)
+// 2.1 (variable | /common-block/ | array-sections)
 TYPE_PARSER(construct<OmpObjectList>(nonemptyList(Parser<OmpObject>{})))
+
+TYPE_PARSER(sourced(construct<OmpErrorDirective>(
+    verbatim("ERROR"_tok), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
+
+TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
+    sourced(construct<OpenMPUtilityConstruct>(
+        sourced(Parser<OmpErrorDirective>{}))) ||
+    sourced(construct<OpenMPUtilityConstruct>(
+        sourced(Parser<OmpNothingDirective>{}))))))
 
 // Omp directives enclosing do loop
 TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
@@ -1027,9 +1119,6 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
-TYPE_PARSER(sourced(construct<OpenMPErrorConstruct>(
-    verbatim("ERROR"_tok), Parser<OmpClauseList>{})))
-
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
@@ -1082,7 +1171,9 @@ TYPE_PARSER(startOmpLine >>
             construct<OpenMPDeclarativeConstruct>(
                 Parser<OpenMPRequiresConstruct>{}) ||
             construct<OpenMPDeclarativeConstruct>(
-                Parser<OpenMPThreadprivate>{})) /
+                Parser<OpenMPThreadprivate>{}) ||
+            construct<OpenMPDeclarativeConstruct>(
+                Parser<OpenMPUtilityConstruct>{})) /
             endOmpLine))
 
 // Block Construct
@@ -1127,7 +1218,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPErrorConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPUtilityConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),

@@ -15,6 +15,8 @@
 ; CHECK:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
 ; CHECK:   experimental                     - Experimental intrinsics.
 ; CHECK:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK:   experimental-sdext               - 'Sdext' (External debugger).
+; CHECK:   experimental-sdtrig              - 'Sdtrig' (Debugger triggers).
 ; CHECK:   experimental-smctr               - 'Smctr' (Control Transfer Records Machine Level).
 ; CHECK:   experimental-ssctr               - 'Ssctr' (Control Transfer Records Supervisor Level).
 ; CHECK:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).

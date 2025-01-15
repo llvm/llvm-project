@@ -28,11 +28,6 @@ namespace hlfir {
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
 
-static llvm::cl::opt<bool>
-    simplifySum("flang-simplify-hlfir-sum",
-                llvm::cl::desc("Expand hlfir.sum into an inline sequence"),
-                llvm::cl::init(true));
-
 namespace {
 
 class TransposeAsElementalConversion
@@ -109,9 +104,6 @@ public:
   llvm::LogicalResult
   matchAndRewrite(hlfir::SumOp sum,
                   mlir::PatternRewriter &rewriter) const override {
-    if (!simplifySum)
-      return rewriter.notifyMatchFailure(sum, "SUM simplification is disabled");
-
     hlfir::Entity array = hlfir::Entity{sum.getArray()};
     bool isTotalReduction = hlfir::Entity{sum}.getRank() == 0;
     mlir::Value dim = sum.getDim();

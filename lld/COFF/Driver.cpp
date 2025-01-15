@@ -189,6 +189,71 @@ bool LinkerDriver::findUnderscoreMangle(StringRef sym) {
   return s && !isa<Undefined>(s);
 }
 
+static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
+  if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
+    return true;
+  switch (ctx.config.machine) {
+  case ARM64:
+    return mt == ARM64 || mt == ARM64X;
+  case ARM64EC:
+    return isArm64EC(mt) || mt == AMD64;
+  case ARM64X:
+    return isAnyArm64(mt) || mt == AMD64;
+  case IMAGE_FILE_MACHINE_UNKNOWN:
+    return true;
+  default:
+    return ctx.config.machine == mt;
+  }
+}
+
+void LinkerDriver::addFile(InputFile *file) {
+  Log(ctx) << "Reading " << toString(file);
+  if (file->lazy) {
+    if (auto *f = dyn_cast<BitcodeFile>(file))
+      f->parseLazy();
+    else
+      cast<ObjFile>(file)->parseLazy();
+  } else {
+    file->parse();
+    if (auto *f = dyn_cast<ObjFile>(file)) {
+      ctx.objFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      if (ltoCompilationDone) {
+        Err(ctx) << "LTO object file " << toString(file)
+                 << " linked in after "
+                    "doing LTO compilation.";
+      }
+      ctx.bitcodeFileInstances.push_back(f);
+    } else if (auto *f = dyn_cast<ImportFile>(file)) {
+      ctx.importFileInstances.push_back(f);
+    }
+  }
+
+  MachineTypes mt = file->getMachineType();
+  // The ARM64EC target must be explicitly specified and cannot be inferred.
+  if (mt == ARM64EC &&
+      (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN ||
+       (ctx.config.machineInferred &&
+        (ctx.config.machine == ARM64 || ctx.config.machine == AMD64)))) {
+    Err(ctx) << toString(file)
+             << ": machine type arm64ec is ambiguous and cannot be "
+                "inferred, use /machine:arm64ec or /machine:arm64x";
+    return;
+  }
+  if (!compatibleMachineType(ctx, mt)) {
+    Err(ctx) << toString(file) << ": machine type " << machineToStr(mt)
+             << " conflicts with " << machineToStr(ctx.config.machine);
+    return;
+  }
+  if (ctx.config.machine == IMAGE_FILE_MACHINE_UNKNOWN &&
+      mt != IMAGE_FILE_MACHINE_UNKNOWN) {
+    ctx.config.machineInferred = true;
+    setMachine(mt);
+  }
+
+  parseDirectives(file);
+}
+
 MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   MemoryBufferRef mbref = *mb;
   make<std::unique_ptr<MemoryBuffer>>(std::move(mb)); // take ownership
@@ -222,17 +287,17 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
         addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
-    ctx.symtab.addFile(make<ArchiveFile>(ctx, mbref));
+    addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
-    ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
+    addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
-    ctx.symtab.addFile(ObjFile::create(ctx, mbref, lazy));
+    addFile(ObjFile::create(ctx, mbref, lazy));
     break;
   case file_magic::pdb:
-    ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
+    addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
     Err(ctx) << filename
@@ -240,7 +305,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      ctx.symtab.addFile(make<DLLFile>(ctx.symtab, mbref));
+      addFile(make<DLLFile>(ctx.symtab, mbref));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
@@ -306,7 +371,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   if (magic == file_magic::coff_import_library) {
     InputFile *imp = make<ImportFile>(ctx, mb);
     imp->parentName = parentName;
-    ctx.symtab.addFile(imp);
+    addFile(imp);
     return;
   }
 
@@ -326,7 +391,7 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   }
 
   obj->parentName = parentName;
-  ctx.symtab.addFile(obj);
+  addFile(obj);
   Log(ctx) << "Loaded " << obj << " for " << symName;
 }
 
@@ -414,7 +479,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
 
   // Handle /include: in bulk.
   for (StringRef inc : directives.includes)
-    addUndefined(inc);
+    file->symtab.addGCRoot(inc);
 
   // Handle /exclude-symbols: in bulk.
   for (StringRef e : directives.excludes) {
@@ -440,13 +505,13 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      ctx.config.entry = addUndefined(mangle(arg->getValue()), true);
+      ctx.config.entry = file->symtab.addGCRoot(mangle(arg->getValue()), true);
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
       break;
     case OPT_incl:
-      addUndefined(arg->getValue());
+      file->symtab.addGCRoot(arg->getValue());
       break;
     case OPT_manifestdependency:
       ctx.config.manifestDependencies.insert(arg->getValue());
@@ -740,35 +805,6 @@ void LinkerDriver::addLibSearchPaths() {
   }
 }
 
-Symbol *LinkerDriver::addUndefined(StringRef name, bool aliasEC) {
-  Symbol *b = ctx.symtab.addUndefined(name);
-  if (!b->isGCRoot) {
-    b->isGCRoot = true;
-    ctx.config.gcroot.push_back(b);
-  }
-
-  // On ARM64EC, a symbol may be defined in either its mangled or demangled form
-  // (or both). Define an anti-dependency symbol that binds both forms, similar
-  // to how compiler-generated code references external functions.
-  if (aliasEC && isArm64EC(ctx.config.machine)) {
-    if (std::optional<std::string> mangledName =
-            getArm64ECMangledFunctionName(name)) {
-      auto u = dyn_cast<Undefined>(b);
-      if (u && !u->weakAlias) {
-        Symbol *t = ctx.symtab.addUndefined(saver().save(*mangledName));
-        u->setWeakAlias(t, true);
-      }
-    } else if (std::optional<std::string> demangledName =
-                   getArm64ECDemangledFunctionName(name)) {
-      Symbol *us = ctx.symtab.addUndefined(saver().save(*demangledName));
-      auto u = dyn_cast<Undefined>(us);
-      if (u && !u->weakAlias)
-        u->setWeakAlias(b, true);
-    }
-  }
-  return b;
-}
-
 void LinkerDriver::addUndefinedGlob(StringRef arg) {
   Expected<GlobPattern> pat = GlobPattern::create(arg);
   if (!pat) {
@@ -784,7 +820,7 @@ void LinkerDriver::addUndefinedGlob(StringRef arg) {
   });
 
   for (Symbol *sym : syms)
-    addUndefined(sym->getName());
+    ctx.symtab.addGCRoot(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -1400,7 +1436,7 @@ void LinkerDriver::convertResources() {
   }
   ObjFile *f =
       ObjFile::create(ctx, convertResToCOFF(resources, resourceObjFiles));
-  ctx.symtab.addFile(f);
+  addFile(f);
   f->includeResourceChunks();
 }
 
@@ -1422,7 +1458,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
     expName = saver().save("EXP+" + *mangledName);
   else
     expName = saver().save("EXP+" + name);
-  sym = addUndefined(expName);
+  sym = ctx.symtabEC->addGCRoot(expName);
   if (auto undef = dyn_cast<Undefined>(sym)) {
     if (!undef->getWeakAlias()) {
       auto thunk = make<ECExportThunkChunk>(def);
@@ -1472,7 +1508,8 @@ void LinkerDriver::createECExportThunks() {
 
 void LinkerDriver::pullArm64ECIcallHelper() {
   if (!ctx.config.arm64ECIcallHelper)
-    ctx.config.arm64ECIcallHelper = addUndefined("__icall_helper_arm64ec");
+    ctx.config.arm64ECIcallHelper =
+        ctx.symtabEC->addGCRoot("__icall_helper_arm64ec");
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -1911,6 +1948,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       setMachine(machine);
     }
   }
+  SymbolTable &mainSymtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
 
   // Handle /nodefaultlib:<filename>
   {
@@ -1997,7 +2035,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /include
   for (auto *arg : args.filtered(OPT_incl))
-    addUndefined(arg->getValue());
+    mainSymtab.addGCRoot(arg->getValue());
 
   // Handle /implib
   if (auto *arg = args.getLastArg(OPT_implib))
@@ -2428,22 +2466,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      config->entry = addUndefined(mangle(arg->getValue()), true);
+      config->entry = ctx.symtab.addGCRoot(mangle(arg->getValue()), true);
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = addUndefined(s, true);
+        config->entry = ctx.symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry = addUndefined(mangle("_NtProcessStartup"), true);
+        config->entry = ctx.symtab.addGCRoot(mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
         StringRef s = findDefaultEntry();
         if (s.empty())
           Fatal(ctx) << "entry point must be defined";
-        config->entry = addUndefined(s, true);
+        config->entry = ctx.symtab.addGCRoot(s, true);
         Log(ctx) << "Entry name inferred: " << s;
       }
     }
@@ -2455,9 +2493,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     for (auto *arg : args.filtered(OPT_delayload)) {
       config->delayLoads.insert(StringRef(arg->getValue()).lower());
       if (config->machine == I386) {
-        config->delayLoadHelper = addUndefined("___delayLoadHelper2@8");
+        config->delayLoadHelper = ctx.symtab.addGCRoot("___delayLoadHelper2@8");
       } else {
-        config->delayLoadHelper = addUndefined("__delayLoadHelper2", true);
+        config->delayLoadHelper =
+            ctx.symtab.addGCRoot("__delayLoadHelper2", true);
       }
     }
   }
@@ -2548,7 +2587,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
     symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
-    if (isArm64EC(ctx.config.machine)) {
+    if (symtab.isEC()) {
       symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
       symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
       symtab.addAbsolute("__arm64x_redirection_metadata", 0);
@@ -2594,7 +2633,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       for (Export &e : config->exports) {
         if (!e.forwardTo.empty())
           continue;
-        e.sym = addUndefined(e.name, !e.data);
+        e.sym = ctx.symtab.addGCRoot(e.name, !e.data);
         if (e.source != ExportSource::Directives)
           e.symbolName = mangleMaybe(e.sym);
       }
@@ -2636,13 +2675,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
       // Windows specific -- if __load_config_used can be resolved, resolve it.
       if (ctx.symtab.findUnderscore("_load_config_used"))
-        addUndefined(mangle("_load_config_used"));
+        ctx.symtab.addGCRoot(mangle("_load_config_used"));
 
       if (args.hasArg(OPT_include_optional)) {
         // Handle /includeoptional
         for (auto *arg : args.filtered(OPT_include_optional))
           if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            addUndefined(arg->getValue());
+            ctx.symtab.addGCRoot(arg->getValue());
       }
     } while (run());
   }
@@ -2702,6 +2741,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
+  ltoCompilationDone = true;
   ctx.symtab.compileBitcodeFiles();
 
   if (Defined *d =
@@ -2812,10 +2852,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
   if (config->callGraphProfileSort) {
     llvm::TimeTraceScope timeScope("Call graph");
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       parseCallGraphFile(arg->getValue());
-    }
-    readCallGraphsFromObjectFiles(ctx);
+    else
+      readCallGraphsFromObjectFiles(ctx);
   }
 
   // Handle /print-symbol-order.
@@ -2824,6 +2864,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (ctx.symtabEC)
     ctx.symtabEC->initializeECThunks();
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

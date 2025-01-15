@@ -1287,6 +1287,12 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
+  /// Return true if \p F has the "kernel" function attribute
+  bool isKernel(const Function &F) {
+    FunctionInfo &FI = getFunctionInfo(F);
+    return FI.IsKernel;
+  }
+
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1361,6 +1367,9 @@ private:
 
     /// Function contains a `musttail` call.
     bool ContainsMustTailCall;
+
+    /// Function has the `"kernel"` attribute
+    bool IsKernel;
   };
 
   /// A map type from functions to informatio about it.
@@ -1478,7 +1487,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 
@@ -3853,7 +3862,7 @@ struct AANoAlias
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4220,7 +4229,7 @@ struct AADereferenceable
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4364,7 +4373,7 @@ struct AANoCapture
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4635,8 +4644,7 @@ struct AAMemoryBehavior
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.isFunctionScope() &&
-        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.isFunctionScope() && !IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
