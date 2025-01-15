@@ -5,7 +5,7 @@ name: Compiler CI test
 on:
   pull_request:
     branches: [amd-staging]
-    types: [opened, reopened, synchronize]
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel, below is a single job called invoke jenkins jobs
@@ -14,6 +14,7 @@ jobs:
   invoke_jenkins_PSDB:
     # The type of runner that the job will run on. For github hosted runner use (${{ 'ubuntu-latest' }}) or self-hosted for sel-hosted runner.
     #runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     runs-on: self-hosted
     container:
       image: compute-artifactory.amd.com:5000/rocm-base-images/ghemu-action-ubuntu-24.04:2024101101
