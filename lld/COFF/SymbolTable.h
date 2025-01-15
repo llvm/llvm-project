@@ -74,11 +74,27 @@ public:
   Symbol *find(StringRef name) const;
   Symbol *findUnderscore(StringRef name) const;
 
+  void addUndefinedGlob(StringRef arg);
+
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
   Symbol *findMangle(StringRef name);
+  StringRef mangleMaybe(Symbol *s);
+
+  // Symbol names are mangled by prepending "_" on x86.
+  StringRef mangle(StringRef sym);
+
+  // Windows specific -- "main" is not the only main function in Windows.
+  // You can choose one from these four -- {w,}{WinMain,main}.
+  // There are four different entry point functions for them,
+  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
+  // choose the right one depending on which "main" function is defined.
+  // This function looks up the symbol table and resolve corresponding
+  // entry point name.
+  StringRef findDefaultEntry();
+  WindowsSubsystem inferSubsystem();
 
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
@@ -152,6 +168,7 @@ private:
   /// Same as insert(Name), but also sets isUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef name, InputFile *f);
 
+  bool findUnderscoreMangle(StringRef sym);
   std::vector<Symbol *> getSymsWithPrefix(StringRef prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
