@@ -1130,7 +1130,7 @@ static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
   return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_0);
 }
 
-std::string Triple::normalize(StringRef Str) {
+std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
   bool IsMinGW32 = false;
   bool IsCygwin = false;
 
@@ -1336,6 +1336,19 @@ std::string Triple::normalize(StringRef Str) {
       Components[0] = getDXILArchNameFromShaderModel(Components[2]);
     }
   }
+
+  // Canonicalize the components if necessary.
+  switch (Form) {
+  case CanonicalForm::ANY:
+    break;
+  case CanonicalForm::THREE_IDENT:
+  case CanonicalForm::FOUR_IDENT:
+  case CanonicalForm::FIVE_IDENT: {
+    Components.resize(static_cast<unsigned>(Form), "unknown");
+    break;
+  }
+  }
+
   // Stick the corrected components back together to form the normalized string.
   return join(Components, "-");
 }
