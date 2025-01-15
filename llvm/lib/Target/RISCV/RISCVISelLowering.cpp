@@ -3534,9 +3534,9 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT SrcVT, const SDLoc &DL,
     return SDValue();
 
   // Convert fixed length vectors to scalable
-  MVT ContainerSrcVT = SrcVT;
+  MVT ContainerVT = SrcVT;
   if (SrcVT.isFixedLengthVector())
-    ContainerSrcVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
+    ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
 
   MVT ContainerVecVT = VecVT;
   if (VecVT.isFixedLengthVector()) {
@@ -3546,19 +3546,19 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT SrcVT, const SDLoc &DL,
 
   // Put SplatVec in a SrcVT sized vector
   if (ContainerVecVT.getVectorMinNumElements() <
-      ContainerSrcVT.getVectorMinNumElements())
-    SplatVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerSrcVT,
-                      DAG.getUNDEF(ContainerSrcVT), SplatVec,
+      ContainerVT.getVectorMinNumElements())
+    SplatVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), SplatVec,
                       DAG.getVectorIdxConstant(0, DL));
   else
-    SplatVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerSrcVT, SplatVec,
+    SplatVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, SplatVec,
                       DAG.getVectorIdxConstant(0, DL));
 
   // We checked that Idx fits inside SrcVT earlier
-  auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerSrcVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
 
-  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerSrcVT, SplatVec,
-                               Idx, DAG.getUNDEF(ContainerSrcVT), Mask, VL);
+  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, SplatVec,
+                               Idx, DAG.getUNDEF(ContainerVT), Mask, VL);
 
   if (!SrcVT.isFixedLengthVector())
     return Gather;
