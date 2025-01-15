@@ -157,9 +157,11 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
 
 void BottomUpVec::tryEraseDeadInstrs() {
   // Visiting the dead instructions bottom-to-top.
-  sort(DeadInstrCandidates,
+  SmallVector<Instruction *> SortedDeadInstrCandidates(
+      DeadInstrCandidates.begin(), DeadInstrCandidates.end());
+  sort(SortedDeadInstrCandidates,
        [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (Instruction *I : reverse(DeadInstrCandidates)) {
+  for (Instruction *I : reverse(SortedDeadInstrCandidates)) {
     if (I->hasNUses(0))
       I->eraseFromParent();
   }
@@ -218,6 +220,31 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
   return LastInsert;
 }
 
+void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
+  for (Value *V : Bndl)
+    DeadInstrCandidates.insert(cast<Instruction>(V));
+  // Also collect the GEPs of vectorized loads and stores.
+  auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
+  switch (Opcode) {
+  case Instruction::Opcode::Load: {
+    for (Value *V : drop_begin(Bndl))
+      if (auto *Ptr =
+              dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
+        DeadInstrCandidates.insert(Ptr);
+    break;
+  }
+  case Instruction::Opcode::Store: {
+    for (Value *V : drop_begin(Bndl))
+      if (auto *Ptr =
+              dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
+        DeadInstrCandidates.insert(Ptr);
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
   Value *NewVec = nullptr;
   const auto &LegalityRes = Legality->canVectorize(Bndl);
@@ -247,11 +274,10 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     }
     NewVec = createVectorInstr(Bndl, VecOperands);
 
-    // Collect the original scalar instructions as they may be dead.
-    if (NewVec != nullptr) {
-      for (Value *V : Bndl)
-        DeadInstrCandidates.push_back(cast<Instruction>(V));
-    }
+    // Collect any potentially dead scalar instructions, including the original
+    // scalars and pointer operands of loads/stores.
+    if (NewVec != nullptr)
+      collectPotentiallyDeadInstrs(Bndl);
     break;
   }
   case LegalityResultID::Pack: {
