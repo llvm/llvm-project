@@ -101,9 +101,9 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisInt<0>]>>;
 
 def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
-                                  SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
-                                                       SDTCisVT<0, i32>]>,
-                                  [SDNPHasChain, SDNPMayStore]>;
+                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                      SDTCisVT<0, i32>]>,
+                                 [SDNPHasChain, SDNPMayStore]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.

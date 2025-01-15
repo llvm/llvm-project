@@ -22573,14 +22573,13 @@ SDValue RISCVTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
 
   MVT XLenVT = Subtarget.getXLenVT();
   // Get the inputs.
-  SDNode *Node = Op.getNode();
   SDValue Chain = Op.getOperand(0);
   SDValue Size = Op.getOperand(1);
 
   MaybeAlign Align =
       cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
   SDLoc dl(Op);
-  EVT VT = Node->getValueType(0);
+  EVT VT = Op.getValueType();
 
   // Construct the new SP value in a GPR.
   SDValue SP = DAG.getCopyFromReg(Chain, dl, RISCV::X2, XLenVT);
