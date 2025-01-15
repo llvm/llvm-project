@@ -1692,6 +1692,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     // updates it automatically. Replicate the same behaviour.
     dos->AddressOfNewExeHeader = config->dosStub->getBufferSize();
     buf += config->dosStub->getBufferSize();
+    // Unlike MS link.exe, LLD accepts non-8-byte-aligned stubs.
+    // In that case, we add zero paddings ourselves.
+    buf += (8 - (config->dosStub->getBufferSize() % 8)) % 8;
   } else {
     buf += sizeof(dos_header);
     dos->Magic[0] = 'M';
@@ -1706,6 +1709,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     memcpy(buf, dosProgram, sizeof(dosProgram));
     buf += sizeof(dosProgram);
   }
+
+  // Make sure DOS stub is aligned to 8 bytes at this point
+  assert((buf - buffer->getBufferStart()) % 8 == 0);
 
   // Write PE magic
   memcpy(buf, PEMagic, sizeof(PEMagic));

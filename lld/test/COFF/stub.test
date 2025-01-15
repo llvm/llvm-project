@@ -23,12 +23,32 @@ CHECK1: AddressOfNewExeHeader: 64
 
 ## Invalid DOS signature (must be `MZ`)
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub64zz %t.obj 2>&1 | FileCheck -check-prefix=CHECK2 %s
-# CHECK2: lld-link: error: /stub: invalid DOS signature: {{.*}}
 
-## Unaligned stub (must be aligned to 8)
-# RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub68mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK3 %s
-# CHECK3: lld-link: error: /stub: stub must be aligned to 8 bytes: {{.*}}
+CHECK2: lld-link: error: /stub: invalid DOS signature: {{.*}}
+
+## Unlike MS linker, we accept non-8byte-aligned stubs and we add paddings ourselves
+# RUN: lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub64mz %t.obj
+# RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK3 %s
+
+CHECK3: Magic: MZ
+CHECK3: UsedBytesInTheLastPage: 144
+CHECK3: FileSizeInPages: 3
+CHECK3: NumberOfRelocationItems: 0
+CHECK3: HeaderSizeInParagraphs: 4
+CHECK3: MinimumExtraParagraphs: 0
+CHECK3: MaximumExtraParagraphs: 65535
+CHECK3: InitialRelativeSS: 0
+CHECK3: InitialSP: 184
+CHECK3: Checksum: 0
+CHECK3: InitialIP: 0
+CHECK3: InitialRelativeCS: 0
+CHECK3: AddressOfRelocationTable: 64
+CHECK3: OverlayNumber: 0
+CHECK3: OEMid: 0
+CHECK3: OEMinfo: 0
+CHECK3: AddressOfNewExeHeader: 64
 
 ## Too-small stub (must be at least 64 bytes long) && Unaligned
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub63mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK4 %s
-# CHECK4: lld-link: error: /stub: stub must be greater than or equal to 64 bytes: {{.*}}
+
+CHECK4: lld-link: error: /stub: stub must be greater than or equal to 64 bytes: {{.*}}

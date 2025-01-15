@@ -260,8 +260,6 @@ void LinkerDriver::parseDosStub(StringRef path) {
              << path;
   if (bufferStart[0] != 'M' || bufferStart[1] != 'Z')
     Err(ctx) << "/stub: invalid DOS signature: " << path;
-  if (bufferSize % 8 != 0)
-    Err(ctx) << "/stub: stub must be aligned to 8 bytes: " << path;
   ctx.config.dosStub = std::move(stub);
 }
 
