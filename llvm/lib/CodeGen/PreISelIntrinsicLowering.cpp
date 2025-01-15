@@ -402,6 +402,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
             GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
         GV->setUnnamedAddr(
             GlobalValue::UnnamedAddr::Global); // Ok to merge these.
+        // TODO: Consider relaxing alignment requirement.
         GV->setAlignment(Align(16));
         Value *PatternPtr = GV;
         Value *NumBytes = Builder.CreateMul(
