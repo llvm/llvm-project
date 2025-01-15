@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+
 class TestFrameVarDILInstanceVariables(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
@@ -49,14 +50,13 @@ class TestFrameVarDILInstanceVariables(TestBase):
         self.assertEqual(
             len(threads), 1, "There should be a thread stopped at our breakpoint"
         )
-       # The hit count for the breakpoint should be 1.
+        # The hit count for the breakpoint should be 1.
         self.assertEquals(breakpoint.GetHitCount(), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
-        self.expect("settings set target.experimental.use-DIL true",
-                    substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect("frame variable 'this'", patterns=["0x[0-9]+"])
         self.expect("frame variable 'c'", substrs=["(field_ = -1)"])

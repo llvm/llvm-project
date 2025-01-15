@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+
 class TestFrameVarDILGlobalVariableLookup(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
@@ -49,7 +50,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.assertEqual(
             len(threads), 1, "There should be a thread stopped at our breakpoint"
         )
-       # The hit count for the breakpoint should be 1.
+        # The hit count for the breakpoint should be 1.
         self.assertEquals(breakpoint.GetHitCount(), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
@@ -57,22 +58,25 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         interp = self.dbg.GetCommandInterpreter()
 
 
-        self.expect("settings set target.experimental.use-DIL true",
-                    substrs=[""])
+        self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect("frame variable 'globalVar'", substrs=["-559038737"])  # 0xDEADBEEF
         self.expect("frame variable 'globalPtr'", patterns=["0x[0-9]+"])
         self.expect("frame variable 'globalRef'", substrs=["-559038737"])
         self.expect("frame variable '::globalPtr'", patterns=["0x[0-9]+"])
         self.expect("frame variable '::globalRef'", substrs=["-559038737"])
 
-        self.expect("frame variable 'externGlobalVar'", error=True,
-                    substrs=["use of undeclared identifier"])  # 0x00C0FFEE
-        self.expect("frame variable '::externGlobalVar'", error=True,
-                    substrs=["use of undeclared identifier"]) # ["12648430"])
+        self.expect(
+            "frame variable 'externGlobalVar'",
+            error=True,
+            substrs=["use of undeclared identifier"]
+        )  # 0x00C0FFEE
+        self.expect(
+            "frame variable '::externGlobalVar'",
+            error=True,
+            substrs=["use of undeclared identifier"]
+        ) # ["12648430"])
         self.expect("frame variable 'ns::globalVar'", substrs=["13"])
-        self.expect("frame variable 'ns::globalPtr'",
-                    patterns=["0x[0-9]+"])
+        self.expect("frame variable 'ns::globalPtr'", patterns=["0x[0-9]+"])
         self.expect("frame variable 'ns::globalRef'", substrs=["13"])
         self.expect("frame variable '::ns::globalVar'", substrs=["13"])
-        self.expect("frame variable '::ns::globalPtr'",
-                    patterns=["0x[0-9]+"])
+        self.expect("frame variable '::ns::globalPtr'", patterns=["0x[0-9]+"])

@@ -1,12 +1,12 @@
 #include <string>
 
 class C {
- public:
+public:
   int field_ = 1337;
 };
 
 class TestMethods {
- public:
+public:
   void TestInstanceVariables() {
     C c;
     c.field_ = -1;
@@ -15,9 +15,7 @@ class TestMethods {
   }
 };
 
-int
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   TestMethods tm;
 
   tm.TestInstanceVariables();
