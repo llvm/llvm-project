@@ -108,6 +108,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`clang-tidy-diff.py` script. Add the `-only-check-in-db`
+  option to exclude files not present in the compilation database, avoiding
+  false-negative results.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
@@ -351,8 +355,8 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
 
-- Improved :doc:`performance-unnecessary-copy-initialization`
-  <clang-tidy/checks/performance/unnecessary-copy-initialization> check
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check
   to consider static member functions the same way as free functions.
 
 - Improved :doc:`readability-container-contains
