@@ -44,7 +44,7 @@ struct RegisterAliasingTracker {
                           const BitVector &ReservedReg,
                           const MCRegisterClass &RegClass);
 
-  // Construct a tracker from an MCPhysReg.
+  // Construct a tracker from an MCRegister.
   RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
                           const MCRegister Register);
 
