@@ -2773,6 +2773,9 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_wwm:
   case Intrinsic::amdgcn_strict_wwm:
     Opcode = AMDGPU::STRICT_WWM;
+    CurDAG->getMachineFunction()
+        .getInfo<SIMachineFunctionInfo>()
+        ->setInitWholeWave();
     break;
   case Intrinsic::amdgcn_strict_wqm:
     Opcode = AMDGPU::STRICT_WQM;

@@ -184,7 +184,11 @@ static bool resultDependsOnExec(const MachineInstr &MI) {
 bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
   // Any implicit use of exec by VALU is not a real register read.
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent());
+         isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent()) &&
+         !MO.getParent()
+              ->getMF()
+              ->getInfo<SIMachineFunctionInfo>()
+              ->hasInitWholeWave();
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,

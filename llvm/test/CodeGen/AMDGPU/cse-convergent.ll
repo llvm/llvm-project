@@ -8,31 +8,33 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
 ; GCN-NEXT:    s_or_saveexec_b32 s4, -1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, v0, s4
-; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
-; GCN-NEXT:    s_mov_b32 exec_lo, s4
-; GCN-NEXT:    v_mov_b32_e32 v5, 0
 ; GCN-NEXT:    v_mov_b32_e32 v4, v2
+; GCN-NEXT:    v_mov_b32_dpp v4, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
+; GCN-NEXT:    s_mov_b32 exec_lo, s4
+; GCN-NEXT:    v_mov_b32_e32 v5, v4
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, v0, s5
-; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s5
+; GCN-NEXT:    v_mov_b32_dpp v3, v2 row_xmask:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s5
-; GCN-NEXT:    v_mov_b32_e32 v5, v2
+; GCN-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GCN-NEXT:    v_add_nc_u32_e32 v0, v4, v5
+; GCN-NEXT:    v_add_nc_u32_e32 v0, v5, v2
 ; GCN-NEXT:    s_xor_saveexec_b32 s4, -1
-; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    s_clause 0x2
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], s32
 ; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:4
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:8
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
