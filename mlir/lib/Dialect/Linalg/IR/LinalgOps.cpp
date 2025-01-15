@@ -3474,7 +3474,6 @@ static LogicalResult verifyExtendedMatmulSemantic(MatmulOp matmulOp,
 /// It checks if the first result dimension is a function of the first
 /// dimension.
 static bool isValidBatchDim(AffineMap bcastMap) {
-  assert(bcastMap.getNumResults() == 3 && "Expected three result dim expr.");
   AffineExpr exp = bcastMap.getResult(0);
   return exp.isFunctionOfDim(0);
 }
@@ -3490,6 +3489,48 @@ static bool isValidOutputResultDim(AffineMap outputMap) {
          exp2.isFunctionOfDim(nPos);
 }
 
+// Check general validity of input indexing map.
+static LogicalResult verifyInputMaps(BatchMatmulOp batchMatmulOp,
+                                     AffineMap opIndexingMap,
+                                     AffineMap defaultIndexingMap, bool isLHS) {
+  // Check the result dims are valid.
+  if (!isValidResultDimExprs(opIndexingMap, defaultIndexingMap))
+    return batchMatmulOp->emitOpError()
+           << "Unexpected dim expression in map result.";
+
+  // Check for valid number of result dims of input maps.
+  if (opIndexingMap.getNumResults() > 3)
+    return batchMatmulOp->emitOpError()
+           << "no. of result dim expression cannot exceed 3.";
+
+  // Check if the requested broadcast is valid.
+  if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
+    if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, isLHS))
+      return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
+  } else if (!isValidBatchDim(opIndexingMap)) {
+    return batchMatmulOp->emitOpError()
+           << "Invalid batch dimension expression.";
+  }
+  return success();
+}
+
+/// This function checks if the given AffineMap for the output of a
+/// BatchMatmulOp has exactly 3 result dimensions and if the output map result
+/// dimensions are valid.
+static LogicalResult verifyOutputMap(BatchMatmulOp batchMatmulOp,
+                                     AffineMap opIndexingMap) {
+  if (opIndexingMap.getNumResults() != 3)
+    return batchMatmulOp->emitOpError()
+           << "expects 3 dims, but got (" << opIndexingMap.getNumResults()
+           << ").";
+
+  if (!isValidOutputResultDim(opIndexingMap))
+    return batchMatmulOp->emitOpError()
+           << "Invalid output map result dimension.";
+
+  return success();
+}
+
 /// Verifies the broadcast and transpose semantic specified by the explicit
 /// indexing map for the BatchMatmulOp \p op for each operand specified by \p
 /// opIndex.
@@ -3503,37 +3544,14 @@ verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
 
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
-  // Check general validity of indexing map results.
-  if (opIndex < 2) {
-    if (!isValidResultDimExprs(opIndexingMap, defaultIndexingMap))
-      return batchMatmulOp->emitOpError()
-             << "Unexpected dim expression in map result.";
-    // Check if the requested broadcast is valid.
-    if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
-      if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap,
-                                                   opIndex == 0)) {
-        return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
-      }
-    } else {
-      // Check for valid number of result dims of input maps.
-      if (opIndexingMap.getNumResults() != 3)
-        return batchMatmulOp->emitOpError()
-               << "no. of result dim expression cannot exceed 3.";
 
-      if (!isValidBatchDim(opIndexingMap))
-        return batchMatmulOp->emitOpError()
-               << "Invalid batch dimension expression.";
-    }
-  } else {
-    // Check for valid number of result dims of output map.
-    if (opIndexingMap.getNumResults() != 3)
-      return batchMatmulOp->emitOpError()
-             << "no. of result dim expression cannot exceed 3.";
+  if (opIndex == 2 && failed(verifyOutputMap(batchMatmulOp, opIndexingMap)))
+    return failure();
 
-    if (!isValidOutputResultDim(opIndexingMap))
-      return batchMatmulOp->emitOpError()
-             << "Invalid output map result dimension.";
-  }
+  if (failed(verifyInputMaps(batchMatmulOp, opIndexingMap, defaultIndexingMap,
+                             opIndex == 0)))
+    return failure();
+
   return success();
 }
 

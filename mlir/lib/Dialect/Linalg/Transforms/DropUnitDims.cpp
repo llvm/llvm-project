@@ -906,6 +906,15 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
 
   LogicalResult matchAndRewrite(FromOpTy contractionOp,
                                 PatternRewriter &rewriter) const override {
+    // Check to not let go the batch_matmul with extended semantic, through this
+    // transform.
+    if (std::is_same<FromOpTy, BatchMatmulOp>::value) {
+      if (contractionOp.hasUserDefinedMaps()) {
+        return rewriter.notifyMatchFailure(
+            contractionOp,
+            "only batch_matmul ops with non-extended semantics are supported");
+      }
+    }
 
     auto loc = contractionOp.getLoc();
     auto inputs = contractionOp.getDpsInputs();

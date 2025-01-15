@@ -1408,7 +1408,7 @@ func.func @invalid_B_map_result_num_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1
 // -----
 
 func.func @invalid_C_map_result_num_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?xf32>) {
-  // expected-error @+1 {{'linalg.batch_matmul' op no. of result dim expression cannot exceed 3.}}
+  // expected-error @+1 {{'linalg.batch_matmul' op expects 3 dims, but got (2).}}
   linalg.batch_matmul indexing_maps = [
                             affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
                             affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
