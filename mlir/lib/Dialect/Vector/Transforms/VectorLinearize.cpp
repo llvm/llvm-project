@@ -72,13 +72,14 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
     auto resType =
         getTypeConverter()->convertType<VectorType>(constOp.getType());
 
+    if (!resType)
+      return rewriter.notifyMatchFailure(loc, "can't convert return type");
+
     if (resType.isScalable() && !isa<SplatElementsAttr>(constOp.getValue()))
       return rewriter.notifyMatchFailure(
           loc,
           "Cannot linearize a constant scalable vector that's not a splat");
 
-    if (!resType)
-      return rewriter.notifyMatchFailure(loc, "can't convert return type");
     if (!isLessThanTargetBitWidth(constOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           loc, "Can't flatten since targetBitWidth <= OpSize");
@@ -459,6 +460,35 @@ struct LinearizeVectorInsert final
 private:
   unsigned targetVectorBitWidth;
 };
+
+struct LinearizeVectorBitCast final
+    : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorBitCast(
+      const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit),
+        targetVectorBitWidth(targetVectBitWidth) {}
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp castOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = castOp.getLoc();
+    auto resType = getTypeConverter()->convertType(castOp.getType());
+    if (!resType)
+      return rewriter.notifyMatchFailure(loc, "can't convert return type.");
+
+    if (!isLessThanTargetBitWidth(castOp, targetVectorBitWidth))
+      return rewriter.notifyMatchFailure(
+          loc, "Can't flatten since targetBitWidth <= OpSize");
+
+    rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType, adaptor.getSource());
+    return mlir::success();
+  }
+private:
+  unsigned targetVectorBitWidth;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
@@ -486,6 +516,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
         if ((isa<arith::ConstantOp>(op) ||
+             isa<vector::BitCastOp>(op) ||
              op->hasTrait<OpTrait::Vectorizable>())) {
           return (isLessThanTargetBitWidth(op, targetBitWidth)
                       ? typeConverter.isLegal(op)
@@ -494,7 +525,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         return std::nullopt;
       });
 
-  patterns.add<LinearizeConstant, LinearizeVectorizable>(
+  patterns.add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorBitCast>(
       typeConverter, patterns.getContext(), targetBitWidth);
 }
 
