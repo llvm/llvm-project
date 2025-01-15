@@ -24,7 +24,8 @@ static bool isExact(StringRef Pattern) {
          Pattern.ends_with("\"");
 }
 
-SingleStringMatcher::SingleStringMatcher(StringRef Pattern) : ExactMatch(isExact(Pattern)) {
+SingleStringMatcher::SingleStringMatcher(StringRef Pattern)
+    : ExactMatch(isExact(Pattern)) {
   if (ExactMatch) {
     ExactPattern = Pattern.substr(1, Pattern.size() - 2);
   } else {
