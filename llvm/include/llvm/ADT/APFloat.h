@@ -1542,6 +1542,9 @@ inline APFloat powi(const APFloat &X, int64_t N) {
   if (N == 0) {
     return Acc;
   }
+  if (N == 1) {
+    return X.isNaN() ? X.makeQuiet() : X;
+  }
   assert(N >= 0 && "negative exponents not supported.");
   APFloat Base = X;
   int64_t RemainingExponent = N;
