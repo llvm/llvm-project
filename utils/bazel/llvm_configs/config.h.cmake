@@ -72,15 +72,6 @@
 /* Define if __unw_add_dynamic_fde() is available on this platform. */
 #cmakedefine HAVE_UNW_ADD_DYNAMIC_FDE ${HAVE_UNW_ADD_DYNAMIC_FDE}
 
-/* Define to 1 if you have the <errno.h> header file. */
-#cmakedefine HAVE_ERRNO_H ${HAVE_ERRNO_H}
-
-/* Define to 1 if you have the <fcntl.h> header file. */
-#cmakedefine HAVE_FCNTL_H ${HAVE_FCNTL_H}
-
-/* Define to 1 if you have the <fenv.h> header file. */
-#cmakedefine HAVE_FENV_H ${HAVE_FENV_H}
-
 /* Define if libffi is available on this platform. */
 #cmakedefine HAVE_FFI_CALL ${HAVE_FFI_CALL}
 
@@ -197,9 +188,6 @@
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #cmakedefine HAVE_SYS_RESOURCE_H ${HAVE_SYS_RESOURCE_H}
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#cmakedefine HAVE_SYS_STAT_H ${HAVE_SYS_STAT_H}
 
 /* Define to 1 if you have the <sys/time.h> header file. */
 #cmakedefine HAVE_SYS_TIME_H ${HAVE_SYS_TIME_H}
