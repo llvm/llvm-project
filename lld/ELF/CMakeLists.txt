@@ -37,6 +37,7 @@ add_lld_library(lldELF
   Arch/X86.cpp
   Arch/X86_64.cpp
   ARMErrataFix.cpp
+  BPSectionOrderer.cpp
   CallGraphSort.cpp
   DWARF.cpp
   Driver.cpp
