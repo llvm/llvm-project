@@ -11,7 +11,7 @@
 // - NegateRAState flips the RA State,
 // - RememberState pushes the RA State to a stack,
 // - RestoreState pops the RA State from the stack.
-// These were saved as MCAnnotations on instructions they refer to at CFI
+// These are saved as MCAnnotations on instructions they refer to at CFI
 // reading (in CFIReaderWriter::fillCFIInfoFor). In this pass, we can work out
 // the RA State of each instruction, and save it as new MCAnnotations. The new
 // annotations are Signing, Signed, Authenticating and Unsigned. After
@@ -95,9 +95,9 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           continue;
         if (Annotation == MCPlus::MCAnnotation::kNegateState)
           RAState = !RAState;
-        if (Annotation == MCPlus::MCAnnotation::kRememberState)
+        else if (Annotation == MCPlus::MCAnnotation::kRememberState)
           RAStateStack.push(RAState);
-        if (Annotation == MCPlus::MCAnnotation::kRestoreState) {
+        else if (Annotation == MCPlus::MCAnnotation::kRestoreState) {
           RAState = RAStateStack.top();
           RAStateStack.pop();
         }
