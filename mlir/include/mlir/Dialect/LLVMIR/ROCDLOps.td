@@ -512,9 +512,10 @@ def ROCDL_RawBufferLoadOp :
                  LLVM_Type:$soffset,
                  LLVM_Type:$aux)> {
   string llvmBuilder = [{
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       $res = createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_load, {$rsrc, $offset,
-          $soffset, $aux}, {$_resultType});
+          $soffset, $aux}, {$_resultType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -528,9 +529,10 @@ def ROCDL_RawBufferStoreOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
     auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+    auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_store, {$vdata, $rsrc,
-          $offset, $soffset, $aux}, {vdataType});
+          $offset, $soffset, $aux}, {vdataType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -545,9 +547,10 @@ def ROCDL_RawBufferAtomicCmpSwap :
                  I32:$soffset,
                  I32:$aux)>{
   string llvmBuilder = [{
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       $res = createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_cmpswap, {$src, $cmp, $rsrc,
-            $offset, $soffset, $aux}, {$_resultType});
+            $offset, $soffset, $aux}, {$_resultType, rsrcType});
   }];
   let assemblyFormat = [{
     attr-dict `(` operands `)` `:` type($res) `,` type($rsrc)
@@ -566,9 +569,10 @@ def ROCDL_RawBufferAtomicFAddOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fadd, {$vdata, $rsrc,
-            $offset, $soffset, $aux}, {vdataType});
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -585,9 +589,10 @@ def ROCDL_RawBufferAtomicFMaxOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fmax, {$vdata, $rsrc,
-            $offset, $soffset, $aux}, {vdataType});
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -604,9 +609,10 @@ def ROCDL_RawBufferAtomicSMaxOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_smax, {$vdata, $rsrc,
-            $offset, $soffset, $aux}, {vdataType});
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -623,9 +629,10 @@ def ROCDL_RawBufferAtomicUMinOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_umin, {$vdata, $rsrc,
-            $offset, $soffset, $aux}, {vdataType});
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
   }];
   let hasCustomAssemblyFormat = 1;
 }
