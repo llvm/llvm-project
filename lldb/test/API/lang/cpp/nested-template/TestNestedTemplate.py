@@ -22,6 +22,11 @@ class NestedTemplateTestCase(TestBase):
             DATA_TYPES_DISPLAYED_CORRECTLY,
             substrs=["1 match found"],
         )
+        self.expect(
+            "image lookup -A -t 'NS::Union<int>'",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=["1 match found"],
+        )
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
