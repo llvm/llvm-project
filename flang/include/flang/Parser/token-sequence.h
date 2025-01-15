@@ -123,6 +123,7 @@ public:
   bool HasRedundantBlanks(std::size_t firstChar = 0) const;
   TokenSequence &RemoveBlanks(std::size_t firstChar = 0);
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
+  TokenSequence &RemoveRedundantCompilerDirectives(const Prescanner &);
   TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(
       Messages &, const Prescanner &, bool allowAmpersand) const;
