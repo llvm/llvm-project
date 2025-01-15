@@ -145,7 +145,7 @@ static void InitializeDefaultFlags() {
 }
 
 // Validate flags and report incompatible configurations
-static void ValidateFlags()s() {
+static void ValidateFlags() {
   Flags *f = flags();
 
   // Flag validation:
@@ -219,10 +219,11 @@ void InitializeFlags() {
 
 #if SANITIZER_WINDOWS
   // On Windows, weak symbols (such as the `__asan_default_options` function)
-  // are emulated by having the user program register which weak functions are defined.
-  // The ASAN DLL will initialize flags prior to user module initialization,
-  // so __asan_default_options will not point to the user definition yet.
-  // We still want to ensure we capture when options are passed via
+  // are emulated by having the user program register which weak functions are
+  // defined. The ASAN DLL will initialize flags prior to user module
+  // initialization, so __asan_default_options will not point to the user
+  // definition yet. We still want to ensure we capture when options are passed
+  // via
   // __asan_default_options, so we add a callback to be run
   // when it is registered with the runtime.
 
