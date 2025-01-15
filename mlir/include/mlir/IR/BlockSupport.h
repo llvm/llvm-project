@@ -74,8 +74,8 @@ class SuccessorRange final
 public:
   using RangeBaseT::RangeBaseT;
   SuccessorRange();
-  SuccessorRange(Block *block);
-  SuccessorRange(Operation *term);
+  SuccessorRange(Block *block LLVM_LIFETIME_BOUND);
+  SuccessorRange(Operation *term LLVM_LIFETIME_BOUND);
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -110,9 +110,9 @@ public:
   BlockRange(SuccessorRange successors);
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Block *>, Arg>::value>>
-  BlockRange(Arg &&arg)
+  BlockRange(Arg &&arg LLVM_LIFETIME_BOUND)
       : BlockRange(ArrayRef<Block *>(std::forward<Arg>(arg))) {}
-  BlockRange(std::initializer_list<Block *> blocks)
+  BlockRange(std::initializer_list<Block *> blocks LLVM_LIFETIME_BOUND)
       : BlockRange(ArrayRef<Block *>(blocks)) {}
 
 private:
