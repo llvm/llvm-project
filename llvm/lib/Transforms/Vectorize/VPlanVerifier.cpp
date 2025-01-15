@@ -197,7 +197,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
-      // Verify that recipes' operands have matching types.
+      // Verify that we can infer a scalar type for each defined value. With
+      // assertions enabled, inferScalarType will perform some consistency
+      // checks during type inference.
       if (!TypeInfo.inferScalarType(V)) {
         errs() << "Failed to infer scalar type!\n";
         return false;
