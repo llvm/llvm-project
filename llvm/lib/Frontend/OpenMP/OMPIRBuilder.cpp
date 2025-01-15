@@ -7363,7 +7363,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   auto TaskBodyCB =
       [&](Value *DeviceID, Value *RTLoc,
           IRBuilderBase::InsertPoint TargetTaskAllocaIP) -> Error {
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
+    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
+    // produce any.
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
       // emitKernelLaunch makes the necessary runtime call to offload the
       // kernel. We then outline all that code into a separate function
       // ('kernel_launch_function' in the pseudo code above). This function is
@@ -7378,19 +7380,18 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
       // When OutlinedFnID is set to nullptr, then it's not an offloading call.
       // In this case, we execute the host implementation directly.
       return EmitTargetCallFallbackCB(OMPBuilder.Builder.saveIP());
-    }();
+    }());
 
-    if (!AfterIP)
-      return AfterIP.takeError();
-
-    OMPBuilder.Builder.restoreIP(*AfterIP);
+    OMPBuilder.Builder.restoreIP(AfterIP);
     return Error::success();
   };
 
   // If we don't have an ID for the target region, it means an offload entry
   // wasn't created. In this case we just run the host fallback directly.
   if (!OutlinedFnID) {
-    OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
+    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
+    // produce any.
+    OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
       if (RequiresOuterTargetTask) {
         // Arguments that are intended to be directly forwarded to an
         // emitKernelLaunch call are pased as nullptr, since
@@ -7400,12 +7401,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
                                          Dependencies, HasNoWait);
       }
       return EmitTargetCallFallbackCB(Builder.saveIP());
-    }();
+    }());
 
-    // Assume no error was returned because EmitTargetCallFallbackCB doesn't
-    // produce any. The 'if' check enables accessing the returned value.
-    if (AfterIP)
-      Builder.restoreIP(*AfterIP);
+    Builder.restoreIP(AfterIP);
     return;
   }
 
@@ -7480,9 +7478,11 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
                                             NumTeamsC, NumThreadsC,
                                             DynCGGroupMem, HasNoWait);
 
-  // The presence of certain clauses on the target directive require the
-  // explicit generation of the target task.
-  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = [&]() {
+  // Assume no error was returned because TaskBodyCB and
+  // EmitTargetCallFallbackCB don't produce any.
+  OpenMPIRBuilder::InsertPointTy AfterIP = cantFail([&]() {
+    // The presence of certain clauses on the target directive require the
+    // explicit generation of the target task.
     if (RequiresOuterTargetTask)
       return OMPBuilder.emitTargetTask(TaskBodyCB, DeviceID, RTLoc, AllocaIP,
                                        Dependencies, HasNoWait);
@@ -7490,13 +7490,9 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     return OMPBuilder.emitKernelLaunch(Builder, OutlinedFnID,
                                        EmitTargetCallFallbackCB, KArgs,
                                        DeviceID, RTLoc, AllocaIP);
-  }();
+  }());
 
-  // Assume no error was returned because TaskBodyCB and
-  // EmitTargetCallFallbackCB don't produce any. The 'if' check enables
-  // accessing the returned value.
-  if (AfterIP)
-    Builder.restoreIP(*AfterIP);
+  Builder.restoreIP(AfterIP);
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
