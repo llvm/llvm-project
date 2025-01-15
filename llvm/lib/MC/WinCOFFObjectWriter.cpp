@@ -1193,6 +1193,11 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 }
 
 uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm) {
+  // If the assember had an error, then layout will not have completed, so we
+  // cannot write an object file.
+  if (Asm.getContext().hadError())
+    return 0;
+
   uint64_t TotalSize = ObjWriter->writeObject(Asm);
   if (DwoWriter)
     TotalSize += DwoWriter->writeObject(Asm);

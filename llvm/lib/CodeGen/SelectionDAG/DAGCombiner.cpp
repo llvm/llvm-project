@@ -26160,26 +26160,27 @@ static SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf,
   // could be an operand of SCALAR_TO_VECTOR, BUILD_VECTOR, or a constant.
   assert(Mask[ShufOp0Index] >= 0 && Mask[ShufOp0Index] < (int)Mask.size() &&
          "Shuffle mask value must be from operand 0");
-  if (Op0.getOpcode() != ISD::INSERT_VECTOR_ELT)
-    return SDValue();
 
-  auto *InsIndexC = dyn_cast<ConstantSDNode>(Op0.getOperand(2));
-  if (!InsIndexC || InsIndexC->getSExtValue() != Mask[ShufOp0Index])
-    return SDValue();
+  SDValue Elt;
+  if (sd_match(Op0, m_InsertElt(m_Value(), m_Value(Elt),
+                                m_SpecificInt(Mask[ShufOp0Index])))) {
+    // There's an existing insertelement with constant insertion index, so we
+    // don't need to check the legality/profitability of a replacement operation
+    // that differs at most in the constant value. The target should be able to
+    // lower any of those in a similar way. If not, legalization will expand
+    // this to a scalar-to-vector plus shuffle.
+    //
+    // Note that the shuffle may move the scalar from the position that the
+    // insert element used. Therefore, our new insert element occurs at the
+    // shuffle's mask index value, not the insert's index value.
+    //
+    // shuffle (insertelt v1, x, C), v2, mask --> insertelt v2, x, C'
+    SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
+    return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
+                       Op1, Elt, NewInsIndex);
+  }
 
-  // There's an existing insertelement with constant insertion index, so we
-  // don't need to check the legality/profitability of a replacement operation
-  // that differs at most in the constant value. The target should be able to
-  // lower any of those in a similar way. If not, legalization will expand this
-  // to a scalar-to-vector plus shuffle.
-  //
-  // Note that the shuffle may move the scalar from the position that the insert
-  // element used. Therefore, our new insert element occurs at the shuffle's
-  // mask index value, not the insert's index value.
-  // shuffle (insertelt v1, x, C), v2, mask --> insertelt v2, x, C'
-  SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
-  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
-                     Op1, Op0.getOperand(1), NewInsIndex);
+  return SDValue();
 }
 
 /// If we have a unary shuffle of a shuffle, see if it can be folded away
