@@ -152,8 +152,8 @@ void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
 // are enclosed in parentheses.
 void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
                                                raw_ostream &OS) {
-  ArrayRef<std::pair<const Record *, SMRange>> Superclasses =
-      Rec.getSuperClasses();
+  SmallVector<std::pair<const Record *, SMRange>> Superclasses;
+  Rec.getSuperClasses(Superclasses);
   if (Superclasses.empty()) {
     OS << "  Superclasses: (none)\n";
     return;

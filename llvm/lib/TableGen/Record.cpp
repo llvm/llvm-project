@@ -2395,7 +2395,9 @@ const DefInit *VarDefInit::instantiate() {
   NewRec->resolveReferences(R);
 
   // Add superclasses.
-  for (const auto &[SC, Loc] : Class->getSuperClasses())
+  SmallVector<std::pair<const Record *, SMRange>> SCs;
+  Class->getSuperClasses(SCs);
+  for (const auto &[SC, Loc] : SCs)
     NewRec->addSuperClass(SC, Loc);
 
   NewRec->addSuperClass(
@@ -2912,13 +2914,18 @@ void Record::setName(const Init *NewName) {
 // so we can step through the direct superclasses in reverse order.
 
 bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
+  SmallVector<std::pair<const Record *, SMRange>> SCs;
+  getSuperClasses(SCs);
+
+  SmallVector<std::pair<const Record *, SMRange>> SSCs;
 
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
     if (SC == Superclass)
       return true;
-    I -= SC->getSuperClasses().size();
+    SC->getSuperClasses(SSCs);
+    I -= SSCs.size();
+    SSCs.clear();
   }
 
   return false;
@@ -2926,11 +2933,17 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
 
 void Record::getDirectSuperClasses(
     SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
+  SmallVector<std::pair<const Record *, SMRange>> SCVec;
+  getSuperClasses(SCVec);
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = SCVec;
+
+  SmallVector<std::pair<const Record *, SMRange>> SSCs;
 
   while (!SCs.empty()) {
     const Record *SC = SCs.back().first;
-    SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
+    SC->getSuperClasses(SSCs);
+    SCs = SCs.drop_back(1 + SSCs.size());
+    SSCs.clear();
     Classes.push_back(SC);
   }
 }
@@ -3008,7 +3021,8 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
+  SmallVector<std::pair<const Record *, SMRange>> SC;
+  R.getSuperClasses(SC);
   if (!SC.empty()) {
     OS << "\t//";
     for (const auto &[SC, _] : SC)

@@ -1718,8 +1718,9 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
-    return SuperClasses;
+  void getSuperClasses(
+      SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const {
+    Classes.append(SuperClasses);
   }
 
   /// Determine whether this record has the specified direct superclass.

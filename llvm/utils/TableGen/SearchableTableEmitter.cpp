@@ -839,8 +839,9 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   const Record *SearchableTable = Records.getClass("SearchableTable");
   for (auto &NameRec : Records.getClasses()) {
     const Record *Class = NameRec.second.get();
-    if (Class->getSuperClasses().size() != 1 ||
-        !Class->isSubClassOf(SearchableTable))
+    SmallVector<std::pair<const Record *, SMRange>> SCs;
+    Class->getSuperClasses(SCs);
+    if (SCs.size() != 1 || !Class->isSubClassOf(SearchableTable))
       continue;
 
     StringRef TableName = Class->getName();
