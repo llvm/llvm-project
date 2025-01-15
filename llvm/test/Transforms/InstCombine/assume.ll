@@ -34,6 +34,23 @@ define i32 @foo1(ptr %a) #0 {
   ret i32 %t0
 }
 
+define i32 @align_assume_trunc_cond(ptr %a) #0 {
+; CHECK-LABEL: @align_assume_trunc_cond(
+; CHECK-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[PTRINT]] to i1
+; CHECK-NEXT:    [[MASKCOND:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    ret i32 [[T0]]
+;
+  %t0 = load i32, ptr %a, align 4
+  %ptrint = ptrtoint ptr %a to i64
+  %trunc = trunc i64 %ptrint to i1
+  %maskcond = xor i1 %trunc, true
+  tail call void @llvm.assume(i1 %maskcond)
+  ret i32 %t0
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {

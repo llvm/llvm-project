@@ -10,7 +10,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK:      VPlan 'Initial VPlan for VF={8,16},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT: Live-in ir<0> = original trip-count
+; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): vector.ph
@@ -42,7 +42,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, ir<[[REDUCE]]>
 ; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<[[RED_RESULT]]>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<0>, vp<%1>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<%1>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -63,7 +63,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   IR   %mul = mul i32 %ext.b, %ext.a
 ; CHECK-NEXT:   IR   %add = add i32 %mul, %accum
 ; CHECK-NEXT:   IR   %iv.next = add i64 %iv, 1
-; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 0
+; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ext.b, %ext.a
   %add = add i32 %mul, %accum
   %iv.next = add i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 0
+  %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:

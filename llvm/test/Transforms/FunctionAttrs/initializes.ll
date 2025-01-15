@@ -158,9 +158,9 @@ define void @merge_store_ranges(ptr %p) {
 define void @partially_overlapping_stores_branches(ptr %p, i1 %i) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @partially_overlapping_stores_branches(
-; CHECK-SAME: ptr nocapture initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr nocapture initializes((4, 8)) [[P:%.*]], i1 [[I:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
@@ -382,12 +382,20 @@ define void @call_initializes_escape_bundle(ptr %p) {
 }
 
 define void @access_bundle() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define void @access_bundle(
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[SINK:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 123, ptr [[SINK]], align 4
+; CHECK-NEXT:    ret void
+;
   %sink = alloca i64, align 8
   store i64 123, ptr %sink
   ret void
 }
 
 define void @call_operand_bundle(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define void @call_operand_bundle(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @access_bundle() [ "unknown"(ptr [[P]]) ]
@@ -437,7 +445,7 @@ define void @memset_neg(ptr %p) {
 define void @memset_volatile(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define void @memset_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 2, i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -472,7 +480,7 @@ define void @memcpy(ptr %p, ptr %p2) {
 define void @memcpy_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memcpy_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -535,7 +543,7 @@ define void @memmove(ptr %p, ptr %p2) {
 define void @memmove_volatile(ptr %p, ptr %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @memmove_volatile(
-; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr writeonly [[P:%.*]], ptr readonly [[P2:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[P2]], i64 9, i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -579,5 +587,27 @@ define void @memmove_non_constant(ptr %p, ptr %p2, i64 %i) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove(ptr %p, ptr %p2, i64 %i, i1 false)
+  ret void
+}
+
+define void @callee_byval(ptr byval(i32) %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @callee_byval(
+; CHECK-SAME: ptr nocapture writeonly byval(i32) initializes((0, 4)) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p
+  ret void
+}
+
+define void @caller_byval(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CHECK-LABEL: define void @caller_byval(
+; CHECK-SAME: ptr nocapture readonly [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @callee_byval(ptr byval(i32) [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @callee_byval(ptr byval(i32) %p)
   ret void
 }

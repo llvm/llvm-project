@@ -173,8 +173,6 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
-
   void addUndefinedGlob(StringRef arg);
 
   StringRef mangleMaybe(Symbol *s);
