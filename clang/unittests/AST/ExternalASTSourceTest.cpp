@@ -68,7 +68,8 @@ TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {
     TestSource(unsigned &Calls) : Calls(Calls) {}
 
     bool FindExternalVisibleDeclsByName(const DeclContext *,
-                                        DeclarationName Name) override {
+                                        DeclarationName Name,
+                                        Module *NamedModule) override {
       if (Name.getAsString() == "j")
         ++Calls;
       return false;
