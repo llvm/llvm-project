@@ -3607,13 +3607,23 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   ModFileReader reader{context()};
   Scope *scope{
       reader.Read(name.source, isIntrinsic, ancestor, /*silent=*/false)};
-  if (!scope) {
-    return nullptr;
+  if (scope) {
+    if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
+      std::optional<SourceName> submoduleName;
+      if (const Scope * container{FindModuleOrSubmoduleContaining(currScope())};
+          container && container->IsSubmodule()) {
+        submoduleName = container->GetName();
+      }
+      if (submoduleName) {
+        Say(name.source,
+            "Module '%s' cannot USE itself from its own submodule '%s'"_err_en_US,
+            name.source, *submoduleName);
+      } else {
+        Say(name, "Module '%s' cannot USE itself"_err_en_US);
+      }
+    }
+    Resolve(name, scope->symbol());
   }
-  if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
-    Say(name, "Module '%s' cannot USE itself"_err_en_US);
-  }
-  Resolve(name, scope->symbol());
   return scope;
 }
 
@@ -8215,6 +8225,9 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
+  if (symbol.owner().IsTopLevel()) {
+    return false;
+  }
   const Scope &symbolUnit{GetProgramUnitContaining(symbol)};
   if (symbolUnit == GetProgramUnitContaining(currScope())) {
     return false;

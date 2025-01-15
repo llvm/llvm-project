@@ -353,6 +353,7 @@ class ASTIdentifierLookupTrait;
 
 /// The on-disk hash table(s) used for DeclContext name lookup.
 struct DeclContextLookupTable;
+struct ModuleLocalLookupTable;
 
 /// The on-disk hash table(s) used for specialization decls.
 struct LazySpecializationInfoLookupTable;
@@ -523,9 +524,14 @@ private:
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
+  struct LookupBlockOffsets {
+    uint64_t LexicalOffset;
+    uint64_t VisibleOffset;
+    uint64_t ModuleLocalOffset;
+  };
+
   using DelayedNamespaceOffsetMapTy =
-      llvm::DenseMap<GlobalDeclID, std::pair</*LexicalOffset*/ uint64_t,
-                                             /*VisibleOffset*/ uint64_t>>;
+      llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
 
   /// Mapping from global declaration IDs to the lexical and visible block
   /// offset for delayed namespace in reduced BMI.
@@ -631,6 +637,9 @@ private:
   /// Map from a DeclContext to its lookup tables.
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::DeclContextLookupTable> Lookups;
+  llvm::DenseMap<const DeclContext *,
+                 serialization::reader::ModuleLocalLookupTable>
+      ModuleLocalLookups;
 
   using SpecLookupTableTy =
       llvm::DenseMap<const Decl *,
@@ -659,6 +668,8 @@ private:
   /// Updates to the visible declarations of declaration contexts that
   /// haven't been loaded yet.
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
+  llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates>
+      PendingModuleLocalVisibleUpdates;
 
   using SpecializationsUpdate = SmallVector<UpdateData, 1>;
   using SpecializationsUpdateMap =
@@ -696,7 +707,8 @@ private:
   /// Read the record that describes the visible contents of a DC.
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
-                                     uint64_t Offset, GlobalDeclID ID);
+                                     uint64_t Offset, GlobalDeclID ID,
+                                     bool IsModuleLocal);
 
   bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
                            uint64_t Offset, Decl *D, bool IsPartial);
@@ -1132,6 +1144,10 @@ private:
   /// Number of visible decl contexts read/total.
   unsigned NumVisibleDeclContextsRead = 0, TotalVisibleDeclContexts = 0;
 
+  /// Number of module local visible decl contexts read/total.
+  unsigned NumModuleLocalVisibleDeclContexts = 0,
+           TotalModuleLocalVisibleDeclContexts = 0;
+
   /// Total size of modules, in bits, currently loaded
   uint64_t TotalModulesSizeInBits = 0;
 
@@ -1443,6 +1459,9 @@ public:
   /// Get the loaded lookup tables for \p Primary, if any.
   const serialization::reader::DeclContextLookupTable *
   getLoadedLookupTables(DeclContext *Primary) const;
+
+  const serialization::reader::ModuleLocalLookupTable *
+  getModuleLocalLookupTables(DeclContext *Primary) const;
 
   /// Get the loaded specializations lookup tables for \p D,
   /// if any.
@@ -2119,7 +2138,8 @@ public:
   /// The current implementation of this method just loads the entire
   /// lookup table as unmaterialized references.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      Module *NamedModule) override;
 
   /// Read all of the declarations lexically stored in a
   /// declaration context.
@@ -2606,6 +2626,10 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
   return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
          (D->isFromGlobalModule() || D->isFromHeaderUnit());
 }
+
+/// Calculate a hash value for the primary module name of the given module.
+/// \returns std::nullopt if M is not a C++ standard module.
+std::optional<unsigned> getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 

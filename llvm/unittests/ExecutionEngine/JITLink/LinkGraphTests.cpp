@@ -217,6 +217,51 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
                            [](char C) { return C == 0; }));
 }
 
+TEST(LinkGraphTest, FindSymbolsByName) {
+  // Check that we can make defined and absolute symbols external.
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              getGenericEdgeKindName);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+
+  auto &B1 =
+      G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
+
+  // Add an anonymous symbol to make sure that these don't disrupt by-name
+  // lookup of defined symbols.
+  G.addAnonymousSymbol(B1, 0, 0, false, false);
+
+  // Add named defined, external and absolute symbols.
+  auto Foo = G.intern("foo");
+  auto &FooSym = G.addDefinedSymbol(B1, 0, Foo, 4, Linkage::Strong,
+                                    Scope::Default, false, false);
+
+  auto Bar = G.intern("bar");
+  auto &BarSym = G.addExternalSymbol(Bar, 0, false);
+
+  auto Baz = G.intern("baz");
+  auto &BazSym = G.addAbsoluteSymbol(Baz, orc::ExecutorAddr(0x1234), 0,
+                                     Linkage::Strong, Scope::Default, true);
+
+  EXPECT_EQ(G.findDefinedSymbolByName(Foo), &FooSym);
+  EXPECT_EQ(G.findExternalSymbolByName(Foo), nullptr);
+  EXPECT_EQ(G.findAbsoluteSymbolByName(Foo), nullptr);
+
+  EXPECT_EQ(G.findDefinedSymbolByName(Bar), nullptr);
+  EXPECT_EQ(G.findExternalSymbolByName(Bar), &BarSym);
+  EXPECT_EQ(G.findAbsoluteSymbolByName(Bar), nullptr);
+
+  EXPECT_EQ(G.findDefinedSymbolByName(Baz), nullptr);
+  EXPECT_EQ(G.findExternalSymbolByName(Baz), nullptr);
+  EXPECT_EQ(G.findAbsoluteSymbolByName(Baz), &BazSym);
+
+  auto Qux = G.intern("qux");
+  EXPECT_EQ(G.findDefinedSymbolByName(Qux), nullptr);
+  EXPECT_EQ(G.findExternalSymbolByName(Qux), nullptr);
+  EXPECT_EQ(G.findAbsoluteSymbolByName(Qux), nullptr);
+}
+
 TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make defined and absolute symbols external.
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
