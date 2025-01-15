@@ -1770,8 +1770,8 @@ define <4 x i32> @vp_sadd_sat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 }
 declare <4 x i32> @llvm.vp.sadd.sat.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
-define <4 x i32> @vp_sadd_uat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 zeroext %evl) {
-; X86-LABEL: vp_sadd_uat_v4i32:
+define <4 x i32> @vp_uadd_sat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 zeroext %evl) {
+; X86-LABEL: vp_uadd_sat_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    vpxor %xmm2, %xmm1, %xmm2
@@ -1779,7 +1779,7 @@ define <4 x i32> @vp_sadd_uat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 ; X86-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
-; SSE-LABEL: vp_sadd_uat_v4i32:
+; SSE-LABEL: vp_uadd_sat_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
@@ -1790,7 +1790,7 @@ define <4 x i32> @vp_sadd_uat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 ; SSE-NEXT:    por %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: vp_sadd_uat_v4i32:
+; AVX1-LABEL: vp_uadd_sat_v4i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm2
@@ -1798,7 +1798,7 @@ define <4 x i32> @vp_sadd_uat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vp_sadd_uat_v4i32:
+; AVX2-LABEL: vp_uadd_sat_v4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
@@ -1806,7 +1806,7 @@ define <4 x i32> @vp_sadd_uat_v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: vp_sadd_uat_v4i32:
+; AVX512-LABEL: vp_uadd_sat_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa %xmm1, %xmm2
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm2 = ~xmm2
