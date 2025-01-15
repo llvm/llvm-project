@@ -101,7 +101,8 @@ void NonPacProtectedRetGenDiag::print(raw_ostream &OS) const { OS << *this; }
 // exactly the registers containing values that should not be trusted (as they
 // could have changed since the last time they were authenticated). For pac-ret,
 // any return instruction using such a register is a gadget to be reported. For
-// PAuthABI, any indirect control flow using such a register should be reported?
+// PAuthABI, probably at least any indirect control flow using such a register
+// should be reported.
 
 // Furthermore, when producing a diagnostic for a found non-pac-ret protected
 // return, the analysis also lists the last instructions that wrote to the
