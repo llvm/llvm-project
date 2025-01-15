@@ -1983,11 +1983,21 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
 
   void handleNoMutexHeld(const NamedDecl *D, ProtectedOperationKind POK,
                          AccessKind AK, SourceLocation Loc) override {
-    assert((POK == POK_VarAccess || POK == POK_VarDereference) &&
-           "Only works for variables");
-    unsigned DiagID = POK == POK_VarAccess?
-                        diag::warn_variable_requires_any_lock:
-                        diag::warn_var_deref_requires_any_lock;
+    unsigned DiagID = 0;
+    switch (POK) {
+    case POK_VarAccess:
+      DiagID = diag::warn_variable_requires_any_lock;
+      break;
+    case POK_VarDereference:
+      DiagID = diag::warn_var_deref_requires_any_lock;
+      break;
+    case POK_AddressOf:
+      DiagID = diag::warn_addressof_requires_any_lock;
+      break;
+    default:
+      assert(false && "Only works for variables");
+      break;
+    }
     PartialDiagnosticAt Warning(Loc, S.PDiag(DiagID)
       << D << getLockKindFromAccessKind(AK));
     Warnings.emplace_back(std::move(Warning), getNotes());
@@ -2005,6 +2015,9 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
         case POK_VarDereference:
           DiagID = diag::warn_var_deref_requires_lock_precise;
+          break;
+        case POK_AddressOf:
+          DiagID = diag::warn_addressof_requires_lock;
           break;
         case POK_FunctionCall:
           DiagID = diag::warn_fun_requires_lock_precise;
@@ -2041,6 +2054,9 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
           break;
         case POK_VarDereference:
           DiagID = diag::warn_var_deref_requires_lock;
+          break;
+        case POK_AddressOf:
+          DiagID = diag::warn_addressof_requires_lock;
           break;
         case POK_FunctionCall:
           DiagID = diag::warn_fun_requires_lock;

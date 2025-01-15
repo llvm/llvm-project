@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -Wthread-safety-addressof -fcxx-exceptions -DUSE_CAPABILITY=1 -DCHECK_ADDRESSOF %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-beta -Wno-thread-safety-negative -Wthread-safety-addressof -fcxx-exceptions -DUSE_CAPABILITY=1 -DCHECK_ADDRESSOF %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -4863,6 +4865,11 @@ private:
   int dat;
 };
 
+class DataWithAddrOf : public Data {
+public:
+  void* operator&() const;
+};
+
 
 class DataCell {
 public:
@@ -4900,10 +4907,15 @@ public:
     a = (*datap2_).getValue(); // \
       // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
 
+    // Calls operator&, and does not obtain the address.
+    (void)&data_ao_; // expected-warning {{reading variable 'data_ao_' requires holding mutex 'mu_'}}
+    (void)__builtin_addressof(data_ao_); // expected-warning {{passing variable 'data_ao_' by reference requires holding mutex 'mu_'}}
+
     mu_.Lock();
     data_.setValue(1);
     datap1_->setValue(1);
     datap2_->setValue(1);
+    (void)&data_ao_;
     mu_.Unlock();
 
     mu_.ReaderLock();
@@ -4911,6 +4923,7 @@ public:
     datap1_->setValue(0);  // reads datap1_, writes *datap1_
     a = datap1_->getValue();
     a = datap2_->getValue();
+    (void)&data_ao_;
     mu_.Unlock();
   }
 
@@ -4939,11 +4952,29 @@ public:
     data_++;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
     --data_;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
     data_--;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+#ifdef CHECK_ADDRESSOF
+    (void)&data_;         // expected-warning {{obtaining address of variable 'data_' requires holding mutex 'mu_'}}
+    (void)&datap1_;       // expected-warning {{obtaining address of variable 'datap1_' requires holding mutex 'mu_'}}
+#else
+    (void)&data_;         // no warning
+    (void)&datap1_;       // no warning
+#endif
+    (void)(&*datap1_);    // expected-warning {{reading variable 'datap1_' requires holding mutex 'mu_'}}
 
     data_[0] = 0;         // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
     (*datap2_)[0] = 0;    // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
+    (void)&datap2_;       // no warning
+    (void)(&*datap2_);    // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
 
     data_();              // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
+
+    mu_.Lock();
+    (void)&data_;
+    mu_.Unlock();
+
+    mu_.ReaderLock();
+    (void)&data_;
+    mu_.Unlock();
   }
 
   // const operator tests
@@ -4962,6 +4993,7 @@ private:
   Data  data_   GUARDED_BY(mu_);
   Data* datap1_ GUARDED_BY(mu_);
   Data* datap2_ PT_GUARDED_BY(mu_);
+  DataWithAddrOf data_ao_ GUARDED_BY(mu_);
 };
 
 }  // end namespace GuardedNonPrimitiveTypeTest
@@ -5870,7 +5902,11 @@ class Foo {
   }
 
   void ptr_test() {
-    int *b = &a;
+#ifdef CHECK_ADDRESSOF
+    int *b = &a;           // expected-warning {{obtaining address of variable 'a' requires holding mutex 'mu'}}
+#else
+    int *b = &a;           // no warning
+#endif
     *b = 0;                // no expected warning yet
   }
 
@@ -6089,7 +6125,11 @@ class Return {
   }
   
   Foo *returns_ptr() {
-    return &foo;              // FIXME -- Do we want to warn on this ?
+#ifdef CHECK_ADDRESSOF
+    return &foo;              // expected-warning {{obtaining address of variable 'foo' requires holding mutex 'mu'}}
+#else
+    return &foo;              // no warning
+#endif
   }
 
   Foo &returns_ref2() {

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta -Wthread-safety-addressof -fexperimental-late-parse-attributes -DLATE_PARSING -DCHECK_ADDRESSOF %s
 
 #define LOCKABLE            __attribute__ ((lockable))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
@@ -133,7 +134,12 @@ int main(void) {
 
   Foo_func3(5);
 
+#ifdef CHECK_ADDRESSOF
+  set_value(&a_, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}} \
+                        expected-warning{{obtaining address of variable 'a_' requires holding mutex 'foo_.mu_'}}
+#else
   set_value(&a_, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
+#endif
   get_value(b_); // expected-warning{{calling function 'get_value' requires holding mutex 'foo_.mu_'}}
   mutex_exclusive_lock(foo_.mu_);
   set_value(&a_, 1);
@@ -180,6 +186,11 @@ int main(void) {
 #ifdef LATE_PARSING
   late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
+# ifdef CHECK_ADDRESSOF
+  (void)&late_parsing.a_value_defined_before; // expected-warning{{obtaining address of variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
+# else
+  (void)&late_parsing.a_value_defined_before; // no warning
+# endif
   mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
   mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);

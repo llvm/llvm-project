@@ -788,6 +788,9 @@ Improvements to Clang's diagnostics
       require(scope); // Warning!  Requires mu1.
     }
 
+- The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-addressof``,
+  which enables warning if the address of guarded variables is obtained.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

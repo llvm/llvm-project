@@ -4140,6 +4140,14 @@ def warn_thread_safety_verbose : Warning<"thread safety verbose warning">,
 def note_thread_warning_in_fun : Note<"thread warning in function %0">;
 def note_guarded_by_declared_here : Note<"guarded_by declared here">;
 
+// Thread safety warnings on addressof
+def warn_addressof_requires_any_lock : Warning<
+  "obtaining address of variable %0 requires holding any mutex">,
+  InGroup<ThreadSafetyAddressof>, DefaultIgnore;
+def warn_addressof_requires_lock : Warning<
+  "obtaining address of variable %1 requires holding %0 '%2'">,
+  InGroup<ThreadSafetyAddressof>, DefaultIgnore;
+
 // Dummy warning that will trigger "beta" warnings from the analysis if enabled.
 def warn_thread_safety_beta : Warning<"thread safety beta warning">,
   InGroup<ThreadSafetyBeta>, DefaultIgnore;

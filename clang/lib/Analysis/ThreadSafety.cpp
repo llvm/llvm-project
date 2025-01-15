@@ -2080,6 +2080,9 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
     case UO_PreInc:
       checkAccess(UO->getSubExpr(), AK_Written);
       break;
+    case UO_AddrOf:
+      checkAccess(UO->getSubExpr(), AK_Read, POK_AddressOf);
+      break;
     default:
       break;
   }
