@@ -282,7 +282,7 @@ bool mlir::linalg::detail::isContractionBody(
   Value yielded = getSourceSkipUnary(terminator->getOperand(0));
   Operation *reductionOp = yielded.getDefiningOp();
 
-  if (!reductionOp){
+  if (!reductionOp) {
     errs << "expected reduction op in body";
     return false;
   }
