@@ -1515,13 +1515,7 @@ cc_library(
             "lib/Format/*.h",
         ],
     ),
-    hdrs = [
-        "lib/Format/FormatTokenLexer.h",
-        "lib/Format/FormatTokenSource.h",
-        "lib/Format/Macros.h",
-        "lib/Format/QualifierAlignmentFixer.h",
-        "lib/Format/UnwrappedLineParser.h",
-    ] + glob([
+    hdrs = glob([
         "include/clang/Format/*.h",
     ]),
     includes = ["include"],
