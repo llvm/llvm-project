@@ -413,7 +413,8 @@ public:
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
-  std::pair<uint64_t, uint64_t> VisitDeclContext(DeclContext *DC);
+  void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
+                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset);
 
   template <typename T>
   RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -1855,7 +1856,10 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
 
 void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
   VisitNamedDecl(D);
-  VisitDeclContext(D);
+  uint64_t LexicalOffset = 0;
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset);
   D->IsCBuffer = Record.readBool();
   D->KwLoc = readSourceLocation();
   D->LBraceLoc = readSourceLocation();
@@ -2764,11 +2768,12 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
   mergeMergeable(D);
 }
 
-std::pair<uint64_t, uint64_t>
-ASTDeclReader::VisitDeclContext(DeclContext *DC) {
-  uint64_t LexicalOffset = ReadLocalOffset();
-  uint64_t VisibleOffset = ReadLocalOffset();
-  return std::make_pair(LexicalOffset, VisibleOffset);
+void ASTDeclReader::VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
+                                     uint64_t &VisibleOffset,
+                                     uint64_t &ModuleLocalOffset) {
+  LexicalOffset = ReadLocalOffset();
+  VisibleOffset = ReadLocalOffset();
+  ModuleLocalOffset = ReadLocalOffset();
 }
 
 template <typename T>
@@ -3869,6 +3874,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   switch ((DeclCode)MaybeDeclCode.get()) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
+  case DECL_CONTEXT_MODULE_LOCAL_VISIBLE:
   case DECL_SPECIALIZATIONS:
   case DECL_PARTIAL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
@@ -4176,21 +4182,35 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
   if (auto *DC = dyn_cast<DeclContext>(D)) {
-    std::pair<uint64_t, uint64_t> Offsets = Reader.VisitDeclContext(DC);
+    uint64_t LexicalOffset = 0;
+    uint64_t VisibleOffset = 0;
+    uint64_t ModuleLocalOffset = 0;
+
+    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset,
+                            ModuleLocalOffset);
 
     // Get the lexical and visible block for the delayed namespace.
     // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
     // But it may be more efficient to filter the other cases.
-    if (!Offsets.first && !Offsets.second && isa<NamespaceDecl>(D))
+    if (!LexicalOffset && !VisibleOffset && !ModuleLocalOffset &&
+        isa<NamespaceDecl>(D))
       if (auto Iter = DelayedNamespaceOffsetMap.find(ID);
-          Iter != DelayedNamespaceOffsetMap.end())
-        Offsets = Iter->second;
+          Iter != DelayedNamespaceOffsetMap.end()) {
+        LexicalOffset = Iter->second.LexicalOffset;
+        VisibleOffset = Iter->second.VisibleOffset;
+        ModuleLocalOffset = Iter->second.ModuleLocalOffset;
+      }
 
-    if (Offsets.first &&
-        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, Offsets.first, DC))
+    if (LexicalOffset &&
+        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, LexicalOffset, DC))
       return nullptr;
-    if (Offsets.second &&
-        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, Offsets.second, ID))
+    if (VisibleOffset &&
+        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, VisibleOffset, ID,
+                                      /*IsModuleLocal=*/false))
+      return nullptr;
+    if (ModuleLocalOffset &&
+        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, ModuleLocalOffset,
+                                      ID, /*IsModuleLocal=*/true))
       return nullptr;
   }
   assert(Record.getIdx() == Record.size());
@@ -4328,8 +4348,8 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
   }
 
   // Load the pending visible updates for this decl context, if it has any.
-  auto I = PendingVisibleUpdates.find(ID);
-  if (I != PendingVisibleUpdates.end()) {
+  if (auto I = PendingVisibleUpdates.find(ID);
+      I != PendingVisibleUpdates.end()) {
     auto VisibleUpdates = std::move(I->second);
     PendingVisibleUpdates.erase(I);
 
@@ -4338,6 +4358,21 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
       Lookups[DC].Table.add(
           Update.Mod, Update.Data,
           reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
+    DC->setHasExternalVisibleStorage(true);
+  }
+
+  if (auto I = PendingModuleLocalVisibleUpdates.find(ID);
+      I != PendingModuleLocalVisibleUpdates.end()) {
+    auto ModuleLocalVisibleUpdates = std::move(I->second);
+    PendingModuleLocalVisibleUpdates.erase(I);
+
+    auto *DC = cast<DeclContext>(D)->getPrimaryContext();
+    for (const auto &Update : ModuleLocalVisibleUpdates)
+      ModuleLocalLookups[DC].Table.add(
+          Update.Mod, Update.Data,
+          reader::ModuleLocalNameLookupTrait(*this, *Update.Mod));
+    // NOTE: Can we optimize the case that the data being loaded
+    // is not related to current module?
     DC->setHasExternalVisibleStorage(true);
   }
 
