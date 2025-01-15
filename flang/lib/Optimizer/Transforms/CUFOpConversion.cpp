@@ -366,22 +366,47 @@ private:
   const fir::LLVMTypeConverter *typeConverter;
 };
 
-static mlir::Value genGetDeviceAddress(mlir::PatternRewriter &rewriter,
-                                       mlir::ModuleOp mod, mlir::Location loc,
-                                       mlir::Value inputArg) {
-  fir::FirOpBuilder builder(rewriter, mod);
-  mlir::func::FuncOp callee =
-      fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(loc, builder);
-  auto fTy = callee.getFunctionType();
-  mlir::Value conv = createConvertOp(rewriter, loc, fTy.getInput(0), inputArg);
-  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-      builder, loc, fTy, conv, sourceFile, sourceLine)};
-  auto call = rewriter.create<fir::CallOp>(loc, callee, args);
-  return createConvertOp(rewriter, loc, inputArg.getType(), call->getResult(0));
-}
+struct CUFDeviceAddressOpConversion
+    : public mlir::OpRewritePattern<cuf::DeviceAddressOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  CUFDeviceAddressOpConversion(mlir::MLIRContext *context,
+                               const mlir::SymbolTable &symtab)
+      : OpRewritePattern(context), symTab{symtab} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::DeviceAddressOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (auto global = symTab.lookup<fir::GlobalOp>(
+            op.getHostSymbol().getRootReference().getValue())) {
+      auto mod = op->getParentOfType<mlir::ModuleOp>();
+      mlir::Location loc = op.getLoc();
+      auto hostAddr = rewriter.create<fir::AddrOfOp>(
+          loc, fir::ReferenceType::get(global.getType()), op.getHostSymbol());
+      fir::FirOpBuilder builder(rewriter, mod);
+      mlir::func::FuncOp callee =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFGetDeviceAddress)>(loc,
+                                                                     builder);
+      auto fTy = callee.getFunctionType();
+      mlir::Value conv =
+          createConvertOp(rewriter, loc, fTy.getInput(0), hostAddr);
+      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      mlir::Value sourceLine =
+          fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
+      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+          builder, loc, fTy, conv, sourceFile, sourceLine)};
+      auto call = rewriter.create<fir::CallOp>(loc, callee, args);
+      mlir::Value addr = createConvertOp(rewriter, loc, hostAddr.getType(),
+                                         call->getResult(0));
+      rewriter.replaceOp(op, addr.getDefiningOp());
+      return success();
+    }
+    return failure();
+  }
+
+private:
+  const mlir::SymbolTable &symTab;
+};
 
 struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -398,9 +423,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
               addrOfOp.getSymbol().getRootReference().getValue())) {
         if (cuf::isRegisteredDeviceGlobal(global)) {
           rewriter.setInsertionPointAfter(addrOfOp);
-          auto mod = op->getParentOfType<mlir::ModuleOp>();
-          mlir::Value devAddr = genGetDeviceAddress(rewriter, mod, op.getLoc(),
-                                                    addrOfOp.getResult());
+          mlir::Value devAddr = rewriter.create<cuf::DeviceAddressOp>(
+              op.getLoc(), addrOfOp.getType(), addrOfOp.getSymbol());
           rewriter.startOpModification(op);
           op.getMemrefMutable().assign(devAddr);
           rewriter.finalizeOpModification(op);
@@ -773,7 +797,6 @@ public:
       }
     }
     llvm::SmallVector<mlir::Value> args;
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
     for (mlir::Value arg : op.getArgs()) {
       // If the argument is a global descriptor, make sure we pass the device
       // copy of this descriptor and not the host one.
@@ -785,8 +808,11 @@ public:
             if (auto global = symTab.lookup<fir::GlobalOp>(
                     addrOfOp.getSymbol().getRootReference().getValue())) {
               if (cuf::isRegisteredDeviceGlobal(global)) {
-                arg = genGetDeviceAddress(rewriter, mod, op.getLoc(),
-                                          declareOp.getResult());
+                arg = rewriter
+                          .create<cuf::DeviceAddressOp>(op.getLoc(),
+                                                        addrOfOp.getType(),
+                                                        addrOfOp.getSymbol())
+                          .getResult();
               }
             }
           }
@@ -907,10 +933,12 @@ void cuf::populateCUFToFIRConversionPatterns(
       patterns.getContext());
   patterns.insert<CUFDataTransferOpConversion>(patterns.getContext(), symtab,
                                                &dl, &converter);
-  patterns.insert<CUFLaunchOpConversion>(patterns.getContext(), symtab);
+  patterns.insert<CUFLaunchOpConversion, CUFDeviceAddressOpConversion>(
+      patterns.getContext(), symtab);
 }
 
 void cuf::populateFIRCUFConversionPatterns(const mlir::SymbolTable &symtab,
                                            mlir::RewritePatternSet &patterns) {
-  patterns.insert<DeclareOpConversion>(patterns.getContext(), symtab);
+  patterns.insert<DeclareOpConversion, CUFDeviceAddressOpConversion>(
+      patterns.getContext(), symtab);
 }
