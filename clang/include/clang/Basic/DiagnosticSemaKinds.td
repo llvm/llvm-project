@@ -4871,8 +4871,8 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
 def note_ovl_candidate_explicit_arg_mismatch_named : Note<
-    "template argument deduction/substitution failed:" 
-    "error: could not convert '%0' from %1 to %2">;
+    "candidate template ignored: invalid explicitly-specified argument "
+    "could not convert '%0' from %1 to %2">;
 def note_ovl_candidate_unsatisfied_constraints : Note<
     "candidate template ignored: constraints not satisfied%0">;
 def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
