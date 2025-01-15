@@ -1135,8 +1135,11 @@ static bool GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD,
   if (RD->isImplicit())
     return false;
 
-  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+  // Keep track of the field number ourselves, because the other methods
+  // (CGRecordLayout::getLLVMFieldNo) aren't always equivalent to how the AST
+  // is laid out.
   uint32_t FieldNo = 0;
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
 
   for (const FieldDecl *Field : RD->fields()) {
     if (Field == FD) {
