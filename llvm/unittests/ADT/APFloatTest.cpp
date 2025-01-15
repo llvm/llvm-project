@@ -3793,19 +3793,42 @@ TEST(APFloatTest, abs) {
   EXPECT_TRUE(PSmallestNormalized.bitwiseIsEqual(abs(MSmallestNormalized)));
 }
 
-TEST(APFloatTest, pow) {
-  APFloat One = APFloat(APFloat::IEEEsingle(), "1.0");
+TEST(APFloatTest, powi) {
+  APFloat One = APFloat::getOne(APFloat::IEEEsingle(), false);
   APFloat Two = APFloat(APFloat::IEEEsingle(), "2.0");
   APFloat Four = APFloat(APFloat::IEEEsingle(), "4.0");
   APFloat Eight = APFloat(APFloat::IEEEsingle(), "8.0");
   APFloat NegTwo = APFloat(APFloat::IEEEsingle(), "-2.0");
   APFloat NegEight = APFloat(APFloat::IEEEsingle(), "-8.0");
-
-  EXPECT_TRUE(One.bitwiseIsEqual(pow(One, 0)));
-  EXPECT_TRUE(One.bitwiseIsEqual(pow(One, 3)));
-  EXPECT_TRUE(Four.bitwiseIsEqual(pow(Two, 2)));
-  EXPECT_TRUE(Eight.bitwiseIsEqual(pow(Two, 3)));
-  EXPECT_TRUE(NegEight.bitwiseIsEqual(pow(NegTwo, 3)));
+  APFloat PosInf = APFloat::getInf(APFloat::IEEEsingle(), false);
+  APFloat NegInf = APFloat::getInf(APFloat::IEEEsingle(), true);
+  APFloat PosZero = APFloat::getZero(APFloat::IEEEsingle(), false);
+  APFloat NegZero = APFloat::getZero(APFloat::IEEEsingle(), true);
+  APFloat PosQNaN = APFloat::getNaN(APFloat::IEEEsingle(), false);
+  APFloat NegQNaN = APFloat::getNaN(APFloat::IEEEsingle(), true);
+  APFloat PosSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false);
+  APFloat NegSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), true);
+  
+  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 0)));
+  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 3)));
+  EXPECT_TRUE(Four.bitwiseIsEqual(powi(Two, 2)));
+  EXPECT_TRUE(Eight.bitwiseIsEqual(powi(Two, 3)));
+  
+  // See page 63 of IEEE 754-2019.
+  EXPECT_TRUE(One.bitwiseIsEqual(powi(PosInf, 0)));
+  EXPECT_TRUE(NegEight.bitwiseIsEqual(powi(NegTwo, 3)));
+  EXPECT_TRUE(PosZero.bitwiseIsEqual(powi(PosZero, 3)));
+  EXPECT_TRUE(NegZero.bitwiseIsEqual(powi(NegZero, 5)));
+  EXPECT_TRUE(PosZero.bitwiseIsEqual(powi(NegZero, 6)));
+  EXPECT_TRUE(NegInf.bitwiseIsEqual(powi(NegInf, 3)));
+  EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(NegInf, 4)));
+  EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(PosInf, 3)));
+  
+  EXPECT_TRUE(PosQNaN.bitwiseIsEqual(powi(PosQNaN, 1)));
+  EXPECT_TRUE(NegQNaN.bitwiseIsEqual(powi(NegQNaN, 1)));
+  // Check signaling NaN is quieted for n == 1.
+  EXPECT_TRUE(PosQNaN.bitwiseIsEqual(powi(PosSNaN, 1)));
+  EXPECT_TRUE(NegSNaN.bitwiseIsEqual(powi(NegSNaN, 1)));
 }
 
 TEST(APFloatTest, neg) {
