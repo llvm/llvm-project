@@ -52,11 +52,6 @@ struct OpStage {
   uint32_t ValidStages;
 };
 
-struct OpAttribute {
-  Version DXILVersion;
-  llvm::SmallVector<dxil::Attribute> ValidAttrs;
-};
-
 static const char *getOverloadTypeName(OverloadKind Kind) {
   switch (Kind) {
   case OverloadKind::HALF:
@@ -158,7 +153,6 @@ struct OpCodeProperty {
   unsigned OpCodeClassNameOffset;
   llvm::SmallVector<OpOverload> Overloads;
   llvm::SmallVector<OpStage> Stages;
-  llvm::SmallVector<OpAttribute> Attributes;
   llvm::SmallVector<dxil::Property> Properties;
   int OverloadParamIndex; // parameter index which control the overload.
                           // When < 0, should be only 1 overload type.
@@ -368,18 +362,40 @@ static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
   return std::nullopt;
 }
 
-static void setDXILAttribute(CallInst *CI, dxil::Attribute Attr) {
-  switch (Attr) {
-  case dxil::Attribute::ReadNone:
-    return CI->setDoesNotAccessMemory();
-  case dxil::Attribute::ReadOnly:
-    return CI->setOnlyReadsMemory();
-  case dxil::Attribute::NoReturn:
-    return CI->setDoesNotReturn();
-  case dxil::Attribute::NoDuplicate:
-    return CI->setCannotDuplicate();
+constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode, uint16_t VersionMajor, uint16_t VersionMinor) {
+  uint64_t OpCodePack = (uint64_t)OpCode;
+  return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
+}
+
+static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode, VersionTuple DXILVersion) {
+  SmallVector<Version> Versions = {
+#define DXIL_VERSION(MAJOR, MINOR) {MAJOR, MINOR},
+#include "DXILOperation.inc"
+  };
+
+  dxil::Attributes Attributes;
+  for (auto Version : Versions) {
+    if (DXILVersion < VersionTuple(Version.Major, Version.Minor)) continue;
+    switch (computeSwitchEnum(OpCode, Version.Major, Version.Minor)) {
+#define DXIL_OP_ATTRIBUTES(OpCode, VersionMajor, VersionMinor, ...) \
+    case computeSwitchEnum(OpCode, VersionMajor, VersionMinor): { \
+      auto Other = dxil::Attributes{__VA_ARGS__}; \
+      Attributes |= Other; \
+      break; \
+    };
+#include "DXILOperation.inc"
+    }
   }
-  llvm_unreachable("Invalid function attribute specified for DXIL operation");
+  return Attributes;
+}
+
+static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode, VersionTuple DXILVersion) {
+  dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);
+  if (Attributes.ReadNone) CI->setDoesNotAccessMemory();
+  if (Attributes.ReadOnly) CI->setOnlyReadsMemory();
+  if (Attributes.NoReturn) CI->setDoesNotReturn();
+  if (Attributes.NoDuplicate) CI->setCannotDuplicate();
+  return;
 }
 
 namespace llvm {
@@ -480,11 +496,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   CallInst *CI = IRB.CreateCall(DXILFn, OpArgs, Name);
 
   // We then need to attach available function attributes
-  for (auto OpAttr : Prop->Attributes)
-    if (VersionTuple(OpAttr.DXILVersion.Major, OpAttr.DXILVersion.Minor) <=
-        DXILVersion)
-      for (auto Attr : OpAttr.ValidAttrs)
-        setDXILAttribute(CI, Attr);
+  setDXILAttributes(CI, OpCode, DXILVersion);
 
   return CI;
 }

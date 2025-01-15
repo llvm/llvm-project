@@ -319,43 +319,6 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
   return MaskString;
 }
 
-/// Return a string representation of valid attribute information denoted
-// by input records
-//
-/// \param Recs A vector of records of TableGen Attribute records
-/// \return std::string string representation of attributes list string
-///         predicated by DXIL Version. E.g.,
-//          {{{1, 0}, {Attr1, ...}}, {{1, 2}, {Attr2, ...}}, ...}
-static std::string getAttributeListString(ArrayRef<const Record *> Recs) {
-  std::string ListString = "";
-  std::string Prefix = "";
-  ListString.append("{");
-
-  for (const auto *Rec : Recs) {
-    unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
-    unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
-    ListString.append(Prefix)
-        .append("{{")
-        .append(std::to_string(Major))
-        .append(", ")
-        .append(std::to_string(Minor).append("}, {"));
-
-    std::string CommaPrefix = "";
-    auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
-    for (const auto *Attr : Attrs) {
-      ListString.append(CommaPrefix)
-          .append("dxil::Attribute::")
-          .append(Attr->getName());
-      CommaPrefix = ", ";
-    }
-    ListString.append("}"); // End of Attrs
-    ListString.append("}"); // End of Rec
-    Prefix = ", ";
-  }
-  ListString.append("}"); // End of List
-  return ListString;
-}
-
 /// Return a string representation of valid property information denoted
 // by input records
 //
@@ -376,6 +339,20 @@ static std::string getPropertyListString(ArrayRef<const Record *> Recs) {
   }
   ListString.append("}");
   return ListString;
+}
+
+/// Emit a list valid DXIL Version records
+static void emitDXILVersions(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_VERSION\n";
+  for (const Record *Version : Records.getAllDerivedDefinitions("Version")) {
+      unsigned Major = Version->getValueAsInt("Major");
+      unsigned Minor = Version->getValueAsInt("Minor");
+      OS << "DXIL_VERSION(";
+      OS << std::to_string(Major) << ", " << std::to_string(Minor);
+      OS << ")\n";
+  }
+  OS << "#undef DXIL_VERSION\n";
+  OS << "#endif\n\n";
 }
 
 /// Emit a mapping of DXIL opcode to opname
@@ -413,6 +390,40 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
   for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
     OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
   OS << "#undef DXIL_ATTRIBUTE\n";
+  OS << "#endif\n\n";
+}
+
+// Determine which function attributes are set for a dxil version
+static bool attrIsDefined(std::vector<const Record *> Attrs, const Record *Attr) {
+  for (auto CurAttr : Attrs)
+    if (CurAttr->getName() == Attr->getName())
+      return true;
+  return false;
+}
+
+/// Emit a table of bools denoting a DXIL op's function attributes
+static void emitDXILOpAttributes(const RecordKeeper &Records,
+                                 ArrayRef<DXILOperationDesc> Ops,
+                                 raw_ostream &OS) {
+  OS << "#ifdef DXIL_OP_ATTRIBUTES\n";
+  for (const auto &Op : Ops) {
+    for (const auto *Rec : Op.AttrRecs) {
+      unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+      unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+      OS << "DXIL_OP_ATTRIBUTES(dxil::OpCode::" << Op.OpName << ", ";
+      OS << std::to_string(Major) << ", " << std::to_string(Minor);
+      auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
+      for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute")) {
+        std::string HasAttr = ", false";
+        if (attrIsDefined(Attrs, Attr))
+          HasAttr = ", true";
+        OS << HasAttr;
+      }
+      OS << ")\n";
+    }
+    
+  }
+  OS << "#undef DXIL_OP_ATTRIBUTES\n";
   OS << "#endif\n\n";
 }
 
@@ -544,7 +555,6 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeListString(Op.AttrRecs) << ", "
        << getPropertyListString(Op.PropRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
@@ -647,10 +657,12 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
     PrevOp = Desc.OpCode;
   }
 
+  emitDXILVersions(Records, OS);
   emitDXILOpCodes(DXILOps, OS);
   emitDXILOpClasses(Records, OS);
   emitDXILOpParamTypes(Records, OS);
   emitDXILAttributes(Records, OS);
+  emitDXILOpAttributes(Records, DXILOps, OS);
   emitDXILProperties(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
