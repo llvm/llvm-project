@@ -55,7 +55,6 @@ enum NodeType : unsigned {
   FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
-  IMAD,
   SETP_F16X2,
   SETP_BF16X2,
   BFE,
