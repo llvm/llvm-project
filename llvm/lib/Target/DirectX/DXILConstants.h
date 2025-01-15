@@ -47,9 +47,8 @@ inline Attributes &operator|=(Attributes &a, Attributes &b) {
   return a;
 }
 
-
-enum class Property : unsigned {
-#define DXIL_PROPERTY(Name) Name,
+struct Properties {
+#define DXIL_PROPERTY(Name) bool Name = false;
 #include "DXILOperation.inc"
 };
 

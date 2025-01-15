@@ -319,28 +319,6 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
   return MaskString;
 }
 
-/// Return a string representation of valid property information denoted
-// by input records
-//
-/// \param Recs A vector of records of TableGen Property records
-/// \return std::string string representation of properties list string
-//          {Attr1, Attr2, ...}
-static std::string getPropertyListString(ArrayRef<const Record *> Recs) {
-  std::string ListString = "";
-  std::string Prefix = "";
-  ListString.append("{");
-
-  std::string CommaPrefix = "";
-  for (const auto *Rec : Recs) {
-    ListString.append(CommaPrefix)
-        .append("dxil::Property::")
-        .append(Rec->getName());
-    CommaPrefix = ", ";
-  }
-  ListString.append("}");
-  return ListString;
-}
-
 /// Emit a list valid DXIL Version records
 static void emitDXILVersions(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_VERSION\n";
@@ -429,34 +407,11 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
 
 /// Emit a list of DXIL op properties and their query functions
 static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
-  // Generate their definitions
   OS << "#ifdef DXIL_PROPERTY\n";
   for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))
     OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
   OS << "#undef DXIL_PROPERTY\n";
   OS << "#endif\n\n";
-}
-
-static void emitDXILPropertyHelper(ArrayRef<DXILOperationDesc> Ops,
-                                   raw_ostream &OS) {
-  // Generate helper function to query all the functions
-  OS << "static llvm::SmallVector<dxil::Property> getProperties(dxil::OpCode "
-        "Op) {\n";
-  OS << "  switch (Op) {\n";
-  for (const auto &Op : Ops) {
-    OS << "  case dxil::OpCode::" << Op.OpName << ": return "
-       << getPropertyListString(Op.PropRecs) << ";\n";
-  }
-  OS << "  }\n";
-  OS << "  return {};\n";
-  OS << "}\n\n";
-  OS << "static bool hasProperty(dxil::OpCode Op, dxil::Property Prop) {\n";
-  OS << "  auto Properties = getProperties(Op);\n";
-  OS << "  for (auto CurProp : Properties)\n";
-  OS << "    if (CurProp == Prop)\n";
-  OS << "      return true;\n";
-  OS << "  return false;\n";
-  OS << "}\n\n";
 }
 
 /// Emit a list of DXIL op function types
@@ -555,7 +510,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
-       << getPropertyListString(Op.PropRecs) << ", " << Op.OverloadParamIndex
+       << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }
@@ -671,10 +626,6 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
   OS << "#undef DXIL_OP_OPERATION_TABLE\n";
-  OS << "#endif\n\n";
-  OS << "#ifdef DXIL_OP_PROPERTY_HELPER\n";
-  emitDXILPropertyHelper(DXILOps, OS);
-  OS << "#undef DXIL_OP_PROPERTY_HELPER\n";
   OS << "#endif\n\n";
 }
 
