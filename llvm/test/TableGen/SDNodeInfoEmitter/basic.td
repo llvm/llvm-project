@@ -46,6 +46,8 @@ def MyTarget : Target;
 // CHECK-NEXT:      MyTargetSDNodeNames, MyTargetSDTypeConstraints);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
+// CHECK-NEXT:  #endif // GET_SDNODE_DESC
 
 
 //--- trivial-node.td
