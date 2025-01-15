@@ -840,7 +840,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   for (auto &NameRec : Records.getClasses()) {
     const Record *Class = NameRec.second.get();
     SmallVector<std::pair<const Record *, SMRange>> SCs;
-    Class->getSuperClasses(SCs);
+    Class->getDirectSuperClasses(SCs);
     if (SCs.size() != 1 || !Class->isSubClassOf(SearchableTable))
       continue;
 

@@ -704,9 +704,9 @@ struct TupleExpander : SetTheory::Expander {
 
       // Copy Proto super-classes.
       SmallVector<std::pair<const Record *, SMRange>> SCs;
-      Proto->getSuperClasses(SCs);
+      Proto->getDirectSuperClasses(SCs);
       for (const auto &[Super, Loc] : SCs)
-        NewReg->addSuperClass(Super, Loc);
+        NewReg->addDirectSuperClass(Super, Loc);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {

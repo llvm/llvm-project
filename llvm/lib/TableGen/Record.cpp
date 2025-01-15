@@ -2398,13 +2398,8 @@ const DefInit *VarDefInit::instantiate() {
 
   NewRec->resolveReferences(R);
 
-  // Add superclasses.
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
-  Class->getSuperClasses(SCs);
-  for (const auto &[SC, Loc] : SCs)
-    NewRec->addSuperClass(SC, Loc);
-
-  NewRec->addSuperClass(
+  // Add superclass.
+  NewRec->addDirectSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
 
   // Resolve internal references and store in record keeper
@@ -2912,46 +2907,6 @@ void Record::setName(const Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
-}
-
-// NOTE for the next two functions:
-// Superclasses are in post-order, so the final one is a direct
-// superclass. All of its transitive superclases immediately precede it,
-// so we can step through the direct superclasses in reverse order.
-
-bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
-  getSuperClasses(SCs);
-
-  SmallVector<std::pair<const Record *, SMRange>> SSCs;
-
-  for (int I = SCs.size() - 1; I >= 0; --I) {
-    const Record *SC = SCs[I].first;
-    if (SC == Superclass)
-      return true;
-    SC->getSuperClasses(SSCs);
-    I -= SSCs.size();
-    SSCs.clear();
-  }
-
-  return false;
-}
-
-void Record::getDirectSuperClasses(
-    SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const {
-  SmallVector<std::pair<const Record *, SMRange>> SCVec;
-  getSuperClasses(SCVec);
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = SCVec;
-
-  SmallVector<std::pair<const Record *, SMRange>> SSCs;
-
-  while (!SCs.empty()) {
-    auto [SC, Range] = SCs.back();
-    SC->getSuperClasses(SSCs);
-    SCs = SCs.drop_back(1 + SSCs.size());
-    SSCs.clear();
-    Classes.emplace_back(SC, Range);
-  }
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {

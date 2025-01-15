@@ -330,19 +330,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
-  SC->getSuperClasses(SCs);
-  for (const auto &[SC, Loc] : SCs) {
-    if (CurRec->isSubClassOf(SC))
-      return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SC->getName() + "'!\n");
-    CurRec->addSuperClass(SC, Loc);
-  }
-
   if (CurRec->isSubClassOf(SC))
     return Error(SubClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -4005,7 +3996,7 @@ bool TGParser::ParseClass() {
   if (CurRec) {
     // If the body was previously defined, this is an error.
     SmallVector<std::pair<const Record *, SMRange>> SCs;
-    CurRec->getSuperClasses(SCs);
+    CurRec->getDirectSuperClasses(SCs);
     if (!CurRec->getValues().empty() || !SCs.empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
