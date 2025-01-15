@@ -584,7 +584,7 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
     unsigned SizeToSpill = CurRP - Limit;
     if (RegSize > SizeToSpill) {
       const TargetRegisterClass *SuperRC = TRI->getRegClassForReg(*MRI, P.VReg);
-      DenseMap<unsigned, unsigned> Cands;
+      DenseMap<unsigned, std::pair<unsigned, LaneBitmask>> Cands;
       SmallVector<unsigned> Sorted;
       for (auto &SubReg : MRI->reg_operands(P.VReg)) {
         unsigned SubRegIdx = SubReg.getSubReg();
@@ -593,7 +593,7 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
           VRegMaskPair X(P.VReg, Mask);
           unsigned D = I == MBB.end() ? NU.getNextUseDistance(MBB, X)
                                       : NU.getNextUseDistance(I, X);
-          Cands[D] = SubRegIdx;
+          Cands[D] = {SubRegIdx, Mask};
           Sorted.push_back(D);
         }
       }
@@ -601,10 +601,11 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
       LaneBitmask ActiveMask = P.LaneMask;
       std::sort(Sorted.begin(), Sorted.end(), [](unsigned x, unsigned y) { return x > y;});
       for (auto i : Sorted) {
-        unsigned SubIdx = Cands[i];
-        LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(Cands[i]);
+        unsigned SubIdx = Cands[i].first;
+        LaneBitmask SubMask = Cands[i].second;
         VRegMaskPair Y(P.VReg, SubMask);
-        dbgs() << "[ " << printReg(Y.VReg, TRI, SubIdx, MRI) << " ] : " << i << "\n";
+        dbgs() << "[ " << printReg(Y.VReg, TRI, SubIdx, MRI) << " ] : " << i
+               << "\n";
         const TargetRegisterClass *RC =
             TRI->getSubRegisterClass(SuperRC, SubIdx);
         unsigned Size = TRI->getRegClassWeight(RC).RegWeight;
@@ -703,7 +704,7 @@ bool AMDGPUSSASpiller::isCoveredActive(VRegMaskPair VMP,
   dumpRegSet(Active);
   for (auto P : Active) {
     if (P.VReg == VMP.VReg) {
-      return (P.LaneMask & VMP.LaneMask).any();
+      return (P.LaneMask & VMP.LaneMask) == VMP.LaneMask;
     }
   }
   return false;
