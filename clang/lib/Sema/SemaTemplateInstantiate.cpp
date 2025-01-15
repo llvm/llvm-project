@@ -2490,7 +2490,9 @@ TemplateInstantiator::TransformDeclRefExpr(DeclRefExpr *E) {
       return TransformFunctionParmPackRefExpr(E, PD);
 
   if (BindingDecl *BD = dyn_cast<BindingDecl>(D); BD && BD->isParameterPack()) {
-    BD = cast<BindingDecl>(TransformDecl(BD->getLocation(), BD));
+    BD = cast_or_null<BindingDecl>(TransformDecl(BD->getLocation(), BD));
+    if (!BD)
+      return ExprError();
     if (auto *RP =
             dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding())) {
       return TransformResolvedUnexpandedPackExpr(RP);
@@ -2671,18 +2673,7 @@ ExprResult TemplateInstantiator::TransformResolvedUnexpandedPackExpr(
         E->getExpansion(getSema().ArgumentPackSubstitutionIndex));
   }
 
-  if (!AlwaysRebuild())
-    return E;
-
-  SmallVector<Expr *, 12> NewExprs;
-  if (TransformExprs(E->getExprs().begin(), E->getNumExprs(),
-                     /*IsCall=*/false, NewExprs))
-    return ExprError();
-
-  // NOTE: The type is just a superficial PackExpansionType
-  //       that needs no substitution.
-  return ResolvedUnexpandedPackExpr::Create(SemaRef.Context, E->getBeginLoc(),
-                                            E->getType(), NewExprs);
+  return inherited::TransformResolvedUnexpandedPackExpr(E);
 }
 
 QualType TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
