@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cfenv> // temporary -- only used in genIeeeGetOrSetModesOrStatus
 #include <mlir/IR/Value.h>
 #include <optional>
 
@@ -318,13 +319,15 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_get_halting_mode",
      &I::genIeeeGetHaltingMode,
      {{{"flag", asValue}, {"halting", asAddr}}}},
-    {"ieee_get_modes", &I::genIeeeGetOrSetModes</*isGet=*/true>},
+    {"ieee_get_modes",
+     &I::genIeeeGetOrSetModesOrStatus</*isGet=*/true, /*isModes=*/true>},
     {"ieee_get_rounding_mode",
      &I::genIeeeGetRoundingMode,
      {{{"round_value", asAddr, handleDynamicOptional},
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"ieee_get_status", &I::genIeeeGetOrSetStatus</*isGet=*/true>},
+    {"ieee_get_status",
+     &I::genIeeeGetOrSetModesOrStatus</*isGet=*/true, /*isModes=*/false>},
     {"ieee_get_underflow_mode",
      &I::genIeeeGetUnderflowMode,
      {{{"gradual", asAddr}}},
@@ -368,13 +371,15 @@ static constexpr IntrinsicHandler handlers[]{
     {"ieee_set_flag", &I::genIeeeSetFlagOrHaltingMode</*isFlag=*/true>},
     {"ieee_set_halting_mode",
      &I::genIeeeSetFlagOrHaltingMode</*isFlag=*/false>},
-    {"ieee_set_modes", &I::genIeeeGetOrSetModes</*isGet=*/false>},
+    {"ieee_set_modes",
+     &I::genIeeeGetOrSetModesOrStatus</*isGet=*/false, /*isModes=*/true>},
     {"ieee_set_rounding_mode",
      &I::genIeeeSetRoundingMode,
      {{{"round_value", asValue, handleDynamicOptional},
        {"radix", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
-    {"ieee_set_status", &I::genIeeeGetOrSetStatus</*isGet=*/false>},
+    {"ieee_set_status",
+     &I::genIeeeGetOrSetModesOrStatus</*isGet=*/false, /*isModes=*/false>},
     {"ieee_set_underflow_mode", &I::genIeeeSetUnderflowMode},
     {"ieee_signaling_eq",
      &I::genIeeeSignalingCompare<mlir::arith::CmpFPredicate::OEQ>},
@@ -4108,11 +4113,12 @@ void IntrinsicLibrary::genRaiseExcept(int excepts, mlir::Value cond) {
 // Return a reference to the contents of a derived type with one field.
 // Also return the field type.
 static std::pair<mlir::Value, mlir::Type>
-getFieldRef(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value rec) {
+getFieldRef(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value rec,
+            unsigned index = 0) {
   auto recType =
       mlir::dyn_cast<fir::RecordType>(fir::unwrapPassByRefType(rec.getType()));
-  assert(recType.getTypeList().size() == 1 && "expected exactly one component");
-  auto [fieldName, fieldTy] = recType.getTypeList().front();
+  assert(index < recType.getTypeList().size() && "not enough components");
+  auto [fieldName, fieldTy] = recType.getTypeList()[index];
   mlir::Value field = builder.create<fir::FieldIndexOp>(
       loc, fir::FieldType::get(recType.getContext()), fieldName, recType,
       fir::getTypeParams(rec));
@@ -4502,15 +4508,60 @@ void IntrinsicLibrary::genIeeeGetHaltingMode(
 }
 
 // IEEE_GET_MODES, IEEE_SET_MODES
-template <bool isGet>
-void IntrinsicLibrary::genIeeeGetOrSetModes(
+// IEEE_GET_STATUS, IEEE_SET_STATUS
+template <bool isGet, bool isModes>
+void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Type ptrTy = builder.getRefType(builder.getIntegerType(32));
+#ifndef __GLIBC_USE_IEC_60559_BFP_EXT // only use of "#include <cfenv>"
+  // No definitions of fegetmode, fesetmode
+  llvm::StringRef func = isModes
+                             ? (isGet ? "ieee_get_modes" : "ieee_set_modes")
+                             : (isGet ? "ieee_get_status" : "ieee_set_status");
+  TODO(loc, "intrinsic module procedure: " + func);
+#else
   mlir::Type i32Ty = builder.getIntegerType(32);
-  mlir::Value addr =
-      builder.create<fir::ConvertOp>(loc, ptrTy, getBase(args[0]));
-  genRuntimeCall(isGet ? "fegetmode" : "fesetmode", i32Ty, addr);
+  mlir::Type i64Ty = builder.getIntegerType(64);
+  mlir::Type ptrTy = builder.getRefType(i32Ty);
+  mlir::Value addr;
+  if (fir::getTargetTriple(builder.getModule()).isSPARC()) {
+    // Floating point environment data is larger than the __data field
+    // allotment. Allocate data space from the heap.
+    auto [fieldRef, fieldTy] =
+        getFieldRef(builder, loc, fir::getBase(args[0]), 1);
+    addr = builder.create<fir::BoxAddrOp>(
+        loc, builder.create<fir::LoadOp>(loc, fieldRef));
+    mlir::Type heapTy = addr.getType();
+    mlir::Value allocated = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne,
+        builder.createConvert(loc, i64Ty, addr),
+        builder.createIntegerConstant(loc, i64Ty, 0));
+    auto ifOp = builder.create<fir::IfOp>(loc, heapTy, allocated,
+                                          /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    builder.create<fir::ResultOp>(loc, addr);
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    mlir::Value byteSize =
+        isModes ? fir::runtime::genGetModesTypeSize(builder, loc)
+                : fir::runtime::genGetStatusTypeSize(builder, loc);
+    byteSize = builder.createConvert(loc, builder.getIndexType(), byteSize);
+    addr =
+        builder.create<fir::AllocMemOp>(loc, extractSequenceType(heapTy),
+                                        /*typeparams=*/std::nullopt, byteSize);
+    mlir::Value shape = builder.create<fir::ShapeOp>(loc, byteSize);
+    builder.create<fir::StoreOp>(
+        loc, builder.create<fir::EmboxOp>(loc, fieldTy, addr, shape), fieldRef);
+    builder.create<fir::ResultOp>(loc, addr);
+    builder.setInsertionPointAfter(ifOp);
+    addr = builder.create<fir::ConvertOp>(loc, ptrTy, ifOp.getResult(0));
+  } else {
+    // Place floating point environment data in __data storage.
+    addr = builder.create<fir::ConvertOp>(loc, ptrTy, getBase(args[0]));
+  }
+  llvm::StringRef func = isModes ? (isGet ? "fegetmode" : "fesetmode")
+                                 : (isGet ? "fegetenv" : "fesetenv");
+  genRuntimeCall(func, i32Ty, addr);
+#endif
 }
 
 // Check that an explicit ieee_[get|set]_rounding_mode call radix value is 2.
@@ -4541,18 +4592,6 @@ void IntrinsicLibrary::genIeeeGetRoundingMode(
   mlir::Value mode = builder.create<fir::CallOp>(loc, getRound).getResult(0);
   mode = builder.createConvert(loc, fieldTy, mode);
   builder.create<fir::StoreOp>(loc, mode, fieldRef);
-}
-
-// IEEE_GET_STATUS, IEEE_SET_STATUS
-template <bool isGet>
-void IntrinsicLibrary::genIeeeGetOrSetStatus(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 1);
-  mlir::Type ptrTy = builder.getRefType(builder.getIntegerType(32));
-  mlir::Type i32Ty = builder.getIntegerType(32);
-  mlir::Value addr =
-      builder.create<fir::ConvertOp>(loc, ptrTy, getBase(args[0]));
-  genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
 }
 
 // IEEE_GET_UNDERFLOW_MODE
