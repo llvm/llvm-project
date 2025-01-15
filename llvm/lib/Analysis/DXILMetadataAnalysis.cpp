@@ -68,6 +68,22 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     }
     MMDAI.EntryPropertyVec.push_back(EFP);
   }
+
+  // Set shader flags based on Module properties
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+  for (const auto &Flag : FlagEntries) {
+    if (Flag.Behavior != Module::ModFlagBehavior::Override)
+      continue;
+    if (Flag.Key->getString().compare("dx.disable_optimizations") == 0) {
+      const auto *V = mdconst::extract<llvm::ConstantInt>(Flag.Val);
+      if (V->isOne()) {
+        MMDAI.DisableOptimizations = true;
+        break;
+      }
+    }
+  }
+
   return MMDAI;
 }
 

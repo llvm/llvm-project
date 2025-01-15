@@ -37,6 +37,7 @@ struct ModuleMetadataInfo {
   Triple::EnvironmentType ShaderProfile{Triple::UnknownEnvironment};
   VersionTuple ValidatorVersion{};
   SmallVector<EntryProperties> EntryPropertyVec{};
+  bool DisableOptimizations{false};
   void print(raw_ostream &OS) const;
 };
 

@@ -96,7 +96,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 }
 
 /// Construct ModuleShaderFlags for module Module M
-void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM) {
+void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
+                                   const ModuleMetadataInfo &MMDI) {
   CallGraph CG(M);
 
   // Compute Shader Flags Mask for all functions using post-order visit of SCC
@@ -142,6 +143,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM) {
       // Merge SCCSF with that of F
       FunctionFlags[F].merge(SCCSF);
   }
+
+  // Set shader flags based on Module properties based on module metadata
+  CombinedSFMask.DisableOptimizations = MMDI.DisableOptimizations;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -180,9 +184,10 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                            ModuleAnalysisManager &AM) {
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM);
+  MSFI.initialize(M, DRTM, MMDI);
 
   return MSFI;
 }
@@ -212,14 +217,17 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  const ModuleMetadataInfo MMDI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM);
+  MSFI.initialize(M, DRTM, MMDI);
   return false;
 }
 
 void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char ShaderFlagsAnalysisWrapper::ID = 0;
@@ -227,5 +235,6 @@ char ShaderFlagsAnalysisWrapper::ID = 0;
 INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                       "DXIL Shader Flag Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_END(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                     "DXIL Shader Flag Analysis", true, true)
