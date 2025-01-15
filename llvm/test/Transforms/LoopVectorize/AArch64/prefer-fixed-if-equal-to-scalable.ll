@@ -1,9 +1,9 @@
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=generic | FileCheck %s --check-prefix=CHECK-GENERIC
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=neoverse-v2 | FileCheck %s --check-prefix=CHECK-PREFFIXED
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x2 | FileCheck %s --check-prefix=CHECK-PREFFIXED
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x3 | FileCheck %s --check-prefix=CHECK-PREFFIXED
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x4 | FileCheck %s --check-prefix=CHECK-PREFFIXED
-; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x925 | FileCheck %s --check-prefix=CHECK-PREFFIXED
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=generic -mattr=+sve2 | FileCheck %s --check-prefix=CHECK-GENERIC
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=neoverse-v2 | FileCheck %s --check-prefix=CHECK-PREFERFIXED
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x2 | FileCheck %s --check-prefix=CHECK-PREFERFIXED
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x3 | FileCheck %s --check-prefix=CHECK-PREFERFIXED
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x4 | FileCheck %s --check-prefix=CHECK-PREFERFIXED
+; RUN: opt -S < %s -passes=loop-vectorize -mcpu=cortex-x925 | FileCheck %s --check-prefix=CHECK-PREFERFIXED
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
@@ -14,8 +14,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test() #0 {
 ; CHECK-GENERIC-LABEL: define void @test(
 ; CHECK-GENERIC:       store <vscale x 4 x float>
-; CHECK-PREFFIXED-LABEL: define void @test(
-; CHECK-PREFFIXED:       store <4 x float>
+; CHECK-PREFERFIXED-LABEL: define void @test(
+; CHECK-PREFERFIXED:       store <4 x float>
 ;
 entry:
   br label %for.body
@@ -38,4 +38,4 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { vscale_range(1,16) "target-features"="+sve,+sve2,+v9a" }
+attributes #0 = { vscale_range(1,16) }
