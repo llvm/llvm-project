@@ -190,19 +190,6 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
-/// Calculate Start and End points of memory access.
-/// Let's assume A is the first access and B is a memory access on N-th loop
-/// iteration. Then B is calculated as:
-///   B = A + Step*N .
-/// Step value may be positive or negative.
-/// N is a calculated back-edge taken count:
-///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
-/// Start and End points are calculated in the following way:
-/// Start = UMIN(A, B) ; End = UMAX(A, B) + SizeOfElt,
-/// where SizeOfElt is the size of single memory access in bytes.
-///
-/// There is no conflict when the intervals are disjoint:
-/// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
     ScalarEvolution *SE,
