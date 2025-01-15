@@ -804,6 +804,15 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
 /// Get the address space which should be used for allocas
 uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 
+/// The two vectors of MLIR values have the following property:
+///   \p extents1[i] must have the same value as \p extents2[i]
+/// The function returns a new vector of MLIR values that preserves
+/// the same property vs \p extents1 and \p extents2, but allows
+/// more optimizations. For example, if extents1[j] is a known constant,
+/// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
+llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
+                                                    mlir::ValueRange extents2);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
