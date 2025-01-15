@@ -1080,6 +1080,10 @@ public:
   }
 
   const MemberExpr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    if (ASE)
+      // We don't support multiple subscripts.
+      return nullptr;
+
     AddrOfSeen = false; // '&ptr->array[idx]' is okay.
     ASE = E;
     return Visit(E->getBase());
