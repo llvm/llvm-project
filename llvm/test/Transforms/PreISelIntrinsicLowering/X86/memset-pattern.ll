@@ -22,7 +22,7 @@ define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern, i64 16)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 16)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 1, i1 0)
@@ -50,7 +50,7 @@ define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounw
 define void @memset_pattern_i128_16(ptr %a) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_16(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.1, i64 256)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.3, i64 256)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 16, i1 0)
@@ -61,9 +61,31 @@ define void @memset_pattern_i128_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 [[TMP1]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.4, i64 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 %x, i1 0)
+  ret void
+}
+
+define void @memset_pattern_i16_x(ptr %a, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i16_x(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 2, [[X]]
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern, i64 [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i16 u0xabcd, i64 %x, i1 0)
+  ret void
+}
+
+define void @memset_pattern_i64_x(ptr %a, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i64_x(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 2, [[X]]
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.1, i64 [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i16 u0xaaaabbbbccccdddd, i64 %x, i1 0)
   ret void
 }
