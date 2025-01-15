@@ -3,13 +3,13 @@
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.64.o
-# RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.32.o -o %t.32
-# RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.64.o -o %t.64
+# RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs --relax %t.32.o -o %t.32
+# RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs --relax %t.64.o -o %t.64
 # RUN: llvm-objdump -dr %t.32 | FileCheck %s --check-prefix=RELAX
 # RUN: llvm-objdump -dr %t.64 | FileCheck %s --check-prefix=RELAX
 
 ## -r should keep original relocations.
-# RUN: ld.lld -r %t.64.o -o %t.64.r
+# RUN: ld.lld --relax -r %t.64.o -o %t.64.r
 # RUN: llvm-objdump -dr %t.64.r | FileCheck %s --check-prefix=CHECKR
 
 ## --no-relax should keep original relocations.
@@ -58,7 +58,7 @@
 # CHECKR-NEXT:   pcalau12i $a0, 0
 # CHECKR-NEXT:     R_LARCH_GOT_PC_HI20 _start
 # CHECKR-NEXT:     R_LARCH_RELAX *ABS*
-# CHECKR-NEXT:   ld.d    $a0, $a0, 0
+# CHECKR-NEXT:   ld.d      $a0, $a0, 0
 # CHECKR-NEXT:     R_LARCH_GOT_PC_LO12 _start
 # CHECKR-NEXT:     R_LARCH_RELAX *ABS*
 # CHECKR-NEXT:   nop

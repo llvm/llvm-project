@@ -9,13 +9,13 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax abs.s -o abs.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax abs.s -o abs.64.o
 
-# RUN: ld.lld --shared -Tlinker.t symbols.32.o abs.32.o -o symbols.32.so
-# RUN: ld.lld --shared -Tlinker.t symbols.64.o abs.64.o -o symbols.64.so
+# RUN: ld.lld --shared --relax -Tlinker.t symbols.32.o abs.32.o -o symbols.32.so
+# RUN: ld.lld --shared --relax -Tlinker.t symbols.64.o abs.64.o -o symbols.64.so
 # RUN: llvm-objdump -d --no-show-raw-insn symbols.32.so | FileCheck --check-prefixes=LIB %s
 # RUN: llvm-objdump -d --no-show-raw-insn symbols.64.so | FileCheck --check-prefixes=LIB %s
 
-# RUN: ld.lld -Tlinker.t -z undefs symbols.32.o abs.32.o -o symbols.32
-# RUN: ld.lld -Tlinker.t -z undefs symbols.64.o abs.64.o -o symbols.64
+# RUN: ld.lld --relax -Tlinker.t -z undefs symbols.32.o abs.32.o -o symbols.32
+# RUN: ld.lld --relax -Tlinker.t -z undefs symbols.64.o abs.64.o -o symbols.64
 # RUN: llvm-objdump -d --no-show-raw-insn symbols.32 | FileCheck --check-prefixes=EXE %s
 # RUN: llvm-objdump -d --no-show-raw-insn symbols.64 | FileCheck --check-prefixes=EXE %s
 
