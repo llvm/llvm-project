@@ -1893,6 +1893,10 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
                      << ": " << e.message();
   }
+
+  // Default disable LoongArch linker relaxation.
+  if (ctx.arg.emachine == EM_LOONGARCH)
+    ctx.arg.relax = args.hasFlag(OPT_relax, OPT_no_relax, false);
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
