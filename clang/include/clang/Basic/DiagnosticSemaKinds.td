@@ -2347,6 +2347,9 @@ def err_init_reference_member_uninitialized : Error<
   "reference member of type %0 uninitialized">;
 def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
+def warn_field_requires_explicit_init : Warning<
+  "field %select{%1|in %1}0 requires explicit initialization but is not "
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -3799,7 +3802,14 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions}2">,
+  "|non-K&R-style functions"
+  "|for loop statements"
+  "|virtual functions"
+  "|parameters and implicit object parameters"
+  "|non-member functions"
+  "|functions, classes, or enumerations"
+  "|classes"
+  "|typedefs}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
