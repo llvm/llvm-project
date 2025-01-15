@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/app.h"
+#include "src/__support/OSUtil/linux/cross_compile_clippy.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
