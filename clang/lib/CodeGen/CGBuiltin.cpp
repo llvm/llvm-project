@@ -1065,10 +1065,12 @@ namespace {
 
 /// StructFieldAccess is a simple visitor class to grab the first MemberExpr
 /// from an Expr. It records any ArraySubscriptExpr we meet along the way.
-struct StructFieldAccess
+class StructFieldAccess
     : public ConstStmtVisitor<StructFieldAccess, const MemberExpr *> {
-  const ArraySubscriptExpr *ASE = nullptr;
   bool AddrOfSeen = false;
+
+public:
+  const ArraySubscriptExpr *ASE = nullptr;
 
   const MemberExpr *VisitMemberExpr(const MemberExpr *E) {
     if (AddrOfSeen && E->getType()->isArrayType())
@@ -1323,21 +1325,6 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
     Index = Builder.CreateIntCast(Index, ResType, IdxSigned, "index");
   }
 
-  //  size_t sizeof_struct = sizeof (struct s);
-  llvm::StructType *StructTy = getTypes().getCGRecordLayout(RD).getLLVMType();
-  const llvm::DataLayout &Layout = CGM.getDataLayout();
-  TypeSize Size = Layout.getTypeSizeInBits(StructTy);
-  Value *SizeofStruct =
-      llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
-
-  //  size_t field_offset = offsetof (struct s, field);
-  Value *FieldOffset = nullptr;
-  if (FlexibleArrayMemberFD != FD) {
-    int64_t Offset = 0;
-    GetFieldOffset(Ctx, RD, FD, Offset);
-    FieldOffset = llvm::ConstantInt::get(ResType, Offset / CharWidth, IsSigned);
-  }
-
   //  size_t flexible_array_member_base_size = sizeof (*ptr->array);
   const ArrayType *ArrayTy = Ctx.getAsArrayType(FlexibleArrayMemberTy);
   CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
@@ -1352,7 +1339,7 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
 
   auto CheckForNegative = [&](Value *Res) {
     Value *Cmp = Builder.CreateIsNotNeg(Res);
-    if (Index)
+    if (Idx)
       Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Index), Cmp);
     return Builder.CreateSelect(Cmp, Res,
                                 ConstantInt::get(ResType, 0, IsSigned));
@@ -1372,6 +1359,19 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       return CheckForNegative(FlexibleArrayMemberSize);
     }
   } else {
+    //  size_t sizeof_struct = sizeof (struct s);
+    llvm::StructType *StructTy = getTypes().getCGRecordLayout(RD).getLLVMType();
+    const llvm::DataLayout &Layout = CGM.getDataLayout();
+    TypeSize Size = Layout.getTypeSizeInBits(StructTy);
+    Value *SizeofStruct =
+        llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
+
+    //  size_t field_offset = offsetof (struct s, field);
+    int64_t Offset = 0;
+    GetFieldOffset(Ctx, RD, FD, Offset);
+    Value *FieldOffset =
+        llvm::ConstantInt::get(ResType, Offset / CharWidth, IsSigned);
+
     if (Idx) { // Option (4) '&ptr->field_array[idx]'
       //  size_t field_base_size = sizeof (*ptr->field_array);
       const ArrayType *ArrayTy = Ctx.getAsArrayType(FieldTy);
