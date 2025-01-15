@@ -1643,8 +1643,12 @@ auto ApplyElementwise(FoldingContext &context,
     -> std::optional<Expr<RESULT>> {
   auto resultLength{ComputeResultLength(operation)};
   auto &leftExpr{operation.left()};
-  leftExpr = Fold(context, std::move(leftExpr));
   auto &rightExpr{operation.right()};
+  if (leftExpr.Rank() != rightExpr.Rank() && leftExpr.Rank() != 0 &&
+      rightExpr.Rank() != 0) {
+    return std::nullopt; // error recovery
+  }
+  leftExpr = Fold(context, std::move(leftExpr));
   rightExpr = Fold(context, std::move(rightExpr));
   if (leftExpr.Rank() > 0) {
     if (std::optional<Shape> leftShape{GetShape(context, leftExpr)}) {

@@ -183,8 +183,12 @@ public:
   }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {
-    if (operation.right().Rank() > 0) {
-      return (*this)(operation.right());
+    if (int rr{operation.right().Rank()}; rr > 0) {
+      if (int lr{operation.left().Rank()}; lr == 0 || lr == rr) {
+        return (*this)(operation.right());
+      } else {
+        return std::nullopt;
+      }
     } else {
       return (*this)(operation.left());
     }
