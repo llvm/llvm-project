@@ -1982,7 +1982,8 @@ void SIInstrInfo::loadRegFromStackSlot(
 
   unsigned Opcode = getVectorRegSpillRestoreOpcode(VReg ? VReg : DestReg, RC,
                                                    SpillSize, RI, *MFI);
-  BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+  BuildMI(MBB, MI, DL, get(Opcode))
+      .addReg(DestReg, 0, SubRegIdx)
       .addFrameIndex(FrameIndex)           // vaddr
       .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
       .addImm(0)                           // offset
