@@ -89,7 +89,6 @@ write_cmake_config("config") {
     "HAVE_DECL_FE_ALL_EXCEPT=1",
     "HAVE_DECL_FE_INEXACT=1",
     "LLVM_ENABLE_CRASH_DUMPS=",
-    "HAVE_FCNTL_H=1",
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",

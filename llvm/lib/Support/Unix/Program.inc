@@ -35,9 +35,7 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif

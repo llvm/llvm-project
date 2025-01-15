@@ -84,15 +84,6 @@
 /* Define if __unw_add_dynamic_fde() is available on this platform. */
 /* HAVE_UNW_ADD_DYNAMIC_FDE defined in Bazel */
 
-/* Define to 1 if you have the <errno.h> header file. */
-#define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the <fcntl.h> header file. */
-#define HAVE_FCNTL_H 1
-
-/* Define to 1 if you have the <fenv.h> header file. */
-#define HAVE_FENV_H 1
-
 /* Define if libffi is available on this platform. */
 /* #undef HAVE_FFI_CALL */
 
