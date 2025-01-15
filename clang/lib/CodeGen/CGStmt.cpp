@@ -549,6 +549,7 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
     assert(Itr != RedVarMap.end() && "Metadata not found");
 
     const CodeGenModule::XteamRedVarInfo &RVI = Itr->second;
+    llvm::Type *RedVarType = ConvertTypeForMem(XteamVD->getType());
 
     assert(RVI.ArgPos + 1 < Args->size() && "Arg position beyond bounds");
 
@@ -568,9 +569,9 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
       //   {
       //     RedVar += TeamVals[TeamID - 1]
       //   }
-
       Address ScanStorageValGEP = Address(
-          Builder.CreateGEP(Int32Ty, DScanStorage, GlobalGpuThreadId), Int32Ty,
+          Builder.CreateGEP(RedVarType, DScanStorage, GlobalGpuThreadId),
+          RedVarType,
           getContext().getTypeAlignInChars(
               XteamVD->getType())); // Storage[GlobalTID]
       Builder.CreateStore(Builder.CreateLoad(ScanStorageValGEP),
@@ -586,10 +587,10 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
       EmitBlock(IsAfterFirstTeamThenBlock);
       Address PrevTeamValGEP =
           Address(Builder.CreateGEP(
-                      Int32Ty, DTeamVals,
+                      RedVarType, DTeamVals,
                       Builder.CreateSub(WorkGroupId,
                                         llvm::ConstantInt::get(Int32Ty, 1))),
-                  Int32Ty,
+                  RedVarType,
                   getContext().getTypeAlignInChars(
                       XteamVD->getType())); // TeamVals[TeamID - 1]
       Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(RVI.RedVarAddr),
@@ -614,7 +615,7 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
       //     }
       //   }
 
-      Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, 0),
+      Builder.CreateStore(llvm::ConstantInt::get(RedVarType, 0),
                           RVI.RedVarAddr); // RedVar = 0
       llvm::Value *IsNotFirstThread = Builder.CreateICmpUGE(
           GlobalGpuThreadId,
@@ -630,8 +631,8 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
           GlobalGpuThreadId,
           llvm::ConstantInt::get(Int32Ty, 1)); // GlobalTID - 1
       Address ScanStoragePrevValGEP = Address(
-          Builder.CreateGEP(Int32Ty, DScanStorage, PrevGlobalGpuThreadId),
-          Int32Ty,
+          Builder.CreateGEP(RedVarType, DScanStorage, PrevGlobalGpuThreadId),
+          RedVarType,
           getContext().getTypeAlignInChars(
               XteamVD->getType())); // Storage[GlobalTID - 1]
       Builder.CreateStore(Builder.CreateLoad(ScanStoragePrevValGEP),
@@ -656,10 +657,10 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
       EmitBlock(IsNotFirstThreadInTeamThenBlock);
       Address PrevTeamValGEP =
           Address(Builder.CreateGEP(
-                      Int32Ty, DTeamVals,
+                      RedVarType, DTeamVals,
                       Builder.CreateSub(WorkGroupId,
                                         llvm::ConstantInt::get(Int32Ty, 1))),
-                  Int32Ty,
+                  RedVarType,
                   getContext().getTypeAlignInChars(
                       XteamVD->getType())); // TeamVals[TeamID - 1]
       Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(RVI.RedVarAddr),
@@ -676,10 +677,10 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
       EmitBlock(IsAfterSecondTeamThenBlock);
       Address PrevPrevTeamValGEP =
           Address(Builder.CreateGEP(
-                      Int32Ty, DTeamVals,
+                      RedVarType, DTeamVals,
                       Builder.CreateSub(WorkGroupId,
                                         llvm::ConstantInt::get(Int32Ty, 2))),
-                  Int32Ty,
+                  RedVarType,
                   getContext().getTypeAlignInChars(
                       XteamVD->getType())); // TeamVals[TeamID - 2]
       Builder.CreateStore(
@@ -2307,12 +2308,12 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
 
   llvm::Value *SegmentLoopUB = nullptr;
   llvm::Value *DSegmentVals = nullptr;
-  llvm::Value *ThreadLevelRes = nullptr;
   llvm::Value *GlobalUpperBound = nullptr;
   const Address *RedVarAddr = nullptr;
   llvm::BasicBlock *ExecBB = nullptr;
   llvm::BasicBlock *DoneBB = nullptr;
-  clang::QualType RedVarType;
+  const clang::VarDecl *XteamVD;
+  llvm::Type *RedVarType;
   if (getLangOpts().OpenMPIsTargetDevice && CGM.isXteamSegmentedScanKernel()) {
     // Compute Loop trip-count (N) = GlobalUB - GlobalLB + 1
     const auto UBLValue = EmitLValue(
@@ -2368,19 +2369,19 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
         Builder.CreateMul(SegmentSizeForScan, GlobalGpuThreadId),
         BigJumpLoopIvAddr); // *iv = GlobalTID * Seg_Size
 
-    // Every thread loops till just before the SegmentLoopUB = (GlobaTID + 1) *
-    // Seg_Size
+    // Every thread loops till just before the SegmentLoopUB:
+    //    SegmentLoopUB = (GlobaTID + 1) * Seg_Size
     SegmentLoopUB = Builder.CreateMul(
         SegmentSizeForScan,
         Builder.CreateAdd(GlobalGpuThreadId,
                           llvm::ConstantInt::get(Int32Ty, 1)));
 
-    auto XteamVD = *(CGM.getXteamOrderedRedVar(&S).begin());
+    XteamVD = *(CGM.getXteamOrderedRedVar(&S).begin());
+    RedVarType = ConvertTypeForMem(XteamVD->getType());
     const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(&S);
     const CodeGenModule::XteamRedVarInfo &RVI =
         (RedVarMap.find(XteamVD))->second;
     RedVarAddr = &(RVI.RedVarAddr);
-    RedVarType = XteamVD->getType();
 
     // SegmentValsAddr points to the SegmentVals array which will store the
     // intermediate scan results computed per segment by a single thread
@@ -2520,11 +2521,12 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
         if (!CGM.isXteamScanPhaseOne) {
           // SegmentVals contains the final scanned results computed for every
           // element in a segment.
-          Address SegmentValsGEP = Address(
-              Builder.CreateGEP(Int32Ty, DSegmentVals,
-                                Builder.CreateLoad(BigJumpLoopIvAddr)),
-              Int32Ty,
-              getContext().getTypeAlignInChars(RedVarType)); // SegmentVals[*iv]
+          Address SegmentValsGEP =
+              Address(Builder.CreateGEP(RedVarType, DSegmentVals,
+                                        Builder.CreateLoad(BigJumpLoopIvAddr)),
+                      RedVarType,
+                      getContext().getTypeAlignInChars(
+                          XteamVD->getType())); // SegmentVals[*iv]
           // emit redvar = SegmentVals[omp.iv]
           Builder.CreateStore(Builder.CreateLoad(SegmentValsGEP), *RedVarAddr);
         }
@@ -2548,11 +2550,12 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
     if (CGM.isXteamSegmentedScanKernel()) {
       EmitBlock(Continue.getBlock());
-      Address SegmentValsGEP = Address(
-          Builder.CreateGEP(Int32Ty, DSegmentVals,
-                            Builder.CreateLoad(BigJumpLoopIvAddr)),
-          Int32Ty,
-          getContext().getTypeAlignInChars(RedVarType)); // Segment_Vals[*iv]
+      Address SegmentValsGEP =
+          Address(Builder.CreateGEP(RedVarType, DSegmentVals,
+                                    Builder.CreateLoad(BigJumpLoopIvAddr)),
+                  RedVarType,
+                  getContext().getTypeAlignInChars(
+                      XteamVD->getType())); // Segment_Vals[*iv]
       Builder.CreateStore(Builder.CreateLoad(*RedVarAddr),
                           SegmentValsGEP); // Segment_Vals[*iv] = red_var
       llvm::Value *SegmentScanLoopInc =

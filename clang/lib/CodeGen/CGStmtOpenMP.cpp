@@ -415,10 +415,10 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
     llvm::Value *DScanStorageInst =
         Builder.CreateAlloca(RedVarType, nullptr, "d_scan_storage");
     Address DScanStorageAddr(
-        DScanStorageInst, Int32Ty,
+        DScanStorageInst, RedVarType,
         Context.getTypeAlignInChars(Context.UnsignedIntTy));
     llvm::Value *NullPtrDScanStorage =
-        llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+        llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
     Builder.CreateStore(NullPtrDScanStorage, DScanStorageAddr);
 
     assert(DScanStorageInst && "Device scan storage pointer cannot be null");
@@ -428,10 +428,10 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       llvm::Value *DSegmentValsInst =
           Builder.CreateAlloca(RedVarType, nullptr, "d_segment_vals");
       Address DSegmentValsAddr(
-          DSegmentValsInst, Int32Ty,
+          DSegmentValsInst, RedVarType,
           Context.getTypeAlignInChars(Context.UnsignedIntTy));
       llvm::Value *NullPtrDSegmentVals =
-          llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+          llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
       Builder.CreateStore(NullPtrDSegmentVals, DSegmentValsAddr);
 
       assert(DSegmentValsInst && "Segment Vals Array pointer cannot be null");
