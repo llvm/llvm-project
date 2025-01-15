@@ -655,12 +655,12 @@ TEST_F(HeadersForSymbolTest, GlobalOperatorNewDelete) {
   V.TraverseDecl(AST->context().getTranslationUnitDecl());
   ASSERT_TRUE(V.New) << "Couldn't find global new!";
   ASSERT_TRUE(V.Delete) << "Couldn't find global delete!";
-  EXPECT_THAT(headersForSymbol(*V.New, AST->sourceManager(), &PI),
-              UnorderedElementsAre(
-                  Header(*tooling::stdlib::Header::named("<new>"))));
-  EXPECT_THAT(headersForSymbol(*V.Delete, AST->sourceManager(), &PI),
-              UnorderedElementsAre(
-                  Header(*tooling::stdlib::Header::named("<new>"))));
+  EXPECT_THAT(
+      headersForSymbol(*V.New, AST->sourceManager(), &PI),
+      UnorderedElementsAre(Header(*tooling::stdlib::Header::named("<new>"))));
+  EXPECT_THAT(
+      headersForSymbol(*V.Delete, AST->sourceManager(), &PI),
+      UnorderedElementsAre(Header(*tooling::stdlib::Header::named("<new>"))));
 }
 
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
