@@ -513,9 +513,6 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
-  bool shouldExpandGetAliasLaneMask(EVT VT, EVT PtrVT,
-                                    unsigned EltSize) const override;
-
   bool
   shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
 

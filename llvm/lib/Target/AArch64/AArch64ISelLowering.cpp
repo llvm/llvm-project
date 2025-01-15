@@ -2169,25 +2169,6 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   return false;
 }
 
-bool AArch64TargetLowering::shouldExpandGetAliasLaneMask(
-    EVT VT, EVT PtrVT, unsigned EltSize) const {
-  if (!Subtarget->hasSVE2())
-    return true;
-
-  if (PtrVT != MVT::i64)
-    return true;
-
-  if (VT == MVT::v2i1 || VT == MVT::nxv2i1)
-    return EltSize != 8;
-  if (VT == MVT::v4i1 || VT == MVT::nxv4i1)
-    return EltSize != 4;
-  if (VT == MVT::v8i1 || VT == MVT::nxv8i1)
-    return EltSize != 2;
-  if (VT == MVT::v16i1 || VT == MVT::nxv16i1)
-    return EltSize != 1;
-  return true;
-}
-
 bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     const IntrinsicInst *I) const {
   assert(I->getIntrinsicID() ==
