@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan %s -o %t && %run %t
 // http://code.google.com/p/address-sanitizer/issues/detail?id=147 (not fixed).
 // BROKEN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
-// UNSUPPORTED: MSVC
+// UNSUPPORTED: msvc
 
 #include "defines.h"
 #include <stdio.h>

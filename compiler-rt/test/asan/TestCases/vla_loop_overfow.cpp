@@ -2,7 +2,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // REQUIRES: stable-runtime
-// UNSUPPORTED: MSVC
+// UNSUPPORTED: msvc
 
 #include <assert.h>
 #include <stdint.h>
