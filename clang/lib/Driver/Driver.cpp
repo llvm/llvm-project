@@ -6501,9 +6501,24 @@ std::string Driver::GetStdModuleManifestPath(const Compilation &C,
     return evaluate("libc++.a").value_or(error);
   }
 
-  case ToolChain::CST_Libstdcxx:
-    // libstdc++ does not provide Standard library modules yet.
-    return error;
+  case ToolChain::CST_Libstdcxx: {
+    auto evaluate = [&](const char *library) -> std::optional<std::string> {
+      std::string lib = GetFilePath(library, TC);
+
+      SmallString<128> path(lib.begin(), lib.end());
+      llvm::sys::path::remove_filename(path);
+      llvm::sys::path::append(path, "libstdc++.modules.json");
+      if (TC.getVFS().exists(path))
+        return static_cast<std::string>(path);
+
+      return {};
+    };
+
+    if (std::optional<std::string> result = evaluate("libstdc++.so"); result)
+      return *result;
+
+    return evaluate("libstdc++.a").value_or(error);
+  }
   }
 
   return error;
