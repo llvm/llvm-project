@@ -33,3 +33,5 @@ macros:
     in-latest-posix: ''
   WUNTRACED:
     in-latest-posix: ''
+  WCORE_DUMPED:
+    in-latest-posix: ''
