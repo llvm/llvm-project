@@ -127,7 +127,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
           module_sp->GetArchitecture(), nullptr, flavor,
           target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
-          *target_sp, m_opaque_ptr->GetAddressRange(), force_live_memory));
+          *target_sp, m_opaque_ptr->GetAddressRanges(), force_live_memory));
     }
   }
   return sb_instructions;
