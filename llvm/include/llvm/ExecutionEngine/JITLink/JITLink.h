@@ -1387,8 +1387,24 @@ public:
                                  GetExternalSymbolMapEntryValue()));
   }
 
+  /// Returns the external symbol with the given name if one exists, otherwise
+  /// returns nullptr.
+  Symbol *findExternalSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : external_symbols())
+      if (Sym->getName() == Name)
+        return Sym;
+    return nullptr;
+  }
+
   iterator_range<absolute_symbol_iterator> absolute_symbols() {
     return make_range(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
+  }
+
+  Symbol *findAbsoluteSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : absolute_symbols())
+      if (Sym->getName() == Name)
+        return Sym;
+    return nullptr;
   }
 
   iterator_range<defined_symbol_iterator> defined_symbols() {
@@ -1401,6 +1417,15 @@ public:
     auto Secs = sections();
     return make_range(const_defined_symbol_iterator(Secs.begin(), Secs.end()),
                       const_defined_symbol_iterator(Secs.end(), Secs.end()));
+  }
+
+  /// Returns the defined symbol with the given name if one exists, otherwise
+  /// returns nullptr.
+  Symbol *findDefinedSymbolByName(const orc::SymbolStringPtrBase &Name) {
+    for (auto *Sym : defined_symbols())
+      if (Sym->hasName() && Sym->getName() == Name)
+        return Sym;
+    return nullptr;
   }
 
   /// Make the given symbol external (must not already be external).
