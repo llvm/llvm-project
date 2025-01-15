@@ -37,10 +37,10 @@
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0030 00000c40 80000000 00040000 00000000
 // complete
-// OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
+// OBJDUMP-NEXT: 0040 01000000 01000000 0c000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e040000 00000000
+// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e048200 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -118,12 +118,14 @@ max_vgprs:
 .amdhsa_kernel complete
   .amdhsa_group_segment_fixed_size 1
   .amdhsa_private_segment_fixed_size 1
-  .amdhsa_kernarg_size 8
+  .amdhsa_kernarg_size 12
   .amdhsa_user_sgpr_count 32
   .amdhsa_user_sgpr_dispatch_ptr 1
   .amdhsa_user_sgpr_queue_ptr 1
   .amdhsa_user_sgpr_kernarg_segment_ptr 1
   .amdhsa_user_sgpr_dispatch_id 1
+  .amdhsa_user_sgpr_kernarg_preload_length 2
+  .amdhsa_user_sgpr_kernarg_preload_offset 1
   .amdhsa_user_sgpr_private_segment_size 1
   .amdhsa_wavefront_size32 1
   .amdhsa_enable_private_segment 1
@@ -155,12 +157,14 @@ max_vgprs:
 // ASM: .amdhsa_kernel complete
 // ASM-NEXT: .amdhsa_group_segment_fixed_size 1
 // ASM-NEXT: .amdhsa_private_segment_fixed_size 1
-// ASM-NEXT: .amdhsa_kernarg_size 8
+// ASM-NEXT: .amdhsa_kernarg_size 12
 // ASM-NEXT: .amdhsa_user_sgpr_count 32
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_id 1
+// ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_length 2
+// ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_offset 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
 // ASM-NEXT: .amdhsa_enable_private_segment 1
@@ -170,7 +174,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 1
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 1
 // ASM-NEXT: .amdhsa_next_free_vgpr 9
-// ASM-NEXT: .amdhsa_next_free_sgpr 27
+// ASM-NEXT: .amdhsa_next_free_sgpr 32
 // ASM-NEXT: .amdhsa_reserve_vcc 0
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1

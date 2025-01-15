@@ -2023,6 +2023,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureGloballyAddressableScratch,
+   FeatureKernargPreload
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
