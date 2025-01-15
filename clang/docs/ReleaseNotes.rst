@@ -316,6 +316,8 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented module level lookup for C++20 modules. (#GH90154)
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1076,6 +1078,15 @@ Arm and AArch64 Support
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
 
+- SME keyword attributes which apply to function types are now represented in the
+  mangling of the type. This means that ``void foo(void (*f)() __arm_streaming);``
+  now has a different mangling from ``void foo(void (*f)());``.
+
+- The ``__arm_agnostic`` keyword attribute was added to let users describe
+  a function that preserves SME state enabled by PSTATE.ZA without having to share
+  this state with its callers and without making the assumption that this state
+  exists.
+
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   For AArch64:
@@ -1215,6 +1226,10 @@ libclang
   whether the first one comes strictly before the second in the source code.
 - Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
   to pretty-print a type.
+- Added ``clang_visitCXXBaseClasses``, which allows visiting the base classes
+  of a class.
+- Added ``clang_getOffsetOfBase``, which allows computing the offset of a base
+  class in a class's layout.
 
 Static Analyzer
 ---------------
@@ -1362,6 +1377,12 @@ Python Binding Changes
   declaration is an anonymous union or anonymous struct.
 - Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
   which allows changing the formatting of pretty-printed types.
+- Added ``Cursor.is_virtual_base``, a binding for ``clang_isVirtualBase``,
+  which checks whether a base class is virtual.
+- Added ``Type.get_bases``, a binding for ``clang_visitCXXBaseClasses``, which
+  allows visiting the base classes of a class.
+- Added ``Cursor.get_base_offsetof``, a binding for ``clang_getOffsetOfBase``,
+  which allows computing the offset of a base class in a class's layout.
 
 OpenMP Support
 --------------
