@@ -10,6 +10,7 @@
 #ifndef TEST_BENCHMARKS_CONTAINERS_CONTAINER_BENCHMARKS_H
 #define TEST_BENCHMARKS_CONTAINERS_CONTAINER_BENCHMARKS_H
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <ranges> // for std::from_range
@@ -19,6 +20,7 @@
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "../GenerateInput.h"
 
 namespace ContainerBenchmarks {
 
@@ -47,11 +49,11 @@ void BM_ctor_size(benchmark::State& st) {
   }
 }
 
-template <class Container>
-void BM_ctor_size_value(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_ctor_size_value(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const auto size = st.range(0);
-  ValueType value{};
+  ValueType value = gen();
   benchmark::DoNotOptimize(value);
   char buffer[sizeof(Container)];
   for (auto _ : st) {
@@ -63,11 +65,12 @@ void BM_ctor_size_value(benchmark::State& st) {
   }
 }
 
-template <class Container>
-void BM_ctor_iter_iter(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_ctor_iter_iter(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const auto size = st.range(0);
-  std::vector<ValueType> in(size);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
   const auto begin = in.begin();
   const auto end   = in.end();
   benchmark::DoNotOptimize(in);
@@ -283,10 +286,24 @@ void BM_erase_middle(benchmark::State& st) {
 
 template <class Container>
 void sequence_container_benchmarks(std::string container) {
+  using ValueType = typename Container::value_type;
+  auto cheap      = [] { return Generate<ValueType>::cheap(); };
+  auto expensive  = [] { return Generate<ValueType>::expensive(); };
+
   // constructors
   benchmark::RegisterBenchmark(container + "::ctor(size)", BM_ctor_size<Container>)->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(size, value_type)", BM_ctor_size_value<Container>)->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator)", BM_ctor_iter_iter<Container>)->Arg(1024);
+  benchmark::RegisterBenchmark(container + "::ctor(size, value_type) (cheap elements)", [=](auto& st) {
+    BM_ctor_size_value<Container>(st, cheap);
+  })->Arg(1024);
+  benchmark::RegisterBenchmark(container + "::ctor(size, value_type) (expensive elements)", [=](auto& st) {
+    BM_ctor_size_value<Container>(st, expensive);
+  })->Arg(1024);
+  benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator) (cheap elements)", [=](auto& st) {
+    BM_ctor_iter_iter<Container>(st, cheap);
+  })->Arg(1024);
+  benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator) (expensive elements)", [=](auto& st) {
+    BM_ctor_iter_iter<Container>(st, expensive);
+  })->Arg(1024);
 #if TEST_STD_VER >= 23
   benchmark::RegisterBenchmark(container + "::ctor(Range)", BM_ctor_from_range<Container>)->Arg(1024);
 #endif

@@ -171,4 +171,31 @@ inline std::vector<const char*> getRandomCStringInputs(std::size_t N) {
   return cinputs;
 }
 
+template <class T>
+struct Generate {
+  // When the contents don't matter
+  static T arbitrary();
+
+  // Prefer a cheap-to-construct element if possible
+  static T cheap();
+
+  // Prefer an expensive-to-construct element if possible
+  static T expensive();
+};
+
+template <class T>
+  requires std::integral<T>
+struct Generate<T> {
+  static T arbitrary() { return 42; }
+  static T cheap() { return 42; }
+  static T expensive() { return 42; }
+};
+
+template <>
+struct Generate<std::string> {
+  static std::string arbitrary() { return "hello world"; }
+  static std::string cheap() { return "small"; }
+  static std::string expensive() { return "large stringggggggggggggggggggggggggggggggggggggggggggggggggggg"; }
+};
+
 #endif // BENCHMARK_GENERATE_INPUT_H
