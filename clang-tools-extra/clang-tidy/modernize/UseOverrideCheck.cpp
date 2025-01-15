@@ -229,8 +229,9 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (HasVirtual) {
     for (Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
-        std::optional<Token> NextToken = Lexer::findNextToken(
-            Tok.getEndLoc(), Sources, getLangOpts(), /*IncludeComments*/ true);
+        std::optional<Token> NextToken =
+            utils::lexer::findNextTokenIncludingComments(
+                Tok.getEndLoc(), Sources, getLangOpts());
         if (NextToken.has_value()) {
           Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
               Tok.getLocation(), NextToken->getLocation()));
