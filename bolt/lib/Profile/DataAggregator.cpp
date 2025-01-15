@@ -1176,6 +1176,7 @@ DataAggregator::parseSpeAsBasicSamples() {
   ErrorOr<uint64_t> AddrResTo = parseHexField(FieldSeparator);
   if (std::error_code EC = AddrResTo.getError())
     return EC;
+
   consumeAllRemainingFS();
 
   ErrorOr<uint64_t> AddrResFrom = parseHexField(FieldSeparator, true);
@@ -1195,12 +1196,13 @@ DataAggregator::parseSpeAsBasicSamples() {
 
     if (!BC->HasFixedLoadAddress)
       adjustAddress(Address, MMapInfoIter->second);
+
     return PerfBasicSample{Event.get(), Address};
   };
 
   // Show more meaningful event names on boltdata.
   if (Event->str() == "instructions:")
-    Event = *AddrResTo != 0x0 ? "branch-spe:" : "instruction-spe:";
+    Event = *AddrResTo != 0x0 ? "branches-spe:" : "instructions-spe:";
 
   return std::make_pair(genBasicSample(*AddrResFrom),
                         genBasicSample(*AddrResTo));
