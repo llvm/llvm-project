@@ -1,7 +1,7 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
 // RUN: %run %t 2>&1
 //
-// UNSUPPORTED: MSVC
+// UNSUPPORTED: msvc
 
 #include <assert.h>
 #include <stdint.h>

@@ -3,7 +3,7 @@
 // Test that no_sanitize_address attribute applies even when the function would
 // be normally inlined.
 //
-// XFAIL: MSVC
+// XFAIL: msvc
 // ^ MSVC has this bug
 
 #include "defines.h"

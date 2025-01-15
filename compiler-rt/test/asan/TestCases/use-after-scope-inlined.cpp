@@ -5,7 +5,7 @@
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // MSVC marks this as xfail because it doesn't generate the metadata to display the "x.i" offset.
-// XFAIL: MSVC
+// XFAIL: msvc
 #include "defines.h"
 
 int *arr;

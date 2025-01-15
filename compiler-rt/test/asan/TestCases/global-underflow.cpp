@@ -1,4 +1,4 @@
-// XFAIL: MSVC
+// XFAIL: msvc
 // RUN: %clangxx_asan -O0 %s %p/Helpers/underflow.cpp -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O1 %s %p/Helpers/underflow.cpp -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s %p/Helpers/underflow.cpp -o %t && not %run %t 2>&1 | FileCheck %s

@@ -16,7 +16,7 @@
 // it to make sure memory past the end of badGlobal will be in
 // the same page.
 
-// XFAIL: MSVC
+// XFAIL: msvc
 #include "defines.h"
 ATTRIBUTE_ALIGNED(16) int badGlobal;
 int readBadGlobal() {
