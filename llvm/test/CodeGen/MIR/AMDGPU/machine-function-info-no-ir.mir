@@ -54,6 +54,7 @@
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT:  hasInitWholeWave: false
+# FULL-NEXT:  usesWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
@@ -163,6 +164,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: usesWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
@@ -244,6 +246,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: usesWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
@@ -326,6 +329,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
+# FULL-NEXT: usesWholeWave: false
 # FULL-NEXT: dynamicVGPRBlockSize: 0
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0

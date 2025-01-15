@@ -45,6 +45,7 @@
 ; AFTER-PEI-NEXT: sgprForEXECCopy: ''
 ; AFTER-PEI-NEXT: longBranchReservedReg: ''
 ; AFTER-PEI-NEXT: hasInitWholeWave: false
+; AFTER-PEI-NEXT: usesWholeWave: false
 ; AFTER-PEI-NEXT: dynamicVGPRBlockSize: 0
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
 ; AFTER-PEI-NEXT: numKernargPreloadSGPRs: 0

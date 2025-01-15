@@ -68,6 +68,7 @@ protected:
   bool WaveLimiter = false;
 
   bool HasInitWholeWave = false;
+  bool UsesWholeWave = false;
 
 public:
   AMDGPUMachineFunction(const Function &F, const AMDGPUSubtarget &ST);
@@ -115,6 +116,9 @@ public:
 
   bool hasInitWholeWave() const { return HasInitWholeWave; }
   void setInitWholeWave() { HasInitWholeWave = true; }
+
+  bool usesWholeWave() const { return HasInitWholeWave || UsesWholeWave; }
+  void setUsesWholeWave() { UsesWholeWave = true; }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalVariable &GV) {
     return allocateLDSGlobal(DL, GV, DynLDSAlign);

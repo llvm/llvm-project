@@ -1172,8 +1172,12 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_softwqm:
     return constrainCopyLikeIntrin(I, AMDGPU::SOFT_WQM);
   case Intrinsic::amdgcn_strict_wwm:
-  case Intrinsic::amdgcn_wwm:
+  case Intrinsic::amdgcn_wwm: {
+    MachineFunction *MF = I.getParent()->getParent();
+    SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
+    MFInfo->setUsesWholeWave();
     return constrainCopyLikeIntrin(I, AMDGPU::STRICT_WWM);
+  }
   case Intrinsic::amdgcn_strict_wqm:
     return constrainCopyLikeIntrin(I, AMDGPU::STRICT_WQM);
   case Intrinsic::amdgcn_writelane:

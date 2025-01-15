@@ -45,6 +45,7 @@
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
+; CHECK-NEXT: usesWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: numKernargPreloadSGPRs: 0

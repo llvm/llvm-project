@@ -761,6 +761,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      UsesWholeWave(MFI.usesWholeWave()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),

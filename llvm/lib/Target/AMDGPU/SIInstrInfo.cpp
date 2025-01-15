@@ -62,6 +62,11 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
+static cl::opt<bool> IgnorableUseConsidersWWM(
+    "amdgpu-ignorable-use-considers-wwm",
+    cl::desc("Disable ignore use semantics for functions with WWM usage"),
+    cl::init(false), cl::ReallyHidden);
+
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
                          AMDGPU::ADJCALLSTACKDOWN),
@@ -192,8 +197,13 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
 
 bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
   // Any implicit use of exec by VALU is not a real register read.
+  bool FuncUsesWWM = MO.getParent()
+                         ->getMF()
+                         ->getInfo<SIMachineFunctionInfo>()
+                         ->usesWholeWave();
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent());
+         isVALU(*MO.getParent()) && !resultDependsOnExec(*MO.getParent()) &&
+         !(IgnorableUseConsidersWWM && FuncUsesWWM);
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
