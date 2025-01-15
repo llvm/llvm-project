@@ -15,16 +15,44 @@ jobs:
       - name: Get PR and Repository Details
         if: github.event_name == 'pull_request'
         run: |
-          echo "PR_NUMBER=$(jq -r .number < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "PR_TITLE=$(jq -r .pull_request.title < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "PR_BODY=$(jq -r .pull_request.body < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "PR_SHA=$(jq -r .pull_request.head.sha < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "PR_URL=$(jq -r .pull_request.html_url < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "BASE_BRANCH=$(jq -r .pull_request.base.ref < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "REPO_OWNER=$(jq -r .repository.owner.login < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "REPO_NAME=$(jq -r .repository.name < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
-          echo "REPO_URL=$(jq -r .repository.html_url < $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+         python3 -c "
+         import json
+         import os
 
+         with open(os.environ['GITHUB_EVENT_PATH']) as f:
+           event = json.load(f)
+           pr_number = event['number']
+           pr_title = event['pull_request']['title']
+           pr_body = event['pull_request']['body']
+           pr_sha = event['pull_request']['head']['sha']
+           pr_url = event['pull_request']['html_url']
+           base_branch = event['pull_request']['base']['ref']
+           repo_owner = event['repository']['owner']['login']
+           repo_name = event['repository']['name']
+           repo_url = event['repository']['html_url']
+
+           with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+            env_file.write(f'PR_NUMBER={pr_number}\n')
+            env_file.write(f'PR_TITLE={pr_title}\n')
+            env_file.write(f'PR_BODY={pr_body}\n')
+            env_file.write(f'PR_SHA={pr_sha}\n')
+            env_file.write(f'PR_URL={pr_url}\n')
+            env_file.write(f'BASE_BRANCH={base_branch}\n')
+            env_file.write(f'REPO_OWNER={repo_owner}\n')
+            env_file.write(f'REPO_NAME={repo_name}\n')
+            env_file.write(f'REPO_URL={repo_url}\n')"
+      - name: Print PR Information
+        run: |
+          echo "PR_NUMBER=$PR_NUMBER"
+          echo "PR_TITLE=$PR_TITLE"
+          echo "PR_BODY=$PR_BODY"
+          echo "PR_SHA=$PR_SHA"
+          echo "PR_URL=$PR_URL"
+          echo "BASE_BRANCH=$BASE_BRANCH"
+          echo "REPO_OWNER=$REPO_OWNER"
+          echo "REPO_NAME=$REPO_NAME"
+          echo "REPO_URL=$REPO_URL"
+          
       - name: Trigger Buildbot Build
         run: |          
           buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"${{ env.PR_TITLE }}" -p PR_BODY:"${{ env.PR_BODY }}" -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }} -p REPO_URL:${{ env.REPO_URL }}
