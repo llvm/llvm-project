@@ -939,8 +939,10 @@ llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
       doLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered,
                                              /*finalCountValue=*/false,
                                              parentLoop.getRegionIterArgs());
-      // Return the results of the child loop from its parent loop.
-      builder.create<fir::ResultOp>(loc, doLoop.getResults());
+      if (!reductionInits.empty()) {
+        // Return the results of the child loop from its parent loop.
+        builder.create<fir::ResultOp>(loc, doLoop.getResults());
+      }
     }
 
     builder.setInsertionPointToStart(doLoop.getBody());
@@ -955,7 +957,8 @@ llvm::SmallVector<mlir::Value> hlfir::genLoopNestWithReductions(
   reductionValues =
       genBody(loc, builder, oneBasedIndices, parentLoop.getRegionIterArgs());
   builder.setInsertionPointToEnd(parentLoop.getBody());
-  builder.create<fir::ResultOp>(loc, reductionValues);
+  if (!reductionValues.empty())
+    builder.create<fir::ResultOp>(loc, reductionValues);
   builder.setInsertionPointAfter(outerLoop);
   return outerLoop->getResults();
 }
@@ -1409,4 +1412,12 @@ void hlfir::computeEvaluateOpIn(mlir::Location loc, fir::FirOpBuilder &builder,
   for (auto &op : evalInMem.getBody().front().without_terminator())
     builder.clone(op, mapper);
   return;
+}
+
+hlfir::Entity hlfir::loadElementAt(mlir::Location loc,
+                                   fir::FirOpBuilder &builder,
+                                   hlfir::Entity entity,
+                                   mlir::ValueRange oneBasedIndices) {
+  return loadTrivialScalar(loc, builder,
+                           getElementAt(loc, builder, entity, oneBasedIndices));
 }
