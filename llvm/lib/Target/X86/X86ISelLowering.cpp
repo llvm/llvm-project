@@ -41701,14 +41701,20 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
   return SDValue();
 }
 
+static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
+                                      ArrayRef<SDValue> Ops, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const X86Subtarget &Subtarget);
+
 /// Try to combine x86 target specific shuffles.
 static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                                     SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   MVT VT = N.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
-
   SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -42401,25 +42407,17 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERMV3: {
-    SDValue V1 = peekThroughBitcasts(N.getOperand(0));
-    SDValue V2 = peekThroughBitcasts(N.getOperand(2));
-    MVT SVT = V1.getSimpleValueType();
-    // Combine VPERMV3 to widened VPERMV if the two source operands are split
-    // from the same vector.
-    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        V1.getConstantOperandVal(1) == 0 &&
-        V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        V2.getConstantOperandVal(1) == SVT.getVectorNumElements() &&
-        V1.getOperand(0) == V2.getOperand(0)) {
-      EVT NVT = V1.getOperand(0).getValueType();
-      if (NVT.is256BitVector() ||
-          (NVT.is512BitVector() && Subtarget.hasEVEX512())) {
-        MVT WideVT = MVT::getVectorVT(
-            VT.getScalarType(), NVT.getSizeInBits() / VT.getScalarSizeInBits());
+    // Combine VPERMV3 to widened VPERMV if the two source operands can be
+    // freely concatenated.
+    if (VT.is128BitVector() ||
+        (VT.is256BitVector() && Subtarget.useAVX512Regs())) {
+      SDValue Ops[] = {N.getOperand(0), N.getOperand(2)};
+      MVT WideVT = VT.getDoubleNumVectorElementsVT();
+      if (SDValue ConcatSrc =
+              combineConcatVectorOps(DL, WideVT, Ops, DAG, DCI, Subtarget)) {
         SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
                                       DL, WideVT.getSizeInBits());
-        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask,
-                                   DAG.getBitcast(WideVT, V1.getOperand(0)));
+        SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Perm,
                            DAG.getIntPtrConstant(0, DL));
       }
@@ -42427,14 +42425,35 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     SmallVector<SDValue, 2> Ops;
     SmallVector<int, 32> Mask;
     if (getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
+      assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
+      SDValue V1 = peekThroughBitcasts(N.getOperand(0));
+      SDValue V2 = peekThroughBitcasts(N.getOperand(2));
       MVT MaskVT = N.getOperand(1).getSimpleValueType();
       // Canonicalize to VPERMV if both sources are the same.
       if (V1 == V2) {
         for (int &M : Mask)
-          M = (M < 0 ? M : M & Mask.size() - 1);
+          M = (M < 0 ? M : M & (Mask.size() - 1));
         SDValue NewMask = getConstVector(Mask, MaskVT, DAG, DL,
                                          /*IsMask=*/true);
         return DAG.getNode(X86ISD::VPERMV, DL, VT, NewMask, N.getOperand(0));
+      }
+      // If sources are half width, then concat and use VPERMV with adjusted
+      // mask.
+      SDValue Ops[2];
+      MVT HalfVT = VT.getHalfNumVectorElementsVT();
+      if (sd_match(V1,
+                   m_InsertSubvector(m_Undef(), m_Value(Ops[0]), m_Zero())) &&
+          sd_match(V2,
+                   m_InsertSubvector(m_Undef(), m_Value(Ops[1]), m_Zero())) &&
+          Ops[0].getValueType() == HalfVT && Ops[1].getValueType() == HalfVT) {
+        if (SDValue ConcatSrc =
+                combineConcatVectorOps(DL, VT, Ops, DAG, DCI, Subtarget)) {
+          for (int &M : Mask)
+            M = (M < (int)NumElts ? M : (M - (NumElts / 2)));
+          SDValue NewMask = getConstVector(Mask, MaskVT, DAG, DL,
+                                           /*IsMask=*/true);
+          return DAG.getNode(X86ISD::VPERMV, DL, VT, NewMask, ConcatSrc);
+        }
       }
       // Commute foldable source to the RHS.
       if (isShuffleFoldableLoad(N.getOperand(0)) &&
@@ -57369,10 +57388,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                          Op0.getOperand(1));
   }
 
-  // concat(extract_subvector(v0,c0), extract_subvector(v1,c1)) -> vperm2x128.
-  // Only concat of subvector high halves which vperm2x128 is best at.
   // TODO: This should go in combineX86ShufflesRecursively eventually.
-  if (VT.is256BitVector() && NumOps == 2) {
+  if (NumOps == 2) {
     SDValue Src0 = peekThroughBitcasts(Ops[0]);
     SDValue Src1 = peekThroughBitcasts(Ops[1]);
     if (Src0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
@@ -57381,13 +57398,24 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       EVT SrcVT1 = Src1.getOperand(0).getValueType();
       unsigned NumSrcElts0 = SrcVT0.getVectorNumElements();
       unsigned NumSrcElts1 = SrcVT1.getVectorNumElements();
-      if (SrcVT0.is256BitVector() && SrcVT1.is256BitVector() &&
+      // concat(extract_subvector(v0), extract_subvector(v1)) -> vperm2x128.
+      // Only concat of subvector high halves which vperm2x128 is best at.
+      if (VT.is256BitVector() && SrcVT0.is256BitVector() &&
+          SrcVT1.is256BitVector() &&
           Src0.getConstantOperandAPInt(1) == (NumSrcElts0 / 2) &&
           Src1.getConstantOperandAPInt(1) == (NumSrcElts1 / 2)) {
         return DAG.getNode(X86ISD::VPERM2X128, DL, VT,
                            DAG.getBitcast(VT, Src0.getOperand(0)),
                            DAG.getBitcast(VT, Src1.getOperand(0)),
                            DAG.getTargetConstant(0x31, DL, MVT::i8));
+      }
+      // concat(extract_subvector(x,lo), extract_subvector(x,hi)) -> x.
+      if (Src0.getOperand(0) == Src1.getOperand(0) &&
+          Src0.getConstantOperandAPInt(1) == 0 &&
+          Src1.getConstantOperandAPInt(1) ==
+              Src0.getValueType().getVectorNumElements()) {
+        return DAG.getBitcast(VT, extractSubVector(Src0.getOperand(0), 0, DAG,
+                                                   DL, VT.getSizeInBits()));
       }
     }
   }
@@ -60836,8 +60864,8 @@ X86TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       MBBI = MBB.insert(OrigCall, NewMI);
     assert(MBBI->isCall() &&
            "Unexpected instruction after memory operand unfolding");
-    if (OrigCall->shouldUpdateCallSiteInfo())
-      MF.moveCallSiteInfo(&*OrigCall, &*MBBI);
+    if (OrigCall->shouldUpdateAdditionalCallInfo())
+      MF.moveAdditionalCallInfo(&*OrigCall, &*MBBI);
     MBBI->setCFIType(MF, OrigCall->getCFIType());
     OrigCall->eraseFromParent();
     break;

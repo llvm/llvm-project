@@ -3216,17 +3216,18 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
   if (!isa<ConstantSDNode>(N))
     return false;
-
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
-  if ((Imm & 0xfff) != 0xfff || Imm == -1)
+
+  // For 32-bit signed constants, we can only substitute LUI+ADDI with LUI.
+  if (isInt<32>(Imm) && ((Imm & 0xfff) != 0xfff || Imm == -1))
     return false;
 
+  // Abandon this transform if the constant is needed elsewhere.
   for (const SDNode *U : N->users()) {
     if (!ISD::isBitwiseLogicOp(U->getOpcode()))
       return false;
   }
 
-  // For 32-bit signed constants we already know it's a win: LUI+ADDI vs LUI.
   // For 64-bit constants, the instruction sequences get complex,
   // so we select inverted only if it's cheaper.
   if (!isInt<32>(Imm)) {
