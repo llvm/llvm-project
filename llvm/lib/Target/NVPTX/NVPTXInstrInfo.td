@@ -141,7 +141,7 @@ def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
-def hasO1 : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
+def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -1121,7 +1121,7 @@ multiclass MAD<string Ptx, ValueType VT, NVPTXRegClass Reg, Operand Imm> {
               [(set VT:$dst, (add (mul_oneuse VT:$a, imm:$b), imm:$c))]>;
 }
 
-let Predicates = [hasO1] in {
+let Predicates = [hasOptEnabled] in {
 defm MAD16 : MAD<"mad.lo.s16", i16, Int16Regs, i16imm>;
 defm MAD32 : MAD<"mad.lo.s32", i32, Int32Regs, i32imm>;
 defm MAD64 : MAD<"mad.lo.s64", i64, Int64Regs, i64imm>;
