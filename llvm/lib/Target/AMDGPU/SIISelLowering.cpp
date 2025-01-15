@@ -13882,7 +13882,7 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
     return SDValue();
 
   SDValue ConstMul =
-      DAG.getConstant(Const->getZExtValue() & 0x00000000FFFFFFFF, SL, MVT::i32);
+      DAG.getConstant(Lo_32(Const->getZExtValue()), SL, MVT::i32);
   return getMad64_32(DAG, SL, MVT::i64,
                      DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
                      DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
