@@ -1584,7 +1584,8 @@ const std::optional<parser::Name> &MaybeGetNodeName(
 
 std::optional<ArraySpec> ToArraySpec(
     evaluate::FoldingContext &context, const evaluate::Shape &shape) {
-  if (auto extents{evaluate::AsConstantExtents(context, shape)}) {
+  if (auto extents{evaluate::AsConstantExtents(context, shape)};
+      extents && !evaluate::HasNegativeExtent(*extents)) {
     ArraySpec result;
     for (const auto &extent : *extents) {
       result.emplace_back(ShapeSpec::MakeExplicit(Bound{extent}));
