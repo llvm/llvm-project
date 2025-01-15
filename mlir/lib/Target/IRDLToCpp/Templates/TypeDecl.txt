@@ -1,0 +1,18 @@
+/*
+{0}: Dialect Name
+{1}: Dialect CppName
+{2}: Type Name
+{3}: Type CppName
+*/
+
+R"(
+class {3}Type : public ::mlir::Type::TypeBase<{3}Type, {1}Type, ::mlir::TypeStorage> {
+public:
+  using Base::Base;
+  static constexpr ::llvm::StringLiteral name = "{0}.{2}";
+  static constexpr ::llvm::StringLiteral dialectName = "{0}";
+  static constexpr ::llvm::StringLiteral getMnemonic() {
+    return {"{2}"};
+  }
+};
+)"

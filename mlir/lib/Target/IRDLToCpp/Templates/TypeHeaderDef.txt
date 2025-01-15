@@ -1,0 +1,10 @@
+/*
+{0}: Dialect CppShortName
+{1}: Dialect CppName
+*/
+
+R"(
+bool {0}Type::classof(Type type) {{
+  return llvm::isa<{1}>(type.getDialect());
+}
+)"

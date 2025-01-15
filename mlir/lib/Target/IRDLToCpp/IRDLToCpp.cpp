@@ -38,14 +38,24 @@ constexpr char dialectDefTemplateText[] =
 #include "Templates/DialectDef.txt"
     ;
 
+
 constexpr char declarationMacroFlag[] = "GEN_DIALECT_DECL_HEADER";
 constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
+
+constexpr char typeHeaderDeclTemplateText[] =
+#include "Templates/TypeHeaderDecl.txt"
+  ;
+
+constexpr char typeHeaderDefTemplateText[] =
+#include "Templates/TypeHeaderDef.txt"
+  ;
 
 namespace {
 
 struct UsefulStrings {
   StringRef dialectName;
   StringRef dialectCppName;
+  StringRef dialectCppShortName;
 
   StringRef namespaceOpen;
   StringRef namespaceClose;
@@ -65,6 +75,10 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
       usefulStrings.namespacePathString, usefulStrings.dialectName);
 
+  output << llvm::formatv(
+    typeHeaderDeclTemplateText, usefulStrings.dialectCppShortName
+  );
+
   output << "#endif // " << declarationMacroFlag << "\n";
 
   return success();
@@ -80,6 +94,10 @@ static LogicalResult generateLib(irdl::DialectOp dialect,
       dialectDefTemplateText, usefulStrings.namespaceOpen,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
       usefulStrings.namespacePathString);
+
+  output << llvm::formatv(
+    typeHeaderDefTemplateText, usefulStrings.dialectCppShortName, usefulStrings.dialectCppName
+  );
 
   output << "#endif // " << definitionMacroFlag << "\n";
 
@@ -117,14 +135,13 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   }
 
   // TODO: allow control over C++ name.
-  std::string cppName;
-  llvm::raw_string_ostream cppNameStream(cppName);
-  cppNameStream << llvm::toUpper(dialectName[0])
-                << dialectName.slice(1, dialectName.size()) << "Dialect";
+  std::string cppShortName = llvm::formatv("{0}{1}", llvm::toUpper(dialectName[0]), dialectName.slice(1, dialectName.size()));
+  std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
   UsefulStrings usefulStrings;
   usefulStrings.dialectName = dialectName;
   usefulStrings.dialectCppName = cppName;
+  usefulStrings.dialectCppShortName = cppShortName;
   usefulStrings.namespaceOpen = namespaceOpen;
   usefulStrings.namespaceClose = namespaceClose;
   usefulStrings.namespacePathString = namespacePathString;
@@ -139,3 +156,4 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
 
   return success();
 }
+

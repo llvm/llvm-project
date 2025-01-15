@@ -1,0 +1,12 @@
+/*
+{0}: Dialect CppShortName
+*/
+
+R"(
+class {0}Type : public ::mlir::Type {{
+public:
+  using Type::Type;
+
+  static bool classof(Type type);
+};
+)"
