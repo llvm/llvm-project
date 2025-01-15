@@ -263,7 +263,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     YamlContext &Context = getTypedContext(Ctx);
     std::optional<MCRegister> RegNo;
     if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
-      RV.Register = RegNo;
+      RV.Register = *RegNo;
       const unsigned BitsNeeded = APInt::getBitsNeeded(Pieces[1], kRadix);
       RV.Value = APInt(BitsNeeded, Pieces[1], kRadix);
     } else {
