@@ -61,7 +61,6 @@ void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "TransformValues", TransformValues);
   Options.store(Opts, "TransformReferences", TransformReferences);
   Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
-
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
 }
