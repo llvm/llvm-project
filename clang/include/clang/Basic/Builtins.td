@@ -1980,7 +1980,7 @@ def AtomicNandFetch : AtomicBuiltin {
 def AtomicTestAndSet : AtomicBuiltin {
   let Spellings = ["__atomic_test_and_set"];
   let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(...)";
+  let Prototype = "bool(...)";
 }
 
 def AtomicClear : AtomicBuiltin {

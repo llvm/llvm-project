@@ -3690,13 +3690,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     GNUCmpXchg,
 
     // bool __atomic_test_and_set(A *, int)
-    TestAndSet,
+    TestAndSetByte,
 
     // void __atomic_clear(A *, int)
-    Clear,
+    ClearByte,
   } Form = Init;
 
-  const unsigned NumForm = Clear + 1;
+  const unsigned NumForm = ClearByte + 1;
   const unsigned NumArgs[] = {2, 2, 3, 3, 3, 3, 4, 5, 6, 2, 2};
   const unsigned NumVals[] = {1, 0, 1, 1, 1, 1, 2, 2, 3, 0, 0};
   // where:
@@ -3861,11 +3861,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     break;
 
   case AtomicExpr::AO__atomic_test_and_set:
-    Form = TestAndSet;
+    Form = TestAndSetByte;
     break;
 
   case AtomicExpr::AO__atomic_clear:
-    Form = Clear;
+    Form = ClearByte;
     break;
   }
 
@@ -3926,7 +3926,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     }
   }
 
-  if (Form != TestAndSet && Form != Clear) {
+  if (Form != TestAndSetByte && Form != ClearByte) {
     // Pointer to object of size zero is not allowed.
     if (RequireCompleteType(Ptr->getBeginLoc(), AtomTy,
                             diag::err_incomplete_type))
@@ -3941,16 +3941,13 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     // The __atomic_clear and __atomic_test_and_set intrinsics accept any
     // non-const pointer type, including void* and pointers to incomplete
     // structs, but only access the first byte.
-    if (AtomTy.isVolatileQualified())
-      Ptr = ImpCastExprToType(
-                Ptr,
-                Context.getPointerType(Context.getVolatileType(Context.CharTy)),
-                CK_BitCast)
-                .get();
-    else
-      Ptr = ImpCastExprToType(Ptr, Context.getPointerType(Context.CharTy),
-                              CK_BitCast)
-                .get();
+    AtomTy = Context.CharTy;
+    AtomTy = AtomTy.withCVRQualifiers(
+        pointerType->getPointeeType().getCVRQualifiers());
+    QualType PointerQT = Context.getPointerType(AtomTy);
+    pointerType = PointerQT->getAs<PointerType>();
+    Ptr = ImpCastExprToType(Ptr, PointerQT, CK_BitCast).get();
+    ValType = AtomTy;
   }
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
@@ -3995,8 +3992,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     return ExprError();
   }
 
-  if (!IsC11 && Form != TestAndSet && Form != Clear &&
-      !AtomTy.isTriviallyCopyableType(Context) && !AtomTy->isScalarType()) {
+  if (!IsC11 && !AtomTy.isTriviallyCopyableType(Context) &&
+      !AtomTy->isScalarType()) {
     // For GNU atomics, require a trivially-copyable type. This is not part of
     // the GNU atomics specification but we enforce it for consistency with
     // other atomics which generally all require a trivially-copyable type. This
@@ -4030,9 +4027,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   ValType.removeLocalConst();
   QualType ResultType = ValType;
   if (Form == Copy || Form == LoadCopy || Form == GNUXchg || Form == Init ||
-      Form == Clear)
+      Form == ClearByte)
     ResultType = Context.VoidTy;
-  else if (Form == C11CmpXchg || Form == GNUCmpXchg || Form == TestAndSet)
+  else if (Form == C11CmpXchg || Form == GNUCmpXchg || Form == TestAndSetByte)
     ResultType = Context.BoolTy;
 
   // The type of a parameter passed 'by value'. In the GNU atomics, such
@@ -4077,8 +4074,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       APIOrderedArgs.push_back(Args[1]); // Order
       APIOrderedArgs.push_back(Args[3]); // OrderFail
       break;
-    case TestAndSet:
-    case Clear:
+    case TestAndSetByte:
+    case ClearByte:
       APIOrderedArgs.push_back(Args[1]); // Order
       break;
     }
@@ -4166,8 +4163,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     SubExprs.push_back(APIOrderedArgs[1]); // Val1
     break;
   case Load:
-  case TestAndSet:
-  case Clear:
+  case TestAndSetByte:
+  case ClearByte:
     SubExprs.push_back(APIOrderedArgs[1]); // Order
     break;
   case LoadCopy:

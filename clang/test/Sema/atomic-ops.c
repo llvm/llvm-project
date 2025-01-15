@@ -293,6 +293,9 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_clear(&flag, memory_order_consume); // expected-warning {{memory order argument to atomic operation is invalid}}
   __atomic_clear(&flag, memory_order_acquire); // expected-warning {{memory order argument to atomic operation is invalid}}
   __atomic_clear(&flag, memory_order_acq_rel); // expected-warning {{memory order argument to atomic operation is invalid}}
+  _Bool lock;
+  __atomic_test_and_set(lock, memory_order_acquire); // expected-error {{address argument to atomic builtin must be a pointer}}
+  __atomic_clear(lock, memory_order_release); // expected-error {{address argument to atomic builtin must be a pointer}}
 
   // These intrinsics accept any non-const pointer type (including
   // pointer-to-incomplete), and access the first byte.
