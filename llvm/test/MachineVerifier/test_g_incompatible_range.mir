@@ -1,6 +1,6 @@
 # RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=none %s -filetype=null 2>&1 | FileCheck %s
 --- |
-  define void @range_metadata_sext_i33_signed_range_i64_load_as_v2i32() {
+  define void @mismatched_range_type() {
     ret void
   }
 
