@@ -70,7 +70,7 @@ _LIBCPP_END_NAMESPACE_STD
     [[gnu::used]] static type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                                    \
     __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
     __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
-    extern type name arglist __attribute__((weak_import));                                                             \
+    [[clang::weak_import]] extern type name arglist;                                                                   \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
