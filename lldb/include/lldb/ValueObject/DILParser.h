@@ -42,7 +42,7 @@ public:
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member);
 
-  DILASTNodeUP Run(Status &error);
+  llvm::Expected<DILASTNodeUP> Run();
 
   ~DILParser() { m_ctx_scope.reset(); }
 

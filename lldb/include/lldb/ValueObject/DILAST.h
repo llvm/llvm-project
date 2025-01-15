@@ -70,16 +70,12 @@ public:
                  lldb::DynamicValueType use_dynamic,
                  std::shared_ptr<ExecutionContextScope> exe_ctx_scope)
       : DILASTNode(location, NodeKind::eIdentifierNode),
-        m_name(std::move(name)), m_use_dynamic(use_dynamic),
-        m_ctx_scope(exe_ctx_scope) {}
+        m_name(std::move(name)), m_use_dynamic(use_dynamic) {}
 
   void Accept(Visitor *v) const override;
 
   lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
   std::string GetName() const { return m_name; }
-  std::shared_ptr<ExecutionContextScope> get_exe_context() const {
-    return m_ctx_scope;
-  }
 
   static bool classof(const DILASTNode *node) {
     return node->GetKind() == NodeKind::eIdentifierNode;
@@ -88,7 +84,6 @@ public:
 private:
   std::string m_name;
   lldb::DynamicValueType m_use_dynamic;
-  std::shared_ptr<ExecutionContextScope> m_ctx_scope;
 };
 
 /// This class contains one Visit method for each specialized type of

@@ -87,7 +87,7 @@ DILParser::DILParser(llvm::StringRef dil_input_expr,
   m_dil_token.setKind(dil::TokenKind::unknown);
 }
 
-DILASTNodeUP DILParser::Run(Status &error) {
+llvm::Expected<DILASTNodeUP> DILParser::Run() {
   ConsumeToken();
 
   DILASTNodeUP expr;
@@ -96,14 +96,8 @@ DILASTNodeUP DILParser::Run(Status &error) {
 
   Expect(dil::TokenKind::eof);
 
-  error = std::move(m_error);
-  m_error.Clear();
-
-  // Explicitly return ErrorNode if there was an error during the parsing.
-  // Some routines raise an error, but don't change the return value (e.g.
-  // Expect).
-  if (error.Fail())
-    return std::make_unique<ErrorNode>();
+  if (m_error.Fail())
+    return m_error.ToError();
 
   return expr;
 }

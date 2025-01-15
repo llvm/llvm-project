@@ -527,7 +527,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
-  ValueObjectSP ret_val;
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -537,12 +536,11 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
 
   // Parse the expression.
-  Status parse_error, eval_error;
   dil::DILParser parser(var_expr, shared_from_this(), use_dynamic,
                         !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
-  dil::DILASTNodeUP tree = parser.Run(parse_error);
-  if (parse_error.Fail()) {
-    error = std::move(parse_error);
+  auto tree_or_error = parser.Run();
+  if (!tree_or_error) {
+    error = Status::FromError(tree_or_error.takeError());
     return ValueObjectSP();
   }
 
@@ -551,19 +549,13 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   dil::DILInterpreter interpreter(target, var_expr, use_dynamic,
                                   shared_from_this());
 
-  ret_val = interpreter.DILEval(tree.get(), target, eval_error);
-  if (eval_error.Fail()) {
-    error = std::move(eval_error);
+  auto valobj_or_error = interpreter.DILEval((*tree_or_error).get(), target);
+  if (!valobj_or_error) {
+    error = Status::FromError(valobj_or_error.takeError());
     return ValueObjectSP();
   }
 
-  if (ret_val) {
-    var_sp = ret_val->GetVariable();
-    if (!var_sp && ret_val->GetParent()) {
-      var_sp = ret_val->GetParent()->GetVariable();
-    }
-  }
-  return ret_val;
+  return *valobj_or_error;
 }
 
 ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(

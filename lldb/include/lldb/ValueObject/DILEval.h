@@ -69,8 +69,8 @@ public:
                  lldb::DynamicValueType use_dynamic,
                  std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
 
-  lldb::ValueObjectSP DILEval(const DILASTNode *tree, lldb::TargetSP target_sp,
-                              Status &error);
+  llvm::Expected<lldb::ValueObjectSP> DILEval(const DILASTNode *tree,
+                                              lldb::TargetSP target_sp);
 
 private:
   lldb::ValueObjectSP DILEvalNode(const DILASTNode *node);

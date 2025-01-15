@@ -160,8 +160,10 @@ LookupIdentifier(const std::string &name,
         return IdentifierInfo::FromValue(*value_sp);
 
       // Try looking for an instance variable (class member).
-      ConstString this_string("this");
-      value_sp = frame->FindVariable(this_string);
+      SymbolContext sc = frame->GetSymbolContext(lldb::eSymbolContextFunction |
+                                                 lldb::eSymbolContextBlock);
+      llvm::StringRef ivar_name = sc.GetInstanceVariableName();
+      value_sp = frame->FindVariable(ConstString(ivar_name));
       if (value_sp)
         value_sp = value_sp->GetChildMemberWithName(name_ref);
 
@@ -223,15 +225,16 @@ DILInterpreter::DILInterpreter(
     : m_target(std::move(target)), m_expr(expr), m_default_dynamic(use_dynamic),
       m_exe_ctx_scope(exe_ctx_scope) {}
 
-lldb::ValueObjectSP DILInterpreter::DILEval(const DILASTNode *tree,
-                                            lldb::TargetSP target_sp,
-                                            Status &error) {
+llvm::Expected<lldb::ValueObjectSP>
+DILInterpreter::DILEval(const DILASTNode *tree, lldb::TargetSP target_sp) {
   m_error.Clear();
   // Evaluate an AST.
   DILEvalNode(tree);
-  // Set the error.
-  error = std::move(m_error);
-  // Return the computed result. If there was an error, it will be invalid.
+  // Check for errors.
+  if (m_error.Fail())
+    return m_error.ToError();
+
+  // Return the computed result.
   return m_result;
 }
 
@@ -257,12 +260,10 @@ void DILInterpreter::Visit(const ErrorNode *node) {
 }
 
 void DILInterpreter::Visit(const IdentifierNode *node) {
-  std::shared_ptr<ExecutionContextScope> exe_ctx_scope =
-      node->get_exe_context();
   lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
 
   std::unique_ptr<IdentifierInfo> identifier =
-      LookupIdentifier(node->GetName(), exe_ctx_scope, use_dynamic);
+      LookupIdentifier(node->GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier) {
     std::string errMsg;
