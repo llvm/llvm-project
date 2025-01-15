@@ -206,7 +206,7 @@ define i32 @ilogb_const1_1() strictfp {
 ; CHECK-NEXT:    ret i32 2
 ;
   %r = call i32 @ilogb(double -7.000000e+00)
-  ret i32 %r
+  ret i32 %r      
 }
 
 declare i32 @ilogbf(float)
