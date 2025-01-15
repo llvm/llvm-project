@@ -108,7 +108,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding
-  the option ``AllowedTypes``, that excludes specified types
+  the option `AllowedTypes`, that excludes specified types
   from const-correctness checking.
 
 - Improved :doc:`misc-redundant-expression
