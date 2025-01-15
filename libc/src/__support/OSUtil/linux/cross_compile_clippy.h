@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_CROSS_COMPILE_CLIPPY_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_CROSS_COMPILE_CLIPPY_H
 
-
 #include "src/__support/macros/properties/architectures.h"
 #include <sys/syscall.h>
 
-#define MSG "Looks like you may be using the host kernel headers to cross " \
-  "compile. This is bad because the syscall numbers frequently (but not " \
-  "always) differ between architectures.  What frequently happens as a " \
+#define MSG                                                                    \
+  "Looks like you may be using the host kernel headers to cross "              \
+  "compile. This is bad because the syscall numbers frequently (but not "      \
+  "always) differ between architectures.  What frequently happens as a "       \
   "result are crashes in startup."
 
 // https://github.com/hrw/syscalls-table is super helpful for trying to find
@@ -40,6 +40,5 @@ static_assert(__NR_riscv_flush_icache == 259, MSG);
 #else
 #error "Missing cross compile check for new arch"
 #endif
-
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_CROSS_COMPILE_CLIPPY_H
