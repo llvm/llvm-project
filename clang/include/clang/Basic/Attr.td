@@ -1917,6 +1917,13 @@ def Leaf : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def ExplicitInit : InheritableAttr {
+  let Spellings = [Clang<"require_explicit_initialization">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Documentation = [ExplicitInitDocs];
+  let SimpleHandler = 1;
+}
+
 def LifetimeBound : DeclOrTypeAttr {
   let Spellings = [Clang<"lifetimebound", 0>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
