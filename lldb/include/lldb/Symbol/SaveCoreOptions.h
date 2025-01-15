@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_SaveCoreOPTIONS_H
 
+#include "lldb/Target/ThreadCollection.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RangeMap.h"
 
@@ -46,7 +47,7 @@ public:
 
   void AddMemoryRegionToSave(const lldb_private::MemoryRegionInfo &region);
 
-  lldb::ThreadCollectionSP GetThreadsToSave() const;
+  lldb_private::ThreadCollection::collection GetThreadsToSave() const;
 
   void Clear();
 
