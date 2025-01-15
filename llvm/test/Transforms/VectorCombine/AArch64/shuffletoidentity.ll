@@ -292,7 +292,7 @@ define <8 x i8> @undeflane(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i8> @constantsplat(<8 x i8> %a) {
 ; CHECK-LABEL: @constantsplat(
-; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], splat (i8 10)
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -339,7 +339,7 @@ define <8 x i8> @constantdiff2(<8 x i8> %a) {
 
 define <8 x half> @constantsplatf(<8 x half> %a) {
 ; CHECK-LABEL: @constantsplatf(
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], <half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900, half 0xH4900>
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], splat (half 0xH4900)
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -937,10 +937,8 @@ define <4 x i64> @cast_mismatched_types(<4 x i32> %x) {
 
 define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @fadd_mismatched_types(
-; CHECK-NEXT:    [[SHUF_X:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[SHUF_Y:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[FADD:%.*]] = fadd fast <2 x float> [[SHUF_X]], [[SHUF_Y]]
-; CHECK-NEXT:    [[EXTSHUF:%.*]] = shufflevector <2 x float> [[FADD]], <2 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 poison>
+; CHECK-NEXT:    [[EXTSHUF:%.*]] = fadd fast <4 x float> [[TMP1:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[EXTSHUF]]
 ;
   %shuf.x = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -1066,4 +1064,167 @@ entry:
   ret <2 x float> %4
 }
 
+define <16 x i64> @operandbundles(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) {
+; CHECK-LABEL: @operandbundles(
+; CHECK-NEXT:    [[CALL:%.*]] = call <4 x i64> @llvm.fshl.v4i64(<4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], <4 x i64> [[C:%.*]]) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <4 x i64> [[CALL]], <4 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <16 x i64> [[SHUFFLEVECTOR]], <16 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    ret <16 x i64> [[SHUFFLEVECTOR1]]
+;
+  %call = call <4 x i64> @llvm.fshl.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+  %shufflevector = shufflevector <4 x i64> %call, <4 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shufflevector1 = shufflevector <16 x i64> %shufflevector, <16 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <16 x i64> %shufflevector1
+}
+
+define <8 x i8> @operandbundles_first(<8 x i8> %a) {
+; CHECK-LABEL: @operandbundles_first(
+; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[ABT:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[AT]], i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[A]], i1 false)
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+;
+  %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %at, i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+  %abb = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %ab, i1 false)
+  %r = shufflevector <4 x i8> %abt, <4 x i8> %abb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @operandbundles_second(<8 x i8> %a) {
+; CHECK-LABEL: @operandbundles_second(
+; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[ABB:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[AB]], i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[A]], i1 false)
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+;
+  %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %at, i1 false)
+  %abb = call <4 x i8> @llvm.abs.v4i8(<4 x i8> %ab, i1 false) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
+  %r = shufflevector <4 x i8> %abt, <4 x i8> %abb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i8> %r
+}
+
+define <8 x i32> @fptoi(<8 x float> %a, <8 x float> %b) {
+; CHECK-LABEL: @fptoi(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <8 x float> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = fptoui <8 x float> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[R:%.*]] = mul <8 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %ab = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bb = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bt = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = fptosi <4 x float> %at to <4 x i32>
+  %abb = fptosi <4 x float> %ab to <4 x i32>
+  %bbt = fptoui <4 x float> %bt to <4 x i32>
+  %bbb = fptoui <4 x float> %bb to <4 x i32>
+  %mt = mul <4 x i32> %abt, %bbt
+  %mb = mul <4 x i32> %abb, %bbb
+  %r = shufflevector <4 x i32> %mt, <4 x i32> %mb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i32> %r
+}
+
+define <8 x half> @itofp(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: @itofp(
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <8 x i16> [[A:%.*]] to <8 x half>
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <8 x i16> [[B:%.*]] to <8 x half>
+; CHECK-NEXT:    [[R:%.*]] = fmul <8 x half> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <8 x half> [[R]]
+;
+  %ab = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bb = shufflevector <8 x i16> %b, <8 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bt = shufflevector <8 x i16> %b, <8 x i16> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = sitofp <4 x i16> %at to <4 x half>
+  %abb = sitofp <4 x i16> %ab to <4 x half>
+  %bbt = uitofp <4 x i16> %bt to <4 x half>
+  %bbb = uitofp <4 x i16> %bb to <4 x half>
+  %mt = fmul <4 x half> %abt, %bbt
+  %mb = fmul <4 x half> %abb, %bbb
+  %r = shufflevector <4 x half> %mt, <4 x half> %mb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x half> %r
+}
+
+define <16 x i32> @const_types(<16 x i32> %wide.vec, <16 x i32> %wide.vec116) {
+; CHECK-LABEL: @const_types(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <16 x i32> [[WIDE_VEC116:%.*]] to <16 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <16 x i32> [[WIDE_VEC:%.*]] to <16 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <16 x i64> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <16 x i64> [[TMP3]], splat (i64 32)
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw <16 x i64> [[TMP4]] to <16 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.smin.v16i32(<16 x i32> [[TMP5]], <16 x i32> splat (i32 1073741823))
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shl <16 x i32> [[TMP6]], splat (i32 1)
+; CHECK-NEXT:    ret <16 x i32> [[INTERLEAVED_VEC]]
+;
+  %strided.vec = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %strided.vec113 = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %strided.vec114 = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %strided.vec115 = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+  %10 = sext <4 x i32> %strided.vec to <4 x i64>
+  %strided.vec117 = shufflevector <16 x i32> %wide.vec116, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %strided.vec118 = shufflevector <16 x i32> %wide.vec116, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %strided.vec119 = shufflevector <16 x i32> %wide.vec116, <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %strided.vec120 = shufflevector <16 x i32> %wide.vec116, <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+  %11 = sext <4 x i32> %strided.vec117 to <4 x i64>
+  %12 = mul nsw <4 x i64> %11, %10
+  %13 = lshr <4 x i64> %12, splat (i64 32)
+  %14 = trunc nuw <4 x i64> %13 to <4 x i32>
+  %15 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %14, <4 x i32> splat (i32 1073741823))
+  %16 = shl <4 x i32> %15, splat (i32 1)
+  %17 = sext <4 x i32> %strided.vec113 to <4 x i64>
+  %18 = sext <4 x i32> %strided.vec118 to <4 x i64>
+  %19 = mul nsw <4 x i64> %18, %17
+  %20 = lshr <4 x i64> %19, splat (i64 32)
+  %21 = trunc nuw <4 x i64> %20 to <4 x i32>
+  %22 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %21, <4 x i32> splat (i32 1073741823))
+  %23 = shl <4 x i32> %22, splat (i32 1)
+  %24 = sext <4 x i32> %strided.vec114 to <4 x i64>
+  %25 = sext <4 x i32> %strided.vec119 to <4 x i64>
+  %26 = mul nsw <4 x i64> %25, %24
+  %27 = lshr <4 x i64> %26, splat (i64 32)
+  %28 = trunc nuw <4 x i64> %27 to <4 x i32>
+  %29 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %28, <4 x i32> splat (i32 1073741823))
+  %30 = shl <4 x i32> %29, splat (i32 1)
+  %31 = sext <4 x i32> %strided.vec115 to <4 x i64>
+  %32 = sext <4 x i32> %strided.vec120 to <4 x i64>
+  %33 = mul nsw <4 x i64> %32, %31
+  %34 = lshr <4 x i64> %33, splat (i64 32)
+  %35 = trunc nuw <4 x i64> %34 to <4 x i32>
+  %36 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %35, <4 x i32> splat (i32 1073741823))
+  %37 = shl <4 x i32> %36, splat (i32 1)
+  %38 = shufflevector <4 x i32> %16, <4 x i32> %23, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %39 = shufflevector <4 x i32> %30, <4 x i32> %37, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x i32> %38, <8 x i32> %39, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+  ret <16 x i32> %interleaved.vec
+}
+
+define <32 x half> @cast_types(<32 x i16> %wide.vec) {
+; CHECK-LABEL: @cast_types(
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <32 x i16> [[WIDE_VEC:%.*]] to <32 x half>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fmul fast <32 x half> [[TMP1]], splat (half 0xH0200)
+; CHECK-NEXT:    ret <32 x half> [[INTERLEAVED_VEC]]
+;
+  %strided.vec = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+  %strided.vec49 = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+  %strided.vec50 = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+  %strided.vec51 = shufflevector <32 x i16> %wide.vec, <32 x i16> poison, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+  %5 = sitofp <8 x i16> %strided.vec to <8 x half>
+  %6 = fmul fast <8 x half> %5, splat (half 0xH0200)
+  %7 = sitofp <8 x i16> %strided.vec49 to <8 x half>
+  %8 = fmul fast <8 x half> %7, splat (half 0xH0200)
+  %9 = sitofp <8 x i16> %strided.vec50 to <8 x half>
+  %10 = fmul fast <8 x half> %9, splat (half 0xH0200)
+  %11 = sitofp <8 x i16> %strided.vec51 to <8 x half>
+  %12 = fmul fast <8 x half> %11, splat (half 0xH0200)
+  %13 = shufflevector <8 x half> %6, <8 x half> %8, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %14 = shufflevector <8 x half> %10, <8 x half> %12, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %interleaved.vec = shufflevector <16 x half> %13, <16 x half> %14, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+  ret <32 x half> %interleaved.vec
+}
+
+declare <4 x i64> @llvm.fshl.v4i64(<4 x i64>, <4 x i64>, <4 x i64>)
 declare void @use(<4 x i8>)

@@ -101,7 +101,7 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
 
   for (const Record *Fusion : Fusions) {
     std::vector<const Record *> Predicates =
-        Fusion->getValueAsListOfConstDefs("Predicates");
+        Fusion->getValueAsListOfDefs("Predicates");
     bool IsCommutable = Fusion->getValueAsBit("IsCommutable");
 
     OS << "bool is" << Fusion->getName() << "(\n";
@@ -160,7 +160,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
     OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";
@@ -181,7 +181,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
     OS.indent(4) << "const MachineInstr *MI = &SecondMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
-    PE.setIndentLevel(3);
+    PE.getIndent() = 3;
     PE.expandPredicate(OS, Predicate->getValueAsDef("Predicate"));
     OS << ")\n";
     OS.indent(4) << "  return false;\n";

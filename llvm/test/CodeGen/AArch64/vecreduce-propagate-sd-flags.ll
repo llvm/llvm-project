@@ -1,4 +1,3 @@
-; REQUIRES: arm-registered-target
 ; REQUIRES: asserts
 ; RUN: llc -o /dev/null %s -debug-only=legalize-types 2>&1 | FileCheck %s
 

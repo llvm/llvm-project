@@ -120,6 +120,7 @@ public:
   void DeleteFile() noexcept;
 
 private:
+  lldb_private::Status AddLLDBGeneratedStream();
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
   // trigger a flush.
   lldb_private::Status AddData(const void *data, uint64_t size);
@@ -172,9 +173,7 @@ private:
   // to duplicate it in the exception data.
   std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
       m_tid_to_reg_ctx;
-  std::unordered_set<lldb::addr_t> m_saved_stack_ranges;
   lldb::FileUP m_core_file;
   lldb_private::SaveCoreOptions m_save_core_options;
 };
-
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_MINIDUMP_MINIDUMPFILEBUILDER_H

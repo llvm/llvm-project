@@ -19,16 +19,11 @@ def RISCVO0PreLegalizerCombiner: GICombiner<
   "RISCVO0PreLegalizerCombinerImpl", [optnone_combines]> {
 }
 
-// Post-legalization combines which should happen at all optimization levels.
-// (E.g. ones that facilitate matching for the selector) For example, matching
-// pseudos.
-def RISCVPostLegalizerLowering
-    : GICombiner<"RISCVPostLegalizerLoweringImpl", []> {
-}
-
 // Post-legalization combines which are primarily optimizations.
 // TODO: Add more combines.
 def RISCVPostLegalizerCombiner
     : GICombiner<"RISCVPostLegalizerCombinerImpl",
-                 [redundant_and, identity_combines]> {
+                 [sub_to_add, combines_for_extload, redundant_and,
+                  identity_combines, shift_immed_chain,
+                  commute_constant_to_rhs, simplify_neg_minmax]> {
 }

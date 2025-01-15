@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
-// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,alpha.security.taint -verify %s
+// RUN:     -analyzer-checker=core,alpha.security.ArrayBoundV2,unix.Malloc,optin.taint -verify %s
 
 int TenElements[10];
 

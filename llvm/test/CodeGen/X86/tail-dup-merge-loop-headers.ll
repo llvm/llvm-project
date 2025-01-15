@@ -6,7 +6,7 @@ define void @tail_dup_merge_loops(i32 %a, ptr %b, ptr %c) local_unnamed_addr #0 
 ; CHECK-LABEL: tail_dup_merge_loops:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %inner_loop_exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    incq %rsi
@@ -15,7 +15,7 @@ define void @tail_dup_merge_loops(i32 %a, ptr %b, ptr %c) local_unnamed_addr #0 
 ; CHECK-NEXT:    # Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_5
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  # %bb.2: # %inner_loop_top
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    cmpb $0, (%rsi)
@@ -118,7 +118,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    movb $32, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_15: # %merge_predecessor_split
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    movb $32, %cl
@@ -127,7 +127,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    # Child Loop BB1_8 Depth 2
 ; CHECK-NEXT:    testl %r12d, %r12d
 ; CHECK-NEXT:    je .LBB1_5
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
 ; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2

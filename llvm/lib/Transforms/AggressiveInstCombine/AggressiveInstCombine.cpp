@@ -172,8 +172,8 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
   // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
-  Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
-  Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
+  Phi.replaceAllUsesWith(
+      Builder.CreateIntrinsic(IID, Phi.getType(), {ShVal0, ShVal1, ShAmt}));
   return true;
 }
 
@@ -181,6 +181,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
 /// the bit indexes (Mask) needed by a masked compare. If we're matching a chain
 /// of 'and' ops, then we also need to capture the fact that we saw an
 /// "and X, 1", so that's an extra return value for that case.
+namespace {
 struct MaskOps {
   Value *Root = nullptr;
   APInt Mask;
@@ -190,6 +191,7 @@ struct MaskOps {
   MaskOps(unsigned BitWidth, bool MatchAnds)
       : Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds) {}
 };
+} // namespace
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
 /// chain of 'and' or 'or' instructions looking for shift ops of a common source
@@ -331,9 +333,8 @@ static bool tryToRecognizePopCount(Instruction &I) {
                                 m_SpecificInt(Mask55)))) {
           LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
           IRBuilder<> Builder(&I);
-          Function *Func = Intrinsic::getDeclaration(
-              I.getModule(), Intrinsic::ctpop, I.getType());
-          I.replaceAllUsesWith(Builder.CreateCall(Func, {Root}));
+          I.replaceAllUsesWith(
+              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
           ++NumPopCountRecognized;
           return true;
         }
@@ -398,9 +399,8 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
     return false;
 
   IRBuilder<> Builder(&I);
-  Function *Fn = Intrinsic::getDeclaration(I.getModule(), Intrinsic::fptosi_sat,
-                                           {SatTy, FpTy});
-  Value *Sat = Builder.CreateCall(Fn, In);
+  Value *Sat =
+      Builder.CreateIntrinsic(Intrinsic::fptosi_sat, {SatTy, FpTy}, In);
   I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
   return true;
 }
@@ -411,9 +411,6 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
                      TargetLibraryInfo &TLI, AssumptionCache &AC,
                      DominatorTree &DT) {
-
-  Module *M = Call->getModule();
-
   // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
   // (because NNAN or the operand arg must not be less than -0.0) and (2) we
   // would not end up lowering to a libcall anyway (which could change the value
@@ -428,11 +425,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            Arg, 0,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
-    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
@@ -808,8 +802,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
     Load1Ptr = Load1Ptr->stripAndAccumulateConstantOffsets(
         DL, Offset1, /* AllowNonInbounds */ true);
-    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr,
-                                    Builder.getInt32(Offset1.getZExtValue()));
+    Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
@@ -843,7 +836,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
   // Return a minimum gep stride, greatest common divisor of consective gep
   // index scales(c.f. Bézout's identity).
   while (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-    MapVector<Value *, APInt> VarOffsets;
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
     if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset))
       break;
 
@@ -1052,6 +1045,13 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
+  // We want these instructions to be recognized as inlined instructions for the
+  // compare call, but we don't have a source location for the definition of
+  // that function, since we're generating that code now. Because the generated
+  // code is a viable point for a memory access error, we make the pragmatic
+  // choice here to directly use CI's location so that we have useful
+  // attribution for the generated code.
+  B.SetCurrentDebugLocation(CI->getDebugLoc());
 
   BasicBlock *BBCI = CI->getParent();
   BasicBlock *BBTail =

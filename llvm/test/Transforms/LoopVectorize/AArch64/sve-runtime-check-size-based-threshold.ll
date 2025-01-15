@@ -53,15 +53,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 2
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP19]], 0
-; CHECK-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i64, ptr [[SRC_1]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[SRC_2]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[TMP23]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP29:%.*]] = mul i64 [[TMP28]], 2
@@ -77,9 +70,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[TMP35:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD12]], [[WIDE_LOAD14]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST_1]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i64, ptr [[DST_2]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i64, ptr [[TMP37]], i32 0
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP43:%.*]] = mul i64 [[TMP42]], 2
@@ -99,7 +90,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

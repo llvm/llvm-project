@@ -217,8 +217,40 @@ static std::string getDecorationName(StringRef attrName) {
   // similar here
   if (attrName == "fp_rounding_mode")
     return "FPRoundingMode";
+  // convertToCamelFromSnakeCase will not capitalize "INTEL".
+  if (attrName == "cache_control_load_intel")
+    return "CacheControlLoadINTEL";
+  if (attrName == "cache_control_store_intel")
+    return "CacheControlStoreINTEL";
 
   return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+}
+
+template <typename AttrTy, typename EmitF>
+LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                    Attribute attrList, StringRef attrName,
+                                    EmitF emitter) {
+  auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
+  if (!arrayAttr) {
+    return emitError(loc, "expecting array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  if (arrayAttr.empty()) {
+    return emitError(loc, "expecting non-empty array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  for (Attribute attr : arrayAttr.getValue()) {
+    auto cacheControlAttr = dyn_cast<AttrTy>(attr);
+    if (!cacheControlAttr) {
+      return emitError(loc, "expecting array attribute of ")
+             << attrName << " for " << stringifyDecoration(decoration);
+    }
+    // This named attribute encodes several decorations. Emit one per
+    // element in the array.
+    if (failed(emitter(cacheControlAttr)))
+      return failure();
+  }
+  return success();
 }
 
 LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
@@ -286,6 +318,7 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
   case spirv::Decoration::Restrict:
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
+  case spirv::Decoration::Constant:
     // For unit attributes and decoration attributes, the args list
     // has no values so we do nothing.
     if (isa<UnitAttr, DecorationAttr>(attr))
@@ -293,6 +326,26 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
     return emitError(loc,
                      "expected unit attribute or decoration attribute for ")
            << stringifyDecoration(decoration);
+  case spirv::Decoration::CacheControlLoadINTEL:
+    return processDecorationList<CacheControlLoadINTELAttr>(
+        loc, decoration, attr, "CacheControlLoadINTEL",
+        [&](CacheControlLoadINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          LoadCacheControl loadCacheControl = attr.getLoadCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(loadCacheControl)});
+        });
+  case spirv::Decoration::CacheControlStoreINTEL:
+    return processDecorationList<CacheControlStoreINTELAttr>(
+        loc, decoration, attr, "CacheControlStoreINTEL",
+        [&](CacheControlStoreINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          StoreCacheControl storeCacheControl = attr.getStoreCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(storeCacheControl)});
+        });
   default:
     return emitError(loc, "unhandled decoration ")
            << stringifyDecoration(decoration);

@@ -74,8 +74,8 @@ const char *p = "foo"bar; // expected-error {{requires a space between}}
 #define ord - '0'
 int k = '4'ord; // expected-error {{requires a space between}}
 
-void operator"x" _y(char); // expected-error {{must be '""'}}
-void operator L"" _z(char); // expected-error {{encoding prefix}}
+void operator"x"_y(char); // expected-error {{must be '""'}}
+void operator L""_z(char); // expected-error {{encoding prefix}}
 void operator "x" "y" U"z" ""_whoops "z" "y"(char); // expected-error {{must be '""'}}
 
 void f() {

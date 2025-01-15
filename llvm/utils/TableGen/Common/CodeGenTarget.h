@@ -46,7 +46,6 @@ class CodeGenSubRegIndex;
 /// record corresponds to.
 MVT::SimpleValueType getValueType(const Record *Rec);
 
-StringRef getName(MVT::SimpleValueType T);
 StringRef getEnumName(MVT::SimpleValueType T);
 
 /// getQualifiedName - Return the name of the specified record, with a
@@ -95,7 +94,7 @@ public:
 
   /// getInstructionSet - Return the InstructionSet object.
   ///
-  Record *getInstructionSet() const;
+  const Record *getInstructionSet() const;
 
   /// getAllowRegisterRenaming - Return the AllowRegisterRenaming flag value for
   /// this target.
@@ -104,12 +103,12 @@ public:
 
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
-  Record *getAsmParser() const;
+  const Record *getAsmParser() const;
 
   /// getAsmParserVariant - Return the AssemblyParserVariant definition for
   /// this target.
   ///
-  Record *getAsmParserVariant(unsigned i) const;
+  const Record *getAsmParserVariant(unsigned i) const;
 
   /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
   /// available for this target.
@@ -118,14 +117,14 @@ public:
 
   /// getAsmWriter - Return the AssemblyWriter definition for this target.
   ///
-  Record *getAsmWriter() const;
+  const Record *getAsmWriter() const;
 
   /// getRegBank - Return the register bank description.
   CodeGenRegBank &getRegBank() const;
 
   /// Return the largest register class on \p RegBank which supports \p Ty and
   /// covers \p SubIdx if it exists.
-  std::optional<CodeGenRegisterClass *>
+  const CodeGenRegisterClass *
   getSuperRegForSubReg(const ValueTypeByHwMode &Ty, CodeGenRegBank &RegBank,
                        const CodeGenSubRegIndex *SubIdx,
                        bool MustBeAllocatable = false) const;
@@ -244,6 +243,8 @@ class ComplexPattern {
   std::vector<const Record *> RootNodes;
   unsigned Properties; // Node properties
   unsigned Complexity;
+  bool WantsRoot;
+  bool WantsParent;
 
 public:
   ComplexPattern(const Record *R);
@@ -254,6 +255,8 @@ public:
   const ArrayRef<const Record *> getRootNodes() const { return RootNodes; }
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
   unsigned getComplexity() const { return Complexity; }
+  bool wantsRoot() const { return WantsRoot; }
+  bool wantsParent() const { return WantsParent; }
 };
 
 } // namespace llvm

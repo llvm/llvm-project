@@ -243,7 +243,15 @@ int ExternalIoStatementBase::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
 #if !defined(RT_USE_PSEUDO_FILE_UNIT)
+  auto unitNumber{unit_.unitNumber()};
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
+  if (destroy_) {
+    if (ExternalFileUnit *
+        toClose{ExternalFileUnit::LookUpForClose(unitNumber)}) {
+      toClose->Close(CloseStatus::Delete, *this);
+      toClose->DestroyClosed();
+    }
+  }
 #else
   // Fetch the unit pointer before *this disappears.
   ExternalFileUnit *unitPtr{&unit_};
@@ -329,11 +337,7 @@ void OpenStatementState::CompleteOperation() {
   }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
-    if (ExternalFileUnit *
-        toClose{unit().LookUpForClose(unit().unitNumber())}) {
-      toClose->Close(CloseStatus::Delete, *this);
-      toClose->DestroyClosed();
-    }
+    set_destroy();
   }
   IoStatementBase::CompleteOperation();
 }

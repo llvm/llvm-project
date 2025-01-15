@@ -612,6 +612,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenLI = SubLI;
   GenSE = SubSE.get();
   BlockGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
+  RegionGen.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
   ExprBuilder.switchGeneratedFunc(SubFn, GenDT, GenLI, GenSE);
   Builder.SetInsertPoint(&*LoopBody);
 
@@ -681,6 +682,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
+  RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(&*AfterLoop);
 
@@ -1050,8 +1052,6 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
 
   auto *Ptr = AddressValue;
   auto Name = Ptr->getName();
-  auto AS = Ptr->getType()->getPointerAddressSpace();
-  Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
   PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());

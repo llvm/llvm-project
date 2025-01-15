@@ -13,8 +13,6 @@
 #include "src/stdio/fflush.h"
 #include "src/stdio/fopencookie.h"
 
-#include <stdio.h>
-
 using LIBC_NAMESPACE::cpp::array;
 
 namespace test_globals {
@@ -157,7 +155,7 @@ TEST_F(LlvmLibcGetoptTest, ParseArgInNext) {
   EXPECT_EQ(test_globals::optind, 3);
 }
 
-TEST_F(LlvmLibcGetoptTest, ParseMutliInOne) {
+TEST_F(LlvmLibcGetoptTest, ParseMultiInOne) {
   array<char *, 3> argv{"prog"_c, "-abc"_c, nullptr};
 
   EXPECT_EQ(LIBC_NAMESPACE::getopt(2, argv.data(), "abc"), (int)'a');

@@ -22,6 +22,12 @@ svfloat32_t test_atan_vv_i8mf8(svfloat32_t v) {
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
 }
 
+svfloat32_t test_atan2_vv_i8mf8(svfloat32_t v) {
+
+  return __builtin_elementwise_atan2(v, v);
+  // expected-error@-1 {{1st argument must be a floating point type}}
+}
+
 svfloat32_t test_sin_vv_i8mf8(svfloat32_t v) {
 
   return __builtin_elementwise_sin(v);

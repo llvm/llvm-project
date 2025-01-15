@@ -3,7 +3,7 @@ add_mlir_unittest(MLIRPassTests
   PassManagerTest.cpp
   PassPipelineParserTest.cpp
 )
-target_link_libraries(MLIRPassTests
+mlir_target_link_libraries(MLIRPassTests
   PRIVATE
   MLIRDebug
   MLIRFuncDialect

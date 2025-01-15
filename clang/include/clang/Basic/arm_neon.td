@@ -252,7 +252,7 @@ def OP_BFMLALT_LN
 
 def OP_VCVT_F32_BF16
     : Op<(bitcast "R",
-          (call "vshll_n", (bitcast "int16x4_t", $p0),
+          (call "vshll_n", (bitcast "uint16x4_t", $p0),
                            (literal "int32_t", "16")))>;
 def OP_VCVT_F32_BF16_LO
     : Op<(call "vcvt_f32_bf16", (call "vget_low", $p0))>;
@@ -275,8 +275,8 @@ def OP_VCVT_BF16_F32_HI_A32
                            (call "vget_low", $p0))>;
 
 def OP_CVT_F32_BF16
-    : Op<(bitcast "R", (op "<<", (cast "int32_t", (bitcast "int16_t", $p0)),
-                                 (literal "int32_t", "16")))>;
+    : Op<(bitcast "R", (op "<<", (cast "uint32_t", (bitcast "uint16_t", $p0)),
+                                 (literal "uint32_t", "16")))>;
 
 //===----------------------------------------------------------------------===//
 // Auxiliary Instructions
@@ -1968,13 +1968,16 @@ let TargetGuard = "v8.3a,neon" in {
   def VCADDQ_ROT90  : SInst<"vcaddq_rot90", "QQQ", "f">;
   def VCADDQ_ROT270 : SInst<"vcaddq_rot270", "QQQ", "f">;
 
-  defm VCMLA_F32        : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
+  defm VCMLA_F32    : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
 }
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "v8.3a,neon" in {
   def VCADDQ_ROT90_FP64  : SInst<"vcaddq_rot90", "QQQ", "d">;
   def VCADDQ_ROT270_FP64 : SInst<"vcaddq_rot270", "QQQ", "d">;
 
-  defm VCMLA_FP64 : VCMLA_ROTS<"d", "uint64x2_t", "uint64x2_t">;
+  def VCMLAQ_FP64        : SInst<"vcmlaq", "QQQQ", "d">;
+  def VCMLAQ_ROT90_FP64  : SInst<"vcmlaq_rot90", "QQQQ", "d">;
+  def VCMLAQ_ROT180_FP64 : SInst<"vcmlaq_rot180", "QQQQ", "d">;
+  def VCMLAQ_ROT270_FP64 : SInst<"vcmlaq_rot270", "QQQQ", "d">;
 }
 
 // V8.2-A BFloat intrinsics
@@ -2125,4 +2128,10 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {
   def FAMIN : WInst<"vamin", "...", "fhQdQfQh">;
   def FAMAX : WInst<"vamax", "...", "fhQdQfQh">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  // fscale
+  def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
+  def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
 }

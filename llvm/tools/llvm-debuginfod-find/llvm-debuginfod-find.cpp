@@ -37,12 +37,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -53,7 +54,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DebuginfodFindOptTable : public opt::GenericOptTable {
 public:
-  DebuginfodFindOptTable() : GenericOptTable(InfoTable) {}
+  DebuginfodFindOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 
 } // end anonymous namespace
@@ -67,7 +69,6 @@ static std::vector<std::string> DebugFileDirectory;
 
 static void parseArgs(int argc, char **argv) {
   DebuginfodFindOptTable Tbl;
-  llvm::StringRef ToolName = argv[0];
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   opt::InputArgList Args =
@@ -77,9 +78,15 @@ static void parseArgs(int argc, char **argv) {
       });
 
   if (Args.hasArg(OPT_help)) {
-    Tbl.printHelp(llvm::outs(),
-                  "llvm-debuginfod-find [options] <input build_id>",
-                  ToolName.str().c_str());
+    Tbl.printHelp(
+        llvm::outs(), "llvm-debuginfod-find [options] <input build_id>",
+        "llvm-debuginfod-find: Fetch debuginfod artifacts\n\n"
+        "This program is a frontend to the debuginfod client library. The "
+        "cache directory, request timeout (in seconds), and debuginfod server "
+        "urls are set by these environment variables:\n"
+        "DEBUGINFOD_CACHE_PATH (default set by sys::path::cache_directory)\n"
+        "DEBUGINFOD_TIMEOUT (defaults to 90s)\n"
+        "DEBUGINFOD_URLS=[comma separated URLs] (defaults to empty)");
     std::exit(0);
   }
 
@@ -97,45 +104,6 @@ static void parseArgs(int argc, char **argv) {
             "--source=/path/to/file, or --debuginfo.\n";
   exit(1);
 }
-
-/*
-cl::OptionCategory DebuginfodFindCategory("llvm-debuginfod-find Options");
-
-cl::opt<std::string> InputBuildID(cl::Positional, cl::Required,
-                                  cl::desc("<input build_id>"), cl::init("-"),
-                                  cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    FetchExecutable("executable", cl::init(false),
-                    cl::desc("If set, fetch a binary file associated with this "
-                             "build id, containing the executable sections."),
-                    cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    FetchDebuginfo("debuginfo", cl::init(false),
-                   cl::desc("If set, fetch a binary file associated with this "
-                            "build id, containing the debuginfo sections."),
-                   cl::cat(DebuginfodFindCategory));
-
-static cl::opt<std::string> FetchSource(
-    "source", cl::init(""),
-    cl::desc("Fetch a source file associated with this build id, which is at "
-             "this relative path relative to the compilation directory."),
-    cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    DumpToStdout("dump", cl::init(false),
-                 cl::desc("If set, dumps the contents of the fetched artifact "
-                          "to standard output. Otherwise, dumps the absolute "
-                          "path to the cached artifact on disk."),
-                 cl::cat(DebuginfodFindCategory));
-
-static cl::list<std::string> DebugFileDirectory(
-    "debug-file-directory",
-    cl::desc("Path to directory where to look for debug files."),
-    cl::cat(DebuginfodFindCategory));
-
-*/
 
 ExitOnError ExitOnDebuginfodFindError;
 

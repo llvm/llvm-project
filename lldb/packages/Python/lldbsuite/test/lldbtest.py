@@ -172,9 +172,9 @@ VARIABLES_DISPLAYED_CORRECTLY = "Variable(s) displayed correctly"
 WATCHPOINT_CREATED = "Watchpoint created successfully"
 
 
-def CMD_MSG(str):
+def CMD_MSG(command):
     """A generic "Command '%s' did not return successfully" message generator."""
-    return "Command '%s' did not return successfully" % str
+    return f"Command '{command}' did not return successfully"
 
 
 def COMPLETION_MSG(str_before, str_after, completions):
@@ -865,13 +865,9 @@ class Base(unittest.TestCase):
         session_file = self.getLogBasenameForCurrentTest() + ".log"
         self.log_files.append(session_file)
 
-        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
-        self.session = encoded_file.open(session_file, "utf-8", mode="w")
-
         # Optimistically set __errored__, __failed__, __expected__ to False
         # initially.  If the test errored/failed, the session info
-        # (self.session) is then dumped into a session specific file for
-        # diagnosis.
+        # is then dumped into a session specific file for diagnosis.
         self.__cleanup_errored__ = False
         self.__errored__ = False
         self.__failed__ = False
@@ -990,16 +986,14 @@ class Base(unittest.TestCase):
                     print("Command '" + cmd + "' failed!", file=sbuf)
 
         if check:
+            if not msg:
+                msg = CMD_MSG(cmd)
             output = ""
             if self.res.GetOutput():
                 output += "\nCommand output:\n" + self.res.GetOutput()
             if self.res.GetError():
                 output += "\nError output:\n" + self.res.GetError()
-            if msg:
-                msg += output
-            if cmd:
-                cmd += output
-            self.assertTrue(self.res.Succeeded(), msg if (msg) else CMD_MSG(cmd))
+            self.assertTrue(self.res.Succeeded(), msg + output)
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1237,20 +1231,25 @@ class Base(unittest.TestCase):
         else:
             prefix = "Success"
 
+        session_file = self.getLogBasenameForCurrentTest() + ".log"
+
+        # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
+        session = encoded_file.open(session_file, "utf-8", mode="w")
+
         if not self.__unexpected__ and not self.__skipped__:
             for test, traceback in pairs:
                 if test is self:
-                    print(traceback, file=self.session)
+                    print(traceback, file=session)
 
         import datetime
 
         print(
             "Session info generated @",
             datetime.datetime.now().ctime(),
-            file=self.session,
+            file=session,
         )
-        self.session.close()
-        del self.session
+        session.close()
+        del session
 
         # process the log files
         if prefix != "Success" or lldbtest_config.log_success:
@@ -1365,10 +1364,16 @@ class Base(unittest.TestCase):
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
+    def isAArch64GCS(self):
+        return self.isAArch64() and "gcs" in self.getCPUInfo()
+
     def isAArch64PAuth(self):
         if self.getArchitecture() == "arm64e":
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
+
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
@@ -1376,6 +1381,17 @@ class Base(unittest.TestCase):
             arch = self.getArchitecture().lower()
             return arch in ["aarch64", "arm64", "arm64e"]
         return False
+
+    def isLoongArch(self):
+        """Returns true if the architecture is LoongArch."""
+        arch = self.getArchitecture().lower()
+        return arch in ["loongarch64", "loongarch32"]
+
+    def isLoongArchLSX(self):
+        return self.isLoongArch() and "lsx" in self.getCPUInfo()
+
+    def isLoongArchLASX(self):
+        return self.isLoongArch() and "lasx" in self.getCPUInfo()
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""

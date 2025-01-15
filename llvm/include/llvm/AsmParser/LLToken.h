@@ -114,6 +114,7 @@ enum Kind {
   kw_disjoint,
   kw_inbounds,
   kw_nneg,
+  kw_samesign,
   kw_inrange,
   kw_addrspace,
   kw_section,
@@ -205,6 +206,12 @@ enum Kind {
   kw_argmemonly,
   kw_inaccessiblememonly,
   kw_inaccessiblemem_or_argmemonly,
+
+  // Captures attribute:
+  kw_address,
+  kw_address_is_null,
+  kw_provenance,
+  kw_read_provenance,
 
   // nofpclass attribute:
   kw_all,

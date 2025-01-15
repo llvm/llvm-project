@@ -289,6 +289,12 @@ HANDLE_TARGET_OPCODE(G_OR)
 /// Generic bitwise exclusive-or instruction.
 HANDLE_TARGET_OPCODE(G_XOR)
 
+/// Generic absolute difference signed instruction.
+HANDLE_TARGET_OPCODE(G_ABDS)
+
+/// Generic absolute difference unsigned instruction.
+HANDLE_TARGET_OPCODE(G_ABDU)
+
 
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
 
@@ -776,6 +782,9 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 /// Generic splatvector.
 HANDLE_TARGET_OPCODE(G_SPLAT_VECTOR)
 
+/// Generic stepvector.
+HANDLE_TARGET_OPCODE(G_STEP_VECTOR)
+
 /// Generic masked compress.
 HANDLE_TARGET_OPCODE(G_VECTOR_COMPRESS)
 
@@ -809,6 +818,9 @@ HANDLE_TARGET_OPCODE(G_FCOS)
 /// Floating point sine.
 HANDLE_TARGET_OPCODE(G_FSIN)
 
+/// Floating point combined sine and cosine.
+HANDLE_TARGET_OPCODE(G_FSINCOS)
+
 /// Floating point tangent.
 HANDLE_TARGET_OPCODE(G_FTAN)
 
@@ -820,6 +832,9 @@ HANDLE_TARGET_OPCODE(G_FASIN)
 
 /// Floating point arctangent.
 HANDLE_TARGET_OPCODE(G_FATAN)
+
+/// Floating point arctangent of y/x.
+HANDLE_TARGET_OPCODE(G_FATAN2)
 
 /// Floating point hyperbolic cosine.
 HANDLE_TARGET_OPCODE(G_FCOSH)

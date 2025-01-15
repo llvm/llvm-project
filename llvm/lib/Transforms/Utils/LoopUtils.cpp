@@ -445,21 +445,22 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
 }
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16>
-llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
-  SmallVector<DomTreeNode *, 16> Worklist;
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
+                                                          DomTreeNode *N,
+                                                          const Loop *CurLoop) {
+  SmallVector<BasicBlock *, 16> Worklist;
   auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
     // Only include subregions in the top level loop.
     BasicBlock *BB = DTN->getBlock();
     if (CurLoop->contains(BB))
-      Worklist.push_back(DTN);
+      Worklist.push_back(DTN->getBlock());
   };
 
   AddRegionToWorklist(N);
 
   for (size_t I = 0; I < Worklist.size(); I++) {
-    for (DomTreeNode *Child : Worklist[I]->children())
+    for (DomTreeNode *Child : DT->getNode(Worklist[I])->children())
       AddRegionToWorklist(Child);
   }
 
@@ -1207,6 +1208,23 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
+Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
+                                       const RecurrenceDescriptor &Desc) {
+  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+             Desc.getRecurrenceKind()) &&
+         "Unexpected reduction kind");
+  Value *StartVal = Desc.getRecurrenceStartValue();
+  Value *Sentinel = Desc.getSentinelValue();
+  Value *MaxRdx = Src->getType()->isVectorTy()
+                      ? Builder.CreateIntMaxReduce(Src, true)
+                      : Src;
+  // Correct the final reduction result back to the start value if the maximum
+  // reduction is sentinel value.
+  Value *Cmp =
+      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
+  return Builder.CreateSelect(Cmp, MaxRdx, StartVal, "rdx.select");
+}
+
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;
@@ -1314,6 +1332,8 @@ Value *llvm::createReduction(IRBuilderBase &B,
   RecurKind RK = Desc.getRecurrenceKind();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
     return createAnyOfReduction(B, Src, Desc, OrigPhi);
+  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+    return createFindLastIVReduction(B, Src, Desc);
 
   return createSimpleReduction(B, Src, RK);
 }

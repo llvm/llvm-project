@@ -470,6 +470,22 @@ exit:
   ret void
 }
 
+define void @test_add_with_disjoint_or(i64 %idx, <vscale x 4 x i1> %pg) {
+; CHECK-LABEL: test_add_with_disjoint_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    mov x12, x0
+; CHECK-NEXT:    mov za0h.s[w12, 0], p0/m, z0.s
+; CHECK-NEXT:    mov za0h.s[w12, 1], p0/m, z0.s
+; CHECK-NEXT:    ret
+  %idx.trunc = trunc i64 %idx to i32
+  call void @llvm.aarch64.sme.write.horiz.nxv4i32(i32 0, i32 %idx.trunc, <vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
+  %idx2 = or disjoint i64 %idx, 1
+  %idx2.trunc = trunc i64 %idx2 to i32
+  call void @llvm.aarch64.sme.write.horiz.nxv4i32(i32 0, i32 %idx2.trunc, <vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
+  ret void
+}
+
 declare void @llvm.aarch64.sme.write.horiz.nxv16i8(i32, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare void @llvm.aarch64.sme.write.horiz.nxv8i16(i32, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare void @llvm.aarch64.sme.write.horiz.nxv8f16(i32, i32, <vscale x 8 x i1>, <vscale x 8 x half>)

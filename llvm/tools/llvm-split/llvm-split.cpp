@@ -67,7 +67,7 @@ static cl::opt<std::string>
             cl::value_desc("triple"), cl::cat(SplitCategory));
 
 static cl::opt<std::string>
-    MCPU("mcpu", cl::desc("Target CPU, ignored if -mtriple is not used"),
+    MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
 int main(int argc, char **argv) {
@@ -125,11 +125,11 @@ int main(int argc, char **argv) {
 
   if (TM) {
     if (PreserveLocals) {
-      errs() << "warning: -preserve-locals has no effect when using "
+      errs() << "warning: --preserve-locals has no effect when using "
                 "TargetMachine::splitModule\n";
     }
     if (RoundRobin)
-      errs() << "warning: -round-robin has no effect when using "
+      errs() << "warning: --round-robin has no effect when using "
                 "TargetMachine::splitModule\n";
 
     if (TM->splitModule(*M, NumOutputs, HandleModulePart))

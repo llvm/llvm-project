@@ -7,5 +7,5 @@ REQUIRES: shell
 
 We expect only the document markers to be emitted
 
-CHECK: 50d
+CHECK: 52d
 CHECK: 1d

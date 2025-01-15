@@ -71,8 +71,20 @@ public:
   }
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
-    return m_Source->FindExternalVisibleDeclsByName(DC, Name);
+                                      clang::DeclarationName Name,
+                                      clang::Module *NamedModule) override {
+    return m_Source->FindExternalVisibleDeclsByName(DC, Name, NamedModule);
+  }
+
+  bool LoadExternalSpecializations(const clang::Decl *D,
+                                   bool OnlyPartial) override {
+    return m_Source->LoadExternalSpecializations(D, OnlyPartial);
+  }
+
+  bool LoadExternalSpecializations(
+      const clang::Decl *D,
+      llvm::ArrayRef<clang::TemplateArgument> TemplateArgs) override {
+    return m_Source->LoadExternalSpecializations(D, TemplateArgs);
   }
 
   void completeVisibleDeclsMap(const clang::DeclContext *DC) override {
@@ -305,6 +317,23 @@ public:
     return nullptr;
   }
 
+  bool LoadExternalSpecializations(const clang::Decl *D,
+                                   bool OnlyPartial) override {
+    bool newDeclFound = false;
+    for (size_t i = 0; i < Sources.size(); ++i)
+      newDeclFound |= Sources[i]->LoadExternalSpecializations(D, OnlyPartial);
+    return newDeclFound;
+  }
+
+  bool LoadExternalSpecializations(
+      const clang::Decl *D,
+      llvm::ArrayRef<clang::TemplateArgument> TemplateArgs) override {
+    bool newDeclFound = false;
+    for (size_t i = 0; i < Sources.size(); ++i)
+      newDeclFound |= Sources[i]->LoadExternalSpecializations(D, TemplateArgs);
+    return newDeclFound;
+  }
+
   void CompleteRedeclChain(const clang::Decl *D) override {
     for (size_t i = 0; i < Sources.size(); ++i)
       Sources[i]->CompleteRedeclChain(D);
@@ -360,9 +389,10 @@ public:
   }
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override {
+                                      clang::DeclarationName Name,
+                                      clang::Module *NamedModule) override {
     for (size_t i = 0; i < Sources.size(); ++i)
-      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name))
+      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name, NamedModule))
         return true;
     return false;
   }

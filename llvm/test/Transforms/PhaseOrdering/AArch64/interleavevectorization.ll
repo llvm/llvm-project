@@ -13,19 +13,16 @@ target triple = "aarch64"
 define void @add4(ptr noalias noundef %x, ptr noalias noundef %y, i32 noundef %n) {
 ; CHECK-LABEL: @add4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -136,25 +133,22 @@ for.end:
 define void @addsubs(ptr noalias noundef %x, ptr noundef %y, i32 noundef %n) {
 ; CHECK-LABEL: @addsubs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i16> [[TMP2]], <32 x i16> [[TMP3]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> [[TMP6]], <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i16> [[TMP7]], <16 x i16> [[TMP8]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -265,25 +259,22 @@ for.end:
 define void @add2sub2(ptr noalias noundef %x, ptr noundef %y, i32 noundef %n) {
 ; CHECK-LABEL: @add2sub2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <32 x i16> [[TMP2]], <32 x i16> [[TMP3]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> [[TMP6]], <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i16> [[TMP7]], <16 x i16> [[TMP8]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -394,22 +385,19 @@ for.end:
 define void @addmul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, i32 noundef %n) {
 ; CHECK-LABEL: @addmul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC31:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC36:%.*]] = load <32 x i16>, ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = add <32 x i16> [[TMP4]], [[WIDE_VEC36]]
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -553,31 +541,28 @@ for.end:
 define void @addsubsmul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, i32 noundef %n) {
 ; CHECK-LABEL: @addsubsmul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC31:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC36:%.*]] = load <32 x i16>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <32 x i16> [[TMP2]], [[WIDE_VEC36]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <32 x i16> [[WIDE_VEC36]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <32 x i16> [[TMP7]], [[WIDE_VEC36]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub <32 x i16> [[WIDE_VEC36]], [[TMP10]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> [[TMP6]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <32 x i16> [[TMP8]], <32 x i16> [[TMP11]], <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i16> [[TMP12]], <16 x i16> [[TMP13]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -721,31 +706,28 @@ for.end:
 define void @add2sub2mul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, i32 noundef %n) {
 ; CHECK-LABEL: @add2sub2mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 -6
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC31:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[X:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC36:%.*]] = load <32 x i16>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <32 x i16> [[TMP2]], [[WIDE_VEC36]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <32 x i16> [[TMP5]], [[WIDE_VEC36]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <32 x i16> [[WIDE_VEC36]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[OFFSET_IDX]], 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub <32 x i16> [[WIDE_VEC36]], [[TMP10]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <32 x i16> [[TMP4]], <32 x i16> [[TMP6]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <32 x i16> [[TMP8]], <32 x i16> [[TMP11]], <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i16> [[TMP12]], <16 x i16> [[TMP13]], <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[GEP]], align 2
+; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]

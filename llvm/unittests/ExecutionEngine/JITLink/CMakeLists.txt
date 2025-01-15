@@ -10,9 +10,11 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(JITLinkTests
     AArch32Tests.cpp
     AArch32ErrorTests.cpp
+    AArch64Tests.cpp
     EHFrameSupportTests.cpp
-    JITLinkMocks.cpp
+    JITLinkTestUtils.cpp
     LinkGraphTests.cpp
+    MachOLinkGraphTests.cpp
     MemoryManagerErrorTests.cpp
     StubsTests.cpp
   )

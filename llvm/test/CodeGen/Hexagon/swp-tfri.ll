@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true -disable-cgp-delete-phis | FileCheck %s --check-prefix=STATS
+; RUN: llc -mtriple=hexagon -enable-pipeliner -hexagon-initial-cfg-cleanup=0 -stats -o /dev/null < %s 2>&1 -pipeliner-experimental-cg=true -disable-cgp-delete-phis | FileCheck %s --check-prefix=STATS
 ; REQUIRES: asserts
 
 ; Check that we handle the case when a value is first defined in the loop.

@@ -5,6 +5,23 @@
 ! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefix=FIRDialect
 
+! FIRDialect: omp.private {type = private} @_QFsimd_loop_1Er_private_ref_box_heap_f32 {{.*}} alloc {
+! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
+! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIRDialect:     [[R_DECL:%.*]]:2 = hlfir.declare [[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}r"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+! FIRDialect:     omp.yield([[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>)
+! FIRDialect:   } dealloc {
+! FIRDialect:  ^bb0([[R_DECL:%.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>):
+! FIRDialect:     {{%.*}} = fir.load [[R_DECL]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIRDialect:     fir.if {{%.*}} {
+! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
+! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
+! FIRDialect:     fir.store {{%.*}} to [[R_DECL]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+! FIRDialect:     omp.yield
+! FIRDialect:   }
+
 !FIRDialect: omp.private {type = private} @[[DERIVED_PRIVATIZER:_QFprivate_clause_derived_typeEt_private_ref_rec__QFprivate_clause_derived_typeTmy_type]] : !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>> alloc {
 !FIRDialect:   ^bb0(%{{.*}}: !fir.ref<!fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}>>):
 !FIRDialect:     %[[PRIV_ALLOC:.*]] = fir.alloca !fir.type<_QFprivate_clause_derived_typeTmy_type{t_i:i32,t_arr:!fir.array<5xi32>}> {bindc_name = "t", pinned, uniq_name = "_QFprivate_clause_derived_typeEt"}
@@ -22,7 +39,7 @@
 !FIRDialect-DAG: %[[BETA_ARRAY:.*]] = fir.alloca !fir.array<10x!fir.char<1,5>> {bindc_name = "beta_array", uniq_name = "{{.*}}beta_array"}
 !FIRDialect-DAG: %[[BETA_ARRAY_DECL:.*]]:2 = hlfir.declare %[[BETA_ARRAY]]({{.*}}) typeparams {{.*}} {uniq_name = "{{.*}}beta_array"} : (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<10x!fir.char<1,5>>>, !fir.ref<!fir.array<10x!fir.char<1,5>>>)
 
-!FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[ALPHA_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[ALPHA_ARRAY_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[BETA_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[BETA_ARRAY_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[ARG1_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[ARG2_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[ARG3_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[ARG4_PVT:.*]] : {{.*}}) {
+!FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[ALPHA_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ALPHA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[BETA_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[BETA_ARRAY_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG3_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[ARG4_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:  %[[ALPHA_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_PVT]] {uniq_name = "{{.*}}alpha"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[ALPHA_ARRAY_PVT_DECL:.*]]:2 = hlfir.declare %[[ALPHA_ARRAY_PVT]]({{.*}}) {uniq_name = "{{.*}}alpha_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !FIRDialect-DAG:  %[[BETA_PVT_DECL:.*]]:2 = hlfir.declare %[[BETA_PVT]] typeparams {{.*}} {uniq_name = "{{.*}}beta"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
@@ -55,8 +72,8 @@ subroutine private_clause(arg1, arg2, arg3, arg4)
 end subroutine
 
 !FIRDialect: func @_QPprivate_clause_scalar() {
-!FIRDialect-DAG:  %[[C:.*]] = fir.alloca !fir.complex<4> {bindc_name = "c", uniq_name = "_QFprivate_clause_scalarEc"}
-!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!FIRDialect-DAG:  %[[C:.*]] = fir.alloca complex<f32> {bindc_name = "c", uniq_name = "_QFprivate_clause_scalarEc"}
+!FIRDialect-DAG:  %[[C_DECL:.*]]:2 = hlfir.declare %[[C]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !FIRDialect-DAG:  %[[I1:.*]] = fir.alloca i8 {bindc_name = "i1", uniq_name = "_QFprivate_clause_scalarEi1"}
 !FIRDialect-DAG:  %[[I1_DECL:.*]]:2 = hlfir.declare %[[I1]] {uniq_name = "_QFprivate_clause_scalarEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 !FIRDialect-DAG:  %[[I16:.*]] = fir.alloca i128 {bindc_name = "i16", uniq_name = "_QFprivate_clause_scalarEi16"}
@@ -72,13 +89,13 @@ end subroutine
 !FIRDialect-DAG:  %[[R:.*]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFprivate_clause_scalarEr"}
 !FIRDialect-DAG:  %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {uniq_name = "_QFprivate_clause_scalarEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
-!FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[I1_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[I2_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[I4_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[I8_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[I16_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[C_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[L_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[R_PVT:.*]] : {{.*}}) {
+!FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[I1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I4_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I8_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[I16_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[C_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[L_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[R_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:    %[[I1_PVT_DECL:.*]]:2 = hlfir.declare %[[I1_PVT]] {uniq_name = "_QFprivate_clause_scalarEi1"} : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
 !FIRDialect-DAG:    %[[I2_PVT_DECL:.*]]:2 = hlfir.declare %[[I2_PVT]] {uniq_name = "_QFprivate_clause_scalarEi2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
 !FIRDialect-DAG:    %[[I4_PVT_DECL:.*]]:2 = hlfir.declare %[[I4_PVT]] {uniq_name = "_QFprivate_clause_scalarEi4"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:    %[[I8_PVT_DECL:.*]]:2 = hlfir.declare %[[I8_PVT]] {uniq_name = "_QFprivate_clause_scalarEi8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 !FIRDialect-DAG:    %[[I16_PVT_DECL:.*]]:2 = hlfir.declare %[[I16_PVT]] {uniq_name = "_QFprivate_clause_scalarEi16"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
-!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<!fir.complex<4>>) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+!FIRDialect-DAG:    %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT]] {uniq_name = "_QFprivate_clause_scalarEc"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 !FIRDialect-DAG:    %[[L_PVT_DECL:.*]]:2 = hlfir.declare %[[L_PVT]] {uniq_name = "_QFprivate_clause_scalarEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 !FIRDialect-DAG:    %[[R_PVT_DECL:.*]]:2 = hlfir.declare %[[R_PVT]] {uniq_name = "_QFprivate_clause_scalarEr"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !FIRDialect:        omp.terminator
@@ -131,7 +148,7 @@ end subroutine
 !FIRDialect-DAG:  %[[X4:.*]] = fir.address_of(@{{.*}}Ex4) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !FIRDialect-DAG:  %[[X4_DECL:.*]]:2 = hlfir.declare %[[X4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex4"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
-!FIRDialect:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[X_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[X2_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[X3_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[X4_PVT:.*]] : {{.*}}) {
+!FIRDialect:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[X_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X2_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X3_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[X4_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:    %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 !FIRDialect-DAG:    %[[X2_PVT_DECL:.*]]:2 = hlfir.declare %[[X2_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 !FIRDialect-DAG:    %[[X3_PVT_DECL:.*]]:2 = hlfir.declare %[[X3_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Ex3"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
@@ -223,7 +240,7 @@ end subroutine increment_list_items
 !FIRDialect-DAG: %[[Z1_DECL:.*]]:2 = hlfir.declare %[[Z1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[Z2:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "z2", fir.target, uniq_name = "_QFparallel_pointerEz2"}
 !FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%12) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
-!FIRDialect:      omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[Y1_PVT:.*]] : {{.*}}, @{{.*}} %{{.*}}#0 -> %[[Y2_PVT:.*]] : {{.*}}) {
+!FIRDialect:      omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[Y1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[Y2_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:    %[[Y1_PVT_DECL:.*]]:2 = hlfir.declare %[[Y1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !FIRDialect-DAG:    %[[Y2_PVT_DECL:.*]]:2 = hlfir.declare %[[Y2_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 !FIRDialect-DAG:    %[[PP18:.*]] = fir.embox %[[Z1_DECL]]#1 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
@@ -245,7 +262,6 @@ subroutine parallel_pointer()
   y2=>z2
 !$omp end parallel
 end subroutine parallel_pointer
-
 
 !FIRDialect-LABEL: func @_QPsimple_loop_1()
 subroutine simple_loop_1
@@ -272,7 +288,6 @@ subroutine simple_loop_1
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -306,7 +321,6 @@ subroutine simple_loop_2
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     omp.terminator
   ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:     fir.if {{%.*}} {
   ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -346,7 +360,6 @@ subroutine simple_loop_3
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      omp.terminator
   ! FIRDialect:      {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! FIRDialect:      fir.if {{%.*}} {
   ! FIRDialect:      [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
@@ -357,20 +370,17 @@ subroutine simple_loop_3
   ! FIRDialect:  omp.terminator
 end subroutine
 
+
 !CHECK-LABEL: func @_QPsimd_loop_1()
 subroutine simd_loop_1
   integer :: i
   real, allocatable :: r;
-  ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
-  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     [[R_DECL:%.*]]:2 = hlfir.declare [[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}r"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
   ! FIRDialect:     %[[LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:     %[[STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect: omp.simd {
+  ! FIRDialect: omp.simd private({{.*}}) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9
@@ -381,10 +391,5 @@ subroutine simd_loop_1
   end do
   !$OMP END SIMD
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
-  ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+
 end subroutine

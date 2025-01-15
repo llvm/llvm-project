@@ -110,6 +110,35 @@ module iso_c_binding
   integer, parameter, public :: &
     c_float128 = 16, &
     c_float128_complex = c_float128
+  integer, parameter, public :: &
+    c_uint8_t = 1, &
+    c_uint16_t = 2, &
+    c_uint32_t = 4, &
+    c_uint64_t = 8, &
+    c_uint128_t = 16
+  integer, parameter, public :: &
+    c_unsigned_char = c_uint8_t, &
+    c_unsigned_short = c_uint16_t, &
+    c_unsigned = c_uint32_t, &
+    c_unsigned_long = c_uint64_t, &
+    c_unsigned_long_long = c_unsigned_long, &
+#if __powerpc__
+    c_uintmax_t = c_uint64_t
+#else
+    c_uintmax_t = c_uint128_t
+#endif
+  integer, parameter, public :: &
+    c_uint_fast8_t = c_uint8_t, &
+    c_uint_fast16_t = c_uint16_t, &
+    c_uint_fast32_t = c_uint32_t, &
+    c_uint_fast64_t = c_uint64_t, &
+    c_uint_fast128_t = c_uint128_t
+  integer, parameter, public :: &
+    c_uint_least8_t = c_uint8_t, &
+    c_uint_least16_t = c_uint16_t, &
+    c_uint_least32_t = c_uint32_t, &
+    c_uint_least64_t = c_uint64_t, &
+    c_uint_least128_t = c_uint128_t
 
  contains
 

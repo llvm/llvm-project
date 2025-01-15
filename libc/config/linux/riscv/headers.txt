@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.assert
+    libc.include.complex
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
@@ -11,6 +12,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdint
     libc.include.inttypes
     libc.include.limits
+    libc.include.malloc
     libc.include.math
     libc.include.pthread
     libc.include.sched

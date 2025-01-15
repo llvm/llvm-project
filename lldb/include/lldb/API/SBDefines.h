@@ -124,6 +124,7 @@ class LLDB_API SBTypeFormat;
 class LLDB_API SBTypeMember;
 class LLDB_API SBTypeMemberFunction;
 class LLDB_API SBTypeNameSpecifier;
+class LLDB_API SBTypeStaticField;
 class LLDB_API SBTypeSummary;
 class LLDB_API SBTypeSummaryOptions;
 class LLDB_API SBTypeSynthetic;

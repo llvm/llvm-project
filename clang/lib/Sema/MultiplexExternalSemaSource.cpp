@@ -107,12 +107,30 @@ MultiplexExternalSemaSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
-bool MultiplexExternalSemaSource::
-FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name) {
+bool MultiplexExternalSemaSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name, Module *NamedModule) {
   bool AnyDeclsFound = false;
   for (size_t i = 0; i < Sources.size(); ++i)
-    AnyDeclsFound |= Sources[i]->FindExternalVisibleDeclsByName(DC, Name);
+    AnyDeclsFound |=
+        Sources[i]->FindExternalVisibleDeclsByName(DC, Name, NamedModule);
   return AnyDeclsFound;
+}
+
+bool MultiplexExternalSemaSource::LoadExternalSpecializations(
+    const Decl *D, bool OnlyPartial) {
+  bool Loaded = false;
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Loaded |= Sources[i]->LoadExternalSpecializations(D, OnlyPartial);
+  return Loaded;
+}
+
+bool MultiplexExternalSemaSource::LoadExternalSpecializations(
+    const Decl *D, ArrayRef<TemplateArgument> TemplateArgs) {
+  bool AnyNewSpecsLoaded = false;
+  for (size_t i = 0; i < Sources.size(); ++i)
+    AnyNewSpecsLoaded |=
+        Sources[i]->LoadExternalSpecializations(D, TemplateArgs);
+  return AnyNewSpecsLoaded;
 }
 
 void MultiplexExternalSemaSource::completeVisibleDeclsMap(const DeclContext *DC){

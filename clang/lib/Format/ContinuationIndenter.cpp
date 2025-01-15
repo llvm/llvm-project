@@ -348,6 +348,13 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Don't allow breaking before a closing brace of a block-indented braced list
+  // initializer if there isn't already a break.
+  if (Current.is(tok::r_brace) && Current.MatchingParen &&
+      Current.isBlockIndentedInitRBrace(Style)) {
+    return CurrentState.BreakBeforeClosingBrace;
+  }
+
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
@@ -454,9 +461,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
       (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
-      (Style.AllowShortFunctionsOnASingleLine != FormatStyle::SFS_All ||
-       Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
-       Style.ColumnLimit != 0)) {
+      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
+       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
     return true;
   }
 
@@ -686,17 +692,14 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   bool DisallowLineBreaksOnThisLine =
       Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
-      Style.isCpp() && [&Current] {
-        // Deal with lambda arguments in C++. The aim here is to ensure that we
-        // don't over-indent lambda function bodies when lambdas are passed as
-        // arguments to function calls. We do this by ensuring that either all
-        // arguments (including any lambdas) go on the same line as the function
-        // call, or we break before the first argument.
-        const auto *Prev = Current.Previous;
-        if (!Prev)
-          return false;
+      // Deal with lambda arguments in C++. The aim here is to ensure that we
+      // don't over-indent lambda function bodies when lambdas are passed as
+      // arguments to function calls. We do this by ensuring that either all
+      // arguments (including any lambdas) go on the same line as the function
+      // call, or we break before the first argument.
+      Style.isCpp() && [&] {
         // For example, `/*Newline=*/false`.
-        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+        if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
           return false;
         const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
@@ -822,8 +825,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
-      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+      if (Prev->opensScope() ||
+          (Prev->is(TT_TemplateString) && Prev->closesScope())) {
         break;
+      }
     }
     return false;
   };
@@ -2464,7 +2469,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           State.Line->InPPDirective, Encoding, Style);
     }
   } else if (Current.is(TT_BlockComment)) {
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         // If a comment token switches formatting, like
         // /* clang-format on */, we don't want to break it further,
         // but we may still want to adjust its indentation.
@@ -2485,7 +2490,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       }
       return true;
     }();
-    if (!Style.ReflowComments ||
+    if (Style.ReflowComments == FormatStyle::RCS_Never ||
         CommentPragmasRegex.match(Current.TokenText.substr(2)) ||
         switchesFormatting(Current) || !RegularComments) {
       return nullptr;

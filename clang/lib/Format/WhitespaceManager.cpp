@@ -1020,7 +1020,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
             return true;
         }
         if (C.Tok->is(TT_FunctionDeclarationName))
-          return true;
+          return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
         if (C.Tok->Previous &&
@@ -1674,7 +1674,7 @@ void WhitespaceManager::generateChanges() {
                                  C.PreviousEndOfTokenColumn,
                                  C.EscapedNewlineColumn);
       } else {
-        appendNewlineText(ReplacementText, C.NewlinesBefore);
+        appendNewlineText(ReplacementText, C);
       }
       // FIXME: This assert should hold if we computed the column correctly.
       // assert((int)C.StartOfTokenColumn >= C.Spaces);
@@ -1706,15 +1706,18 @@ void WhitespaceManager::storeReplacement(SourceRange Range, StringRef Text) {
   }
 }
 
-void WhitespaceManager::appendNewlineText(std::string &Text,
-                                          unsigned Newlines) {
-  if (UseCRLF) {
-    Text.reserve(Text.size() + 2 * Newlines);
-    for (unsigned i = 0; i < Newlines; ++i)
-      Text.append("\r\n");
-  } else {
-    Text.append(Newlines, '\n');
-  }
+void WhitespaceManager::appendNewlineText(std::string &Text, const Change &C) {
+  if (C.NewlinesBefore <= 0)
+    return;
+
+  StringRef Newline = UseCRLF ? "\r\n" : "\n";
+  Text.append(Newline);
+
+  if (C.Tok->HasFormFeedBefore)
+    Text.append("\f");
+
+  for (unsigned I = 1; I < C.NewlinesBefore; ++I)
+    Text.append(Newline);
 }
 
 void WhitespaceManager::appendEscapedNewlineText(

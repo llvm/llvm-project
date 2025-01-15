@@ -63,7 +63,9 @@ getNewFieldsOrder(const RecordDecl *Definition,
     NameToIndex[Field->getName()] = Field->getFieldIndex();
 
   if (DesiredFieldsOrder.size() != NameToIndex.size()) {
-    llvm::errs() << "Number of provided fields doesn't match definition.\n";
+    llvm::errs() << "Number of provided fields (" << DesiredFieldsOrder.size()
+                 << ") doesn't match definition (" << NameToIndex.size()
+                 << ").\n";
     return {};
   }
   SmallVector<unsigned, 4> NewFieldsOrder;
@@ -116,6 +118,79 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
+/// Returns the next token after `Loc` (including comment tokens).
+static std::optional<Token> getTokenAfter(SourceLocation Loc,
+                                          const SourceManager &SM,
+                                          const LangOptions &LangOpts) {
+  if (Loc.isMacroID()) {
+    return std::nullopt;
+  }
+  Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
+
+  // Break down the source location.
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+
+  // Try to load the file buffer.
+  bool InvalidTemp = false;
+  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
+  if (InvalidTemp)
+    return std::nullopt;
+
+  const char *TokenBegin = File.data() + LocInfo.second;
+
+  Lexer lexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
+              TokenBegin, File.end());
+  lexer.SetCommentRetentionState(true);
+  // Find the token.
+  Token Tok;
+  lexer.LexFromRawLexer(Tok);
+  return Tok;
+}
+
+/// Returns the end of the trailing comments after `Loc`.
+static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  // We consider any following comment token that is indented more than the
+  // first comment to be part of the trailing comment.
+  const unsigned Column = SM.getPresumedColumnNumber(Loc);
+  std::optional<Token> Tok = getTokenAfter(Loc, SM, LangOpts);
+  while (Tok && Tok->is(tok::comment) &&
+         SM.getPresumedColumnNumber(Tok->getLocation()) > Column) {
+    Loc = Tok->getEndLoc();
+    Tok = getTokenAfter(Loc, SM, LangOpts);
+  }
+  return Loc;
+}
+
+/// Returns the full source range for the field declaration up to (including)
+/// the trailing semicolumn, including potential macro invocations,
+/// e.g. `int a GUARDED_BY(mu);`. If there is a trailing comment, include it.
+static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
+                                           const ASTContext &Context) {
+  const SourceRange Range = Field.getSourceRange();
+  SourceLocation Begin = Range.getBegin();
+  SourceLocation End = Range.getEnd();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+  while (true) {
+    std::optional<Token> CurrentToken = Lexer::findNextToken(End, SM, LangOpts);
+
+    if (!CurrentToken)
+      return SourceRange(Begin, End);
+
+    if (CurrentToken->is(tok::eof))
+      return Range; // Something is wrong, return the original range.
+
+    End = CurrentToken->getLastLoc();
+
+    if (CurrentToken->is(tok::semi))
+      break;
+  }
+  End = getEndOfTrailingComment(End, SM, LangOpts);
+  return SourceRange(Begin, End);
+}
+
 /// Reorders fields in the definition of a struct/class.
 ///
 /// At the moment reordering of fields with
@@ -145,9 +220,10 @@ static bool reorderFieldsInDefinition(
     const auto FieldIndex = Field->getFieldIndex();
     if (FieldIndex == NewFieldsOrder[FieldIndex])
       continue;
-    addReplacement(Field->getSourceRange(),
-                   Fields[NewFieldsOrder[FieldIndex]]->getSourceRange(),
-                   Context, Replacements);
+    addReplacement(
+        getFullFieldSourceRange(*Field, Context),
+        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context),
+        Context, Replacements);
   }
   return true;
 }

@@ -47,9 +47,9 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  SymbolTable(COFFLinkerContext &c) : ctx(c) {}
-
-  void addFile(InputFile *file);
+  SymbolTable(COFFLinkerContext &c,
+              llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN)
+      : ctx(c), machine(machine) {}
 
   // Emit errors for symbols that cannot be resolved.
   void reportUnresolvable();
@@ -57,7 +57,10 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  void resolveRemainingUndefines();
+  // Returns whether more files might need to be linked in to resolve lazy
+  // symbols, in which case the caller is expected to call the function again
+  // after linking those files.
+  bool resolveRemainingUndefines();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
@@ -71,16 +74,35 @@ public:
   Symbol *find(StringRef name) const;
   Symbol *findUnderscore(StringRef name) const;
 
+  void addUndefinedGlob(StringRef arg);
+
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
   Symbol *findMangle(StringRef name);
+  StringRef mangleMaybe(Symbol *s);
+
+  // Symbol names are mangled by prepending "_" on x86.
+  StringRef mangle(StringRef sym);
+
+  // Windows specific -- "main" is not the only main function in Windows.
+  // You can choose one from these four -- {w,}{WinMain,main}.
+  // There are four different entry point functions for them,
+  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
+  // choose the right one depending on which "main" function is defined.
+  // This function looks up the symbol table and resolve corresponding
+  // entry point name.
+  StringRef findDefaultEntry();
+  WindowsSubsystem inferSubsystem();
 
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
+
+  // Creates an Undefined symbol and marks it as live.
+  Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
 
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);
@@ -88,7 +110,7 @@ public:
   Symbol *addSynthetic(StringRef n, Chunk *c);
   Symbol *addAbsolute(StringRef n, uint64_t va);
 
-  Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
+  Symbol *addUndefined(StringRef name, InputFile *f, bool overrideLazy);
   void addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym);
   void addLazyObject(InputFile *f, StringRef n);
   void addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym, StringRef n);
@@ -116,6 +138,11 @@ public:
                        SectionChunk *newSc = nullptr,
                        uint32_t newSectionOffset = 0);
 
+  COFFLinkerContext &ctx;
+  llvm::COFF::MachineTypes machine;
+
+  bool isEC() const { return machine == ARM64EC; }
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
@@ -128,6 +155,10 @@ public:
       callback(pair.second);
   }
 
+  DefinedRegular *loadConfigSym = nullptr;
+  uint32_t loadConfigSize = 0;
+  void initializeLoadConfig();
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
@@ -137,15 +168,13 @@ private:
   /// Same as insert(Name), but also sets isUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef name, InputFile *f);
 
+  bool findUnderscoreMangle(StringRef sym);
   std::vector<Symbol *> getSymsWithPrefix(StringRef prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
-  bool ltoCompilationDone = false;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
-
-  COFFLinkerContext &ctx;
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

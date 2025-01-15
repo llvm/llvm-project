@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -verify -Wfunction-effects %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -verify -x c -std=c23 -Wfunction-effects %s
 
 #if !__has_attribute(nonblocking)
 #error "the 'nonblocking' attribute is not available"
@@ -77,7 +77,7 @@ void type_conversions()
   void (*fp_nonallocating)() [[clang::nonallocating]];
   fp_nonallocating = nullptr;
   fp_nonallocating = nonallocating;
-  fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating fp_nonallocating = unannotated;
+  fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating
   fp_nonallocating = unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
 }
 

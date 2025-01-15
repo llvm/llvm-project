@@ -439,6 +439,28 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 TEST(LlvmLibcTypeTraitsTest, true_type) { EXPECT_TRUE((true_type::value)); }
 
+struct CompilerLeadingPadded {
+  char b;
+  int a;
+};
+
+struct CompilerTrailingPadded {
+  int a;
+  char b;
+};
+
+struct alignas(long long) ManuallyPadded {
+  int b;
+  char padding[sizeof(long long) - sizeof(int)];
+};
+
+TEST(LlvmLibcTypeTraitsTest, has_unique_object_representations) {
+  EXPECT_TRUE(has_unique_object_representations<int>::value);
+  EXPECT_FALSE(has_unique_object_representations_v<CompilerLeadingPadded>);
+  EXPECT_FALSE(has_unique_object_representations_v<CompilerTrailingPadded>);
+  EXPECT_TRUE(has_unique_object_representations_v<ManuallyPadded>);
+}
+
 // TODO type_identity
 
 // TODO void_t

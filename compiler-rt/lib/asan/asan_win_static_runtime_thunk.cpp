@@ -63,9 +63,12 @@ INTERCEPT_LIBRARY_FUNCTION_ASAN(strpbrk);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strspn);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strstr);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(strtok);
-INTERCEPT_LIBRARY_FUNCTION_ASAN(strtol);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(wcslen);
 INTERCEPT_LIBRARY_FUNCTION_ASAN(wcsnlen);
+
+// Note: Don't intercept strtol(l). They are supposed to set errno for out-of-
+// range values, but since the ASan runtime is linked against the dynamic CRT,
+// its errno is different from the one in the current module.
 
 #  if defined(_MSC_VER) && !defined(__clang__)
 #    pragma warning(pop)

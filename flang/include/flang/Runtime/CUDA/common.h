@@ -9,9 +9,16 @@
 #ifndef FORTRAN_RUNTIME_CUDA_COMMON_H_
 #define FORTRAN_RUNTIME_CUDA_COMMON_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
+/// Type of memory for allocation/deallocation
+static constexpr unsigned kMemTypeDevice = 0;
+static constexpr unsigned kMemTypeManaged = 1;
+static constexpr unsigned kMemTypeUnified = 2;
+static constexpr unsigned kMemTypePinned = 3;
+
+/// Data transfer kinds.
 static constexpr unsigned kHostToDevice = 0;
 static constexpr unsigned kDeviceToHost = 1;
 static constexpr unsigned kDeviceToDevice = 2;
@@ -23,7 +30,7 @@ static constexpr unsigned kDeviceToDevice = 2;
     const char *name = cudaGetErrorName(err); \
     if (!name) \
       name = "<unknown>"; \
-    Terminator terminator{__FILE__, __LINE__}; \
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__}; \
     terminator.Crash("'%s' failed with '%s'", #expr, name); \
   }(expr)
 

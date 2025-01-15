@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include "../clcmacro.h"
+#include <clc/clcmacro.h>
 
 _CLC_DEFINE_BINARY_BUILTIN(float, copysign, __builtin_copysignf, float, float)
 

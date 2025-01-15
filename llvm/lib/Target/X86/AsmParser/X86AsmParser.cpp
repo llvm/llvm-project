@@ -13,7 +13,6 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
-#include "X86AsmParserCommon.h"
 #include "X86Operand.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -1215,7 +1214,7 @@ private:
                                     uint64_t &ErrorInfo,
                                     bool MatchingInlineAsm);
 
-  bool omitRegisterFromClobberLists(unsigned RegNo) override;
+  bool omitRegisterFromClobberLists(MCRegister Reg) override;
 
   /// Parses AVX512 specific operand primitives: masked registers ({%k<NUM>}, {z})
   /// and memory broadcasting ({1to<NUM>}) primitives, updating Operands vector if required.
@@ -1399,14 +1398,14 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
   RegNo = MatchRegisterName(RegName);
 
   // If the match failed, try the register name as lowercase.
-  if (RegNo == 0)
+  if (!RegNo)
     RegNo = MatchRegisterName(RegName.lower());
 
   // The "flags" and "mxcsr" registers cannot be referenced directly.
   // Treat it as an identifier instead.
   if (isParsingMSInlineAsm() && isParsingIntelSyntax() &&
       (RegNo == X86::EFLAGS || RegNo == X86::MXCSR))
-    RegNo = 0;
+    RegNo = MCRegister();
 
   if (!is64BitMode()) {
     // FIXME: This should be done using Requires<Not64BitMode> and
@@ -1427,7 +1426,7 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
 
   // If this is "db[0-15]", match it as an alias
   // for dr[0-15].
-  if (RegNo == 0 && RegName.starts_with("db")) {
+  if (!RegNo && RegName.starts_with("db")) {
     if (RegName.size() == 3) {
       switch (RegName[2]) {
       case '0':
@@ -1485,7 +1484,7 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
     }
   }
 
-  if (RegNo == 0) {
+  if (!RegNo) {
     if (isParsingIntelSyntax())
       return true;
     return Error(StartLoc, "invalid register name", SMRange(StartLoc, EndLoc));
@@ -1497,7 +1496,7 @@ bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
   MCAsmLexer &Lexer = getLexer();
-  RegNo = 0;
+  RegNo = MCRegister();
 
   SmallVector<AsmToken, 5> Tokens;
   auto OnFailure = [RestoreOnFailure, &Lexer, &Tokens]() {
@@ -1579,7 +1578,7 @@ bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
 
   EndLoc = Parser.getTok().getEndLoc();
 
-  if (RegNo == 0) {
+  if (!RegNo) {
     OnFailure();
     if (isParsingIntelSyntax()) return true;
     return Error(StartLoc, "invalid register name",
@@ -3030,7 +3029,7 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
   // base-index-scale-expr.
 
   if (!parseOptionalToken(AsmToken::LParen)) {
-    if (SegReg == 0)
+    if (!SegReg)
       Operands.push_back(
           X86Operand::CreateMem(getPointerWidth(), Disp, StartLoc, EndLoc));
     else
@@ -3119,7 +3118,7 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
   // This is to support otherwise illegal operand (%dx) found in various
   // unofficial manuals examples (e.g. "out[s]?[bwl]? %al, (%dx)") and must now
   // be supported. Mark such DX variants separately fix only in special cases.
-  if (BaseReg == X86::DX && IndexReg == 0 && Scale == 1 && SegReg == 0 &&
+  if (BaseReg == X86::DX && !IndexReg && Scale == 1 && !SegReg &&
       isa<MCConstantExpr>(Disp) &&
       cast<MCConstantExpr>(Disp)->getValue() == 0) {
     Operands.push_back(X86Operand::CreateDXReg(BaseLoc, BaseLoc));
@@ -4495,7 +4494,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
   // compatible with gas.
   StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
   if (UnsizedMemOp) {
-    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push"};
+    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push", "pop"};
     for (const char *Instr : PtrSizedInstrs) {
       if (Mnemonic == Instr) {
         UnsizedMemOp->Mem.Size = getPointerWidth();
@@ -4659,8 +4658,8 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
                MatchingInlineAsm);
 }
 
-bool X86AsmParser::omitRegisterFromClobberLists(unsigned RegNo) {
-  return X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(RegNo);
+bool X86AsmParser::omitRegisterFromClobberLists(MCRegister Reg) {
+  return X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(Reg);
 }
 
 bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
@@ -4920,14 +4919,14 @@ bool X86AsmParser::parseSEHRegisterNumber(unsigned RegClassID,
 
     // The SEH register number is the same as the encoding register number. Map
     // from the encoding back to the LLVM register number.
-    RegNo = 0;
+    RegNo = MCRegister();
     for (MCPhysReg Reg : X86MCRegisterClasses[RegClassID]) {
       if (MRI->getEncodingValue(Reg) == EncodedReg) {
         RegNo = Reg;
         break;
       }
     }
-    if (RegNo == 0) {
+    if (!RegNo) {
       return Error(startLoc,
                    "incorrect register number for use with this directive");
     }
@@ -5031,7 +5030,7 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmParser() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86AsmParser() {
   RegisterMCAsmParser<X86AsmParser> X(getTheX86_32Target());
   RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }

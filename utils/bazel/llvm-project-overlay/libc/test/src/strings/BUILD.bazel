@@ -1,0 +1,48 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc strings.h functions.
+
+load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "bcopy_test",
+    srcs = ["bcopy_test.cpp"],
+    libc_function_deps = [
+        "//libc:bcopy",
+    ],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc/test/UnitTest:memory_matcher",
+        "//libc/test/src/string:memory_check_utils",
+    ],
+)
+
+libc_test(
+    name = "bcmp_test",
+    srcs = ["bcmp_test.cpp"],
+    libc_function_deps = [
+        "//libc:bcmp",
+    ],
+    deps = [
+        "//libc/test/UnitTest:test_logger",
+        "//libc/test/src/string:memory_check_utils",
+    ],
+)
+
+libc_test(
+    name = "bzero_test",
+    srcs = ["bzero_test.cpp"],
+    libc_function_deps = [
+        "//libc:bzero",
+    ],
+    deps = [
+        "//libc/test/src/string:memory_check_utils",
+    ],
+)
