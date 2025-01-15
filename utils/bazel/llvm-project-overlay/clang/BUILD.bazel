@@ -43,10 +43,7 @@ cc_binary(
 
 gentbl(
     name = "diagnostic_defs_gen",
-    tbl_outs = [(
-        "-gen-clang-diags-defs -clang-component=%s" % c,
-        "include/clang/Basic/Diagnostic%sKinds.inc" % c,
-    ) for c in [
+    tbl_outs = [out for c in [
         "AST",
         "Analysis",
         "Comment",
@@ -60,6 +57,15 @@ gentbl(
         "Refactoring",
         "Sema",
         "Serialization",
+    ] for out in [
+        (
+            "-gen-clang-diags-defs -clang-component=%s" % c,
+            "include/clang/Basic/Diagnostic%sKinds.inc" % c,
+        ),
+        (
+            "-gen-clang-diags-enums -clang-component=%s" % c,
+            "include/clang/Basic/Diagnostic%sEnums.inc" % c,
+        ),
     ]] + [
         (
             "-gen-clang-diag-groups",
