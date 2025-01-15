@@ -1847,10 +1847,11 @@ SDNodeInfo::SDNodeInfo(const Record *R, const CodeGenHwModes &CGH) : Def(R) {
   Properties = parseSDPatternOperatorProperties(R);
   IsStrictFP = R->getValueAsBit("IsStrictFP");
 
-  std::optional<uint64_t> MaybeTSFlags =
+  std::optional<int64_t> MaybeTSFlags =
       R->getValueAsBitsInit("TSFlags")->convertInitializerToInt();
   if (!MaybeTSFlags)
     PrintFatalError(R->getLoc(), "Invalid TSFlags");
+  assert(isUInt<32>(*MaybeTSFlags) && "TSFlags bit width out of sync");
   TSFlags = *MaybeTSFlags;
 
   // Parse the type constraints.

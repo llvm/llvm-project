@@ -354,7 +354,7 @@ class SDNode<string opcode, SDTypeProfile typeprof,
   let Properties = props;
   SDTypeProfile TypeProfile = typeprof;
   bit IsStrictFP = false;
-  bits<64> TSFlags = 0;
+  bits<32> TSFlags = 0;
 }
 
 // Special TableGen-recognized dag nodes

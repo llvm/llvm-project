@@ -426,7 +426,7 @@ class SDNodeInfo {
   int NumOperands;
   unsigned Properties;
   bool IsStrictFP;
-  uint64_t TSFlags;
+  uint32_t TSFlags;
   std::vector<SDTypeConstraint> TypeConstraints;
 
 public:
@@ -459,7 +459,7 @@ public:
 
   bool isStrictFP() const { return IsStrictFP; }
 
-  uint64_t getTSFlags() const { return TSFlags; }
+  uint32_t getTSFlags() const { return TSFlags; }
 
   /// ApplyTypeConstraints - Given a node in a pattern, apply the type
   /// constraints for this node to the operands of the node.  This returns

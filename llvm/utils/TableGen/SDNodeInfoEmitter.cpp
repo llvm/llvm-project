@@ -249,7 +249,8 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
 
   SmallVector<StringRef> SkippedNodes;
   for (const auto &[EnumName, Nodes] : TargetNodesByName) {
-    ArrayRef Constraints = Nodes.front()->getTypeConstraints();
+    ArrayRef<SDTypeConstraint> Constraints =
+        Nodes.front()->getTypeConstraints();
 
     bool IsAmbiguous = any_of(drop_begin(Nodes), [&](const SDNodeInfo *Other) {
       return ArrayRef(Other->getTypeConstraints()) != Constraints;
@@ -282,7 +283,8 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
   OS << "};\n\n";
 
   for (const auto &[EnumName, Nodes] : TargetNodesByName) {
-    ArrayRef Constraints = Nodes.front()->getTypeConstraints();
+    ArrayRef<SDTypeConstraint> Constraints =
+        Nodes.front()->getTypeConstraints();
 
     if (Constraints.empty() || is_contained(SkippedNodes, EnumName)) {
       ConstraintOffsetsAndCounts.emplace_back(/*Offset=*/0, /*Size=*/0);
