@@ -79,7 +79,6 @@ public:
   enum class Kind { Hash, Random, Fixed, None, Invalid };
 
   CUIDOptions() = default;
-  CUIDOptions(const CUIDOptions &) = default;
   CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D);
 
   // Get the CUID for an input string
