@@ -33,6 +33,7 @@ extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
 extern llvm::cl::opt<bool> AggregateOnly;
+extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;

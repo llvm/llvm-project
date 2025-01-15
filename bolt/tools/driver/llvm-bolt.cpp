@@ -51,8 +51,6 @@ static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::Required, cl::cat(BoltCategory),
                                           cl::sub(cl::SubCommand::getAll()));
 
-extern cl::opt<bool> ArmSPE;
-
 static cl::opt<std::string>
 InputDataFilename("data",
   cl::desc("<data file>"),
@@ -241,7 +239,7 @@ int main(int argc, char **argv) {
       RewriteInstance &RI = *RIOrErr.get();
 
       if (opts::AggregateOnly && !RI.getBinaryContext().isAArch64() &&
-          opts::ArmSPE == 1) {
+          opts::ArmSPE) {
         errs() << "BOLT-ERROR: -spe is available only on AArch64.\n";
         exit(1);
       }

@@ -110,7 +110,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranches) {
       "1234          instructions:              d002    d001\n"
       "1234          instructions:              e002    e001\n";
 
-  EXPECT_TRUE(checkEvents(1234, 10, {"branch-spe:"}));
+  EXPECT_TRUE(checkEvents(1234, 10, {"branches-spe:"}));
 }
 
 TEST_F(PerfSpeEventsTestHelper, SpeBranchesAndCycles) {
@@ -127,7 +127,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesAndCycles) {
       "1234          instructions:              d002    d001\n"
       "1234          instructions:              e002    e001\n";
 
-  EXPECT_TRUE(checkEvents(1234, 8, {"branch-spe:", "cycles:u:"}));
+  EXPECT_TRUE(checkEvents(1234, 8, {"branches-spe:", "cycles:u:"}));
 }
 
 TEST_F(PerfSpeEventsTestHelper, SpeAnyEventAndCycles) {
@@ -144,8 +144,8 @@ TEST_F(PerfSpeEventsTestHelper, SpeAnyEventAndCycles) {
       "1234          instructions:                0     d001\n"
       "1234          instructions:              e002    e001\n";
 
-  EXPECT_TRUE(
-      checkEvents(1234, 6, {"cycles:u:", "instruction-spe:", "branch-spe:"}));
+  EXPECT_TRUE(checkEvents(1234, 6,
+                          {"cycles:u:", "instructions-spe:", "branches-spe:"}));
 }
 
 TEST_F(PerfSpeEventsTestHelper, SpeNoBranchPairsRecorded) {
@@ -164,7 +164,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeNoBranchPairsRecorded) {
       "1234              cycles:u:                 0    d001\n"
       "1234          instructions:                 0    e001\n";
 
-  EXPECT_TRUE(checkEvents(1234, 5, {"instruction-spe:", "cycles:u:"}));
+  EXPECT_TRUE(checkEvents(1234, 5, {"instructions-spe:", "cycles:u:"}));
 
   std::string Stderr = testing::internal::GetCapturedStderr();
   EXPECT_EQ(Stderr, "PERF2BOLT-WARNING: no SPE branches found\n");
