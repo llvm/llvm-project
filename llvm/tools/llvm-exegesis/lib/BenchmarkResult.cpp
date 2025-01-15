@@ -65,17 +65,17 @@ struct YamlContext {
 
   raw_string_ostream &getErrorStream() { return ErrorStream; }
 
-  StringRef getRegName(unsigned RegNo) {
+  StringRef getRegName(MCRegister Reg) {
     // Special case: RegNo 0 is NoRegister. We have to deal with it explicitly.
-    if (RegNo == 0)
+    if (!Reg)
       return kNoRegister;
-    const StringRef RegName = State->getRegInfo().getName(RegNo);
+    const StringRef RegName = State->getRegInfo().getName(Reg);
     if (RegName.empty())
-      ErrorStream << "No register with enum value '" << RegNo << "'\n";
+      ErrorStream << "No register with enum value '" << Reg.id() << "'\n";
     return RegName;
   }
 
-  std::optional<unsigned> getRegNo(StringRef RegName) {
+  std::optional<MCRegister> getRegNo(StringRef RegName) {
     std::optional<MCRegister> RegisterNumber =
         State->getRegisterNumberFromName(RegName);
     if (!RegisterNumber.has_value())
@@ -261,9 +261,9 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
     String.split(Pieces, "=0x", /* MaxSplit */ -1,
                  /* KeepEmpty */ false);
     YamlContext &Context = getTypedContext(Ctx);
-    std::optional<unsigned> RegNo;
+    std::optional<MCRegister> RegNo;
     if (Pieces.size() == 2 && (RegNo = Context.getRegNo(Pieces[0]))) {
-      RV.Register = *RegNo;
+      RV.Register = RegNo->id();
       const unsigned BitsNeeded = APInt::getBitsNeeded(Pieces[1], kRadix);
       RV.Value = APInt(BitsNeeded, Pieces[1], kRadix);
     } else {

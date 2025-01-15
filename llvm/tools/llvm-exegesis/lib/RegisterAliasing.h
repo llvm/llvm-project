@@ -46,7 +46,7 @@ struct RegisterAliasingTracker {
 
   // Construct a tracker from an MCPhysReg.
   RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
-                          const MCPhysReg Register);
+                          const MCRegister Register);
 
   const BitVector &sourceBits() const { return SourceBits; }
 
@@ -88,7 +88,7 @@ struct RegisterAliasingTrackerCache {
   const MCRegisterInfo &regInfo() const { return RegInfo; }
 
   // Retrieves the RegisterAliasingTracker for this particular register.
-  const RegisterAliasingTracker &getRegister(MCPhysReg Reg) const;
+  const RegisterAliasingTracker &getRegister(MCRegister Reg) const;
 
   // Retrieves the RegisterAliasingTracker for this particular register class.
   const RegisterAliasingTracker &getRegisterClass(unsigned RegClassIndex) const;
