@@ -144,7 +144,8 @@ static void InitializeDefaultFlags() {
   DisplayHelpMessages(&asan_parser);
 }
 
-static void ProcessFlags() {
+// Validate flags and report incompatible configurations
+static void ValidateFlags()s() {
   Flags *f = flags();
 
   // Flag validation:
@@ -214,11 +215,11 @@ static void ProcessFlags() {
 
 void InitializeFlags() {
   InitializeDefaultFlags();
-  ProcessFlags();
+  ValidateFlags();
 
 #if SANITIZER_WINDOWS
-  // On Windows, weak symbols are emulated by having the user program
-  // register which weak functions are defined.
+  // On Windows, weak symbols (such as the `__asan_default_options` function)
+  // are emulated by having the user program register which weak functions are defined.
   // The ASAN DLL will initialize flags prior to user module initialization,
   // so __asan_default_options will not point to the user definition yet.
   // We still want to ensure we capture when options are passed via
@@ -239,14 +240,8 @@ void InitializeFlags() {
         asan_parser.ParseString(__asan_default_options());
 
         DisplayHelpMessages(&asan_parser);
-        ProcessFlags();
-
-        // TODO: Update other globals and data structures that may need to change
-        // after initialization due to new flags potentially being set changing after
-        // `__asan_default_options` is registered.
-        // See GH issue 'https://github.com/llvm/llvm-project/issues/117925' for
-        // details.
-        SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
+        ValidateFlags();
+        ApplyFlags();
       });
 
 #  if CAN_SANITIZE_UB
@@ -259,7 +254,7 @@ void InitializeFlags() {
         ubsan_parser.ParseString(__ubsan_default_options());
 
         // To match normal behavior, do not print UBSan help.
-        ProcessFlags();
+        ValidateFlags();
       });
 #  endif
 
@@ -273,7 +268,7 @@ void InitializeFlags() {
         lsan_parser.ParseString(__lsan_default_options());
 
         // To match normal behavior, do not print LSan help.
-        ProcessFlags();
+        ValidateFlags();
       });
 #  endif
 
