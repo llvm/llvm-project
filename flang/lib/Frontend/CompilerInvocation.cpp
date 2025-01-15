@@ -1374,9 +1374,11 @@ bool CompilerInvocation::createFromArgs(
   }
 
   // -f[no-]init-global-zero
-  if (!args.hasFlag(clang::driver::options::OPT_finit_global_zero,
-                    clang::driver::options::OPT_fno_init_global_zero,
-                    /*default=*/true))
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
     invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
