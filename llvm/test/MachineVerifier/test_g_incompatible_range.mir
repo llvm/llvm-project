@@ -26,7 +26,7 @@ body:             |
     %4:_(p0) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
 
     ; CHECK: Bad machine code: range is incompatible with the value it gets assigned to
-    %5:_(<2 x s32>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
+    %5:_(<2 x p0>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
 
     $vgpr0_vgpr1 = COPY %3
     SI_RETURN implicit $vgpr0_vgpr1
