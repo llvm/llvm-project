@@ -294,6 +294,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       BasePtr->getIncomingBlock(StartBlock)->getTerminator());
   Builder.SetCurrentDebugLocation(DebugLoc());
 
+  // TODO: Share this switch with matchStridedStart?
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
