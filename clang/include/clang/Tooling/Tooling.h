@@ -225,6 +225,9 @@ buildASTFromCode(StringRef Code, StringRef FileName = "input.cc",
 ///
 /// \param Adjuster A function to filter the command line arguments as specified.
 ///
+/// \param FileSystem FileSystem for managing and looking up files.
+///
+///
 /// \return The resulting AST or null if an error occurred.
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args,
@@ -233,7 +236,9 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
         std::make_shared<PCHContainerOperations>(),
     ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
     const FileContentMappings &VirtualMappedFiles = FileContentMappings(),
-    DiagnosticConsumer *DiagConsumer = nullptr);
+    DiagnosticConsumer *DiagConsumer = nullptr,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileSystem =
+        llvm::vfs::getRealFileSystem());
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {

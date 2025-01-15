@@ -692,11 +692,12 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef Code, const std::vector<std::string> &Args, StringRef FileName,
     StringRef ToolName, std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ArgumentsAdjuster Adjuster, const FileContentMappings &VirtualMappedFiles,
-    DiagnosticConsumer *DiagConsumer) {
+    DiagnosticConsumer *DiagConsumer,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileSystem) {
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
-      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+      new llvm::vfs::OverlayFileSystem(FileSystem));
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
