@@ -42,11 +42,11 @@
 // -------------------
 //
 // Let's say we want to check whether a weak function `f` has been overridden by the user.
-// The general mechanism works by defining a symbol `f_impl__` and a weak alias `f` via the
-// _LIBCPP_OVERRIDABLE_FUNCTION macro.
+// The general mechanism works by defining an internal symbol `.L.f` and a weak alias `f`
+// via the _LIBCPP_OVERRIDABLE_FUNCTION macro.
 //
 // Then, when comes the time to check whether the function has been overridden, we take
-// the address of the function `f` and we check whether it is different from `f_impl__`.
+// the address of the function `f` and we check whether it is different from `.L.f`.
 // If so it means the function was overriden by the user.
 //
 // Important note
@@ -67,17 +67,17 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static __attribute__((used)) type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                   \
+    [[gnu::used]] static type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                                    \
     __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
     __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
-    extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
+    extern type name arglist __attribute__((weak_import));                                                             \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
-      return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
+      return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    static type symbol##_impl__ arglist
+    static type symbol arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
@@ -90,15 +90,15 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__(".L" _LIBCPP_TOSTRING(symbol));                                        \
-    [[gnu::weak, gnu::alias(".L" _LIBCPP_TOSTRING(symbol))]] type name arglist;                                        \
+    [[gnu::weak]] type name arglist;                                                                                   \
+    [[gnu::alias(_LIBCPP_TOSTRING(symbol))]] static type symbol arglist __asm__(".L." _LIBCPP_TOSTRING(symbol));       \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
-      return static_cast<type(*) arglist>(name) != symbol##_impl__;                                                    \
+      return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    static type symbol##_impl__ arglist
+    type name arglist
 
 #else
 
