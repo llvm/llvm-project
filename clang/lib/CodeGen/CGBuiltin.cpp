@@ -1342,11 +1342,14 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
   //  size_t field_offset = offsetof (struct s, field);
-  std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
-  if (!Offset)
-    return nullptr;
-  Value *FieldOffset =
-      llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
+  Value *FieldOffset = nullptr;
+  if (FlexibleArrayMemberFD != FD) {
+    std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
+    if (!Offset)
+      return nullptr;
+    FieldOffset =
+        llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
+  }
 
   //  size_t flexible_array_member_size =
   //          count * flexible_array_member_base_size;
