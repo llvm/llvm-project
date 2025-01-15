@@ -3167,38 +3167,19 @@ LogicalResult ScanOp::verify() {
     return emitError(
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected");
   }
-  const OperandRange &scanVars =
-      hasExclusiveVars() ? getExclusiveVars() : getInclusiveVars();
-  auto verifyScanVarsInReduction = [&scanVars](ValueRange reductionVars) {
-    for (const auto &it : scanVars)
-      if (!llvm::is_contained(reductionVars, it))
-        return false;
-    return true;
-  };
   if (mlir::omp::WsloopOp parentWsLoopOp =
           (*this)->getParentOfType<mlir::omp::WsloopOp>()) {
     if (parentWsLoopOp.getReductionModAttr() &&
         parentWsLoopOp.getReductionModAttr().getValue() ==
             mlir::omp::ReductionModifier::inscan) {
-      auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(
-          parentWsLoopOp.getOperation());
-      if (!verifyScanVarsInReduction(iface.getReductionBlockArgs())) {
-        return emitError(
-            "List item should appear in REDUCTION clause of the parent");
-      }
       return success();
     }
-  } else if (mlir::omp::SimdOp parentSimdOp =
-                 (*this)->getParentOfType<mlir::omp::SimdOp>()) {
+  }
+  if (mlir::omp::SimdOp parentSimdOp =
+          (*this)->getParentOfType<mlir::omp::SimdOp>()) {
     if (parentSimdOp.getReductionModAttr() &&
         parentSimdOp.getReductionModAttr().getValue() ==
             mlir::omp::ReductionModifier::inscan) {
-      auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(
-          parentSimdOp.getOperation());
-      if (!verifyScanVarsInReduction(iface.getReductionBlockArgs())) {
-        return emitError(
-            "List item should appear in REDUCTION clause of the parent");
-      }
       return success();
     }
   }
