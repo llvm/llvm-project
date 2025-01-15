@@ -99,7 +99,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__));                                    \
+    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__) _LIBCPP_SYMBOL_SUFFIX);              \
     [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__) _LIBCPP_SYMBOL_SUFFIX)]] type name arglist;              \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
