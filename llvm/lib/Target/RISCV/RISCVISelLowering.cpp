@@ -12430,7 +12430,11 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
   }
 
-  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IndicesVT, Mask, EVL);
+  // Don't use EVL or Mask for vid so it can be hoisted out of loops.
+  auto [TrueMask, VLMAX] =
+      getDefaultScalableVLOps(IndicesVT, DL, DAG, Subtarget);
+  SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, IndicesVT, TrueMask, VLMAX);
+
   SDValue VecLen =
       DAG.getNode(ISD::SUB, DL, XLenVT, EVL, DAG.getConstant(1, DL, XLenVT));
   SDValue VecLenSplat = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,

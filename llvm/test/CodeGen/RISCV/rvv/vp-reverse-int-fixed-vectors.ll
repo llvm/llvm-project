@@ -5,10 +5,10 @@
 define <2 x i64> @test_vp_reverse_v2i64_masked(<2 x i64> %src, <2 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v2i64_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vid.v v9, v0.t
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v10, v9, a0, v0.t
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vrsub.vx v10, v9, a1, v0.t
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -34,10 +34,10 @@ define <2 x i64> @test_vp_reverse_v2i64(<2 x i64> %src, i32 zeroext %evl) {
 define <4 x i32> @test_vp_reverse_v4i32_masked(<4 x i32> %src, <4 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v4i32_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vid.v v9, v0.t
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v10, v9, a0, v0.t
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vrsub.vx v10, v9, a1, v0.t
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -63,10 +63,10 @@ define <4 x i32> @test_vp_reverse_v4i32(<4 x i32> %src, i32 zeroext %evl) {
 define <8 x i16> @test_vp_reverse_v8i16_masked(<8 x i16> %src, <8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v8i16_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vid.v v9, v0.t
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v10, v9, a0, v0.t
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vrsub.vx v10, v9, a1, v0.t
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -92,10 +92,10 @@ define <8 x i16> @test_vp_reverse_v8i16(<8 x i16> %src, i32 zeroext %evl) {
 define <16 x i8> @test_vp_reverse_v16i8_masked(<16 x i8> %src, <16 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: test_vp_reverse_v16i8_masked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vrsub.vx v10, v10, a1, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v9, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
