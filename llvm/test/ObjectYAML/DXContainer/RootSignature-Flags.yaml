@@ -1,5 +1,4 @@
 # RUN: yaml2obj %s | obj2yaml | FileCheck %s
-
 --- !dxcontainer
 Header:
   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
@@ -11,23 +10,35 @@ Header:
   PartOffsets:     [ 60 ]
 Parts:
   - Name:            RTS0
-    Size:            24
+    Size:            8
     RootSignature:
-      Version: 2
-      NumParameters: 1
-      RootParametersOffset: 3
-      NumStaticSamplers: 4
-      StaticSamplersOffset: 5
+      Version:         1
       AllowInputAssemblerInputLayout: true
-      DenyGeometryShaderRootAccess: true
-
-# CHECK:  - Name:            RTS0
-# CHECK-NEXT:    Size:            24
-# CHECK-NEXT:    RootSignature:
-# CHECK-NEXT:      Version: 2
-# CHECK-NEXT:      NumParameters: 1
-# CHECK-NEXT:      RootParametersOffset: 3
-# CHECK-NEXT:      NumStaticSamplers: 4
-# CHECK-NEXT:      StaticSamplersOffset: 5
-# CHECK-NEXT:      AllowInputAssemblerInputLayout: true
-# CHECK-NEXT:      DenyGeometryShaderRootAccess: true
+      DenyVertexShaderRootAccess: false
+      DenyHullShaderRootAccess: false
+      DenyDomainShaderRootAccess: false
+      DenyGeometryShaderRootAccess: false
+      DenyPixelShaderRootAccess: false
+      AllowStreamOutput: false
+      LocalRootSignature: false
+      DenyAmplificationShaderRootAccess: false
+      DenyMeshShaderRootAccess: false
+      CBVSRVUAVHeapDirectlyIndexed: false
+      SamplerHeapDirectlyIndexed: false
+      
+#CHECK:    - Name: RTS0
+#CHECK-NEXT: Size: 8
+#CHECK-NEXT: RootSignature:
+#CHECK-NEXT:   Version: 1
+#CHECK-NEXT:   AllowInputAssemblerInputLayout: true
+#CHECK-NEXT:   DenyVertexShaderRootAccess: false
+#CHECK-NEXT:   DenyHullShaderRootAccess: false
+#CHECK-NEXT:   DenyDomainShaderRootAccess: false
+#CHECK-NEXT:   DenyGeometryShaderRootAccess: false
+#CHECK-NEXT:   DenyPixelShaderRootAccess: false
+#CHECK-NEXT:   AllowStreamOutput: false
+#CHECK-NEXT:   LocalRootSignature: false
+#CHECK-NEXT:   DenyAmplificationShaderRootAccess: false
+#CHECK-NEXT:   DenyMeshShaderRootAccess: false
+#CHECK-NEXT:   CBVSRVUAVHeapDirectlyIndexed: false
+#CHECK-NEXT:   SamplerHeapDirectlyIndexed: false
