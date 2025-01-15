@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseRangesCheck.h"
+#include "LexerUtils.h"
 #include "Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -164,31 +165,22 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
 static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
                                ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
-  auto GetCommaLoc =
-      [&](SourceLocation BeginLoc,
-          SourceLocation EndLoc) -> std::optional<CharSourceRange> {
-    auto Invalid = false;
-    StringRef SourceText = Lexer::getSourceText(
-        CharSourceRange::getCharRange({BeginLoc, EndLoc}),
-        Ctx.getSourceManager(), Ctx.getLangOpts(), &Invalid);
-    assert(!Invalid);
+  auto GetCommaLoc = [&](SourceLocation BeginLoc,
+                         SourceLocation EndLoc) -> CharSourceRange {
+    SourceLocation CommaLoc =
+        lexer::findNextAnyTokenKind(BeginLoc, Ctx.getSourceManager(),
+                                    Ctx.getLangOpts(), tok::comma, tok::comma);
 
-    size_t I = 0;
-    while (I < SourceText.size() && SourceText[I] != ',') {
-      I++;
+    std::optional<Token> NextTok = lexer::findNextTokenIncludingComments(
+        CommaLoc, Ctx.getSourceManager(), Ctx.getLangOpts());
+
+    if (!NextTok) {
+      return {};
     }
 
-    if (I < SourceText.size()) {
-      // also remove space after ,
-      size_t J = I + 1;
-      while (J < SourceText.size() && SourceText[J] == ' ') {
-        J++;
-      }
+    SourceLocation CommaEndLoc = NextTok->getLocation();
 
-      return std::make_optional(CharSourceRange::getCharRange(
-          {BeginLoc.getLocWithOffset(I), BeginLoc.getLocWithOffset(J)}));
-    }
-    return std::nullopt;
+    return CharSourceRange::getCharRange(CommaLoc, CommaEndLoc);
   };
 
   llvm::SmallVector<unsigned> Sorted(Indexes);
@@ -203,21 +195,21 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
       if (Index + 1 < Call.getNumArgs()) {
         // Remove the next comma
         const Expr *NextArg = Call.getArg(Index + 1);
-        std::optional<CharSourceRange> CommaLoc = GetCommaLoc(
-            Arg->getEndLoc().getLocWithOffset(1), NextArg->getBeginLoc());
-        if (CommaLoc) {
+        CharSourceRange CommaLoc =
+            GetCommaLoc(Arg->getEndLoc(), NextArg->getBeginLoc());
+        if (CommaLoc.isValid()) {
           Commas[Index + 1] = true;
-          Diag << FixItHint::CreateRemoval(*CommaLoc);
+          Diag << FixItHint::CreateRemoval(CommaLoc);
         }
       }
     } else {
       // At this point we know Index > 0 because `Commas[0] = true` earlier
       const Expr *PrevArg = Call.getArg(Index - 1);
-      std::optional<CharSourceRange> CommaLoc = GetCommaLoc(
-          PrevArg->getEndLoc().getLocWithOffset(1), Arg->getBeginLoc());
-      if (CommaLoc) {
+      CharSourceRange CommaLoc =
+          GetCommaLoc(PrevArg->getEndLoc(), Arg->getBeginLoc());
+      if (CommaLoc.isValid()) {
         Commas[Index] = true;
-        Diag << FixItHint::CreateRemoval(*CommaLoc);
+        Diag << FixItHint::CreateRemoval(CommaLoc);
       }
     }
     Diag << FixItHint::CreateRemoval(Arg->getSourceRange());

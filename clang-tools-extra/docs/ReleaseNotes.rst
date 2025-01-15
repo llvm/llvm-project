@@ -190,6 +190,9 @@ Changes in existing checks
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing
   crashes from invalid code.
 
+- Improved :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check to more precisely remove comma.
+
 - Improved :doc:`bugprone-branch-clone
   <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
   branch clones by now detecting duplicate inner and outer if statements.
@@ -325,6 +328,9 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
   ``NULL``/``__null`` (but not ``0``) when used with a templated type.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check to more precisely remove comma.
+
 - Improved :doc:`modernize-use-starts-ends-with
   <clang-tidy/checks/modernize/use-starts-ends-with>` check to handle two new
   cases from ``rfind`` and ``compare`` to ``ends_with``, and one new case from
@@ -388,11 +394,6 @@ Changes in existing checks
 - Improved :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check to use correct template
   type in ``std::min`` and ``std::max`` when operand is integer literal.
-
-- Improved :doc:`modernize-use-ranges
-  <clang-tidy/checks/modernize/use-ranges>` and :doc:`boost-use-ranges
-  <clang-tidy/checks/boost/use-ranges>` check to more precisely remove
-  comma.
 
 Removed checks
 ^^^^^^^^^^^^^^
