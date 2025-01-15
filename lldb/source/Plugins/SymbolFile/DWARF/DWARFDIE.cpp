@@ -379,7 +379,7 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
 }
 
 static CompilerContext GetContextEntry(DWARFDIE die,
-                                       bool complete_template_names) {
+                                       bool derive_template_names) {
   auto ctx = [die](CompilerContextKind kind) {
     return CompilerContext(kind, ConstString(die.GetName()));
   };
@@ -406,7 +406,7 @@ static CompilerContext GetContextEntry(DWARFDIE die,
                                    ? CompilerContextKind::Union
                                    : CompilerContextKind::ClassOrStruct;
     llvm::StringRef name = die.GetName();
-    if (!complete_template_names || name.contains('<'))
+    if (!derive_template_names || name.contains('<'))
       return CompilerContext(kind, ConstString(name));
 
     std::string name_storage = name.str();
@@ -420,7 +420,7 @@ static CompilerContext GetContextEntry(DWARFDIE die,
   }
 }
 
-static void GetDeclContextImpl(DWARFDIE die, bool complete_template_names,
+static void GetDeclContextImpl(DWARFDIE die, bool derive_template_names,
                                llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -442,7 +442,7 @@ static void GetDeclContextImpl(DWARFDIE die, bool complete_template_names,
     case DW_TAG_subprogram:
     case DW_TAG_variable:
     case DW_TAG_typedef:
-      context.push_back(GetContextEntry(die, complete_template_names));
+      context.push_back(GetContextEntry(die, derive_template_names));
       break;
     default:
       break;
@@ -453,15 +453,15 @@ static void GetDeclContextImpl(DWARFDIE die, bool complete_template_names,
 }
 
 std::vector<CompilerContext>
-DWARFDIE::GetDeclContext(bool complete_template_names) const {
+DWARFDIE::GetDeclContext(bool derive_template_names) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetDeclContextImpl(*this, complete_template_names, seen, context);
+  GetDeclContextImpl(*this, derive_template_names, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }
 
-static void GetTypeLookupContextImpl(DWARFDIE die, bool complete_template_names,
+static void GetTypeLookupContextImpl(DWARFDIE die, bool derive_template_names,
                                      llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                      std::vector<CompilerContext> &context) {
   // Stop if we hit a cycle.
@@ -476,7 +476,7 @@ static void GetTypeLookupContextImpl(DWARFDIE die, bool complete_template_names,
     case DW_TAG_variable:
     case DW_TAG_typedef:
     case DW_TAG_base_type:
-      context.push_back(GetContextEntry(die, complete_template_names));
+      context.push_back(GetContextEntry(die, derive_template_names));
       break;
 
     // If any of the tags below appear in the parent chain, stop the decl
@@ -500,10 +500,10 @@ static void GetTypeLookupContextImpl(DWARFDIE die, bool complete_template_names,
 }
 
 std::vector<CompilerContext>
-DWARFDIE::GetTypeLookupContext(bool complete_template_names) const {
+DWARFDIE::GetTypeLookupContext(bool derive_template_names) const {
   llvm::SmallSet<lldb::user_id_t, 4> seen;
   std::vector<CompilerContext> context;
-  GetTypeLookupContextImpl(*this, complete_template_names, seen, context);
+  GetTypeLookupContextImpl(*this, derive_template_names, seen, context);
   std::reverse(context.begin(), context.end());
   return context;
 }

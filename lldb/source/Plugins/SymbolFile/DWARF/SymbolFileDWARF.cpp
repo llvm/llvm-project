@@ -2740,8 +2740,8 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
         std::vector<CompilerContext> qualified_context =
             query.GetModuleSearch()
-                ? die.GetDeclContext(/*complete_template_names=*/true)
-                : die.GetTypeLookupContext(/*complete_template_names=*/true);
+                ? die.GetDeclContext(/*derive_template_names=*/true)
+                : die.GetTypeLookupContext(/*derive_template_names=*/true);
         if (query.ContextMatches(qualified_context))
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
