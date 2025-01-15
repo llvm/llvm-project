@@ -1,0 +1,9 @@
+functions:
+  select:
+    in-latest-posix: ''
+  utimes:
+    in-latest-posix: ''
+
+macros:
+  FD_SETSIZE:
+    in-latest-posix: ''
