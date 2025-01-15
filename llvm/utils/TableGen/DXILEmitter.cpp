@@ -323,11 +323,11 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
 static void emitDXILVersions(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_VERSION\n";
   for (const Record *Version : Records.getAllDerivedDefinitions("Version")) {
-      unsigned Major = Version->getValueAsInt("Major");
-      unsigned Minor = Version->getValueAsInt("Minor");
-      OS << "DXIL_VERSION(";
-      OS << std::to_string(Major) << ", " << std::to_string(Minor);
-      OS << ")\n";
+    unsigned Major = Version->getValueAsInt("Major");
+    unsigned Minor = Version->getValueAsInt("Minor");
+    OS << "DXIL_VERSION(";
+    OS << std::to_string(Major) << ", " << std::to_string(Minor);
+    OS << ")\n";
   }
   OS << "#undef DXIL_VERSION\n";
   OS << "#endif\n\n";
@@ -372,7 +372,8 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Determine which function attributes are set for a dxil version
-static bool attrIsDefined(std::vector<const Record *> Attrs, const Record *Attr) {
+static bool attrIsDefined(std::vector<const Record *> Attrs,
+                          const Record *Attr) {
   for (auto CurAttr : Attrs)
     if (CurAttr->getName() == Attr->getName())
       return true;
@@ -386,12 +387,15 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
   OS << "#ifdef DXIL_OP_ATTRIBUTES\n";
   for (const auto &Op : Ops) {
     for (const auto *Rec : Op.AttrRecs) {
-      unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
-      unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
+      unsigned Major =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
+      unsigned Minor =
+          Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
       OS << "DXIL_OP_ATTRIBUTES(dxil::OpCode::" << Op.OpName << ", ";
       OS << std::to_string(Major) << ", " << std::to_string(Minor);
       auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
-      for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute")) {
+      for (const Record *Attr :
+           Records.getAllDerivedDefinitions("DXILAttribute")) {
         std::string HasAttr = ", false";
         if (attrIsDefined(Attrs, Attr))
           HasAttr = ", true";
@@ -399,7 +403,6 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
       }
       OS << ")\n";
     }
-    
   }
   OS << "#undef DXIL_OP_ATTRIBUTES\n";
   OS << "#endif\n\n";
@@ -509,8 +512,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
-       << getStageMaskString(Op.StageRecs) << ", "
-       << Op.OverloadParamIndex
+       << getStageMaskString(Op.StageRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }

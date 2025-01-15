@@ -361,12 +361,15 @@ static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
   return std::nullopt;
 }
 
-constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode, uint16_t VersionMajor, uint16_t VersionMinor) {
+constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
+                                            uint16_t VersionMajor,
+                                            uint16_t VersionMinor) {
   uint64_t OpCodePack = (uint64_t)OpCode;
   return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
 }
 
-static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode, VersionTuple DXILVersion) {
+static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
+                                          VersionTuple DXILVersion) {
   SmallVector<Version> Versions = {
 #define DXIL_VERSION(MAJOR, MINOR) {MAJOR, MINOR},
 #include "DXILOperation.inc"
@@ -374,26 +377,32 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode, VersionTuple DXIL
 
   dxil::Attributes Attributes;
   for (auto Version : Versions) {
-    if (DXILVersion < VersionTuple(Version.Major, Version.Minor)) continue;
+    if (DXILVersion < VersionTuple(Version.Major, Version.Minor))
+      continue;
     switch (computeSwitchEnum(OpCode, Version.Major, Version.Minor)) {
-#define DXIL_OP_ATTRIBUTES(OpCode, VersionMajor, VersionMinor, ...) \
-    case computeSwitchEnum(OpCode, VersionMajor, VersionMinor): { \
-      auto Other = dxil::Attributes{__VA_ARGS__}; \
-      Attributes |= Other; \
-      break; \
-    };
+#define DXIL_OP_ATTRIBUTES(OpCode, VersionMajor, VersionMinor, ...)            \
+  case computeSwitchEnum(OpCode, VersionMajor, VersionMinor): {                \
+    auto Other = dxil::Attributes{__VA_ARGS__};                                \
+    Attributes |= Other;                                                       \
+    break;                                                                     \
+  };
 #include "DXILOperation.inc"
     }
   }
   return Attributes;
 }
 
-static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode, VersionTuple DXILVersion) {
+static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
+                              VersionTuple DXILVersion) {
   dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);
-  if (Attributes.ReadNone) CI->setDoesNotAccessMemory();
-  if (Attributes.ReadOnly) CI->setOnlyReadsMemory();
-  if (Attributes.NoReturn) CI->setDoesNotReturn();
-  if (Attributes.NoDuplicate) CI->setCannotDuplicate();
+  if (Attributes.ReadNone)
+    CI->setDoesNotAccessMemory();
+  if (Attributes.ReadOnly)
+    CI->setOnlyReadsMemory();
+  if (Attributes.NoReturn)
+    CI->setDoesNotReturn();
+  if (Attributes.NoDuplicate)
+    CI->setCannotDuplicate();
   return;
 }
 

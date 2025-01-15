@@ -39,7 +39,7 @@ inline Attributes operator|(Attributes a, Attributes b) {
   Attributes c;
 #define DXIL_ATTRIBUTE(Name) c.Name = a.Name | b.Name;
 #include "DXILOperation.inc"
- return c;
+  return c;
 }
 
 inline Attributes &operator|=(Attributes &a, Attributes &b) {
