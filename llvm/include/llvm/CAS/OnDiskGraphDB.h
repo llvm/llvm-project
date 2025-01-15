@@ -78,34 +78,34 @@ public:
     InternalRef operator*() const {
       if (auto *Ref = dyn_cast<const InternalRef *>(I))
         return *Ref;
-      return InternalRef(*I.get<const InternalRef4B *>());
+      return InternalRef(*cast<const InternalRef4B *>(I));
     }
     bool operator<(const iterator &RHS) const {
-      assert(I.is<const InternalRef *>() == RHS.I.is<const InternalRef *>());
+      assert(isa<const InternalRef *>(I) == isa<const InternalRef *>(RHS.I));
       if (auto *Ref = dyn_cast<const InternalRef *>(I))
-        return Ref < RHS.I.get<const InternalRef *>();
-      return I.get<const InternalRef4B *>() -
-             RHS.I.get<const InternalRef4B *>();
+        return Ref < cast<const InternalRef *>(RHS.I);
+      return cast<const InternalRef4B *>(I) -
+             cast<const InternalRef4B *>(RHS.I);
     }
     ptrdiff_t operator-(const iterator &RHS) const {
-      assert(I.is<const InternalRef *>() == RHS.I.is<const InternalRef *>());
+      assert(isa<const InternalRef *>(I) == isa<const InternalRef *>(RHS.I));
       if (auto *Ref = dyn_cast<const InternalRef *>(I))
-        return Ref - RHS.I.get<const InternalRef *>();
-      return I.get<const InternalRef4B *>() -
-             RHS.I.get<const InternalRef4B *>();
+        return Ref - cast<const InternalRef *>(RHS.I);
+      return cast<const InternalRef4B *>(I) -
+             cast<const InternalRef4B *>(RHS.I);
     }
     iterator &operator+=(ptrdiff_t N) {
       if (auto *Ref = dyn_cast<const InternalRef *>(I))
         I = Ref + N;
       else
-        I = I.get<const InternalRef4B *>() + N;
+        I = cast<const InternalRef4B *>(I) + N;
       return *this;
     }
     iterator &operator-=(ptrdiff_t N) {
       if (auto *Ref = dyn_cast<const InternalRef *>(I))
         I = Ref - N;
       else
-        I = I.get<const InternalRef4B *>() - N;
+        I = cast<const InternalRef4B *>(I) - N;
       return *this;
     }
     InternalRef operator[](ptrdiff_t N) const { return *(this->operator+(N)); }
@@ -139,15 +139,15 @@ public:
   /// Array accessor.
   InternalRef operator[](ptrdiff_t N) const { return begin()[N]; }
 
-  bool is4B() const { return Begin.is<const InternalRef4B *>(); }
-  bool is8B() const { return Begin.is<const InternalRef *>(); }
+  bool is4B() const { return isa<const InternalRef4B *>(Begin); }
+  bool is8B() const { return isa<const InternalRef *>(Begin); }
 
   ArrayRef<uint8_t> getBuffer() const {
     if (is4B()) {
-      auto *B = Begin.get<const InternalRef4B *>();
+      auto *B = cast<const InternalRef4B *>(Begin);
       return ArrayRef((const uint8_t *)B, sizeof(InternalRef4B) * Size);
     } else {
-      auto *B = Begin.get<const InternalRef *>();
+      auto *B = cast<const InternalRef *>(Begin);
       return ArrayRef((const uint8_t *)B, sizeof(InternalRef) * Size);
     }
   }
