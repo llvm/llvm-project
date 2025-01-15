@@ -4,7 +4,7 @@ define void @test_memset_pattern4_const_size(ptr noalias %a, i32 %pattern) {
 ; CHECK-LABEL: Function: test_memset_pattern4_const_size
 ; CHECK:      Just Mod:  Ptr: i8* %a	<->  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr %a, i32 %pattern, i64 17, i1 false)
 ; CHECK-NEXT: Just Mod:  Ptr: i8* %a.gep.1	<->  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr %a, i32 %pattern, i64 17, i1 false)
-; CHECK-NEXT: Just Mod:  Ptr: i8* %a.gep.129	<->  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr %a, i32 %pattern, i64 17, i1 false)
+; CHECK-NEXT: NoModRef:  Ptr: i8* %a.gep.129	<->  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr %a, i32 %pattern, i64 17, i1 false)
 
 entry:
   load i8, ptr %a
