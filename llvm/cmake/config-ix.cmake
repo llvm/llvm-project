@@ -92,6 +92,7 @@ elseif (PURE_WINDOWS)
   set(HAVE_SYS_TYPES_H 1)
   set(HAVE_SYSEXITS_H 0)
   set(HAVE_TERMIOS_H 0)
+  set(HAVE_UNISTD_H 0)
 elseif (ZOS)
   # Confirmed in
   # https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297109613
