@@ -38,20 +38,21 @@ lld::elf::runBalancedPartitioning(Ctx &ctx, llvm::StringRef profilePath,
   SmallVector<std::unique_ptr<BPSectionBase>> sections;
   DenseSet<const InputSectionBase *> seenSections;
 
+  auto addSection = [&](Symbol &sym) {
+    if (sym.getSize() == 0)
+      return;
+    if (auto *d = dyn_cast<Defined>(&sym))
+      if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
+        if (seenSections.insert(sec).second)
+          sections.emplace_back(std::make_unique<BPSectionELF>(sec));
+  };
+
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->getSize() > 0)
-      if (auto *d = dyn_cast<Defined>(sym))
-        if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
-          if (seenSections.insert(sec).second)
-            sections.emplace_back(std::make_unique<BPSectionELF>(sec));
+    addSection(*sym);
 
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
-      if (sym->getSize() > 0)
-        if (auto *d = dyn_cast<Defined>(sym))
-          if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
-            if (seenSections.insert(sec).second)
-              sections.emplace_back(std::make_unique<BPSectionELF>(sec));
+      addSection(*sym);
 
   auto reorderedSections = BPSectionBase::reorderSectionsByBalancedPartitioning(
       profilePath, forFunctionCompression, forDataCompression,
