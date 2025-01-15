@@ -7821,13 +7821,6 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   // (3)uleb128 separated by 2 commas.
   MCAsmParser &Parser = getParser();
 
-  bool HasActiveSubsection = true;
-  std::unique_ptr<MCELFStreamer::AttributeSubSection> ActiveSubsection =
-      getTargetStreamer().getActiveAtributesSubsection();
-  if (nullptr == ActiveSubsection) {
-    HasActiveSubsection = false;
-  }
-
   // Consume the name (subsection name)
   StringRef SubsectionName;
   AArch64BuildAttributes::VendorID SubsectionNameID;
@@ -7846,6 +7839,13 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
 
+  bool SubsectionExists = true;
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> ExistingSubsection =
+      getTargetStreamer().getActiveSubsectionByName(SubsectionName);
+  if (nullptr == ExistingSubsection) {
+    SubsectionExists = false;
+  }
+
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
   // options: optional/required
@@ -7858,20 +7858,19 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
                 Optionality);
       return true;
     }
-    if (HasActiveSubsection &&
-        (SubsectionName == ActiveSubsection->VendorName)) {
-      if (IsOptional != ActiveSubsection->IsOptional) {
+    if (SubsectionExists) {
+      if (IsOptional != ExistingSubsection->IsOptional) {
         Error(Parser.getTok().getLoc(),
               "optionality mismatch! subsection '" + SubsectionName +
                   "' already exists with optionality defined as '" +
-                  Twine(ActiveSubsection->IsOptional) + "' and not '" +
+                  Twine(ExistingSubsection->IsOptional) + "' and not '" +
                   Twine(IsOptional) + "' (0: required, 1: optional)");
         return true;
       }
     }
   } else {
     Error(Parser.getTok().getLoc(),
-          "optionality parameter not found, expected required|optinal");
+          "optionality parameter not found, expected required|optional");
     return true;
   }
   // Check for possible IsOptional unaccepted values for known subsections
@@ -7906,13 +7905,12 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
                 Name);
       return true;
     }
-    if (HasActiveSubsection &&
-        (SubsectionName == ActiveSubsection->VendorName)) {
-      if (Type != ActiveSubsection->ParameterType) {
+    if (SubsectionExists) {
+      if (Type != ExistingSubsection->ParameterType) {
         Error(Parser.getTok().getLoc(),
               "type mismatch! subsection '" + SubsectionName +
                   "' already exists with type defined as '" +
-                  Twine(ActiveSubsection->ParameterType) + "' and not '" +
+                  Twine(ExistingSubsection->ParameterType) + "' and not '" +
                   Twine(Type) + "' (0: uleb128, 1: ntbs)");
         return true;
       }

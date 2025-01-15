@@ -33,11 +33,11 @@
 // ERR-NEXT: .aeabi_subsection aeabi_pauthabi, a, uleb128
 
 .aeabi_subsection aeabi_pauthabi, 1, uleb128
-// ERR: error: optionality parameter not found, expected required|optinal
+// ERR: error: optionality parameter not found, expected required|optional
 // ERR-NEXT: .aeabi_subsection aeabi_pauthabi, 1, uleb128
 
 .aeabi_subsection aeabi_pauthabi, ,uleb128
-// ERR: error: optionality parameter not found, expected required|optinal
+// ERR: error: optionality parameter not found, expected required|optional
 // ERR-NEXT: .aeabi_subsection aeabi_pauthabi, ,uleb128
 
 .aeabi_subsection aeabi_pauthabi,uleb128
@@ -59,4 +59,3 @@
 .aeabi_subsection aeabi_pauthabi, required, a
 // ERR: error: unknown AArch64 build attributes type, expected uleb128|ntbs: a
 // ERR-NEXT: .aeabi_subsection aeabi_pauthabi, required, a
-

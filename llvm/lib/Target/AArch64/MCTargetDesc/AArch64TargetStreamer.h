@@ -104,6 +104,8 @@ public:
   void activateAtributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
   getActiveAtributesSubsection();
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getActiveSubsectionByName(StringRef name);
   void
   insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
                          MCELFStreamer::AttributeSubSection &AttSubSection);

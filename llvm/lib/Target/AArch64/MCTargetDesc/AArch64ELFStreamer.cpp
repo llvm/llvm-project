@@ -189,9 +189,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
                                              Override);
         break;
       case AArch64BuildAttributes::TAG_FEATURE_BTI:
-        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_FEATURE_GCS:
-        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_FEATURE_PAC:
         OS << "\t.aeabi_attribute" << "\t"
            << AArch64BuildAttributes::getFeatureAndBitsTagsStr(Tag) << ", "
@@ -212,7 +210,6 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
                                              Override);
         break;
       case AArch64BuildAttributes::TAG_PAUTH_PLATFORM:
-        LLVM_FALLTHROUGH;
       case AArch64BuildAttributes::TAG_PAUTH_SCHEMA:
         OS << "\t.aeabi_attribute" << "\t"
            << AArch64BuildAttributes::getPauthABITagsStr(Tag) << ", " << Value;
@@ -246,16 +243,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
     switch (SubsectionID) {
     default: {
-      assert(0 && "Subsection error");
-      break;
-    }
-    case AArch64BuildAttributes::VENDOR_UNKNOWN: {
-      // Keep the data structure consistent with the case of ELF emission
-      // (important for llvm-mc asm parsing)
-      OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", "
-         << OptionalStr << ", " << ParameterStr;
-      AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
-                                                     ParameterType);
+      // Treated as a private subsection
       break;
     }
     case AArch64BuildAttributes::AEABI_PAUTHABI: {
@@ -265,10 +253,6 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       assert(AArch64BuildAttributes::ULEB128 == ParameterType &&
              "subsection .aeabi-pauthabi should be "
              "marked as uleb128 and not as ntbs");
-      OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", "
-         << OptionalStr << ", " << ParameterStr;
-      AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
-                                                     ParameterType);
       break;
     }
     case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS: {
@@ -278,13 +262,15 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
       assert(AArch64BuildAttributes::ULEB128 == ParameterType &&
              "subsection .aeabi_feature_and_bits should "
              "be marked as uleb128 and not as ntbs");
-      OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", "
-         << OptionalStr << ", " << ParameterStr;
-      AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
-                                                     ParameterType);
       break;
     }
     }
+    OS << "\t" << SubsectionTag << "\t" << SubsectionName << ", " << OptionalStr
+       << ", " << ParameterStr;
+    // Keep the data structure consistent with the case of ELF emission
+    // (important for llvm-mc asm parsing)
+    AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
+                                                   ParameterType);
     OS << "\n";
   }
 

@@ -182,6 +182,16 @@ AArch64TargetStreamer::getActiveAtributesSubsection() {
   return nullptr;
 }
 
+std::unique_ptr<MCELFStreamer::AttributeSubSection>
+AArch64TargetStreamer::getActiveSubsectionByName(StringRef name) {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (name == SubSection.VendorName) {
+      return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
+    }
+  }
+  return nullptr;
+}
+
 void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
                                           unsigned Value, std::string String,
                                           bool Override) {

@@ -39,7 +39,6 @@ StringRef getOptionalStr(unsigned Optional) {
   case OPTIONAL:
     return "optional";
   case OPTIONAL_NOT_FOUND:
-    LLVM_FALLTHROUGH;
   default:
     return "";
   }
@@ -62,17 +61,14 @@ StringRef getTypeStr(unsigned Type) {
   case NTBS:
     return "ntbs";
   case TYPE_NOT_FOUND:
-    LLVM_FALLTHROUGH;
   default:
     return "";
   }
 }
 SubsectionType getTypeID(StringRef Type) {
   return StringSwitch<SubsectionType>(Type)
-      .Case("uleb128", ULEB128)
-      .Case("ULEB128", ULEB128)
-      .Case("NTBS", NTBS)
-      .Case("ntbs", NTBS)
+      .Cases("uleb128", "ULEB128", ULEB128)
+      .Cases("ntbs", "NTBS", NTBS)
       .Default(TYPE_NOT_FOUND);
 }
 StringRef getSubsectionTypeUnknownError() {
@@ -86,7 +82,6 @@ StringRef getPauthABITagsStr(unsigned PauthABITag) {
   case TAG_PAUTH_SCHEMA:
     return "Tag_PAuth_Schema";
   case PAUTHABI_TAG_NOT_FOUND:
-    LLVM_FALLTHROUGH;
   default:
     return "";
   }
@@ -107,7 +102,6 @@ StringRef getFeatureAndBitsTagsStr(unsigned FeatureAndBitsTag) {
   case TAG_FEATURE_GCS:
     return "Tag_Feature_GCS";
   case FEATURE_AND_BITS_TAG_NOT_FOUND:
-    LLVM_FALLTHROUGH;
   default:
     return "";
   }
