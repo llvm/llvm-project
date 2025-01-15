@@ -40,7 +40,6 @@ Compilation Process
 
 .. figure:: toplevel.png
    
-   :align: center
    Figure 1: Top-level SYCL offloading compilation flow.
 
 Figure 1 showcases the SYCL offloading compilation flow. The SYCL compiler
@@ -191,7 +190,6 @@ with host image in the original fat object using the host linker tool.
 
 .. figure:: linker_wrapper.png
    
-   :align: center
    Figure 2: Device linking flow for SYCL offloading inside the linker-wrapper tool.
 
 Figure 2 shows the compilation flow inside the linker-wrapper tool. First, all
@@ -219,7 +217,6 @@ below.
 
 .. figure:: sycl_linker.png  
    
-   :align: center
    Figure 3: SYCL-specific device code linking for JIT compilation flow.
 
 Figure 3 shows the device code linking process performed inside the SYCL linker
@@ -267,7 +264,6 @@ kernel itself or any funtion in its call graph uses FP64 operations. Figure 6
 showcases this device code split.
 
 .. figure:: code_split.png
-   :align: center
    
    Figure 6: An example of device code splitting for SYCL offloading.
 

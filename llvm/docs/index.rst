@@ -60,10 +60,14 @@ Getting Started, How-tos, Developer Guides, and Tutorials.
 .. toctree::
    :hidden:
 
+   SYCLOffloadingDesign
    GettingStartedTutorials
    Reference
    UserGuides
    DiscourseMigrationGuide
+
+:doc:`SYCLOffloadingDesign`
+  For those new to the SYCL system.
 
 :doc:`GettingStartedTutorials`
   For those new to the LLVM system.
