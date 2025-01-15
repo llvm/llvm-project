@@ -66,8 +66,8 @@ struct YamlContext {
   raw_string_ostream &getErrorStream() { return ErrorStream; }
 
   StringRef getRegName(MCRegister Reg) {
-    // Special case: RegNo 0 is NoRegister. We have to deal with it explicitly.
-    if (!Reg)
+    // Special case: Reg may be invalid. We have to deal with it explicitly.
+    if (!Reg.isValid())
       return kNoRegister;
     const StringRef RegName = State->getRegInfo().getName(Reg);
     if (RegName.empty())

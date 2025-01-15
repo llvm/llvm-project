@@ -49,7 +49,7 @@ Error SnippetGenerator::generateConfigurations(
     const auto &ET = State.getExegesisTarget();
     MCRegister ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
-    if (!ScratchSpacePointerInReg)
+    if (!ScratchSpacePointerInReg.isValid())
       return make_error<Failure>(
           "Infeasible : target does not support memory instructions");
     const auto &ScratchRegAliases =
