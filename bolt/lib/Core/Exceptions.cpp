@@ -640,16 +640,16 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         BC.errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
-      // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
-      // id but mean different things. The latter is used in AArch64.
+      // DW_CFA_GNU_window_save and DW_CFA_AARCH64_negate_ra_state just use the
+      // same id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
-        // Not adding OpNegateRAState since the location they are needed
+        // The location OpNegateRAState CFIs are needed
         // depends on the order of BasicBlocks, which changes during
-        // optimizations. Instead, an annotation is added to the instruction, to
-        // mark that the instruction modifies the RA State. The actual state for
-        // instructions are worked out in MarkRAStates based on these
-        // annotations.
-        Function.setInstModifiesRAState(DW_CFA_GNU_window_save, Offset);
+        // optimizations. Instead of adding OpNegateRAState CFIs, an annotation
+        // is added to the instruction, to mark that the instruction modifies
+        // the RA State. The actual state for instructions are worked out in
+        // MarkRAStates based on these annotations.
+        Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state, Offset);
         break;
       }
       if (opts::Verbosity >= 1)

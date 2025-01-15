@@ -27,9 +27,8 @@ namespace bolt {
 void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
 
-  if (BF.getState() == BinaryFunction::State::Empty) {
+  if (BF.getState() == BinaryFunction::State::Empty)
     return;
-  }
 
   if (BF.getState() != BinaryFunction::State::CFG &&
       BF.getState() != BinaryFunction::State::CFG_Finalized) {
@@ -91,13 +90,7 @@ bool InsertNegateRAState::addNegateRAStateAfterPacOrAuth(BinaryFunction &BF) {
   for (BinaryBasicBlock &BB : BF) {
     for (auto Iter = BB.begin(); Iter != BB.end(); ++Iter) {
       MCInst &Inst = *Iter;
-      if (BC.MIB->isPSign(Inst)) {
-        Iter = BF.addCFIInstruction(
-            &BB, Iter + 1, MCCFIInstruction::createNegateRAState(nullptr));
-        FoundAny = true;
-      }
-
-      if (BC.MIB->isPAuth(Inst)) {
+      if (BC.MIB->isPSign(Inst) || BC.MIB->isPAuth(Inst)) {
         Iter = BF.addCFIInstruction(
             &BB, Iter + 1, MCCFIInstruction::createNegateRAState(nullptr));
         FoundAny = true;
@@ -111,9 +104,7 @@ void InsertNegateRAState::fixUnknownStates(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   bool FirstIter = true;
   MCInst PrevInst;
-  for (auto BBIt = BF.begin(); BBIt != BF.end(); ++BBIt) {
-    BinaryBasicBlock &BB = *BBIt;
-
+  for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
 
       MCInst &Inst = *It;
