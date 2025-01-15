@@ -325,8 +325,9 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   // Currently we don't have a partial_reduce_sub intrinsic,
   // so mimic the behaviour by negating the second operand
-  if(Opcode == Instruction::Sub) {
-    BinOpVal = Builder.CreateSub(Constant::getNullValue(BinOpVal->getType()), BinOpVal);
+  if (Opcode == Instruction::Sub) {
+    BinOpVal = Builder.CreateSub(Constant::getNullValue(BinOpVal->getType()),
+                                 BinOpVal);
     Opcode = Instruction::Add;
   }
 

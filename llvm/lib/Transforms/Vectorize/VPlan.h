@@ -2454,13 +2454,15 @@ public:
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
         Opcode(Opcode) {
     auto *DefiningRecipe = getOperand(1)->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(DefiningRecipe) || isa<VPPartialReductionRecipe>(DefiningRecipe)) &&
+    assert((isa<VPReductionPHIRecipe>(DefiningRecipe) ||
+            isa<VPPartialReductionRecipe>(DefiningRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1), getUnderlyingInstr());
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)

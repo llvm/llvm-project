@@ -8824,11 +8824,10 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 }
 
 std::optional<SmallVector<std::pair<PartialReductionChain, unsigned>>>
-VPRecipeBuilder::getScaledReduction(Instruction *PHI,
-                                    Instruction *RdxExitInstr,
+VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
                                     VFRange &Range) {
 
-  if(!CM.TheLoop->contains(RdxExitInstr))
+  if (!CM.TheLoop->contains(RdxExitInstr))
     return std::nullopt;
 
   // TODO: Allow scaling reductions when predicating. The select at
@@ -8850,7 +8849,7 @@ VPRecipeBuilder::getScaledReduction(Instruction *PHI,
   SmallVector<std::pair<PartialReductionChain, unsigned>> Chains;
 
   if (auto *OpInst = dyn_cast<Instruction>(Op)) {
-    if(auto SR0 = getScaledReduction(PHI, OpInst, Range)) {
+    if (auto SR0 = getScaledReduction(PHI, OpInst, Range)) {
       Chains.append(*SR0);
       PHI = SR0->rbegin()->first.Reduction;
 
@@ -9000,7 +8999,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
   VPValue *BinOp = Operands[0];
   VPValue *Phi = Operands[1];
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
-  if (isa<VPReductionPHIRecipe>(BinOpRecipe) || isa<VPPartialReductionRecipe>(BinOpRecipe))
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Phi);
 
   return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Phi,
