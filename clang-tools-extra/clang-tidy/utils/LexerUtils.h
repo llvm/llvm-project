@@ -91,7 +91,9 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
 
 std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
-                               const LangOptions &LangOpts);
+                               const LangOptions &LangOpts) {
+  return Lexer::findNextToken(Start, SM, LangOpts, true);
+}
 
 // Finds next token that's not a comment.
 std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,

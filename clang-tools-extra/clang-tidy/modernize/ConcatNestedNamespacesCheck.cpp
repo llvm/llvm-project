@@ -59,7 +59,7 @@ SourceRange NS::getNamespaceBackRange(const SourceManager &SM,
   // Back from '}' to conditional '// namespace xxx'
   SourceLocation Loc = front()->getRBraceLoc();
   std::optional<Token> Tok =
-      utils::lexer::findNextTokenIncludingComments(Loc, SM, LangOpts);
+      Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments*/ true);
   if (!Tok)
     return getDefaultNamespaceBackRange();
   if (Tok->getKind() != tok::TokenKind::comment)
