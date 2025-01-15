@@ -32,13 +32,11 @@ namespace {
 static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
                                       const APInt &Value) {
   SmallVector<MCInst, 8> MCInstSeq;
-  std::vector<MCInst> MatIntInstrs;
   MCRegister DestReg = Reg;
 
   RISCVMatInt::generateMCInstSeq(Value.getSExtValue(), STI, DestReg, MCInstSeq);
-  MatIntInstrs.resize(MCInstSeq.size());
-  std::copy(MCInstSeq.begin(), MCInstSeq.end(), MatIntInstrs.begin());
 
+  std::vector<MCInst> MatIntInstrs(MCInstSeq.begin(), MCInstSeq.end());
   return MatIntInstrs;
 }
 
