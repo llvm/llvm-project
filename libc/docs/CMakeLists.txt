@@ -53,6 +53,7 @@ if (SPHINX_FOUND)
       string
       strings
       sys/mman
+      sys/resource
       sys/wait
       threads
       uchar
