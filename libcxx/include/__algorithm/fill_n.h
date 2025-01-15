@@ -41,11 +41,7 @@ __fill_n_bool(__bit_iterator<_Cp, false> __first, typename __size_difference_typ
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
-    __storage_type __m     = std::__middle_mask<__storage_type>(__first.__ctz_, __clz_f - __dn);
-    if (_FillVal)
-      *__first.__seg_ |= __m;
-    else
-      *__first.__seg_ &= ~__m;
+    std::__fill_masked_range(std::__to_address(__first.__seg_), __first.__ctz_, __clz_f - __dn, _FillVal);
     __n -= __dn;
     ++__first.__seg_;
   }
@@ -56,11 +52,7 @@ __fill_n_bool(__bit_iterator<_Cp, false> __first, typename __size_difference_typ
   // do last partial word
   if (__n > 0) {
     __first.__seg_ += __nw;
-    __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
-    if (_FillVal)
-      *__first.__seg_ |= __m;
-    else
-      *__first.__seg_ &= ~__m;
+    std::__fill_masked_range(std::__to_address(__first.__seg_), 0u, __bits_per_word - __n, _FillVal);
   }
 }
 
