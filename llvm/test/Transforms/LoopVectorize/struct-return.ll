@@ -208,6 +208,40 @@ exit:
   ret void
 }
 
+; Test crafted to exercise computePredInstDiscount with struct results
+; (mainly it does not crash).
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
+define void @scalarized_predicated_struct_return(ptr %a) optsize {
+; CHECK-LABEL: define void @scalarized_predicated_struct_return
+; CHECK:  vector.body:
+; CHECK:  pred.store.if:
+; CHECK:     tail call { i64, i64 } @bar_i64(i64 %5)
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %in_val = load i64, ptr %arrayidx, align 8
+  %sgt_zero = icmp sgt i64 %in_val, 0
+  br i1 %sgt_zero, label %if.then, label %for.inc
+
+if.then:
+  %call = tail call { i64, i64 } @bar_i64(i64 %in_val) #6
+  %extract_a = extractvalue { i64, i64 } %call, 0
+  %div = udiv i64 %extract_a, %in_val
+  store i64 %div, ptr %arrayidx, align 8
+  br label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ; Negative test. Widening structs of vectors is not supported.
 ; CHECK-REMARKS-COUNT: remark: {{.*}} loop not vectorized: instruction return type cannot be vectorized
 define void @negative_struct_of_vectors(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
@@ -431,13 +465,14 @@ declare { [2 x float] } @foo_arrays(float)
 declare { float, [1 x float] } @foo_one_non_widenable_element(float)
 declare { <1 x float>, <1 x float> } @foo_vectors(<1 x float>)
 declare { i32, i32, i32 } @qux(i32)
+declare { i64, i64 } @bar_i64(i64)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)
 declare { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double>)
 declare { <2 x float>, <2 x i32> } @fixed_vec_baz(<2 x float>)
 declare { <2 x i32>, <2 x i32>, <2 x i32> } @fixed_vec_qux(<2 x i32>)
-
 declare { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float>, <vscale x 4 x i1>)
+declare { <vscale x 4 x i64>, <vscale x 4 x i64> } @scalable_vec_masked_bar_i64(<vscale x 4 x i64>, <vscale x 4 x i1>)
 
 attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_foo(fixed_vec_foo)" }
 attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar(fixed_vec_bar)" }
@@ -445,3 +480,4 @@ attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_baz(fixed_vec
 attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(scalable_vec_masked_foo)" }
 attributes #4 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar_named(fixed_vec_bar)" }
 attributes #5 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_qux(fixed_vec_qux)" }
+attributes #6 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_bar_i64(scalable_vec_masked_bar_i64)" }
