@@ -367,8 +367,12 @@ private:
 
     if (Style.AllowShortNamespacesOnASingleLine &&
         TheLine->First->is(tok::kw_namespace) &&
-        TheLine->Last->is(tok::l_brace)) {
-      const auto result = tryMergeNamespace(I, E, Limit);
+        ((Style.BraceWrapping.AfterNamespace &&
+          NextLine.First->is(tok::l_brace)) ||
+         (!Style.BraceWrapping.AfterNamespace &&
+          TheLine->Last->is(tok::l_brace)))) {
+      const auto result =
+          tryMergeNamespace(I, E, Limit, Style.BraceWrapping.AfterNamespace);
       if (result > 0)
         return result;
     }
@@ -628,28 +632,36 @@ private:
 
   unsigned tryMergeNamespace(ArrayRef<AnnotatedLine *>::const_iterator I,
                              ArrayRef<AnnotatedLine *>::const_iterator E,
-                             unsigned Limit) {
+                             unsigned Limit, bool OpenBraceWrapped) {
     if (Limit == 0)
       return 0;
 
-    assert(I[1]);
-    const auto &L1 = *I[1];
+    // The merging code is relative to the opening namespace brace, which could
+    // be either on the first or second line due to the brace wrapping rules.
+    const size_t OpeningBraceLineOffset = OpenBraceWrapped ? 1 : 0;
+    const auto BraceOpenLine = I + OpeningBraceLineOffset;
+
+    if (std::distance(BraceOpenLine, E) <= 2)
+      return 0;
+
+    if (BraceOpenLine[0]->Last->is(TT_LineComment))
+      return 0;
+
+    assert(BraceOpenLine[1]);
+    const auto &L1 = *BraceOpenLine[1];
     if (L1.InPPDirective != (*I)->InPPDirective ||
         (L1.InPPDirective && L1.First->HasUnescapedNewline)) {
       return 0;
     }
 
-    if (std::distance(I, E) <= 2)
-      return 0;
-
-    assert(I[2]);
-    const auto &L2 = *I[2];
+    assert(BraceOpenLine[2]);
+    const auto &L2 = *BraceOpenLine[2];
     if (L2.Type == LT_Invalid)
       return 0;
 
     Limit = limitConsideringMacros(I + 1, E, Limit);
 
-    if (!nextTwoLinesFitInto(I, Limit))
+    if (!nextNLinesFitInto(I, I + OpeningBraceLineOffset + 2, Limit))
       return 0;
 
     // Check if it's a namespace inside a namespace, and call recursively if so.
@@ -660,17 +672,18 @@ private:
 
       assert(Limit >= L1.Last->TotalLength + 3);
       const auto InnerLimit = Limit - L1.Last->TotalLength - 3;
-      const auto MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
+      const auto MergedLines =
+          tryMergeNamespace(BraceOpenLine + 1, E, InnerLimit, OpenBraceWrapped);
       if (MergedLines == 0)
         return 0;
-      const auto N = MergedLines + 2;
+      const auto N = MergedLines + 2 + OpeningBraceLineOffset;
       // Check if there is even a line after the inner result.
       if (std::distance(I, E) <= N)
         return 0;
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
       if (I[N]->First->is(tok::r_brace) && !I[N]->First->MustBreakBefore &&
-          I[MergedLines + 1]->Last->isNot(tok::comment) &&
+          BraceOpenLine[MergedLines + 1]->Last->isNot(tok::comment) &&
           nextNLinesFitInto(I, I + N + 1, Limit)) {
         return N;
       }
@@ -688,8 +701,8 @@ private:
     if (L2.First->isNot(tok::r_brace) || L2.First->MustBreakBefore)
       return 0;
 
-    // If so, merge all three lines.
-    return 2;
+    // If so, merge all lines.
+    return 2 + OpeningBraceLineOffset;
   }
 
   unsigned
