@@ -1165,7 +1165,7 @@ GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD, const FieldDecl *FD) {
   if (GetFieldOffset(Ctx, RD, FD, Offset))
     return std::optional<int64_t>(Offset);
 
-  return std::optional<int64_t>();
+  return std::nullopt;
 }
 
 llvm::Value *
@@ -1285,11 +1285,11 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //            count * flexible_array_member_base_size;
   //
   //    size_t field_offset = offsetof (struct s, field);
-  //    size_t offset_diff = struct_size - field_offset;
+  //    size_t offset_diff = sizeof_struct - field_offset;
   //
   //    if (flexible_array_member_size < 0)
   //        return 0;
-  //    return flexible_array_member_size;
+  //    return offset_diff + flexible_array_member_size;
   //
   // 4) '&ptr->field_array[idx]':
   //
