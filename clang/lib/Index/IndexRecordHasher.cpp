@@ -156,7 +156,7 @@ std::array<uint8_t, 8> index::hashRecord(const FileIndexRecord &record,
       hasher.hashDecl(D);
     } else {
       hasher.hashMacro(Info.MacroName,
-                       Info.DeclOrMacro.get<const MacroInfo *>());
+                       cast<const MacroInfo *>(Info.DeclOrMacro));
     }
 
     for (auto &Rel : Info.Relations) {

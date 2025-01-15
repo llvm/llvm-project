@@ -623,7 +623,7 @@ public:
               return;
             return Handler(captureVariable(VD));
           }
-          return Handler(captureField(Entity.get<const FieldDecl *>()));
+          return Handler(captureField(cast<const FieldDecl *>(Entity)));
         });
   }
 

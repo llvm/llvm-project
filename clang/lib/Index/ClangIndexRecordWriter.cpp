@@ -107,7 +107,7 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     for (auto &Rel : Occur.Relations)
       Related.push_back(writer::SymbolRelation{Rel.RelatedSymbol, Rel.Roles});
     if (Occur.MacroName)
-      MacroNames[Occur.DeclOrMacro.get<const MacroInfo *>()] = Occur.MacroName;
+      MacroNames[cast<const MacroInfo *>(Occur.DeclOrMacro)] = Occur.MacroName;
 
     Impl.addOccurrence(Occur.DeclOrMacro.getOpaqueValue(), Occur.Roles, Line,
                        Col, Related);
@@ -130,7 +130,7 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
       Sym.USR = getUSR(II, MI);
       assert(!Sym.USR.empty() && "Recorded macro without USR!");
     } else {
-      const Decl *D = DeclOrMacro.get<const Decl *>();
+      const Decl *D = cast<const Decl *>(DeclOrMacro);
       Sym.SymInfo = getSymbolInfo(D);
 
       auto *ND = dyn_cast<NamedDecl>(D);
