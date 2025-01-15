@@ -2629,7 +2629,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     __throw_length_error();
   pointer __old_p = __get_pointer();
   size_type __cap =
-      __old_cap < __ms / 2 - __alignment ? __recommend(std::max<size_type>(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
+      __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms;
   __annotate_delete();
   auto __guard      = std::__make_scope_guard(__annotate_new_size(*this));
   auto __allocation = std::__allocate_at_least(__alloc_, __cap + 1);
