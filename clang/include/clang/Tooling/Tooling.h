@@ -223,7 +223,8 @@ buildASTFromCode(StringRef Code, StringRef FileName = "input.cc",
 /// \param PCHContainerOps The PCHContainerOperations for loading and creating
 /// clang modules.
 ///
-/// \param Adjuster A function to filter the command line arguments as specified.
+/// \param Adjuster A function to filter the command line arguments as
+/// specified.
 ///
 /// \param FileSystem FileSystem for managing and looking up files.
 ///
