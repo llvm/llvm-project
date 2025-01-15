@@ -23874,8 +23874,12 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     // If we only found a single constant indexed extract_vector_elt feeding the
     // build_vector, do not produce a more complicated shuffle if the extract is
     // cheap.
+
+    // TODO: This should be more aggressive about skipping the shuffle formation
+    // (e.g., always do this for VecIn[1]->hasOneUse())
     if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
-        TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
+        (VecIn[1].hasOneUse() &&
+         TLI.isExtractVecEltCheap(VT, OneConstExtractIndex)))
       return SDValue();
 
     unsigned MaxIndex = 0;
