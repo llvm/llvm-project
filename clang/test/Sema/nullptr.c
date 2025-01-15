@@ -108,3 +108,6 @@ void test_f1() {
   int ir = (f1)(nullptr);
 }
 
+// __nullptr keyword in C
+void foo(void *);
+void bar() { foo(__nullptr); }
