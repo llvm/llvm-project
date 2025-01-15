@@ -210,11 +210,11 @@ Author: {self.pr.user.name} ({self.pr.user.login})
 
 
 def get_top_values(values : dict, top : int = 3) -> list:
-    return [v for v in sorted(values.items(), key = lambda x: x[1], reverse = True)][:top]
+    return [v for v in sorted(values.items(), key=lambda x: x[1], reverse = True)][:top]
 
 
 def get_user_values_str(values: list) -> str:
-    return ', '.join([f'@{v[0]} ({v[1]})' for v in values])
+    return ", ".join([f"@{v[0]} ({v[1]})" for v in values])
 
 
 class PRGreeter:
@@ -248,6 +248,7 @@ You can also ask questions in a comment on this PR, on the [LLVM Discord](https:
         self.pr.as_issue().create_comment(comment)
         return True
 
+
 class CommitRequestGreeter:
     def __init__(self, token: str, repo: str, issue_number: int):
         self.repo = github.Github(token).get_repo(repo)
@@ -260,12 +261,12 @@ class CommitRequestGreeter:
 """
         self.issue.create_comment(comment)
 
-        #Post activity summary:
+        # Post activity summary:
         total_prs = 0
         merged_prs = 0
         merged_by = {}
         reviewed_by = {}
-        for i in self.repo.get_issues(creator = self.issue.user.login, state = 'all'):
+        for i in self.repo.get_issues(creator=self.issue.user.login, state="all"):
             issue_reviewed_by = set()
             try:
                 pr = i.as_pull_request()
