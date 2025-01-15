@@ -66,9 +66,9 @@ struct ShaderHash {
 struct RootSignatureDesc {
   uint32_t Version;
   uint32_t Flags;
-  void swapBytes() { 
+  void swapBytes() {
     sys::swapByteOrder(Version);
-    sys::swapByteOrder(Flags); 
+    sys::swapByteOrder(Flags);
   }
 };
 
