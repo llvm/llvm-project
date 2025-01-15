@@ -316,6 +316,8 @@ Improvements to Clang's diagnostics
 
 - Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
 
+- Don't emit bogus dignostic about an undefined behavior on ``reinterpret_cast<T>`` for non-instantiated template functions without sufficient knowledge whether it can actually lead to undefined behavior for ``T`` (#GH109430).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
