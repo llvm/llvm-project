@@ -74,8 +74,8 @@ class SuccessorRange final
 public:
   using RangeBaseT::RangeBaseT;
   SuccessorRange();
-  SuccessorRange(Block *block LLVM_LIFETIME_BOUND);
-  SuccessorRange(Operation *term LLVM_LIFETIME_BOUND);
+  SuccessorRange(Block *block);
+  SuccessorRange(Operation *term);
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
