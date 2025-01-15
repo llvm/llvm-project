@@ -1807,7 +1807,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
-  if (Subtarget->hasSVE2() || (Subtarget->hasSME() && Subtarget->isStreaming())) {
+  if (Subtarget->hasSVE2() ||
+      (Subtarget->hasSME() && Subtarget->isStreaming())) {
     for (auto VT : {MVT::v2i32, MVT::v4i16, MVT::v8i8, MVT::v16i8, MVT::nxv2i1,
                     MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
       setOperationAction(ISD::EXPERIMENTAL_ALIAS_LANE_MASK, VT, Custom);
