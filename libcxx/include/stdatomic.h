@@ -126,7 +126,7 @@ using std::atomic_signal_fence                         // see below
 #    pragma GCC system_header
 #  endif
 
-#  if defined(__cplusplus)
+#  if defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
 #    include <atomic>
 #    include <version>
@@ -233,11 +233,14 @@ using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
 #  else
 
+// Before C++23, we include the next <stdatomic.h> on the path to avoid hijacking
+// the header, since Clang and some platforms have been providing this header for
+// a long time and users rely on it.
 #    if __has_include_next(<stdatomic.h>)
 #      include_next <stdatomic.h>
 #    endif
 
-#  endif // defined(__cplusplus)
+#  endif // defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 #endif   // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STDATOMIC_H
