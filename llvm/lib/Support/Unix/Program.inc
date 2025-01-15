@@ -28,9 +28,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 #if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
