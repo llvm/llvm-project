@@ -1658,9 +1658,8 @@ public:
       Offset = I->first;
     }
     assert(I->first == Offset && "CFI pointing to unknown instruction");
-    if (I == Instructions.begin()) {
+    if (I == Instructions.begin())
       return {};
-    }
 
     --I;
     while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
@@ -1677,7 +1676,7 @@ public:
       I--;
 
       switch (CFIOpcode) {
-      case dwarf::DW_CFA_GNU_window_save:
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
         BC.MIB->setNegateRAState(I->second);
         break;
       case dwarf::DW_CFA_remember_state:
