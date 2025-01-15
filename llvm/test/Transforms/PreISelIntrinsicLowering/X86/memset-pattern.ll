@@ -3,10 +3,11 @@
 
 ;.
 ; CHECK: @.memset_pattern = private unnamed_addr constant [2 x i64] [i64 -6148895925951734307, i64 -6148895925951734307], align 16
-; CHECK: @.memset_pattern.1 = private unnamed_addr constant [8 x i16] [i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555], align 16
-; CHECK: @.memset_pattern.2 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
+; CHECK: @.memset_pattern.1 = private unnamed_addr constant [2 x i64] [i64 4614256656552045848, i64 4614256656552045848], align 16
+; CHECK: @.memset_pattern.2 = private unnamed_addr constant [8 x i16] [i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555, i16 -21555], align 16
 ; CHECK: @.memset_pattern.3 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
 ; CHECK: @.memset_pattern.4 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
+; CHECK: @.memset_pattern.5 = private unnamed_addr constant i128 -113427455635030943652277463699152839203, align 16
 ;.
 define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1_dynvalue(
@@ -29,7 +30,7 @@ define void @memset_pattern_i128_1_dynvalue(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 16)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.3, i64 16)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 1, i1 false)
@@ -57,7 +58,7 @@ define void @memset_pattern_i128_1_nz_as(ptr addrspace(1) %a, i128 %value) nounw
 define void @memset_pattern_i128_16(ptr %a) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_16(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.3, i64 256)
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.4, i64 256)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 16, i1 false)
@@ -68,7 +69,7 @@ define void @memset_pattern_i128_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.4, i64 [[TMP1]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.5, i64 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 %x, i1 false)
@@ -98,7 +99,7 @@ define void @memset_pattern_i16_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i16_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 2, [[X]]
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.1, i64 [[TMP1]])
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.2, i64 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.experimental.memset.pattern(ptr %a, i16 u0xabcd, i64 %x, i1 false)
@@ -115,8 +116,30 @@ define void @memset_pattern_i64_x(ptr %a, i64 %x) nounwind {
   tail call void @llvm.experimental.memset.pattern(ptr %a, i64 u0xaaaabbbbccccdddd, i64 %x, i1 false)
   ret void
 }
+
+; Demonstrate that TBAA metadata is preserved.
+define void @memset_pattern_i64_128_tbaa(ptr %a) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i64_128_tbaa(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @memset_pattern16(ptr [[A]], ptr @.memset_pattern.1, i64 1024), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern(ptr %a, i64 u0x400921fb54442d18, i64 128, i1 false), !tbaa !5
+  ret void
+}
+
+!5 = !{!6, !6, i64 0}
+!6 = !{!"double", !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C++ TBAA"}
+
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nounwind willreturn memory(argmem: readwrite) }
+;.
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"double", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
 ;.
