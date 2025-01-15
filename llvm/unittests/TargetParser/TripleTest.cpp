@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
 #include "gtest/gtest.h"
 
@@ -2736,5 +2737,42 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
             Triple::normalize("dxil-shadermodel5.0-pc-compute"));
+}
+
+TEST(TripleTest, isCompatibleWith) {
+  struct {
+    const char *A;
+    const char *B;
+    bool Result;
+  } Cases[] = {
+      {"armv7-linux-gnueabihf", "thumbv7-linux-gnueabihf", true},
+      {"armv4-none-unknown-eabi", "thumbv6-unknown-linux-gnueabihf", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64-apple-macosx10.10.0", true},
+      {"x86_64-apple-macosx10.9.0", "i386-apple-macosx10.9.0", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64h-apple-macosx10.9.0", true},
+      {"x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", true},
+      {"x86_64-unknown-linux-gnu", "i386-unknown-linux-gnu", false},
+      {"x86_64-unknown-linux-gnu", "x86_64h-unknown-linux-gnu", true},
+      {"x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", false},
+      {"x86_64-pc-windows-msvc", "x86_64-pc-windows-msvc-elf", false},
+      {"i686-w64-windows-gnu", "i386-w64-windows-gnu", true},
+      {"x86_64-w64-windows-gnu", "x86_64-pc-windows-gnu", true},
+      {"armv7-w64-windows-gnu", "thumbv7-pc-windows-gnu", true},
+  };
+
+  auto DoTest = [](const char *A, const char *B,
+                   bool Result) -> testing::AssertionResult {
+    if (Triple(A).isCompatibleWith(Triple(B)) != Result) {
+      return testing::AssertionFailure()
+             << llvm::formatv("Triple {0} and {1} were expected to be {2}", A,
+                              B, Result ? "compatible" : "incompatible");
+    }
+    return testing::AssertionSuccess();
+  };
+  for (const auto &C : Cases) {
+    EXPECT_TRUE(DoTest(C.A, C.B, C.Result));
+    // Test that the comparison is commutative.
+    EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
+  }
 }
 } // end anonymous namespace
