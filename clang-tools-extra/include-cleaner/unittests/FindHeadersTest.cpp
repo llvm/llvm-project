@@ -11,11 +11,13 @@
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
@@ -617,6 +619,49 @@ TEST_F(HeadersForSymbolTest, AmbiguousStdSymbolsUsingShadow) {
                   Header(*tooling::stdlib::Header::named("<cstdio>"))));
 }
 
+TEST_F(HeadersForSymbolTest, GlobalOperatorNewDelete) {
+  Inputs.Code = R"cpp(
+    void k() {
+      int *x;
+      // make sure operator new/delete are part of TU.
+      x = static_cast<int*>(::operator new(sizeof(int)));
+      ::operator delete(x);
+    }
+  )cpp";
+  buildAST();
+
+  // Find global new/delete operators.
+  struct Visitor : public DynamicRecursiveASTVisitor {
+    const NamedDecl *New = nullptr;
+    const NamedDecl *Delete = nullptr;
+    bool VisitNamedDecl(NamedDecl *ND) override {
+      if (!ND->getDeclContext()->isTranslationUnit())
+        return true;
+      switch (ND->getDeclName().getCXXOverloadedOperator()) {
+      case OO_New:
+        New = ND;
+        break;
+      case OO_Delete:
+        Delete = ND;
+        break;
+      default:
+        break;
+      }
+      return true;
+    }
+  };
+  Visitor V;
+  V.ShouldVisitImplicitCode = true;
+  V.TraverseDecl(AST->context().getTranslationUnitDecl());
+  ASSERT_TRUE(V.New) << "Couldn't find global new!";
+  ASSERT_TRUE(V.Delete) << "Couldn't find global delete!";
+  EXPECT_THAT(headersForSymbol(*V.New, AST->sourceManager(), &PI),
+              UnorderedElementsAre(
+                  Header(*tooling::stdlib::Header::named("<new>"))));
+  EXPECT_THAT(headersForSymbol(*V.Delete, AST->sourceManager(), &PI),
+              UnorderedElementsAre(
+                  Header(*tooling::stdlib::Header::named("<new>"))));
+}
 
 TEST_F(HeadersForSymbolTest, StandardHeaders) {
   Inputs.Code = R"cpp(

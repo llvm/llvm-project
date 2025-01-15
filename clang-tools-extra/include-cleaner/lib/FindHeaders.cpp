@@ -16,6 +16,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
@@ -157,8 +158,22 @@ headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
   if (!ND)
     return std::nullopt;
   auto *II = ND->getIdentifier();
-  if (!II)
+  if (!II) {
+    // Special case global operator new/delete, these show up often enough in
+    // practice and stdlib mappings can't work with them as they're symbol-name
+    // based.
+    if (ND->getDeclContext()->isTranslationUnit()) {
+      switch (ND->getDeclName().getCXXOverloadedOperator()) {
+      case OverloadedOperatorKind::OO_New:
+      case OverloadedOperatorKind::OO_Delete:
+        return hintedHeadersForStdHeaders(
+            {tooling::stdlib::Header::named("<new>").value()}, SM, PI);
+      default:
+        break;
+      }
+    }
     return std::nullopt;
+  }
 
   // Check first for symbols that are part of our stdlib mapping. As we have
   // header names for those.
