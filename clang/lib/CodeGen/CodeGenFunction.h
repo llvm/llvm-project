@@ -3587,7 +3587,8 @@ public:
                                const FunctionArgList *Args,
                                llvm::Value *&GpuThreadId,
                                llvm::Value *&GlobalGpuThreadId,
-                               llvm::Value *&WorkGroupId);
+                               llvm::Value *&WorkGroupId,
+                               llvm::Value *&TotalNumThreads);
 
   void EmitNoLoopXteamScanPhaseOneCode(const OMPExecutableDirective &D,
                                        const ForStmt *CapturedForStmt,

@@ -440,7 +440,8 @@ void CodeGenFunction::EmitNoLoopXteamScanInit(const OMPLoopDirective &LD,
                                               const FunctionArgList *Args,
                                               llvm::Value *&GpuThreadId,
                                               llvm::Value *&GlobalGpuThreadId,
-                                              llvm::Value *&WorkGroupId) {
+                                              llvm::Value *&WorkGroupId,
+                                              llvm::Value *&TotalNumThreads) {
   auto IVPair = EmitNoLoopIV(LD, Args);
   Address OMPIterationVarAddr = IVPair.second;
 
@@ -468,6 +469,8 @@ void CodeGenFunction::EmitNoLoopXteamScanInit(const OMPLoopDirective &LD,
   CGM.updateXteamRedKernel(
       CapturedForStmt, Builder.CreateIntCast(OMPIterationVar, Int64Ty, false),
       NumTeams);
+  TotalNumThreads =
+      Builder.CreateMul(NumTeams, WorkGroupSize, "total_num_threads");
   Builder.CreateStore(OMPIterationVar, OMPIterationVarAddr);
 
   // Emit updates of the original loop indices
@@ -488,8 +491,9 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseOneCode(
   llvm::Value *GpuThreadId = nullptr;
   llvm::Value *GlobalGpuThreadId = nullptr;
   llvm::Value *WorkGroupId = nullptr;
+  llvm::Value *TotalNumThreads = nullptr;
   EmitNoLoopXteamScanInit(LD, CapturedForStmt, Args, GpuThreadId,
-                          GlobalGpuThreadId, WorkGroupId);
+                          GlobalGpuThreadId, WorkGroupId, TotalNumThreads);
 
   // Branch to end if original loop condition not satisfied
   llvm::Value *IvCmp = EvaluateExprAsBool(LD.getCond());
@@ -539,8 +543,9 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
   llvm::Value *GpuThreadId = nullptr;
   llvm::Value *GlobalGpuThreadId = nullptr;
   llvm::Value *WorkGroupId = nullptr;
+  llvm::Value *TotalNumThreads = nullptr;
   EmitNoLoopXteamScanInit(LD, CapturedForStmt, Args, GpuThreadId,
-                          GlobalGpuThreadId, WorkGroupId);
+                          GlobalGpuThreadId, WorkGroupId, TotalNumThreads);
 
   const CodeGenModule::XteamRedVarMap &RedVarMap =
       CGM.getXteamRedVarMap(CapturedForStmt);
@@ -559,137 +564,21 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
     Address XteamRedSumArg3 = GetAddrOfLocalVar((*Args)[RVI.ArgPos + 2]);
     llvm::Value *DScanStorage = Builder.CreateLoad(XteamRedSumArg3);
 
-    // TODO: Extract a DeviceRTL function out of the PhaseTwo of Xteam Scan
-    // codegen.
-    if (CGM.OMPPresentScanDirective->hasClausesOfKind<OMPInclusiveClause>()) {
-      // Handle the redistribution of cross-team scan result inside every
-      // constituent team member by emitting this -
-      //   RedVar = Storage[GlobalTID]
-      //   if(TeamID >= 1)
-      //   {
-      //     RedVar += TeamVals[TeamID - 1]
-      //   }
-      Address ScanStorageValGEP = Address(
-          Builder.CreateGEP(RedVarType, DScanStorage, GlobalGpuThreadId),
-          RedVarType,
-          getContext().getTypeAlignInChars(
-              XteamVD->getType())); // Storage[GlobalTID]
-      Builder.CreateStore(Builder.CreateLoad(ScanStorageValGEP),
-                          RVI.RedVarAddr); // RedVar = Storage[GlobalTID]
-      llvm::Value *IsAfterFirstTeam = Builder.CreateICmpUGE(
-          WorkGroupId, llvm::ConstantInt::get(Int32Ty, 1)); // TeamID >= 1
-      llvm::BasicBlock *IsAfterFirstTeamThenBlock =
-          createBasicBlock("omp.is.after.first.team.then");
-      llvm::BasicBlock *InclusiveScanEndBlock =
-          createBasicBlock("omp.xteam.inclusive.scan.end");
-      Builder.CreateCondBr(IsAfterFirstTeam, IsAfterFirstTeamThenBlock,
-                           InclusiveScanEndBlock);
-      EmitBlock(IsAfterFirstTeamThenBlock);
-      Address PrevTeamValGEP =
-          Address(Builder.CreateGEP(
-                      RedVarType, DTeamVals,
-                      Builder.CreateSub(WorkGroupId,
-                                        llvm::ConstantInt::get(Int32Ty, 1))),
-                  RedVarType,
-                  getContext().getTypeAlignInChars(
-                      XteamVD->getType())); // TeamVals[TeamID - 1]
-      Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(RVI.RedVarAddr),
-                                            Builder.CreateLoad(PrevTeamValGEP)),
-                          RVI.RedVarAddr); // RedVar += TeamVals[TeamID - 1]
-      EmitBranch(InclusiveScanEndBlock);
-      EmitBlock(InclusiveScanEndBlock);
-    } else {
-      // Redistribution for the 'exclusive' scan is handled differently because
-      // each work-item accesses the temporary output 'Storage' at the index
-      // before it's own global thread id(GlobalTID). Emits the following -
-      //   RedVar = 0
-      //   if(GlobalTID >= 1)
-      //   {
-      //     RedVar = Storage[GlobalTID - 1]
-      //     if(TeamID >= 1)
-      //     {
-      //       if(localTID >= 1)
-      //         RedVar += TeamVals[TeamID - 1];
-      //       else if(TeamID >= 2)
-      //         RedVar += TeamVals[TeamID - 2];
-      //     }
-      //   }
+    EmitXteamScanPhaseTwo(
+        CapturedForStmt, /*SegmentSize=*/Builder.getInt32(1), *Args,
+        CGM.getXteamRedBlockSize(D),
+        CGM.OMPPresentScanDirective->hasClausesOfKind<OMPInclusiveClause>());
 
-      Builder.CreateStore(llvm::ConstantInt::get(RedVarType, 0),
-                          RVI.RedVarAddr); // RedVar = 0
-      llvm::Value *IsNotFirstThread = Builder.CreateICmpUGE(
-          GlobalGpuThreadId,
-          llvm::ConstantInt::get(Int32Ty, 1)); // GlobalTID >= 1
-      llvm::BasicBlock *IsNotFirstThreadThenBlock =
-          createBasicBlock("omp.is.not.first.thread.then");
-      llvm::BasicBlock *ExclusiveScanEndBlock =
-          createBasicBlock("omp.xteam.exclusive.scan.end");
-      Builder.CreateCondBr(IsNotFirstThread, IsNotFirstThreadThenBlock,
-                           ExclusiveScanEndBlock);
-      EmitBlock(IsNotFirstThreadThenBlock);
-      llvm::Value *PrevGlobalGpuThreadId = Builder.CreateSub(
-          GlobalGpuThreadId,
-          llvm::ConstantInt::get(Int32Ty, 1)); // GlobalTID - 1
-      Address ScanStoragePrevValGEP = Address(
-          Builder.CreateGEP(RedVarType, DScanStorage, PrevGlobalGpuThreadId),
-          RedVarType,
-          getContext().getTypeAlignInChars(
-              XteamVD->getType())); // Storage[GlobalTID - 1]
-      Builder.CreateStore(Builder.CreateLoad(ScanStoragePrevValGEP),
-                          RVI.RedVarAddr); // RedVar = Storage[GlobalTID - 1]
-
-      llvm::Value *IsAfterFirstTeam = Builder.CreateICmpUGE(
-          WorkGroupId, llvm::ConstantInt::get(Int32Ty, 1)); // TeamID >= 1
-      llvm::BasicBlock *IsAfterFirstTeamThenBlock =
-          createBasicBlock("omp.is.after.first.team.then");
-      Builder.CreateCondBr(IsAfterFirstTeam, IsAfterFirstTeamThenBlock,
-                           ExclusiveScanEndBlock);
-      EmitBlock(IsAfterFirstTeamThenBlock);
-      llvm::Value *IsNotFirstThreadInTeam = Builder.CreateICmpUGE(
-          GpuThreadId, llvm::ConstantInt::get(Int32Ty, 1)); // LocalTID >= 1
-      llvm::BasicBlock *IsNotFirstThreadInTeamThenBlock =
-          createBasicBlock("omp.is.not.first.thread.in.team.then");
-      llvm::BasicBlock *IsNotFirstThreadInTeamElseBlock =
-          createBasicBlock("omp.is.not.first.thread.in.team.else");
-      Builder.CreateCondBr(IsNotFirstThreadInTeam,
-                           IsNotFirstThreadInTeamThenBlock,
-                           IsNotFirstThreadInTeamElseBlock);
-      EmitBlock(IsNotFirstThreadInTeamThenBlock);
-      Address PrevTeamValGEP =
-          Address(Builder.CreateGEP(
-                      RedVarType, DTeamVals,
-                      Builder.CreateSub(WorkGroupId,
-                                        llvm::ConstantInt::get(Int32Ty, 1))),
-                  RedVarType,
-                  getContext().getTypeAlignInChars(
-                      XteamVD->getType())); // TeamVals[TeamID - 1]
-      Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(RVI.RedVarAddr),
-                                            Builder.CreateLoad(PrevTeamValGEP)),
-                          RVI.RedVarAddr); // RedVar += TeamVals[TeamID - 1]
-      EmitBranch(ExclusiveScanEndBlock);
-      EmitBlock(IsNotFirstThreadInTeamElseBlock);
-      llvm::Value *IsAfterSecondTeam = Builder.CreateICmpUGE(
-          WorkGroupId, llvm::ConstantInt::get(Int32Ty, 2)); // TeamID >= 2
-      llvm::BasicBlock *IsAfterSecondTeamThenBlock =
-          createBasicBlock("omp.is.after.second.team.then");
-      Builder.CreateCondBr(IsAfterSecondTeam, IsAfterSecondTeamThenBlock,
-                           ExclusiveScanEndBlock);
-      EmitBlock(IsAfterSecondTeamThenBlock);
-      Address PrevPrevTeamValGEP =
-          Address(Builder.CreateGEP(
-                      RedVarType, DTeamVals,
-                      Builder.CreateSub(WorkGroupId,
-                                        llvm::ConstantInt::get(Int32Ty, 2))),
-                  RedVarType,
-                  getContext().getTypeAlignInChars(
-                      XteamVD->getType())); // TeamVals[TeamID - 2]
-      Builder.CreateStore(
-          Builder.CreateAdd(Builder.CreateLoad(RVI.RedVarAddr),
-                            Builder.CreateLoad(PrevPrevTeamValGEP)),
-          RVI.RedVarAddr); // RedVar += TeamVals[TeamID - 2]
-      EmitBranch(ExclusiveScanEndBlock);
-      EmitBlock(ExclusiveScanEndBlock);
-    }
+    // Emit: RedVar = Storage[Offset + GlobalTID]
+    // The offset is calculated to index into the second half of the Storage[]
+    // data structure.
+    llvm::Value *StorageOffset =
+        Builder.CreateAdd(GlobalGpuThreadId, TotalNumThreads);
+    Address ScanStorageValGEP = Address(
+        Builder.CreateGEP(RedVarType, DScanStorage, StorageOffset), RedVarType,
+        getContext().getTypeAlignInChars(
+            XteamVD->getType())); // Storage[Offset + GlobalTID]
+    Builder.CreateStore(Builder.CreateLoad(ScanStorageValGEP), RVI.RedVarAddr);
   }
 
   // After the 'scanned' results are put in the respective private copies, the
@@ -949,8 +838,17 @@ void CodeGenFunction::EmitXteamScanPhaseTwo(const ForStmt *FStmt,
     Address XteamRedSumArg2 = GetAddrOfLocalVar(Args[RVI.ArgPos + 2]);
     llvm::Value *DScanStorage = Builder.CreateLoad(XteamRedSumArg2);
 
-    Address XteamRedSumArg3 = GetAddrOfLocalVar(Args[RVI.ArgPos + 3]);
-    llvm::Value *DSegmentVals = Builder.CreateLoad(XteamRedSumArg3);
+    llvm::Value *DSegmentVals = nullptr;
+    if (CGM.isXteamSegmentedScanKernel()) {
+      Address XteamRedSumArg3 = GetAddrOfLocalVar(Args[RVI.ArgPos + 3]);
+      DSegmentVals = Builder.CreateLoad(XteamRedSumArg3);
+    } else {
+      // For No-Loop Scan, the SegmentVals[] is not required and therefore was
+      // not created in the first place. Here we want to use the same
+      // kmpc_xteams_phase2* API to compute Phase 2 of scan, therefore we're
+      // passing the pointer of Storage[] as a dummy ptr.
+      DSegmentVals = DScanStorage;
+    }
 
     const Expr *OrigRedVarExpr = RVI.RedVarExpr;
     const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);

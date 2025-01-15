@@ -212,6 +212,35 @@ _xteam_scan_phase2(T *storage, int segment_size, T *team_vals, T *segment_vals,
   uint32_t omp_team_num = k / _NT;         // team ID
 
   T thread_level_result = rnv;
+  uint32_t NumTeams = ompx::mapping::getNumberOfBlocksInKernel();
+
+  if (segment_size == 1) {
+    // Reconstructing the Final Results for No-Loop Scan
+    if (is_inclusive_scan) {
+      thread_level_result = storage[k];
+      if (omp_team_num >= 1)
+        thread_level_result += team_vals[omp_team_num - 1];
+    } else {
+      if (k >= 1) {
+        thread_level_result = storage[k - 1];
+        if (omp_team_num >= 1) {
+          if (omp_thread_num >= 1)
+            thread_level_result += team_vals[omp_team_num - 1];
+          else if (omp_team_num >= 2)
+            thread_level_result += team_vals[omp_team_num - 2];
+        }
+      }
+    }
+    // Store the thread_level_result in the second half of the storage[] array
+    // to avoid any data races that might happen due to a 'write' performed at
+    // storage[k].
+    // Reason: The immediate next thread might attempt a read using the
+    // expression storage[k-1]
+    storage[NumTeams * _NT + k] = thread_level_result;
+    return;
+  }
+
+  // Reconstructing the Final Results for Segment Scan (the default)
   if (omp_thread_num >= 1)
     thread_level_result = storage[k - 1];
   if (omp_team_num >= 1)
