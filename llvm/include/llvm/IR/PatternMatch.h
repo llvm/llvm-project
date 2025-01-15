@@ -1451,8 +1451,8 @@ struct XorLike_match {
   }
 };
 
-// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
-// Only commutative matcher as the `sub` will need to swap the L and R.
+/// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
+/// Only commutative matcher as the `sub` will need to swap the L and R.
 template <typename LHS, typename RHS>
 inline auto m_c_XorLike(const LHS &L, const RHS &R) {
   return XorLike_match<LHS, RHS>(L, R);
