@@ -153,9 +153,7 @@ void MCPlusBuilder::setNegateRAState(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::hasNegateRAState(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kNegateState))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kNegateState);
 }
 
 void MCPlusBuilder::setRememberState(MCInst &Inst) const {
@@ -164,9 +162,7 @@ void MCPlusBuilder::setRememberState(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::hasRememberState(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kRememberState))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kRememberState);
 }
 
 void MCPlusBuilder::setRestoreState(MCInst &Inst) const {
@@ -175,9 +171,7 @@ void MCPlusBuilder::setRestoreState(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kRestoreState))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kRestoreState);
 }
 
 void MCPlusBuilder::setRASigned(MCInst &Inst) const {
@@ -186,9 +180,7 @@ void MCPlusBuilder::setRASigned(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::isRASigned(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kSigned))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kSigned);
 }
 
 void MCPlusBuilder::setRASigning(MCInst &Inst) const {
@@ -197,9 +189,7 @@ void MCPlusBuilder::setRASigning(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::isRASigning(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kSigning))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kSigning);
 }
 
 void MCPlusBuilder::setAuthenticating(MCInst &Inst) const {
@@ -208,9 +198,7 @@ void MCPlusBuilder::setAuthenticating(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::isAuthenticating(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kAuthenticating))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kAuthenticating);
 }
 
 void MCPlusBuilder::setRAUnsigned(MCInst &Inst) const {
@@ -219,16 +207,12 @@ void MCPlusBuilder::setRAUnsigned(MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::isRAUnsigned(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kUnsigned))
-    return true;
-  return false;
+  return hasAnnotation(Inst, MCAnnotation::kUnsigned);
 }
 
 bool MCPlusBuilder::isRAStateUnknown(const MCInst &Inst) const {
-  if (hasAnnotation(Inst, MCAnnotation::kUnsigned) ||
-      hasAnnotation(Inst, MCAnnotation::kSigned) ||
-      hasAnnotation(Inst, MCAnnotation::kSigning) ||
-      hasAnnotation(Inst, MCAnnotation::kAuthenticating))
+  if (isRAUnsigned(Inst) || isRASigned(Inst) || isRASigning(Inst) ||
+      isAuthenticating(Inst))
     return false;
   return true;
 }
