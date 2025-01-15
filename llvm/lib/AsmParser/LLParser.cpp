@@ -941,8 +941,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (NumberedMetadata.count(MID)) {
-    Result = NumberedMetadata[MID];
+  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+    Result = It->second;
     return false;
   }
 
