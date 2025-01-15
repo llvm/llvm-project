@@ -2180,7 +2180,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // is not further optimized, it is likely to be transformed back to a
   // short-circuited form for code gen, and the source order may have been
   // optimized for the most likely conditions.
-  if (I->getType()->isIntegerTy(1))
+  if (I->getType()->isIntOrIntVectorTy(1))
     return;
 
   // If this is a bitwise or instruction of operands
