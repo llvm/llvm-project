@@ -1,4 +1,5 @@
 header: elf.h
+header_template: elf.h.def
 standards:
   - Linux
 macros: []

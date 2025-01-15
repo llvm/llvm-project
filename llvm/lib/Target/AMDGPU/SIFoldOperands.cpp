@@ -1096,21 +1096,8 @@ void SIFoldOperandsImpl::foldOperand(
           B.addImm(Defs[I].second);
         }
         LLVM_DEBUG(dbgs() << "Folded " << *UseMI);
-        return;
       }
 
-      if (Size != 4)
-        return;
-
-      Register Reg0 = UseMI->getOperand(0).getReg();
-      Register Reg1 = UseMI->getOperand(1).getReg();
-      if (TRI->isAGPR(*MRI, Reg0) && TRI->isVGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64));
-      else if (TRI->isVGPR(*MRI, Reg0) && TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64));
-      else if (ST->hasGFX90AInsts() && TRI->isAGPR(*MRI, Reg0) &&
-               TRI->isAGPR(*MRI, Reg1))
-        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_MOV_B32));
       return;
     }
 

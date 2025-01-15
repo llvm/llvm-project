@@ -437,6 +437,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",

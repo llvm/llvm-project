@@ -1626,6 +1626,25 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                            cPtr, addrFieldIndex);
 }
 
+mlir::Value fir::factory::genCDevPtrAddr(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value cDevPtr, mlir::Type ty) {
+  auto recTy = mlir::cast<fir::RecordType>(ty);
+  assert(recTy.getTypeList().size() == 1);
+  auto cptrFieldName = recTy.getTypeList()[0].first;
+  mlir::Type cptrFieldTy = recTy.getTypeList()[0].second;
+  auto fieldIndexType = fir::FieldType::get(ty.getContext());
+  mlir::Value cptrFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, cptrFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  auto cptrCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(cptrFieldTy), cDevPtr, cptrFieldIndex);
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, cptrFieldTy);
+  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(addrFieldTy),
+                                           cptrCoord, addrFieldIndex);
+}
+
 mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                                 mlir::Location loc,
                                                 mlir::Value cPtr) {

@@ -9,6 +9,7 @@
 ! CUDA Fortran procedures available in device subprogram
 
 module cudadevice
+  use __cuda_device, only: __fadd_rd, __fadd_ru
 implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant
