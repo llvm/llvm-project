@@ -228,7 +228,8 @@ public:
   ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
                  ASTContext &ParentASTCtxt, FileManager &ParentFM);
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      Module *NamedModule) override;
   void
   completeVisibleDeclsMap(const clang::DeclContext *childDeclContext) override;
 };
@@ -271,7 +272,8 @@ ExternalSource::ExternalSource(ASTContext &ChildASTCtxt, FileManager &ChildFM,
 }
 
 bool ExternalSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                    DeclarationName Name) {
+                                                    DeclarationName Name,
+                                                    Module *NamedModule) {
 
   IdentifierTable &ParentIdTable = ParentASTCtxt.Idents;
 

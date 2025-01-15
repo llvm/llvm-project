@@ -71,6 +71,9 @@ namespace Fortran::tools {
   if (targetTriple.isPPC())
     targetCharacteristics.set_isPPC(true);
 
+  if (targetTriple.isSPARC())
+    targetCharacteristics.set_isSPARC(true);
+
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);
 

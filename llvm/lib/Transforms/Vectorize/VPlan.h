@@ -1813,11 +1813,10 @@ public:
 };
 
 /// A recipe for widening select instructions.
-struct VPWidenSelectRecipe : public VPSingleDefRecipe {
+struct VPWidenSelectRecipe : public VPRecipeWithIRFlags {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPSingleDefRecipe(VPDef::VPWidenSelectSC, Operands, &I,
-                          I.getDebugLoc()) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I) {}
 
   ~VPWidenSelectRecipe() override = default;
 

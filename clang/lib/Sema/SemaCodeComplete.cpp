@@ -121,8 +121,7 @@ private:
         return;
       }
 
-      if (const NamedDecl *PrevND =
-              DeclOrVector.dyn_cast<const NamedDecl *>()) {
+      if (const NamedDecl *PrevND = dyn_cast<const NamedDecl *>(DeclOrVector)) {
         // 1 -> 2 elements: create the vector of results and push in the
         // existing declaration.
         DeclIndexPairVector *Vec = new DeclIndexPairVector;
@@ -702,7 +701,7 @@ ResultBuilder::ShadowMapEntry::begin() const {
   if (DeclOrVector.isNull())
     return iterator();
 
-  if (const NamedDecl *ND = DeclOrVector.dyn_cast<const NamedDecl *>())
+  if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrVector))
     return iterator(ND, SingleDeclIndex);
 
   return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->begin());

@@ -17,13 +17,13 @@ struct C {
 
 struct D : public C {
   void run();
-  // expected-warning@-1 {{'run()' overrides a member function but is not marked 'override'}}
+  // expected-warning@-1 {{'run' overrides a member function but is not marked 'override'}}
   ~D();
 };
 
 struct E : public C {
   virtual void run();
-  // expected-warning@-1 {{'run()' overrides a member function but is not marked 'override'}}
+  // expected-warning@-1 {{'run' overrides a member function but is not marked 'override'}}
   virtual ~E();
 };
 
@@ -32,7 +32,8 @@ struct F : public C {
   ~F() override;
 };
 
-struct G : public C {
+struct G : public C { // expected-note {{mark 'G' as 'final'}}
   void run() final;
   ~G() final;
+  // expected-warning@-1 {{class with destructor marked 'final' cannot be inherited from}}
 };
