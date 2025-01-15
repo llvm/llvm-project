@@ -10652,10 +10652,10 @@ static void InsertExplicitZeroOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatZero);
 }
 
-static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
-                                       SmallVectorImpl<Value *> &Ops) {
-  auto *SplatUndef = UndefValue::get(Ty);
-  Ops.insert(Ops.begin(), SplatUndef);
+static void InsertExplicitPoisonOperand(CGBuilderTy &Builder, llvm::Type *Ty,
+                                        SmallVectorImpl<Value *> &Ops) {
+  auto *SplatPoison = PoisonValue::get(Ty);
+  Ops.insert(Ops.begin(), SplatPoison);
 }
 
 SmallVector<llvm::Type *, 2>
@@ -10798,7 +10798,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       InsertExplicitZeroOperand(Builder, Ty, Ops);
 
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
-      InsertExplicitUndefOperand(Builder, Ty, Ops);
+      InsertExplicitPoisonOperand(Builder, Ty, Ops);
 
     // Some ACLE builtins leave out the argument to specify the predicate
     // pattern, which is expected to be expanded to an SV_ALL pattern.
