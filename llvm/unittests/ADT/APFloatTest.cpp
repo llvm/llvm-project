@@ -3809,13 +3809,13 @@ TEST(APFloatTest, powi) {
   APInt Payload(64, 0x1337);
   APFloat PosSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false, &Payload);
   APFloat NegSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), true, &Payload);
-  
+
   // Simple cases.
   EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 0)));
   EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 3)));
   EXPECT_TRUE(Four.bitwiseIsEqual(powi(Two, 2)));
   EXPECT_TRUE(Eight.bitwiseIsEqual(powi(Two, 3)));
-  
+
   // See page 63 of IEEE 754-2019.
   EXPECT_TRUE(One.bitwiseIsEqual(powi(PosInf, 0)));
   EXPECT_TRUE(NegEight.bitwiseIsEqual(powi(NegTwo, 3)));
@@ -3825,7 +3825,7 @@ TEST(APFloatTest, powi) {
   EXPECT_TRUE(NegInf.bitwiseIsEqual(powi(NegInf, 3)));
   EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(NegInf, 4)));
   EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(PosInf, 3)));
-  
+
   EXPECT_TRUE(PosQNaN.bitwiseIsEqual(powi(PosQNaN, 1)));
   EXPECT_TRUE(NegQNaN.bitwiseIsEqual(powi(NegQNaN, 1)));
   // Check signaling NaN is quieted for n == 1.
