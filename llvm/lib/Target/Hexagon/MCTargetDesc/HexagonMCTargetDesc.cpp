@@ -734,8 +734,44 @@ public:
     Target = Value;
     return true;
   }
+
+  uint32_t getValueFromMask(uint32_t Instruction, uint32_t Mask) const {
+    uint32_t Result = 0;
+    size_t Off = 0;
+    for (uint32_t Bit = 0; Bit != sizeof(uint32_t) * CHAR_BIT; ++Bit) {
+      const uint8_t ValBit = (Instruction >> Bit) & 1;
+      const bool MaskBit = (Mask >> Bit) & 1;
+      if (MaskBit) {
+        Result |= (ValBit << Off);
+        ++Off;
+      }
+    }
+    return Result;
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const Triple &TargetTriple) const override {
+    // Do a lightweight parsing of PLT entries.
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {
+      // Recognize immext(##gotpltn)
+      uint32_t ImmExt = support::endian::read32le(PltContents.data() + Byte);
+      if ((ImmExt & 0x00004000) != 0x00004000)
+        continue;
+      uint32_t LoadGotPlt =
+          support::endian::read32le(PltContents.data() + Byte + 4);
+      if ((LoadGotPlt & 0x6a49c00c) != 0x6a49c00c)
+        continue;
+      uint32_t Address = (getValueFromMask(ImmExt, 0xfff3fff) << 6) +
+                         getValueFromMask(LoadGotPlt, 0x1f80) + PltSectionVA +
+                         Byte;
+      Result.push_back(std::make_pair(PltSectionVA + Byte, Address));
+    }
+    return Result;
+  }
 };
-}
+} // namespace
 
 static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
   return new HexagonMCInstrAnalysis(Info);
