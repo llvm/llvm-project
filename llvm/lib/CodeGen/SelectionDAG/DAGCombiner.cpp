@@ -27526,35 +27526,24 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
-  SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
-  SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
-  SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
-  SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
-
   // If all lanes but 1 are undefined, no need to splat the scalar result.
   // TODO: Keep track of undefs and use that info in the general case.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
     // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
-    //   insert_vector_elt undef, (bo X, Y), index
-
-    SmallVector<SDValue, 16> EltsX, EltsY;
+    //   build_vec ..undef, (bo X, Y), undef...
+    SmallVector<SDValue, 16> EltsX, EltsY, EltsResult;
     DAG.ExtractVectorElements(Src0, EltsX);
     DAG.ExtractVectorElements(Src1, EltsY);
 
-    SmallVector<SDValue, 16> EltsResult;
-
-    unsigned NonUndefElements = 0;
-    for (auto [X, Y] : zip(EltsX, EltsY)) {
-      SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
-      if (!ScalarBO.isUndef())
-        if (NonUndefElements++ > 1)
-          break;
-      EltsResult.push_back(ScalarBO);
-    }
-
-    if (NonUndefElements == 1)
-      return DAG.getBuildVector(VT, DL, EltsResult);
+    for (auto [X, Y] : zip(EltsX, EltsY))
+      EltsResult.push_back(DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags()));
+    return DAG.getBuildVector(VT, DL, EltsResult);
   }
+
+  SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
+  SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
+  SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
+  SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   return DAG.getSplat(VT, DL, ScalarBO);
