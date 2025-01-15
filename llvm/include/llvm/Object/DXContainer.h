@@ -406,8 +406,7 @@ public:
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 
-  std::optional<dxbc::RootSignatureDesc>
-  getRootSignature() const {
+  std::optional<dxbc::RootSignatureDesc> getRootSignature() const {
     return RootSignature;
   }
 
