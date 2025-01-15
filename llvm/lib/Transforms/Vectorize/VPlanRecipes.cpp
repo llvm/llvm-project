@@ -1439,8 +1439,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     assert(getNumOperands() == 2 && "expected single level extractvalue");
     Value *Op = State.get(getOperand(0));
     auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
-    unsigned Idx = CI->getZExtValue();
-    Value *Extract = Builder.CreateExtractValue(Op, Idx);
+    Value *Extract = Builder.CreateExtractValue(Op, CI->getZExtValue());
     State.set(this, Extract);
     break;
   }
