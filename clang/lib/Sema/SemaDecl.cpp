@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -52,6 +53,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
@@ -2923,7 +2925,7 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
 
   AttrVec &NewAttributes = New->getAttrs();
   for (unsigned I = 0, E = NewAttributes.size(); I != E;) {
-    const Attr *NewAttribute = NewAttributes[I];
+    Attr *NewAttribute = NewAttributes[I];
 
     if (isa<AliasAttr>(NewAttribute) || isa<IFuncAttr>(NewAttribute)) {
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(New)) {
@@ -3016,6 +3018,16 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
     } else if (isa<OMPDeclareVariantAttr>(NewAttribute)) {
       // We allow to add OMP[Begin]DeclareVariantAttr to be added to
       // declarations after definitions.
+      ++I;
+      continue;
+    } else if (isa<SYCLKernelEntryPointAttr>(NewAttribute)) {
+      // Elevate latent uses of the sycl_kernel_entry_point attribute to an
+      // error since the definition will have already been created without
+      // the semantic effects of the attribute having been applied.
+      S.Diag(NewAttribute->getLocation(),
+             diag::err_sycl_entry_point_after_definition);
+      S.Diag(Def->getLocation(), diag::note_previous_definition);
+      cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
       continue;
     }
@@ -3227,6 +3239,42 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+// Returns the number of added attributes.
+template <class T>
+static unsigned propagateAttribute(ParmVarDecl *To, const ParmVarDecl *From,
+                                   Sema &S) {
+  unsigned found = 0;
+  for (const auto *I : From->specific_attrs<T>()) {
+    if (!DeclHasAttr(To, I)) {
+      T *newAttr = cast<T>(I->clone(S.Context));
+      newAttr->setInherited(true);
+      To->addAttr(newAttr);
+      ++found;
+    }
+  }
+  return found;
+}
+
+template <class F>
+static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
+                                F &&propagator) {
+  if (!From->hasAttrs()) {
+    return;
+  }
+
+  bool foundAny = To->hasAttrs();
+
+  // Ensure that any moving of objects within the allocated map is
+  // done before we process them.
+  if (!foundAny)
+    To->setAttrs(AttrVec());
+
+  foundAny |= std::forward<F>(propagator)(To, From) != 0;
+
+  if (!foundAny)
+    To->dropAttrs();
+}
+
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
@@ -3250,26 +3298,17 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
   }
 
-  if (!oldDecl->hasAttrs())
-    return;
-
-  bool foundAny = newDecl->hasAttrs();
-
-  // Ensure that any moving of objects within the allocated map is
-  // done before we process them.
-  if (!foundAny) newDecl->setAttrs(AttrVec());
-
-  for (const auto *I : oldDecl->specific_attrs<InheritableParamAttr>()) {
-    if (!DeclHasAttr(newDecl, I)) {
-      InheritableAttr *newAttr =
-        cast<InheritableParamAttr>(I->clone(S.Context));
-      newAttr->setInherited(true);
-      newDecl->addAttr(newAttr);
-      foundAny = true;
-    }
-  }
-
-  if (!foundAny) newDecl->dropAttrs();
+  propagateAttributes(
+      newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
+        unsigned found = 0;
+        found += propagateAttribute<InheritableParamAttr>(To, From, S);
+        // Propagate the lifetimebound attribute from parameters to the
+        // most recent declaration. Note that this doesn't include the implicit
+        // 'this' parameter, as the attribute is applied to the function type in
+        // that case.
+        found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        return found;
+      });
 }
 
 static bool EquivalentArrayTypes(QualType Old, QualType New,
@@ -6948,6 +6987,7 @@ static void checkInheritableAttr(Sema &S, NamedDecl &ND) {
 static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   // Check the attributes on the function type and function params, if any.
   if (const auto *FD = dyn_cast<FunctionDecl>(&ND)) {
+    FD = FD->getMostRecentDecl();
     // Don't declare this variable in the second operand of the for-statement;
     // GCC miscompiles that by ending its lifetime before evaluating the
     // third operand. See gcc.gnu.org/PR86769.
@@ -11096,7 +11136,8 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
       }
 
       if (!TargetInfo.validateCpuSupports(BareFeat) ||
-          !TargetInfo.isValidFeatureName(BareFeat)) {
+          !TargetInfo.isValidFeatureName(BareFeat) ||
+          (BareFeat != "default" && TargetInfo.getFMVPriority(BareFeat) == 0)) {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
             << Feature << BareFeat;
         return true;
@@ -12142,8 +12183,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   if (LangOpts.OpenMP)
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(NewFD);
 
-  if (LangOpts.isSYCL() && NewFD->hasAttr<SYCLKernelEntryPointAttr>())
-    getASTContext().registerSYCLEntryPointFunction(NewFD);
+  if (NewFD->hasAttr<SYCLKernelEntryPointAttr>())
+    SYCL().CheckSYCLEntryPointFunctionDecl(NewFD);
 
   // Semantic checking for this function declaration (in isolation).
 
@@ -12286,58 +12327,8 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
   }
 
-  // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled and warn user if sme locally streaming
-  // function returns or uses arguments with VL-based types.
-  if (DeclIsDefn) {
-    const auto *Attr = NewFD->getAttr<ArmNewAttr>();
-    bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
-    bool UsesZA = Attr && Attr->isNewZA();
-    bool UsesZT0 = Attr && Attr->isNewZT0();
-
-    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
-      if (NewFD->getReturnType()->isSizelessVectorType())
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns)
-            << /*IsArg=*/false;
-      if (llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
-            return P->getOriginalType()->isSizelessVectorType();
-          }))
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns)
-            << /*IsArg=*/true;
-    }
-    if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
-      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      UsesSM |=
-          EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
-      UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
-                FunctionType::ARM_None;
-      UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
-                 FunctionType::ARM_None;
-    }
-
-    if (UsesSM || UsesZA) {
-      llvm::StringMap<bool> FeatureMap;
-      Context.getFunctionFeatureMap(FeatureMap, NewFD);
-      if (!FeatureMap.contains("sme")) {
-        if (UsesSM)
-          Diag(NewFD->getLocation(),
-               diag::err_sme_definition_using_sm_in_non_sme_target);
-        else
-          Diag(NewFD->getLocation(),
-               diag::err_sme_definition_using_za_in_non_sme_target);
-      }
-    }
-    if (UsesZT0) {
-      llvm::StringMap<bool> FeatureMap;
-      Context.getFunctionFeatureMap(FeatureMap, NewFD);
-      if (!FeatureMap.contains("sme2")) {
-        Diag(NewFD->getLocation(),
-             diag::err_sme_definition_using_zt0_in_non_sme2_target);
-      }
-    }
-  }
+  if (DeclIsDefn && Context.getTargetInfo().getTriple().isAArch64())
+    ARM().CheckSMEFunctionDefAttributes(NewFD);
 
   return Redeclaration;
 }
@@ -15906,8 +15897,8 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
   llvm::DenseMap<const BlockDecl *, bool> EscapeInfo;
 
   auto IsOrNestedInEscapingBlock = [&](const BlockDecl *BD) {
-    if (EscapeInfo.count(BD))
-      return EscapeInfo[BD];
+    if (auto It = EscapeInfo.find(BD); It != EscapeInfo.end())
+      return It->second;
 
     bool R = false;
     const BlockDecl *CurBD = BD;
@@ -15973,6 +15964,25 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       CheckCompletedCoroutineBody(FD, Body);
     else
       CheckCoroutineWrapper(FD);
+  }
+
+  // Diagnose invalid SYCL kernel entry point function declarations.
+  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    SYCLKernelEntryPointAttr *SKEPAttr =
+        FD->getAttr<SYCLKernelEntryPointAttr>();
+    if (FD->isDefaulted()) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << /*defaulted function*/ 3;
+      SKEPAttr->setInvalidAttr();
+    } else if (FD->isDeleted()) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << /*deleted function*/ 2;
+      SKEPAttr->setInvalidAttr();
+    } else if (FSI->isCoroutine()) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << /*coroutine*/ 7;
+      SKEPAttr->setInvalidAttr();
+    }
   }
 
   {
@@ -18376,7 +18386,9 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     }
   }
 
-  return BitWidth;
+  if (isa<ConstantExpr>(BitWidth))
+    return BitWidth;
+  return ConstantExpr::Create(getASTContext(), BitWidth, APValue{Value});
 }
 
 Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
@@ -18751,7 +18763,7 @@ void Sema::ActOnLastBitfield(SourceLocation DeclLoc,
   Decl *ivarDecl = AllIvarDecls[AllIvarDecls.size()-1];
   ObjCIvarDecl *Ivar = cast<ObjCIvarDecl>(ivarDecl);
 
-  if (!Ivar->isBitField() || Ivar->isZeroLengthBitField(Context))
+  if (!Ivar->isBitField() || Ivar->isZeroLengthBitField())
     return;
   ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(CurContext);
   if (!ID) {
@@ -18766,14 +18778,13 @@ void Sema::ActOnLastBitfield(SourceLocation DeclLoc,
   // All conditions are met. Add a new bitfield to the tail end of ivars.
   llvm::APInt Zero(Context.getTypeSize(Context.IntTy), 0);
   Expr * BW = IntegerLiteral::Create(Context, Zero, Context.IntTy, DeclLoc);
+  Expr *BitWidth =
+      ConstantExpr::Create(Context, BW, APValue(llvm::APSInt(Zero)));
 
-  Ivar = ObjCIvarDecl::Create(Context, cast<ObjCContainerDecl>(CurContext),
-                              DeclLoc, DeclLoc, nullptr,
-                              Context.CharTy,
-                              Context.getTrivialTypeSourceInfo(Context.CharTy,
-                                                               DeclLoc),
-                              ObjCIvarDecl::Private, BW,
-                              true);
+  Ivar = ObjCIvarDecl::Create(
+      Context, cast<ObjCContainerDecl>(CurContext), DeclLoc, DeclLoc, nullptr,
+      Context.CharTy, Context.getTrivialTypeSourceInfo(Context.CharTy, DeclLoc),
+      ObjCIvarDecl::Private, BitWidth, true);
   AllIvarDecls.push_back(Ivar);
 }
 
@@ -19221,6 +19232,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         if (FT.hasNonTrivialToPrimitiveCopyCUnion() || Record->isUnion())
           Record->setHasNonTrivialToPrimitiveCopyCUnion(true);
       }
+      if (FD->hasAttr<ExplicitInitAttr>())
+        Record->setHasUninitializedExplicitInitFields(true);
       if (FT.isDestructedType()) {
         Record->setNonTrivialToPrimitiveDestroy(true);
         Record->setParamDestroyedInCallee(true);
@@ -19403,7 +19416,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
            (NonBitFields == 0 || ZeroSize) && I != E; ++I) {
         IsEmpty = false;
         if (I->isUnnamedBitField()) {
-          if (!I->isZeroLengthBitField(Context))
+          if (!I->isZeroLengthBitField())
             ZeroSize = false;
         } else {
           ++NonBitFields;

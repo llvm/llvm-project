@@ -313,6 +313,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
@@ -480,6 +481,7 @@ struct SysReg {
   }
 };
 
+#define GET_SysRegEncodings_DECL
 #define GET_SysRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg

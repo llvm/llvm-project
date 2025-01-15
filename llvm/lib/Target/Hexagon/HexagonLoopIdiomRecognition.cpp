@@ -1796,6 +1796,8 @@ bool PolynomialMultiplyRecognize::recognize() {
     IterCount = CV->getValue()->getZExtValue() + 1;
 
   Value *CIV = getCountIV(LoopB);
+  if (CIV == nullptr)
+    return false;
   ParsedValues PV;
   Simplifier PreSimp;
   PV.IterCount = IterCount;

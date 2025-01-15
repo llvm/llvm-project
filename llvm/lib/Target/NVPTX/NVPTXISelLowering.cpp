@@ -261,6 +261,15 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     return;
   }
 
+  // Given an array type, recursively traverse the elements with custom ComputePTXValueVTs.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
+    for (int I : llvm::seq<int>(ATy->getNumElements()))
+      ComputePTXValueVTs(TLI, DL, EltTy, ValueVTs, Offsets, StartingOffset + I * EltSize);
+    return;
+  }
+
   ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
   for (unsigned i = 0, e = TempVTs.size(); i != e; ++i) {
     EVT VT = TempVTs[i];

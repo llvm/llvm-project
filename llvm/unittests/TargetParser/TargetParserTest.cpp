@@ -1343,7 +1343,10 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-      AArch64::AEK_SVEAES};
+      AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
+      AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
+      AArch64::AEK_SSVE_BITPERM,
+  };
 
   std::vector<StringRef> Features;
 
@@ -1382,7 +1385,9 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ssve-bitperm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-aes2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ssve-aes"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2p1"));
@@ -1448,6 +1453,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1554,6 +1561,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
       {"sve2p1", "nosve2p1", "+sve2p1", "-sve2p1"},
       {"sve2p2", "nosve2p2", "+sve2p2", "-sve2p2"},
+      {"sve-bitperm", "nosve-bitperm", "+sve-bitperm", "-sve-bitperm"},
+      {"ssve-bitperm", "nossve-bitperm", "+ssve-bitperm", "-ssve-bitperm"},
       {"sve2-bitperm", "nosve2-bitperm", "+sve2-bitperm", "-sve2-bitperm"},
       {"sve-aes2", "nosve-aes2", "+sve-aes2", "-sve-aes2"},
       {"ssve-aes", "nossve-aes", "+ssve-aes", "-ssve-aes"},
@@ -1605,6 +1614,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"occmo", "nooccmo", "+occmo", "-occmo"},
       {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
+      {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
+      {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1754,13 +1765,13 @@ AArch64ExtensionDependenciesBaseArchTestParams
 
         // Long dependency chains: sve2-bitperm -> sve2 -> sve -> fp16 -> fp
         {AArch64::ARMV8A,
-         {"nofp", "sve2-bitperm"},
-         {"fp-armv8", "fullfp16", "sve", "sve2", "sve2-bitperm"},
+         {"nofp", "sve2", "sve-bitperm"},
+         {"fp-armv8", "fullfp16", "sve", "sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
-         {"sve2-bitperm", "nofp16"},
+         {"sve2", "sve-bitperm", "nofp16"},
          {"fp-armv8"},
-         {"full-fp16", "sve", "sve2", "sve2-bitperm"}},
+         {"full-fp16", "sve", "sve2", "sve-bitperm"}},
 
         // Meaning of +crypto varies with base architecture.
         {AArch64::ARMV8A, {"crypto"}, {"aes", "sha2"}, {}},
@@ -1803,7 +1814,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nofp", "fprcvt"}, {"fp-armv8", "fprcvt"}, {}},
         {AArch64::ARMV9_6A, {"fprcvt", "nofp"}, {}, {"fp-armv8", "fprcvt"}},
 
-        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm}
+        // simd -> {aes, sha2, sha3, sm4, f8f16mm, f8f32mm, fp8dot4, fp8dot2}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
         {AArch64::ARMV8A, {"aes", "nosimd"}, {}, {"neon", "aes"}},
         {AArch64::ARMV8A, {"nosimd", "sha2"}, {"neon", "sha2"}, {}},
@@ -1816,6 +1827,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"f8f16mm", "nosimd"}, {}, {"neon", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nosimd", "f8f32mm"}, {"neon", "f8f32mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f32mm", "nosimd"}, {}, {"neon", "f8f32mm"}},
+        {AArch64::ARMV9_6A, {"nosimd", "fp8dot4"}, {"neon", "fp8dot4"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot4", "nosimd"}, {}, {"neon", "fp8dot4"}},
+        {AArch64::ARMV9_6A, {"nosimd", "fp8dot2"}, {"neon", "fp8dot2"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot2", "nosimd"}, {}, {"neon", "fp8dot2"}},
 
         // simd -> {rdm, dotprod, fcma}
         {AArch64::ARMV8A, {"nosimd", "rdm"}, {"neon", "rdm"}, {}},
@@ -1860,12 +1875,20 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"sve2p1", "nosve2"}, {}, {"sve2", "sve2p1"}},
         {AArch64::ARMV8A,
          {"nosve2", "sve2-bitperm"},
-         {"sve2", "sve2-bitperm"},
+         {"sve2", "sve-bitperm"},
          {}},
         {AArch64::ARMV8A,
          {"sve2-bitperm", "nosve2"},
-         {},
-         {"sve2", "sve2-bitperm"}},
+         {"sve"},
+         {"sve-bitperm", "sve2", "sve2-bitperm"}},
+        {AArch64::ARMV8A,
+         {"ssve-bitperm", "nosve-bitperm"},
+         {"sme"},
+         {"ssve-bitperm", "sve-bitperm"}},
+        {AArch64::ARMV8A,
+         {"nosve-bitperm", "ssve-bitperm"},
+         {"sve-bitperm", "sve-bitperm"},
+         {""}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sha3"}, {"sve2", "sve2-sha3"}, {}},
         {AArch64::ARMV8A, {"sve2-sha3", "nosve2"}, {}, {"sve2", "sve2-sha3"}},
         {AArch64::ARMV8A, {"nosve2", "sve2-sm4"}, {"sve2", "sve2-sm4"}, {}},
@@ -1940,7 +1963,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
 
-        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm}
+        // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
+        // ssve-fp8dot4, ssve-fp8dot2}
         {AArch64::ARMV8A, {"nofp8", "sme-f8f16"}, {"fp8", "sme-f8f16"}, {}},
         {AArch64::ARMV8A, {"sme-f8f16", "nofp8"}, {}, {"fp8", "sme-f8f16"}},
         {AArch64::ARMV8A, {"nofp8", "sme-f8f32"}, {"fp8", "sme-f8f32"}, {}},
@@ -1949,6 +1973,26 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A, {"f8f16mm", "nofp8"}, {}, {"fp8", "f8f16mm"}},
         {AArch64::ARMV9_6A, {"nofp8", "f8f32mm"}, {"fp8", "f8f32mm"}, {}},
         {AArch64::ARMV9_6A, {"f8f32mm", "nofp8"}, {}, {"fp8", "f8f32mm"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot4"}, {"fp8", "fp8dot4"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot4", "nofp8"}, {}, {"fp8", "fp8dot4"}},
+        {AArch64::ARMV9_6A, {"nofp8", "fp8dot2"}, {"fp8", "fp8dot2"}, {}},
+        {AArch64::ARMV9_6A, {"fp8dot2", "nofp8"}, {}, {"fp8", "fp8dot2"}},
+        {AArch64::ARMV9_6A,
+         {"nofp8", "ssve-fp8dot4"},
+         {"fp8", "ssve-fp8dot4"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"ssve-fp8dot4", "nofp8"},
+         {},
+         {"fp8", "ssve-fp8dot4"}},
+        {AArch64::ARMV9_6A,
+         {"nofp8", "ssve-fp8dot2"},
+         {"fp8", "ssve-fp8dot2"},
+         {}},
+        {AArch64::ARMV9_6A,
+         {"ssve-fp8dot2", "nofp8"},
+         {},
+         {"fp8", "ssve-fp8dot2"}},
 
         // lse -> lse128
         {AArch64::ARMV8A, {"nolse", "lse128"}, {"lse", "lse128"}, {}},
@@ -1994,7 +2038,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A,
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
-         {"sve2-aes", "sve-aes"}}};
+         {"sve2-aes", "sve-aes"}},
+
+        // sme-tmop -> sme
+        {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
+        {AArch64::ARMV8A, {"sme-tmop", "nosme2"}, {}, {"sme2", "sme-tmop"}},
+
+        // sme-mop4 -> sme
+        {AArch64::ARMV8A, {"nosme", "sme-mop4"}, {"sme", "sme-mop4"}, {}},
+        {AArch64::ARMV8A, {"sme-mop4", "nosme"}, {}, {"sme", "sme-mop4"}}};
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseArch,
@@ -2015,10 +2067,10 @@ AArch64ExtensionDependenciesBaseCPUTestParams
          {}},
         {"cortex-a520",
          {},
-         {"v9.2a",    "bf16",    "crc",  "dotprod",      "flagm", "fp-armv8",
-          "fullfp16", "fp16fml", "i8mm", "lse",          "mte",   "pauth",
-          "perfmon",  "predres", "ras",  "rcpc",         "rdm",   "sb",
-          "neon",     "ssbs",    "sve",  "sve2-bitperm", "sve2"},
+         {"v9.2a",    "bf16",    "crc",  "dotprod",     "flagm", "fp-armv8",
+          "fullfp16", "fp16fml", "i8mm", "lse",         "mte",   "pauth",
+          "perfmon",  "predres", "ras",  "rcpc",        "rdm",   "sb",
+          "neon",     "ssbs",    "sve",  "sve-bitperm", "sve2"},
          {}},
 
         // Negative modifiers
