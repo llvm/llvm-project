@@ -8,13 +8,12 @@
 
 ; When 'partition-static-data-sections' is enabled, static data splitter pass will
 ; categorize jump tables and assembly printer will place hot jump tables in the
-; `.hot`-suffixed read only section, and cold ones in the `.rodata` sections.
+; `.rodata.hot`-prefixed section, and cold ones in the `.rodata.unlikely`-prefixed section.
 ; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,HOT
+; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTHOT
 ; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=false -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; Tests that jump tables with unknown hotness are categorized as cold if `-static-data-default-hotness` specifies so.
-; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULT
+; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTCOLD
  
  ; Tests stat messages are expected.
 ; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
@@ -27,15 +26,17 @@
 ; FUNCLESS: .section .rodata.hot,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; FUNC: .section .rodata.foo,"a",@progbits
-; FUNCLESS: .section .rodata,"a",@progbits
+; FUNC: .section .rodata.unlikely.foo,"a",@progbits
+; FUNCLESS: .section .rodata.unlikely,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
-; HOT: .section .rodata.hot.func_without_entry_count,"a",@progbits
-; HOT: .LJTI1_0:
+; DEFAULTHOT: .section .rodata.hot.func_without_entry_count,"a",@progbits
+; DEFAULTHOT: .LJTI1_0:
+; FUNCLESS: .section .rodata.hot,"a",@progbits
+; FUNCLESS: .LJTI1_0:
 
-; DEFAULT: .section .rodata.func_without_entry_count,"a",@progbits
-; DEFAULT: .LJTI1_0:
+; DEFAULTCOLD: .section .rodata.unlikely.func_without_entry_count,"a",@progbits
+; DEFAULTCOLD: .LJTI1_0:
 
 ; @foo has four jump tables, jt0, jt1, jt2 and jt3 in the input basic block
 ; order; jt0 and jt2 are hot, and jt1 and jt3 are cold.

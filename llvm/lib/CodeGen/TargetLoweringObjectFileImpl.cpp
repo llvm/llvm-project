@@ -671,6 +671,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     if (JTE) {
       if (JTE->Hotness == MachineFunctionDataHotness::Hot)
         raw_svector_ostream(Name) << ".hot";
+      else if (JTE->Hotness == MachineFunctionDataHotness::Cold)
+        raw_svector_ostream(Name) << ".unlikely";
     } else if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
       raw_svector_ostream(Name) << '.' << *Prefix;
       HasPrefix = true;

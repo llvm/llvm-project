@@ -2885,8 +2885,14 @@ void AsmPrinter::emitJumpTableInfo() {
     return;
   }
 
+  // When static data partitioning is enabled, collect jump table entries that
+  // go into the same section together to reduce the amount of section switch
+  // statements.
+  //
   // Iterate all jump tables, put hot jump table indices towards the beginning
-  // of the vector, and cold jump table indices towards the end.
+  // of the vector, and cold jump table indices towards the end. Meanwhile
+  // retain the relative orders of original jump tables within a hot or unlikely
+  // section by reversing the cold jump table indices.
   int NextHotJumpTableIndex = 0, NextColdJumpTableIndex = JT.size() - 1;
   JumpTableIndices.resize(JT.size());
   for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
@@ -2902,8 +2908,8 @@ void AsmPrinter::emitJumpTableInfo() {
         TLOF.getSectionForJumpTable(F, TM, &JT[0]), JTInDiffSection, *MJTI);
   }
 
-  if (NextHotJumpTableIndex != (int)JT.size()) {
-    // Retain the relative orders of original jump tables.
+  if (NextHotJumpTableIndex < (int)JT.size()) {
+    // Reverse the order of cold jump tables indices.
     for (int L = NextHotJumpTableIndex, R = JT.size() - 1; L < R; ++L, --R)
       std::swap(JumpTableIndices[L], JumpTableIndices[R]);
   
