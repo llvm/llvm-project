@@ -66,7 +66,6 @@ private:
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
-  bool UseLoadStorePair = false;
 };
 } // end anonymous namespace
 
@@ -78,7 +77,6 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
-
   if (!Subtarget.useLoadStorePairs())
     return false;
 
@@ -89,7 +87,6 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);
-  UseLoadStorePair = Subtarget.useLoadStorePairs();
 
   for (MachineBasicBlock &MBB : Fn) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
@@ -127,9 +124,6 @@ bool RISCVLoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
 
 bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     MachineBasicBlock::iterator First, MachineBasicBlock::iterator Second) {
-  if (!UseLoadStorePair)
-    return false;
-
   unsigned PairOpc;
   // TODO: Handle the rest from RISCVInstrInfo::isPairableLdStInstOpc.
   switch (First->getOpcode()) {

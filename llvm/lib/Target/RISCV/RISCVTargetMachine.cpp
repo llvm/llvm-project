@@ -383,7 +383,12 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMI *DAG = nullptr;
-    if (EnablePostMISchedLoadStoreClustering) {
+    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
+    bool EnableLoadStoreClusteringForLoadStorePairOpt =
+        !ST.getMacroFusions().empty() && ST.useLoadStorePairs();
+
+    if (EnablePostMISchedLoadStoreClustering ||
+        EnableLoadStoreClusteringForLoadStorePairOpt) {
       DAG = createGenericSchedPostRA(C);
       DAG->addMutation(createLoadClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
@@ -391,15 +396,9 @@ public:
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     }
 
-    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (!ST.getMacroFusions().empty() && ST.useLoadStorePairs()) {
-      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
-      DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-    }
-
     return DAG;
   }
-  
+
   void addIRPasses() override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;

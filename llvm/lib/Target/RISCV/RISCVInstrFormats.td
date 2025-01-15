@@ -532,7 +532,7 @@ class LDPFormat<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = 0b100;
   let Inst{11-7} = rd1;
-  let Inst{6-0} = 0b0001011;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
 // Load word pair format.
@@ -549,7 +549,7 @@ class LWPFormat<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = 0b100;
   let Inst{11-7} = rd1;
-  let Inst{6-0} = 0b0001011;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
 // Store double pair format.

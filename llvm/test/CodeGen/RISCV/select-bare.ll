@@ -18,7 +18,7 @@ define i32 @bare_select(i1 %a, i32 %b, i32 %c) nounwind {
 ; RV64I-CCMOV-LABEL: bare_select:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    andi a0, a0, 1
-; RV64I-CCMOV-NEXT:    ccmov a0, a0, a1, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret
   %1 = select i1 %a, i32 %b, i32 %c
   ret i32 %1
@@ -38,7 +38,7 @@ define float @bare_select_float(i1 %a, float %b, float %c) nounwind {
 ; RV64I-CCMOV-LABEL: bare_select_float:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    andi a0, a0, 1
-; RV64I-CCMOV-NEXT:    ccmov a0, a0, a1, a2
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret
   %1 = select i1 %a, float %b, float %c
   ret float %1

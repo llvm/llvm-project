@@ -33,7 +33,7 @@ define signext i32 @select_of_and(i1 zeroext %a, i1 zeroext %b, i32 signext %c, 
 ; RV64I-CCMOV-LABEL: select_of_and:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    and a0, a0, a1
-; RV64I-CCMOV-NEXT:    ccmov a0, a0, a2, a3
+; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a2, a3
 ; RV64I-CCMOV-NEXT:    ret
   %1 = and i1 %a, %b
   %2 = select i1 %1, i32 %c, i32 %d

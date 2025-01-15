@@ -145,18 +145,18 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32I_PAIR:       # %bb.0: # %entry
 ; RV32I_PAIR-NEXT:    addi sp, sp, -16
 ; RV32I_PAIR-NEXT:    .cfi_def_cfa_offset 16
-; RV32I_PAIR-NEXT:    swp s3, s2, 8(sp) # 8-byte Folded Spill
-; RV32I_PAIR-NEXT:    swp s5, s4, 0(sp) # 8-byte Folded Spill
+; RV32I_PAIR-NEXT:    mips.swp s3, s2, 8(sp) # 8-byte Folded Spill
+; RV32I_PAIR-NEXT:    mips.swp s5, s4, 0(sp) # 8-byte Folded Spill
 ; RV32I_PAIR-NEXT:    .cfi_offset s2, -4
 ; RV32I_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32I_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32I_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32I_PAIR-NEXT:    lwp s3, s2, 0(a0)
-; RV32I_PAIR-NEXT:    lwp s5, s4, 8(a0)
+; RV32I_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
+; RV32I_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32I_PAIR-NEXT:    #APP
 ; RV32I_PAIR-NEXT:    #NO_APP
-; RV32I_PAIR-NEXT:    lwp s3, s2, 8(sp) # 8-byte Folded Reload
-; RV32I_PAIR-NEXT:    lwp s5, s4, 0(sp) # 8-byte Folded Reload
+; RV32I_PAIR-NEXT:    mips.lwp s3, s2, 8(sp) # 8-byte Folded Reload
+; RV32I_PAIR-NEXT:    mips.lwp s5, s4, 0(sp) # 8-byte Folded Reload
 ; RV32I_PAIR-NEXT:    .cfi_restore s2
 ; RV32I_PAIR-NEXT:    .cfi_restore s3
 ; RV32I_PAIR-NEXT:    .cfi_restore s4
@@ -169,18 +169,18 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV32D_PAIR:       # %bb.0: # %entry
 ; RV32D_PAIR-NEXT:    addi sp, sp, -16
 ; RV32D_PAIR-NEXT:    .cfi_def_cfa_offset 16
-; RV32D_PAIR-NEXT:    swp s3, s2, 8(sp) # 8-byte Folded Spill
-; RV32D_PAIR-NEXT:    swp s5, s4, 0(sp) # 8-byte Folded Spill
+; RV32D_PAIR-NEXT:    mips.swp s3, s2, 8(sp) # 8-byte Folded Spill
+; RV32D_PAIR-NEXT:    mips.swp s5, s4, 0(sp) # 8-byte Folded Spill
 ; RV32D_PAIR-NEXT:    .cfi_offset s2, -4
 ; RV32D_PAIR-NEXT:    .cfi_offset s3, -8
 ; RV32D_PAIR-NEXT:    .cfi_offset s4, -12
 ; RV32D_PAIR-NEXT:    .cfi_offset s5, -16
-; RV32D_PAIR-NEXT:    lwp s3, s2, 0(a0)
-; RV32D_PAIR-NEXT:    lwp s5, s4, 8(a0)
+; RV32D_PAIR-NEXT:    mips.lwp s3, s2, 0(a0)
+; RV32D_PAIR-NEXT:    mips.lwp s5, s4, 8(a0)
 ; RV32D_PAIR-NEXT:    #APP
 ; RV32D_PAIR-NEXT:    #NO_APP
-; RV32D_PAIR-NEXT:    lwp s3, s2, 8(sp) # 8-byte Folded Reload
-; RV32D_PAIR-NEXT:    lwp s5, s4, 0(sp) # 8-byte Folded Reload
+; RV32D_PAIR-NEXT:    mips.lwp s3, s2, 8(sp) # 8-byte Folded Reload
+; RV32D_PAIR-NEXT:    mips.lwp s5, s4, 0(sp) # 8-byte Folded Reload
 ; RV32D_PAIR-NEXT:    .cfi_restore s2
 ; RV32D_PAIR-NEXT:    .cfi_restore s3
 ; RV32D_PAIR-NEXT:    .cfi_restore s4
@@ -193,8 +193,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64I_PAIR:       # %bb.0: # %entry
 ; RV64I_PAIR-NEXT:    addi sp, sp, -32
 ; RV64I_PAIR-NEXT:    .cfi_def_cfa_offset 32
-; RV64I_PAIR-NEXT:    sdp s3, s2, 16(sp) # 16-byte Folded Spill
-; RV64I_PAIR-NEXT:    sdp s5, s4, 0(sp) # 16-byte Folded Spill
+; RV64I_PAIR-NEXT:    mips.sdp s3, s2, 16(sp) # 16-byte Folded Spill
+; RV64I_PAIR-NEXT:    mips.sdp s5, s4, 0(sp) # 16-byte Folded Spill
 ; RV64I_PAIR-NEXT:    .cfi_offset s2, -8
 ; RV64I_PAIR-NEXT:    .cfi_offset s3, -16
 ; RV64I_PAIR-NEXT:    .cfi_offset s4, -24
@@ -205,8 +205,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64I_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64I_PAIR-NEXT:    #APP
 ; RV64I_PAIR-NEXT:    #NO_APP
-; RV64I_PAIR-NEXT:    ldp s3, s2, 16(sp) # 16-byte Folded Reload
-; RV64I_PAIR-NEXT:    ldp s5, s4, 0(sp) # 16-byte Folded Reload
+; RV64I_PAIR-NEXT:    mips.ldp s3, s2, 16(sp) # 16-byte Folded Reload
+; RV64I_PAIR-NEXT:    mips.ldp s5, s4, 0(sp) # 16-byte Folded Reload
 ; RV64I_PAIR-NEXT:    .cfi_restore s2
 ; RV64I_PAIR-NEXT:    .cfi_restore s3
 ; RV64I_PAIR-NEXT:    .cfi_restore s4
@@ -219,8 +219,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64P_8700:       # %bb.0: # %entry
 ; RV64P_8700-NEXT:    addi sp, sp, -32
 ; RV64P_8700-NEXT:    .cfi_def_cfa_offset 32
-; RV64P_8700-NEXT:    sdp s3, s2, 16(sp) # 16-byte Folded Spill
-; RV64P_8700-NEXT:    sdp s5, s4, 0(sp) # 16-byte Folded Spill
+; RV64P_8700-NEXT:    mips.sdp s3, s2, 16(sp) # 16-byte Folded Spill
+; RV64P_8700-NEXT:    mips.sdp s5, s4, 0(sp) # 16-byte Folded Spill
 ; RV64P_8700-NEXT:    .cfi_offset s2, -8
 ; RV64P_8700-NEXT:    .cfi_offset s3, -16
 ; RV64P_8700-NEXT:    .cfi_offset s4, -24
@@ -231,8 +231,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64P_8700-NEXT:    ld s4, 24(a0)
 ; RV64P_8700-NEXT:    #APP
 ; RV64P_8700-NEXT:    #NO_APP
-; RV64P_8700-NEXT:    ldp s3, s2, 16(sp) # 16-byte Folded Reload
-; RV64P_8700-NEXT:    ldp s5, s4, 0(sp) # 16-byte Folded Reload
+; RV64P_8700-NEXT:    mips.ldp s3, s2, 16(sp) # 16-byte Folded Reload
+; RV64P_8700-NEXT:    mips.ldp s5, s4, 0(sp) # 16-byte Folded Reload
 ; RV64P_8700-NEXT:    .cfi_restore s2
 ; RV64P_8700-NEXT:    .cfi_restore s3
 ; RV64P_8700-NEXT:    .cfi_restore s4
@@ -245,8 +245,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64D_PAIR:       # %bb.0: # %entry
 ; RV64D_PAIR-NEXT:    addi sp, sp, -32
 ; RV64D_PAIR-NEXT:    .cfi_def_cfa_offset 32
-; RV64D_PAIR-NEXT:    sdp s3, s2, 16(sp) # 16-byte Folded Spill
-; RV64D_PAIR-NEXT:    sdp s5, s4, 0(sp) # 16-byte Folded Spill
+; RV64D_PAIR-NEXT:    mips.sdp s3, s2, 16(sp) # 16-byte Folded Spill
+; RV64D_PAIR-NEXT:    mips.sdp s5, s4, 0(sp) # 16-byte Folded Spill
 ; RV64D_PAIR-NEXT:    .cfi_offset s2, -8
 ; RV64D_PAIR-NEXT:    .cfi_offset s3, -16
 ; RV64D_PAIR-NEXT:    .cfi_offset s4, -24
@@ -257,8 +257,8 @@ define dso_local void @testi(i8** nocapture noundef readonly %a) local_unnamed_a
 ; RV64D_PAIR-NEXT:    ld s4, 24(a0)
 ; RV64D_PAIR-NEXT:    #APP
 ; RV64D_PAIR-NEXT:    #NO_APP
-; RV64D_PAIR-NEXT:    ldp s3, s2, 16(sp) # 16-byte Folded Reload
-; RV64D_PAIR-NEXT:    ldp s5, s4, 0(sp) # 16-byte Folded Reload
+; RV64D_PAIR-NEXT:    mips.ldp s3, s2, 16(sp) # 16-byte Folded Reload
+; RV64D_PAIR-NEXT:    mips.ldp s5, s4, 0(sp) # 16-byte Folded Reload
 ; RV64D_PAIR-NEXT:    .cfi_restore s2
 ; RV64D_PAIR-NEXT:    .cfi_restore s3
 ; RV64D_PAIR-NEXT:    .cfi_restore s4
@@ -448,10 +448,10 @@ define dso_local void @testd(double* nocapture noundef readonly %a) local_unname
 ;
 ; RV32I_PAIR-LABEL: testd:
 ; RV32I_PAIR:       # %bb.0: # %entry
-; RV32I_PAIR-NEXT:    lwp a4, a5, 16(a0)
-; RV32I_PAIR-NEXT:    lwp a2, a3, 24(a0)
-; RV32I_PAIR-NEXT:    lwp a6, a7, 0(a0)
-; RV32I_PAIR-NEXT:    lwp a0, a1, 8(a0)
+; RV32I_PAIR-NEXT:    mips.lwp a4, a5, 16(a0)
+; RV32I_PAIR-NEXT:    mips.lwp a2, a3, 24(a0)
+; RV32I_PAIR-NEXT:    mips.lwp a6, a7, 0(a0)
+; RV32I_PAIR-NEXT:    mips.lwp a0, a1, 8(a0)
 ; RV32I_PAIR-NEXT:    tail sinkd
 ;
 ; RV32D_PAIR-LABEL: testd:
