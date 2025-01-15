@@ -395,9 +395,11 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
         // Otherwise we should form a memset_pattern16.  PatternValue is known
         // to be an constant array of 16-bytes. Put the value into a mergable
         // global.
+        assert(Memset->getRawDest()->getType()->getPointerAddressSpace() == 0 &&
+               "Should have skipped if non-zero AS");
         GlobalVariable *GV = new GlobalVariable(
-            *M, PatternValue->getType(), true, GlobalValue::PrivateLinkage,
-            PatternValue, ".memset_pattern");
+            *M, PatternValue->getType(), /*isConstant=*/true,
+            GlobalValue::PrivateLinkage, PatternValue, ".memset_pattern");
         GV->setUnnamedAddr(
             GlobalValue::UnnamedAddr::Global); // Ok to merge these.
         GV->setAlignment(Align(16));

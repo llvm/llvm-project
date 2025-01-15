@@ -75,6 +75,25 @@ define void @memset_pattern_i128_x(ptr %a, i64 %x) nounwind {
   ret void
 }
 
+define void @memset_pattern_i128_x_nonzero_as(ptr addrspace(10) %a, i64 %x) nounwind {
+; CHECK-LABEL: define void @memset_pattern_i128_x_nonzero_as(
+; CHECK-SAME: ptr addrspace(10) [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK:       [[LOADSTORELOOP]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i128, ptr addrspace(10) [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(10) [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[X]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK:       [[SPLIT]]:
+; CHECK-NEXT:    ret void
+;
+  tail call void @llvm.experimental.memset.pattern(ptr addrspace(10) %a, i128 u0xaaaaaaaabbbbbbbbccccccccdddddddd, i64 %x, i1 false)
+  ret void
+}
+
 define void @memset_pattern_i16_x(ptr %a, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i16_x(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
