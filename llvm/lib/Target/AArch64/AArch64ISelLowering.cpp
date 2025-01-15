@@ -9664,7 +9664,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         DAG.getConstant(0, DL, MVT::i64));
     TPIDR2.Uses++;
   } else if (RequiresSaveAllZA) {
-    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
+    Result = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Result,
                                      /*IsSave=*/false);
   }
 
@@ -14010,6 +14010,23 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                   dl);
   }
 
+  // Check for a "select shuffle", generating a BSL to pick between lanes in
+  // V1/V2.
+  if (ShuffleVectorInst::isSelectMask(ShuffleMask, NumElts)) {
+    assert(VT.getScalarSizeInBits() <= 32 &&
+           "Expected larger vector element sizes to be handled already");
+    SmallVector<SDValue> MaskElts;
+    for (int M : ShuffleMask)
+      MaskElts.push_back(DAG.getConstant(
+          M >= static_cast<int>(NumElts) ? 0 : 0xffffffff, dl, MVT::i32));
+    EVT IVT = VT.changeVectorElementTypeToInteger();
+    SDValue MaskConst = DAG.getBuildVector(IVT, dl, MaskElts);
+    return DAG.getBitcast(VT, DAG.getNode(AArch64ISD::BSP, dl, IVT, MaskConst,
+                                          DAG.getBitcast(IVT, V1),
+                                          DAG.getBitcast(IVT, V2)));
+  }
+
+  // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
 }
 

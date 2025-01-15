@@ -29,6 +29,7 @@ add_flang_library(flangFrontend
   FortranEvaluate
   FortranCommon
   FortranLower
+  FortranSupport
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -38,6 +39,7 @@ add_flang_library(flangFrontend
   HLFIRDialect
   HLFIRTransforms
   flangPasses
+  FIROpenACCSupport
   FlangOpenMPTransforms
   MLIRTransforms
   MLIRBuiltinToLLVMIRTranslation

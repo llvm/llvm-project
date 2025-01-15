@@ -62,8 +62,8 @@ void test_late() {
 
   not_exported = 1;
 #ifndef IMPLEMENTATION
-  // expected-error@-2 {{declaration of 'not_exported' must be imported from module 'A' before it is required}}
-  // expected-note@p2.cpp:19 {{declaration here is not visible}}
+  // expected-error@-2 {{use of undeclared identifier 'not_exported'; did you mean 'exported'?}}
+  // expected-note@p2.cpp:18 {{'exported' declared here}}
 #endif
 
   internal = 1;

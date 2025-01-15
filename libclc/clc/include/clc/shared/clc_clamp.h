@@ -6,9 +6,6 @@
 #define __clc_clamp clamp
 #else
 
-#include <clc/clcfunc.h>
-#include <clc/clctypes.h>
-
 #define __CLC_BODY <clc/shared/clc_clamp.inc>
 #include <clc/integer/gentype.inc>
 

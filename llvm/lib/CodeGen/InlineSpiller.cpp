@@ -997,9 +997,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
   LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
-  // Update the call site info.
-  if (MI->isCandidateForCallSiteEntry())
-    MI->getMF()->moveCallSiteInfo(MI, FoldMI);
+  // Update the call info.
+  if (MI->isCandidateForAdditionalCallInfo())
+    MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
 
   // If we've folded a store into an instruction labelled with debug-info,
   // record a substitution from the old operand to the memory operand. Handle
