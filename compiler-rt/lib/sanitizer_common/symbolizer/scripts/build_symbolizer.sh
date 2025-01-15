@@ -88,7 +88,7 @@ make -j libz.a
 
 # Build and install libcxxabi and libcxx.
 if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
-  rm -rf ${LIBCXX_BUILD}
+  rm -rf "${LIBCXX_BUILD}" "${LIBCXX_INSTALL}"
   mkdir -p ${LIBCXX_BUILD} ${LIBCXX_INSTALL}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
