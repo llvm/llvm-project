@@ -44,6 +44,7 @@ using common_sint =
 namespace numbers {
 // TODO: Track C++20 std::numbers.
 // TODO: Favor using the hexadecimal FP constants (requires C++17).
+// clang-format off
 constexpr double e          = 2.7182818284590452354, // (0x1.5bf0a8b145769P+1) https://oeis.org/A001113
                  egamma     = .57721566490153286061, // (0x1.2788cfc6fb619P-1) https://oeis.org/A001620
                  ln2        = .69314718055994530942, // (0x1.62e42fefa39efP-1) https://oeis.org/A002162
@@ -74,6 +75,7 @@ constexpr float ef          = 2.71828183F, // (0x1.5bf0a8P+1) https://oeis.org/A
                 sqrt3f      = 1.73205081F, // (0x1.bb67aeP+0) https://oeis.org/A002194
                 inv_sqrt3f  = .577350269F, // (0x1.279a74P-1)
                 phif        = 1.61803399F; // (0x1.9e377aP+0) https://oeis.org/A001622
+// clang-format on
 } // namespace numbers
 
 /// Create a bitmask with the N right-most bits set to 1, and all other
