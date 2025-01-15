@@ -6886,7 +6886,7 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
       return FirstObject;
   } while (!Worklist.empty());
 
-  return Object;
+  return Object ? Object : FirstObject;
 }
 
 /// This is the function that does the work of looking through basic
