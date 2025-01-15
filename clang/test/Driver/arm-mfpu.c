@@ -409,6 +409,25 @@
 // CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+sha2"
 // CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+aes"
 
+// RUN: %clang -target armv8-linux-androideabi21 %s -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM8-ANDROID-FP-DEFAULT %s
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+soft-float-abi"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+vfp3"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+vfp4"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+fp-armv8"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+aes"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+sha2"
+// CHECK-ARM8-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+neon"
+
+// RUN: %clang -target armv8-linux-android %s -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM8-ANDROID-DEFAULT %s
+// CHECK-ARM8-ANDROID-DEFAULT-DAG: "-target-feature" "+vfp3"
+// CHECK-ARM8-ANDROID-DEFAULT-DAG: "-target-feature" "+vfp4"
+// CHECK-ARM8-ANDROID-DEFAULT-DAG: "-target-feature" "+fp-armv8"
+// CHECK-ARM8-ANDROID-DEFAULT-DAG: "-target-feature" "+aes"
+// CHECK-ARM8-ANDROID-DEFAULT-DAG: "-target-feature" "+sha2"
+// CHECK-ARM8-ANDROID-DEFAULT-NOT: "-target-feature" "+neon"
+
 // RUN: %clang -target armv7-linux-androideabi21 %s -mfpu=vfp3-d16 -### -c 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-D16 %s
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+soft-float"
