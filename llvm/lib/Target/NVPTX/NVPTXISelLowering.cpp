@@ -1046,7 +1046,6 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreV4)
     MAKE_CASE(NVPTXISD::FSHL_CLAMP)
     MAKE_CASE(NVPTXISD::FSHR_CLAMP)
-    MAKE_CASE(NVPTXISD::IMAD)
     MAKE_CASE(NVPTXISD::BFE)
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
@@ -4451,14 +4450,8 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   if (!N0.getNode()->hasOneUse())
     return SDValue();
 
-  // fold (add (mul a, b), c) -> (mad a, b, c)
-  //
-  if (N0.getOpcode() == ISD::MUL)
-    return DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT, N0.getOperand(0),
-                           N0.getOperand(1), N1);
-
   // fold (add (select cond, 0, (mul a, b)), c)
-  //   -> (select cond, c, (mad a, b, c))
+  //   -> (select cond, c, (add (mul a, b), c))
   //
   if (N0.getOpcode() == ISD::SELECT) {
     unsigned ZeroOpNum;
@@ -4473,8 +4466,10 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     if (M->getOpcode() != ISD::MUL || !M.getNode()->hasOneUse())
       return SDValue();
 
-    SDValue MAD = DCI.DAG.getNode(NVPTXISD::IMAD, SDLoc(N), VT,
-                                  M->getOperand(0), M->getOperand(1), N1);
+    SDLoc DL(N);
+    SDValue Mul =
+        DCI.DAG.getNode(ISD::MUL, DL, VT, M->getOperand(0), M->getOperand(1));
+    SDValue MAD = DCI.DAG.getNode(ISD::ADD, DL, VT, Mul, N1);
     return DCI.DAG.getSelect(SDLoc(N), VT, N0->getOperand(0),
                              ((ZeroOpNum == 1) ? N1 : MAD),
                              ((ZeroOpNum == 1) ? MAD : N1));
@@ -4911,8 +4906,10 @@ static SDValue matchMADConstOnePattern(SDValue Add) {
 static SDValue combineMADConstOne(SDValue X, SDValue Add, EVT VT, SDLoc DL,
                                   TargetLowering::DAGCombinerInfo &DCI) {
 
-  if (SDValue Y = matchMADConstOnePattern(Add))
-    return DCI.DAG.getNode(NVPTXISD::IMAD, DL, VT, X, Y, X);
+  if (SDValue Y = matchMADConstOnePattern(Add)) {
+    SDValue Mul = DCI.DAG.getNode(ISD::MUL, DL, VT, X, Y);
+    return DCI.DAG.getNode(ISD::ADD, DL, VT, Mul, X);
+  }
 
   return SDValue();
 }
@@ -4959,7 +4956,7 @@ PerformMULCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
 
   SDLoc DL(N);
 
-  // (mul x, (add y, 1)) -> (mad x, y, x)
+  // (mul x, (add y, 1)) -> (add (mul x, y), x)
   if (SDValue Res = combineMADConstOne(N0, N1, VT, DL, DCI))
     return Res;
   if (SDValue Res = combineMADConstOne(N1, N0, VT, DL, DCI))
