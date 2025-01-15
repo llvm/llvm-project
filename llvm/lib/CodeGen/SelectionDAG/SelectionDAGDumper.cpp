@@ -571,7 +571,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "find_last_active";
 
   case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
-    return "alias_mask";
+    return "alias_lane_mask";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
