@@ -31,5 +31,6 @@ Implementation Status
    threads
    time
    uchar
+   unistd
    wchar
    wctype

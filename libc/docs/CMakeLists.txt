@@ -57,6 +57,7 @@ if (SPHINX_FOUND)
       sys/resource
       threads
       uchar
+      unistd
       wchar
       wctype
     )
