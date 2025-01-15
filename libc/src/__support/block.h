@@ -268,20 +268,28 @@ public:
     if (alignment == alignof(max_align_t))
       return size;
 
-    // We must create a padding block to align the usable space of the next
-    // block. The next block's usable space can be found by advancing by
-    // sizeof(Block) then aligning up. The amount advanced is the amount of
-    // additional inner size required.
-    //
-    // The minimum advancment is sizeof(Block), since the resulting position may
-    // happen to be aligned. What is the maximum? Advancing by sizeof(Block)
-    // leaves the result still aligned to alignof(Block). So the most additional
-    // advancement required would be if the point is exactly alignof(Block) past
-    // alignment. The remaining size to the next alignment would then be
-    // alignment - alignof(Block). So the total maximum advancement required is
-    // sizeof(Block) + alignment - alignof(Block).
+    // We must create a new block inside this one (splitting). This requires a
+    // block header in addition to the requested size.
     if (add_overflow(size, sizeof(Block), size))
       return 0;
+
+    // Beyond that, padding space may need to remain in this block to ensure
+    // that the usable space of the next block is aligned.
+    //
+    // Consider a position P of some lesser alignment, L, with maximal distance
+    // to the next position of some greater alignment, G, where G is a multiple
+    // of L. P must be one L unit past a G-aligned point. If it were one L-unit
+    // earlier, its distance would be zero. If it were one L-unit later, its
+    // distance would not be maximal. If it were not some integral number of L
+    // units away, it would not be L-aligned.
+    //
+    // So the maximum distance would be G - L. As a special case, if L is 1
+    // (unaligned), the max distance is G - 1.
+    //
+    // This block's usable space is aligned to max_align_t >= Block. With zero
+    // padding, the next block's usable space is sizeof(Block) past it, which is
+    // a point aligned to Block. Thus the max padding needed is alignment -
+    // alignof(Block).
     if (add_overflow(size, alignment - alignof(Block), size))
       return 0;
     return size;
