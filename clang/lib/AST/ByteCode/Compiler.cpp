@@ -2141,6 +2141,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
   }
 
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
+  }
+
   return false;
 }
 
