@@ -400,33 +400,21 @@ declare void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1
 declare <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
 
 
-; TODO: Make the step loop variant to reflect what the loop vectorizer will emit
-; in an EVL tail folding configuration.
-
 define <vscale x 1 x i64> @vp_gather(ptr %a, i32 %len) {
 ; CHECK-LABEL: @vp_gather(
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LEN:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[DOTSPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
-; CHECK-NEXT:    [[ODD:%.*]] = and <vscale x 1 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <vscale x 1 x i64> [[ODD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
-; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP2]], i64 16, <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP2]], i64 16, <vscale x 1 x i1> splat (i1 true), i32 42)
 ; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], [[TMP0]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VEC_IND_NEXT_SCALAR]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       for.cond.cleanup:
@@ -444,15 +432,8 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
   %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
-
-  %elems = sub i64 %wide.trip.count, %index
-  %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 1, i1 true)
-
-  %odd = and <vscale x 1 x i64> %vec.ind, splat (i64 1)
-  %mask = icmp ne <vscale x 1 x i64> %odd, splat (i64 0)
-
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  %gather = call <vscale x 1 x i64> @llvm.vp.gather(<vscale x 1 x ptr> %2, <vscale x 1 x i1> %mask, i32 %evl)
+  %gather = call <vscale x 1 x i64> @llvm.vp.gather(<vscale x 1 x ptr> %2, <vscale x 1 x i1> splat (i1 true), i32 42)
   %accum.next = add <vscale x 1 x i64> %accum, %gather
   %index.next = add nuw i64 %index, %0
   %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
@@ -463,31 +444,19 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret <vscale x 1 x i64> %accum.next
 }
 
-; TODO: Make the step loop variant to reflect what the loop vectorizer will emit
-; in an EVL tail folding configuration.
-
 define void @vp_scatter(ptr %a, i32 %len) {
 ; CHECK-LABEL: @vp_scatter(
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LEN:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[DOTSPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND_SCALAR1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[VEC_IND_SCALAR]]
-; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
-; CHECK-NEXT:    [[ODD:%.*]] = and <vscale x 1 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[MASK:%.*]] = icmp ne <vscale x 1 x i64> [[ODD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]], i32 3
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> zeroinitializer, ptr [[TMP2]], i64 16, <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> zeroinitializer, ptr [[TMP2]], i64 16, <vscale x 1 x i1> splat (i1 true), i32 42)
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[TMP0]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR1]] = add i64 [[VEC_IND_SCALAR1]], [[TMP0]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VEC_IND_NEXT_SCALAR]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       for.cond.cleanup:
@@ -504,17 +473,120 @@ vector.ph:
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
+  %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
+  tail call void @llvm.vp.scatter(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %2, <vscale x 1 x i1> splat (i1 true), i32 42)
+  %index.next = add nuw i64 %index, %0
+  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
+  %3 = icmp ne i64 %index.next, %wide.trip.count
+  br i1 %3, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+
+; Test that reflects what the loop vectorizer will generate for an EVL tail
+; folded loop
+
+define <vscale x 1 x i64> @evl_gather(ptr %a, i32 %len) {
+; CHECK-LABEL: @evl_gather(
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP1]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[INDEX]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[A:%.*]], <vscale x 1 x i64> [[VEC_IND]], i32 3
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[TMP2]], <vscale x 1 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[EVL_ZEXT]]
+; CHECK-NEXT:    [[EVL_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[EVL_ZEXT]], i64 0
+; CHECK-NEXT:    [[EVL_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[EVL_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[EVL_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[ACCUM_NEXT]]
+;
+vector.ph:
+  %wide.trip.count = zext i32 %len to i64
+  %1 = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
+  %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
 
   %elems = sub i64 %wide.trip.count, %index
   %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 1, i1 true)
 
-  %odd = and <vscale x 1 x i64> %vec.ind, splat (i64 1)
-  %mask = icmp ne <vscale x 1 x i64> %odd, splat (i64 0)
+  %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
+  %gather = call <vscale x 1 x i64> @llvm.vp.gather(<vscale x 1 x ptr> %2, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  %accum.next = add <vscale x 1 x i64> %accum, %gather
+
+  %evl.zext = zext i32 %evl to i64
+  %index.next = add nuw i64 %index, %evl.zext
+  %evl.splatinsert = insertelement <vscale x 1 x i64> poison, i64 %evl.zext, i64 0
+  %evl.splat = shufflevector <vscale x 1 x i64> %evl.splatinsert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %evl.splat
+  %3 = icmp ne i64 %index.next, %wide.trip.count
+  br i1 %3, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret <vscale x 1 x i64> %accum.next
+}
+
+; Test that reflects what the loop vectorizer will generate for an EVL tail
+; folded loop
+
+define void @evl_scatter(ptr %a, i32 %len) {
+; CHECK-LABEL: @evl_scatter(
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ELEMS:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[VEC_IND_SCALAR]]
+; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[ELEMS]], i32 1, i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[A:%.*]], <vscale x 1 x i64> [[VEC_IND]], i32 3
+; CHECK-NEXT:    tail call void @llvm.vp.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> [[TMP1]], <vscale x 1 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add nuw i64 [[VEC_IND_SCALAR]], [[EVL_ZEXT]]
+; CHECK-NEXT:    [[EVL_SPLATINSERT:%.*]] = insertelement <vscale x 1 x i64> poison, i64 [[EVL_ZEXT]], i64 0
+; CHECK-NEXT:    [[EVL_SPLAT:%.*]] = shufflevector <vscale x 1 x i64> [[EVL_SPLATINSERT]], <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 1 x i64> [[VEC_IND]], [[EVL_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VEC_IND_NEXT_SCALAR]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+vector.ph:
+  %wide.trip.count = zext i32 %len to i64
+  %1 = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
+
+  %elems = sub i64 %wide.trip.count, %index
+  %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 1, i1 true)
 
   %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind, i32 3
-  tail call void @llvm.vp.scatter(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %2, <vscale x 1 x i1> %mask, i32 %evl)
-  %index.next = add nuw i64 %index, %0
-  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
+  tail call void @llvm.vp.scatter(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %2, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+
+  %evl.zext = zext i32 %evl to i64
+  %index.next = add nuw i64 %index, %evl.zext
+  %evl.splatinsert = insertelement <vscale x 1 x i64> poison, i64 %evl.zext, i64 0
+  %evl.splat = shufflevector <vscale x 1 x i64> %evl.splatinsert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %evl.splat
   %3 = icmp ne i64 %index.next, %wide.trip.count
   br i1 %3, label %for.cond.cleanup, label %vector.body
 
