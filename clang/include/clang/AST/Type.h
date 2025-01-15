@@ -7040,17 +7040,17 @@ class DependentNameType : public TypeWithKeyword, public llvm::FoldingSetNode {
       : TypeWithKeyword(Keyword, DependentName, CanonType,
                         TypeDependence::DependentInstantiation |
                             toTypeDependence(NNS->getDependence())),
-        NNS(NNS), Name(Name) {}
+        NNS(NNS), Name(Name) {
+    assert(NNS);
+    assert(Name);
+  }
 
 public:
   /// Retrieve the qualification on this type.
   NestedNameSpecifier *getQualifier() const { return NNS; }
 
-  /// Retrieve the type named by the typename specifier as an identifier.
-  ///
-  /// This routine will return a non-NULL identifier pointer when the
-  /// form of the original typename was terminated by an identifier,
-  /// e.g., "typename T::type".
+  /// Retrieve the identifier that terminates this type name.
+  /// For example, "type" in "typename T::type".
   const IdentifierInfo *getIdentifier() const {
     return Name;
   }
