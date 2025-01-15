@@ -119,7 +119,8 @@ bool SectionLoadHistory::ResolveLoadAddress(uint32_t stop_id, addr_t load_addr,
   const bool read_only = true;
   SectionLoadList *section_load_list =
       GetSectionLoadListForStopID(stop_id, read_only);
-  return section_load_list->ResolveLoadAddress(load_addr, so_addr);
+  return section_load_list->ResolveLoadAddress(load_addr, so_addr,
+                                               allow_section_end);
 }
 
 bool SectionLoadHistory::SetSectionLoadAddress(

@@ -271,11 +271,17 @@ void Target::DeleteCurrentProcess() {
   if (m_process_sp) {
     // We dispose any active tracing sessions on the current process
     m_trace_sp.reset();
-    m_section_load_history.Clear();
+
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
     m_process_sp->Finalize(false /* not destructing */);
+
+    // Let the process finalize itself first, then clear the section load
+    // history. Some objects owned by the process might end up calling
+    // SectionLoadHistory::SetSectionUnloaded() which can create entries in
+    // the section load history that can mess up subsequent processes.
+    m_section_load_history.Clear();
 
     CleanupProcess();
 
