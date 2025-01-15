@@ -207,33 +207,39 @@ class ValueToRegClass<ValueType T> {
 // Some Common Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
+// Utility class to wrap up information about a register and DAG type for more
+// convenient iteration and parameterization
+class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
+  ValueType Ty = ty;
+  NVPTXRegClass RC = rc;
+  Operand Imm = imm;
+  int Size = ty.Size;
+}
+
+def I16RT : RegTyInfo<i16, Int16Regs, i16imm>;
+def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
+def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
+
 // Template for instructions which take three int64, int32, or int16 args.
 // The instructions are named "<OpcStr><Width>" (e.g. "add.s64").
-multiclass I3<string OpcStr, SDNode OpNode> {
-  def i64rr :
-    NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
-              !strconcat(OpcStr, "64 \t$dst, $a, $b;"),
-              [(set i64:$dst, (OpNode i64:$a, i64:$b))]>;
-  def i64ri :
-    NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
-              !strconcat(OpcStr, "64 \t$dst, $a, $b;"),
-              [(set i64:$dst, (OpNode i64:$a, imm:$b))]>;
-  def i32rr :
-    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
-              !strconcat(OpcStr, "32 \t$dst, $a, $b;"),
-              [(set i32:$dst, (OpNode i32:$a, i32:$b))]>;
-  def i32ri :
-    NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
-              !strconcat(OpcStr, "32 \t$dst, $a, $b;"),
-              [(set i32:$dst, (OpNode i32:$a, imm:$b))]>;
-  def i16rr :
-    NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, Int16Regs:$b),
-              !strconcat(OpcStr, "16 \t$dst, $a, $b;"),
-              [(set i16:$dst, (OpNode i16:$a, i16:$b))]>;
-  def i16ri :
-    NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a, i16imm:$b),
-              !strconcat(OpcStr, "16 \t$dst, $a, $b;"),
-              [(set i16:$dst, (OpNode i16:$a, (imm):$b))]>;
+multiclass I3<string OpcStr, SDNode OpNode, bit commutative> {
+  foreach t = [I16RT, I32RT, I64RT] in {
+    defvar asmstr = OpcStr # t.Size # " \t$dst, $a, $b;";
+
+    def t.Ty # rr :
+      NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b),
+                asmstr,
+                [(set t.Ty:$dst, (OpNode t.Ty:$a, t.Ty:$b))]>;
+    def t.Ty # ri :
+      NVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.Imm:$b),
+                asmstr,
+                [(set t.Ty:$dst, (OpNode t.RC:$a, imm:$b))]>;
+    if !not(commutative) then
+      def t.Ty # ir :
+        NVPTXInst<(outs t.RC:$dst), (ins t.Imm:$a, t.RC:$b),
+                  asmstr,
+                  [(set t.Ty:$dst, (OpNode imm:$a, t.RC:$b))]>;
+  }
 }
 
 class I16x2<string OpcStr, SDNode OpNode> :
@@ -870,8 +876,8 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 
 // int16, int32, and int64 signed addition.  Since nvptx is 2's complement, we
 // also use these for unsigned arithmetic.
-defm ADD : I3<"add.s", add>;
-defm SUB : I3<"sub.s", sub>;
+defm ADD : I3<"add.s", add, /*commutative=*/ true>;
+defm SUB : I3<"sub.s", sub, /*commutative=*/ false>;
 
 def ADD16x2 : I16x2<"add.s", add>;
 
@@ -883,18 +889,18 @@ defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
 defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
 defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
 
-defm MULT : I3<"mul.lo.s", mul>;
+defm MULT : I3<"mul.lo.s", mul, /*commutative=*/ true>;
 
-defm MULTHS : I3<"mul.hi.s", mulhs>;
-defm MULTHU : I3<"mul.hi.u", mulhu>;
+defm MULTHS : I3<"mul.hi.s", mulhs, /*commutative=*/ true>;
+defm MULTHU : I3<"mul.hi.u", mulhu, /*commutative=*/ true>;
 
-defm SDIV : I3<"div.s", sdiv>;
-defm UDIV : I3<"div.u", udiv>;
+defm SDIV : I3<"div.s", sdiv, /*commutative=*/ false>;
+defm UDIV : I3<"div.u", udiv, /*commutative=*/ false>;
 
 // The ri versions of rem.s and rem.u won't be selected; DAGCombiner::visitSREM
 // will lower it.
-defm SREM : I3<"rem.s", srem>;
-defm UREM : I3<"rem.u", urem>;
+defm SREM : I3<"rem.s", srem, /*commutative=*/ false>;
+defm UREM : I3<"rem.u", urem, /*commutative=*/ false>;
 
 // Integer absolute value.  NumBits should be one minus the bit width of RC.
 // This idiom implements the algorithm at
@@ -909,10 +915,10 @@ defm ABS_32 : ABS<i32, Int32Regs, ".s32">;
 defm ABS_64 : ABS<i64, Int64Regs, ".s64">;
 
 // Integer min/max.
-defm SMAX : I3<"max.s", smax>;
-defm UMAX : I3<"max.u", umax>;
-defm SMIN : I3<"min.s", smin>;
-defm UMIN : I3<"min.u", umin>;
+defm SMAX : I3<"max.s", smax, /*commutative=*/ true>;
+defm UMAX : I3<"max.u", umax, /*commutative=*/ true>;
+defm SMIN : I3<"min.s", smin, /*commutative=*/ true>;
+defm UMIN : I3<"min.u", umin, /*commutative=*/ true>;
 
 def SMAX16x2 : I16x2<"max.s", smax>;
 def UMAX16x2 : I16x2<"max.u", umax>;
@@ -1392,25 +1398,32 @@ def FDIV32ri_prec :
 //
 
 multiclass FMA<string OpcStr, RegisterClass RC, Operand ImmCls, Predicate Pred> {
-   def rrr : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
-                       !strconcat(OpcStr, " \t$dst, $a, $b, $c;"),
-                       [(set RC:$dst, (fma RC:$a, RC:$b, RC:$c))]>,
-                       Requires<[Pred]>;
-   def rri : NVPTXInst<(outs RC:$dst),
-                       (ins RC:$a, RC:$b, ImmCls:$c),
-                       !strconcat(OpcStr, " \t$dst, $a, $b, $c;"),
-                       [(set RC:$dst, (fma RC:$a, RC:$b, fpimm:$c))]>,
-                       Requires<[Pred]>;
-   def rir : NVPTXInst<(outs RC:$dst),
-                       (ins RC:$a, ImmCls:$b, RC:$c),
-                       !strconcat(OpcStr, " \t$dst, $a, $b, $c;"),
-                       [(set RC:$dst, (fma RC:$a, fpimm:$b, RC:$c))]>,
-                       Requires<[Pred]>;
-   def rii : NVPTXInst<(outs RC:$dst),
-                       (ins RC:$a, ImmCls:$b, ImmCls:$c),
-                       !strconcat(OpcStr, " \t$dst, $a, $b, $c;"),
-                       [(set RC:$dst, (fma RC:$a, fpimm:$b, fpimm:$c))]>,
-                       Requires<[Pred]>;
+  defvar asmstr = OpcStr # " \t$dst, $a, $b, $c;";
+  def rrr : NVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+                      asmstr,
+                      [(set RC:$dst, (fma RC:$a, RC:$b, RC:$c))]>,
+                      Requires<[Pred]>;
+  def rri : NVPTXInst<(outs RC:$dst),
+                      (ins RC:$a, RC:$b, ImmCls:$c),
+                      asmstr,
+                      [(set RC:$dst, (fma RC:$a, RC:$b, fpimm:$c))]>,
+                      Requires<[Pred]>;
+  def rir : NVPTXInst<(outs RC:$dst),
+                      (ins RC:$a, ImmCls:$b, RC:$c),
+                      asmstr,
+                      [(set RC:$dst, (fma RC:$a, fpimm:$b, RC:$c))]>,
+                      Requires<[Pred]>;
+  def rii : NVPTXInst<(outs RC:$dst),
+                      (ins RC:$a, ImmCls:$b, ImmCls:$c),
+                      asmstr,
+                      [(set RC:$dst, (fma RC:$a, fpimm:$b, fpimm:$c))]>,
+                      Requires<[Pred]>;
+  def iir : NVPTXInst<(outs RC:$dst),
+                      (ins ImmCls:$a, ImmCls:$b, RC:$c),
+                      asmstr,
+                      [(set RC:$dst, (fma fpimm:$a, fpimm:$b, RC:$c))]>,
+                      Requires<[Pred]>;
+
 }
 
 multiclass FMA_F16<string OpcStr, ValueType T, RegisterClass RC, Predicate Pred> {
