@@ -7,14 +7,14 @@ define void @implied1(i32 %n) {
 ; CHECK-LABEL: 'implied1'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-2 + %n)
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483645
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
   %cmp1 = icmp sgt i32 %n, 1
   %n.minus.1 = sub nsw i32 %n, 1
-  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
+  call void @llvm.assume(i1 %cmp1)
   br label %header
 
 header:
@@ -31,15 +31,15 @@ define void @implied1_neg(i32 %n) {
 ; Prove that (n > 0) =\=> (n - 1 > 0).
 ; CHECK-LABEL: 'implied1_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1_neg
-; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (-1 + %n)))<nsw>
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (-1 + %n)))<nsw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (-1 + %n)<nsw>))<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483645
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax (-1 + %n)<nsw>))<nsw>
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
   %cmp1 = icmp sgt i32 %n, 0
   %n.minus.1 = sub nsw i32 %n, 1
-  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
+  call void @llvm.assume(i1 %cmp1)
   br label %header
 
 header:
@@ -56,15 +56,23 @@ define void @implied2(i32 %n) {
 ; Prove that (n >= -1) ===> (n + 1 >= 0).
 ; CHECK-LABEL: 'implied2'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2
-; CHECK-NEXT:  Loop %header: backedge-taken count is (zext i32 (1 + %n) to i64)
-; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 4294967295
-; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (zext i32 (1 + %n) to i64)
-; CHECK-NEXT:  Loop %header: Trip multiple is 1
+; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Predicated backedge-taken count is (1 + (zext i32 %n to i64))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 4294967296
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (1 + (zext i32 %n to i64))<nuw><nsw>
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ;
 entry:
   %cmp1 = icmp uge i32 %n, -1
   %n.1 = add nuw i32 %n, 1
-  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
+  call void @llvm.assume(i1 %cmp1)
   br label %header
 
 header:
@@ -81,23 +89,15 @@ define void @implied2_neg(i32 %n) {
 ; Prove that (n >= -1) =\=> (n - 1 >= 0).
 ; CHECK-LABEL: 'implied2_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
-; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Predicated backedge-taken count is (-1 + (1 smax (1 + (sext i32 (-1 + %n) to i64))<nsw>))<nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nssw>
-; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 2147483647
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nssw>
-; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 smax (1 + (sext i32 (-1 + %n) to i64))<nsw>))<nsw>
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nssw>
+; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 2147483646
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
 ;
 entry:
   %cmp1 = icmp uge i32 %n, -1
   %n.minus.1 = sub nuw nsw i32 %n, 1
-  call void(i1, ...) @llvm.experimental.guard(i1 %cmp1) [ "deopt"() ]
+  call void @llvm.assume(i1 %cmp1)
   br label %header
 
 header:
