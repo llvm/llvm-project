@@ -21,12 +21,14 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::COFF;
 using namespace llvm::support;
 
 namespace lld::coff {
@@ -1020,6 +1022,110 @@ Symbol *SymbolTable::findMangle(StringRef name) {
     return s;
   // Search for x86 C++ non-member function.
   return findByPrefix("?" + name.substr(1) + "@@Y");
+}
+
+bool SymbolTable::findUnderscoreMangle(StringRef sym) {
+  Symbol *s = findMangle(mangle(sym));
+  return s && !isa<Undefined>(s);
+}
+
+// Symbol names are mangled by prepending "_" on x86.
+StringRef SymbolTable::mangle(StringRef sym) {
+  assert(machine != IMAGE_FILE_MACHINE_UNKNOWN);
+  if (machine == I386)
+    return saver().save("_" + sym);
+  return sym;
+}
+
+StringRef SymbolTable::mangleMaybe(Symbol *s) {
+  // If the plain symbol name has already been resolved, do nothing.
+  Undefined *unmangled = dyn_cast<Undefined>(s);
+  if (!unmangled)
+    return "";
+
+  // Otherwise, see if a similar, mangled symbol exists in the symbol table.
+  Symbol *mangled = findMangle(unmangled->getName());
+  if (!mangled)
+    return "";
+
+  // If we find a similar mangled symbol, make this an alias to it and return
+  // its name.
+  Log(ctx) << unmangled->getName() << " aliased to " << mangled->getName();
+  unmangled->setWeakAlias(addUndefined(mangled->getName()));
+  return mangled->getName();
+}
+
+// Windows specific -- find default entry point name.
+//
+// There are four different entry point functions for Windows executables,
+// each of which corresponds to a user-defined "main" function. This function
+// infers an entry point from a user-defined "main" function.
+StringRef SymbolTable::findDefaultEntry() {
+  assert(ctx.config.subsystem != IMAGE_SUBSYSTEM_UNKNOWN &&
+         "must handle /subsystem before calling this");
+
+  if (ctx.config.mingw)
+    return mangle(ctx.config.subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI
+                      ? "WinMainCRTStartup"
+                      : "mainCRTStartup");
+
+  if (ctx.config.subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
+    if (findUnderscoreMangle("wWinMain")) {
+      if (!findUnderscoreMangle("WinMain"))
+        return mangle("wWinMainCRTStartup");
+      Warn(ctx) << "found both wWinMain and WinMain; using latter";
+    }
+    return mangle("WinMainCRTStartup");
+  }
+  if (findUnderscoreMangle("wmain")) {
+    if (!findUnderscoreMangle("main"))
+      return mangle("wmainCRTStartup");
+    Warn(ctx) << "found both wmain and main; using latter";
+  }
+  return mangle("mainCRTStartup");
+}
+
+WindowsSubsystem SymbolTable::inferSubsystem() {
+  if (ctx.config.dll)
+    return IMAGE_SUBSYSTEM_WINDOWS_GUI;
+  if (ctx.config.mingw)
+    return IMAGE_SUBSYSTEM_WINDOWS_CUI;
+  // Note that link.exe infers the subsystem from the presence of these
+  // functions even if /entry: or /nodefaultlib are passed which causes them
+  // to not be called.
+  bool haveMain = findUnderscoreMangle("main");
+  bool haveWMain = findUnderscoreMangle("wmain");
+  bool haveWinMain = findUnderscoreMangle("WinMain");
+  bool haveWWinMain = findUnderscoreMangle("wWinMain");
+  if (haveMain || haveWMain) {
+    if (haveWinMain || haveWWinMain) {
+      Warn(ctx) << "found " << (haveMain ? "main" : "wmain") << " and "
+                << (haveWinMain ? "WinMain" : "wWinMain")
+                << "; defaulting to /subsystem:console";
+    }
+    return IMAGE_SUBSYSTEM_WINDOWS_CUI;
+  }
+  if (haveWinMain || haveWWinMain)
+    return IMAGE_SUBSYSTEM_WINDOWS_GUI;
+  return IMAGE_SUBSYSTEM_UNKNOWN;
+}
+
+void SymbolTable::addUndefinedGlob(StringRef arg) {
+  Expected<GlobPattern> pat = GlobPattern::create(arg);
+  if (!pat) {
+    Err(ctx) << "/includeglob: " << toString(pat.takeError());
+    return;
+  }
+
+  SmallVector<Symbol *, 0> syms;
+  forEachSymbol([&syms, &pat](Symbol *sym) {
+    if (pat->match(sym->getName())) {
+      syms.push_back(sym);
+    }
+  });
+
+  for (Symbol *sym : syms)
+    addGCRoot(sym->getName());
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name) {
