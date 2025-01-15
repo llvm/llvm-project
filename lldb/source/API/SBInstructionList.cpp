@@ -169,7 +169,7 @@ bool SBInstructionList::GetDescription(Stream &sref) {
               addr, eSymbolContextEverything, sc);
         }
 
-        if (next_addr && addr != next_addr)
+        if (next_addr && *next_addr != addr)
           sref.EOL();
         inst->Dump(&sref, max_opcode_byte_size, true, false,
                    /*show_control_flow_kind=*/false, nullptr, &sc, &prev_sc,
