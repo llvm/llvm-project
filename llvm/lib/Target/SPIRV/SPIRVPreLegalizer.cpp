@@ -58,9 +58,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                              ->getValue());
       if (auto *GV = dyn_cast<GlobalValue>(Const)) {
         Register Reg = GR->find(GV, &MF);
-        if (!Reg.isValid())
+        if (!Reg.isValid()) {
           GR->add(GV, &MF, SrcReg);
-        else
+          GR->addGlobalObject(GV, &MF, SrcReg);
+        } else
           RegsAlreadyAddedToDT[&MI] = Reg;
       } else {
         Register Reg = GR->find(Const, &MF);

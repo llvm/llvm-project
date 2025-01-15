@@ -281,9 +281,11 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
   return Result;
 }
 
-bool isPointerLikeType(QualType QT) {
-  return isRecordWithAttr<PointerAttr>(QT) || QT->isPointerType() ||
-         QT->isNullPtrType();
+// Tells whether the type is annotated with [[gsl::Pointer]].
+bool isGLSPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
+
+static bool isPointerLikeType(QualType QT) {
+  return isGLSPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
 }
 
 // Decl::isInStdNamespace will return false for iterators in some STL
@@ -523,7 +525,20 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   return false;
 }
 
+static const FunctionDecl *
+getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD) {
+  return FD != nullptr ? FD->getMostRecentDecl() : nullptr;
+}
+
+static const CXXMethodDecl *
+getDeclWithMergedLifetimeBoundAttrs(const CXXMethodDecl *CMD) {
+  const FunctionDecl *FD = CMD;
+  return cast_if_present<CXXMethodDecl>(
+      getDeclWithMergedLifetimeBoundAttrs(FD));
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
@@ -582,6 +597,15 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     //   Temp().ptr; // Here ptr might not dangle.
     if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
       return;
+    // Avoid false positives when the object is constructed from a conditional
+    // operator argument. A common case is:
+    //   // 'ptr' might not be owned by the Owner object.
+    //   std::string_view s = cond() ? Owner().ptr : sv;
+    if (const auto *Cond =
+            dyn_cast<AbstractConditionalOperator>(Arg->IgnoreImpCasts());
+        Cond && isPointerLikeType(Cond->getType()))
+      return;
+
     auto ReturnType = Callee->getReturnType();
 
     // Once we initialized a value with a non gsl-owner reference, it can no
@@ -636,9 +660,9 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     }
   }
 
-  for (unsigned I = 0,
-                N = std::min<unsigned>(Callee->getNumParams(), Args.size());
-       I != N; ++I) {
+  const FunctionDecl *CanonCallee = getDeclWithMergedLifetimeBoundAttrs(Callee);
+  unsigned NP = std::min(Callee->getNumParams(), CanonCallee->getNumParams());
+  for (unsigned I = 0, N = std::min<unsigned>(NP, Args.size()); I != N; ++I) {
     Expr *Arg = Args[I];
     RevertToOldSizeRAII RAII(Path);
     if (auto *DAE = dyn_cast<CXXDefaultArgExpr>(Arg)) {
@@ -646,11 +670,12 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
           {IndirectLocalPathEntry::DefaultArg, DAE, DAE->getParam()});
       Arg = DAE->getExpr();
     }
-    if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
-      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    if (CheckCoroCall ||
+        CanonCallee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (const auto *CaptureAttr =
-                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
-             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+                 CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
              llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
                return ArgIdx == LifetimeCaptureByAttr::THIS;
              }))
@@ -667,11 +692,11 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       // `lifetimebound` and shares the same code path. This implies the emitted
       // diagnostics will be emitted under `-Wdangling`, not
       // `-Wdangling-capture`.
-      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+      VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
-      if (shouldTrackFirstArgument(Callee)) {
-        VisitGSLPointerArg(Callee, Arg);
+      if (shouldTrackFirstArgument(CanonCallee)) {
+        VisitGSLPointerArg(CanonCallee, Arg);
       } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
                  Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
         VisitGSLPointerArg(Ctor->getConstructor(), Arg);
@@ -1091,14 +1116,13 @@ enum PathLifetimeKind {
 /// supposed to lifetime-extend along.
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
-  PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
       return PathLifetimeKind::Extend;
-    else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
+    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
-  return Kind;
+  return PathLifetimeKind::Extend;
 }
 
 /// Find the range for the first interesting entry in the path at or after I.
@@ -1235,7 +1259,8 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   return Report;
 }
 
-static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
+static bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
+  CMD = getDeclWithMergedLifetimeBoundAttrs(CMD);
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
          CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
 }

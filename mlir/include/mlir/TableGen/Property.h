@@ -27,6 +27,7 @@ namespace mlir {
 namespace tblgen {
 class Dialect;
 class Type;
+class Pred;
 
 // Wrapper class providing helper methods for accessing MLIR Property defined
 // in TableGen. This class should closely reflect what is defined as class
@@ -73,6 +74,10 @@ public:
   StringRef getConvertFromAttributeCall() const {
     return convertFromAttributeCall;
   }
+
+  // Return the property's predicate. Properties that didn't come from
+  // tablegen (the hardcoded ones) have the null predicate.
+  Pred getPredicate() const;
 
   // Returns the method call which parses this property from textual MLIR.
   StringRef getParserCall() const { return parserCall; }

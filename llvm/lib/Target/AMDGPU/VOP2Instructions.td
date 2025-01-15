@@ -1261,22 +1261,38 @@ class ZExt_i16_i1_Pat <SDNode ext> : GCNPat <
                      $src)
 >;
 
-foreach vt = [i16, v2i16] in {
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
-  (and vt:$src0, vt:$src1),
+  (and i16:$src0, i16:$src1),
   (V_AND_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
-  (or vt:$src0, vt:$src1),
+  (or i16:$src0, i16:$src1),
   (V_OR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 
 def : GCNPat <
-  (xor vt:$src0, vt:$src1),
+  (xor i16:$src0, i16:$src1),
   (V_XOR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
 >;
 }
+
+def : GCNPat <
+  (and v2i16:$src0, v2i16:$src1),
+  (V_AND_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
+
+def : GCNPat <
+  (or v2i16:$src0, v2i16:$src1),
+  (V_OR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
+
+def : GCNPat <
+  (xor v2i16:$src0, v2i16:$src1),
+  (V_XOR_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1)
+>;
 
 let Predicates = [Has16BitInsts, isGFX8GFX9] in {
 
@@ -1820,12 +1836,10 @@ defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12<0x03c>;
 
 defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x032, "v_add_f16">;
 defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x033, "v_sub_f16">;
-defm V_SUBREV_F16_t16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
-defm V_SUBREV_F16_fake16   : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16">;
+defm V_SUBREV_F16          : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x034, "v_subrev_f16">;
 defm V_MUL_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x035, "v_mul_f16">;
 defm V_FMAC_F16            : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x036, "v_fmac_f16">;
-defm V_LDEXP_F16_t16       : VOP2_Real_FULL_t16_gfx11_gfx12<0x03b, "v_ldexp_f16">;
-defm V_LDEXP_F16_fake16    : VOP2_Real_FULL_t16_gfx11_gfx12<0x03b, "v_ldexp_f16">;
+defm V_LDEXP_F16           : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x03b, "v_ldexp_f16">;
 defm V_MAX_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11<0x039, "v_max_f16">;
 defm V_MIN_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11<0x03a, "v_min_f16">;
 defm V_FMAMK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<0x037, "v_fmamk_f16">;

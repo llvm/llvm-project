@@ -736,9 +736,10 @@ at the end to the next power of 2.
 
 These reductions support both fixed-sized and scalable vector types.
 
-The integer reduction intrinsics, including ``__builtin_reduce_add``,
-``__builtin_reduce_mul``, ``__builtin_reduce_and``, ``__builtin_reduce_or``,
-and ``__builtin_reduce_xor``, can be called in a ``constexpr`` context.
+The integer reduction intrinsics, including ``__builtin_reduce_max``,
+``__builtin_reduce_min``, ``__builtin_reduce_add``, ``__builtin_reduce_mul``,
+``__builtin_reduce_and``, ``__builtin_reduce_or``, and ``__builtin_reduce_xor``,
+can be called in a ``constexpr`` context.
 
 Example:
 
@@ -2136,8 +2137,8 @@ method; it specifies that the method expects its ``self`` parameter to have a
   - (void) bar __attribute__((ns_consumes_self));
   - (void) baz:(id) __attribute__((ns_consumed)) x;
 
-Further examples of these attributes are available in the static analyzer's `list of annotations for analysis
-<https://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
+Further examples of these attributes are available in the static analyzer's
+`list of annotations for analysis <analyzer/user-docs/Annotations.html#cocoa-mem>`__.
 
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
@@ -3640,7 +3641,7 @@ program location should be executed. It is expected to be used to implement
 <https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
 intrinsic.
 
-The ``__builtin_allow_runtime_check()`` can be used within constrol structures
+The ``__builtin_allow_runtime_check()`` can be used within control structures
 like ``if`` to guard expensive runtime checks. The return value is determined
 by the following compiler options and may differ per call site:
 
@@ -4791,8 +4792,8 @@ Extensions for Static Analysis
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the `Clang Static
 Analyzer <https://clang-analyzer.llvm.org/>`_. These attributes are documented
-in the analyzer's `list of source-level annotations
-<https://clang-analyzer.llvm.org/annotations.html>`_.
+in the analyzer's `list of annotations for analysis
+<analyzer/user-docs/Annotations.html>`__.
 
 
 Extensions for Dynamic Analysis

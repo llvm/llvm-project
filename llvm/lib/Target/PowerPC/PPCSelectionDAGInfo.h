@@ -16,6 +16,10 @@ namespace llvm {
 class PPCSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
   ~PPCSelectionDAGInfo() override;
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
+  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
 };
 
 } // namespace llvm

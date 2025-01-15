@@ -65,7 +65,7 @@ define i8 @relaxed_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM70-NEXT:    and.b64 %rd3, %rd2, 1;
 ; SM70-NEXT:    shl.b64 %rd4, %rd3, 3;
 ; SM70-NEXT:    cvt.u32.u64 %r1, %rd4;
-; SM70-NEXT:    mov.u16 %rs11, 255;
+; SM70-NEXT:    mov.b16 %rs11, 255;
 ; SM70-NEXT:    shl.b16 %rs12, %rs11, %r1;
 ; SM70-NEXT:    not.b16 %rs2, %rs12;
 ; SM70-NEXT:    shl.b16 %rs3, %rs9, %r1;

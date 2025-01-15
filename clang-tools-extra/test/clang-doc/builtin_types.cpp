@@ -23,11 +23,11 @@ extern bool b();
 // YAML-NEXT:         Filename:        '{{.*}}'
 // YAML-NEXT:     ReturnType:
 // YAML-NEXT:       Type:
-// YAML-NEXT:         Name:            '_Bool'
-// YAML-NEXT:         QualName:        '_Bool'
+// YAML-NEXT:         Name:            'bool'
+// YAML-NEXT:         QualName:        'bool'
 
 // MD: ### b
-// MD: *_Bool b()*
+// MD: *bool b()*
 
 char c();
 

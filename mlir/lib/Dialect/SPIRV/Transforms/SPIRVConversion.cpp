@@ -1354,7 +1354,7 @@ LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {
   // looking for newly created func ops.
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingOps;
-  return applyPatternsAndFoldGreedily(op, std::move(patterns), config);
+  return applyPatternsGreedily(op, std::move(patterns), config);
 }
 
 LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
@@ -1366,7 +1366,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     auto options = vector::UnrollVectorOptions().setNativeShapeFn(
         [](auto op) { return mlir::spirv::getNativeVectorShape(op); });
     populateVectorUnrollPatterns(patterns, options);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
 
@@ -1378,7 +1378,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
         vector::VectorTransposeLowering::EltWise);
     vector::populateVectorTransposeLoweringPatterns(patterns, options);
     vector::populateVectorShapeCastLoweringPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
 
@@ -1403,7 +1403,7 @@ LogicalResult mlir::spirv::unrollVectorsInFuncBodies(Operation *op) {
     vector::BroadcastOp::getCanonicalizationPatterns(patterns, context);
     vector::ShapeCastOp::getCanonicalizationPatterns(patterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return failure();
   }
   return success();

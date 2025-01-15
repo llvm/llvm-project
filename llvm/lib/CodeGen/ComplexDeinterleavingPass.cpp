@@ -1730,7 +1730,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     auto *Real = OperationInstruction[i];
     // We want to check that we have 2 operands, but the function attributes
     // being counted as operands bloats this value.
-    if (Real->getNumOperands() < 2)
+    if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
     RealPHI = ReductionInfo[Real].first;
@@ -1756,9 +1756,21 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
 bool ComplexDeinterleavingGraph::checkNodes() {
 
+  bool FoundDeinterleaveNode = false;
   for (NodePtr N : CompositeNodes) {
     if (!N->areOperandsValid())
       return false;
+    if (N->Operation == ComplexDeinterleavingOperation::Deinterleave)
+      FoundDeinterleaveNode = true;
+  }
+
+  // We need a deinterleave node in order to guarantee that we're working with
+  // complex numbers.
+  if (!FoundDeinterleaveNode) {
+    LLVM_DEBUG(
+        dbgs() << "Couldn't find a deinterleave node within the graph, cannot "
+                  "guarantee safety during graph transformation.\n");
+    return false;
   }
 
   // Collect all instructions from roots to leaves

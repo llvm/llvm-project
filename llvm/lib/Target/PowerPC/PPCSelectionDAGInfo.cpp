@@ -7,7 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCSelectionDAGInfo.h"
+#include "PPCISelLowering.h"
 
 using namespace llvm;
 
 PPCSelectionDAGInfo::~PPCSelectionDAGInfo() = default;
+
+bool PPCSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= PPCISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= PPCISD::LAST_MEMORY_OPCODE;
+}
+
+bool PPCSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= PPCISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= PPCISD::LAST_STRICTFP_OPCODE;
+}

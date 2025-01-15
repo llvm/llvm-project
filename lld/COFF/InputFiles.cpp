@@ -149,11 +149,19 @@ std::vector<MemoryBufferRef>
 lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = file->isThin() && ctx.driver.tar;
+
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               file->getFileName() +
                   ": could not get the buffer for a child of the archive");
+    if (addToTar) {
+      ctx.driver.tar->append(relativeToRoot(check(c.getFullName())),
+                             mbref.getBuffer());
+    }
     v.push_back(mbref);
   }
   if (err)
@@ -193,6 +201,8 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
+    if (!lazy)
+      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -345,7 +355,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     MergeChunk::addSection(symtab.ctx, c);
   else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
-  else
+  else if (!(sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_INFO))
     chunks.push_back(c);
 
   return c;
@@ -1292,8 +1302,11 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
+    if (!sym.isUndefined()) {
       symtab.addLazyObject(this, sym.getName());
+      if (!lazy)
+        return;
+    }
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
@@ -1407,5 +1420,5 @@ void DLLFile::makeImport(DLLFile::Symbol *s) {
   memcpy(p, s->dllName.data(), s->dllName.size());
   MemoryBufferRef mbref = MemoryBufferRef(StringRef(buf, size), s->dllName);
   ImportFile *impFile = make<ImportFile>(symtab.ctx, mbref);
-  symtab.addFile(impFile);
+  symtab.ctx.driver.addFile(impFile);
 }

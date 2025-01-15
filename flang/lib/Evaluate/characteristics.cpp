@@ -227,15 +227,14 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
   } else if (semantics::IsAssumedSizeArray(symbol)) {
     attrs_.set(Attr::AssumedSize);
   }
+  if (int n{GetCorank(symbol)}) {
+    corank_ = n;
+    attrs_.set(Attr::Coarray);
+  }
   if (const auto *object{
-          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
-    corank_ = object->coshape().Rank();
-    if (object->IsAssumedRank()) {
-      attrs_.set(Attr::AssumedRank);
-    }
-    if (object->IsCoarray()) {
-      attrs_.set(Attr::Coarray);
-    }
+          symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()};
+      object && object->IsAssumedRank()) {
+    attrs_.set(Attr::AssumedRank);
   }
 }
 

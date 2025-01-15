@@ -87,72 +87,54 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
 }
 
 //===----------------------------------------------------------------------===//
-// Float Type
+// Float Types
 //===----------------------------------------------------------------------===//
 
-unsigned FloatType::getWidth() {
-  return APFloat::semanticsSizeInBits(getFloatSemantics());
-}
-
-/// Returns the floating semantics for the given type.
-const llvm::fltSemantics &FloatType::getFloatSemantics() {
-  if (llvm::isa<Float4E2M1FNType>(*this))
-    return APFloat::Float4E2M1FN();
-  if (llvm::isa<Float6E2M3FNType>(*this))
-    return APFloat::Float6E2M3FN();
-  if (llvm::isa<Float6E3M2FNType>(*this))
-    return APFloat::Float6E3M2FN();
-  if (llvm::isa<Float8E5M2Type>(*this))
-    return APFloat::Float8E5M2();
-  if (llvm::isa<Float8E4M3Type>(*this))
-    return APFloat::Float8E4M3();
-  if (llvm::isa<Float8E4M3FNType>(*this))
-    return APFloat::Float8E4M3FN();
-  if (llvm::isa<Float8E5M2FNUZType>(*this))
-    return APFloat::Float8E5M2FNUZ();
-  if (llvm::isa<Float8E4M3FNUZType>(*this))
-    return APFloat::Float8E4M3FNUZ();
-  if (llvm::isa<Float8E4M3B11FNUZType>(*this))
-    return APFloat::Float8E4M3B11FNUZ();
-  if (llvm::isa<Float8E3M4Type>(*this))
-    return APFloat::Float8E3M4();
-  if (llvm::isa<Float8E8M0FNUType>(*this))
-    return APFloat::Float8E8M0FNU();
-  if (llvm::isa<BFloat16Type>(*this))
-    return APFloat::BFloat();
-  if (llvm::isa<Float16Type>(*this))
-    return APFloat::IEEEhalf();
-  if (llvm::isa<FloatTF32Type>(*this))
-    return APFloat::FloatTF32();
-  if (llvm::isa<Float32Type>(*this))
-    return APFloat::IEEEsingle();
-  if (llvm::isa<Float64Type>(*this))
-    return APFloat::IEEEdouble();
-  if (llvm::isa<Float80Type>(*this))
-    return APFloat::x87DoubleExtended();
-  if (llvm::isa<Float128Type>(*this))
-    return APFloat::IEEEquad();
-  llvm_unreachable("non-floating point type used");
-}
-
-FloatType FloatType::scaleElementBitwidth(unsigned scale) {
-  if (!scale)
-    return FloatType();
-  MLIRContext *ctx = getContext();
-  if (isF16() || isBF16()) {
-    if (scale == 2)
-      return FloatType::getF32(ctx);
-    if (scale == 4)
-      return FloatType::getF64(ctx);
+// Mapping from MLIR FloatType to APFloat semantics.
+#define FLOAT_TYPE_SEMANTICS(TYPE, SEM)                                        \
+  const llvm::fltSemantics &TYPE::getFloatSemantics() const {                  \
+    return APFloat::SEM();                                                     \
   }
-  if (isF32())
-    if (scale == 2)
-      return FloatType::getF64(ctx);
+FLOAT_TYPE_SEMANTICS(Float4E2M1FNType, Float4E2M1FN)
+FLOAT_TYPE_SEMANTICS(Float6E2M3FNType, Float6E2M3FN)
+FLOAT_TYPE_SEMANTICS(Float6E3M2FNType, Float6E3M2FN)
+FLOAT_TYPE_SEMANTICS(Float8E5M2Type, Float8E5M2)
+FLOAT_TYPE_SEMANTICS(Float8E4M3Type, Float8E4M3)
+FLOAT_TYPE_SEMANTICS(Float8E4M3FNType, Float8E4M3FN)
+FLOAT_TYPE_SEMANTICS(Float8E5M2FNUZType, Float8E5M2FNUZ)
+FLOAT_TYPE_SEMANTICS(Float8E4M3FNUZType, Float8E4M3FNUZ)
+FLOAT_TYPE_SEMANTICS(Float8E4M3B11FNUZType, Float8E4M3B11FNUZ)
+FLOAT_TYPE_SEMANTICS(Float8E3M4Type, Float8E3M4)
+FLOAT_TYPE_SEMANTICS(Float8E8M0FNUType, Float8E8M0FNU)
+FLOAT_TYPE_SEMANTICS(BFloat16Type, BFloat)
+FLOAT_TYPE_SEMANTICS(Float16Type, IEEEhalf)
+FLOAT_TYPE_SEMANTICS(FloatTF32Type, FloatTF32)
+FLOAT_TYPE_SEMANTICS(Float32Type, IEEEsingle)
+FLOAT_TYPE_SEMANTICS(Float64Type, IEEEdouble)
+FLOAT_TYPE_SEMANTICS(Float80Type, x87DoubleExtended)
+FLOAT_TYPE_SEMANTICS(Float128Type, IEEEquad)
+#undef FLOAT_TYPE_SEMANTICS
+
+FloatType Float16Type::scaleElementBitwidth(unsigned scale) const {
+  if (scale == 2)
+    return FloatType::getF32(getContext());
+  if (scale == 4)
+    return FloatType::getF64(getContext());
   return FloatType();
 }
 
-unsigned FloatType::getFPMantissaWidth() {
-  return APFloat::semanticsPrecision(getFloatSemantics());
+FloatType BFloat16Type::scaleElementBitwidth(unsigned scale) const {
+  if (scale == 2)
+    return FloatType::getF32(getContext());
+  if (scale == 4)
+    return FloatType::getF64(getContext());
+  return FloatType();
+}
+
+FloatType Float32Type::scaleElementBitwidth(unsigned scale) const {
+  if (scale == 2)
+    return FloatType::getF64(getContext());
+  return FloatType();
 }
 
 //===----------------------------------------------------------------------===//

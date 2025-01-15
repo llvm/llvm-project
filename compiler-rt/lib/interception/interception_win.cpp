@@ -213,6 +213,18 @@ static char* _strchr(char* str, char c) {
   return nullptr;
 }
 
+static int _strcmp(const char *s1, const char *s2) {
+  while (true) {
+    unsigned c1 = *s1;
+    unsigned c2 = *s2;
+    if (c1 != c2) return (c1 < c2) ? -1 : 1;
+    if (c1 == 0) break;
+    s1++;
+    s2++;
+  }
+  return 0;
+}
+
 static void _memset(void *p, int value, size_t sz) {
   for (size_t i = 0; i < sz; ++i)
     ((char*)p)[i] = (char)value;
@@ -624,12 +636,17 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xFF8B:  // 8B FF : mov edi, edi
     case 0xEC8B:  // 8B EC : mov ebp, esp
     case 0xc889:  // 89 C8 : mov eax, ecx
+    case 0xD189:  // 89 D1 : mov ecx, edx
     case 0xE589:  // 89 E5 : mov ebp, esp
     case 0xC18B:  // 8B C1 : mov eax, ecx
+    case 0xC031:  // 31 C0 : xor eax, eax
+    case 0xC931:  // 31 C9 : xor ecx, ecx
+    case 0xD231:  // 31 D2 : xor edx, edx
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
     case 0xD233:  // 33 D2 : xor edx, edx
     case 0xDB84:  // 84 DB : test bl,bl
+    case 0xC084:  // 84 C0 : test al,al
     case 0xC984:  // 84 C9 : test cl,cl
     case 0xD284:  // 84 D2 : test dl,dl
       return 2;
@@ -1177,8 +1194,7 @@ static void **InterestingDLLsAvailable() {
     "libc++.dll",     // libc++
     "libunwind.dll",  // libunwind
 #  endif
-    // NTDLL should go last as it exports some functions that we should
-    // override in the CRT [presumably only used internally].
+    // NTDLL must go last as it gets special treatment in OverrideFunction.
     "ntdll.dll",
     NULL
   };
@@ -1235,7 +1251,7 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
   for (DWORD i = 0; i < exports->NumberOfNames; i++) {
     RVAPtr<char> name(module, names[i]);
-    if (!strcmp(func_name, name)) {
+    if (!_strcmp(func_name, name)) {
       DWORD index = ordinals[i];
       RVAPtr<char> func(module, functions[index]);
 
@@ -1281,9 +1297,22 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
 
 bool OverrideFunction(
     const char *func_name, uptr new_func, uptr *orig_old_func) {
+  static const char *kNtDllIgnore[] = {
+    "memcmp", "memcpy", "memmove", "memset"
+  };
+
   bool hooked = false;
   void **DLLs = InterestingDLLsAvailable();
   for (size_t i = 0; DLLs[i]; ++i) {
+    if (DLLs[i + 1] == nullptr) {
+      // This is the last DLL, i.e. NTDLL. It exports some functions that
+      // we only want to override in the CRT.
+      for (const char *ignored : kNtDllIgnore) {
+        if (_strcmp(func_name, ignored) == 0)
+          return hooked;
+      }
+    }
+
     uptr func_addr = InternalGetProcAddress(DLLs[i], func_name);
     if (func_addr &&
         OverrideFunction(func_addr, new_func, orig_old_func)) {
@@ -1337,7 +1366,7 @@ bool OverrideImportedFunction(const char *module_to_patch,
       RVAPtr<IMAGE_IMPORT_BY_NAME> import_by_name(
           module, name_table->u1.ForwarderString);
       const char *funcname = &import_by_name->Name[0];
-      if (strcmp(funcname, function_name) == 0)
+      if (_strcmp(funcname, function_name) == 0)
         break;
     }
   }

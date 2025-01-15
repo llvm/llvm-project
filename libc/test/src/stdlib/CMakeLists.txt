@@ -301,18 +301,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  quick_sort_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    quick_sort_test.cpp
-  HDRS
-    SortingTest.h
-  DEPENDS
-    libc.src.stdlib.qsort_util
-)
-
-add_libc_test(
   heap_sort_test
   SUITE
     libc-stdlib-tests
@@ -321,15 +309,15 @@ add_libc_test(
   HDRS
     SortingTest.h
   DEPENDS
-    libc.src.stdlib.qsort_util
+    libc.src.stdlib.qsort
 )
 
 add_libc_test(
-  qsort_test
+  quick_sort_test
   SUITE
     libc-stdlib-tests
   SRCS
-    qsort_test.cpp
+    quick_sort_test.cpp
   HDRS
     SortingTest.h
   DEPENDS
