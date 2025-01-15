@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -51,6 +52,14 @@
 #endif // __linux__
 
 namespace llvm {
+
+static cl::opt<bool>
+    SerializeBenchmarks("serialize-benchmarks",
+                        cl::desc("Generate fully-serialized benchmarks "
+                                 "that can later be deserialized and "
+                                 "resuming the measurement."),
+                        cl::init(false));
+
 namespace exegesis {
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
@@ -610,6 +619,7 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
 Expected<BenchmarkRunner::RunnableConfiguration>
 BenchmarkRunner::getRunnableConfiguration(
     const BenchmarkCode &BC, unsigned MinInstructions, unsigned LoopBodySize,
+    Benchmark::RepetitionModeE RepetitionMode,
     const SnippetRepetitor &Repetitor) const {
   RunnableConfiguration RC;
 
@@ -654,10 +664,55 @@ BenchmarkRunner::getRunnableConfiguration(
                         LoopBodySize, GenerateMemoryInstructions);
     if (Error E = Snippet.takeError())
       return std::move(E);
+
+    // Generate fully-serialized benchmarks.
+    if (SerializeBenchmarks) {
+      if (RepetitionMode != Benchmark::Loop &&
+          RepetitionMode != Benchmark::Duplicate)
+        return make_error<Failure>(
+            "-serialize-benchmarks currently only supports -repetition-mode "
+            "of loop and duplicate.");
+
+      if (Error E = BenchmarkResult.setObjectFile(*Snippet))
+        return std::move(E);
+    }
+
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
   }
 
   return std::move(RC);
+}
+
+Expected<BenchmarkRunner::RunnableConfiguration>
+BenchmarkRunner::getRunnableConfiguration(Benchmark &&B) const {
+  assert(B.ObjFile.has_value() && B.ObjFile->isValid() &&
+         "No serialized obejct file is attached?");
+  const Benchmark::ObjectFile &ObjFile = *B.ObjFile;
+  SmallVector<uint8_t> DecompressedObjFile;
+  switch (ObjFile.CompressionFormat) {
+  case compression::Format::Zstd:
+    if (!compression::zstd::isAvailable())
+      return make_error<StringError>("zstd is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zstd::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  case compression::Format::Zlib:
+    if (!compression::zlib::isAvailable())
+      return make_error<StringError>("zlib is not available for decompression.",
+                                     inconvertibleErrorCode());
+    if (Error E = compression::zlib::decompress(ObjFile.CompressedBytes,
+                                                DecompressedObjFile,
+                                                ObjFile.UncompressedSize))
+      return std::move(E);
+    break;
+  }
+
+  StringRef Buffer(reinterpret_cast<const char *>(DecompressedObjFile.begin()),
+                   DecompressedObjFile.size());
+  return RunnableConfiguration{std::move(B), getObjectFromBuffer(Buffer)};
 }
 
 Expected<std::unique_ptr<BenchmarkRunner::FunctionExecutor>>

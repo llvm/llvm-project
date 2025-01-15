@@ -1,0 +1,41 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --mode=latency --benchmarks-file=%t.yaml
+# RUN: FileCheck --input-file=%t.yaml %s --check-prefixes=CHECK,SERIALIZE
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --run-measurement=%t.yaml --mode=latency --benchmark-phase=dry-run-measurement --use-dummy-perf-counters \
+# RUN:    --dump-object-to-disk=%t.o | FileCheck %s --check-prefixes=CHECK,DESERIALIZE
+# RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=OBJDUMP
+
+# We should not serialie benchmarks by default.
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --benchmark-phase=assemble-measured-code --mode=latency | \
+# RUN:    FileCheck %s --check-prefix=NO-SERIALIZE
+
+# We currently don't support serialization for repetition modes that require more than one snippets.
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=min 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=middle-half-loop 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+# RUN: not llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p470 --opcode-name=SH3ADD --mode=latency --serialize-benchmarks --benchmark-phase=assemble-measured-code \
+# RUN:    --repetition-mode=middle-half-duplicate 2>&1 | FileCheck %s --check-prefix=NOT-SUPPORTED
+
+# REQUIRES: riscv-registered-target && native-registered-exegesis-target
+# REQUIRES: zlib || zstd
+
+# A round-trip test for serialize/deserialize benchmarks.
+
+# CHECK: mode: latency
+# CHECK:  instructions:
+# CHECK-NEXT: - 'SH3ADD X{{.*}} X{{.*}} X{{.*}}'
+# CHECK: cpu_name:        sifive-p470
+# CHECK-NEXT: llvm_triple:     riscv64
+# CHECK-NEXT: min_instructions: 10000
+# CHECK-NEXT: measurements:    []
+# SERIALIZE: error: actual measurements skipped.
+# DESERIALIZE: error:           ''
+# CHECK: info:            Repeating a single explicitly serial instruction
+
+# OBJDUMP: sh3add
+
+# Negative tests.
+
+# NOT-SUPPORTED: -serialize-benchmarks currently only supports -repetition-mode of loop and duplicate.
+# NO-SERIALIZE-NOT: object_file:

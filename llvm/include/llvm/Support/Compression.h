@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;
@@ -125,6 +126,16 @@ Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
                  SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
 
 } // End of namespace compression
+
+namespace yaml {
+// Related YAML traits.
+template <> struct ScalarEnumerationTraits<compression::Format> {
+  static void enumeration(IO &Io, compression::Format &Format) {
+    Io.enumCase(Format, "zstd", compression::Format::Zstd);
+    Io.enumCase(Format, "zlib", compression::Format::Zlib);
+  }
+};
+} // namespace yaml
 
 } // End of namespace llvm
 

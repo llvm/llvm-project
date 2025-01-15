@@ -114,8 +114,7 @@ static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
 
 static cl::opt<BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
     "benchmark-phase",
-    cl::desc(
-        "it is possible to stop the benchmarking process after some phase"),
+    cl::desc("Stop the benchmarking process after some phase"),
     cl::cat(BenchmarkOptions),
     cl::values(
         clEnumValN(BenchmarkPhaseSelectorE::PrepareSnippet, "prepare-snippet",
@@ -134,6 +133,13 @@ static cl::opt<BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
             "Same as prepare-measured-code, but also runs the measurement "
             "(default)")),
     cl::init(BenchmarkPhaseSelectorE::Measure));
+
+static cl::opt<std::string> RunMeasurement(
+    "run-measurement",
+    cl::desc(
+        "Run measurement phase with a benchmarks file generated previously"),
+    cl::cat(BenchmarkOptions), cl::value_desc("<benchmarks file>"),
+    cl::init(""));
 
 static cl::opt<bool>
     UseDummyPerfCounters("use-dummy-perf-counters",
@@ -397,11 +403,55 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   return Benchmarks;
 }
 
-static void runBenchmarkConfigurations(
-    const LLVMState &State, ArrayRef<BenchmarkCode> Configurations,
+static void deserializeRunnableConfigurations(
+    std::vector<Benchmark> &Benchmarks, const BenchmarkRunner &Runner,
+    std::vector<BenchmarkRunner::RunnableConfiguration> &RunnableConfigs,
+    SmallVectorImpl<unsigned> &Repetitions) {
+  for (unsigned I = 0U, E = Benchmarks.size(); I < E; ++I) {
+    // Reset any previous error.
+    Benchmarks[I].Error.clear();
+
+    RunnableConfigs.emplace_back(
+        ExitOnErr(Runner.getRunnableConfiguration(std::move(Benchmarks[I]))));
+    if (I > 0 && RunnableConfigs[I].BenchmarkResult.Key ==
+                     RunnableConfigs[I - 1].BenchmarkResult.Key) {
+      // Extend the current end index in Repetitions.
+      Repetitions.back() = RunnableConfigs.size();
+    } else {
+      // Append a new entry into Repetitions.
+      Repetitions.push_back(RunnableConfigs.size());
+    }
+  }
+}
+
+static void collectRunnableConfigurations(
+    ArrayRef<BenchmarkCode> Configurations,
     ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
-    const BenchmarkRunner &Runner) {
-  assert(!Configurations.empty() && "Don't have any configurations to run.");
+    const BenchmarkRunner &Runner,
+    std::vector<BenchmarkRunner::RunnableConfiguration> &RunnableConfigs,
+    SmallVectorImpl<unsigned> &Repetitions) {
+
+  SmallVector<unsigned, 2> MinInstructionCounts = {MinInstructions};
+  if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
+      RepetitionMode == Benchmark::MiddleHalfLoop)
+    MinInstructionCounts.push_back(MinInstructions * 2);
+
+  for (const BenchmarkCode &Conf : Configurations) {
+    for (const auto &Repetitor : Repetitors) {
+      for (unsigned IterationRepetitions : MinInstructionCounts)
+        RunnableConfigs.emplace_back(ExitOnErr(Runner.getRunnableConfiguration(
+            Conf, IterationRepetitions, LoopBodySize, RepetitionMode,
+            *Repetitor)));
+    }
+    Repetitions.emplace_back(RunnableConfigs.size());
+  }
+}
+
+static void runBenchmarkConfigurations(
+    const LLVMState &State,
+    std::vector<BenchmarkRunner::RunnableConfiguration> &RunnableConfigs,
+    ArrayRef<unsigned> Repetitions, const BenchmarkRunner &Runner) {
+  assert(!RunnableConfigs.empty() && "Don't have any configurations to run.");
   std::optional<raw_fd_ostream> FileOstr;
   if (BenchmarkFile != "-") {
     int ResultFD = 0;
@@ -415,43 +465,38 @@ static void runBenchmarkConfigurations(
 
   std::optional<ProgressMeter<>> Meter;
   if (BenchmarkMeasurementsPrintProgress)
-    Meter.emplace(Configurations.size());
+    Meter.emplace(RunnableConfigs.size());
 
-  SmallVector<unsigned, 2> MinInstructionCounts = {MinInstructions};
-  if (RepetitionMode == Benchmark::MiddleHalfDuplicate ||
-      RepetitionMode == Benchmark::MiddleHalfLoop)
-    MinInstructionCounts.push_back(MinInstructions * 2);
+  std::optional<StringRef> DumpFile;
+  if (DumpObjectToDisk.getNumOccurrences())
+    DumpFile = DumpObjectToDisk;
 
-  for (const BenchmarkCode &Conf : Configurations) {
+  const std::optional<int> BenchmarkCPU =
+      BenchmarkProcessCPU == -1 ? std::nullopt
+                                : std::optional(BenchmarkProcessCPU.getValue());
+
+  unsigned StartIdx = 0;
+  for (unsigned EndIdx : Repetitions) {
     ProgressMeter<>::ProgressMeterStep MeterStep(Meter ? &*Meter : nullptr);
     SmallVector<Benchmark, 2> AllResults;
 
-    for (const std::unique_ptr<const SnippetRepetitor> &Repetitor :
-         Repetitors) {
-      for (unsigned IterationRepetitions : MinInstructionCounts) {
-        auto RC = ExitOnErr(Runner.getRunnableConfiguration(
-            Conf, IterationRepetitions, LoopBodySize, *Repetitor));
-        std::optional<StringRef> DumpFile;
-        if (DumpObjectToDisk.getNumOccurrences())
-          DumpFile = DumpObjectToDisk;
-        const std::optional<int> BenchmarkCPU =
-            BenchmarkProcessCPU == -1
-                ? std::nullopt
-                : std::optional(BenchmarkProcessCPU.getValue());
-        auto [Err, BenchmarkResult] =
-            Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
-        if (Err) {
-          // Errors from executing the snippets are fine.
-          // All other errors are a framework issue and should fail.
-          if (!Err.isA<SnippetExecutionFailure>())
-            ExitOnErr(std::move(Err));
-
-          BenchmarkResult.Error = toString(std::move(Err));
+    for (unsigned Idx = StartIdx; Idx < EndIdx; ++Idx) {
+      auto RC = std::move(RunnableConfigs[Idx]);
+      auto [Err, BenchmarkResult] =
+          Runner.runConfiguration(std::move(RC), DumpFile, BenchmarkCPU);
+      if (Err) {
+        // Errors from executing the snippets are fine.
+        // All other errors are a framework issue and should fail.
+        if (!Err.isA<SnippetExecutionFailure>()) {
+          llvm::errs() << "llvm-exegesis error: " << toString(std::move(Err));
+          exit(1);
         }
-        AllResults.push_back(std::move(BenchmarkResult));
+        BenchmarkResult.Error = toString(std::move(Err));
       }
-    }
 
+      AllResults.push_back(std::move(BenchmarkResult));
+    }
+    StartIdx = EndIdx;
     Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
@@ -517,77 +562,94 @@ void benchmarkMain() {
     ExitWithError("cannot create benchmark runner");
   }
 
-  const auto Opcodes = getOpcodesOrDie(State);
-  std::vector<BenchmarkCode> Configurations;
-
-  unsigned LoopRegister =
-      State.getExegesisTarget().getDefaultLoopCounterRegister(
-          State.getTargetMachine().getTargetTriple());
-
-  if (Opcodes.empty()) {
-    Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
-    for (const auto &Configuration : Configurations) {
-      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
-          (Configuration.Key.MemoryMappings.size() != 0 ||
-           Configuration.Key.MemoryValues.size() != 0 ||
-           Configuration.Key.SnippetAddress != 0))
-        ExitWithError("Memory and snippet address annotations are only "
-                      "supported in subprocess "
-                      "execution mode");
-    }
-    LoopRegister = Configurations[0].Key.LoopRegister;
-  }
-
-  SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
-  if (RepetitionMode != Benchmark::RepetitionModeE::AggregateMin)
-    Repetitors.emplace_back(
-        SnippetRepetitor::Create(RepetitionMode, State, LoopRegister));
-  else {
-    for (Benchmark::RepetitionModeE RepMode :
-         {Benchmark::RepetitionModeE::Duplicate,
-          Benchmark::RepetitionModeE::Loop})
-      Repetitors.emplace_back(
-          SnippetRepetitor::Create(RepMode, State, LoopRegister));
-  }
-
-  BitVector AllReservedRegs;
-  for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
-    AllReservedRegs |= Repetitor->getReservedRegs();
-
-  if (!Opcodes.empty()) {
-    for (const unsigned Opcode : Opcodes) {
-      // Ignore instructions without a sched class if
-      // -ignore-invalid-sched-class is passed.
-      if (IgnoreInvalidSchedClass &&
-          State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
-        errs() << State.getInstrInfo().getName(Opcode)
-               << ": ignoring instruction without sched class\n";
-        continue;
-      }
-
-      auto ConfigsForInstr = generateSnippets(State, Opcode, AllReservedRegs);
-      if (!ConfigsForInstr) {
-        logAllUnhandledErrors(
-            ConfigsForInstr.takeError(), errs(),
-            Twine(State.getInstrInfo().getName(Opcode)).concat(": "));
-        continue;
-      }
-      std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
-                std::back_inserter(Configurations));
-    }
-  }
-
-  if (MinInstructions == 0) {
-    ExitOnErr.setBanner("llvm-exegesis: ");
-    ExitWithError("--min-instructions must be greater than zero");
-  }
+  std::vector<BenchmarkRunner::RunnableConfiguration> RunnableConfigs;
+  SmallVector<unsigned> Repetitions;
 
   // Write to standard output if file is not set.
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
-  if (!Configurations.empty())
-    runBenchmarkConfigurations(State, Configurations, Repetitors, *Runner);
+  if (!RunMeasurement.empty()) {
+    // Right now we only support resuming before the measurement phase.
+    auto ErrOrBuffer =
+        MemoryBuffer::getFileOrSTDIN(RunMeasurement, /*IsText=*/true);
+    if (!ErrOrBuffer)
+      report_fatal_error(errorCodeToError(ErrOrBuffer.getError()));
+
+    std::vector<Benchmark> Benchmarks =
+        ExitOnErr(Benchmark::readYamls(State, **ErrOrBuffer));
+    deserializeRunnableConfigurations(Benchmarks, *Runner, RunnableConfigs,
+                                      Repetitions);
+  } else {
+    const auto Opcodes = getOpcodesOrDie(State);
+    std::vector<BenchmarkCode> Configurations;
+
+    unsigned LoopRegister =
+        State.getExegesisTarget().getDefaultLoopCounterRegister(
+            State.getTargetMachine().getTargetTriple());
+
+    if (Opcodes.empty()) {
+      Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
+      for (const auto &Configuration : Configurations) {
+        if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
+            (Configuration.Key.MemoryMappings.size() != 0 ||
+             Configuration.Key.MemoryValues.size() != 0 ||
+             Configuration.Key.SnippetAddress != 0))
+          ExitWithError("Memory and snippet address annotations are only "
+                        "supported in subprocess "
+                        "execution mode");
+      }
+      LoopRegister = Configurations[0].Key.LoopRegister;
+    }
+    SmallVector<std::unique_ptr<const SnippetRepetitor>, 2> Repetitors;
+    if (RepetitionMode != Benchmark::RepetitionModeE::AggregateMin)
+      Repetitors.emplace_back(
+          SnippetRepetitor::Create(RepetitionMode, State, LoopRegister));
+    else {
+      for (Benchmark::RepetitionModeE RepMode :
+           {Benchmark::RepetitionModeE::Duplicate,
+            Benchmark::RepetitionModeE::Loop})
+        Repetitors.emplace_back(
+            SnippetRepetitor::Create(RepMode, State, LoopRegister));
+    }
+
+    BitVector AllReservedRegs;
+    for (const std::unique_ptr<const SnippetRepetitor> &Repetitor : Repetitors)
+      AllReservedRegs |= Repetitor->getReservedRegs();
+
+    if (!Opcodes.empty()) {
+      for (const unsigned Opcode : Opcodes) {
+        // Ignore instructions without a sched class if
+        // -ignore-invalid-sched-class is passed.
+        if (IgnoreInvalidSchedClass &&
+            State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
+          errs() << State.getInstrInfo().getName(Opcode)
+                 << ": ignoring instruction without sched class\n";
+          continue;
+        }
+
+        auto ConfigsForInstr = generateSnippets(State, Opcode, AllReservedRegs);
+        if (!ConfigsForInstr) {
+          logAllUnhandledErrors(
+              ConfigsForInstr.takeError(), errs(),
+              Twine(State.getInstrInfo().getName(Opcode)).concat(": "));
+          continue;
+        }
+        std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
+                  std::back_inserter(Configurations));
+      }
+    }
+    if (MinInstructions == 0) {
+      ExitOnErr.setBanner("llvm-exegesis: ");
+      ExitWithError("--min-instructions must be greater than zero");
+    }
+
+    collectRunnableConfigurations(Configurations, Repetitors, *Runner,
+                                  RunnableConfigs, Repetitions);
+  }
+
+  if (!RunnableConfigs.empty())
+    runBenchmarkConfigurations(State, RunnableConfigs, Repetitions, *Runner);
 
   pfm::pfmTerminate();
 }

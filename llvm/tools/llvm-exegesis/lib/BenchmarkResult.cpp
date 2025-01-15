@@ -15,10 +15,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Base64.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 
 static constexpr const char kIntegerPrefix[] = "i_0x";
@@ -26,6 +29,13 @@ static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
 
 namespace llvm {
+
+static cl::opt<compression::Format> ForceObjectFileCompressionFormat(
+    "force-serialized-obj-compress-format", cl::Hidden,
+    cl::desc(
+        "Force to use this compression format for serialized object files."),
+    cl::values(clEnumValN(compression::Format::Zstd, "zstd", "Using Zstandard"),
+               clEnumValN(compression::Format::Zlib, "zlib", "Using LibZ")));
 
 namespace {
 
@@ -288,6 +298,33 @@ template <> struct MappingContextTraits<exegesis::BenchmarkKey, YamlContext> {
   }
 };
 
+template <> struct MappingTraits<exegesis::Benchmark::ObjectFile> {
+  struct NormalizedBase64Binary {
+    std::string Base64Str;
+
+    NormalizedBase64Binary(IO &) {}
+    NormalizedBase64Binary(IO &, const std::vector<uint8_t> &Data)
+        : Base64Str(llvm::encodeBase64(Data)) {}
+
+    std::vector<uint8_t> denormalize(IO &) {
+      std::vector<char> Buffer;
+      if (Error E = llvm::decodeBase64(Base64Str, Buffer))
+        report_fatal_error(std::move(E));
+
+      StringRef Data(Buffer.data(), Buffer.size());
+      return std::vector<uint8_t>(Data.bytes_begin(), Data.bytes_end());
+    }
+  };
+
+  static void mapping(IO &Io, exegesis::Benchmark::ObjectFile &Obj) {
+    Io.mapRequired("compression", Obj.CompressionFormat);
+    Io.mapRequired("original_size", Obj.UncompressedSize);
+    MappingNormalization<NormalizedBase64Binary, std::vector<uint8_t>>
+        ObjFileString(Io, Obj.CompressedBytes);
+    Io.mapRequired("compressed_bytes", ObjFileString->Base64Str);
+  }
+};
+
 template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
   struct NormalizedBinary {
     NormalizedBinary(IO &io) {}
@@ -325,9 +362,11 @@ template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
     Io.mapRequired("error", Obj.Error);
     Io.mapOptional("info", Obj.Info);
     // AssembledSnippet
-    MappingNormalization<NormalizedBinary, std::vector<uint8_t>> BinaryString(
+    MappingNormalization<NormalizedBinary, std::vector<uint8_t>> SnippetString(
         Io, Obj.AssembledSnippet);
-    Io.mapOptional("assembled_snippet", BinaryString->Binary);
+    Io.mapOptional("assembled_snippet", SnippetString->Binary);
+    // ObjectFile
+    Io.mapOptional("object_file", Obj.ObjFile);
   }
 };
 
@@ -362,6 +401,52 @@ Benchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
     Yin.nextDocument();
   }
   return Result;
+}
+
+Error Benchmark::setObjectFile(StringRef RawBytes) {
+  SmallVector<uint8_t> CompressedBytes;
+  llvm::compression::Format CompressionFormat;
+
+  auto isFormatAvailable = [](llvm::compression::Format F) -> bool {
+    switch (F) {
+    case compression::Format::Zstd:
+      return compression::zstd::isAvailable();
+    case compression::Format::Zlib:
+      return compression::zlib::isAvailable();
+    }
+  };
+  if (ForceObjectFileCompressionFormat.getNumOccurrences() > 0) {
+    CompressionFormat = ForceObjectFileCompressionFormat;
+    if (!isFormatAvailable(CompressionFormat))
+      return make_error<StringError>(
+          "The designated compression format is not available.",
+          inconvertibleErrorCode());
+  } else if (isFormatAvailable(compression::Format::Zstd)) {
+    // Try newer compression algorithm first.
+    CompressionFormat = compression::Format::Zstd;
+  } else if (isFormatAvailable(compression::Format::Zlib)) {
+    CompressionFormat = compression::Format::Zlib;
+  } else {
+    return make_error<StringError>(
+        "None of the compression methods is available.",
+        inconvertibleErrorCode());
+  }
+
+  switch (CompressionFormat) {
+  case compression::Format::Zstd:
+    compression::zstd::compress({RawBytes.bytes_begin(), RawBytes.bytes_end()},
+                                CompressedBytes);
+    break;
+  case compression::Format::Zlib:
+    compression::zlib::compress({RawBytes.bytes_begin(), RawBytes.bytes_end()},
+                                CompressedBytes);
+    break;
+  }
+
+  ObjFile = {CompressionFormat,
+             RawBytes.size(),
+             {CompressedBytes.begin(), CompressedBytes.end()}};
+  return Error::success();
 }
 
 Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
