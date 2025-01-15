@@ -3794,12 +3794,20 @@ TEST(APFloatTest, abs) {
 }
 
 TEST(APFloatTest, powi) {
+  // Simple cases.
   APFloat One = APFloat::getOne(APFloat::IEEEsingle(), false);
   APFloat Two = APFloat(APFloat::IEEEsingle(), "2.0");
+  APFloat NegTwo = APFloat(APFloat::IEEEsingle(), "-2.0");
   APFloat Four = APFloat(APFloat::IEEEsingle(), "4.0");
   APFloat Eight = APFloat(APFloat::IEEEsingle(), "8.0");
-  APFloat NegTwo = APFloat(APFloat::IEEEsingle(), "-2.0");
   APFloat NegEight = APFloat(APFloat::IEEEsingle(), "-8.0");
+
+  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 0)));
+  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 3)));
+  EXPECT_TRUE(Four.bitwiseIsEqual(powi(Two, 2)));
+  EXPECT_TRUE(Eight.bitwiseIsEqual(powi(Two, 3)));
+
+  // See page 63 of IEEE 754-2019.
   APFloat PosInf = APFloat::getInf(APFloat::IEEEsingle(), false);
   APFloat NegInf = APFloat::getInf(APFloat::IEEEsingle(), true);
   APFloat PosZero = APFloat::getZero(APFloat::IEEEsingle(), false);
@@ -3810,13 +3818,6 @@ TEST(APFloatTest, powi) {
   APFloat PosSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), false, &Payload);
   APFloat NegSNaN = APFloat::getSNaN(APFloat::IEEEsingle(), true, &Payload);
 
-  // Simple cases.
-  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 0)));
-  EXPECT_TRUE(One.bitwiseIsEqual(powi(One, 3)));
-  EXPECT_TRUE(Four.bitwiseIsEqual(powi(Two, 2)));
-  EXPECT_TRUE(Eight.bitwiseIsEqual(powi(Two, 3)));
-
-  // See page 63 of IEEE 754-2019.
   EXPECT_TRUE(One.bitwiseIsEqual(powi(PosInf, 0)));
   EXPECT_TRUE(NegEight.bitwiseIsEqual(powi(NegTwo, 3)));
   EXPECT_TRUE(PosZero.bitwiseIsEqual(powi(PosZero, 3)));
@@ -3826,11 +3827,28 @@ TEST(APFloatTest, powi) {
   EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(NegInf, 4)));
   EXPECT_TRUE(PosInf.bitwiseIsEqual(powi(PosInf, 3)));
 
+  // Nans
   EXPECT_TRUE(PosQNaN.bitwiseIsEqual(powi(PosQNaN, 1)));
   EXPECT_TRUE(NegQNaN.bitwiseIsEqual(powi(NegQNaN, 1)));
   // Check signaling NaN is quieted for n == 1.
   EXPECT_TRUE(PosQNaN.bitwiseIsEqual(powi(PosSNaN, 1)));
   EXPECT_TRUE(NegQNaN.bitwiseIsEqual(powi(NegSNaN, 1)));
+
+  APFloat LargestDenormalF64(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023");
+  APFloat NegLargestDenormalF64(APFloat::IEEEdouble(),
+                                "-0x1.ffffffffffffep-1023");
+  APFloat Smallest = APFloat::getSmallest(APFloat::IEEEsingle(), false);
+  APFloat NegSmallest = APFloat::getSmallest(APFloat::IEEEsingle(), true);
+  APFloat Largest = APFloat::getLargest(APFloat::IEEEsingle(), false);
+  APFloat NegLargest = APFloat::getLargest(APFloat::IEEEsingle(), true);
+
+  EXPECT_TRUE(LargestDenormalF64.bitwiseIsEqual(powi(LargestDenormalF64, 1)));
+  EXPECT_TRUE(
+      NegLargestDenormalF64.bitwiseIsEqual(powi(NegLargestDenormalF64, 1)));
+  EXPECT_TRUE(Smallest.bitwiseIsEqual(powi(Smallest, 1)));
+  EXPECT_TRUE(NegSmallest.bitwiseIsEqual(powi(NegSmallest, 1)));
+  EXPECT_TRUE(Largest.bitwiseIsEqual(powi(Largest, 1)));
+  EXPECT_TRUE(NegLargest.bitwiseIsEqual(powi(NegLargest, 1)));
 }
 
 TEST(APFloatTest, neg) {
