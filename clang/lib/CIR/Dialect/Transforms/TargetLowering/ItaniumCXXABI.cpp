@@ -73,6 +73,18 @@ public:
   mlir::Value lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                      mlir::Value loweredSrc,
                                      mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
+                                 mlir::Value loweredRhs,
+                                 mlir::OpBuilder &builder) const override;
+
+  mlir::Value lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                     mlir::Value loweredSrc,
+                                     mlir::OpBuilder &builder) const override;
+
+  mlir::Value
+  lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                            mlir::OpBuilder &builder) const override;
 };
 
 } // namespace
@@ -89,16 +101,21 @@ bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
   return false;
 }
 
-mlir::Type ItaniumCXXABI::lowerDataMemberType(
-    cir::DataMemberType type, const mlir::TypeConverter &typeConverter) const {
+static mlir::Type getABITypeForDataMember(LowerModule &lowerMod) {
   // Itanium C++ ABI 2.3:
   //   A pointer to data member is an offset from the base address of
   //   the class object containing it, represented as a ptrdiff_t
-  const clang::TargetInfo &target = LM.getTarget();
+  const clang::TargetInfo &target = lowerMod.getTarget();
   clang::TargetInfo::IntType ptrdiffTy =
       target.getPtrDiffType(clang::LangAS::Default);
-  return cir::IntType::get(type.getContext(), target.getTypeWidth(ptrdiffTy),
+  return cir::IntType::get(lowerMod.getMLIRContext(),
+                           target.getTypeWidth(ptrdiffTy),
                            target.isTypeSigned(ptrdiffTy));
+}
+
+mlir::Type ItaniumCXXABI::lowerDataMemberType(
+    cir::DataMemberType type, const mlir::TypeConverter &typeConverter) const {
+  return getABITypeForDataMember(LM);
 }
 
 mlir::TypedAttr ItaniumCXXABI::lowerDataMemberConstant(
@@ -173,6 +190,33 @@ ItaniumCXXABI::lowerDerivedDataMember(cir::DerivedDataMemberOp op,
                                       mlir::OpBuilder &builder) const {
   return lowerDataMemberCast(op, loweredSrc, op.getOffset().getSExtValue(),
                              /*isDerivedToBase=*/false, builder);
+}
+
+mlir::Value ItaniumCXXABI::lowerDataMemberCmp(cir::CmpOp op,
+                                              mlir::Value loweredLhs,
+                                              mlir::Value loweredRhs,
+                                              mlir::OpBuilder &builder) const {
+  return builder.create<cir::CmpOp>(op.getLoc(), op.getKind(), loweredLhs,
+                                    loweredRhs);
+}
+
+mlir::Value
+ItaniumCXXABI::lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                                      mlir::Value loweredSrc,
+                                      mlir::OpBuilder &builder) const {
+  return builder.create<cir::CastOp>(op.getLoc(), loweredDstTy,
+                                     cir::CastKind::bitcast, loweredSrc);
+}
+
+mlir::Value
+ItaniumCXXABI::lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                                         mlir::OpBuilder &builder) const {
+  // Itanium C++ ABI 2.3:
+  //   A NULL pointer is represented as -1.
+  auto nullAttr = cir::IntAttr::get(getABITypeForDataMember(LM), -1);
+  auto nullValue = builder.create<cir::ConstantOp>(op.getLoc(), nullAttr);
+  return builder.create<cir::CmpOp>(op.getLoc(), cir::CmpOpKind::ne, loweredSrc,
+                                    nullValue);
 }
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {

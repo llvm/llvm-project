@@ -1299,8 +1299,18 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
   }
   case cir::CastKind::bitcast: {
     auto dstTy = castOp.getType();
-    auto llvmSrcVal = adaptor.getOperands().front();
     auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+
+    if (mlir::isa<cir::DataMemberType>(castOp.getSrc().getType())) {
+      mlir::Value loweredResult = lowerMod->getCXXABI().lowerDataMemberBitcast(
+          castOp, llvmDstTy, src, rewriter);
+      rewriter.replaceOp(castOp, loweredResult);
+      return mlir::success();
+    }
+    if (mlir::isa<cir::MethodType>(castOp.getSrc().getType()))
+      llvm_unreachable("NYI");
+
+    auto llvmSrcVal = adaptor.getOperands().front();
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
                                                        llvmSrcVal);
     return mlir::success();
@@ -1322,6 +1332,16 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     auto llvmDstTy = getTypeConverter()->convertType(dstTy);
     rewriter.replaceOpWithNewOp<mlir::LLVM::AddrSpaceCastOp>(castOp, llvmDstTy,
                                                              llvmSrcVal);
+    break;
+  }
+  case cir::CastKind::member_ptr_to_bool: {
+    mlir::Value loweredResult;
+    if (mlir::isa<cir::MethodType>(castOp.getSrc().getType()))
+      llvm_unreachable("NYI");
+    else
+      loweredResult = lowerMod->getCXXABI().lowerDataMemberToBoolCast(
+          castOp, src, rewriter);
+    rewriter.replaceOp(castOp, loweredResult);
     break;
   }
   default: {
@@ -2902,6 +2922,14 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   auto type = cmpOp.getLhs().getType();
 
+  if (mlir::isa<cir::DataMemberType>(type)) {
+    assert(lowerMod && "lowering module is not available");
+    mlir::Value loweredResult = lowerMod->getCXXABI().lowerDataMemberCmp(
+        cmpOp, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+    rewriter.replaceOp(cmpOp, loweredResult);
+    return mlir::success();
+  }
+
   // Lower to LLVM comparison op.
   // if (auto intTy = mlir::dyn_cast<cir::IntType>(type)) {
   if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
@@ -4087,6 +4115,7 @@ void populateCIRToLLVMConversionPatterns(
                                           argsVarMap, patterns.getContext());
   patterns.add<
       // clang-format off
+      CIRToLLVMCastOpLowering,
       CIRToLLVMLoadOpLowering,
       CIRToLLVMStoreOpLowering,
       CIRToLLVMGlobalOpLowering,
@@ -4096,6 +4125,7 @@ void populateCIRToLLVMConversionPatterns(
   patterns.add<
       // clang-format off
       CIRToLLVMBaseDataMemberOpLowering,
+      CIRToLLVMCmpOpLowering,
       CIRToLLVMDerivedDataMemberOpLowering,
       CIRToLLVMGetRuntimeMemberOpLowering
       // clang-format on
@@ -4103,7 +4133,6 @@ void populateCIRToLLVMConversionPatterns(
   patterns.add<
       // clang-format off
       CIRToLLVMPtrStrideOpLowering,
-      CIRToLLVMCastOpLowering,
       CIRToLLVMInlineAsmOpLowering
       // clang-format on
       >(converter, patterns.getContext(), dataLayout);
@@ -4132,7 +4161,6 @@ void populateCIRToLLVMConversionPatterns(
       CIRToLLVMCallOpLowering,
       CIRToLLVMCatchParamOpLowering,
       CIRToLLVMClearCacheOpLowering,
-      CIRToLLVMCmpOpLowering,
       CIRToLLVMCmpThreeWayOpLowering,
       CIRToLLVMComplexCreateOpLowering,
       CIRToLLVMComplexImagOpLowering,

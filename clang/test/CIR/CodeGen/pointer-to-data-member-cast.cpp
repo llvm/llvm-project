@@ -70,3 +70,29 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
   // LLVM-NEXT: %[[#ret:]] = load i64, ptr %[[#ret_slot]]
   // LLVM-NEXT: ret i64 %[[#ret]]
 }
+
+struct Foo {
+  int a;
+};
+
+struct Bar {
+  int a;
+};
+
+bool to_bool(int Foo::*x) {
+  return x;
+}
+
+// CIR-LABEL: @_Z7to_boolM3Fooi
+//      CIR:   %[[#x:]] = cir.load %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !ty_Foo>>, !cir.data_member<!s32i in !ty_Foo>
+// CIR-NEXT:   %{{.+}} = cir.cast(member_ptr_to_bool, %[[#x]] : !cir.data_member<!s32i in !ty_Foo>), !cir.bool
+//      CIR: }
+
+auto bitcast(int Foo::*x) {
+  return reinterpret_cast<int Bar::*>(x);
+}
+
+// CIR-LABEL: @_Z7bitcastM3Fooi
+//      CIR:   %[[#x:]] = cir.load %{{.+}} : !cir.ptr<!cir.data_member<!s32i in !ty_Foo>>, !cir.data_member<!s32i in !ty_Foo>
+// CIR-NEXT:   %{{.+}} = cir.cast(bitcast, %[[#x]] : !cir.data_member<!s32i in !ty_Foo>), !cir.data_member<!s32i in !ty_Bar>
+//      CIR: }

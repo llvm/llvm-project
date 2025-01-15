@@ -123,6 +123,7 @@ def CK_FloatComplexToIntegralComplex
 def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 23>;
 def CK_IntegralComplexToFloatComplex
     : I32EnumAttrCase<"int_complex_to_float_complex", 24>;
+def CK_MemberPtrToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 25>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
@@ -135,7 +136,7 @@ def CastKind : I32EnumAttr<
      CK_FloatComplexToReal, CK_IntegralComplexToReal, CK_FloatComplexToBoolean,
      CK_IntegralComplexToBoolean, CK_FloatComplexCast,
      CK_FloatComplexToIntegralComplex, CK_IntegralComplexCast,
-     CK_IntegralComplexToFloatComplex]> {
+     CK_IntegralComplexToFloatComplex, CK_MemberPtrToBoolean]> {
   let cppNamespace = "::cir";
 }
 

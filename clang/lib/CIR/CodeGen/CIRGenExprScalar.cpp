@@ -932,7 +932,12 @@ public:
     };
 
     if (const MemberPointerType *MPT = LHSTy->getAs<MemberPointerType>()) {
-      assert(0 && "not implemented");
+      assert(E->getOpcode() == BO_EQ || E->getOpcode() == BO_NE);
+      mlir::Value lhs = CGF.emitScalarExpr(E->getLHS());
+      mlir::Value rhs = CGF.emitScalarExpr(E->getRHS());
+      cir::CmpOpKind kind = ClangCmpToCIRCmp(E->getOpcode());
+      Result =
+          Builder.createCompare(CGF.getLoc(E->getExprLoc()), kind, lhs, rhs);
     } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
       BinOpInfo BOInfo = emitBinOps(E);
       mlir::Value LHS = BOInfo.LHS;
@@ -1741,8 +1746,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     auto Ty = mlir::cast<cir::DataMemberType>(CGF.convertType(DestTy));
     return Builder.getNullDataMemberPtr(Ty, CGF.getLoc(E->getExprLoc()));
   }
-  case CK_ReinterpretMemberPointer:
-    llvm_unreachable("NYI");
+  case CK_ReinterpretMemberPointer: {
+    mlir::Value src = Visit(E);
+    return Builder.createBitcast(CGF.getLoc(E->getExprLoc()), src,
+                                 CGF.convertType(DestTy));
+  }
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(E);
@@ -1875,8 +1883,12 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return emitPointerToBoolConversion(Visit(E), E->getType());
   case CK_FloatingToBoolean:
     return emitFloatToBoolConversion(Visit(E), CGF.getLoc(E->getExprLoc()));
-  case CK_MemberPointerToBoolean:
-    llvm_unreachable("NYI");
+  case CK_MemberPointerToBoolean: {
+    mlir::Value memPtr = Visit(E);
+    return Builder.createCast(CGF.getLoc(CE->getSourceRange()),
+                              cir::CastKind::member_ptr_to_bool, memPtr,
+                              CGF.convertType(DestTy));
+  }
   case CK_FloatingComplexToReal:
   case CK_IntegralComplexToReal:
   case CK_FloatingComplexToBoolean:
