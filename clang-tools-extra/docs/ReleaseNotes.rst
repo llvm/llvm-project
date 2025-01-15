@@ -108,6 +108,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`clang-tidy-diff.py` script. Add the `-only-check-in-db`
+  option to exclude files not present in the compilation database, avoiding
+  false-negative results.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 

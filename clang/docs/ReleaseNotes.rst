@@ -1258,6 +1258,10 @@ libclang
   whether the first one comes strictly before the second in the source code.
 - Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
   to pretty-print a type.
+- Added ``clang_visitCXXBaseClasses``, which allows visiting the base classes
+  of a class.
+- Added ``clang_getOffsetOfBase``, which allows computing the offset of a base
+  class in a class's layout.
 
 Static Analyzer
 ---------------
@@ -1405,6 +1409,12 @@ Python Binding Changes
   declaration is an anonymous union or anonymous struct.
 - Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
   which allows changing the formatting of pretty-printed types.
+- Added ``Cursor.is_virtual_base``, a binding for ``clang_isVirtualBase``,
+  which checks whether a base class is virtual.
+- Added ``Type.get_bases``, a binding for ``clang_visitCXXBaseClasses``, which
+  allows visiting the base classes of a class.
+- Added ``Cursor.get_base_offsetof``, a binding for ``clang_getOffsetOfBase``,
+  which allows computing the offset of a base class in a class's layout.
 
 OpenMP Support
 --------------
