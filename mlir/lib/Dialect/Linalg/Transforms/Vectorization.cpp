@@ -2716,15 +2716,12 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   }
   auto vecType = VectorType::get(vecShape, sourceType.getElementType());
 
-  // 3. Generate TransferReadOp.
-  SmallVector<Value> readIndices(
-      vecType.getRank(),
-      rewriter.create<arith::ConstantIndexOp>(sliceOp.getLoc(), 0));
-  Operation *read = rewriter.create<vector::TransferReadOp>(
-      sliceOp.getLoc(), vecType, source, readIndices, padValue,
-      ArrayRef<bool>{readInBounds});
+  // 3. Generate TransferReadOp + TransferWriteOp
+  ReifiedRankedShapedTypeDims reifiedSrcSizes;
+  Value maskOp;
 
-  // If vector sizes are user provided, make sure to mask xfer_read.
+  // If vector sizes are user provided, make sure to mask. First, generate the
+  // mask.
   if (!inputVectorSizes.empty()) {
     auto *srcDefOp = source.getDefiningOp();
     if (!srcDefOp) {
@@ -2732,40 +2729,47 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       return failure();
     }
 
-    ReifiedRankedShapedTypeDims reifiedSrcSizes;
     LogicalResult status =
         cast<ReifyRankedShapedTypeOpInterface>(srcDefOp).reifyResultShapes(
             rewriter, reifiedSrcSizes);
     if (status.failed()) {
-      LDBG("Unable to reify result shapes of " << sliceOp);
+      LDBG("Unable to reify result shapes of " << srcDefOp);
       return failure();
     }
 
     // Create the mask
-    SmallVector<int64_t> readMaskShape(
-        sliceOp.getSource().getType().getShape());
     auto readMaskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
-    Value maskOp = rewriter.create<vector::CreateMaskOp>(
+    maskOp = rewriter.create<vector::CreateMaskOp>(
         sliceOp.getLoc(), readMaskType, reifiedSrcSizes[0]);
+  }
 
-    // Mask the xfer_read Op
+  // 3.a. TransferReadOp
+  SmallVector<Value> readIndices(
+      vecType.getRank(),
+      rewriter.create<arith::ConstantIndexOp>(sliceOp.getLoc(), 0));
+  Operation *read = rewriter.create<vector::TransferReadOp>(
+      sliceOp.getLoc(), vecType, source, readIndices, padValue,
+      ArrayRef<bool>{readInBounds});
+
+  // Mask the xfer_read Op
+  if (!inputVectorSizes.empty()) {
     read = mlir::vector::maskOperation(rewriter, read, maskOp);
   }
 
-  // 4. Generate TransferWriteOp.
-  if (!inputVectorSizes.empty() &&
-      ShapedType::isDynamicShape(resultType.getShape())) {
-    LDBG("TODO: Masking of xfer_write when vectorising " << sliceOp);
-    return failure();
-  }
-
+  // 3.b. TransferWriteOp
   auto writeIndices = getValueOrCreateConstantIndexOp(
       rewriter, sliceOp.getLoc(), sliceOp.getMixedOffsets());
 
-  // 5. Finalize
   Operation *write = rewriter.create<vector::TransferWriteOp>(
       sliceOp.getLoc(), read->getResult(0), sliceOp.getDest(), writeIndices,
       ArrayRef<bool>{writeInBounds});
+
+  // Mask the xfer_write Op
+  if (!inputVectorSizes.empty()) {
+    write = mlir::vector::maskOperation(rewriter, write, maskOp);
+  }
+
+  // 4. Finalize
   newResults.push_back(write->getResult(0));
 
   return success();
