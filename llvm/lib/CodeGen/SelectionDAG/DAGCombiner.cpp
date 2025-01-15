@@ -27536,8 +27536,24 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
     // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
     //   insert_vector_elt undef, (bo X, Y), index
-    return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, DAG.getUNDEF(VT),
-                       ScalarBO, IndexC);
+
+    SmallVector<SDValue, 16> EltsX, EltsY;
+    DAG.ExtractVectorElements(Src0, EltsX);
+    DAG.ExtractVectorElements(Src1, EltsY);
+
+    SmallVector<SDValue, 16> EltsResult;
+
+    unsigned NonUndefElements = 0;
+    for (auto [X, Y] : zip(EltsX, EltsY)) {
+      SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
+      if (!ScalarBO.isUndef())
+        if (NonUndefElements++ > 1)
+          break;
+      EltsResult.push_back(ScalarBO);
+    }
+
+    if (NonUndefElements == 1)
+      return DAG.getBuildVector(VT, DL, EltsResult);
   }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
