@@ -2487,8 +2487,6 @@ const unsigned RMD160_return_length = RMD160_DIGEST_STRING_LENGTH;
 const unsigned MD5_CTX_sz = sizeof(MD5_CTX);
 const unsigned MD5_return_length = MD5_DIGEST_STRING_LENGTH;
 
-const unsigned fpos_t_sz = sizeof(fpos_t);
-
 const unsigned MD2_CTX_sz = sizeof(MD2_CTX);
 const unsigned MD2_return_length = MD2_DIGEST_STRING_LENGTH;
 

@@ -212,10 +212,10 @@ end subroutine
 ! CMPLX-PRECISE: fir.call @ccos
 
 ! CHECK-LABEL: @fir.cosh.contract.f32.f32
-! CHECK: fir.call {{.*}}cosh
+! CHECK: math.cosh {{.*}} : f32
 
 ! CHECK-LABEL: @fir.cosh.contract.f64.f64
-! CHECK: fir.call {{.*}}cosh
+! CHECK: math.cosh {{.*}} : f64
 
 ! CHECK-LABEL: @fir.cosh.contract.z32.z32
 ! CHECK: fir.call @ccoshf
