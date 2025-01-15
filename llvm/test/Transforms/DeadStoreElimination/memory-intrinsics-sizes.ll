@@ -131,6 +131,16 @@ define void @memset_pattern_and_store_2(ptr %ptr, i64 %len) {
   ret void
 }
 
+define void @memset_pattern_and_store_3(ptr %ptr) {
+; CHECK-LABEL: @memset_pattern_and_store_3(
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 13, i1 false)
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %ptr
+  call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 %ptr, i8 0, i64 13, i1 false)
+  ret void
+}
+
 define void @memcpy_equal_size_values(ptr noalias %src, ptr noalias %dst, i64 %len) {
 ; CHECK-LABEL: @memcpy_equal_size_values(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]], i1 false)
