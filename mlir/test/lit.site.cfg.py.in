@@ -9,6 +9,7 @@ config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.python_executable = "@Python3_EXECUTABLE@"
 config.enable_assertions = @ENABLE_ASSERTIONS@
+config.has_py_module_ml_dtypes = @HAS_PY_MODULE_ML_DTYPES@
 config.native_target = "@LLVM_NATIVE_ARCH@"
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"

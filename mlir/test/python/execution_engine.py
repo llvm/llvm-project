@@ -1,5 +1,5 @@
 # RUN: env MLIR_RUNNER_UTILS=%mlir_runner_utils MLIR_C_RUNNER_UTILS=%mlir_c_runner_utils %PYTHON %s 2>&1 | FileCheck %s
-# REQUIRES: host-supports-jit
+# REQUIRES: host-supports-jit, has_py_module_ml_dtypes
 import gc, sys, os, tempfile
 from mlir.ir import *
 from mlir.passmanager import *

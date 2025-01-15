@@ -85,6 +85,15 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_SM90_TESTS
   )
 
+# Run python file to find out of ml_dtypes is supported or not.
+execute_process(COMMAND ${Python3_EXECUTABLE} -c "import ml_dtypes" RESULT_VARIABLE HAS_PY_MODULE_ML_DTYPES_RET)
+if(NOT HAS_PY_MODULE_ML_DTYPES_RET EQUAL "0")
+  set(HAS_PY_MODULE_ML_DTYPES 0)
+else()
+  set(HAS_PY_MODULE_ML_DTYPES 1)
+endif()
+unset(HAS_PY_MODULE_ML_DTYPES_RET)
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

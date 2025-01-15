@@ -314,6 +314,8 @@ if config.enable_assertions:
 else:
     config.available_features.add("noasserts")
 
+if config.has_py_module_ml_dtypes:
+    config.available_features.add("has_py_module_ml_dtypes")
 
 def have_host_jit_feature_support(feature_name):
     mlir_cpu_runner_exe = lit.util.which("mlir-cpu-runner", config.mlir_tools_dir)
