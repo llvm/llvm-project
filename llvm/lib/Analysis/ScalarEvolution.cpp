@@ -11872,7 +11872,6 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   // FIXME: use CmpPredicate::getMatching here.
   if (ICmpInst::getSwappedCmpPredicate(FoundPred) ==
       static_cast<CmpInst::Predicate>(Pred)) {
-    return false;
     // We can write the implication
     // 0.  LHS Pred      RHS  <-   FoundLHS SwapPred  FoundRHS
     // using one of the following ways:
