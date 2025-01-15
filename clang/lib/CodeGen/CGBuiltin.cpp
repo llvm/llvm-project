@@ -1158,6 +1158,16 @@ static bool GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD,
   return false;
 }
 
+static std::optional<int64_t>
+GetFieldOffset(ASTContext &Ctx, const RecordDecl *RD, const FieldDecl *FD) {
+  int64_t Offset = 0;
+
+  if (GetFieldOffset(Ctx, RD, FD, Offset))
+    return std::optional<int64_t>(Offset);
+
+  return std::optional<int64_t>();
+}
+
 llvm::Value *
 CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
                                          unsigned Type,
@@ -1331,20 +1341,20 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   auto *FlexibleArrayMemberBaseSize =
       llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
+  //  size_t field_offset = offsetof (struct s, field);
+  std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
+  if (!Offset)
+    return nullptr;
+  Value *FieldOffset =
+      llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
+
   //  size_t flexible_array_member_size =
   //          count * flexible_array_member_base_size;
   Value *FlexibleArrayMemberSize =
       Builder.CreateMul(Count, FlexibleArrayMemberBaseSize,
                         "flexible_array_member_size", !IsSigned, IsSigned);
 
-  auto CheckForNegative = [&](Value *Res) {
-    Value *Cmp = Builder.CreateIsNotNeg(Res);
-    if (Idx)
-      Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Index), Cmp);
-    return Builder.CreateSelect(Cmp, Res,
-                                ConstantInt::get(ResType, 0, IsSigned));
-  };
-
+  Value *Res = nullptr;
   if (FlexibleArrayMemberFD == FD) {
     if (Idx) { // Option (2) '&ptr->array[idx]'
       //  size_t index_size = index * flexible_array_member_base_size;
@@ -1352,11 +1362,11 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
                                            "index_size", !IsSigned, IsSigned);
 
       //  return flexible_array_member_size - index_size;
-      return CheckForNegative(Builder.CreateSub(
-          FlexibleArrayMemberSize, IndexSize, "result", !IsSigned, IsSigned));
+      Res = Builder.CreateSub(FlexibleArrayMemberSize, IndexSize, "result",
+                              !IsSigned, IsSigned);
     } else { // Option (1) 'ptr->array'
       //  return flexible_array_member_size;
-      return CheckForNegative(FlexibleArrayMemberSize);
+      Res = FlexibleArrayMemberSize;
     }
   } else {
     //  size_t sizeof_struct = sizeof (struct s);
@@ -1365,12 +1375,6 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
     TypeSize Size = Layout.getTypeSizeInBits(StructTy);
     Value *SizeofStruct =
         llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
-
-    //  size_t field_offset = offsetof (struct s, field);
-    int64_t Offset = 0;
-    GetFieldOffset(Ctx, RD, FD, Offset);
-    Value *FieldOffset =
-        llvm::ConstantInt::get(ResType, Offset / CharWidth, IsSigned);
 
     if (Idx) { // Option (4) '&ptr->field_array[idx]'
       //  size_t field_base_size = sizeof (*ptr->field_array);
@@ -1389,20 +1393,22 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
                                             "offset_diff", !IsSigned, IsSigned);
 
       //  return offset_diff + flexible_array_member_size;
-      return CheckForNegative(
-          Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result"));
+      Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
     } else { // Option (3) '&ptr->field'
       //  size_t offset_diff = flexible_array_member_offset - field_offset;
       Value *OffsetDiff = Builder.CreateSub(SizeofStruct, FieldOffset,
                                             "offset_diff", !IsSigned, IsSigned);
 
       //  return flexible_array_member_size + offset_diff;
-      return CheckForNegative(
-          Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result"));
+      Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
     }
   }
 
-  llvm_unreachable("unable to handle expression");
+  Value *Cmp = Builder.CreateIsNotNeg(Res);
+  if (Idx)
+    Cmp = Builder.CreateAnd(Builder.CreateIsNotNeg(Index), Cmp);
+
+  return Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
 }
 
 /// Returns a Value corresponding to the size of the given expression.
