@@ -246,6 +246,7 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
     return nullptr;
 
   Value *V = Inst->getValue();
+  Type *VTy = V->getType();
   const DataLayout &DL = Inst->getDataLayout();
   Module *M = Inst->getModule();
 
@@ -260,8 +261,8 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
     return nullptr;
 
   // Only handle simple values that are a power of two bytes in size.
-  uint64_t Size = DL.getTypeSizeInBits(V->getType());
-  if (Size == 0 || (Size & 7) || (Size & (Size - 1)))
+  uint64_t Size = DL.getTypeSizeInBits(VTy);
+  if (!DL.typeSizeEqualsStoreSize(VTy) || !isPowerOf2_64(Size))
     return nullptr;
 
   // Don't care enough about darwin/ppc to implement this.
