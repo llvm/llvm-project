@@ -3043,7 +3043,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
         Value *StridedVec = DeinterleavedValues[I];
         if (!Member) {
           // This value is not needed as it's not used
-          static_cast<Instruction *>(StridedVec)->eraseFromParent();
+          cast<Instruction>(StridedVec)->eraseFromParent();
           continue;
         }
         // If this member has different type, cast the result type.
