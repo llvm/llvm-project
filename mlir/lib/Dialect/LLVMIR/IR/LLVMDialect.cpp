@@ -2510,7 +2510,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 
   assert(llvm::cast<LLVMFunctionType>(type).getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
@@ -2636,7 +2636,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       parser.getBuilder(), result, entryArgs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 

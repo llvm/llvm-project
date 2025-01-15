@@ -1,4 +1,5 @@
 set(LLVM_OPTIONAL_SOURCES
+  CallImplementation.cpp
   CallInterfaces.cpp
   CastInterfaces.cpp
   ControlFlowInterfaces.cpp
@@ -24,8 +25,10 @@ set(LLVM_OPTIONAL_SOURCES
   )
 
 function(add_mlir_interface_library name)
+  cmake_parse_arguments(ARG "" "" "EXTRA_SOURCE" ${ARGN})
   add_mlir_library(MLIR${name}
     ${name}.cpp
+    ${ARG_EXTRA_SOURCE}
 
     ADDITIONAL_HEADER_DIRS
     ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
@@ -39,28 +42,14 @@ function(add_mlir_interface_library name)
 endfunction(add_mlir_interface_library)
 
 
-add_mlir_interface_library(CallInterfaces)
+add_mlir_interface_library(CallInterfaces EXTRA_SOURCE CallImplementation.cpp)
 add_mlir_interface_library(CastInterfaces)
 add_mlir_interface_library(ControlFlowInterfaces)
 add_mlir_interface_library(CopyOpInterface)
 add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(DestinationStyleOpInterface)
-
-add_mlir_library(MLIRFunctionInterfaces
-  FunctionInterfaces.cpp
-  FunctionImplementation.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
-
-  DEPENDS
-  MLIRFunctionInterfacesIncGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-)
-
+add_mlir_interface_library(FunctionInterfaces EXTRA_SOURCE FunctionImplementation.cpp)
 add_mlir_interface_library(InferIntRangeInterface)
 add_mlir_interface_library(InferTypeOpInterface)
 

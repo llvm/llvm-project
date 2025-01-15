@@ -753,7 +753,15 @@ interface section goes as follows:
     -   (`C++ class` -- `ODS class`(if applicable))
 
 ##### CallInterfaces
-
+*   `OpWithArgumentAttributesInterface`  - Used to represent operations that may
+    carry argument and result attributes. It is inherited by both
+    CallOpInterface and CallableOpInterface.
+    -   `ArrayAttr getArgAttrsAttr()`
+    -   `ArrayAttr getResAttrsAttr()`
+    -   `void setArgAttrsAttr(ArrayAttr)`
+    -   `void setResAttrsAttr(ArrayAttr)`
+    -   `Attribute removeArgAttrsAttr()`
+    -   `Attribute removeResAttrsAttr()`
 *   `CallOpInterface` - Used to represent operations like 'call'
     -   `CallInterfaceCallable getCallableForCallee()`
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
@@ -761,12 +769,6 @@ interface section goes as follows:
     -   `Region * getCallableRegion()`
     -   `ArrayRef<Type> getArgumentTypes()`
     -   `ArrayRef<Type> getResultsTypes()`
-    -   `ArrayAttr getArgAttrsAttr()`
-    -   `ArrayAttr getResAttrsAttr()`
-    -   `void setArgAttrsAttr(ArrayAttr)`
-    -   `void setResAttrsAttr(ArrayAttr)`
-    -   `Attribute removeArgAttrsAttr()`
-    -   `Attribute removeResAttrsAttr()`
 
 ##### RegionKindInterfaces
 
