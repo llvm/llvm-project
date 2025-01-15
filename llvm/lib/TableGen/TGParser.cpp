@@ -3995,9 +3995,8 @@ bool TGParser::ParseClass() {
   Record *CurRec = const_cast<Record *>(Records.getClass(Name));
   if (CurRec) {
     // If the body was previously defined, this is an error.
-    SmallVector<std::pair<const Record *, SMRange>> SCs;
-    CurRec->getDirectSuperClasses(SCs);
-    if (!CurRec->getValues().empty() || !SCs.empty() ||
+    if (!CurRec->getValues().empty() ||
+        !CurRec->getDirectSuperClasses().empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");

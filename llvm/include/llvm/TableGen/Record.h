@@ -1732,10 +1732,9 @@ public:
     return is_contained(make_first_range(DirectSuperClasses), SuperClass);
   }
 
-  /// Append the direct superclasses of this record to Classes.
-  void getDirectSuperClasses(
-      SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const {
-    Classes.append(DirectSuperClasses);
+  /// Return the direct superclasses of this record.
+  ArrayRef<std::pair<const Record *, SMRange>> getDirectSuperClasses() const {
+    return DirectSuperClasses;
   }
 
   bool isTemplateArg(const Init *Name) const {

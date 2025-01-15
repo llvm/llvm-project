@@ -703,9 +703,7 @@ struct TupleExpander : SetTheory::Expander {
                         "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
-      SmallVector<std::pair<const Record *, SMRange>> SCs;
-      Proto->getDirectSuperClasses(SCs);
-      for (const auto &[Super, Loc] : SCs)
+      for (const auto &[Super, Loc] : Proto->getDirectSuperClasses())
         NewReg->addDirectSuperClass(Super, Loc);
 
       // Copy Proto fields.

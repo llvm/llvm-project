@@ -327,17 +327,13 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
   SmallVector<const Record *, 4> CommonSuperClasses;
   SmallVector<const Record *, 4> Stack(T1->getClasses());
 
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
-
   while (!Stack.empty()) {
     const Record *R = Stack.pop_back_val();
 
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
     } else {
-      R->getDirectSuperClasses(SCs);
-      append_range(Stack, make_first_range(SCs));
-      SCs.clear();
+      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
     }
   }
 
@@ -2874,10 +2870,8 @@ void Record::checkName() {
 }
 
 const RecordRecTy *Record::getType() const {
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
-  getDirectSuperClasses(SCs);
   SmallVector<const Record *, 4> DirectSCs;
-  append_range(DirectSCs, make_first_range(SCs));
+  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
