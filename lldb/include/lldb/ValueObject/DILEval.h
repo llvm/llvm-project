@@ -9,23 +9,65 @@
 #ifndef LLDB_VALUEOBJECT_DILEVAL_H_
 #define LLDB_VALUEOBJECT_DILEVAL_H_
 
-#include <memory>
-#include <vector>
-
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
+#include <memory>
+#include <vector>
 
 namespace lldb_private {
 
 namespace dil {
 
+/// Class used to store & manipulate information about identifiers.
+class IdentifierInfo {
+public:
+  enum class Kind {
+    eValue,
+    eContextArg,
+  };
+
+  static std::unique_ptr<IdentifierInfo> FromValue(ValueObject &valobj) {
+    CompilerType type;
+    type = valobj.GetCompilerType();
+    return std::unique_ptr<IdentifierInfo>(
+        new IdentifierInfo(Kind::eValue, type, valobj.GetSP(), {}));
+  }
+
+  static std::unique_ptr<IdentifierInfo> FromContextArg(CompilerType type) {
+    lldb::ValueObjectSP empty_value;
+    return std::unique_ptr<IdentifierInfo>(
+        new IdentifierInfo(Kind::eContextArg, type, empty_value, {}));
+  }
+
+  Kind GetKind() const { return m_kind; }
+  lldb::ValueObjectSP GetValue() const { return m_value; }
+
+  CompilerType GetType() { return m_type; }
+  bool IsValid() const { return m_type.IsValid(); }
+
+  IdentifierInfo(Kind kind, CompilerType type, lldb::ValueObjectSP value,
+                 std::vector<uint32_t> path)
+      : m_kind(kind), m_type(type), m_value(std::move(value)) {}
+
+private:
+  Kind m_kind;
+  CompilerType m_type;
+  lldb::ValueObjectSP m_value;
+};
+
+/// Given the name of an identifier (variable name, member name, type name,
+/// etc.), find the ValueObject for that name (if it exists) and create and
+/// return an IdentifierInfo object containing all the relevant information
+/// about that object (for DIL parsing and evaluating).
+std::unique_ptr<IdentifierInfo> LookupIdentifier(
+    const std::string &name, std::shared_ptr<ExecutionContextScope> ctx_scope,
+    lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr = nullptr);
+
 class DILInterpreter : Visitor {
 public:
-  DILInterpreter(lldb::TargetSP target, std::shared_ptr<std::string> sm);
-  DILInterpreter(lldb::TargetSP target, std::shared_ptr<std::string> sm,
-                 lldb::ValueObjectSP scope);
-  DILInterpreter(lldb::TargetSP target, std::shared_ptr<std::string> sm,
-                 lldb::DynamicValueType use_dynamic);
+  DILInterpreter(lldb::TargetSP target, llvm::StringRef expr,
+                 lldb::DynamicValueType use_dynamic,
+                 std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
 
   lldb::ValueObjectSP DILEval(const DILASTNode *tree, lldb::TargetSP target_sp,
                               Status &error);
@@ -44,7 +86,7 @@ private:
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
 
-  std::shared_ptr<std::string> m_sm;
+  llvm::StringRef m_expr;
 
   lldb::ValueObjectSP m_result;
 
@@ -53,6 +95,8 @@ private:
   lldb::DynamicValueType m_default_dynamic;
 
   Status m_error;
+
+  std::shared_ptr<ExecutionContextScope> m_exe_ctx_scope;
 };
 
 } // namespace dil

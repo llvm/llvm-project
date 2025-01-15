@@ -18,37 +18,24 @@ namespace lldb_private {
 namespace dil {
 
 const std::string DILToken::getTokenName(dil::TokenKind kind) {
-  std::string retval;
   switch (kind) {
   case dil::TokenKind::coloncolon:
-    retval = "coloncolon";
-    break;
+    return "coloncolon";
   case dil::TokenKind::eof:
-    retval = "eof";
-    break;
+    return "eof";
   case dil::TokenKind::identifier:
-    retval = "identifier";
-    break;
+    return "identifier";
   case dil::TokenKind::kw_namespace:
-    retval = "namespace";
-    break;
-  case dil::TokenKind::kw_this:
-    retval = "this";
-    break;
+    return "namespace";
   case dil::TokenKind::l_paren:
-    retval = "l_paren";
-    break;
+    return "l_paren";
   case dil::TokenKind::r_paren:
-    retval = "r_paren";
-    break;
+    return "r_paren";
   case dil::TokenKind::unknown:
-    retval = "unknown";
-    break;
+    return "unknown";
   default:
-    retval = "token_name";
-    break;
+    return "token_name";
   }
-  return retval;
 }
 
 static bool Is_Letter(char c) {
@@ -71,16 +58,15 @@ bool DILLexer::Is_Word(std::string::iterator start, uint32_t &length) {
   }
   if (length > 0)
     return true;
-  else
-    m_cur_pos = start;
+
+  m_cur_pos = start;
   return false;
 }
 
 void DILLexer::UpdateLexedTokens(DILToken &result, dil::TokenKind tok_kind,
-                                 std::string tok_str, uint32_t tok_pos,
-                                 uint32_t tok_len) {
+                                 std::string tok_str, uint32_t tok_pos) {
   DILToken new_token;
-  result.setValues(tok_kind, tok_str, tok_pos, tok_len);
+  result.setValues(tok_kind, tok_str, tok_pos);
   new_token = result;
   m_lexed_tokens.push_back(std::move(new_token));
 }
@@ -106,7 +92,7 @@ bool DILLexer::Lex(DILToken &result, bool look_ahead) {
 
   // Check to see if we've reached the end of our input string.
   if (m_cur_pos == m_expr.end()) {
-    UpdateLexedTokens(result, dil::TokenKind::eof, "", m_expr.length(), 0);
+    UpdateLexedTokens(result, dil::TokenKind::eof, "", m_expr.length());
     return retval;
   }
 
@@ -117,30 +103,28 @@ bool DILLexer::Lex(DILToken &result, bool look_ahead) {
   if (Is_Word(start, length)) {
     dil::TokenKind kind;
     std::string word = m_expr.substr(position, length);
-    if (word == "this")
-      kind = dil::TokenKind::kw_this;
-    else if (word == "namespace")
+    if (word == "namespace")
       kind = dil::TokenKind::kw_namespace;
     else
       kind = dil::TokenKind::identifier;
 
-    UpdateLexedTokens(result, kind, word, position, length);
+    UpdateLexedTokens(result, kind, word, position);
     return true;
   }
 
   switch (*m_cur_pos) {
   case '(':
     m_cur_pos++;
-    UpdateLexedTokens(result, dil::TokenKind::l_paren, "(", position, 1);
+    UpdateLexedTokens(result, dil::TokenKind::l_paren, "(", position);
     return true;
   case ')':
     m_cur_pos++;
-    UpdateLexedTokens(result, dil::TokenKind::r_paren, ")", position, 1);
+    UpdateLexedTokens(result, dil::TokenKind::r_paren, ")", position);
     return true;
   case ':':
     if (position + 1 < m_expr.size() && m_expr[position + 1] == ':') {
       m_cur_pos += 2;
-      UpdateLexedTokens(result, dil::TokenKind::coloncolon, "::", position, 2);
+      UpdateLexedTokens(result, dil::TokenKind::coloncolon, "::", position);
       return true;
     }
     break;
@@ -148,7 +132,7 @@ bool DILLexer::Lex(DILToken &result, bool look_ahead) {
     break;
   }
   // Empty Token
-  result.setValues(dil::TokenKind::none, "", m_expr.length(), 0);
+  result.setValues(dil::TokenKind::none, "", m_expr.length());
   return false;
 }
 
@@ -172,10 +156,11 @@ const DILToken &DILLexer::LookAhead(uint32_t N) {
   };
 
   if (remaining_tokens > 0) {
-    m_invalid_token.setValues(dil::TokenKind::invalid, "", 0, 0);
+    m_invalid_token.setValues(dil::TokenKind::invalid, "", 0);
     return m_invalid_token;
-  } else
-    return m_lexed_tokens[m_tokens_idx + N + 1];
+  }
+
+  return m_lexed_tokens[m_tokens_idx + N + 1];
 }
 
 const DILToken &DILLexer::AcceptLookAhead(uint32_t N) {

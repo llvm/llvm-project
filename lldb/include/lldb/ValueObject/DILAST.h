@@ -9,11 +9,8 @@
 #ifndef LLDB_VALUEOBJECT_DILAST_H
 #define LLDB_VALUEOBJECT_DILAST_H
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "lldb/ValueObject/ValueObject.h"
+#include <string>
 
 namespace lldb_private {
 
@@ -24,51 +21,6 @@ enum class NodeKind {
   eErrorNode,
   eIdentifierNode,
 };
-
-/// Class used to store & manipulate information about identifiers.
-class IdentifierInfo {
-public:
-  enum class Kind {
-    eValue,
-    eContextArg,
-  };
-
-  static std::unique_ptr<IdentifierInfo> FromValue(ValueObject &valobj) {
-    CompilerType type;
-    type = valobj.GetCompilerType();
-    return std::unique_ptr<IdentifierInfo>(
-        new IdentifierInfo(Kind::eValue, type, valobj.GetSP(), {}));
-  }
-
-  static std::unique_ptr<IdentifierInfo> FromContextArg(CompilerType type) {
-    lldb::ValueObjectSP empty_value;
-    return std::unique_ptr<IdentifierInfo>(
-        new IdentifierInfo(Kind::eContextArg, type, empty_value, {}));
-  }
-
-  Kind GetKind() const { return m_kind; }
-  lldb::ValueObjectSP GetValue() const { return m_value; }
-
-  CompilerType GetType() { return m_type; }
-  bool IsValid() const { return m_type.IsValid(); }
-
-  IdentifierInfo(Kind kind, CompilerType type, lldb::ValueObjectSP value,
-                 std::vector<uint32_t> path)
-      : m_kind(kind), m_type(type), m_value(std::move(value)) {}
-
-private:
-  Kind m_kind;
-  CompilerType m_type;
-  lldb::ValueObjectSP m_value;
-};
-
-/// Given the name of an identifier (variable name, member name, type name,
-/// etc.), find the ValueObject for that name (if it exists) and create and
-/// return an IdentifierInfo object containing all the relevant information
-/// about that object (for DIL parsing and evaluating).
-std::unique_ptr<IdentifierInfo> LookupIdentifier(
-    const std::string &name, std::shared_ptr<ExecutionContextScope> ctx_scope,
-    lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr = nullptr);
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
 /// end of this file.
@@ -104,16 +56,12 @@ using DILASTNodeUP = std::unique_ptr<DILASTNode>;
 
 class ErrorNode : public DILASTNode {
 public:
-  ErrorNode(CompilerType empty_type)
-      : DILASTNode(0, NodeKind::eErrorNode), m_empty_type(empty_type) {}
+  ErrorNode() : DILASTNode(0, NodeKind::eErrorNode) {}
   void Accept(Visitor *v) const override;
 
   static bool classof(const DILASTNode *node) {
     return node->GetKind() == NodeKind::eErrorNode;
   }
-
-private:
-  CompilerType m_empty_type;
 };
 
 class IdentifierNode : public DILASTNode {
@@ -127,8 +75,8 @@ public:
 
   void Accept(Visitor *v) const override;
 
-  lldb::DynamicValueType use_dynamic() const { return m_use_dynamic; }
-  std::string name() const { return m_name; }
+  lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
+  std::string GetName() const { return m_name; }
   std::shared_ptr<ExecutionContextScope> get_exe_context() const {
     return m_ctx_scope;
   }

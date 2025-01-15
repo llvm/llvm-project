@@ -528,8 +528,6 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
   ValueObjectSP ret_val;
-  std::shared_ptr<std::string> source =
-      std::make_shared<std::string>(var_expr.data());
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -540,7 +538,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Parse the expression.
   Status parse_error, eval_error;
-  dil::DILParser parser(source, shared_from_this(), use_dynamic,
+  dil::DILParser parser(var_expr, shared_from_this(), use_dynamic,
                         !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
   dil::DILASTNodeUP tree = parser.Run(parse_error);
   if (parse_error.Fail()) {
@@ -550,7 +548,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  dil::DILInterpreter interpreter(target, source, use_dynamic);
+  dil::DILInterpreter interpreter(target, var_expr, use_dynamic,
+                                  shared_from_this());
 
   ret_val = interpreter.DILEval(tree.get(), target, eval_error);
   if (eval_error.Fail()) {

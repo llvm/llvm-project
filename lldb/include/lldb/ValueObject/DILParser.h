@@ -9,16 +9,15 @@
 #ifndef LLDB_VALUEOBJECT_DILPARSER_H_
 #define LLDB_VALUEOBJECT_DILPARSER_H_
 
+#include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/DILAST.h"
+#include "lldb/ValueObject/DILLexer.h"
 #include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
-
-#include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/ValueObject/DILAST.h"
-#include "lldb/ValueObject/DILLexer.h"
 
 namespace lldb_private {
 
@@ -31,14 +30,14 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
-std::string FormatDiagnostics(std::shared_ptr<std::string> input_expr,
+std::string FormatDiagnostics(llvm::StringRef input_expr,
                               const std::string &message, uint32_t loc);
 
 /// Pure recursive descent parser for C++ like expressions.
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  explicit DILParser(std::shared_ptr<std::string> dil_input_expr,
+  explicit DILParser(llvm::StringRef dil_input_expr,
                      std::shared_ptr<ExecutionContextScope> exe_ctx_scope,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
                      bool fragile_ivar, bool check_ptr_vs_member);
@@ -72,8 +71,6 @@ private:
 
   std::string TokenDescription(const DILToken &token);
 
-  template <typename... Ts> void ExpectOneOf(dil::TokenKind k, Ts... ks);
-
   void TentativeParsingRollback(uint32_t saved_idx) {
     m_error.Clear();
     m_dil_lexer.ResetTokenIdx(saved_idx);
@@ -85,7 +82,7 @@ private:
   // context will outlive the parser.
   std::shared_ptr<ExecutionContextScope> m_ctx_scope;
 
-  std::shared_ptr<std::string> m_input_expr;
+  llvm::StringRef m_input_expr;
   // The token lexer is stopped at (aka "current token").
   DILToken m_dil_token;
   // Holds an error if it occures during parsing.

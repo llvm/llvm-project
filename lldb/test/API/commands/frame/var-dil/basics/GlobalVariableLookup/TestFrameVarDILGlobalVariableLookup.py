@@ -67,12 +67,8 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
         self.expect("frame variable 'externGlobalVar'", error=True,
                     substrs=["use of undeclared identifier"])  # 0x00C0FFEE
-                    #substrs=["no variable named 'externGlobalVar' found in this frame"])  # 0x00C0FFEE
         self.expect("frame variable '::externGlobalVar'", error=True,
                     substrs=["use of undeclared identifier"]) # ["12648430"])
-                    #substrs=["no variable named '::externGlobalVar' found in this frame"]) # ["12648430"])
-        # "use of undeclared identifier"
-
         self.expect("frame variable 'ns::globalVar'", substrs=["13"])
         self.expect("frame variable 'ns::globalPtr'",
                     patterns=["0x[0-9]+"])

@@ -6,7 +6,6 @@
 expression = primary_expression ;
 
 primary_expression = id_expression
-                   | "this"
                    | "(" expression ")";
 
 id_expression = unqualified_id
@@ -17,7 +16,7 @@ unqualified_id = identifier ;
 qualified_id = ["::"] [nested_name_specifier] unqualified_id
              | ["::"] identifier ;
 
-identifier = ? dil::TokenKind::identifier ? ;
+identifier = ? C99 Identifier ? ;
 
 nested_name_specifier = type_name "::"
                       | namespace_name '::'

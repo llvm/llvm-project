@@ -9,14 +9,12 @@
 #ifndef LLDB_VALUEOBJECT_DILLEXER_H_
 #define LLDB_VALUEOBJECT_DILLEXER_H_
 
-#include <limits.h>
-
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
+#include <limits.h>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -39,20 +37,17 @@ enum class TokenKind {
 /// DIL parser.
 class DILToken {
 public:
-  DILToken(dil::TokenKind kind, std::string spelling, uint32_t start,
-           uint32_t len)
-      : m_kind(kind), m_spelling(spelling), m_start_pos(start), m_length(len) {}
+  DILToken(dil::TokenKind kind, std::string spelling, uint32_t start)
+      : m_kind(kind), m_spelling(spelling), m_start_pos(start) {}
 
-  DILToken()
-      : m_kind(dil::TokenKind::none), m_spelling(""), m_start_pos(0),
-        m_length(0) {}
+  DILToken() : m_kind(dil::TokenKind::none), m_spelling(""), m_start_pos(0) {}
 
   void setKind(dil::TokenKind kind) { m_kind = kind; }
   dil::TokenKind getKind() const { return m_kind; }
 
   std::string getSpelling() const { return m_spelling; }
 
-  uint32_t getLength() const { return m_length; }
+  uint32_t getLength() const { return m_spelling.size(); }
 
   bool is(dil::TokenKind kind) const { return m_kind == kind; }
 
@@ -68,12 +63,10 @@ public:
 
   uint32_t getLocation() const { return m_start_pos; }
 
-  void setValues(dil::TokenKind kind, std::string spelling, uint32_t start,
-                 uint32_t len) {
+  void setValues(dil::TokenKind kind, std::string spelling, uint32_t start) {
     m_kind = kind;
     m_spelling = spelling;
     m_start_pos = start;
-    m_length = len;
   }
 
   static const std::string getTokenName(dil::TokenKind kind);
@@ -82,13 +75,12 @@ private:
   dil::TokenKind m_kind;
   std::string m_spelling;
   uint32_t m_start_pos; // within entire expression string
-  uint32_t m_length;
 };
 
 /// Class for doing the simple lexing required by DIL.
 class DILLexer {
 public:
-  DILLexer(std::shared_ptr<std::string> dil_sm) : m_expr(*dil_sm) {
+  DILLexer(llvm::StringRef dil_expr) : m_expr(dil_expr.str()) {
     m_cur_pos = m_expr.begin();
     // Use UINT_MAX to indicate invalid/uninitialized value.
     m_tokens_idx = UINT_MAX;
@@ -104,8 +96,7 @@ public:
   /// duplicate token, and push the duplicate token onto the vector of
   /// lexed tokens.
   void UpdateLexedTokens(DILToken &result, dil::TokenKind tok_kind,
-                         std::string tok_str, uint32_t tok_pos,
-                         uint32_t tok_len);
+                         std::string tok_str, uint32_t tok_pos);
 
   /// Return the lexed token N+1 positions ahead of the 'current' token
   /// being handled by the DIL parser.

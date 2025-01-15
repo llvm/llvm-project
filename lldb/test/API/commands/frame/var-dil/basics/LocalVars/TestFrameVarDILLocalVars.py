@@ -56,7 +56,6 @@ class TestFrameVarDILLocalVars(TestBase):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
-        # Test 'a' is 1
         self.expect("settings set target.experimental.use-DIL true",
                     substrs=[""])
         self.expect("frame variable a", substrs=["1"])
