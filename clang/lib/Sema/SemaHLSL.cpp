@@ -2036,7 +2036,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh:
+  case Builtin::BI__builtin_hlsl_elementwise_firstbitlow: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
 
