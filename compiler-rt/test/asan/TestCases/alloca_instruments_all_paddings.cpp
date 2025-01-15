@@ -2,7 +2,9 @@
 // RUN: %clangxx_asan -O3 -mllvm -asan-instrument-dynamic-allocas %s -o %t
 // RUN: %run %t 2>&1
 //
+// MSVC does not support asan-instrament-dynamic-allocas yet
 // UNSUPPORTED: msvc
+
 
 #include "sanitizer/asan_interface.h"
 #include <assert.h>
