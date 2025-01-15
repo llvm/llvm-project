@@ -2994,27 +2994,29 @@ public:
   /// \param Loc where the target data construct was encountered.
   /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
-  /// function should be emitted.
+  ///        function should be emitted.
   /// \param EntryInfo The entry information about the function.
   /// \param DefaultAttrs Structure containing the default attributes, including
   ///        numbers of threads and teams to launch the kernel with.
   /// \param RuntimeAttrs Structure containing the runtime numbers of threads
   ///        and teams to launch the kernel with.
+  /// \param IfCond value of the `if` clause.
   /// \param Inputs The input values to the region that will be passed.
-  /// as arguments to the outlined function.
+  ///        as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
-  /// instructions for passed in target arguments where neccessary
+  ///        instructions for passed in target arguments where neccessary
   /// \param Dependencies A vector of DependData objects that carry
-  // dependency information as passed in the depend clause
-  // \param HasNowait Whether the target construct has a `nowait` clause or not.
+  ///        dependency information as passed in the depend clause
+  /// \param HasNowait Whether the target construct has a `nowait` clause or
+  ///        not.
   InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
       OpenMPIRBuilder::InsertPointTy CodeGenIP,
       TargetRegionEntryInfo &EntryInfo,
       const TargetKernelDefaultAttrs &DefaultAttrs,
-      const TargetKernelRuntimeAttrs &RuntimeAttrs,
+      const TargetKernelRuntimeAttrs &RuntimeAttrs, Value *IfCond,
       SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
