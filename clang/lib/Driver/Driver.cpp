@@ -197,6 +197,50 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath) {
   return std::string(P);
 }
 
+CUIDOptions::CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D)
+    : UseCUID(Kind::Hash) {
+  if (Arg *A = Args.getLastArg(options::OPT_fuse_cuid_EQ)) {
+    StringRef UseCUIDStr = A->getValue();
+    UseCUID = llvm::StringSwitch<Kind>(UseCUIDStr)
+                  .Case("hash", Kind::Hash)
+                  .Case("random", Kind::Random)
+                  .Case("none", Kind::None)
+                  .Default(Kind::Invalid);
+    if (UseCUID == Kind::Invalid)
+      D.Diag(clang::diag::err_drv_invalid_value)
+          << A->getAsString(Args) << UseCUIDStr;
+  }
+
+  FixedCUID = Args.getLastArgValue(options::OPT_cuid_EQ);
+  if (!FixedCUID.empty())
+    UseCUID = Kind::Fixed;
+}
+
+std::string CUIDOptions::getCUID(StringRef InputFile,
+                                 llvm::opt::DerivedArgList &Args) const {
+  std::string CUID = FixedCUID.str();
+  if (CUID.empty()) {
+    if (UseCUID == Kind::Random)
+      CUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
+                             /*LowerCase=*/true);
+    else if (UseCUID == Kind::Hash) {
+      llvm::MD5 Hasher;
+      llvm::MD5::MD5Result Hash;
+      SmallString<256> RealPath;
+      llvm::sys::fs::real_path(InputFile, RealPath,
+                               /*expand_tilde=*/true);
+      Hasher.update(RealPath);
+      for (auto *A : Args) {
+        if (A->getOption().matches(options::OPT_INPUT))
+          continue;
+        Hasher.update(A->getAsString(Args));
+      }
+      Hasher.final(Hash);
+      CUID = llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
+    }
+  }
+  return CUID;
+}
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
                DiagnosticsEngine &Diags, std::string Title,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
@@ -874,6 +918,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                                 *HostTC, OFK);
     C.addOffloadDeviceToolChain(HIPTC, OFK);
   }
+
+  if (IsCuda || IsHIP)
+    CUIDOpts = CUIDOptions(C.getArgs(), *this);
 
   //
   // OpenMP
@@ -3161,19 +3208,15 @@ class OffloadingActionBuilder final {
     /// Default GPU architecture if there's no one specified.
     OffloadArch DefaultOffloadArch = OffloadArch::UNKNOWN;
 
-    /// Method to generate compilation unit ID specified by option
-    /// '-fuse-cuid='.
-    enum UseCUIDKind { CUID_Hash, CUID_Random, CUID_None, CUID_Invalid };
-    UseCUIDKind UseCUID = CUID_Hash;
-
-    /// Compilation unit ID specified by option '-cuid='.
-    StringRef FixedCUID;
+    /// Compilation unit ID specified by option '-fuse-cuid=' or'-cuid='.
+    const CUIDOptions &CUIDOpts;
 
   public:
     CudaActionBuilderBase(Compilation &C, DerivedArgList &Args,
                           const Driver::InputList &Inputs,
                           Action::OffloadKind OFKind)
-        : DeviceActionBuilder(C, Args, Inputs, OFKind) {
+        : DeviceActionBuilder(C, Args, Inputs, OFKind),
+          CUIDOpts(C.getDriver().getCUIDOpts()) {
 
       CompileDeviceOnly = C.getDriver().offloadDeviceOnly();
       Relocatable = Args.hasFlag(options::OPT_fgpu_rdc,
@@ -3204,28 +3247,8 @@ class OffloadingActionBuilder final {
         // Set the flag to true, so that the builder acts on the current input.
         IsActive = true;
 
-        std::string CUID = FixedCUID.str();
-        if (CUID.empty()) {
-          if (UseCUID == CUID_Random)
-            CUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
-                                   /*LowerCase=*/true);
-          else if (UseCUID == CUID_Hash) {
-            llvm::MD5 Hasher;
-            llvm::MD5::MD5Result Hash;
-            SmallString<256> RealPath;
-            llvm::sys::fs::real_path(IA->getInputArg().getValue(), RealPath,
-                                     /*expand_tilde=*/true);
-            Hasher.update(RealPath);
-            for (auto *A : Args) {
-              if (A->getOption().matches(options::OPT_INPUT))
-                continue;
-              Hasher.update(A->getAsString(Args));
-            }
-            Hasher.final(Hash);
-            CUID = llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
-          }
-        }
-        IA->setId(CUID);
+        if (CUIDOpts.isEnabled())
+          IA->setId(CUIDOpts.getCUID(IA->getInputArg().getValue(), Args));
 
         if (CompileHostOnly)
           return ABRT_Success;
@@ -3351,21 +3374,6 @@ class OffloadingActionBuilder final {
       CompileHostOnly = C.getDriver().offloadHostOnly();
       EmitLLVM = Args.getLastArg(options::OPT_emit_llvm);
       EmitAsm = Args.getLastArg(options::OPT_S);
-      FixedCUID = Args.getLastArgValue(options::OPT_cuid_EQ);
-      if (Arg *A = Args.getLastArg(options::OPT_fuse_cuid_EQ)) {
-        StringRef UseCUIDStr = A->getValue();
-        UseCUID = llvm::StringSwitch<UseCUIDKind>(UseCUIDStr)
-                      .Case("hash", CUID_Hash)
-                      .Case("random", CUID_Random)
-                      .Case("none", CUID_None)
-                      .Default(CUID_Invalid);
-        if (UseCUID == CUID_Invalid) {
-          C.getDriver().Diag(diag::err_drv_invalid_value)
-              << A->getAsString(Args) << UseCUIDStr;
-          C.setContainsError();
-          return true;
-        }
-      }
 
       // --offload and --offload-arch options are mutually exclusive.
       if (Args.hasArgNoClaim(options::OPT_offload_EQ) &&
@@ -4366,6 +4374,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Build the pipeline for this file.
     Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
 
+    std::string CUID;
+    if (CUIDOpts.isEnabled() && types::isSrcFile(InputType)) {
+      CUID = CUIDOpts.getCUID(InputArg->getValue(), Args);
+      cast<InputAction>(Current)->setId(CUID);
+    }
+
     // Use the current host action in any of the offloading actions, if
     // required.
     if (!UseNewOffloadingDriver)
@@ -4429,7 +4443,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       // Try to build the offloading actions and add the result as a dependency
       // to the host.
       if (UseNewOffloadingDriver)
-        Current = BuildOffloadingActions(C, Args, I, Current);
+        Current = BuildOffloadingActions(C, Args, I, CUID, Current);
       // Use the current host action in any of the offloading actions, if
       // required.
       else if (OffloadBuilder->addHostDependenceToDeviceActions(Current,
@@ -4766,7 +4780,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
 Action *Driver::BuildOffloadingActions(Compilation &C,
                                        llvm::opt::DerivedArgList &Args,
-                                       const InputTy &Input,
+                                       const InputTy &Input, StringRef CUID,
                                        Action *HostAction) const {
   // Don't build offloading actions if explicitly disabled or we do not have a
   // valid source input and compile action to embed it in. If preprocessing only
@@ -4807,12 +4821,12 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       llvm::DenseSet<StringRef> Arches = getOffloadArchs(C, Args, Kind, TC);
       SmallVector<StringRef, 0> Sorted(Arches.begin(), Arches.end());
       llvm::sort(Sorted);
-      for (StringRef Arch : Sorted)
+      for (StringRef Arch : Sorted) {
         TCAndArchs.push_back(std::make_pair(TC, Arch));
+        DeviceActions.push_back(
+            C.MakeAction<InputAction>(*InputArg, InputType, CUID));
+      }
     }
-
-    for (unsigned I = 0, E = TCAndArchs.size(); I != E; ++I)
-      DeviceActions.push_back(C.MakeAction<InputAction>(*InputArg, InputType));
 
     if (DeviceActions.empty())
       return HostAction;
