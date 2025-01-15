@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf < %s | FileCheck %s
 
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4

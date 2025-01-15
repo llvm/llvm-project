@@ -24,6 +24,10 @@ extern "C" {
 // This mapping is done at runtime to support cross compilation.
 std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
 
+// Check if the processor has the ability to control whether to halt
+// or continue exeuction when a given exception is raised.
+bool RTNAME(SupportHalting)(uint32_t except);
+
 // Get and set the ieee underflow mode if supported; otherwise nops.
 bool RTNAME(GetUnderflowMode)(void);
 void RTNAME(SetUnderflowMode)(bool flag);

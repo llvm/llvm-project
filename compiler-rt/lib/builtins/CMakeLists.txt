@@ -310,6 +310,7 @@ set(x86_80_BIT_SOURCES
   mulxc3.c
   powixf2.c
   trunctfxf2.c
+  truncxfhf2.c
 )
 
 if (NOT MSVC)
@@ -575,7 +576,11 @@ set(aarch64_SOURCES
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 
 if (COMPILER_RT_HAS_AARCH64_SME)
-  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
+  if (APPLE)
+    list(APPEND aarch64_SOURCES aarch64/arm_apple_sme_abi.s)
+    set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
+    message(STATUS "AArch64 Apple SME ABI routines enabled")
+  elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
     list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-libc-mem-routines.S aarch64/sme-abi-assert.c aarch64/sme-libc-routines.c)
     message(STATUS "AArch64 SME ABI routines enabled")
     set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")

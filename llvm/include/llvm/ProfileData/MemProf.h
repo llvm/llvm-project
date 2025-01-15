@@ -323,21 +323,6 @@ struct Frame {
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";
   }
-
-  // Return a hash value based on the contents of the frame. Here we use a
-  // cryptographic hash function to minimize the chance of hash collisions.  We
-  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
-  // However, the deserializer never calls this function; it uses FrameIds
-  // merely as keys to look up Frames proper.
-  inline FrameId hash() const {
-    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
-        HashBuilder;
-    HashBuilder.add(Function, LineOffset, Column, IsInlineFrame);
-    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
-    FrameId Id;
-    std::memcpy(&Id, Hash.data(), sizeof(Hash));
-    return Id;
-  }
 };
 
 // A type representing the index into the table of call stacks.
@@ -775,9 +760,6 @@ public:
   }
 };
 
-// Compute a CallStackId for a given call stack.
-CallStackId hashCallStack(ArrayRef<FrameId> CS);
-
 namespace detail {
 // "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
 // to do so in one of two different ways depending on the type of the hash
@@ -1011,7 +993,7 @@ struct IndexedMemProfData {
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStacks;
 
   FrameId addFrame(const Frame &F) {
-    const FrameId Id = F.hash();
+    const FrameId Id = hashFrame(F);
     Frames.try_emplace(Id, F);
     return Id;
   }
@@ -1027,6 +1009,46 @@ struct IndexedMemProfData {
     CallStacks.try_emplace(CSId, std::move(CS));
     return CSId;
   }
+
+private:
+  // Return a hash value based on the contents of the frame. Here we use a
+  // cryptographic hash function to minimize the chance of hash collisions.  We
+  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
+  // However, the deserializer never calls this function; it uses FrameIds
+  // merely as keys to look up Frames proper.
+  FrameId hashFrame(const Frame &F) const {
+    llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
+        HashBuilder;
+    HashBuilder.add(F.Function, F.LineOffset, F.Column, F.IsInlineFrame);
+    llvm::BLAKE3Result<8> Hash = HashBuilder.final();
+    FrameId Id;
+    std::memcpy(&Id, Hash.data(), sizeof(Hash));
+    return Id;
+  }
+
+  // Compute a CallStackId for a given call stack.
+  CallStackId hashCallStack(ArrayRef<FrameId> CS) const;
+};
+
+// A convenience wrapper around FrameIdConverter and CallStackIdConverter for
+// tests.
+struct IndexedCallstackIdConveter {
+  IndexedCallstackIdConveter() = delete;
+  IndexedCallstackIdConveter(IndexedMemProfData &MemProfData)
+      : FrameIdConv(MemProfData.Frames),
+        CSIdConv(MemProfData.CallStacks, FrameIdConv) {}
+
+  // Delete the copy constructor and copy assignment operator to avoid a
+  // situation where a copy of IndexedCallStackIdConverter gets an error in
+  // LastUnmappedId while the original instance doesn't.
+  IndexedCallstackIdConveter(const IndexedCallstackIdConveter &) = delete;
+  IndexedCallstackIdConveter &
+  operator=(const IndexedCallstackIdConveter &) = delete;
+
+  std::vector<Frame> operator()(CallStackId CSId) { return CSIdConv(CSId); }
+
+  FrameIdConverter<decltype(IndexedMemProfData::Frames)> FrameIdConv;
+  CallStackIdConverter<decltype(IndexedMemProfData::CallStacks)> CSIdConv;
 };
 
 struct FrameStat {

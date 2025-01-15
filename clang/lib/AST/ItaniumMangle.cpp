@@ -3585,13 +3585,15 @@ void CXXNameMangler::mangleSMEAttrs(unsigned SMEAttrs) {
   else if (SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)
     Bitmask |= AAPCSBitmaskSME::ArmStreamingCompatibleBit;
 
-  // TODO: Must represent __arm_agnostic("sme_za_state")
+  if (SMEAttrs & FunctionType::SME_AgnosticZAStateMask)
+    Bitmask |= AAPCSBitmaskSME::ArmAgnosticSMEZAStateBit;
+  else {
+    Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
+               << AAPCSBitmaskSME::ZA_Shift;
 
-  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZAState(SMEAttrs))
-             << AAPCSBitmaskSME::ZA_Shift;
-
-  Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
-             << AAPCSBitmaskSME::ZT0_Shift;
+    Bitmask |= encodeAAPCSZAState(FunctionType::getArmZT0State(SMEAttrs))
+               << AAPCSBitmaskSME::ZT0_Shift;
+  }
 
   Out << "Lj" << static_cast<unsigned>(Bitmask) << "EE";
 }

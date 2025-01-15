@@ -779,6 +779,10 @@ void SVEType::applyModifier(char Mod) {
     Kind = UInt;
     ElementBitwidth = 64;
     break;
+  case '#':
+    Kind = SInt;
+    ElementBitwidth = 64;
+    break;
   case '[':
     Kind = UInt;
     ElementBitwidth = 8;
@@ -1634,13 +1638,6 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  uint64_t x0, x1;\n";
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & (1ULL << 63);\n";
-  OS << "}\n\n";
-
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
   OS << "}\n\n";
 
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";

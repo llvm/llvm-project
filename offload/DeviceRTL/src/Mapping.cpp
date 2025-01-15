@@ -371,8 +371,8 @@ int ompx_shfl_down_sync_i(uint64_t mask, int var, unsigned delta, int width) {
 
 float ompx_shfl_down_sync_f(uint64_t mask, float var, unsigned delta,
                             int width) {
-  return utils::convertViaPun<float>(utils::shuffleDown(
-      mask, utils::convertViaPun<int32_t>(var), delta, width));
+  return utils::bitCast<float>(
+      utils::shuffleDown(mask, utils::bitCast<int32_t>(var), delta, width));
 }
 
 long ompx_shfl_down_sync_l(uint64_t mask, long var, unsigned delta, int width) {
@@ -381,8 +381,8 @@ long ompx_shfl_down_sync_l(uint64_t mask, long var, unsigned delta, int width) {
 
 double ompx_shfl_down_sync_d(uint64_t mask, double var, unsigned delta,
                              int width) {
-  return utils::convertViaPun<double>(utils::shuffleDown(
-      mask, utils::convertViaPun<int64_t>(var), delta, width));
+  return utils::bitCast<double>(
+      utils::shuffleDown(mask, utils::bitCast<int64_t>(var), delta, width));
 }
 }
 

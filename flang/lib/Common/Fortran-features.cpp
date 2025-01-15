@@ -83,6 +83,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::VectorSubscriptFinalization);
   warnUsage_.set(UsageWarning::UndefinedFunctionResult);
   warnUsage_.set(UsageWarning::UselessIomsg);
+  warnUsage_.set(UsageWarning::UnsignedLiteralTruncation);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
 }

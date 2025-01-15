@@ -7433,6 +7433,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     bit_width = new (clang_ast)
         clang::IntegerLiteral(clang_ast, bitfield_bit_size_apint,
                               clang_ast.IntTy, clang::SourceLocation());
+    bit_width = clang::ConstantExpr::Create(
+        clang_ast, bit_width, APValue(llvm::APSInt(bitfield_bit_size_apint)));
   }
 
   clang::RecordDecl *record_decl = ast->GetAsRecordDecl(type);
@@ -8534,7 +8536,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
   bool is_signed = false;
   underlying_type.IsIntegerType(is_signed);
 
-  llvm::APSInt value(enum_value_bit_size, is_signed);
+  llvm::APSInt value(enum_value_bit_size, !is_signed);
   value = enum_value;
 
   return AddEnumerationValueToEnumerationType(enum_type, decl, name, value);

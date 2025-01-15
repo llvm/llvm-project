@@ -2045,7 +2045,12 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
       Results.begin(), Results.end(),
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 

@@ -12,7 +12,6 @@
 #include <__algorithm/min.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
-#include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__utility/convert_to_integral.h>
 

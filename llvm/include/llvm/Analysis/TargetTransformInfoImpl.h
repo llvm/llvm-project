@@ -396,9 +396,14 @@ public:
     return false;
   }
 
-  bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
-                                              int ScalarOpdIdx) const {
-    return ScalarOpdIdx == -1;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const {
+    return OpdIdx == -1;
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const {
+    return RetIdx == 0;
   }
 
   InstructionCost getScalarizationOverhead(VectorType *Ty,

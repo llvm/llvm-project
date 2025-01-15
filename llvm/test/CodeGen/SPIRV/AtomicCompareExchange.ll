@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
-; CHECK-SPIRV:      %[[#Int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG:      %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG:  %[[#MemScope_CrossDevice:]] = OpConstant %[[#Int]] 0
 ; CHECK-SPIRV-DAG:  %[[#MemSemEqual_SeqCst:]] = OpConstant %[[#Int]] 16
 ; CHECK-SPIRV-DAG:  %[[#MemSemUnequal_Acquire:]] = OpConstant %[[#Int]] 2

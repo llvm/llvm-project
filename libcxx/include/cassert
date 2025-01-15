@@ -16,8 +16,9 @@ Macros:
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cassert>
+#else
 #  include <__config>
 
 // <assert.h> is not provided by libc++
@@ -31,4 +32,4 @@ Macros:
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

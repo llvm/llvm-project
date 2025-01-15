@@ -235,10 +235,10 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   return FuncInfoOffset;
 }
 
-llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
-                                                  const GsymReader &GR,
-                                                  uint64_t FuncAddr,
-                                                  uint64_t Addr) {
+llvm::Expected<LookupResult>
+FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
+                     uint64_t FuncAddr, uint64_t Addr,
+                     std::optional<DataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
@@ -287,6 +287,12 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
           LineEntry = ExpectedLE.get();
         else
           return ExpectedLE.takeError();
+        break;
+
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        if (MergedFuncsData)
+          *MergedFuncsData = InfoData;
         break;
 
       case InfoType::InlineInfo:

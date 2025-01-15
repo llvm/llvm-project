@@ -7796,12 +7796,10 @@ bool LLParser::parseCast(Instruction *&Inst, PerFunctionState &PFS,
       parseType(DestTy))
     return true;
 
-  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy)) {
-    CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy);
+  if (!CastInst::castIsValid((Instruction::CastOps)Opc, Op, DestTy))
     return error(Loc, "invalid cast opcode for cast from '" +
                           getTypeString(Op->getType()) + "' to '" +
                           getTypeString(DestTy) + "'");
-  }
   Inst = CastInst::Create((Instruction::CastOps)Opc, Op, DestTy);
   return false;
 }

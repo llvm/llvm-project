@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -3022,8 +3023,19 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (!Ty.isScalar())
-      return UnableToLegalize;
+    assert(!Ty.isPointerOrPointerVector() && "Can't widen type");
+    if (!Ty.isScalar()) {
+      // We need to widen the vector element type.
+      Observer.changingInstr(MI);
+      widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+      // We also need to adjust the MMO to turn this into a truncating store.
+      MachineMemOperand &MMO = **MI.memoperands_begin();
+      MachineFunction &MF = MIRBuilder.getMF();
+      auto *NewMMO = MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), Ty);
+      MI.setMemRefs(MF, {NewMMO});
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
 
     Observer.changingInstr(MI);
 
@@ -4106,10 +4118,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   unsigned StoreWidth = MemTy.getSizeInBits();
   unsigned StoreSizeInBits = 8 * MemTy.getSizeInBytes();
 
-  if (StoreWidth != StoreSizeInBits) {
-    if (SrcTy.isVector())
-      return UnableToLegalize;
-
+  if (StoreWidth != StoreSizeInBits && !SrcTy.isVector()) {
     // Promote to a byte-sized store with upper bits zero if not
     // storing an integral number of bytes.  For example, promote
     // TRUNCSTORE:i1 X -> TRUNCSTORE:i8 (and X, 1)
@@ -4131,9 +4140,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   }
 
   if (MemTy.isVector()) {
-    // TODO: Handle vector trunc stores
     if (MemTy != SrcTy)
-      return UnableToLegalize;
+      return scalarizeVectorBooleanStore(StoreMI);
 
     // TODO: We can do better than scalarizing the vector and at least split it
     // in half.
@@ -4186,6 +4194,50 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerStore(GStore &StoreMI) {
   MIRBuilder.buildStore(SmallVal, SmallPtr, *SmallMMO);
   StoreMI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::scalarizeVectorBooleanStore(GStore &StoreMI) {
+  Register SrcReg = StoreMI.getValueReg();
+  Register PtrReg = StoreMI.getPointerReg();
+  LLT SrcTy = MRI.getType(SrcReg);
+  MachineMemOperand &MMO = **StoreMI.memoperands_begin();
+  LLT MemTy = MMO.getMemoryType();
+  LLT MemScalarTy = MemTy.getElementType();
+  MachineFunction &MF = MIRBuilder.getMF();
+
+  assert(SrcTy.isVector() && "Expect a vector store type");
+
+  if (!MemScalarTy.isByteSized()) {
+    // We need to build an integer scalar of the vector bit pattern.
+    // It's not legal for us to add padding when storing a vector.
+    unsigned NumBits = MemTy.getSizeInBits();
+    LLT IntTy = LLT::scalar(NumBits);
+    auto CurrVal = MIRBuilder.buildConstant(IntTy, 0);
+    LLT IdxTy = getLLTForMVT(TLI.getVectorIdxTy(MF.getDataLayout()));
+
+    for (unsigned I = 0, E = MemTy.getNumElements(); I < E; ++I) {
+      auto Elt = MIRBuilder.buildExtractVectorElement(
+          SrcTy.getElementType(), SrcReg, MIRBuilder.buildConstant(IdxTy, I));
+      auto Trunc = MIRBuilder.buildTrunc(MemScalarTy, Elt);
+      auto ZExt = MIRBuilder.buildZExt(IntTy, Trunc);
+      unsigned ShiftIntoIdx = MF.getDataLayout().isBigEndian()
+                                  ? (MemTy.getNumElements() - 1) - I
+                                  : I;
+      auto ShiftAmt = MIRBuilder.buildConstant(
+          IntTy, ShiftIntoIdx * MemScalarTy.getSizeInBits());
+      auto Shifted = MIRBuilder.buildShl(IntTy, ZExt, ShiftAmt);
+      CurrVal = MIRBuilder.buildOr(IntTy, CurrVal, Shifted);
+    }
+    auto PtrInfo = MMO.getPointerInfo();
+    auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, IntTy);
+    MIRBuilder.buildStore(CurrVal, PtrReg, *NewMMO);
+    StoreMI.eraseFromParent();
+    return Legalized;
+  }
+
+  // TODO: implement simple scalarization.
+  return UnableToLegalize;
 }
 
 LegalizerHelper::LegalizeResult
@@ -4651,6 +4703,20 @@ LegalizerHelper::createStackTemporary(TypeSize Bytes, Align Alignment,
 
   PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
   return MIRBuilder.buildFrameIndex(FramePtrTy, FrameIdx);
+}
+
+MachineInstrBuilder LegalizerHelper::createStackStoreLoad(const DstOp &Res,
+                                                          const SrcOp &Val) {
+  LLT SrcTy = Val.getLLTTy(MRI);
+  Align StackTypeAlign =
+      std::max(getStackTemporaryAlignment(SrcTy),
+               getStackTemporaryAlignment(Res.getLLTTy(MRI)));
+  MachinePointerInfo PtrInfo;
+  auto StackTemp =
+      createStackTemporary(SrcTy.getSizeInBytes(), StackTypeAlign, PtrInfo);
+
+  MIRBuilder.buildStore(Val, StackTemp, PtrInfo, StackTypeAlign);
+  return MIRBuilder.buildLoad(Res, StackTemp, PtrInfo, StackTypeAlign);
 }
 
 static Register clampVectorIndex(MachineIRBuilder &B, Register IdxReg,

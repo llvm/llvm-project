@@ -679,8 +679,9 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/iterator>
+#else
 #  include <__config>
 #  include <__iterator/access.h>
 #  include <__iterator/advance.h>
@@ -753,6 +754,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #    include <typeinfo>
 #    include <utility>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ITERATOR

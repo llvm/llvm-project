@@ -2223,7 +2223,7 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
     return emitDefaultDefiniteFailure(target);
 
   if (target->getNumResults())
-    rewriter.replaceOp(target, maybeTilingResult->replacements);
+    rewriter.replaceOp(target, maybeTilingResult->mergeResult.replacements);
   else
     rewriter.eraseOp(target);
 
@@ -2626,21 +2626,29 @@ void transform::TileReductionUsingForOp::build(
 }
 
 DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
-    transform::TransformRewriter &rewriter, LinalgOp target,
+    transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  FailureOr<scf::SCFReductionTilingResult> result = scf::tileReductionUsingScf(
-      rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
+
+  auto partialReductionOp = dyn_cast<PartialReductionOpInterface>(target);
+  if (!partialReductionOp) {
+    return emitSilenceableFailure(
+        target->getLoc(),
+        "Operation should implement PartialReductionOpInterface");
+  }
+  FailureOr<scf::SCFTilingResult> result = scf::tileReductionUsingScf(
+      rewriter, partialReductionOp,
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes())));
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
+  rewriter.replaceOp(target, result->mergeResult.replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->parallelTiledOps)
+  for (auto parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
-  for (auto mergeOp : result->mergeOps)
+  for (auto mergeOp : result->mergeResult.mergeOps)
     results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
@@ -3064,7 +3072,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     if (failed(maybeTilingResult))
       return DiagnosedSilenceableFailure::definiteFailure();
 
-    rewriter.replaceOp(op, maybeTilingResult->replacements);
+    rewriter.replaceOp(op, maybeTilingResult->mergeResult.replacements);
 
     tiled.append(maybeTilingResult->tiledOps);
     for (const auto &en2 : llvm::enumerate(maybeTilingResult->loops))
@@ -3303,7 +3311,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (failed(maybeTilingResult))
     return transformOp.emitDefaultSilenceableFailure(tileableOp);
 
-  rewriter.replaceOp(tileableOp, maybeTilingResult->replacements);
+  rewriter.replaceOp(tileableOp, maybeTilingResult->mergeResult.replacements);
 
   tilingResult = *maybeTilingResult;
 
@@ -3510,7 +3518,7 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
   TrackingListener listener(state, *this);
   GreedyRewriteConfig config;
   config.listener = &listener;
-  if (failed(applyPatternsAndFoldGreedily(target, std::move(patterns), config)))
+  if (failed(applyPatternsGreedily(target, std::move(patterns), config)))
     return emitDefaultDefiniteFailure(target);
 
   results.push_back(target);

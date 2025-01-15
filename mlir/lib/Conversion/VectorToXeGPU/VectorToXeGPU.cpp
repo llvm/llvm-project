@@ -318,8 +318,7 @@ struct ConvertVectorToXeGPUPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

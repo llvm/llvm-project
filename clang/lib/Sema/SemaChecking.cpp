@@ -70,6 +70,7 @@
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -657,7 +658,7 @@ struct BuiltinDumpStructGenerator {
         Format += ": %zu ";
         QualType SizeT = S.Context.getSizeType();
         llvm::APInt BitWidth(S.Context.getIntWidth(SizeT),
-                             FD->getBitWidthValue(S.Context));
+                             FD->getBitWidthValue());
         Args.push_back(IntegerLiteral::Create(S.Context, BitWidth, SizeT, Loc));
       }
 
@@ -1934,6 +1935,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     return MIPS().CheckMipsBuiltinFunctionCall(TI, BuiltinID, TheCall);
+  case llvm::Triple::spirv:
+    return SPIRV().CheckSPIRVBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
@@ -5320,9 +5323,11 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
   {
     ExprResult FirstArgResult =
         DefaultFunctionArrayLvalueConversion(FirstArg);
-    if (checkBuiltinArgument(*this, TheCall, 0))
+    if (!FirstArgResult.get()->getType()->isPointerType()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_assume_aligned_invalid_arg)
+          << TheCall->getSourceRange();
       return true;
-    /// In-place updation of FirstArg by checkBuiltinArgument is ignored.
+    }
     TheCall->setArg(0, FirstArgResult.get());
   }
 
@@ -6589,27 +6594,33 @@ void CheckFormatHandler::HandleNonStandardConversionSpecifier(
 
 void CheckFormatHandler::HandlePosition(const char *startPos,
                                         unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_non_standard_positional_arg, SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_non_standard_positional_arg),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleInvalidPosition(
     const char *startSpecifier, unsigned specifierLen,
     analyze_format_string::PositionContext p) {
-  EmitFormatDiagnostic(
-      S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
-      getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
-      getSpecifierRange(startSpecifier, specifierLen));
+  if (!S.getDiagnostics().isIgnored(
+          diag::warn_format_invalid_positional_specifier, SourceLocation()))
+    EmitFormatDiagnostic(
+        S.PDiag(diag::warn_format_invalid_positional_specifier) << (unsigned)p,
+        getLocationOfByte(startSpecifier), /*IsStringLocation*/ true,
+        getSpecifierRange(startSpecifier, specifierLen));
 }
 
 void CheckFormatHandler::HandleZeroPosition(const char *startPos,
                                             unsigned posLen) {
-  EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
-                               getLocationOfByte(startPos),
-                               /*IsStringLocation*/true,
-                               getSpecifierRange(startPos, posLen));
+  if (!S.getDiagnostics().isIgnored(diag::warn_format_zero_positional_specifier,
+                                    SourceLocation()))
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_zero_positional_specifier),
+                         getLocationOfByte(startPos),
+                         /*IsStringLocation*/ true,
+                         getSpecifierRange(startPos, posLen));
 }
 
 void CheckFormatHandler::HandleNullChar(const char *nullCharacter) {
@@ -8080,8 +8091,9 @@ static void CheckFormatString(
   }
 
   if (Type == Sema::FST_Printf || Type == Sema::FST_NSString ||
-      Type == Sema::FST_FreeBSDKPrintf || Type == Sema::FST_OSLog ||
-      Type == Sema::FST_OSTrace || Type == Sema::FST_Syslog) {
+      Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf ||
+      Type == Sema::FST_OSLog || Type == Sema::FST_OSTrace ||
+      Type == Sema::FST_Syslog) {
     CheckPrintfHandler H(
         S, FExpr, OrigFormatExpr, Type, firstDataArg, numDataArgs,
         (Type == Sema::FST_NSString || Type == Sema::FST_OSTrace), Str, APK,
@@ -8090,7 +8102,7 @@ static void CheckFormatString(
 
     if (!analyze_format_string::ParsePrintfString(
             H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
-            Type == Sema::FST_FreeBSDKPrintf))
+            Type == Sema::FST_Kprintf || Type == Sema::FST_FreeBSDKPrintf))
       H.DoneProcessing();
   } else if (Type == Sema::FST_Scanf) {
     CheckScanfHandler H(S, FExpr, OrigFormatExpr, Type, firstDataArg,
@@ -10015,7 +10027,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                            Approximate);
 
   if (const auto *BitField = E->getSourceBitField())
-    return IntRange(BitField->getBitWidthValue(C),
+    return IntRange(BitField->getBitWidthValue(),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
   if (GetExprType(E)->isVoidType())
@@ -10568,7 +10580,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     return false;
 
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
-  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
+  unsigned FieldWidth = Bitfield->getBitWidthValue();
 
   Expr::EvalResult Result;
   if (!OriginalInit->EvaluateAsInt(Result, S.Context,
@@ -14032,8 +14044,8 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
 
   if (Field1->isBitField()) {
     // Make sure that the bit-fields are the same length.
-    unsigned Bits1 = Field1->getBitWidthValue(C);
-    unsigned Bits2 = Field2->getBitWidthValue(C);
+    unsigned Bits1 = Field1->getBitWidthValue();
+    unsigned Bits2 = Field2->getBitWidthValue();
 
     if (Bits1 != Bits2)
       return false;

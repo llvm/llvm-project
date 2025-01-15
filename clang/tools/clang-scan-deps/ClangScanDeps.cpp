@@ -913,7 +913,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       return llvm::nulls();
 
     std::error_code EC;
-    FileOS.emplace(OutputFileName, EC);
+    FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
                    << "': " << llvm::errorCodeToError(EC) << '\n';
@@ -1003,9 +1003,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           auto OSIter = OSs.find(MakeformatOutputPath);
           if (OSIter == OSs.end()) {
             std::error_code EC;
-            OSIter =
-                OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath, EC)
-                    .first;
+            OSIter = OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath,
+                                     EC, llvm::sys::fs::OF_Text)
+                         .first;
             if (EC)
               llvm::errs() << "Failed to open P1689 make format output file \""
                            << MakeformatOutputPath << "\" for " << EC.message()

@@ -187,8 +187,9 @@ template <class charT> class messages_byname;
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/locale>
+#else
 #  include <__config>
 
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -218,7 +219,7 @@ template <class charT> class messages_byname;
 #    include <streambuf>
 #    include <version>
 
-// TODO: Properly qualify calls now that __bsd_locale_defaults.h defines functions instead of macros
+// TODO: Properly qualify calls now that the locale base API defines functions instead of macros
 // NOLINTBEGIN(libcpp-robust-against-adl)
 
 #    if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
@@ -3700,6 +3701,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_LOCALE
