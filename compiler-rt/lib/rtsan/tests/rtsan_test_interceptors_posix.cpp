@@ -545,6 +545,7 @@ TEST_F(RtsanOpenedFileTest, FtelloDieWhenRealtime) {
 
 TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
   int end = fseek(GetOpenFile(), 0, SEEK_END);
+  EXPECT_THAT(end, Eq(0));
   auto Func = [this]() { rewind(GetOpenFile()); };
 
   ExpectRealtimeDeath(Func, "rewind");
