@@ -361,7 +361,7 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
 /// vector.store
 ///----------------------------------------------------------------------------------------
 
-func.func @vector_store_i2_const_index_two_atomic_rmw(%arg0: vector<3xi2>) {
+func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
     %src = memref.alloc() : memref<3x3xi2>
     %c0 = arith.constant 0 : index
     %c2 = arith.constant 2 : index
@@ -374,7 +374,7 @@ func.func @vector_store_i2_const_index_two_atomic_rmw(%arg0: vector<3xi2>) {
 // Note, sizeof(%src) = 18 bits. This is modelled as %src_as_bytes:
 // <3xi8> (bits [0, 18) with the input values from %src, and [18, 24) are masked out)
 
-// CHECK-LABEL: func @vector_store_i2_const_index_two_atomic_rmw(
+// CHECK-LABEL: func @vector_store_i2_const_index_two_partial_stores(
 // CHECK-SAME: %[[ARG0:.+]]: vector<3xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -413,7 +413,7 @@ func.func @vector_store_i2_const_index_two_atomic_rmw(%arg0: vector<3xi2>) {
 
 // -----
 
-func.func @vector_store_i2_atomic_rmw(%arg0: vector<7xi2>) {
+func.func @vector_store_i2_two_partial_one_full_stores(%arg0: vector<7xi2>) {
     %0 = memref.alloc() : memref<3x7xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -422,7 +422,7 @@ func.func @vector_store_i2_atomic_rmw(%arg0: vector<7xi2>) {
 }
 
 // In this example, emit 2 atomic RMWs and 1 non-atomic store:
-// CHECK-LABEL: func @vector_store_i2_atomic_rmw(
+// CHECK-LABEL: func @vector_store_i2_two_partial_one_full_stores(
 // CHECK-SAME: %[[ARG0:.+]]: vector<7xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<6xi8>
 // CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -469,7 +469,7 @@ func.func @vector_store_i2_atomic_rmw(%arg0: vector<7xi2>) {
 
 // -----
 
-func.func @vector_store_i2_const_index_one_atomic_rmw(%arg0: vector<1xi2>) {
+func.func @vector_store_i2_const_index_one_partial_store(%arg0: vector<1xi2>) {
     %0 = memref.alloc() : memref<4x1xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -478,7 +478,7 @@ func.func @vector_store_i2_const_index_one_atomic_rmw(%arg0: vector<1xi2>) {
 }
 
 // In this example, only emit 1 atomic store
-// CHECK-LABEL: func @vector_store_i2_const_index_one_atomic_rmw(
+// CHECK-LABEL: func @vector_store_i2_const_index_one_partial_store(
 // CHECK-SAME: %[[ARG0:.+]]: vector<1xi2>)
 // CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<1xi8>
 // CHECK: %[[C0:.+]] = arith.constant 0 : index
