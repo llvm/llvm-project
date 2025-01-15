@@ -141,6 +141,7 @@ def hasLDG : Predicate<"Subtarget->hasLDG()">;
 def hasLDU : Predicate<"Subtarget->hasLDU()">;
 def hasPTXASUnreachableBug : Predicate<"Subtarget->hasPTXASUnreachableBug()">;
 def noPTXASUnreachableBug : Predicate<"!Subtarget->hasPTXASUnreachableBug()">;
+def hasOptEnabled : Predicate<"TM.getOptLevel() != CodeGenOptLevel::None">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
@@ -1092,73 +1093,39 @@ def : Pat<(mul (zext i16:$a), (i32 UInt16Const:$b)),
 //
 // Integer multiply-add
 //
-def SDTIMAD :
-  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>,
-                       SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>]>;
-def imad : SDNode<"NVPTXISD::IMAD", SDTIMAD>;
+def mul_oneuse : PatFrag<(ops node:$a, node:$b), (mul node:$a, node:$b), [{
+  return N->hasOneUse();
+}]>;
 
-def MAD16rrr :
-  NVPTXInst<(outs Int16Regs:$dst),
-            (ins Int16Regs:$a, Int16Regs:$b, Int16Regs:$c),
-            "mad.lo.s16 \t$dst, $a, $b, $c;",
-            [(set i16:$dst, (imad i16:$a, i16:$b, i16:$c))]>;
-def MAD16rri :
-  NVPTXInst<(outs Int16Regs:$dst),
-            (ins Int16Regs:$a, Int16Regs:$b, i16imm:$c),
-            "mad.lo.s16 \t$dst, $a, $b, $c;",
-            [(set i16:$dst, (imad i16:$a, i16:$b, imm:$c))]>;
-def MAD16rir :
-  NVPTXInst<(outs Int16Regs:$dst),
-            (ins Int16Regs:$a, i16imm:$b, Int16Regs:$c),
-            "mad.lo.s16 \t$dst, $a, $b, $c;",
-            [(set i16:$dst, (imad i16:$a, imm:$b, i16:$c))]>;
-def MAD16rii :
-  NVPTXInst<(outs Int16Regs:$dst),
-            (ins Int16Regs:$a, i16imm:$b, i16imm:$c),
-            "mad.lo.s16 \t$dst, $a, $b, $c;",
-            [(set i16:$dst, (imad i16:$a, imm:$b, imm:$c))]>;
+multiclass MAD<string Ptx, ValueType VT, NVPTXRegClass Reg, Operand Imm> {
+  def rrr:
+    NVPTXInst<(outs Reg:$dst),
+              (ins Reg:$a, Reg:$b, Reg:$c),
+              Ptx # " \t$dst, $a, $b, $c;",
+              [(set VT:$dst, (add (mul_oneuse VT:$a, VT:$b), VT:$c))]>;
 
-def MAD32rrr :
-  NVPTXInst<(outs Int32Regs:$dst),
-            (ins Int32Regs:$a, Int32Regs:$b, Int32Regs:$c),
-            "mad.lo.s32 \t$dst, $a, $b, $c;",
-            [(set i32:$dst, (imad i32:$a, i32:$b, i32:$c))]>;
-def MAD32rri :
-  NVPTXInst<(outs Int32Regs:$dst),
-            (ins Int32Regs:$a, Int32Regs:$b, i32imm:$c),
-            "mad.lo.s32 \t$dst, $a, $b, $c;",
-            [(set i32:$dst, (imad i32:$a, i32:$b, imm:$c))]>;
-def MAD32rir :
-  NVPTXInst<(outs Int32Regs:$dst),
-            (ins Int32Regs:$a, i32imm:$b, Int32Regs:$c),
-            "mad.lo.s32 \t$dst, $a, $b, $c;",
-            [(set i32:$dst, (imad i32:$a, imm:$b, i32:$c))]>;
-def MAD32rii :
-  NVPTXInst<(outs Int32Regs:$dst),
-            (ins Int32Regs:$a, i32imm:$b, i32imm:$c),
-            "mad.lo.s32 \t$dst, $a, $b, $c;",
-            [(set i32:$dst, (imad i32:$a, imm:$b, imm:$c))]>;
+  def rir:
+    NVPTXInst<(outs Reg:$dst),
+              (ins Reg:$a, Imm:$b, Reg:$c),
+              Ptx # " \t$dst, $a, $b, $c;",
+              [(set VT:$dst, (add (mul_oneuse VT:$a, imm:$b), VT:$c))]>;
+  def rri:
+    NVPTXInst<(outs Reg:$dst),
+              (ins Reg:$a, Reg:$b, Imm:$c),
+              Ptx # " \t$dst, $a, $b, $c;",
+              [(set VT:$dst, (add (mul_oneuse VT:$a, VT:$b), imm:$c))]>;
+  def rii:
+    NVPTXInst<(outs Reg:$dst),
+              (ins Reg:$a, Imm:$b, Imm:$c),
+              Ptx # " \t$dst, $a, $b, $c;",
+              [(set VT:$dst, (add (mul_oneuse VT:$a, imm:$b), imm:$c))]>;
+}
 
-def MAD64rrr :
-  NVPTXInst<(outs Int64Regs:$dst),
-            (ins Int64Regs:$a, Int64Regs:$b, Int64Regs:$c),
-            "mad.lo.s64 \t$dst, $a, $b, $c;",
-            [(set i64:$dst, (imad i64:$a, i64:$b, i64:$c))]>;
-def MAD64rri :
-  NVPTXInst<(outs Int64Regs:$dst),
-            (ins Int64Regs:$a, Int64Regs:$b, i64imm:$c),
-            "mad.lo.s64 \t$dst, $a, $b, $c;",
-            [(set i64:$dst, (imad i64:$a, i64:$b, imm:$c))]>;
-def MAD64rir :
-  NVPTXInst<(outs Int64Regs:$dst),
-            (ins Int64Regs:$a, i64imm:$b, Int64Regs:$c),
-            "mad.lo.s64 \t$dst, $a, $b, $c;",
-            [(set i64:$dst, (imad i64:$a, imm:$b, i64:$c))]>;
-def MAD64rii :
-  NVPTXInst<(outs Int64Regs:$dst),
-            (ins Int64Regs:$a, i64imm:$b, i64imm:$c),
-            "mad.lo.s64 \t$dst, $a, $b, $c;",
-            [(set i64:$dst, (imad i64:$a, imm:$b, imm:$c))]>;
+let Predicates = [hasOptEnabled] in {
+defm MAD16 : MAD<"mad.lo.s16", i16, Int16Regs, i16imm>;
+defm MAD32 : MAD<"mad.lo.s32", i32, Int32Regs, i32imm>;
+defm MAD64 : MAD<"mad.lo.s64", i64, Int64Regs, i64imm>;
+}
 
 def INEG16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
