@@ -392,7 +392,7 @@ struct TypeBuilderImpl {
     // Always generate packed FIR struct type for bind(c) derived type for AIX
     if (targetTriple.getOS() == llvm::Triple::OSType::AIX &&
         tySpec.typeSymbol().attrs().test(Fortran::semantics::Attr::BIND_C) &&
-        !IsIsoCType(&tySpec)) {
+        !IsIsoCType(&tySpec) && !fir::isa_builtin_cdevptr_type(rec)) {
       rec.pack(true);
     }
 

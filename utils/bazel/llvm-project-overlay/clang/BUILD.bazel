@@ -693,32 +693,33 @@ cc_library(
     ],
     includes = ["include"],
     textual_hdrs = [
-        "include/clang/Basic/arm_fp16.inc",
-        "include/clang/Basic/arm_mve_builtins.inc",
-        "include/clang/Basic/arm_immcheck_types.inc",
-        "include/clang/Basic/arm_mve_builtin_aliases.inc",
-        "include/clang/Basic/arm_mve_builtin_cg.inc",
-        "include/clang/Basic/arm_mve_builtin_sema.inc",
-        "include/clang/Basic/arm_sme_builtins.inc",
-        "include/clang/Basic/arm_sme_builtin_cg.inc",
-        "include/clang/Basic/arm_neon.inc",
+        # keep sorted
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
         "include/clang/Basic/AttrSubMatchRulesList.inc",
         "include/clang/Basic/DiagnosticASTKinds.inc",
-        "include/clang/Basic/DiagnosticGroups.inc",
-        "include/clang/Basic/DiagnosticRefactoringKinds.inc",
         "include/clang/Basic/DiagnosticAnalysisKinds.inc",
-        "include/clang/Basic/DiagnosticSemaKinds.inc",
         "include/clang/Basic/DiagnosticCommentKinds.inc",
-        "include/clang/Basic/DiagnosticParseKinds.inc",
-        "include/clang/Basic/DiagnosticLexKinds.inc",
-        "include/clang/Basic/DiagnosticSerializationKinds.inc",
-        "include/clang/Basic/DiagnosticFrontendKinds.inc",
-        "include/clang/Basic/DiagnosticDriverKinds.inc",
-        "include/clang/Basic/DiagnosticCrossTUKinds.inc",
         "include/clang/Basic/DiagnosticCommonKinds.inc",
+        "include/clang/Basic/DiagnosticCrossTUKinds.inc",
+        "include/clang/Basic/DiagnosticDriverKinds.inc",
+        "include/clang/Basic/DiagnosticFrontendKinds.inc",
+        "include/clang/Basic/DiagnosticGroups.inc",
         "include/clang/Basic/DiagnosticIndexName.inc",
+        "include/clang/Basic/DiagnosticLexKinds.inc",
+        "include/clang/Basic/DiagnosticParseKinds.inc",
+        "include/clang/Basic/DiagnosticRefactoringKinds.inc",
+        "include/clang/Basic/DiagnosticSemaKinds.inc",
+        "include/clang/Basic/DiagnosticSerializationKinds.inc",
+        "include/clang/Basic/arm_fp16.inc",
+        "include/clang/Basic/arm_immcheck_types.inc",
+        "include/clang/Basic/arm_mve_builtin_aliases.inc",
+        "include/clang/Basic/arm_mve_builtin_cg.inc",
+        "include/clang/Basic/arm_mve_builtin_sema.inc",
+        "include/clang/Basic/arm_mve_builtins.inc",
+        "include/clang/Basic/arm_neon.inc",
+        "include/clang/Basic/arm_sme_builtin_cg.inc",
+        "include/clang/Basic/arm_sme_builtins.inc",
     ] + glob([
         "include/clang/Basic/*.def",
     ]),
@@ -1034,9 +1035,7 @@ cc_library(
     ] + glob([
         "include/clang/AST/*.def",
     ]),
-    toolchains = [
-        ":workspace_root",
-    ],
+    toolchains = [":workspace_root"],
     deps = [
         ":ast_attr_gen",
         ":ast_bytecode_opcodes_gen",
@@ -1558,6 +1557,7 @@ cc_library(
         "include/clang/StaticAnalyzer/Core/AnalyzerOptions.def",
     ],
     deps = [
+        ":analysis",
         ":basic",
         ":static_analyzer_checkers_gen",
         "//llvm:Support",
@@ -1790,10 +1790,6 @@ gentbl(
 
 gentbl(
     name = "headers_arm_sme_gen",
-    copts = [
-        "-Wno-implicit-fallthrough",
-        "-Wno-error=frame-larger-than=",
-    ],
     tbl_outs = [(
         "-gen-arm-sme-header",
         "lib/Headers/arm_sme.h",
@@ -1848,22 +1844,23 @@ builtin_headers = glob(
         "lib/Headers/ppc_wrappers/nmmintrin.h",
     ],
 ) + [
+    # keep sorted
+    "lib/Headers/arm_bf16.h",
     "lib/Headers/arm_cde.h",
     "lib/Headers/arm_fp16.h",
     "lib/Headers/arm_mve.h",
     "lib/Headers/arm_neon.h",
-    "lib/Headers/arm_sve.h",
     "lib/Headers/arm_sme.h",
+    "lib/Headers/arm_sve.h",
     "lib/Headers/arm_vector_types.h",
-    "lib/Headers/arm_bf16.h",
-    "lib/Headers/module.modulemap",
-    "lib/Headers/riscv_vector.h",
     "lib/Headers/cuda_wrappers/algorithm",
     "lib/Headers/cuda_wrappers/complex",
     "lib/Headers/cuda_wrappers/new",
+    "lib/Headers/module.modulemap",
     "lib/Headers/openmp_wrappers/cmath",
     "lib/Headers/openmp_wrappers/complex",
     "lib/Headers/openmp_wrappers/new",
+    "lib/Headers/riscv_vector.h",
 ]
 
 genrule(
@@ -1878,9 +1875,7 @@ genrule(
          cp $$src $$target
        done""",
     output_to_bindir = 1,
-    toolchains = [
-        ":workspace_root",
-    ],
+    toolchains = [":workspace_root"],
 )
 
 cc_library(
@@ -2173,6 +2168,7 @@ cc_library(
         ":sema",
         ":serialization_attr_gen",
         ":static_analyzer_core_options",
+        ":support",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",
@@ -2354,6 +2350,17 @@ cc_library(
 )
 
 cc_binary(
+    name = "apinotes-test",
+    testonly = 1,
+    srcs = ["tools/apinotes-test/APINotesTest.cpp"],
+    stamp = 0,
+    deps = [
+        ":apinotes",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
     name = "arcmt-test",
     testonly = 1,
     srcs = ["tools/arcmt-test/arcmt-test.cpp"],
@@ -2493,6 +2500,11 @@ binary_alias(
     binary = ":clang",
 )
 
+binary_alias(
+    name = "clang-cl",
+    binary = ":clang",
+)
+
 cc_binary(
     name = "clang-check",
     srcs = ["tools/clang-check/ClangCheck.cpp"],
@@ -2590,9 +2602,7 @@ cc_binary(
         "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/tools/clang-linker-wrapper",
     ],
     stamp = 0,
-    toolchains = [
-        ":workspace_root",
-    ],
+    toolchains = [":workspace_root"],
     deps = [
         ":basic",
         ":linker_wrapper_opts_gen",
@@ -2723,5 +2733,42 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_binary(
+    name = "clang-fuzzer-dictionary",
+    srcs = ["tools/clang-fuzzer/dictionary/dictionary.c"],
+    deps = [":basic"],
+)
+
+genrule(
+    name = "fuzzer-dictionary",
+    outs = ["fuzzer-dictionary.txt"],
+    cmd = "$(location :clang-fuzzer-dictionary) > $@",
+    tools = [":clang-fuzzer-dictionary"],
+)
+
+cc_library(
+    name = "handle-cxx",
+    srcs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.cpp"],
+    hdrs = ["tools/clang-fuzzer/handle-cxx/handle_cxx.h"],
+    deps = [
+        ":codegen",
+        ":frontend",
+        ":lex",
+        ":tooling",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "clang-fuzzer-initialize",
+    srcs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.cpp"],
+    hdrs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.h"],
+    deps = [
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )

@@ -6,19 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Utility class to wrap up information about a register and DAG type for more
-// convenient iteration and parameterization
-class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
-  ValueType Ty = ty;
-  NVPTXRegClass RC = rc;
-  Operand Imm = imm;
-  int Size = ty.Size;
-}
-
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
-
-
 def immFloat0 : PatLeaf<(fpimm), [{
     float f = (float)N->getValueAPF().convertToFloat();
     return (f==0.0f);

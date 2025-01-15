@@ -683,17 +683,17 @@ ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
       }
     }
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
-    if (CB->isArgOperand(ArgUse.U)) {
+    if (CB->isArgOperand(ArgUse.U) &&
+        !CB->isByValArgument(CB->getArgOperandNo(ArgUse.U))) {
       unsigned ArgNo = CB->getArgOperandNo(ArgUse.U);
       bool IsInitialize = CB->paramHasAttr(ArgNo, Attribute::Initializes);
-      // Argument is a Write when parameter is writeonly/readnone
-      // and nocapture. Otherwise, it's a WriteWithSideEffect.
-      auto Access = CB->onlyWritesMemory(ArgNo) &&
-                            CB->paramHasAttr(ArgNo, Attribute::NoCapture)
-                        ? ArgumentAccessInfo::AccessType::Write
-                        : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
-      ConstantRangeList AccessRanges;
       if (IsInitialize && ArgUse.Offset) {
+        // Argument is a Write when parameter is writeonly/readnone
+        // and nocapture. Otherwise, it's a WriteWithSideEffect.
+        auto Access = CB->onlyWritesMemory(ArgNo) && CB->doesNotCapture(ArgNo)
+                          ? ArgumentAccessInfo::AccessType::Write
+                          : ArgumentAccessInfo::AccessType::WriteWithSideEffect;
+        ConstantRangeList AccessRanges;
         Attribute Attr = CB->getParamAttr(ArgNo, Attribute::Initializes);
         ConstantRangeList CBCRL = Attr.getValueAsConstantRangeList();
         for (ConstantRange &CR : CBCRL)

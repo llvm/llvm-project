@@ -107,11 +107,11 @@ static Address ResolveAddress(Target &target, const Address &addr) {
     Address resolved_addr;
     // If we weren't passed in a section offset address range, try and resolve
     // it to something
-    bool is_resolved = target.GetSectionLoadList().IsEmpty()
-                           ? target.GetImages().ResolveFileAddress(
-                                 addr.GetOffset(), resolved_addr)
-                           : target.GetSectionLoadList().ResolveLoadAddress(
-                                 addr.GetOffset(), resolved_addr);
+    bool is_resolved =
+        target.HasLoadedSections()
+            ? target.ResolveLoadAddress(addr.GetOffset(), resolved_addr)
+            : target.GetImages().ResolveFileAddress(addr.GetOffset(),
+                                                    resolved_addr);
 
     // We weren't able to resolve the address, just treat it as a raw address
     if (is_resolved && resolved_addr.IsValid())
