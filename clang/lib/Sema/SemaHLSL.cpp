@@ -3056,3 +3056,162 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
     }
   }
 }
+
+static bool CastInitializer(Sema &S, ASTContext &Ctx, Expr *E,
+                            llvm::SmallVectorImpl<Expr *> &List,
+                            llvm::SmallVectorImpl<QualType> &DestTypes) {
+  if (List.size() >= DestTypes.size())
+    return false;
+  InitializedEntity Entity =
+      InitializedEntity::InitializeParameter(Ctx, DestTypes[List.size()], false);
+  ExprResult Res =
+      S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
+  if (Res.isInvalid())
+    return false;
+  Expr *Init = Res.get();
+  List.push_back(Init);
+  return true;
+}
+
+static void BuildIntializerList(Sema &S, ASTContext &Ctx, Expr *E,
+                                llvm::SmallVectorImpl<Expr *> &List,
+                                llvm::SmallVectorImpl<QualType> &DestTypes,
+                                bool &ExcessInits) {
+  if (List.size() >= DestTypes.size()) {
+    ExcessInits = true;
+    return;
+  }
+
+  // If this is an initialization list, traverse the sub initializers.
+  if (auto *Init = dyn_cast<InitListExpr>(E)) {
+    for (auto *SubInit : Init->inits())
+      BuildIntializerList(S, Ctx, SubInit, List, DestTypes, ExcessInits);
+    return;
+  }
+
+  // If this is a scalar type, just enqueue the expression.
+  QualType Ty = E->getType();
+  if (Ty->isScalarType()) {
+    (void)CastInitializer(S, Ctx, E, List, DestTypes);
+    return;
+  }
+
+  if (auto *ATy = Ty->getAs<VectorType>()) {
+    uint64_t Size = ATy->getNumElements();
+
+    if (List.size() + Size > DestTypes.size()) {
+      ExcessInits = true;
+      return;
+    }
+    QualType SizeTy = Ctx.getSizeType();
+    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
+    for (uint64_t I = 0; I < Size; ++I) {
+      auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
+                                         SizeTy, SourceLocation());
+
+      ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
+          E, E->getBeginLoc(), Idx, E->getEndLoc());
+      if (ElExpr.isInvalid())
+        return;
+      if (!CastInitializer(S, Ctx, ElExpr.get(), List, DestTypes))
+        return;
+    }
+    return;
+  }
+
+  if (auto *VTy = dyn_cast<ConstantArrayType>(Ty.getTypePtr())) {
+    uint64_t Size = VTy->getZExtSize();
+    QualType SizeTy = Ctx.getSizeType();
+    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
+    for (uint64_t I = 0; I < Size; ++I) {
+      auto *Idx = IntegerLiteral::Create(Ctx, llvm::APInt(SizeTySize, I),
+                                         SizeTy, SourceLocation());
+      ExprResult ElExpr = S.CreateBuiltinArraySubscriptExpr(
+          E, E->getBeginLoc(), Idx, E->getEndLoc());
+      if (ElExpr.isInvalid())
+        return;
+      BuildIntializerList(S, Ctx, ElExpr.get(), List, DestTypes, ExcessInits);
+    }
+    return;
+  }
+
+  if (auto *RTy = Ty->getAs<RecordType>()) {
+    for (auto *FD : RTy->getDecl()->fields()) {
+      DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
+      DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
+      ExprResult Res = S.BuildFieldReferenceExpr(
+          E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
+      if (Res.isInvalid())
+        return;
+      BuildIntializerList(S, Ctx, Res.get(), List, DestTypes, ExcessInits);
+    }
+  }
+}
+
+static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
+                               llvm::SmallVectorImpl<Expr *>::iterator &It) {
+  if (Ty->isScalarType()) {
+    return *(It++);
+  }
+  llvm::SmallVector<Expr *> Inits;
+  assert(!isa<MatrixType>(Ty) && "Matrix types not yet supported in HLSL");
+  if (Ty->isVectorType() || Ty->isConstantArrayType()) {
+    QualType ElTy;
+    uint64_t Size = 0;
+    if (auto *ATy = Ty->getAs<VectorType>()) {
+      ElTy = ATy->getElementType();
+      Size = ATy->getNumElements();
+    } else {
+      auto *VTy = cast<ConstantArrayType>(Ty.getTypePtr());
+      ElTy = VTy->getElementType();
+      Size = VTy->getZExtSize();
+    }
+    for (uint64_t I = 0; I < Size; ++I)
+      Inits.push_back(GenerateInitLists(Ctx, ElTy, It));
+  }
+  if (const RecordDecl *RD = Ty->getAsRecordDecl()) {
+    for (auto *FD : RD->fields()) {
+      Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
+    }
+  }
+  auto *NewInit = new (Ctx) InitListExpr(Ctx, Inits.front()->getBeginLoc(),
+                                         Inits, Inits.back()->getEndLoc());
+  NewInit->setType(Ty);
+  return NewInit;
+}
+
+bool SemaHLSL::TransformInitList(const InitializedEntity &Entity,
+                                 const InitializationKind &Kind,
+                                 InitListExpr *Init) {
+  // If the initializer is a scalar, just return it.
+  if (Init->getType()->isScalarType())
+    return true;
+  ASTContext &Ctx = SemaRef.getASTContext();
+  llvm::SmallVector<QualType, 16> DestTypes;
+  // An initializer list might be attempting to initialize a reference or
+  // rvalue-reference. When checking the initializer we should look through the
+  // reference.
+  QualType InitTy = Entity.getType().getNonReferenceType();
+  BuildFlattenedTypeList(InitTy, DestTypes);
+
+  llvm::SmallVector<Expr *, 16> ArgExprs;
+  bool ExcessInits = false;
+  for (Expr *Arg : Init->inits())
+    BuildIntializerList(SemaRef, Ctx, Arg, ArgExprs, DestTypes, ExcessInits);
+
+  if (DestTypes.size() != ArgExprs.size() || ExcessInits) {
+    int TooManyOrFew = ExcessInits ? 1 : 0;
+    SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
+        << TooManyOrFew << InitTy << DestTypes.size() << ArgExprs.size();
+    return false;
+  }
+
+  auto It = ArgExprs.begin();
+  // GenerateInitLists will always return an InitListExpr here, because the
+  // scalar case is handled above.
+  auto *NewInit = cast<InitListExpr>(GenerateInitLists(Ctx, InitTy, It));
+  Init->resizeInits(Ctx, NewInit->getNumInits());
+  for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
+    Init->updateInit(Ctx, I, NewInit->getInit(I));
+  return true;
+}
