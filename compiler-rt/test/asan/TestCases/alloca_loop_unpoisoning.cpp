@@ -4,6 +4,8 @@
 // REQUIRES: stable-runtime
 
 // This testcase checks that allocas and VLAs inside loop are correctly unpoisoned.
+
+// MSVC doesn't support VLAs in the first place.
 // UNSUPPORTED: msvc
 
 #include "defines.h"

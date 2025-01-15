@@ -2,6 +2,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // REQUIRES: stable-runtime
+// MSVC doesn't support VLAs
 // UNSUPPORTED: msvc
 
 #include "defines.h"

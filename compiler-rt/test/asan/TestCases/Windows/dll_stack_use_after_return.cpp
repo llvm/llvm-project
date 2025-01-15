@@ -3,6 +3,7 @@
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t %t.dll 2>&1 | FileCheck %s
 // RUN: %clang_cl_asan %LD %Od %s %Fe%t.dll -fsanitize-address-use-after-return=always
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
+
 // UNSUPPORTED: msvc
 
 #include <malloc.h>
