@@ -3791,13 +3791,14 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
-static bool hasGPROut(unsigned Opc) {
-  switch (RISCV::getRVVMCOpcode(Opc)) {
+static bool hasPassthru(const MCInstrDesc &MCID) {
+  switch (RISCV::getRVVMCOpcode(MCID.getOpcode())) {
   case RISCV::VCPOP_M:
   case RISCV::VFIRST_M:
-    return true;
+    return false;
   }
-  return false;
+  // None of the stores has passthru.
+  return !MCID.mayStore();
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
@@ -3829,8 +3830,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 #endif
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
-  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  // Skip the passthru operand at index 0 if !UseTUPseudo and has the passthru
+  // operand.
+  bool ShouldSkip = !UseTUPseudo && hasPassthru(MCID);
   for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);

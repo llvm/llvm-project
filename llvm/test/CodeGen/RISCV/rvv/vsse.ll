@@ -53,10 +53,8 @@ entry:
 define void @intrinsic_vsse_allonesmask_v_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, ptr %1, iXLen %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vsse_allonesmask_v_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
-; CHECK-NEXT:    vsse64.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    vsse64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
   call void @llvm.riscv.vsse.mask.nxv1i64(

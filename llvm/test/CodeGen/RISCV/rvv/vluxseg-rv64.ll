@@ -34,10 +34,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg2_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_2t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg2_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_2t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg2ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg2ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -658,10 +656,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg3_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_3t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg3_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_3t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg3ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg3ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -1224,10 +1220,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg4_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_4t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg4_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_4t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg4ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg4ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -1790,10 +1784,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg5_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_5t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg5_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_5t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg5ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg5ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -2269,10 +2261,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg6_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_6t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg6_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_6t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg6ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg6ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -2748,10 +2738,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg7_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_7t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg7_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_7t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg7ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg7ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -3227,10 +3215,8 @@ entry:
 define <vscale x 1 x i8> @test_vluxseg8_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_8t_nxv1i8(ptr %base, <vscale x 1 x i8> %index, i64 %vl, <vscale x 1 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg8_allonesmask_nxv1i8_triscv.vector.tuple_nxv1i8_8t_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
-; CHECK-NEXT:    vluxseg8ei8.v v9, (a0), v8, v0.t
+; CHECK-NEXT:    vluxseg8ei8.v v9, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
 entry:
