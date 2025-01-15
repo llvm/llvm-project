@@ -286,7 +286,7 @@ Description:
   This format specifier is used exactly like a ``select`` specifier, except it
   additionally generates a namespace, enumeration, and enumerator list based on
   the format string given. In the above case, a namespace is generated named
-  ``FrobbleKind`` that has a anonymous enumeration with the enumerators
+  ``FrobbleKind`` that has an unscoped enumeration with the enumerators
   ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
   permits a clearer use of the ``Diag`` in source code, as the above could be
   called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
