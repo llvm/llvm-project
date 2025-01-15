@@ -3542,6 +3542,10 @@ verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
   SmallVector<AffineMap, 3> defaultIndexingMaps =
       batchMatmulOp.getDefaultIndexingMaps(batchMatmulOp->getContext());
 
+  if (opIndexingMaps.size() != 3)
+    return batchMatmulOp->emitOpError()
+           << "Indexing_map attribute must have 3 affine maps.";
+
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
 
