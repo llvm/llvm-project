@@ -3425,30 +3425,9 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-DecompositionDecl::flat_binding_iterator
-DecompositionDecl::flat_bindings_begin() const {
-  if (NumBindings == 0)
-    return flat_bindings_end();
-
-  auto Bindings = bindings();
-  BindingDecl *First = *Bindings.begin();
-  llvm::ArrayRef<Expr *> PackExprs;
-
-  if (NumBindings > 0 && First->isParameterPack()) {
-    auto *RP = cast<ResolvedUnexpandedPackExpr>(First->getBinding());
-    PackExprs = RP->getExprs();
-  }
-
-  return flat_binding_iterator(Bindings, Bindings.begin(), PackExprs,
-                               PackExprs.begin());
-}
-
-DecompositionDecl::flat_binding_iterator
-DecompositionDecl::flat_bindings_end() const {
-  auto Bindings = bindings();
-  llvm::ArrayRef<Expr *> PackExprs;
-
-  return flat_binding_iterator(Bindings, Bindings.end(), PackExprs, nullptr);
+llvm::ArrayRef<Expr *> BindingDecl::getBindingPackExprs() const {
+  auto *RP = cast<ResolvedUnexpandedPackExpr>(Binding);
+  return RP->getExprs();
 }
 
 void DecompositionDecl::anchor() {}
