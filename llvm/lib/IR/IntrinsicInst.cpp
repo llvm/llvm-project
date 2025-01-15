@@ -69,7 +69,7 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
 bool IntrinsicInst::canAccessFPEnvironment(LLVMContext &C, Intrinsic::ID IID) {
   AttributeList Attrs = Intrinsic::getAttributes(C, IID);
   MemoryEffects ME = Attrs.getMemoryEffects();
-  return ME.onlyAccessesInaccessibleMem();
+  return ME.doesAccessInaccessibleMem();
 }
 
 //===----------------------------------------------------------------------===//
