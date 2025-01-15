@@ -1436,6 +1436,10 @@ bool CompilerInvocation::createFromArgs(
     }
   }
 
+  // Process the timing-related options.
+  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+    invoc.enableTimers = true;
+
   invoc.setArgv0(argv0);
 
   return success;

@@ -1879,6 +1879,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
 float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//
+// D3DCOLORtoUBYTE4 builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T D3DCOLORtoUBYTE4(T x)
+/// \brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+/// \param x [in] The floating-point vector4 to convert.
+///
+/// The return value is the UBYTE4 representation of the \a x parameter.
+///
+/// This function swizzles and scales components of the \a x parameter. Use this
+/// function to compensate for the lack of UBYTE4 support in some hardware.
+
+constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
+  return __detail::d3d_color_to_ubyte4_impl(V);
+}
+
+//===----------------------------------------------------------------------===//
 // rcp builtins
 //===----------------------------------------------------------------------===//
 
