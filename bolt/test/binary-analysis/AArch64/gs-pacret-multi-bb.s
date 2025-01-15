@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -march=armv8.3-a -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=CHECK --allow-empty %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
 
 
 // Verify that we can also detect gadgets across basic blocks

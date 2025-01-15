@@ -202,8 +202,8 @@ public:
                  const std::vector<MCPhysReg> &RegsToTrackInstsFor)
       : Parent(BF, AllocId), NumRegs(BF.getBinaryContext().MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor),
-        TrackingLastInsts(RegsToTrackInstsFor.size() != 0),
-        Reg2StateIdx(RegsToTrackInstsFor.size() == 0
+        TrackingLastInsts(!RegsToTrackInstsFor.empty()),
+        Reg2StateIdx(RegsToTrackInstsFor.empty()
                          ? 0
                          : *llvm::max_element(RegsToTrackInstsFor) + 1,
                      -1) {
@@ -223,11 +223,9 @@ protected:
   std::vector<uint16_t> Reg2StateIdx;
 
   bool isTrackingReg(MCPhysReg Reg) const {
-    for (auto R : RegsToTrackInstsFor)
-      if (R == Reg)
-        return true;
-    return false;
+    return llvm::is_contained(RegsToTrackInstsFor, Reg);
   }
+
   uint16_t reg2StateIdx(MCPhysReg Reg) const {
     assert(Reg < Reg2StateIdx.size());
     return Reg2StateIdx[Reg];

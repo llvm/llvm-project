@@ -1,5 +1,5 @@
 // RUN: %clang %cflags -march=armv8.3-a -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck -check-prefix=CHECK --allow-empty %s
+// RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
 
         .text
 
@@ -208,7 +208,7 @@ f_autibz:
         bl      g
         add     x0, x0, #3
         ldp     x29, x30, [sp], #16
-        autiaz
+        autibz
 // CHECK-NOT: function f_autibz
         ret
         .size f_autibz, .-f_autibz

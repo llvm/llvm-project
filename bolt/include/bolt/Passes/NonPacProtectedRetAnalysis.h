@@ -36,7 +36,7 @@ struct MCInstInBBReference {
   static MCInstInBBReference get(const MCInst *Inst, BinaryFunction &BF) {
     for (BinaryBasicBlock &BB : BF)
       for (size_t I = 0; I < BB.size(); ++I)
-        if (Inst == &(BB.getInstructionAtIndex(I)))
+        if (Inst == &BB.getInstructionAtIndex(I))
           return MCInstInBBReference(&BB, I);
     return {};
   }
@@ -53,7 +53,7 @@ struct MCInstInBBReference {
     return BB->getInstructionAtIndex(BBIndex);
   }
   uint64_t getAddress() const {
-    // 4 bytes per instruction on AArch64;
+    // 4 bytes per instruction on AArch64.
     // FIXME: the assumption of 4 byte per instruction needs to be fixed before
     // this method gets used on any non-AArch64 binaries (but should be fine for
     // pac-ret analysis, as that is an AArch64-specific feature).
@@ -79,7 +79,7 @@ struct MCInstInBFReference {
   }
   operator MCInst &() const {
     assert(BF != nullptr);
-    return *(BF->getInstructionAtOffset(Offset));
+    return *BF->getInstructionAtOffset(Offset);
   }
 
   uint64_t getOffset() const { return Offset; }
