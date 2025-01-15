@@ -257,7 +257,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
-; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[FADD:%.+]]> = vp.fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>
@@ -277,6 +277,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: scalar.ph:
+; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; IF-EVL-OUTLOOP-EMPTY:
@@ -308,7 +309,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
-; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[FADD:%.+]]> = ir<[[RDX_PHI]]> + fast vp.reduce.fadd (ir<[[LD1]]>, vp<[[EVL]]>)
@@ -327,6 +328,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; IF-EVL-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT: scalar.ph:
+; IF-EVL-INLOOP-NEXT:   EMIT vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; IF-EVL-INLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
 ; IF-EVL-INLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; IF-EVL-INLOOP-EMPTY:
@@ -355,7 +357,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
-; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[FADD:%.+]]> = fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<[[RDX_PHI]]>
@@ -373,6 +375,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
+; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-OUTLOOP-EMPTY:
@@ -401,7 +404,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
-; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; NO-VP-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-INLOOP-NEXT:    REDUCE ir<[[FADD:%.+]]> = ir<[[RDX_PHI]]> + fast reduce.fadd (ir<[[LD1]]>)
@@ -419,6 +422,7 @@ define nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i64
 ; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; NO-VP-INLOOP-EMPTY:
 ; NO-VP-INLOOP-NEXT: scalar.ph:
+; NO-VP-INLOOP-NEXT:   EMIT vp<[[IV_RESUME:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; NO-VP-INLOOP-NEXT:   EMIT vp<[[RED_RESUME:%.+]]> = resume-phi vp<[[RDX]]>, ir<%start>
 ; NO-VP-INLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-INLOOP-EMPTY:

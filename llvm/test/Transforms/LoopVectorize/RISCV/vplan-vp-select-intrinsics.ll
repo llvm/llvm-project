@@ -9,8 +9,20 @@ define void @vp_select(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: Live-in ir<[[VFUF:%.+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; IF-EVL-NEXT: Live-in ir<%N> = original trip-count
-; IF-EVL: vector.ph:
+
+; IF-EVL:      ir-bb<entry>:
+; IF-EVL-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+; IF-EVL:      ir-bb<vector.ph>:
+; IF-EVL-NEXT:   IR   %4 = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:   IR   %5 = mul i64 %4, 4
+; IF-EVL-NEXT:   IR   %6 = sub i64 %5, 1
+; IF-EVL-NEXT:   IR   %n.rnd.up = add i64 %N, %6
+; IF-EVL-NEXT:   IR   %n.mod.vf = urem i64 %n.rnd.up, %5
+; IF-EVL-NEXT:   IR   %n.vec = sub i64 %n.rnd.up, %n.mod.vf
+; IF-EVL-NEXT:   IR   %7 = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:   IR   %8 = mul i64 %7, 4
 ; IF-EVL-NEXT: Successor(s): vector loop
+
 ; IF-EVL: <x1> vector loop: {
 ; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:     SCALAR-PHI vp<[[IV:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
@@ -66,8 +78,33 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT: Live-in ir<[[VFUF:%.+]]> = VF * UF
 ; IF-EVL-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; IF-EVL-NEXT: Live-in ir<%N> = original trip-count
-; IF-EVL: vector.ph:
+
+; IF-EVL: ir-bb<entry>:
+; IF-EVL-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+
+; IF-EVL: ir-bb<vector.memcheck>:
+; IF-EVL-NEXT:   IR   %5 = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:   IR   %6 = mul i64 %5, 4
+; IF-EVL-NEXT:   IR   %7 = mul i64 %6, 4
+; IF-EVL-NEXT:   IR   %8 = sub i64 %a1, %b2
+; IF-EVL-NEXT:   IR   %diff.check = icmp ult i64 %8, %7
+; IF-EVL-NEXT:   IR   %9 = mul i64 %6, 4
+; IF-EVL-NEXT:   IR   %10 = sub i64 %a1, %c3
+; IF-EVL-NEXT:   IR   %diff.check4 = icmp ult i64 %10, %9
+; IF-EVL-NEXT:   IR   %conflict.rdx = or i1 %diff.check, %diff.check4
+; IF-EVL-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
+
+; IF-EVL: ir-bb<vector.ph>:
+; IF-EVL-NEXT:   IR   %11 = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:   IR   %12 = mul i64 %11, 4
+; IF-EVL-NEXT:   IR   %13 = sub i64 %12, 1
+; IF-EVL-NEXT:   IR   %n.rnd.up = add i64 %N, %13
+; IF-EVL-NEXT:   IR   %n.mod.vf = urem i64 %n.rnd.up, %12
+; IF-EVL-NEXT:   IR   %n.vec = sub i64 %n.rnd.up, %n.mod.vf
+; IF-EVL-NEXT:   IR   %14 = call i64 @llvm.vscale.i64()
+; IF-EVL-NEXT:   IR   %15 = mul i64 %14, 4
 ; IF-EVL-NEXT: Successor(s): vector loop
+
 ; IF-EVL: <x1> vector loop: {
 ; IF-EVL-NEXT:   vector.body:
 ; IF-EVL-NEXT:     SCALAR-PHI vp<[[IV:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
@@ -75,16 +112,16 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
 ; IF-EVL-NEXT:     EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
-; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[ST]]>
+; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%b>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds ir<%c>, vp<[[ST]]>
+; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%c>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[FADD:%.+]]> = vp.fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<1.000000e+01>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call reassoc nnan ninf nsz arcp contract afn llvm.vp.select(ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>, vp<[[EVL]]>)
-; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
+; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds nuw ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, vp<[[SELECT]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64

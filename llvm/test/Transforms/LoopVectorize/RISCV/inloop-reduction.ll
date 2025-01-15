@@ -559,8 +559,8 @@ define  nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i6
 ; OUTLOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; OUTLOOP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ [[TMP6]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; OUTLOOP-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; OUTLOOP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP7]]
-; OUTLOOP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP8]], i32 0
+; OUTLOOP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[TMP7]]
+; OUTLOOP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i32 0
 ; OUTLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP9]], align 4
 ; OUTLOOP-NEXT:    [[TMP10]] = fadd fast <vscale x 4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; OUTLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -605,8 +605,8 @@ define  nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i6
 ; INLOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INLOOP-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; INLOOP-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
-; INLOOP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP6]]
-; INLOOP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 0
+; INLOOP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[TMP6]]
+; INLOOP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i32 0
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP8]], align 4
 ; INLOOP-NEXT:    [[TMP9:%.*]] = call fast float @llvm.vector.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[WIDE_LOAD]])
 ; INLOOP-NEXT:    [[TMP10]] = fadd fast float [[TMP9]], [[VEC_PHI]]
@@ -658,8 +658,8 @@ define  nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i6
 ; IF-EVL-OUTLOOP-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP11]]
-; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
+; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[TMP11]]
+; IF-EVL-OUTLOOP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP12]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; IF-EVL-OUTLOOP-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> [[VEC_PHI]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP10]])
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP14]] = call fast <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VEC_PHI]], i32 [[TMP10]])
@@ -712,8 +712,8 @@ define  nofpclass(nan inf) float @vp_reduction_with_fastflags(ptr %a, ptr %b, i6
 ; IF-EVL-INLOOP-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-INLOOP-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-INLOOP-NEXT:    [[TMP10:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-INLOOP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP10]]
-; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i32 0
+; IF-EVL-INLOOP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[B:%.*]], i64 [[TMP10]]
+; IF-EVL-INLOOP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i32 0
 ; IF-EVL-INLOOP-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP12]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-INLOOP-NEXT:    [[TMP13:%.*]] = call fast float @llvm.vp.reduce.fadd.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; IF-EVL-INLOOP-NEXT:    [[TMP14]] = fadd fast float [[TMP13]], [[VEC_PHI]]

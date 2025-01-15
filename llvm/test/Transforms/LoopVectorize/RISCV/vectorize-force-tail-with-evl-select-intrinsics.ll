@@ -66,11 +66,11 @@ define void @vp_select(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP26]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP15]]
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; IF-EVL-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -86,7 +86,7 @@ define void @vp_select(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store i32 [[COND]], ptr [[GEP15]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -175,27 +175,27 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    [[AVL:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP17]]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i32 0
+; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP17]]
+; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw float, ptr [[TMP18]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP19]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
-; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[TMP17]]
-; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i32 0
+; IF-EVL-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP17]]
+; IF-EVL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw float, ptr [[TMP20]], i32 0
 ; IF-EVL-NEXT:    [[VP_OP_LOAD5:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP21]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = fcmp fast ogt <vscale x 4 x float> [[VP_OP_LOAD]], [[VP_OP_LOAD5]]
 ; IF-EVL-NEXT:    [[VP_OP:%.*]] = call fast <vscale x 4 x float> @llvm.vp.fadd.nxv4f32(<vscale x 4 x float> [[VP_OP_LOAD]], <vscale x 4 x float> splat (float 1.000000e+01), <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = call fast <vscale x 4 x float> @llvm.vp.select.nxv4f32(<vscale x 4 x i1> [[TMP22]], <vscale x 4 x float> [[VP_OP]], <vscale x 4 x float> [[VP_OP_LOAD5]], i32 [[TMP16]])
-; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP17]]
-; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i32 0
+; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP17]]
+; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw float, ptr [[TMP24]], i32 0
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP23]], ptr align 4 [[TMP25]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP16]] to i64
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP26]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP15]]
 ; IF-EVL-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; IF-EVL-NEXT:    br i1 [[TMP27]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
 ; IF-EVL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; IF-EVL:       [[SCALAR_PH]]:
-; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -210,7 +210,7 @@ define void @vp_select_with_fastflags(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT:    store float [[COND]], ptr [[GEP11]], align 4
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]]
+; IF-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       [[EXIT]]:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -256,3 +256,11 @@ for.body:
 exit:
   ret void
 }
+;.
+; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; IF-EVL: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
+; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+;.
