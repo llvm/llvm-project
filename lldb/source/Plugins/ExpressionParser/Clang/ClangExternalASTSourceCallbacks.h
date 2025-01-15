@@ -41,7 +41,8 @@ public:
       llvm::SmallVectorImpl<clang::Decl *> &Result) override;
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override;
+                                      clang::DeclarationName Name,
+                                      clang::Module *NamedModule) override;
 
   bool FindExternalVisibleMethodsByName(const clang::DeclContext *DC,
                                         clang::DeclarationName Name) override {
