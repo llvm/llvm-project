@@ -327,13 +327,17 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
   SmallVector<const Record *, 4> CommonSuperClasses;
   SmallVector<const Record *, 4> Stack(T1->getClasses());
 
+  SmallVector<std::pair<const Record *, SMRange>> SCs;
+
   while (!Stack.empty()) {
     const Record *R = Stack.pop_back_val();
 
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
     } else {
-      R->getDirectSuperClasses(Stack);
+      R->getDirectSuperClasses(SCs);
+      append_range(Stack, make_first_range(SCs));
+      SCs.clear();
     }
   }
 
@@ -2875,8 +2879,10 @@ void Record::checkName() {
 }
 
 const RecordRecTy *Record::getType() const {
+  SmallVector<std::pair<const Record *, SMRange>> SCs;
+  getDirectSuperClasses(SCs);
   SmallVector<const Record *, 4> DirectSCs;
-  getDirectSuperClasses(DirectSCs);
+  append_range(DirectSCs, make_first_range(SCs));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
@@ -2932,7 +2938,7 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
 }
 
 void Record::getDirectSuperClasses(
-    SmallVectorImpl<const Record *> &Classes) const {
+    SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const {
   SmallVector<std::pair<const Record *, SMRange>> SCVec;
   getSuperClasses(SCVec);
   ArrayRef<std::pair<const Record *, SMRange>> SCs = SCVec;
@@ -2940,11 +2946,11 @@ void Record::getDirectSuperClasses(
   SmallVector<std::pair<const Record *, SMRange>> SSCs;
 
   while (!SCs.empty()) {
-    const Record *SC = SCs.back().first;
+    auto [SC, Range] = SCs.back();
     SC->getSuperClasses(SSCs);
     SCs = SCs.drop_back(1 + SSCs.size());
     SSCs.clear();
-    Classes.push_back(SC);
+    Classes.emplace_back(SC, Range);
   }
 }
 

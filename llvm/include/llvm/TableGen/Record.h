@@ -1727,7 +1727,8 @@ public:
   bool hasDirectSuperClass(const Record *SuperClass) const;
 
   /// Append the direct superclasses of this record to Classes.
-  void getDirectSuperClasses(SmallVectorImpl<const Record *> &Classes) const;
+  void getDirectSuperClasses(
+      SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const;
 
   bool isTemplateArg(const Init *Name) const {
     return llvm::is_contained(TemplateArgs, Name);
