@@ -1688,14 +1688,21 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   auto *VecTyA = ArgTyA->getAs<VectorType>();
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
 
-  ExprResult B;
+  bool AllBArgAreVectors = true;
   for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
-    B = TheCall->getArg(i);
+    ExprResult B = TheCall->getArg(i);
     QualType ArgTyB = B.get()->getType();
     auto *VecTyB = ArgTyB->getAs<VectorType>();
-    if (VecTyA == nullptr && VecTyB == nullptr)
-      return false;
-
+    if (VecTyB == nullptr)
+      AllBArgAreVectors &= false;
+    if (VecTyA && VecTyB == nullptr) {
+      // Note: if we get here 'B' is scalar which
+      // requires a VectorSplat on ArgN
+      S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+      return true;
+    }
     if (VecTyA && VecTyB) {
       bool retValue = false;
       if (VecTyA->getElementType() != VecTyB->getElementType()) {
@@ -1716,16 +1723,20 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
             << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
         retValue = true;
       }
-      return retValue;
+      if (retValue)
+        return retValue;
     }
   }
 
-  // Note: if we get here one of the args is a scalar which
-  // requires a VectorSplat on Arg0 or Arg1
-  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
-      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-      << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
-  return true;
+  if (VecTyA == nullptr && AllBArgAreVectors) {
+    // Note: if we get here 'A' is a scalar which
+    // requires a VectorSplat on Arg0
+    S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+        << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+        << SourceRange(A.get()->getBeginLoc(), A.get()->getEndLoc());
+    return true;
+  }
+  return false;
 }
 
 static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
