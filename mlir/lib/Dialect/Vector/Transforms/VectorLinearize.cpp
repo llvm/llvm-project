@@ -482,9 +482,11 @@ struct LinearizeVectorBitCast final
       return rewriter.notifyMatchFailure(
           loc, "Can't flatten since targetBitWidth <= OpSize");
 
-    rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType, adaptor.getSource());
+    rewriter.replaceOpWithNewOp<vector::BitCastOp>(castOp, resType,
+                                                   adaptor.getSource());
     return mlir::success();
   }
+
 private:
   unsigned targetVectorBitWidth;
 };
@@ -515,8 +517,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   typeConverter.addTargetMaterialization(materializeCast);
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if ((isa<arith::ConstantOp>(op) ||
-             isa<vector::BitCastOp>(op) ||
+        if ((isa<arith::ConstantOp>(op) || isa<vector::BitCastOp>(op) ||
              op->hasTrait<OpTrait::Vectorizable>())) {
           return (isLessThanTargetBitWidth(op, targetBitWidth)
                       ? typeConverter.isLegal(op)
@@ -525,8 +526,9 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         return std::nullopt;
       });
 
-  patterns.add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorBitCast>(
-      typeConverter, patterns.getContext(), targetBitWidth);
+  patterns
+      .add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorBitCast>(
+          typeConverter, patterns.getContext(), targetBitWidth);
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
