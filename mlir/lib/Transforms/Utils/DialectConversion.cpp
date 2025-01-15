@@ -201,8 +201,9 @@ ConversionValueMapping::lookupOrDefault(Value from,
     // If possible, Replace each value with (one or multiple) mapped values.
     ValueVector next;
     for (Value v : current) {
-      auto it = mapping.find({v});
-      if (it != mapping.end()) {
+      ValueVector vv{v};
+      auto it = mapping.find(vv);
+      if (it != mapping.end() && it->first != vv) {
         llvm::append_range(next, it->second);
       } else {
         next.push_back(v);
