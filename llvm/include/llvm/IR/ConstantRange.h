@@ -128,6 +128,12 @@ public:
   /// NOTE: false does not mean that inverse predicate holds!
   bool icmp(CmpInst::Predicate Pred, const ConstantRange &Other) const;
 
+  /// Does the predicate \p Pred or its inverse hold between ranges this and \p
+  /// Other? Returns `true` if the predicate always holds, `false` if the
+  /// inverse always holds, or `std::nullopt` otherwise.
+  std::optional<bool> icmpOrInverse(CmpInst::Predicate Pred,
+                                    const ConstantRange &Other) const;
+
   /// Return true iff CR1 ult CR2 is equivalent to CR1 slt CR2.
   /// Does not depend on strictness/direction of the predicate.
   static bool

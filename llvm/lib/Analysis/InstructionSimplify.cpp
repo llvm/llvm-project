@@ -3783,13 +3783,9 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   // If both operands have range metadata, use the metadata
   // to simplify the comparison.
   if (std::optional<ConstantRange> RhsCr = getRange(RHS, Q.IIQ))
-    if (std::optional<ConstantRange> LhsCr = getRange(LHS, Q.IIQ)) {
-      if (LhsCr->icmp(Pred, *RhsCr))
-        return ConstantInt::getTrue(ITy);
-
-      if (LhsCr->icmp(CmpInst::getInversePredicate(Pred), *RhsCr))
-        return ConstantInt::getFalse(ITy);
-    }
+    if (std::optional<ConstantRange> LhsCr = getRange(LHS, Q.IIQ))
+      if (auto Res = LhsCr->icmpOrInverse(Pred, *RhsCr))
+        return ConstantInt::getBool(ITy, *Res);
 
   // Compare of cast, for example (zext X) != 0 -> X != 0
   if (isa<CastInst>(LHS) && (isa<Constant>(RHS) || isa<CastInst>(RHS))) {

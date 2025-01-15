@@ -274,6 +274,16 @@ bool ConstantRange::icmp(CmpInst::Predicate Pred,
   }
 }
 
+std::optional<bool>
+ConstantRange::icmpOrInverse(CmpInst::Predicate Pred,
+                             const ConstantRange &Other) const {
+  if (icmp(Pred, Other))
+    return true;
+  if (icmp(CmpInst::getInversePredicate(Pred), Other))
+    return false;
+  return std::nullopt;
+}
+
 /// Exact mul nuw region for single element RHS.
 static ConstantRange makeExactMulNUWRegion(const APInt &V) {
   unsigned BitWidth = V.getBitWidth();

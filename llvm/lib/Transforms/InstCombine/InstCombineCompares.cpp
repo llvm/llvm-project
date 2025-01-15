@@ -2674,41 +2674,10 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
 Instruction *InstCombinerImpl::foldICmpSRemConstant(ICmpInst &Cmp,
                                                     BinaryOperator *SRem,
                                                     const APInt &C) {
-  const ICmpInst::Predicate Pred = Cmp.getPredicate();
-  if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULT) {
-    // Canonicalize unsigned predicates to signed:
-    // (X s% DivisorC) u> C -> (X s% DivisorC) s< 0
-    //   iff (C s< 0 ? ~C : C) u>= abs(DivisorC)-1
-    // (X s% DivisorC) u< C+1 -> (X s% DivisorC) s> -1
-    //   iff (C+1 s< 0 ? ~C : C) u>= abs(DivisorC)-1
-
-    const APInt *DivisorC;
-    if (!match(SRem->getOperand(1), m_APInt(DivisorC)))
-      return nullptr;
-
-    APInt NormalizedC = C;
-    if (Pred == ICmpInst::ICMP_ULT) {
-      assert(!NormalizedC.isZero() &&
-             "ult X, 0 should have been simplified already.");
-      --NormalizedC;
-    }
-    if (C.isNegative())
-      NormalizedC.flipAllBits();
-    assert(!DivisorC->isZero() &&
-           "srem X, 0 should have been simplified already.");
-    if (!NormalizedC.uge(DivisorC->abs() - 1))
-      return nullptr;
-
-    Type *Ty = SRem->getType();
-    if (Pred == ICmpInst::ICMP_UGT)
-      return new ICmpInst(ICmpInst::ICMP_SLT, SRem,
-                          ConstantInt::getNullValue(Ty));
-    return new ICmpInst(ICmpInst::ICMP_SGT, SRem,
-                        ConstantInt::getAllOnesValue(Ty));
-  }
   // Match an 'is positive' or 'is negative' comparison of remainder by a
   // constant power-of-2 value:
   // (X % pow2C) sgt/slt 0
+  const ICmpInst::Predicate Pred = Cmp.getPredicate();
   if (Pred != ICmpInst::ICMP_SGT && Pred != ICmpInst::ICMP_SLT &&
       Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
     return nullptr;
@@ -3164,7 +3133,10 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
 
   if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
       C.isNonNegative() && (C - *C2).isNonNegative() &&
-      computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
+      computeConstantRange(X, /*ForSigned=*/true, /*UseInstrInfo=*/true, &AC,
+                           Add, &DT)
+          .add(*C2)
+          .isAllNonNegative())
     return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
                         ConstantInt::get(Ty, C - *C2));
 
@@ -7056,6 +7028,66 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   }
 }
 
+// (icmp X, Y) --> (icmp slt/sgt X, 0/-1) iff Y is outside the signed range of X
+static ICmpInst *canonicalizeSignBitCheck(ICmpInst::Predicate Pred, Value *X,
+                                          const ConstantRange &XRange,
+                                          const ConstantRange &YRange) {
+  if (XRange.isSignWrappedSet())
+    return nullptr;
+  unsigned BitWidth = XRange.getBitWidth();
+  APInt SMin = APInt::getSignedMinValue(BitWidth);
+  APInt Zero = APInt::getZero(BitWidth);
+  auto NegResult =
+      XRange.intersectWith(ConstantRange(SMin, Zero), ConstantRange::Signed)
+          .icmpOrInverse(Pred, YRange);
+  if (!NegResult)
+    return nullptr;
+  auto PosResult =
+      XRange.intersectWith(ConstantRange(Zero, SMin), ConstantRange::Signed)
+          .icmpOrInverse(Pred, YRange);
+  if (!PosResult)
+    return nullptr;
+  assert(NegResult != PosResult &&
+         "Known result should been simplified already.");
+  Type *Ty = X->getType();
+  if (*NegResult)
+    return new ICmpInst(ICmpInst::ICMP_SLT, X, ConstantInt::getNullValue(Ty));
+  return new ICmpInst(ICmpInst::ICMP_SGT, X, ConstantInt::getAllOnesValue(Ty));
+}
+
+// Try to fold an icmp using the constant ranges of its operands.
+Instruction *InstCombinerImpl::foldICmpUsingConstantRanges(ICmpInst &Cmp) {
+  Value *X = Cmp.getOperand(0);
+  if (!X->getType()->isIntOrIntVectorTy())
+    return nullptr;
+  Value *Y = Cmp.getOperand(1);
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+  ConstantRange XRange = computeConstantRange(
+      X, ICmpInst::isSigned(Pred), /*UseInstrInfo=*/true, &AC, &Cmp, &DT);
+  if (XRange.isFullSet())
+    return nullptr; // early out if we don't have any information
+  ConstantRange YRange = computeConstantRange(
+      Y, ICmpInst::isSigned(Pred), /*UseInstrInfo=*/true, &AC, &Cmp, &DT);
+  if (YRange.isFullSet())
+    return nullptr; // early out if we don't have any information
+  if (auto Res = XRange.icmpOrInverse(Pred, YRange))
+    return replaceInstUsesWith(Cmp, ConstantInt::getBool(Cmp.getType(), *Res));
+  if (ICmpInst::isUnsigned(Pred)) {
+    // Check if this icmp is actually a sign bit check.
+    const APInt *C;
+    bool IgnoreTrueIfSigned;
+    if (!match(Y, m_APInt(C)) ||
+        !isSignBitCheck(Pred, *C, IgnoreTrueIfSigned)) {
+      if (ICmpInst *Res = canonicalizeSignBitCheck(Pred, X, XRange, YRange))
+        return Res;
+      if (ICmpInst *Res = canonicalizeSignBitCheck(
+              ICmpInst::getSwappedPredicate(Pred), Y, YRange, XRange))
+        return Res;
+    }
+  }
+  return nullptr;
+}
+
 // Transform pattern like:
 //   (1 << Y) u<= X  or  ~(-1 << Y) u<  X  or  ((1 << Y)+(-1)) u<  X
 //   (1 << Y) u>  X  or  ~(-1 << Y) u>= X  or  ((1 << Y)+(-1)) u>= X
@@ -7426,6 +7458,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = canonicalizeICmpPredicate(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpUsingConstantRanges(I))
     return Res;
 
   if (Instruction *Res = foldICmpWithConstant(I))
