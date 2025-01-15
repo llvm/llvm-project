@@ -188,10 +188,10 @@ protected:
   /// For dso_local functions, the current $local alias for the function.
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
-  /// A handle to the EH info emitter (if present)
-  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1>
-      EHHandlers; // only for EHHandler subtypes, but some c++ compilers will
-                  // incorrectly warn us if we declare that
+  /// A handle to the EH info emitter (if present).
+  // Only for EHStreamer subtypes, but some C++ compilers will incorrectly warn
+  // us if we declare that directly.
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
