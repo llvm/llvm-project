@@ -7768,7 +7768,7 @@ private:
              &Data : RecordLayout) {
       if (Data.isNull())
         continue;
-      if (const auto *Base = Data.dyn_cast<const CXXRecordDecl *>())
+      if (const auto *Base = dyn_cast<const CXXRecordDecl *>(Data))
         getPlainLayout(Base, Layout, /*AsBase=*/true);
       else
         Layout.push_back(cast<const FieldDecl *>(Data));
