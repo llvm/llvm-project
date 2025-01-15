@@ -3939,6 +3939,8 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
                                                       CmpPredicate B) {
   if (A.Pred == B.Pred)
     return A.HasSameSign == B.HasSameSign ? A : CmpPredicate(A.Pred);
+  if (CmpInst::isFPPredicate(A) || CmpInst::isFPPredicate(B))
+    return {};
   if (A.HasSameSign &&
       A.Pred == ICmpInst::getFlippedSignednessPredicate(B.Pred))
     return B.Pred;
@@ -3946,6 +3948,10 @@ std::optional<CmpPredicate> CmpPredicate::getMatching(CmpPredicate A,
       B.Pred == ICmpInst::getFlippedSignednessPredicate(A.Pred))
     return A.Pred;
   return {};
+}
+
+CmpInst::Predicate CmpPredicate::getPreferredSignedPredicate() const {
+  return HasSameSign ? ICmpInst::getSignedPredicate(Pred) : Pred;
 }
 
 CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {

@@ -374,16 +374,16 @@ private:
 /// SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class ValueRange final
-    : public llvm::detail::indexed_accessor_range_base<
-          ValueRange,
-          PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>,
-          Value, Value, Value> {
+class ValueRange final : public llvm::detail::indexed_accessor_range_base<
+                             ValueRange,
+                             PointerUnion<const Value *, OpOperand *,
+                                          detail::OpResultImpl *, Value>,
+                             Value, Value, Value> {
 public:
   /// The type representing the owner of a ValueRange. This is either a list of
-  /// values, operands, or results.
+  /// values, operands, or results or a single value.
   using OwnerT =
-      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *>;
+      PointerUnion<const Value *, OpOperand *, detail::OpResultImpl *, Value>;
 
   using RangeBaseT::RangeBaseT;
 
@@ -393,8 +393,7 @@ public:
                 !std::is_convertible<Arg, Value>::value>>
   ValueRange(Arg &&arg LLVM_LIFETIME_BOUND)
       : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}
-  ValueRange(const Value &value LLVM_LIFETIME_BOUND)
-      : ValueRange(&value, /*count=*/1) {}
+  ValueRange(Value value) : ValueRange(value, /*count=*/1) {}
   ValueRange(const std::initializer_list<Value> &values LLVM_LIFETIME_BOUND)
       : ValueRange(ArrayRef<Value>(values)) {}
   ValueRange(iterator_range<OperandRange::iterator> values)
