@@ -1321,6 +1321,16 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   // u64's leading to overflows..
   int64_t CharWidth = static_cast<int64_t>(CGM.getContext().getCharWidth());
 
+  //  size_t field_offset = offsetof (struct s, field);
+  Value *FieldOffset = nullptr;
+  if (FlexibleArrayMemberFD != FD) {
+    std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
+    if (!Offset)
+      return nullptr;
+    FieldOffset =
+        llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
+  }
+
   //  size_t count = (size_t) ptr->count;
   Value *Count = EmitLoadOfCountedByField(ME, FlexibleArrayMemberFD, CountFD);
   if (!Count)
@@ -1340,16 +1350,6 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
   auto *FlexibleArrayMemberBaseSize =
       llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
-
-  //  size_t field_offset = offsetof (struct s, field);
-  Value *FieldOffset = nullptr;
-  if (FlexibleArrayMemberFD != FD) {
-    std::optional<int64_t> Offset = GetFieldOffset(Ctx, RD, FD);
-    if (!Offset)
-      return nullptr;
-    FieldOffset =
-        llvm::ConstantInt::get(ResType, *Offset / CharWidth, IsSigned);
-  }
 
   //  size_t flexible_array_member_size =
   //          count * flexible_array_member_base_size;
