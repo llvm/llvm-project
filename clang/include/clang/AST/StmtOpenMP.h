@@ -5562,7 +5562,7 @@ class OMPTileDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPTileDirectiveClass,
                                        llvm::omp::OMPD_tile, StartLoc, EndLoc,
                                        NumLoops) {
-    setNumGeneratedLoops(3 * NumLoops);
+    setNumGeneratedLoops(2 * NumLoops);
   }
 
   void setPreInits(Stmt *PreInits) {
@@ -5639,7 +5639,7 @@ class OMPStripeDirective final : public OMPLoopTransformationDirective {
       : OMPLoopTransformationDirective(OMPStripeDirectiveClass,
                                        llvm::omp::OMPD_stripe, StartLoc, EndLoc,
                                        NumLoops) {
-    setNumGeneratedLoops(3 * NumLoops);
+    setNumGeneratedLoops(2 * NumLoops);
   }
 
   void setPreInits(Stmt *PreInits) {
