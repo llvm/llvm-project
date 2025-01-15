@@ -1102,8 +1102,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Save the LR now.
-  if (!HasSTUX && MustSaveLR && !HasFastMFLR && isInt<16>(FrameSize + LROffset)
-      && !HasROPProtect)
+  if (!HasSTUX && MustSaveLR && !HasFastMFLR &&
+      isInt<16>(FrameSize + LROffset) && !HasROPProtect)
     SaveLR(LROffset + FrameSize);
 
   // Add Call Frame Information for the instructions we generated above.
