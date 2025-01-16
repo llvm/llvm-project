@@ -1245,11 +1245,22 @@ class VOPSelectPat <ValueType vt> : GCNPat <
   (vt (select i1:$src0, vt:$src1, vt:$src2)),
   (V_CNDMASK_B32_e64 0, VSrc_b32:$src2, 0, VSrc_b32:$src1, SSrc_i1:$src0)
 >;
+class VOPSelectPat_t16 <ValueType vt> : GCNPat <
+  (vt (select i1:$src0, vt:$src1, vt:$src2)),
+  (V_CNDMASK_B16_t16_e64 0, VSrcT_b16:$src2, 0, VSrcT_b16:$src1, SSrc_i1:$src0)
+>;
 
 def : VOPSelectModsPat <i32>;
 def : VOPSelectModsPat <f32>;
-def : VOPSelectPat <f16>;
-def : VOPSelectPat <i16>;
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
+  def : VOPSelectPat <f16>;
+  def : VOPSelectPat <i16>;
+} // End True16Predicate = p
+let True16Predicate = UseRealTrue16Insts in {
+  def : VOPSelectPat_t16 <f16>;
+  def : VOPSelectPat_t16 <i16>;
+} // End True16Predicate = UseRealTrue16Insts
 
 let AddedComplexity = 1 in {
 def : GCNPat <
