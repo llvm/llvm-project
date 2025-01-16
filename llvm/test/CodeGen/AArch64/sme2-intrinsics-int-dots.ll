@@ -319,6 +319,39 @@ define void @udot_single_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+define void @udot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8 x i16> %zn) #0 {
+; CHECK-LABEL: udot_single_za32_u16_vg1x2_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    ld1h { z2.h, z3.h }, pn8/z, [x0]
+; CHECK-NEXT:    ld1h { z6.h, z7.h }, pn8/z, [x9]
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z7.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z5.h, z6.h }, z0.h
+; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z3.h, z4.h }, z0.h
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 0
+  %3 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
+  %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> %zn)
+  ret void
+}
+
 define void @udot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #0 {
 ; CHECK-LABEL: udot_single_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
@@ -329,6 +362,102 @@ define void @udot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
   call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4)
   %slice2 = add i32 %slice, 7
   call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4)
+  ret void
+}
+
+define void @udot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8 x i16> %zn) #0 {
+; CHECK-LABEL: udot_single_za32_u16_vg1x4_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-13
+; CHECK-NEXT:    add x10, x1, x1, lsl #1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    str z19, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    str z18, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ld1h { z4.h - z7.h }, pn8/z, [x0]
+; CHECK-NEXT:    ld1h { z28.h - z31.h }, pn8/z, [x9]
+; CHECK-NEXT:    add x9, x0, x10
+; CHECK-NEXT:    ld1h { z24.h - z27.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld1h { z8.h - z11.h }, pn8/z, [x9]
+; CHECK-NEXT:    mov z1.d, z4.d
+; CHECK-NEXT:    mov z2.d, z28.d
+; CHECK-NEXT:    mov z12.d, z5.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z4.d, z8.d
+; CHECK-NEXT:    mov z13.d, z29.d
+; CHECK-NEXT:    mov z14.d, z25.d
+; CHECK-NEXT:    mov z15.d, z9.d
+; CHECK-NEXT:    mov z16.d, z6.d
+; CHECK-NEXT:    mov z17.d, z30.d
+; CHECK-NEXT:    mov z18.d, z26.d
+; CHECK-NEXT:    mov z19.d, z10.d
+; CHECK-NEXT:    mov z8.d, z7.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z1.h - z4.h }, z0.h
+; CHECK-NEXT:    mov z9.d, z31.d
+; CHECK-NEXT:    mov z10.d, z27.d
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z12.h - z15.h }, z0.h
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z16.h - z19.h }, z0.h
+; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z8.h - z11.h }, z0.h
+; CHECK-NEXT:    ldr z19, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #13
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 0
+  %3 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 1
+  %4 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 2
+  %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 3
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %6 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %7 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 0
+  %8 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 1
+  %9 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 2
+  %10 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 3
+  %mul3 = shl i64 %stride, 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %ptr, i64 %mul3
+  %11 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx4)
+  %12 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 0
+  %13 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 1
+  %14 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 2
+  %15 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 3
+  %mul5 = mul i64 %stride, 3
+  %arrayidx6 = getelementptr inbounds i8, ptr %ptr, i64 %mul5
+  %16 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx6)
+  %17 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 0
+  %18 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 1
+  %19 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 2
+  %20 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 3
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %7, <vscale x 8 x i16> %12, <vscale x 8 x i16> %17, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %8, <vscale x 8 x i16> %13, <vscale x 8 x i16> %18, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %4, <vscale x 8 x i16> %9, <vscale x 8 x i16> %14, <vscale x 8 x i16> %19, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.udot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %5, <vscale x 8 x i16> %10, <vscale x 8 x i16> %15, <vscale x 8 x i16> %20, <vscale x 8 x i16> %zn)
   ret void
 }
 
@@ -397,6 +526,38 @@ define void @usdot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+define void @usdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 16 x i8> %zn) #0 {
+; CHECK-LABEL: usdot_single_za32_u16_vg1x2_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    ld1b { z2.b, z3.b }, pn8/z, [x0]
+; CHECK-NEXT:    ld1b { z6.b, z7.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z7.d
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z5.b, z6.b }, z0.b
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z3.b, z4.b }, z0.b
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 0
+  %3 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %4 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %5 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %4, 0
+  %6 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %4, 1
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x2.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %5, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x2.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %6, <vscale x 16 x i8> %zn)
+  ret void
+}
+
 define void @usdot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
 ; CHECK-LABEL: usdot_single_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
@@ -410,6 +571,100 @@ define void @usdot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+define void @usdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 16 x i8> %zn) #0 {
+; CHECK-LABEL: usdot_single_za32_u16_vg1x4_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-13
+; CHECK-NEXT:    lsl x9, x1, #1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    str z19, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    str z18, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ld1b { z24.b - z27.b }, pn8/z, [x0]
+; CHECK-NEXT:    ld1b { z4.b - z7.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    add x9, x9, x1
+; CHECK-NEXT:    ld1b { z28.b - z31.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z2.d, z4.d
+; CHECK-NEXT:    mov z3.d, z8.d
+; CHECK-NEXT:    mov z12.d, z25.d
+; CHECK-NEXT:    mov z13.d, z5.d
+; CHECK-NEXT:    mov z14.d, z9.d
+; CHECK-NEXT:    mov z4.d, z28.d
+; CHECK-NEXT:    mov z15.d, z29.d
+; CHECK-NEXT:    mov z16.d, z26.d
+; CHECK-NEXT:    mov z17.d, z6.d
+; CHECK-NEXT:    mov z18.d, z10.d
+; CHECK-NEXT:    mov z19.d, z30.d
+; CHECK-NEXT:    mov z28.d, z27.d
+; CHECK-NEXT:    mov z29.d, z7.d
+; CHECK-NEXT:    mov z30.d, z11.d
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z1.b - z4.b }, z0.b
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b
+; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b
+; CHECK-NEXT:    ldr z19, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #13
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 0
+  %3 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 1
+  %4 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 2
+  %5 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 3
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %6 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %7 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 0
+  %8 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 1
+  %9 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 2
+  %10 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 3
+  %mul3 = shl i64 %stride, 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %ptr, i64 %mul3
+  %11 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx4)
+  %12 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 0
+  %13 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 1
+  %14 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 2
+  %15 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 3
+  %mul5 = mul i64 %stride, 3
+  %arrayidx6 = getelementptr inbounds i8, ptr %ptr, i64 %mul5
+  %16 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx6)
+  %17 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 0
+  %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
+  %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
+  %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.usdot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> %zn)
+  ret void
+}
 
 ; == Multi, single (signed) ==
 
@@ -426,6 +681,39 @@ define void @sdot_single_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+define void @sdot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 8 x i16> %zn) #0 {
+; CHECK-LABEL: sdot_single_za32_u16_vg1x2_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    ld1h { z2.h, z3.h }, pn8/z, [x0]
+; CHECK-NEXT:    ld1h { z6.h, z7.h }, pn8/z, [x9]
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z7.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z5.h, z6.h }, z0.h
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z3.h, z4.h }, z0.h
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 0
+  %3 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %4 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 0
+  %6 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %4, 1
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %5, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x2.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %6, <vscale x 8 x i16> %zn)
+  ret void
+}
+
 define void @sdot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4) #0 {
 ; CHECK-LABEL: sdot_single_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
@@ -436,6 +724,102 @@ define void @sdot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
   call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 %slice, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4)
   %slice2 = add i32 %slice, 7
   call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 %slice2, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4)
+  ret void
+}
+
+define void @sdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 8 x i16> %zn) #0 {
+; CHECK-LABEL: sdot_single_za32_u16_vg1x4_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-13
+; CHECK-NEXT:    add x10, x1, x1, lsl #1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    str z19, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    add x9, x0, x1
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    str z18, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ld1h { z4.h - z7.h }, pn8/z, [x0]
+; CHECK-NEXT:    ld1h { z28.h - z31.h }, pn8/z, [x9]
+; CHECK-NEXT:    add x9, x0, x10
+; CHECK-NEXT:    ld1h { z24.h - z27.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld1h { z8.h - z11.h }, pn8/z, [x9]
+; CHECK-NEXT:    mov z1.d, z4.d
+; CHECK-NEXT:    mov z2.d, z28.d
+; CHECK-NEXT:    mov z12.d, z5.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z4.d, z8.d
+; CHECK-NEXT:    mov z13.d, z29.d
+; CHECK-NEXT:    mov z14.d, z25.d
+; CHECK-NEXT:    mov z15.d, z9.d
+; CHECK-NEXT:    mov z16.d, z6.d
+; CHECK-NEXT:    mov z17.d, z30.d
+; CHECK-NEXT:    mov z18.d, z26.d
+; CHECK-NEXT:    mov z19.d, z10.d
+; CHECK-NEXT:    mov z8.d, z7.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z1.h - z4.h }, z0.h
+; CHECK-NEXT:    mov z9.d, z31.d
+; CHECK-NEXT:    mov z10.d, z27.d
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z12.h - z15.h }, z0.h
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z16.h - z19.h }, z0.h
+; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z8.h - z11.h }, z0.h
+; CHECK-NEXT:    ldr z19, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #13
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 0
+  %3 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 1
+  %4 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 2
+  %5 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %1, 3
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %6 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %7 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 0
+  %8 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 1
+  %9 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 2
+  %10 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %6, 3
+  %mul3 = shl i64 %stride, 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %ptr, i64 %mul3
+  %11 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx4)
+  %12 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 0
+  %13 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 1
+  %14 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 2
+  %15 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %11, 3
+  %mul5 = mul i64 %stride, 3
+  %arrayidx6 = getelementptr inbounds i8, ptr %ptr, i64 %mul5
+  %16 = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %0, ptr %arrayidx6)
+  %17 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 0
+  %18 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 1
+  %19 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 2
+  %20 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %16, 3
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %2, <vscale x 8 x i16> %7, <vscale x 8 x i16> %12, <vscale x 8 x i16> %17, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %3, <vscale x 8 x i16> %8, <vscale x 8 x i16> %13, <vscale x 8 x i16> %18, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %4, <vscale x 8 x i16> %9, <vscale x 8 x i16> %14, <vscale x 8 x i16> %19, <vscale x 8 x i16> %zn)
+  call void @llvm.aarch64.sme.sdot.single.za32.vg1x4.nxv8i16(i32 0, <vscale x 8 x i16> %5, <vscale x 8 x i16> %10, <vscale x 8 x i16> %15, <vscale x 8 x i16> %20, <vscale x 8 x i16> %zn)
   ret void
 }
 
@@ -504,6 +888,38 @@ define void @sudot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, 
   ret void
 }
 
+define void @sudot_single_za32_u16_vg1x2_tuple(ptr %ptr, i64 %stride, <vscale x 16 x i8> %zn) #0 {
+; CHECK-LABEL: sudot_single_za32_u16_vg1x2_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    ld1b { z2.b, z3.b }, pn8/z, [x0]
+; CHECK-NEXT:    ld1b { z6.b, z7.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z7.d
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z5.b, z6.b }, z0.b
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z3.b, z4.b }, z0.b
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 0
+  %3 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %4 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %5 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %4, 0
+  %6 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %4, 1
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x2.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %5, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x2.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %6, <vscale x 16 x i8> %zn)
+  ret void
+}
+
 define void @sudot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4) #0 {
 ; CHECK-LABEL: sudot_single_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
@@ -514,6 +930,101 @@ define void @sudot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
   call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 %slice, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4)
   %slice2 = add i32 %slice, 7
   call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 %slice2, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4)
+  ret void
+}
+
+define void @sudot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 16 x i8> %zn) #0 {
+; CHECK-LABEL: sudot_single_za32_u16_vg1x4_tuple:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-13
+; CHECK-NEXT:    lsl x9, x1, #1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ptrue pn8.b
+; CHECK-NEXT:    str z19, [sp, #1, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    str z18, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    ld1b { z24.b - z27.b }, pn8/z, [x0]
+; CHECK-NEXT:    ld1b { z4.b - z7.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    add x9, x9, x1
+; CHECK-NEXT:    ld1b { z28.b - z31.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z2.d, z4.d
+; CHECK-NEXT:    mov z3.d, z8.d
+; CHECK-NEXT:    mov z12.d, z25.d
+; CHECK-NEXT:    mov z13.d, z5.d
+; CHECK-NEXT:    mov z14.d, z9.d
+; CHECK-NEXT:    mov z4.d, z28.d
+; CHECK-NEXT:    mov z15.d, z29.d
+; CHECK-NEXT:    mov z16.d, z26.d
+; CHECK-NEXT:    mov z17.d, z6.d
+; CHECK-NEXT:    mov z18.d, z10.d
+; CHECK-NEXT:    mov z19.d, z30.d
+; CHECK-NEXT:    mov z28.d, z27.d
+; CHECK-NEXT:    mov z29.d, z7.d
+; CHECK-NEXT:    mov z30.d, z11.d
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z1.b - z4.b }, z0.b
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b
+; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z28.b - z31.b }, z0.b
+; CHECK-NEXT:    ldr z19, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #13
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
+  %1 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %ptr)
+  %2 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 0
+  %3 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 1
+  %4 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 2
+  %5 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %1, 3
+  %arrayidx2 = getelementptr inbounds i8, ptr %ptr, i64 %stride
+  %6 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx2)
+  %7 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 0
+  %8 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 1
+  %9 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 2
+  %10 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %6, 3
+  %mul3 = shl i64 %stride, 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %ptr, i64 %mul3
+  %11 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx4)
+  %12 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 0
+  %13 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 1
+  %14 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 2
+  %15 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %11, 3
+  %mul5 = mul i64 %stride, 3
+  %arrayidx6 = getelementptr inbounds i8, ptr %ptr, i64 %mul5
+  %16 = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %0, ptr %arrayidx6)
+  %17 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 0
+  %18 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 1
+  %19 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 2
+  %20 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %16, 3
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %2, <vscale x 16 x i8> %7, <vscale x 16 x i8> %12, <vscale x 16 x i8> %17, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %3, <vscale x 16 x i8> %8, <vscale x 16 x i8> %13, <vscale x 16 x i8> %18, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %4, <vscale x 16 x i8> %9, <vscale x 16 x i8> %14, <vscale x 16 x i8> %19, <vscale x 16 x i8> %zn)
+  call void @llvm.aarch64.sme.sudot.single.za32.vg1x4.nxv16i8(i32 0, <vscale x 16 x i8> %5, <vscale x 16 x i8> %10, <vscale x 16 x i8> %15, <vscale x 16 x i8> %20, <vscale x 16 x i8> %zn)
   ret void
 }
 
