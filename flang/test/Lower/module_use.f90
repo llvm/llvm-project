@@ -1,4 +1,4 @@
-! RUN: rm -fr %t && mkdir %t
+! RUN: rm -fr %t && mkdir -p %t
 ! RUN: bbc -emit-fir -module %t %S/module_definition.f90
 ! RUN: bbc -emit-fir -J %t %s -o - | FileCheck %s
 
