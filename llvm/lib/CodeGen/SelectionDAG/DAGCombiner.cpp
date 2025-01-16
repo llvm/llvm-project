@@ -22808,9 +22808,26 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     return SDValue();
 
   EVT ResVT = ExtElt->getValueType(0);
-  if (Opc == ISD::SETCC &&
-      (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
-    return SDValue();
+  bool SetCCNeedsSignExt = false;
+  if (Opc == ISD::SETCC) {
+    EVT VecVT = Vec.getValueType();
+    if (ResVT != VecVT.getVectorElementType() || LegalTypes)
+      return SDValue();
+
+    if (ResVT != MVT::i1) {
+      bool VecRequiresSignExt = TLI.getBooleanContents(VecVT) ==
+                                TargetLowering::ZeroOrNegativeOneBooleanContent;
+      bool ScalarRequiresSignExt =
+          TLI.getBooleanContents(ResVT) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent;
+      if (VecRequiresSignExt && !ScalarRequiresSignExt)
+        SetCCNeedsSignExt = true;
+      else if (!VecRequiresSignExt && ScalarRequiresSignExt) {
+        // There are currently no targets with this behaviour.
+        return SDValue();
+      }
+    }
+  }
 
   // Targets may want to avoid this to prevent an expensive register transfer.
   if (!TLI.shouldScalarizeBinop(Vec))
@@ -22834,8 +22851,14 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     EVT OpVT = Op0.getValueType().getVectorElementType();
     Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op0, Index);
     Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op1, Index);
-    return DAG.getSetCC(DL, ResVT, Op0, Op1,
-                        cast<CondCodeSDNode>(Vec->getOperand(2))->get());
+    SDValue NewVal = DAG.getSetCC(
+        DL, ResVT, Op0, Op1, cast<CondCodeSDNode>(Vec->getOperand(2))->get());
+    // We may need to sign-extend the result to match the same behaviour as the
+    // vector version of SETCC.
+    if (SetCCNeedsSignExt)
+      NewVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, ResVT, NewVal,
+                           DAG.getValueType(MVT::i1));
+    return NewVal;
   }
   Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op0, Index);
   Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op1, Index);
