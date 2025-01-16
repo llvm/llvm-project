@@ -10932,6 +10932,7 @@ public:
            ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
            ArrayRef<int> SubVectorsMask, unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
+    assert(!IsFinalized && "ShuffleCostEstimator is already finalized.");
     IsFinalized = true;
     if (Action) {
       const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
@@ -14524,6 +14525,7 @@ public:
            ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors,
            ArrayRef<int> SubVectorsMask, unsigned VF = 0,
            function_ref<void(Value *&, SmallVectorImpl<int> &)> Action = {}) {
+    assert(!IsFinalized && "ShuffleInstructionBuilder is already finalized.");
     IsFinalized = true;
     unsigned ScalarTyNumElements = getNumElements(ScalarTy);
     SmallVector<int> NewExtMask(ExtMask);
@@ -14696,6 +14698,8 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx,
           NumElements != 1 ? FixedVectorType::get(ScalarTy, NumElements)
                            : ScalarTy,
           Builder, *this);
+      assert(Mask.size() == VL.size() &&
+             "The mask is incompatible with the expected result.");
       ShuffleBuilder.add(V, Mask);
       SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
           E->CombinedEntriesWithIndices.size());
@@ -14912,6 +14916,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         // process to keep correct order.
         return *Delayed;
       }
+      assert(ExtractMask.size() == E->Scalars.size() &&
+             "The mask is incompatible with the expected result.");
       if (Value *VecBase = ShuffleBuilder.adjustExtracts(
               E, ExtractMask, ExtractShuffles, NumParts, UseVecBaseAsInput)) {
         ExtractVecBase = VecBase;
@@ -14973,6 +14979,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             Mask[I] = FrontTE->findLaneForValue(V);
           }
         }
+        assert(Mask.size() == E->Scalars.size() &&
+               "The mask is incompatible with the expected result.");
         ShuffleBuilder.add(*FrontTE, Mask);
         // Full matched entry found, no need to insert subvectors.
         Res = ShuffleBuilder.finalize(E->getCommonMask(), {}, {});
@@ -15123,6 +15131,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         IsUsedInExpr = false;
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1, AC) &&
                          isGuaranteedNotToBePoison(Vec2, AC);
+        assert(ExtractMask.size() == E->Scalars.size() &&
+               "The mask is incompatible with the expected result.");
         ShuffleBuilder.add(Vec1, Vec2, ExtractMask);
       } else if (Vec1) {
         bool IsNotPoisonedVec = isGuaranteedNotToBePoison(Vec1, AC);
@@ -15130,10 +15140,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements(), 0,
             ExtractMask.size(), IsNotPoisonedVec);
+        assert(ExtractMask.size() == E->Scalars.size() &&
+               "The mask is incompatible with the expected result.");
         ShuffleBuilder.add(Vec1, ExtractMask, /*ForExtracts=*/true);
         IsNonPoisoned &= IsNotPoisonedVec;
       } else {
         IsUsedInExpr = false;
+        assert(ExtractMask.size() == E->Scalars.size() &&
+               "The mask is incompatible with the expected result.");
         ShuffleBuilder.add(PoisonValue::get(VecTy), ExtractMask,
                            /*ForExtracts=*/true);
       }
@@ -15161,10 +15175,16 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
           IsUsedInExpr &=
               FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I,
                               SliceSize, IsNotPoisonedVec);
+          assert((VecMask.size() == E->Scalars.size() ||
+                  VecMask.size() == E->ReuseShuffleIndices.size()) &&
+                 "The mask is incompatible with the expected result.");
           ShuffleBuilder.add(*TEs.front(), VecMask);
           IsNonPoisoned &= IsNotPoisonedVec;
         } else {
           IsUsedInExpr = false;
+          assert((VecMask.size() == E->Scalars.size() ||
+                  VecMask.size() == E->ReuseShuffleIndices.size()) &&
+                 "The mask is incompatible with the expected result.");
           ShuffleBuilder.add(*TEs.front(), *TEs.back(), VecMask);
           if (TEs.front()->VectorizedValue && TEs.back()->VectorizedValue)
             IsNonPoisoned &=
@@ -15229,6 +15249,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       SmallVector<int> BVMask(GatheredScalars.size(), PoisonMaskElem);
       TryPackScalars(GatheredScalars, BVMask, /*IsRootPoison=*/true);
       Value *BV = ShuffleBuilder.gather(GatheredScalars, BVMask.size());
+      assert((BVMask.size() == E->Scalars.size() ||
+              BVMask.size() == E->ReuseShuffleIndices.size()) &&
+             "The mask is incompatible with the expected result.");
       ShuffleBuilder.add(BV, BVMask);
     }
     if (all_of(NonConstants, [=](Value *V) {
@@ -15250,6 +15273,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size());
+    assert((ReuseMask.size() == E->Scalars.size() ||
+            ReuseMask.size() == E->ReuseShuffleIndices.size()) &&
+           "The mask is incompatible with the expected result.");
     ShuffleBuilder.add(BV, ReuseMask);
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
                                   SubVectorsMask);
@@ -15261,6 +15287,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         Mask[I] = I;
     }
     Value *BV = ShuffleBuilder.gather(GatheredScalars);
+    assert(Mask.size() == E->Scalars.size() &&
+           "The mask is incompatible with the expected result.");
     ShuffleBuilder.add(BV, Mask);
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
                                   SubVectorsMask);
@@ -15329,10 +15357,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       ArrayRef<int> Mask =
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
+      assert((Mask.empty() || Mask.size() == E->Scalars.size()) &&
+             "The mask is incompatible with the expected result.");
       ShuffleBuilder.add(V, Mask);
     } else if (E->State == TreeEntry::StridedVectorize && IsReverseOrder) {
       ShuffleBuilder.addOrdered(V, {});
     } else {
+      assert((E->ReorderIndices.empty() ||
+              E->ReorderIndices.size() == E->Scalars.size()) &&
+             "The mask is incompatible with the expected result.");
       ShuffleBuilder.addOrdered(V, E->ReorderIndices);
     }
     SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
