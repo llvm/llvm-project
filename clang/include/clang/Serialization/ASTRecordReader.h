@@ -83,6 +83,9 @@ public:
   /// Returns the current value in this record, without advancing.
   uint64_t peekInt() { return Record[Idx]; }
 
+  /// Returns the next value in this record, without advancing.
+  uint64_t peekNextInt() { return Record[Idx + 1]; }
+
   /// Skips the specified number of values.
   void skipInts(unsigned N) { Idx += N; }
 
@@ -343,7 +346,9 @@ public:
   Attr *readOrDeferAttrFor(Decl *D);
 
   /// Read an BTFTypeTagAttr object.
-  BTFTypeTagAttr *readBTFTypeTagAttr();
+  BTFTypeTagAttr *readBTFTypeTagAttr() {
+    return cast<BTFTypeTagAttr>(readAttr());
+  }
 
   /// Reads a token out of a record, advancing Idx.
   Token readToken() {

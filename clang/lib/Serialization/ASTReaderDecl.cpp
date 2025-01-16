@@ -3088,6 +3088,10 @@ public:
     return Reader.readInt();
   }
 
+  uint64_t peekNextInt() {
+    return Reader.peekNextInt();
+  }
+
   bool readBool() { return Reader.readBool(); }
 
   SourceRange readSourceRange() {
@@ -3132,8 +3136,12 @@ public:
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   auto V = Record.readInt();
-  if (!V)
+   if (!V)
     return nullptr;
+
+  // Read and ignore the skip count, since attribute deserialization is not
+  // deferred on this pass.
+  Record.readInt();
 
   Attr *New = nullptr;
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
@@ -3178,19 +3186,12 @@ void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
 /// reading the attribute until the type has been read.
 Attr *ASTRecordReader::readOrDeferAttrFor(Decl *D) {
   AttrReader Record(*this);
-  unsigned SkipCount = Record.readInt();
+  unsigned SkipCount = Record.peekNextInt();
   if (!SkipCount)
     return readAttr();
   Reader->PendingDeferredAttributes.push_back({Record.getCurrentIdx(), D});
   Record.skipInts(SkipCount);
   return nullptr;
-}
-
-BTFTypeTagAttr *ASTRecordReader::readBTFTypeTagAttr() {
-  AttrReader Record(*this);
-  // Read and ignore the skip count, since this attribute is not deferred.
-  Record.readInt();
-  return cast<BTFTypeTagAttr>(readAttr());
 }
 
 //===----------------------------------------------------------------------===//
