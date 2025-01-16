@@ -8838,15 +8838,11 @@ void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
 inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
   const Type *TypePtr = QT.getTypePtr();
   while (true) {
-    // Note that getPointeeType() seems to successfully navigate some constructs
-    // for which isAnyPointerType() returns false (e.g.
-    // pointer-to-member-function).
-    QualType Pointee = TypePtr->getPointeeType();
-    if (Pointee.isNull()) {
-      if (TypePtr->isArrayType()) {
-        TypePtr = TypePtr->getBaseElementTypeUnsafe();
-        continue;
-      }
+    if (QualType Pointee = TypePtr->getPointeeType())
+      TypePtr = Pointee.getTypePtr();
+    else if (TypePtr->isArrayType())
+      TypePtr = TypePtr->getBaseElementTypeUnsafe();
+    else
       break;
     }
     TypePtr = Pointee.getTypePtr();
