@@ -162,6 +162,7 @@ int main(int, char**) {
   test<std::uintmax_t>();
   test<std::uintmax_t>();
 
+  test<void (*)(int)>();
   test<void*>();
   test<const void*>();
   test<int*>();
