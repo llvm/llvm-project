@@ -33,30 +33,30 @@
 // RUN: %clang -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // RUN: %clang -mkernel -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // RUN: %clang -fapple-kext -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
-// DEFAULT: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-target-cpu" "apple-a12"{{.*}}
+// DEFAULT: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"{{.*}}
 
 
 // RUN: %clang -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
 // RUN: %clang -mkernel -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
 // RUN: %clang -fapple-kext -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
 // DEFAULT-NOCALL-NOT: "-fptrauth-calls"
-// DEFAULT-NOCALL: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-target-cpu" "apple-a12"
+// DEFAULT-NOCALL: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"
 
 
 // RUN: %clang -target arm64e-apple-ios -fno-ptrauth-returns -c %s -### 2>&1 | FileCheck %s --check-prefix NORET
 
 // NORET-NOT: "-fptrauth-returns"
-// NORET: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-target-cpu" "apple-a12"
+// NORET: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"
 
 // RUN: %clang -target arm64e-apple-ios -fno-ptrauth-intrinsics -c %s -### 2>&1 | FileCheck %s --check-prefix NOINTRIN
 
 // NOINTRIN: "-fptrauth-returns"
 // NOINTRIN-NOT: "-fptrauth-intrinsics"
-// NOINTRIN: "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" "-target-cpu" "apple-a12"{{.*}}
+// NOINTRIN: "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"{{.*}}
 
 
 // RUN: %clang -target arm64e-apple-ios -fno-ptrauth-auth-traps -c %s -### 2>&1 | FileCheck %s --check-prefix NOTRAP
-// NOTRAP: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-target-cpu" "apple-a12"
+// NOTRAP: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" {{.*}}"-target-cpu" "apple-a12"
 
 
 // Check the CPU defaults and overrides.
