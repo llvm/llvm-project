@@ -32,6 +32,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <type_traits>
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMSPASS
@@ -908,11 +909,11 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
                                 PatternRewriter &rewriter) const override {
     // Check to not let go the batch_matmul with extended semantic, through this
     // transform.
-    if (std::is_same<FromOpTy, BatchMatmulOp>::value) {
+    if (std::is_same<FromOpTy, BatchMatmulOp>::value ||
+        std::is_same<FromOpTy, MatmulOp>::value) {
       if (contractionOp.hasUserDefinedMaps()) {
         return rewriter.notifyMatchFailure(
-            contractionOp,
-            "only batch_matmul ops with non-extended semantics are supported");
+            contractionOp, "ops with user-defined maps are not supported");
       }
     }
 
@@ -944,10 +945,21 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : contractionOp->getAttrs()) {
-      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
-          attr.getName() == "indexing_maps")
+      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
         continue;
-      collapsedOp->setAttr(attr.getName(), attr.getValue());
+
+      // Update the indexing_maps attribute for the collapsed MatmulOp.
+      if (attr.getName() == "indexing_maps" &&
+          std::is_same<FromOpTy, BatchMatmulOp>::value &&
+          std::is_same<ToOpTy, MatmulOp>::value) {
+        SmallVector<Attribute, 3> indexingMapsAttr = llvm::map_to_vector(
+            MatmulOp::getDefaultIndexingMaps(rewriter.getContext()),
+            [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+        collapsedOp->setAttr(attr.getName(),
+                             rewriter.getArrayAttr(indexingMapsAttr));
+      } else {
+        collapsedOp->setAttr(attr.getName(), attr.getValue());
+      }
     }
 
     auto results = contractionOp.getResults();

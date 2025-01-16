@@ -828,8 +828,8 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     them to the same data type as the accumulator/output.
 
     Broadcast and Transpose semantics can be appiled by specifying the explicit attribute
-    'indexing_maps' as shown below.This is a list attribute, so the list must include all
-    the maps if specified.
+    'indexing_maps' as shown below. This is a list attribute, so must include maps for all
+    arguments if specified.
 
     Example Transpose:
     ```
@@ -845,7 +845,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     Example Broadcast:
     ```
     linalg.batch_matmul indexing_maps = [
-                       affine_map<(d0, d1, d2, d3) -> (d3)>,     // broadcast
+                       affine_map<(d0, d1, d2, d3) -> (d3)>,         // broadcast
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
                      ]
@@ -853,7 +853,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
                      outs(%arg2: memref<2x3x7xf32>)
     ```
 
-    Example Broadcast and transpose:
+    Example Broadcast and Transpose:
     ```
     linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d1, d3)>,     // broadcast
@@ -919,7 +919,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
         return regionBuilder;
       }
 
-      /// Returns a list of AffineMap with the typical batch_matmul indexing charactristic.
+      /// Returns a list with default AffineMap(s), i.e. without broadcasts and transpositions.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.

@@ -1578,11 +1578,11 @@ func.func @batch_matmul_bcast_batch_dim_B(%arg0: memref<2x3x5xf32>, %arg1: memre
 
 // -----
 
-// CHECK-LABEL: func @batch_matmul_explicit_transpose_a
+// CHECK-LABEL: func @batch_matmul_explicit_transpose_A
 //       CHECK:   linalg.batch_matmul
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x5x3xf32>, memref<2x5x7xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batch_matmul_explicit_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
+func.func @batch_matmul_explicit_transpose_A(%arg0: memref<2x5x3xf32>, %arg1: memref<2x5x7xf32>, %arg2: memref<2x3x7xf32>) {
   linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
@@ -1594,11 +1594,11 @@ func.func @batch_matmul_explicit_transpose_a(%arg0: memref<2x5x3xf32>, %arg1: me
 
 // -----
 
-// CHECK-LABEL: func @batch_matmul_explicit_transpose_b
+// CHECK-LABEL: func @batch_matmul_explicit_transpose_B
 //       CHECK:   linalg.batch_matmul
 //  CHECK-SAME:     ins(%{{.+}}, %{{.+}} : memref<2x3x5xf32>, memref<2x7x5xf32>)
 //  CHECK-SAME:     outs(%{{.+}} : memref<2x3x7xf32>)
-func.func @batch_matmul_explicit_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
+func.func @batch_matmul_explicit_transpose_B(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5xf32>, %arg2: memref<2x3x7xf32>) {
   linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,

@@ -88,12 +88,9 @@ FailureOr<Operation *>
 mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
                                    linalg::BatchMatmulOp batchMatmulOp,
                                    bool transposeLHS) {
-  // Check to not let go the batch_matmul with extended semantic, through this
-  // transform.
   if (batchMatmulOp.hasUserDefinedMaps()) {
     return rewriter.notifyMatchFailure(
-        batchMatmulOp,
-        "only batch_matmul ops with non-extended semantics are supported");
+        batchMatmulOp, "ops with user-defined maps are not supported");
   }
 
   if (!bufferization::hasTensorSemantics(batchMatmulOp))
