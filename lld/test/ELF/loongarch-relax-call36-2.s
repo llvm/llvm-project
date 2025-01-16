@@ -2,14 +2,14 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax a.s -o a.o
 
-# RUN: ld.lld -T lds a.o -o a
+# RUN: ld.lld --relax -T lds a.o -o a
 # RUN: llvm-objdump -d --no-show-raw-insn a | FileCheck %s --check-prefixes=RELAX,RELAX-MID
 
 ## Unsure whether this needs a diagnostic. GNU ld allows this.
-# RUN: ld.lld -T lds -pie a.o -o a.pie
+# RUN: ld.lld --relax -T lds -pie a.o -o a.pie
 # RUN: llvm-objdump -d --no-show-raw-insn a.pie | FileCheck %s --check-prefixes=RELAX,RELAX-MID
 
-# RUN: ld.lld -T lds -pie -z notext -z ifunc-noplt a.o -o a.ifunc-noplt
+# RUN: ld.lld --relax -T lds -pie -z notext -z ifunc-noplt a.o -o a.ifunc-noplt
 # RUN: llvm-objdump -d --no-show-raw-insn a.ifunc-noplt | FileCheck %s --check-prefixes=RELAX,NORELAX-MID
 
 # RELAX-LABEL:  <_start>:

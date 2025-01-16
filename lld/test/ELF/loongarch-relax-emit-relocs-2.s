@@ -3,15 +3,15 @@
 ## Call36 and tail36 need LA64 basic integer, so they donot have 32-bit version.
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.64.o
-# RUN: ld.lld -Ttext=0x10000 --emit-relocs %t.64.o -o %t.64
+# RUN: ld.lld --relax -Ttext=0x10000 --emit-relocs %t.64.o -o %t.64
 # RUN: llvm-objdump -dr %t.64 | FileCheck %s --check-prefix=RELAX
 
 ## -r should keep original relocations.
-# RUN: ld.lld -r %t.64.o -o %t.64.r
+# RUN: ld.lld --relax -r %t.64.o -o %t.64.r
 # RUN: llvm-objdump -dr %t.64.r | FileCheck %s --check-prefix=CHECKR
 
 ## --no-relax should keep original relocations.
-# RUN: ld.lld -Ttext=0x10000 --emit-relocs --no-relax %t.64.o -o %t.64.norelax
+# RUN: ld.lld --no-relax -Ttext=0x10000 --emit-relocs %t.64.o -o %t.64.norelax
 # RUN: llvm-objdump -dr %t.64.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX:      00010000 <_start>:
