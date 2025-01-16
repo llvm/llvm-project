@@ -301,7 +301,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   uint64_t entryAddress = 0;
 
   if (!ctx.config.noEntry) {
-    Defined *entry = dyn_cast_or_null<Defined>(ctx.config.entry);
+    Defined *entry = dyn_cast_or_null<Defined>(ctx.symtab.entry);
     if (entry) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();

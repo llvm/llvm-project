@@ -945,15 +945,6 @@ void SymbolTable::addLibcall(StringRef name) {
   }
 }
 
-std::vector<Chunk *> SymbolTable::getChunks() const {
-  std::vector<Chunk *> res;
-  for (ObjFile *file : ctx.objFileInstances) {
-    ArrayRef<Chunk *> v = file->getChunks();
-    res.insert(res.end(), v.begin(), v.end());
-  }
-  return res;
-}
-
 Symbol *SymbolTable::find(StringRef name) const {
   return symMap.lookup(CachedHashStringRef(name));
 }
