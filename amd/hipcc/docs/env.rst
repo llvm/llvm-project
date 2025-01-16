@@ -18,3 +18,5 @@ The environment variable ``HIP_PLATFORM`` can be used to specify ``amd`` or ``nv
 Additional environment variable controls:
 
 * ``CUDA_PATH``       : Path to the CUDA SDK. The default is ``/usr/local/cuda``. This is only used for NVIDIA platforms.
+* ``HIPCC_COMPILE_FLAGS_APPEND``       : Append extra flags as compilation options to ``hipcc``.
+* ``HIPCC_LINK_FLAGS_APPEND``       : Append extra flags as linking options to ``hipcc``.
