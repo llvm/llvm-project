@@ -2115,12 +2115,11 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
 static bool IsPrivatizable(const Symbol *sym) {
   auto *misc{sym->detailsIf<MiscDetails>()};
   return IsVariableName(*sym) && !IsProcedure(*sym) && !IsNamedConstant(*sym) &&
-      (!semantics::IsAssumedSizeArray(
-           *sym) || /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
-          (sym->test(Symbol::Flag::CrayPointee) &&
-              // If CrayPointer is among the DSA list then the
-              // CrayPointee is Privatizable
-              &semantics::GetCrayPointer(*sym))) &&
+      ( // OpenMP 5.2, 5.1.1: Assumed-size arrays are shared
+          !semantics::IsAssumedSizeArray(*sym) ||
+          // If CrayPointer is among the DSA list then the
+          // CrayPointee is Privatizable
+          sym->test(Symbol::Flag::CrayPointee)) &&
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
       !sym->detailsIf<semantics::AssocEntityDetails>() &&
