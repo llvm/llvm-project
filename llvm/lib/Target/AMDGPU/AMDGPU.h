@@ -238,8 +238,8 @@ extern char &AMDGPUBundleIdxLdStID;
 void initializeAMDGPUIdxRegAllocPass(PassRegistry &);
 extern char &AMDGPUIdxRegAllocID;
 
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
