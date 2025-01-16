@@ -4115,24 +4115,24 @@ define void @vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4(ptr %in.
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pinsrw $2, %eax, %xmm3
-; SSE2-NEXT:    pinsrw $4, %eax, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [0,65535,65535,65535,65535,65535,0,65535]
-; SSE2-NEXT:    pand %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pandn %xmm0, %xmm4
-; SSE2-NEXT:    por %xmm1, %xmm4
-; SSE2-NEXT:    paddb (%rdx), %xmm4
-; SSE2-NEXT:    paddb 16(%rdx), %xmm2
-; SSE2-NEXT:    paddb 32(%rdx), %xmm3
-; SSE2-NEXT:    movdqa %xmm3, 32(%rcx)
-; SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
-; SSE2-NEXT:    movdqa %xmm4, (%rcx)
+; SSE2-NEXT:    paddb 48(%rsi), %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,0,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1]
+; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7,8,9,10,11]
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE2-NEXT:    paddb (%rdx), %xmm2
+; SSE2-NEXT:    paddb 16(%rdx), %xmm0
+; SSE2-NEXT:    paddb 32(%rdx), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, 32(%rcx)
+; SSE2-NEXT:    movdqa %xmm2, (%rcx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4:
@@ -4141,19 +4141,19 @@ define void @vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4(ptr %in.
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
-; SSE42-NEXT:    movd %xmm0, %eax
-; SSE42-NEXT:    pxor %xmm2, %xmm2
+; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0],xmm1[1,2,3,4,5],xmm2[6],xmm1[7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
 ; SSE42-NEXT:    pxor %xmm3, %xmm3
-; SSE42-NEXT:    pinsrw $2, %eax, %xmm3
-; SSE42-NEXT:    pinsrw $4, %eax, %xmm2
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5],xmm0[6],xmm1[7]
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    paddb 16(%rdx), %xmm2
-; SSE42-NEXT:    paddb 32(%rdx), %xmm3
-; SSE42-NEXT:    movdqa %xmm3, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm3[0,1],xmm1[2],xmm3[3,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm3[0,1,2,3],xmm0[4],xmm3[5,6,7]
+; SSE42-NEXT:    paddb (%rdx), %xmm2
+; SSE42-NEXT:    paddb 16(%rdx), %xmm0
+; SSE42-NEXT:    paddb 32(%rdx), %xmm1
+; SSE42-NEXT:    movdqa %xmm1, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm2, (%rcx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4:
@@ -4165,16 +4165,16 @@ define void @vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5],xmm2[6],xmm1[7]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpaddb 32(%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm3[0,1],xmm0[2],xmm3[3,4,5,6,7]
+; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
+; AVX-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm2, %xmm2
-; AVX-NEXT:    vmovdqa %xmm0, (%rcx)
+; AVX-NEXT:    vmovdqa %xmm1, (%rcx)
 ; AVX-NEXT:    vmovdqa %xmm2, 16(%rcx)
-; AVX-NEXT:    vmovdqa %xmm1, 32(%rcx)
+; AVX-NEXT:    vmovdqa %xmm0, 32(%rcx)
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4:
@@ -4183,13 +4183,12 @@ define void @vec384_i16_widen_to_i96_factor6_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-NEXT:    vmovdqa 48(%rdi), %xmm1
 ; AVX2-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5],xmm2[6],xmm1[7]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5],xmm0[6],xmm1[7]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3,4,5,6,7]
 ; AVX2-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, 32(%rcx)
@@ -4324,37 +4323,36 @@ define void @vec384_i16_widen_to_i128_factor8_broadcast_to_v3i128_factor3(ptr %i
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
-; SSE2-NEXT:    pextrw $0, %xmm0, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [0,65535,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
-; SSE2-NEXT:    paddb (%rdx), %xmm3
-; SSE2-NEXT:    movdqa 16(%rdx), %xmm0
-; SSE2-NEXT:    paddb %xmm2, %xmm0
-; SSE2-NEXT:    paddb 32(%rdx), %xmm2
-; SSE2-NEXT:    movdqa %xmm2, 32(%rcx)
-; SSE2-NEXT:    movdqa %xmm3, (%rcx)
-; SSE2-NEXT:    movdqa %xmm0, 16(%rcx)
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    paddb (%rdx), %xmm2
+; SSE2-NEXT:    movdqa 16(%rdx), %xmm1
+; SSE2-NEXT:    paddb %xmm0, %xmm1
+; SSE2-NEXT:    paddb 32(%rdx), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, 32(%rcx)
+; SSE2-NEXT:    movdqa %xmm1, 16(%rcx)
+; SSE2-NEXT:    movdqa %xmm2, (%rcx)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_i16_widen_to_i128_factor8_broadcast_to_v3i128_factor3:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa (%rdi), %xmm0
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
+; SSE42-NEXT:    paddb 48(%rsi), %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3,4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    movdqa 16(%rdx), %xmm1
-; SSE42-NEXT:    paddb %xmm2, %xmm1
+; SSE42-NEXT:    paddb (%rdx), %xmm1
+; SSE42-NEXT:    movdqa 16(%rdx), %xmm0
+; SSE42-NEXT:    paddb %xmm2, %xmm0
 ; SSE42-NEXT:    paddb 32(%rdx), %xmm2
 ; SSE42-NEXT:    movdqa %xmm2, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm1, 16(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i16_widen_to_i128_factor8_broadcast_to_v3i128_factor3:
@@ -4364,9 +4362,9 @@ define void @vec384_i16_widen_to_i128_factor8_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
-; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm2, %xmm2
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}+16(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
@@ -4463,36 +4461,36 @@ define void @vec384_i16_widen_to_i192_factor12_broadcast_to_v2i192_factor2(ptr %
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    pinsrw $4, %eax, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [0,65535,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pandn %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
-; SSE2-NEXT:    movaps 32(%rdx), %xmm0
-; SSE2-NEXT:    paddb (%rdx), %xmm3
-; SSE2-NEXT:    paddb 16(%rdx), %xmm2
-; SSE2-NEXT:    movaps %xmm0, 32(%rcx)
-; SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
-; SSE2-NEXT:    movdqa %xmm3, (%rcx)
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pandn %xmm0, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1]
+; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE2-NEXT:    movaps 32(%rdx), %xmm1
+; SSE2-NEXT:    paddb (%rdx), %xmm2
+; SSE2-NEXT:    paddb 16(%rdx), %xmm0
+; SSE2-NEXT:    movaps %xmm1, 32(%rcx)
+; SSE2-NEXT:    movdqa %xmm2, (%rcx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_i16_widen_to_i192_factor12_broadcast_to_v2i192_factor2:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa (%rdi), %xmm0
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
-; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    paddb 48(%rsi), %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    pinsrw $4, %eax, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
-; SSE42-NEXT:    movaps 32(%rdx), %xmm1
-; SSE42-NEXT:    paddb (%rdx), %xmm0
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4],xmm2[5,6,7]
+; SSE42-NEXT:    movaps 32(%rdx), %xmm0
+; SSE42-NEXT:    paddb (%rdx), %xmm1
 ; SSE42-NEXT:    paddb 16(%rdx), %xmm2
-; SSE42-NEXT:    movaps %xmm1, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
+; SSE42-NEXT:    movaps %xmm0, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
 ; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
@@ -4802,14 +4800,14 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,1,1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[1,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,3,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,0,1,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
 ; SSE2-NEXT:    paddb (%rdx), %xmm0
 ; SSE2-NEXT:    paddb 16(%rdx), %xmm2
-; SSE2-NEXT:    paddb 32(%rdx), %xmm3
-; SSE2-NEXT:    movdqa %xmm3, 32(%rcx)
+; SSE2-NEXT:    paddb 32(%rdx), %xmm1
+; SSE2-NEXT:    movdqa %xmm1, 32(%rcx)
 ; SSE2-NEXT:    movdqa %xmm0, (%rcx)
 ; SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
 ; SSE2-NEXT:    retq
@@ -4820,18 +4818,18 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
-; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,1,1]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5],xmm0[6,7]
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    paddb 16(%rdx), %xmm2
-; SSE42-NEXT:    paddb 32(%rdx), %xmm3
-; SSE42-NEXT:    movdqa %xmm3, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
+; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,0,0,0]
+; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3,4,5],xmm2[6,7]
+; SSE42-NEXT:    pxor %xmm1, %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,1,1]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,0,1]
+; SSE42-NEXT:    paddb (%rdx), %xmm2
+; SSE42-NEXT:    paddb 16(%rdx), %xmm1
+; SSE42-NEXT:    paddb 32(%rdx), %xmm0
+; SSE42-NEXT:    movdqa %xmm0, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm2, (%rcx)
+; SSE42-NEXT:    movdqa %xmm1, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4:
@@ -4843,10 +4841,10 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,2,0]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,3,4,5,6,7]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5],xmm3[6,7]
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm2, %xmm2
@@ -4859,19 +4857,20 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-SLOW-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX2-SLOW-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
 ; AVX2-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm2
-; AVX2-SLOW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm3[0],ymm2[1],ymm3[2,3,4,5,6,7]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX2-SLOW-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,5,6,0]
-; AVX2-SLOW-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm3[4,5],ymm0[6],ymm3[7]
-; AVX2-SLOW-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vpaddb 32(%rdx), %ymm2, %ymm1
-; AVX2-SLOW-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX2-SLOW-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-SLOW-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-SLOW-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,5,6,0]
+; AVX2-SLOW-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX2-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5],ymm1[6],ymm2[7]
+; AVX2-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; AVX2-SLOW-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vmovdqa %ymm1, (%rcx)
+; AVX2-SLOW-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -4879,18 +4878,18 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-FAST-PERLANE:       # %bb.0:
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX2-FAST-PERLANE-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
 ; AVX2-FAST-PERLANE-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX2-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,5,6,0]
-; AVX2-FAST-PERLANE-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-PERLANE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6],ymm1[7]
-; AVX2-FAST-PERLANE-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-FAST-PERLANE-NEXT:    vpaddb 32(%rdx), %ymm2, %ymm1
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm1, 32(%rcx)
-; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX2-FAST-PERLANE-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
+; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-FAST-PERLANE-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,5,6,0]
+; AVX2-FAST-PERLANE-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX2-FAST-PERLANE-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-FAST-PERLANE-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5],ymm1[6],ymm2[7]
+; AVX2-FAST-PERLANE-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-FAST-PERLANE-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-FAST-PERLANE-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm1, (%rcx)
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX2-FAST-PERLANE-NEXT:    retq
 ;
@@ -4898,18 +4897,18 @@ define void @vec384_i32_widen_to_i96_factor3_broadcast_to_v4i96_factor4(ptr %in.
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-FAST-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX2-FAST-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
 ; AVX2-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm2 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; AVX2-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,5,6,0]
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5],ymm0[6],ymm1[7]
-; AVX2-FAST-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vpaddb 32(%rdx), %ymm2, %ymm1
-; AVX2-FAST-NEXT:    vmovdqa %ymm1, 32(%rcx)
-; AVX2-FAST-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX2-FAST-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
+; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; AVX2-FAST-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,5,6,0]
+; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX2-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5],ymm1[6],ymm2[7]
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-FAST-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-FAST-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vmovdqa %ymm1, (%rcx)
+; AVX2-FAST-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
 ;
@@ -4998,11 +4997,11 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
+; SSE2-NEXT:    paddb 48(%rsi), %xmm1
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    paddb (%rdx), %xmm1
 ; SSE2-NEXT:    movdqa 16(%rdx), %xmm0
 ; SSE2-NEXT:    paddb %xmm2, %xmm0
@@ -5016,18 +5015,18 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa (%rdi), %xmm0
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
+; SSE42-NEXT:    paddb 48(%rsi), %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    movdqa 16(%rdx), %xmm1
-; SSE42-NEXT:    paddb %xmm2, %xmm1
+; SSE42-NEXT:    paddb (%rdx), %xmm1
+; SSE42-NEXT:    movdqa 16(%rdx), %xmm0
+; SSE42-NEXT:    paddb %xmm2, %xmm0
 ; SSE42-NEXT:    paddb 32(%rdx), %xmm2
 ; SSE42-NEXT:    movdqa %xmm2, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm1, 16(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3:
@@ -5037,9 +5036,9 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm0[0,1],xmm2[2,3,4,5,6,7]
+; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm3, %xmm3
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
@@ -5052,18 +5051,18 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX2-NEXT:    vmovdqa 48(%rdi), %xmm2
-; AVX2-NEXT:    vpaddb 48(%rsi), %xmm2, %xmm2
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vmovdqa 48(%rdi), %xmm1
+; AVX2-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
+; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0],ymm1[1,2,3],ymm2[4,5,6,7]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5,6,7]
-; AVX2-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb 32(%rdx), %ymm1, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX2-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4],ymm2[5,6,7]
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
+; AVX2-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm1, (%rcx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -5151,36 +5150,36 @@ define void @vec384_i32_widen_to_i192_factor6_broadcast_to_v2i192_factor2(ptr %i
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
+; SSE2-NEXT:    paddb 48(%rsi), %xmm1
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; SSE2-NEXT:    movaps 32(%rdx), %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,0,1]
+; SSE2-NEXT:    movaps 32(%rdx), %xmm2
 ; SSE2-NEXT:    paddb (%rdx), %xmm1
-; SSE2-NEXT:    paddb 16(%rdx), %xmm2
-; SSE2-NEXT:    movaps %xmm0, 32(%rcx)
+; SSE2-NEXT:    paddb 16(%rdx), %xmm0
+; SSE2-NEXT:    movaps %xmm2, 32(%rcx)
 ; SSE2-NEXT:    movdqa %xmm1, (%rcx)
-; SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
+; SSE2-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_i32_widen_to_i192_factor6_broadcast_to_v2i192_factor2:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa (%rdi), %xmm0
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
+; SSE42-NEXT:    paddb 48(%rsi), %xmm1
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,0,1]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; SSE42-NEXT:    movaps 32(%rdx), %xmm1
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    paddb 16(%rdx), %xmm2
-; SSE42-NEXT:    movaps %xmm1, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,0,1]
+; SSE42-NEXT:    movaps 32(%rdx), %xmm2
+; SSE42-NEXT:    paddb (%rdx), %xmm1
+; SSE42-NEXT:    paddb 16(%rdx), %xmm0
+; SSE42-NEXT:    movaps %xmm2, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i32_widen_to_i192_factor6_broadcast_to_v2i192_factor2:
@@ -5284,17 +5283,17 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm0[0],zero
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; SSE2-NEXT:    paddb (%rdx), %xmm0
-; SSE2-NEXT:    movdqa 16(%rdx), %xmm1
-; SSE2-NEXT:    paddb %xmm2, %xmm1
-; SSE2-NEXT:    paddb 32(%rdx), %xmm2
-; SSE2-NEXT:    movdqa %xmm2, 32(%rcx)
-; SSE2-NEXT:    movdqa %xmm0, (%rcx)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rcx)
+; SSE2-NEXT:    paddb 48(%rsi), %xmm1
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE2-NEXT:    paddb (%rdx), %xmm1
+; SSE2-NEXT:    movdqa 16(%rdx), %xmm2
+; SSE2-NEXT:    paddb %xmm0, %xmm2
+; SSE2-NEXT:    paddb 32(%rdx), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, 32(%rcx)
+; SSE2-NEXT:    movdqa %xmm1, (%rcx)
+; SSE2-NEXT:    movdqa %xmm2, 16(%rcx)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3:
@@ -5303,15 +5302,15 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
-; SSE42-NEXT:    movq {{.*#+}} xmm2 = xmm0[0],zero
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    movdqa 16(%rdx), %xmm1
-; SSE42-NEXT:    paddb %xmm2, %xmm1
-; SSE42-NEXT:    paddb 32(%rdx), %xmm2
-; SSE42-NEXT:    movdqa %xmm2, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
-; SSE42-NEXT:    movdqa %xmm1, 16(%rcx)
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; SSE42-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE42-NEXT:    paddb (%rdx), %xmm1
+; SSE42-NEXT:    movdqa 16(%rdx), %xmm2
+; SSE42-NEXT:    paddb %xmm0, %xmm2
+; SSE42-NEXT:    paddb 32(%rdx), %xmm0
+; SSE42-NEXT:    movdqa %xmm0, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
+; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3:
@@ -5321,8 +5320,8 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; AVX-NEXT:    vpaddb 48(%rsi), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX-NEXT:    vpaddb (%rdx), %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb 32(%rdx), %xmm0, %xmm2
 ; AVX-NEXT:    vpaddb 16(%rdx), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm1, (%rcx)
@@ -5336,15 +5335,15 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX2-NEXT:    vpaddb 32(%rsi), %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vmovq {{.*#+}} xmm2 = xmm0[0],zero
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,0,3]
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
-; AVX2-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb 32(%rdx), %ymm2, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX2-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,3,0,3]
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; AVX2-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm1, (%rcx)
+; AVX2-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -5430,8 +5429,8 @@ define void @vec384_i64_widen_to_i192_factor3_broadcast_to_v2i192_factor2(ptr %i
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 48(%rdi), %xmm1
-; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    paddb (%rsi), %xmm0
+; SSE2-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; SSE2-NEXT:    movaps 32(%rdx), %xmm2
@@ -5448,15 +5447,14 @@ define void @vec384_i64_widen_to_i192_factor3_broadcast_to_v2i192_factor2(ptr %i
 ; SSE42-NEXT:    movdqa 48(%rdi), %xmm1
 ; SSE42-NEXT:    paddb 48(%rsi), %xmm1
 ; SSE42-NEXT:    paddb (%rsi), %xmm0
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE42-NEXT:    movaps 32(%rdx), %xmm1
-; SSE42-NEXT:    paddb (%rdx), %xmm0
-; SSE42-NEXT:    paddb 16(%rdx), %xmm2
-; SSE42-NEXT:    movaps %xmm1, 32(%rcx)
-; SSE42-NEXT:    movdqa %xmm2, 16(%rcx)
-; SSE42-NEXT:    movdqa %xmm0, (%rcx)
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; SSE42-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE42-NEXT:    movaps 32(%rdx), %xmm2
+; SSE42-NEXT:    paddb (%rdx), %xmm1
+; SSE42-NEXT:    paddb 16(%rdx), %xmm0
+; SSE42-NEXT:    movaps %xmm2, 32(%rcx)
+; SSE42-NEXT:    movdqa %xmm0, 16(%rcx)
+; SSE42-NEXT:    movdqa %xmm1, (%rcx)
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: vec384_i64_widen_to_i192_factor3_broadcast_to_v2i192_factor2:

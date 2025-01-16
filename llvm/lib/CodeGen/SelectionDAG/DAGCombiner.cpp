@@ -23885,9 +23885,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
         TLI.isTypeLegal(VT.getVectorElementType()) &&
         // VecIn[1].hasOneUse() &&
-        NumExtracts == 1
-        //&& TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
-    )
+        NumExtracts == 1 && TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
       return SDValue();
 
     unsigned MaxIndex = 0;
