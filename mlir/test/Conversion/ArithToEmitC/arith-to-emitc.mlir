@@ -739,3 +739,29 @@ func.func @arith_divui_remui(%arg0: i32, %arg1: i32) -> i32 {
 
   return %div : i32
 }
+
+// -----
+
+func.func @arith_extf(%arg0: f16) -> f64 {
+  // CHECK-LABEL: arith_extf
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: f16)
+  // CHECK: %[[Extd0:.*]] = emitc.cast %[[Arg0]] : f16 to f32
+  %extd0 = arith.extf %arg0 : f16 to f32
+  // CHECK: %[[Extd1:.*]] = emitc.cast %[[Extd0]] : f32 to f64
+  %extd1 = arith.extf %extd0 : f32 to f64
+
+  return %extd1 : f64
+}
+
+// -----
+
+func.func @arith_truncf(%arg0: f64) -> f16 {
+  // CHECK-LABEL: arith_truncf
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: f64)
+  // CHECK: %[[Truncd0:.*]] = emitc.cast %[[Arg0]] : f64 to f32
+  %truncd0 = arith.truncf %arg0 : f64 to f32
+  // CHECK: %[[Truncd1:.*]] = emitc.cast %[[Truncd0]] : f32 to f16
+  %truncd1 = arith.truncf %truncd0 : f32 to f16
+
+  return %truncd1 : f16
+}

@@ -1678,3 +1678,9 @@ namespace NonConst {
     static_assert(s.getSize() == 10, "");
   }
 }
+
+namespace ExplicitThisInTemporary {
+  struct B { B *p = this; };
+  constexpr bool g(B b) { return &b == b.p; }
+  static_assert(g({}), "");
+}

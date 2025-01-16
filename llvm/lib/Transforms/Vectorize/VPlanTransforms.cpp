@@ -1603,7 +1603,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   LLVMContext &Ctx = CanonicalIVType->getContext();
   VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
 
-  for (VPUser *U : Plan.getVF().users()) {
+  for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
