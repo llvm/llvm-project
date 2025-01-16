@@ -141,8 +141,7 @@ public:
 
   /// Implementation of the ExternalASTSource API.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name,
-                                      Module *NamedModule) override;
+                                      DeclarationName Name) override;
 
   /// Implementation of the ExternalASTSource API.
   void

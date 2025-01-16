@@ -72,9 +72,8 @@ public:
   }
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name,
-                                      clang::Module *NamedModule) override {
-    return m_Source->FindExternalVisibleDeclsByName(DC, Name, NamedModule);
+                                      clang::DeclarationName Name) override {
+    return m_Source->FindExternalVisibleDeclsByName(DC, Name);
   }
 
   bool LoadExternalSpecializations(const clang::Decl *D,
@@ -398,10 +397,9 @@ public:
   }
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name,
-                                      clang::Module *NamedModule) override {
+                                      clang::DeclarationName Name) override {
     for (size_t i = 0; i < Sources.size(); ++i)
-      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name, NamedModule))
+      if (Sources[i]->FindExternalVisibleDeclsByName(DC, Name))
         return true;
     return false;
   }

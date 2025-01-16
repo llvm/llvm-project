@@ -14,4 +14,5 @@ export using Y = X;
 export module B;
 import A;
 Y y; // OK, definition of X is reachable
-X x; // expected-error {{unknown type name 'X'}}
+X x; // expected-error {{declaration of 'X' must be imported from module 'A' before it is required}}
+     // expected-note@* {{declaration here is not visible}}

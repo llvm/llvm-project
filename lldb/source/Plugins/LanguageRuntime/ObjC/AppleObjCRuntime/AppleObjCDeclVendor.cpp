@@ -32,8 +32,7 @@ public:
 
   // FIXME: unused when 'TypeSystemClang::UseRedeclCompletion == true'
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *decl_ctx,
-                                      clang::DeclarationName name,
-                                      clang::Module *NamedModule) override {
+                                      clang::DeclarationName name) override {
 
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
