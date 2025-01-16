@@ -1273,19 +1273,18 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
       Converted |= Operand->convertToSDWA(*SDWAInst, TII, CombineSelections);
   }
 
-  if (Converted) {
-    ConvertedInstructions.push_back(SDWAInst);
-    for (MachineOperand &MO : SDWAInst->uses()) {
-      if (!MO.isReg())
-        continue;
-
-      MRI->clearKillFlags(MO.getReg());
-    }
-  } else {
+  if (!Converted) {
     SDWAInst->eraseFromParent();
     return false;
   }
 
+  ConvertedInstructions.push_back(SDWAInst);
+  for (MachineOperand &MO : SDWAInst->uses()) {
+    if (!MO.isReg())
+      continue;
+
+    MRI->clearKillFlags(MO.getReg());
+  }
   LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
   ++NumSDWAInstructionsPeepholed;
 
