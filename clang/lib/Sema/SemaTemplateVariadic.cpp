@@ -802,7 +802,8 @@ bool Sema::CheckParameterPacksForExpansion(
             CurrentInstantiationScope->findInstantiationOf(ND);
         Decl *B = cast<Decl *>(*Instantiation);
         Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
-        ResolvedPack = dyn_cast<ResolvedUnexpandedPackExpr>(BindingExpr);
+        ResolvedPack =
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr);
         if (!ResolvedPack) {
           ShouldExpand = false;
           continue;

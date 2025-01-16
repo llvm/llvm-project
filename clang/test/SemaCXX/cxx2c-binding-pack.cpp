@@ -60,6 +60,9 @@ template <typename T>
 void decompose_struct() {
   T obj{1, 2, 3, 6};
   auto [x, ...rest, y] = obj;
+
+  auto [...empty] = type_<int>{};
+  static_assert(sizeof...(empty) == 0);
 }
 
 template <typename T>
@@ -88,9 +91,27 @@ struct S {
   };
 };
 
+struct bit_fields {
+  int a : 4 {1};
+  int b : 4 {2};
+  int c : 4 {3};
+  int d : 4 {4};
+};
+
+template <typename T>
+void decompose_bit_field() {
+  auto [...x] = T{};
+  static_assert(sizeof...(x) == 4);
+  int a = x...[0];
+  int b = x...[1];
+  int c = x...[2];
+  int d = x...[3];
+}
+
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
   decompose_struct<my_struct>();
   S<1, 2, 3, 4>::N<5, 6>().foo();
+  decompose_bit_field<bit_fields>();
 }
