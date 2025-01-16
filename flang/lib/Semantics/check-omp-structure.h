@@ -188,25 +188,25 @@ private:
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
-    const parser::OmpTraitProperty &);
+      const parser::OmpTraitProperty &);
 
   void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
   void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
   void CheckTraitScore(const parser::OmpTraitScore &);
-  bool VerifyTraitPropertyLists(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitSelector(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitADMO(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitCondition(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitDeviceNum(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitRequires(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
-  void CheckTraitSimd(const parser::OmpTraitSetSelector &,
-      const parser::OmpTraitSelector &);
+  bool VerifyTraitPropertyLists(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitSelector(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitADMO(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitCondition(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitDeviceNum(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitRequires(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
+  void CheckTraitSimd(
+      const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
