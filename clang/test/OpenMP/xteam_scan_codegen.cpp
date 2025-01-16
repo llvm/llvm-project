@@ -2,7 +2,7 @@
 
 /*---------------------------------------- Test Xteam NoLoop Scan -----------------------------------------*/
 
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-target-ignore-env-vars -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -fopenmp-target-xteam-no-loop-scan -emit-llvm-bc %s -o %t-ppc-host1.bc 
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-target-ignore-env-vars -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -fopenmp-target-xteam-no-loop-scan -emit-llvm-bc %s -o %t-ppc-host1.bc
 // RUN: %clang_cc1 -target-cpu gfx90a -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-target-ignore-env-vars -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -fopenmp-target-xteam-no-loop-scan -emit-llvm %s -fopenmp-is-device  -fopenmp-host-ir-file-path %t-ppc-host1.bc -o - | FileCheck %s --check-prefix=CHECK-64WAVE
 
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-target-ignore-env-vars -fopenmp-assume-no-nested-parallelism -fopenmp-assume-no-thread-state -fopenmp-target-xteam-no-loop-scan -emit-llvm-bc %s -DNUM_THREADS=512 -o %t-ppc-host2.bc
@@ -126,6 +126,7 @@ int main() {
 // CHECK-64WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -234,6 +235,7 @@ int main() {
 // CHECK-64WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -241,46 +243,40 @@ int main() {
 // CHECK-64WAVE-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-64WAVE-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-64WAVE-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP12]]
-// CHECK-64WAVE-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP22:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-NEXT:    br i1 [[TMP22]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_INCLUSIVE_SCAN_END:%.*]]
-// CHECK-64WAVE:       omp.is.after.first.team.then:
-// CHECK-64WAVE-NEXT:    [[TMP23:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP23]]
+// CHECK-64WAVE-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-64WAVE-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-64WAVE-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    call void @__kmpc_xteams_phase2_i_4x64(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-64WAVE-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-64WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
 // CHECK-64WAVE-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP27:%.*]] = add i32 [[TMP26]], [[TMP25]]
-// CHECK-64WAVE-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    br label [[OMP_XTEAM_INCLUSIVE_SCAN_END]]
-// CHECK-64WAVE:       omp.xteam.inclusive.scan.end:
+// CHECK-64WAVE-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-NEXT:    store i32 0, ptr [[SUM15_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-64WAVE:       omp.before.scan.bb:
-// CHECK-64WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
+// CHECK-64WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-64WAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP4]], i64 0, i64 [[IDXPROM]]
-// CHECK-64WAVE-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP30:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP31:%.*]] = add i32 [[TMP30]], [[TMP29]]
-// CHECK-64WAVE-NEXT:    store i32 [[TMP31]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], [[TMP27]]
+// CHECK-64WAVE-NEXT:    store i32 [[TMP29]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-64WAVE:       omp.exit.inscan.bb:
 // CHECK-64WAVE-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-64WAVE:       omp.inscan.dispatch:
-// CHECK-64WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP33:%.*]] = zext i32 [[TMP32]] to i64
-// CHECK-64WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP33]]
-// CHECK-64WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP3]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP30]] to i64
+// CHECK-64WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-64WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP3]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_AFTER_SCAN_BB:%.*]]
 // CHECK-64WAVE:       omp.after.scan.bb:
-// CHECK-64WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP35]] to i64
+// CHECK-64WAVE-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-64WAVE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-64WAVE-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP36]], ptr [[ARRAYIDX8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    store i32 [[TMP34]], ptr [[ARRAYIDX8]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-64WAVE:       omp.body.continue:
 // CHECK-64WAVE-NEXT:    ret void
@@ -349,6 +345,7 @@ int main() {
 // CHECK-64WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -457,6 +454,7 @@ int main() {
 // CHECK-64WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -464,71 +462,46 @@ int main() {
 // CHECK-64WAVE-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-64WAVE-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-64WAVE-NEXT:    store i32 0, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP20:%.*]] = icmp uge i32 [[TMP12]], 1
-// CHECK-64WAVE-NEXT:    br i1 [[TMP20]], label [[OMP_IS_NOT_FIRST_THREAD_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END:%.*]]
-// CHECK-64WAVE:       omp.is.not.first.thread.then:
-// CHECK-64WAVE-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP12]], 1
-// CHECK-64WAVE-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP21]]
-// CHECK-64WAVE-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP23]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP24:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-NEXT:    br i1 [[TMP24]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE:       omp.is.after.first.team.then:
-// CHECK-64WAVE-NEXT:    [[TMP25:%.*]] = icmp uge i32 [[TMP10]], 1
-// CHECK-64WAVE-NEXT:    br i1 [[TMP25]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_THEN:%.*]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_ELSE:%.*]]
-// CHECK-64WAVE:       omp.is.not.first.thread.in.team.then:
-// CHECK-64WAVE-NEXT:    [[TMP26:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP26]]
-// CHECK-64WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP29:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], [[TMP28]]
-// CHECK-64WAVE-NEXT:    store i32 [[TMP30]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE:       omp.is.not.first.thread.in.team.else:
-// CHECK-64WAVE-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 2
-// CHECK-64WAVE-NEXT:    br i1 [[TMP31]], label [[OMP_IS_AFTER_SECOND_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE:       omp.is.after.second.team.then:
-// CHECK-64WAVE-NEXT:    [[TMP32:%.*]] = sub i32 [[GPU_BLOCK_ID]], 2
-// CHECK-64WAVE-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP32]]
-// CHECK-64WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP33]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
-// CHECK-64WAVE-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE:       omp.xteam.exclusive.scan.end:
+// CHECK-64WAVE-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-64WAVE-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-64WAVE-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    call void @__kmpc_xteams_phase2_i_4x64(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-64WAVE-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-64WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
+// CHECK-64WAVE-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
+// CHECK-64WAVE-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-NEXT:    store i32 0, ptr [[SUM25_ASCAST]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-64WAVE:       omp.before.scan.bb:
-// CHECK-64WAVE-NEXT:    [[TMP37:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP37]] to i64
+// CHECK-64WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-64WAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP3]], i64 0, i64 [[IDXPROM]]
-// CHECK-64WAVE-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP38]], ptr [[ARRAYIDX]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP27:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    store i32 [[TMP27]], ptr [[ARRAYIDX]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-64WAVE:       omp.exit.inscan.bb:
 // CHECK-64WAVE-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-64WAVE:       omp.inscan.dispatch:
-// CHECK-64WAVE-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i64
-// CHECK-64WAVE-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP40]], 0
-// CHECK-64WAVE-NEXT:    br i1 [[TMP41]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
+// CHECK-64WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP28]] to i64
+// CHECK-64WAVE-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP29]], 0
+// CHECK-64WAVE-NEXT:    br i1 [[TMP30]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
 // CHECK-64WAVE:       omp.exclusive.dec:
-// CHECK-64WAVE-NEXT:    [[TMP42:%.*]] = sub nuw i64 [[TMP40]], 1
-// CHECK-64WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP42]]
-// CHECK-64WAVE-NEXT:    [[TMP43:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    store i32 [[TMP43]], ptr [[TMP4]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP31:%.*]] = sub nuw i64 [[TMP29]], 1
+// CHECK-64WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-64WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP4]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_EXCLUSIVE_COPY_EXIT]]
 // CHECK-64WAVE:       omp.exclusive.copy.exit:
 // CHECK-64WAVE-NEXT:    br label [[OMP_BEFORE_SCAN_BB:%.*]]
 // CHECK-64WAVE:       omp.after.scan.bb:
-// CHECK-64WAVE-NEXT:    [[TMP44:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP44]] to i64
+// CHECK-64WAVE-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-64WAVE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-64WAVE-NEXT:    [[TMP45:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP46:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-NEXT:    [[TMP47:%.*]] = add i32 [[TMP46]], [[TMP45]]
-// CHECK-64WAVE-NEXT:    store i32 [[TMP47]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
+// CHECK-64WAVE-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-64WAVE:       omp.body.continue:
 // CHECK-64WAVE-NEXT:    ret void
@@ -597,6 +570,7 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -705,6 +679,7 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -712,46 +687,40 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP12]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP22]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_INCLUSIVE_SCAN_END:%.*]]
-// CHECK-64WAVE-512WGSize:       omp.is.after.first.team.then:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP23]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = add i32 [[TMP26]], [[TMP25]]
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_INCLUSIVE_SCAN_END]]
-// CHECK-64WAVE-512WGSize:       omp.xteam.inclusive.scan.end:
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 0, ptr [[SUM15_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.before.scan.bb:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP4]], i64 0, i64 [[IDXPROM]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = add i32 [[TMP30]], [[TMP29]]
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP31]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], [[TMP27]]
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP29]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.exit.inscan.bb:
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-64WAVE-512WGSize:       omp.inscan.dispatch:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = zext i32 [[TMP32]] to i64
-// CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP33]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP34]], ptr [[TMP3]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP30]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP32]], ptr [[TMP3]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_AFTER_SCAN_BB:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.after.scan.bb:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP35]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr [[ARRAYIDX8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP34]], ptr [[ARRAYIDX8]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.body.continue:
 // CHECK-64WAVE-512WGSize-NEXT:    ret void
@@ -820,6 +789,7 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -928,6 +898,7 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -935,71 +906,46 @@ int main() {
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-64WAVE-512WGSize-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 0, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = icmp uge i32 [[TMP12]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP20]], label [[OMP_IS_NOT_FIRST_THREAD_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END:%.*]]
-// CHECK-64WAVE-512WGSize:       omp.is.not.first.thread.then:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP12]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP21]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP23]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP24]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE-512WGSize:       omp.is.after.first.team.then:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = icmp uge i32 [[TMP10]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP25]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_THEN:%.*]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_ELSE:%.*]]
-// CHECK-64WAVE-512WGSize:       omp.is.not.first.thread.in.team.then:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP26]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], [[TMP28]]
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP30]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE-512WGSize:       omp.is.not.first.thread.in.team.else:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 2
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP31]], label [[OMP_IS_AFTER_SECOND_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE-512WGSize:       omp.is.after.second.team.then:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = sub i32 [[GPU_BLOCK_ID]], 2
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP32]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP33]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-64WAVE-512WGSize:       omp.xteam.exclusive.scan.end:
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    call void @__kmpc_xteams_phase2_i_8x64(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    store i32 0, ptr [[SUM25_ASCAST]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.before.scan.bb:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP37:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP37]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP3]], i64 0, i64 [[IDXPROM]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP38]], ptr [[ARRAYIDX]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP27]], ptr [[ARRAYIDX]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.exit.inscan.bb:
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-64WAVE-512WGSize:       omp.inscan.dispatch:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i64
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP40]], 0
-// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP41]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP28]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP29]], 0
+// CHECK-64WAVE-512WGSize-NEXT:    br i1 [[TMP30]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.exclusive.dec:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP42:%.*]] = sub nuw i64 [[TMP40]], 1
-// CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP42]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP43:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP43]], ptr [[TMP4]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = sub nuw i64 [[TMP29]], 1
+// CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP32]], ptr [[TMP4]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_EXCLUSIVE_COPY_EXIT]]
 // CHECK-64WAVE-512WGSize:       omp.exclusive.copy.exit:
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_BEFORE_SCAN_BB:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.after.scan.bb:
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP44:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP44]] to i64
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-64WAVE-512WGSize-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP45:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP46:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-64WAVE-512WGSize-NEXT:    [[TMP47:%.*]] = add i32 [[TMP46]], [[TMP45]]
-// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP47]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-64WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
+// CHECK-64WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-64WAVE-512WGSize-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-64WAVE-512WGSize:       omp.body.continue:
 // CHECK-64WAVE-512WGSize-NEXT:    ret void
@@ -1068,6 +1014,7 @@ int main() {
 // CHECK-32WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1176,6 +1123,7 @@ int main() {
 // CHECK-32WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1183,46 +1131,40 @@ int main() {
 // CHECK-32WAVE-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-32WAVE-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-32WAVE-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP12]]
-// CHECK-32WAVE-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP22:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-NEXT:    br i1 [[TMP22]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_INCLUSIVE_SCAN_END:%.*]]
-// CHECK-32WAVE:       omp.is.after.first.team.then:
-// CHECK-32WAVE-NEXT:    [[TMP23:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP23]]
+// CHECK-32WAVE-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-32WAVE-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-32WAVE-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    call void @__kmpc_xteams_phase2_i_8x32(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-32WAVE-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-32WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
 // CHECK-32WAVE-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP27:%.*]] = add i32 [[TMP26]], [[TMP25]]
-// CHECK-32WAVE-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    br label [[OMP_XTEAM_INCLUSIVE_SCAN_END]]
-// CHECK-32WAVE:       omp.xteam.inclusive.scan.end:
+// CHECK-32WAVE-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-NEXT:    store i32 0, ptr [[SUM15_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-32WAVE:       omp.before.scan.bb:
-// CHECK-32WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
+// CHECK-32WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-32WAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP4]], i64 0, i64 [[IDXPROM]]
-// CHECK-32WAVE-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP30:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP31:%.*]] = add i32 [[TMP30]], [[TMP29]]
-// CHECK-32WAVE-NEXT:    store i32 [[TMP31]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], [[TMP27]]
+// CHECK-32WAVE-NEXT:    store i32 [[TMP29]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-32WAVE:       omp.exit.inscan.bb:
 // CHECK-32WAVE-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-32WAVE:       omp.inscan.dispatch:
-// CHECK-32WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP33:%.*]] = zext i32 [[TMP32]] to i64
-// CHECK-32WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP33]]
-// CHECK-32WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP3]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP30]] to i64
+// CHECK-32WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-32WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP3]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_AFTER_SCAN_BB:%.*]]
 // CHECK-32WAVE:       omp.after.scan.bb:
-// CHECK-32WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP35]] to i64
+// CHECK-32WAVE-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-32WAVE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-32WAVE-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP36]], ptr [[ARRAYIDX8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    store i32 [[TMP34]], ptr [[ARRAYIDX8]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-32WAVE:       omp.body.continue:
 // CHECK-32WAVE-NEXT:    ret void
@@ -1291,6 +1233,7 @@ int main() {
 // CHECK-32WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1399,6 +1342,7 @@ int main() {
 // CHECK-32WAVE-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1406,71 +1350,46 @@ int main() {
 // CHECK-32WAVE-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-32WAVE-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-32WAVE-NEXT:    store i32 0, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP20:%.*]] = icmp uge i32 [[TMP12]], 1
-// CHECK-32WAVE-NEXT:    br i1 [[TMP20]], label [[OMP_IS_NOT_FIRST_THREAD_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END:%.*]]
-// CHECK-32WAVE:       omp.is.not.first.thread.then:
-// CHECK-32WAVE-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP12]], 1
-// CHECK-32WAVE-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP21]]
-// CHECK-32WAVE-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP23]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP24:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-NEXT:    br i1 [[TMP24]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE:       omp.is.after.first.team.then:
-// CHECK-32WAVE-NEXT:    [[TMP25:%.*]] = icmp uge i32 [[TMP10]], 1
-// CHECK-32WAVE-NEXT:    br i1 [[TMP25]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_THEN:%.*]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_ELSE:%.*]]
-// CHECK-32WAVE:       omp.is.not.first.thread.in.team.then:
-// CHECK-32WAVE-NEXT:    [[TMP26:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP26]]
-// CHECK-32WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP29:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], [[TMP28]]
-// CHECK-32WAVE-NEXT:    store i32 [[TMP30]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE:       omp.is.not.first.thread.in.team.else:
-// CHECK-32WAVE-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 2
-// CHECK-32WAVE-NEXT:    br i1 [[TMP31]], label [[OMP_IS_AFTER_SECOND_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE:       omp.is.after.second.team.then:
-// CHECK-32WAVE-NEXT:    [[TMP32:%.*]] = sub i32 [[GPU_BLOCK_ID]], 2
-// CHECK-32WAVE-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP32]]
-// CHECK-32WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP33]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
-// CHECK-32WAVE-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE:       omp.xteam.exclusive.scan.end:
+// CHECK-32WAVE-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-32WAVE-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-32WAVE-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    call void @__kmpc_xteams_phase2_i_8x32(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-32WAVE-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-32WAVE-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
+// CHECK-32WAVE-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
+// CHECK-32WAVE-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-NEXT:    store i32 0, ptr [[SUM25_ASCAST]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-32WAVE:       omp.before.scan.bb:
-// CHECK-32WAVE-NEXT:    [[TMP37:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP37]] to i64
+// CHECK-32WAVE-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-32WAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP3]], i64 0, i64 [[IDXPROM]]
-// CHECK-32WAVE-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP38]], ptr [[ARRAYIDX]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP27:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    store i32 [[TMP27]], ptr [[ARRAYIDX]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-32WAVE:       omp.exit.inscan.bb:
 // CHECK-32WAVE-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-32WAVE:       omp.inscan.dispatch:
-// CHECK-32WAVE-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i64
-// CHECK-32WAVE-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP40]], 0
-// CHECK-32WAVE-NEXT:    br i1 [[TMP41]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
+// CHECK-32WAVE-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP28]] to i64
+// CHECK-32WAVE-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP29]], 0
+// CHECK-32WAVE-NEXT:    br i1 [[TMP30]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
 // CHECK-32WAVE:       omp.exclusive.dec:
-// CHECK-32WAVE-NEXT:    [[TMP42:%.*]] = sub nuw i64 [[TMP40]], 1
-// CHECK-32WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP42]]
-// CHECK-32WAVE-NEXT:    [[TMP43:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    store i32 [[TMP43]], ptr [[TMP4]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP31:%.*]] = sub nuw i64 [[TMP29]], 1
+// CHECK-32WAVE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-32WAVE-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP4]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_EXCLUSIVE_COPY_EXIT]]
 // CHECK-32WAVE:       omp.exclusive.copy.exit:
 // CHECK-32WAVE-NEXT:    br label [[OMP_BEFORE_SCAN_BB:%.*]]
 // CHECK-32WAVE:       omp.after.scan.bb:
-// CHECK-32WAVE-NEXT:    [[TMP44:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP44]] to i64
+// CHECK-32WAVE-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-32WAVE-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [64000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-32WAVE-NEXT:    [[TMP45:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP46:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-NEXT:    [[TMP47:%.*]] = add i32 [[TMP46]], [[TMP45]]
-// CHECK-32WAVE-NEXT:    store i32 [[TMP47]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
+// CHECK-32WAVE-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-32WAVE:       omp.body.continue:
 // CHECK-32WAVE-NEXT:    ret void
@@ -1539,6 +1458,7 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1647,6 +1567,7 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1654,46 +1575,40 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP12]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP21]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP22]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_INCLUSIVE_SCAN_END:%.*]]
-// CHECK-32WAVE-512WGSize:       omp.is.after.first.team.then:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP23]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    call void @__kmpc_xteams_phase2_i_16x32(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 1)
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = add i32 [[TMP26]], [[TMP25]]
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP27]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_INCLUSIVE_SCAN_END]]
-// CHECK-32WAVE-512WGSize:       omp.xteam.inclusive.scan.end:
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 0, ptr [[SUM15_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.before.scan.bb:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP28]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP4]], i64 0, i64 [[IDXPROM]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = add i32 [[TMP30]], [[TMP29]]
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP31]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], [[TMP27]]
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP29]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.exit.inscan.bb:
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-32WAVE-512WGSize:       omp.inscan.dispatch:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = zext i32 [[TMP32]] to i64
-// CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP33]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP34]], ptr [[TMP3]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP30]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP32]], ptr [[TMP3]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_AFTER_SCAN_BB:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.after.scan.bb:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP35]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr [[ARRAYIDX8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP34]], ptr [[ARRAYIDX8]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.body.continue:
 // CHECK-32WAVE-512WGSize-NEXT:    ret void
@@ -1762,6 +1677,7 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1870,6 +1786,7 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP14:%.*]] = add i32 [[TMP12]], [[TMP13]]
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_get_hardware_num_blocks()
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TOTAL_NUM_THREADS:%.*]] = mul i32 [[TMP15]], [[NVPTX_NUM_THREADS]]
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP14]], ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP17]], 1
@@ -1877,71 +1794,46 @@ int main() {
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 [[ADD]], ptr [[I_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-32WAVE-512WGSize-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 0, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = icmp uge i32 [[TMP12]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP20]], label [[OMP_IS_NOT_FIRST_THREAD_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END:%.*]]
-// CHECK-32WAVE-512WGSize:       omp.is.not.first.thread.then:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP12]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP21]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP23]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP24]], label [[OMP_IS_AFTER_FIRST_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE-512WGSize:       omp.is.after.first.team.then:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = icmp uge i32 [[TMP10]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP25]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_THEN:%.*]], label [[OMP_IS_NOT_FIRST_THREAD_IN_TEAM_ELSE:%.*]]
-// CHECK-32WAVE-512WGSize:       omp.is.not.first.thread.in.team.then:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = sub i32 [[GPU_BLOCK_ID]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP26]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = add i32 [[TMP29]], [[TMP28]]
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP30]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE-512WGSize:       omp.is.not.first.thread.in.team.else:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = icmp uge i32 [[GPU_BLOCK_ID]], 2
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP31]], label [[OMP_IS_AFTER_SECOND_TEAM_THEN:%.*]], label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE-512WGSize:       omp.is.after.second.team.then:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = sub i32 [[GPU_BLOCK_ID]], 2
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[TMP18]], i32 [[TMP32]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP33]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_XTEAM_EXCLUSIVE_SCAN_END]]
-// CHECK-32WAVE-512WGSize:       omp.xteam.exclusive.scan.end:
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTADDR4_ASCAST]], align 8
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    call void @__kmpc_xteams_phase2_i_16x32(ptr [[TMP21]], i32 1, ptr [[TMP20]], ptr [[TMP21]], ptr @__kmpc_rfun_sum_i, i32 0, i64 [[TMP16]], i32 0)
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP23:%.*]] = add i32 [[TMP12]], [[TOTAL_NUM_THREADS]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP19]], i32 [[TMP23]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP25]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    store i32 0, ptr [[SUM25_ASCAST]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_INSCAN_DISPATCH:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.before.scan.bb:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP37:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP37]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP26:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP26]] to i64
 // CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP3]], i64 0, i64 [[IDXPROM]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP38:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP38]], ptr [[ARRAYIDX]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP27:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP27]], ptr [[ARRAYIDX]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.exit.inscan.bb:
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_BODY_CONTINUE]]
 // CHECK-32WAVE-512WGSize:       omp.inscan.dispatch:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP39:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i64
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP40]], 0
-// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP41]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP28]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP29]], 0
+// CHECK-32WAVE-512WGSize-NEXT:    br i1 [[TMP30]], label [[OMP_EXCLUSIVE_COPY_EXIT:%.*]], label [[OMP_EXCLUSIVE_DEC:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.exclusive.dec:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP42:%.*]] = sub nuw i64 [[TMP40]], 1
-// CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP42]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP43:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP43]], ptr [[TMP4]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP31:%.*]] = sub nuw i64 [[TMP29]], 1
+// CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i64 [[TMP31]]
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP32:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP32]], ptr [[TMP4]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_EXCLUSIVE_COPY_EXIT]]
 // CHECK-32WAVE-512WGSize:       omp.exclusive.copy.exit:
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_BEFORE_SCAN_BB:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.after.scan.bb:
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP44:%.*]] = load i32, ptr [[I_ASCAST]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP44]] to i64
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP33:%.*]] = load i32, ptr [[I_ASCAST]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP33]] to i64
 // CHECK-32WAVE-512WGSize-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [128000 x i32], ptr [[TMP5]], i64 0, i64 [[IDXPROM7]]
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP45:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP46:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
-// CHECK-32WAVE-512WGSize-NEXT:    [[TMP47:%.*]] = add i32 [[TMP46]], [[TMP45]]
-// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP47]], ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP34:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP35:%.*]] = load i32, ptr addrspace(5) [[TMP8]], align 4
+// CHECK-32WAVE-512WGSize-NEXT:    [[TMP36:%.*]] = add i32 [[TMP35]], [[TMP34]]
+// CHECK-32WAVE-512WGSize-NEXT:    store i32 [[TMP36]], ptr addrspace(5) [[TMP8]], align 4
 // CHECK-32WAVE-512WGSize-NEXT:    br label [[OMP_EXIT_INSCAN_BB:%.*]]
 // CHECK-32WAVE-512WGSize:       omp.body.continue:
 // CHECK-32WAVE-512WGSize-NEXT:    ret void
