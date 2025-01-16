@@ -1,4 +1,4 @@
-//===--- DiagnosticIDs.inc --------------------------------------*- C++ -*-===//
+//===--- AllDiagnosticKinds.inc----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the Diagnostic IDs in ID sorted order.
+/// Defines the Diagnostic IDs in ID sorted order. The order is dictated by
+/// the enum in DiagnosticIDs.h#L49-L65.
 ///
 //===----------------------------------------------------------------------===//
 
 // Turn off clang-format, as the order of the includes are important to make
-// sure the table is sorted.
+// sure tables based on Diagnostic IDs are partitioned/sorted based on
+// DiagID.
 
 // clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"

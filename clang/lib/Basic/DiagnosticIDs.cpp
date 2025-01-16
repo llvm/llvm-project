@@ -37,7 +37,7 @@ struct StaticDiagInfoDescriptionStringTable {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   char ENUM##_desc[sizeof(DESC)];
-#include "clang/Basic/DiagnosticIDs.inc"
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -45,7 +45,7 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   DESC,
-#include "clang/Basic/DiagnosticIDs.inc"
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -57,7 +57,7 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
-#include "clang/Basic/DiagnosticIDs.inc"
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
