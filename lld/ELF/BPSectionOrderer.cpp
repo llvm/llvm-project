@@ -17,11 +17,13 @@ void BPSectionELF::getSectionHashes(
     const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) const {
   constexpr unsigned windowSize = 4;
 
-  size_t size = isec->content().size();
-  for (size_t i = 0; i != size; ++i) {
-    auto window = isec->content().drop_front(i).take_front(windowSize);
-    hashes.push_back(xxHash64(window));
-  }
+  // Calculate content hashes: k-mers and the last k-1 bytes.
+  ArrayRef<uint8_t> data = isec->content();
+  if (data.size() >= windowSize)
+    for (size_t i = 0; i <= data.size() - windowSize; ++i)
+      hashes.push_back(llvm::support::endian::read32le(data.data() + i));
+  for (uint8_t byte : data.take_back(windowSize - 1))
+    hashes.push_back(byte);
 
   llvm::sort(hashes);
   hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
