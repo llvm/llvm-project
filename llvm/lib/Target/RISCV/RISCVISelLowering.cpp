@@ -16252,8 +16252,8 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue LoadMask = VPLoad->getMask();
-  // If Mask is not all 1's, try to replace the mask if it's opcode
-  // is EXPERIMENTAL_VP_REVERSE and it's operand can be directly extracted.
+  // If Mask is not all 1's, try to replace the mask if its opcode
+  // is EXPERIMENTAL_VP_REVERSE and its operand can be directly extracted.
   if (!isOneOrOneSplat(LoadMask)) {
     // Check if the mask of vp.reverse in vp.load are all 1's and
     // the length of mask is same as evl.
