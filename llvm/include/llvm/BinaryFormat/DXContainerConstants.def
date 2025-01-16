@@ -56,18 +56,18 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #ifdef ROOT_ELEMENT_FLAG
 
 
-ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout)
-ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess)
-ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess)
-ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess)
-ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess)
-ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess)
-ROOT_ELEMENT_FLAG(6, AllowStreamOutput)
-ROOT_ELEMENT_FLAG(7, LocalRootSignature)
-ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess)
-ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess)
-ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed)
-ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed)
+ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout, "")
+ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(6, AllowStreamOutput, "")
+ROOT_ELEMENT_FLAG(7, LocalRootSignature, "")
+ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess, "")
+ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed, "")
+ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed, "")
 #undef ROOT_ELEMENT_FLAG
 #endif // ROOT_ELEMENT_FLAG
 
