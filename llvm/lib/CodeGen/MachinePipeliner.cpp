@@ -2824,6 +2824,10 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
            << ", Len: " << AccessSizeO.getValue() << "\n";
   });
 
+  // Excessive overlap may be detected in strided patterns.
+  // For example, the memory addresses of the store and the load in
+  //   for (i=0; i<n; i+=2) a[i+1] = a[i];
+  // are assumed to overlap.
   if (Delta < 0) {
     int64_t BaseMinAddr = OffsetB;
     int64_t OhterNextIterMaxAddr = OffsetO + Delta + AccessSizeO.getValue() - 1;
