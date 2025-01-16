@@ -91,7 +91,7 @@ TEST(APIntTest, PowerSignedMinValueTo1) {
 // Test that MaxValue^3 == MaxValue
 TEST(APIntTest, ZeroToZero) {
   APInt Zero = APInt::getZero(32);
-  APInt One(32,1);
+  APInt One(32, 1);
   APInt ZeroToZero = APIntOps::pow(Zero, 0);
   EXPECT_EQ(ZeroToZero, One);
 }
