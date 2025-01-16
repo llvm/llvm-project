@@ -208,6 +208,63 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret <vscale x 1 x i64> %accum.next
 }
 
+; Check that the operand of the binary op (%scale.splat in shl) always dominates
+; the existing step value when we're adjusting it.
+define <vscale x 1 x i64> @gather_splat_op_after_step(ptr %a, ptr %b, i32 %len) {
+; CHECK-LABEL: @gather_splat_op_after_step(
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[SCALE:%.*]] = load i64, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[STRIDE:%.*]] = shl i64 1, [[SCALE]]
+; CHECK-NEXT:    [[STEP:%.*]] = shl i64 [[TMP0]], [[SCALE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 16
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi <vscale x 1 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP2]], i64 [[TMP1]], <vscale x 1 x i1> splat (i1 true), i32 [[TMP3]])
+; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 1 x i64> @llvm.vp.select.nxv1i64(<vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> [[TMP4]], <vscale x 1 x i64> undef, i32 [[TMP3]])
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add <vscale x 1 x i64> [[ACCUM]], [[GATHER]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
+; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[STEP]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[INDEX_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[ACCUM_NEXT]]
+;
+vector.ph:
+  %wide.trip.count = zext i32 %len to i64
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = tail call <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
+  %.splatinsert = insertelement <vscale x 1 x i64> poison, i64 %0, i64 0
+  %.splat = shufflevector <vscale x 1 x i64> %.splatinsert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+
+  %scale = load i64, ptr %b
+  %scale.head = insertelement <vscale x 1 x i64> poison, i64 %scale, i64 0
+  %scale.splat = shufflevector <vscale x 1 x i64> %scale.head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 1 x i64> [ %1, %vector.ph ], [ %vec.ind.next, %vector.body ]
+  %accum = phi <vscale x 1 x i64> [ zeroinitializer, %vector.ph ], [ %accum.next, %vector.body ]
+  %vec.ind.shl = shl <vscale x 1 x i64> %vec.ind, %scale.splat
+  %2 = getelementptr inbounds %struct.foo, ptr %a, <vscale x 1 x i64> %vec.ind.shl, i32 3
+  %gather = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> %2, i32 8, <vscale x 1 x i1> splat (i1 true), <vscale x 1 x i64> undef)
+  %accum.next = add <vscale x 1 x i64> %accum, %gather
+  %index.next = add nuw i64 %index, %0
+  %vec.ind.next = add <vscale x 1 x i64> %vec.ind, %.splat
+  %3 = icmp ne i64 %index.next, %wide.trip.count
+  br i1 %3, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret <vscale x 1 x i64> %accum.next
+}
+
 define void @scatter(ptr %a, i32 %len) {
 ; CHECK-LABEL: @scatter(
 ; CHECK-NEXT:  vector.ph:

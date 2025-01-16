@@ -317,8 +317,9 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   }
   }
 
-  // Adjust the step value after its definition if it's an instruction.
-  if (auto *StepI = dyn_cast<Instruction>(Step))
+  // If the Step was defined inside the loop, adjust it before its definition
+  // instead of in the preheader.
+  if (auto *StepI = dyn_cast<Instruction>(Step); StepI && L->contains(StepI))
     Builder.SetInsertPoint(*StepI->getInsertionPointAfterDef());
 
   switch (BO->getOpcode()) {
