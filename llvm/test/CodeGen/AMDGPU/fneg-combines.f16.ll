@@ -558,12 +558,12 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; GFX11-SAFE-NEXT:    v_mul_f16_e32 v0, 0, v0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, 0, v0
+; GFX11-SAFE-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, s0, v0
-; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_cndmask_b16 v0, v0, s0, vcc_lo
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, s0, vcc_lo
 ; GFX11-SAFE-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
-; GFX11-SAFE-NEXT:    v_cndmask_b16 v0, 0x7e00, 0, vcc_lo
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-NSZ-LABEL: fneg_fadd_0_f16:
@@ -573,10 +573,10 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0
-; GFX11-NSZ-NEXT:    v_cndmask_b16 v0, v0, s0, s1
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, v0, s0, s1
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
-; GFX11-NSZ-NEXT:    v_cndmask_b16 v0, 0x7e00, 0, vcc_lo
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-NSZ-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv half 1.000000e+00, %tmp6
@@ -646,12 +646,13 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ;
 ; GFX11-SAFE-LABEL: fneg_fadd_0_nsz_f16:
 ; GFX11-SAFE:       ; %bb.0: ; %.entry
-; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e64 s1, s0, 0
 ; GFX11-SAFE-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_cndmask_b16 v0, 0x8000, v0, s1
+; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e64 vcc_lo, s0, 0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0x8000, v0, vcc_lo
 ; GFX11-SAFE-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
-; GFX11-SAFE-NEXT:    v_cndmask_b16 v0, 0x7e00, 0, vcc_lo
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-NSZ-LABEL: fneg_fadd_0_nsz_f16:
@@ -661,10 +662,10 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0
-; GFX11-NSZ-NEXT:    v_cndmask_b16 v0, v0, s0, s1
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, v0, s0, s1
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
-; GFX11-NSZ-NEXT:    v_cndmask_b16 v0, 0x7e00, 0, vcc_lo
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-NSZ-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv afn half 1.000000e+00, %tmp6
@@ -3834,7 +3835,7 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_cndmask_b16 v2, 0, 0x3c00, s0
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
 ; GFX11-SAFE-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, v1, v0
@@ -3849,7 +3850,7 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
 ; GFX11-NSZ-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-NEXT:    v_cndmask_b16 v2, 0, 0x3c00, s0
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
 ; GFX11-NSZ-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_sub_f16_e64 v0, -v1, v0
@@ -4676,7 +4677,7 @@ define half @fadd_select_fneg_fneg_f16(i32 %arg0, half %x, half %y, half %z) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-NEXT:    v_cndmask_b16 v0, v2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f16_e32 v0, v3, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
