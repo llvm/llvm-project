@@ -549,7 +549,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
   assert(DstSel);
   if (CombineSelections) {
     std::optional<SdwaSel> NewOp =
-     combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel());
+        combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel());
     if (!NewOp.has_value())
       return false;
     DstSel->setImm(NewOp.value());
@@ -1079,7 +1079,7 @@ bool isConvertibleToSDWA(MachineInstr &MI,
 }
 } // namespace
 
-MachineInstr* SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
+MachineInstr *SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
   assert(!TII->isSDWA(Opcode));
 
