@@ -302,7 +302,7 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars", 
+          ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars",
            "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps",
            "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,
@@ -671,7 +671,7 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
     "getEntrySuccessorRegions"]>,
     InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
-    RecursiveMemoryEffects, NoRegionArguments]> {
+    RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for

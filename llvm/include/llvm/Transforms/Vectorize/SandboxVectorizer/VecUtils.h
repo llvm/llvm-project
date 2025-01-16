@@ -133,6 +133,16 @@ public:
     assert(tryGetCommonScalarType(Bndl) && "Expected common scalar type!");
     return ScalarTy;
   }
+  /// \Returns the first integer power of 2 that is <= Num.
+  static unsigned getFloorPowerOf2(unsigned Num) {
+    if (Num == 0)
+      return Num;
+    unsigned Mask = Num;
+    Mask >>= 1;
+    for (unsigned ShiftBy = 1; ShiftBy < sizeof(Num) * 8; ShiftBy <<= 1)
+      Mask |= Mask >> ShiftBy;
+    return Num & ~Mask;
+  }
 };
 
 } // namespace llvm::sandboxir

@@ -409,7 +409,7 @@ TEST_F(RtsanFileTest, SetbufDieWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
 
-  auto Func = [&f, &buffer]() { setbuf(f, buffer); };
+  auto Func = [f, &buffer]() { setbuf(f, buffer); };
 
   ExpectRealtimeDeath(Func, "setbuf");
   ExpectNonRealtimeSurvival(Func);
@@ -421,12 +421,34 @@ TEST_F(RtsanFileTest, SetvbufDieWhenRealtime) {
   FILE *f = fopen(GetTemporaryFilePath(), "w");
   EXPECT_THAT(f, Ne(nullptr));
 
-  auto Func = [&f, &buffer, &size]() {
+  auto Func = [f, &buffer, size]() {
     int r = setvbuf(f, buffer, _IOFBF, size);
     EXPECT_THAT(r, Eq(0));
   };
 
   ExpectRealtimeDeath(Func, "setvbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetlinebufDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f]() { setlinebuf(f); };
+
+  ExpectRealtimeDeath(Func, "setlinebuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetbufferDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() { setbuffer(f, buffer, size); };
+
+  ExpectRealtimeDeath(Func, "setbuffer");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
@@ -455,6 +477,81 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+#if SANITIZER_INTERCEPT_FSEEK
+TEST_F(RtsanOpenedFileTest, FgetposDieWhenRealtime) {
+  auto Func = [this]() {
+    fpos_t pos;
+    int ret = fgetpos(GetOpenFile(), &pos);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fgetpos"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FsetposDieWhenRealtime) {
+  fpos_t pos;
+  int ret = fgetpos(GetOpenFile(), &pos);
+  ASSERT_THAT(ret, Eq(0));
+  auto Func = [this, pos]() {
+    int ret = fsetpos(GetOpenFile(), &pos);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fsetpos"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FseekDieWhenRealtime) {
+  auto Func = [this]() {
+    int ret = fseek(GetOpenFile(), 0, SEEK_CUR);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "fseek");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FseekoDieWhenRealtime) {
+  auto Func = [this]() {
+    int ret = fseeko(GetOpenFile(), 0, SEEK_CUR);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fseeko"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtellDieWhenRealtime) {
+  auto Func = [this]() {
+    long ret = ftell(GetOpenFile());
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "ftell");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtelloDieWhenRealtime) {
+  auto Func = [this]() {
+    off_t ret = ftello(GetOpenFile());
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftello"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
+  int end = fseek(GetOpenFile(), 0, SEEK_END);
+  EXPECT_THAT(end, Eq(0));
+  auto Func = [this]() { rewind(GetOpenFile()); };
+
+  ExpectRealtimeDeath(Func, "rewind");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
   auto Func = []() { ioctl(0, FIONREAD); };

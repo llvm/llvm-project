@@ -5717,6 +5717,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
+        ":ValueBoundsOpInterface",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -10571,6 +10572,7 @@ cc_library(
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -12112,6 +12114,14 @@ gentbl_cc_library(
         (
             ["-gen-dialect-defs"],
             "include/mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Tosa/IR/TosaOpsTypesBase.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc",
         ),
         (
             ["-gen-attrdef-decls"],

@@ -10,6 +10,7 @@
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
+#include "Plugins/Process/Utility/OpenBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include <optional>
@@ -32,10 +33,11 @@ lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
   case llvm::Triple::Linux:
     return std::make_shared<LinuxSignals>();
   case llvm::Triple::FreeBSD:
-  case llvm::Triple::OpenBSD:
     return std::make_shared<FreeBSDSignals>();
   case llvm::Triple::NetBSD:
     return std::make_shared<NetBSDSignals>();
+  case llvm::Triple::OpenBSD:
+    return std::make_shared<OpenBSDSignals>();
   default:
     return std::make_shared<UnixSignals>();
   }

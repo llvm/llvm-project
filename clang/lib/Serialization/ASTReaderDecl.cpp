@@ -451,9 +451,8 @@ public:
   void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
   void VisitOMPRequiresDecl(OMPRequiresDecl *D);
   void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
-  };
-
-  } // namespace clang
+};
+} // namespace clang
 
 namespace {
 
@@ -833,6 +832,7 @@ RedeclarableResult ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
       RecordDeclBits.getNextBit());
   RD->setHasNonTrivialToPrimitiveDestructCUnion(RecordDeclBits.getNextBit());
   RD->setHasNonTrivialToPrimitiveCopyCUnion(RecordDeclBits.getNextBit());
+  RD->setHasUninitializedExplicitInitFields(RecordDeclBits.getNextBit());
   RD->setParamDestroyedInCallee(RecordDeclBits.getNextBit());
   RD->setArgPassingRestrictions(
       (RecordArgPassingKind)RecordDeclBits.getNextBits(/*Width=*/2));
@@ -1134,8 +1134,19 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // the presence of a sycl_kernel_entry_point attribute, register it so that
   // associated metadata is recreated.
   if (FD->hasAttr<SYCLKernelEntryPointAttr>()) {
+    auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     ASTContext &C = Reader.getContext();
-    C.registerSYCLEntryPointFunction(FD);
+    const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
+    if (SKI) {
+      if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
+                    diag::note_previous_declaration);
+        SKEPAttr->setInvalidAttr();
+      }
+    } else {
+      C.registerSYCLEntryPointFunction(FD);
+    }
   }
 }
 
@@ -2663,7 +2674,8 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  if (D->hasTypeConstraint()) {
+  bool TypeConstraintInitialized = D->hasTypeConstraint() && Record.readBool();
+  if (TypeConstraintInitialized) {
     ConceptReference *CR = nullptr;
     if (Record.readBool())
       CR = Record.readConceptReference();

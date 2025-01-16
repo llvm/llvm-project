@@ -633,7 +633,7 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
     // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : f64, !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
-    gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
+    gpu.printf "Hello: %d\n", %arg0, %arg1 : i32, f32
     gpu.return
   }
 }
