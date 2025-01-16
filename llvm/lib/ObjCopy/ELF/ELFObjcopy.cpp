@@ -657,7 +657,7 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   std::vector<uint8_t> NewData;
   NewData.reserve(OldData.size());
   uint64_t CurPos = 0;
-  for (auto &RemRange : ToRemove) {
+  for (const DeletedRange &RemRange : ToRemove) {
     if (CurPos < RemRange.OldFrom) {
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
       NewData.insert(NewData.end(), Slice.begin(), Slice.end());
