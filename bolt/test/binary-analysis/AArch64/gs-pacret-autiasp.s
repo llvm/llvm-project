@@ -1,4 +1,4 @@
-// RUN: %clang %cflags -march=armv8.3-a -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
+// RUN: %clang %cflags -march=armv9.5-a+pauth-lr -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
 // RUN: llvm-bolt-binary-analysis --scanners=pacret %t.exe 2>&1 | FileCheck %s
 
         .text
@@ -670,7 +670,182 @@ f_movx30reg:
         ret
         .size f_movx30reg, .-f_movx30reg
 
-// FIXME: add regression tests for the instructions added in v9.5: AUTI{A,B}SPPC{i,r}, RETI{A,B}SPPC{i,r}, AUTI{A,B}171615.
+        .globl  f_autiasppci
+        .type   f_autiasppci,@function
+f_autiasppci:
+0:
+        pacnbiasppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        autiasppc 0b
+// CHECK-NOT: function f_autiasppci
+        ret
+        .size f_autiasppci, .-f_autiasppci
 
+        .globl  f_autibsppci
+        .type   f_autibsppci,@function
+f_autibsppci:
+0:
+        pacnbibsppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        autibsppc 0b
+// CHECK-NOT: function f_autibsppci
+        ret
+        .size f_autibsppci, .-f_autibsppci
+
+        .globl  f_autiasppcr
+        .type   f_autiasppcr,@function
+
+f_autiasppcr:
+0:
+        pacnbiasppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        adr     x28, 0b
+        autiasppcr x28
+// CHECK-NOT: function f_autiasppcr
+        ret
+        .size f_autiasppcr, .-f_autiasppcr
+
+f_autibsppcr:
+0:
+        pacnbibsppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        adr     x28, 0b
+        autibsppcr x28
+// CHECK-NOT: function f_autibsppcr
+        ret
+        .size f_autibsppcr, .-f_autibsppcr
+
+        .globl  f_retaasppci
+        .type   f_retaasppci,@function
+f_retaasppci:
+0:
+        pacnbiasppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+// CHECK-NOT: function f_retaasppci
+        retaasppc 0b
+        .size f_retaasppci, .-f_retaasppci
+
+        .globl  f_retabsppci
+        .type   f_retabsppci,@function
+f_retabsppci:
+0:
+        pacnbibsppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+// CHECK-NOT: function f_retabsppci
+        retabsppc 0b
+        .size f_retabsppci, .-f_retabsppci
+
+        .globl  f_retaasppcr
+        .type   f_retaasppcr,@function
+
+f_retaasppcr:
+0:
+        pacnbiasppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        adr     x28, 0b
+// CHECK-NOT: function f_retaasppcr
+        retaasppcr x28
+        .size f_retaasppcr, .-f_retaasppcr
+
+f_retabsppcr:
+0:
+        pacnbibsppc
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        adr     x28, 0b
+// CHECK-NOT: function f_retabsppcr
+        retabsppcr x28
+        .size f_retabsppcr, .-f_retabsppcr
+
+        .globl  f_autia171615
+        .type   f_autia171615,@function
+f_autia171615:
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        autia171615
+// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_autia171615, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
+// CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g@PLT
+// CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
+// CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// CHECK-NEXT: {{[0-9a-f]+}}:   autia171615
+// CHECK-NEXT: {{[0-9a-f]+}}:   ret
+        ret
+        .size f_autia171615, .-f_autia171615
+
+        .globl  f_autib171615
+        .type   f_autib171615,@function
+f_autib171615:
+        hint    #25
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        autib171615
+// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_autib171615, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
+// CHECK-NEXT:    1. {{[0-9a-f]+}}: ldp     x29, x30, [sp], #0x10
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   paciasp
+// CHECK-NEXT: {{[0-9a-f]+}}:   stp     x29, x30, [sp, #-0x10]!
+// CHECK-NEXT: {{[0-9a-f]+}}:   mov     x29, sp
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g@PLT
+// CHECK-NEXT: {{[0-9a-f]+}}:   add     x0, x0, #0x3
+// CHECK-NEXT: {{[0-9a-f]+}}:   ldp     x29, x30, [sp], #0x10
+// CHECK-NEXT: {{[0-9a-f]+}}:   autib171615
+// CHECK-NEXT: {{[0-9a-f]+}}:   ret
+        ret
+        .size f_autib171615, .-f_autib171615
 
 // TODO: add test to see if registers clobbered by a call are picked up.

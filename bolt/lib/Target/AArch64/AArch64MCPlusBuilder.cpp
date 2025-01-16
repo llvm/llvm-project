@@ -217,6 +217,10 @@ public:
       return Inst.getOperand(0).getReg();
     case AArch64::RETAA:
     case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
       return AArch64::LR;
     case AArch64::ERET:
     case AArch64::ERETAA:
