@@ -117,23 +117,23 @@ FLOAT_TYPE_SEMANTICS(Float128Type, IEEEquad)
 
 FloatType Float16Type::scaleElementBitwidth(unsigned scale) const {
   if (scale == 2)
-    return FloatType::getF32(getContext());
+    return Float32Type::get(getContext());
   if (scale == 4)
-    return FloatType::getF64(getContext());
+    return Float64Type::get(getContext());
   return FloatType();
 }
 
 FloatType BFloat16Type::scaleElementBitwidth(unsigned scale) const {
   if (scale == 2)
-    return FloatType::getF32(getContext());
+    return Float32Type::get(getContext());
   if (scale == 4)
-    return FloatType::getF64(getContext());
+    return Float64Type::get(getContext());
   return FloatType();
 }
 
 FloatType Float32Type::scaleElementBitwidth(unsigned scale) const {
   if (scale == 2)
-    return FloatType::getF64(getContext());
+    return Float64Type::get(getContext());
   return FloatType();
 }
 
