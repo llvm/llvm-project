@@ -2979,7 +2979,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   std::vector<const Record *> SCs = R.getSuperClasses();
   if (!SCs.empty()) {
     OS << "\t//";
-    for (const auto *SC : SCs)
+    for (const Record *SC : SCs)
       OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";

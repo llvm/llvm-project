@@ -159,7 +159,7 @@ void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
   }
 
   OS << "  Superclasses:";
-  for (const auto *ClassRec : Superclasses) {
+  for (const Record *ClassRec : Superclasses) {
     if (Rec.hasDirectSuperClass(ClassRec))
       OS << formatv(" {0}", ClassRec->getNameInitAsString());
     else
