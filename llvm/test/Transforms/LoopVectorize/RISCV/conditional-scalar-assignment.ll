@@ -2915,15 +2915,9 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; EVL:       [[SCALAR_PH]]:
 ; EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[LOOP_PREHEADER]] ]
 ; EVL-NEXT:    br label %[[LOOP:.*]]
-; EVL:       [[EXIT_LOOPEXIT]]:
-; EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT:%.*]], %[[LOOP]] ], [ [[TMP25]], %[[MIDDLE_BLOCK]] ]
-; EVL-NEXT:    br label %[[EXIT]]
-; EVL:       [[EXIT]]:
-; EVL-NEXT:    [[T_0_LCSSA:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SPEC_SELECT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
-; EVL-NEXT:    ret ptr [[T_0_LCSSA]]
 ; EVL:       [[LOOP]]:
 ; EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; EVL-NEXT:    [[T_010:%.*]] = phi ptr [ null, %[[SCALAR_PH]] ], [ [[SPEC_SELECT]], %[[LOOP]] ]
+; EVL-NEXT:    [[T_010:%.*]] = phi ptr [ null, %[[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[DATA]], i64 [[IV]]
 ; EVL-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
 ; EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
@@ -2933,6 +2927,12 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; EVL:       [[EXIT_LOOPEXIT]]:
+; EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT]], %[[LOOP]] ], [ [[TMP25]], %[[MIDDLE_BLOCK]] ]
+; EVL-NEXT:    br label %[[EXIT]]
+; EVL:       [[EXIT]]:
+; EVL-NEXT:    [[T_0_LCSSA:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SPEC_SELECT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; EVL-NEXT:    ret ptr [[T_0_LCSSA]]
 ;
 ; NO-EVL-LABEL: define ptr @simple_csa_ptr_select(
 ; NO-EVL-SAME: i32 [[N:%.*]], ptr [[DATA:%.*]], i64 [[A:%.*]]) #[[ATTR0]] {
@@ -2944,7 +2944,7 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; NO-EVL-NEXT:    br label %[[LOOP:.*]]
 ; NO-EVL:       [[LOOP]]:
 ; NO-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; NO-EVL-NEXT:    [[T_010:%.*]] = phi ptr [ null, %[[LOOP_PREHEADER]] ], [ [[SPEC_SELECT]], %[[LOOP]] ]
+; NO-EVL-NEXT:    [[T_010:%.*]] = phi ptr [ null, %[[LOOP_PREHEADER]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
 ; NO-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr [[DATA]], i64 [[IV]]
 ; NO-EVL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
 ; NO-EVL-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2953,9 +2953,9 @@ define ptr @simple_csa_ptr_select(i32 %N, ptr %data, i64 %a) {
 ; NO-EVL-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], ptr [[TMP0]], ptr [[T_010]]
 ; NO-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; NO-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]]
-; NO-EVL:       [[EXIT_LOOPEXIT:.*]]:
-; NO-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; NO-EVL-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; NO-EVL:       [[EXIT_LOOPEXIT]]:
+; NO-EVL-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi ptr [ [[SPEC_SELECT]], %[[LOOP]] ]
 ; NO-EVL-NEXT:    br label %[[EXIT]]
 ; NO-EVL:       [[EXIT]]:
 ; NO-EVL-NEXT:    [[T_0_LCSSA:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SPEC_SELECT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
