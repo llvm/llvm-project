@@ -39,24 +39,24 @@ TEST(APIntTest, PowZeroTo5) {
 
 // Test that 1^16 == 1
 TEST(APIntTest, PowOneTo16) {
-  APInt One(32, 1);
+  APInt One = APInt::getZero(32) + 1;
   APInt OneTo16 = APIntOps::pow(One, 16);
   EXPECT_EQ(One, OneTo16);
 }
 
 // Test that 2^10 == 1024
 TEST(APIntTest, PowerTwoTo10) {
-  APInt Two(32, 2);
+  APInt Two = APInt::getZero(32) + 2;
   APInt TwoTo20 = APIntOps::pow(Two, 10);
-  APInt V_1024(32, 1024);
+  APInt V_1024 = APInt::getZero(32) + 1024;
   EXPECT_EQ(TwoTo20, V_1024);
 }
 
 // Test that 3^3 == 27
 TEST(APIntTest, PowerThreeTo3) {
-  APInt Three(32, 3);
+  APInt Three = APInt::getZero(32) + 3;
   APInt ThreeTo3 = APIntOps::pow(Three, 3);
-  APInt V_27(32, 27);
+  APInt V_27 = APInt::getZero(32) + 27;
   EXPECT_EQ(ThreeTo3, V_27);
 }
 
@@ -74,10 +74,24 @@ TEST(APIntTest, PowerMaxValue) {
   EXPECT_EQ(MaxValue, MaxTo3);
 }
 
-// Test that 0^0 == 1
+// Test that SignedMinValue^3 == 0
+TEST(APIntTest, PowerSignedMinValueTo3) {
+  APInt SignedMinValue = APInt::getSignedMinValue(32);
+  APInt MaxTo3 = APIntOps::pow(SignedMinValue, 3);
+  EXPECT_TRUE(MaxTo3.isZero());
+}
+
+// Test that SignedMinValue^1 == SignedMinValue
+TEST(APIntTest, PowerSignedMinValueTo1) {
+  APInt SignedMinValue = APInt::getSignedMinValue(32);
+  APInt MinTo1 = APIntOps::pow(SignedMinValue, 1);
+  EXPECT_EQ(SignedMinValue, MinTo1);
+}
+
+// Test that MaxValue^3 == MaxValue
 TEST(APIntTest, ZeroToZero) {
   APInt Zero = APInt::getZero(32);
-  APInt One(32, 1);
+  APInt One = APInt::getZero(32) + 1;
   APInt ZeroToZero = APIntOps::pow(Zero, 0);
   EXPECT_EQ(ZeroToZero, One);
 }
