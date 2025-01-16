@@ -1240,53 +1240,20 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
                                    const SDWAOperandsVector &SDWAOperands) {
   LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
 
-  // Convert to sdwa
-  unsigned Opcode = MI.getOpcode();
-
-  // If the MI is already SDWA, preserve any existing opsel
-  if (TII->isSDWA(Opcode)) {
-    auto SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+  MachineInstr *SDWAInst;
+  bool CombineSelections;
+  if (TII->isSDWA(MI.getOpcode())) {
+    // No conversion necessary, since MI is an SDWA instruction.  But
+    // tell convertToSDWA below to combine selections of this instruction
+    // and its SDWA operands.
+    SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
     MI.getParent()->insert(MI.getIterator(), SDWAInst);
-
-    // Apply all sdwa operand patterns.
-    bool Converted = false;
-    for (auto &Operand : SDWAOperands) {
-      LLVM_DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
-      // There should be no intersection between SDWA operands and potential MIs
-      // e.g.:
-      // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
-      // v_and_b32 v2, 0xff, v0 -> src:v0 sel:BYTE_0
-      // v_add_u32 v3, v4, v2
-      //
-      // In that example it is possible that we would fold 2nd instruction into
-      // 3rd (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd
-      // (that was already destroyed). So if SDWAOperand is also a potential MI
-      // then do not apply it.
-      if (PotentialMatches.count(Operand->getParentInst()) == 0)
-        Converted |= Operand->convertToSDWA(*SDWAInst, TII, true);
-    }
-
-    if (Converted) {
-      ConvertedInstructions.push_back(SDWAInst);
-      for (MachineOperand &MO : SDWAInst->uses()) {
-        if (!MO.isReg())
-          continue;
-
-        MRI->clearKillFlags(MO.getReg());
-      }
-    } else {
-      SDWAInst->eraseFromParent();
-      return false;
-    }
-
-    LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
-    ++NumSDWAInstructionsPeepholed;
-
-    MI.eraseFromParent();
-    return true;
+    CombineSelections = true;
+  } else {
+    // Convert to sdwa
+    SDWAInst = createSDWAVersion(MI);
+    CombineSelections = false;
   }
-
-  MachineInstr *SDWAInst{createSDWAVersion(MI)};
 
   // Apply all sdwa operand patterns.
   bool Converted = false;
@@ -1303,7 +1270,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     // was already destroyed). So if SDWAOperand is also a potential MI then do
     // not apply it.
     if (PotentialMatches.count(Operand->getParentInst()) == 0)
-      Converted |= Operand->convertToSDWA(*SDWAInst, TII);
+      Converted |= Operand->convertToSDWA(*SDWAInst, TII, CombineSelections);
   }
 
   if (Converted) {
