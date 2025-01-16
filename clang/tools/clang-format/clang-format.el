@@ -160,9 +160,9 @@ is a zero-based file offset, assuming ‘utf-8-unix’ coding."
 
 (defun clang-format--vc-diff-get-diff-lines (file-orig file-new)
   "Return all line regions that contain diffs between FILE-ORIG and
-FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the
-return is a ‘list’ of lines in the format ‘--lines=<start>:<end>’
-which can be passed directly to ‘clang-format’."
+FILE-NEW.  If there is no diff ‘nil’ is returned. Otherwise the return
+is a ‘list’ of line ranges to format. The list of line ranges can be
+passed to ‘clang-format--region-impl’"
   ;; Use temporary buffer for output of diff.
   (with-temp-buffer
     ;; We could use diff.el:diff-no-select here. The reason we don't
@@ -186,7 +186,7 @@ which can be passed directly to ‘clang-format’."
           (diff-lines '()))
       (cond
        ((stringp status)
-        (error "(diff killed by signal %s%s)" status stderr))
+        (error "clang-format: (diff killed by signal %s%s)" status stderr))
        ;; Return of 0 indicates no diff.
        ((= status 0) nil)
        ;; Return of 1 indicates found diffs and no error.
@@ -205,15 +205,11 @@ which can be passed directly to ‘clang-format’."
                           (if match3_or_nil
                               (string-to-number match3_or_nil)
                             nil))))
-            (push (format
-                   "--lines=%d:%d"
-                   match1
-                   (if match3 (+ match1 match3) match1))
-                  diff-lines)))
+            (push (cons match1 (if match3 (+ match1 match3) match1)) diff-lines)))
         (nreverse diff-lines))
        ;; Any return != 0 && != 1 indicates some level of error.
        (t
-        (error "(diff returned unsuccessfully %s%s)" status stderr))))))
+        (error "clang-format: (diff returned unsuccessfully %s%s)" status stderr))))))
 
 (defun clang-format--vc-diff-get-vc-head-file (tmpfile-vc-head)
   "Stores the contents of ‘buffer-file-name’ at vc revision HEAD into
@@ -222,13 +218,13 @@ in a vc repo, this results in an error. Currently git is the only
 supported vc."
   ;; We need the current buffer to be a file.
   (unless (buffer-file-name)
-    (error "Buffer is not visiting a file"))
+    (error "clang-format: Buffer is not visiting a file"))
 
   (let ((base-dir (vc-root-dir))
         (backend (vc-backend (buffer-file-name))))
     ;; We need to be able to find version control (git) root.
     (unless base-dir
-      (error "File not known to git"))
+      (error "clang-format: File not known to git"))
     (cond
      ((string-equal backend "Git")
       ;; Get the filename relative to git root.
@@ -248,10 +244,10 @@ supported vc."
                         (buffer-substring-no-properties
                          (point-min) (line-end-position)))))
           (when (stringp status)
-            (error "(git show HEAD:%s killed by signal %s%s)"
+            (error "clang-format: (git show HEAD:%s killed by signal %s%s)"
                    vc-file-name status stderr))
           (unless (zerop status)
-            (error "(git show HEAD:%s returned unsuccessfully %s%s)"
+            (error "clang-format: (git show HEAD:%s returned unsuccessfully %s%s)"
                    vc-file-name status stderr)))))
      (t
       (error
@@ -270,6 +266,12 @@ specific locations for reformatting (i.e diff locations)."
 
   (unless assume-file-name
     (setq assume-file-name (buffer-file-name (buffer-base-buffer))))
+
+  ;; Convert list of line ranges to list command for ‘clang-format’ executable.
+  (when lines
+    (setq lines (mapcar (lambda (range)
+                          (format "--lines=%d:%d" (car range) (cdr range)))
+                        lines)))
 
   (let ((file-start (clang-format--bufferpos-to-filepos start 'approximate
                                                         'utf-8-unix))
@@ -327,7 +329,9 @@ specific locations for reformatting (i.e diff locations)."
             (if incomplete-format
                 (message "(clang-format: incomplete (syntax errors)%s)" stderr)
               (message "(clang-format: success%s)" stderr))))
-      (ignore-errors (delete-file temp-file))
+      (with-demoted-errors
+          "clang-format: Failed to delete temporary file: %S"
+        (delete-file temp-file))
       (when (buffer-name temp-buffer) (kill-buffer temp-buffer)))))
 
 
