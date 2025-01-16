@@ -18,6 +18,7 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__bit/countr.h>
+#include <__bit/invert_if.h>
 #include <__compare/ordering.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
@@ -66,6 +67,20 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
   using difference_type = typename _Cp::difference_type;
   using size_type       = typename _Cp::size_type;
 };
+
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __trailing_mask(unsigned __clz) {
+  static_assert(is_unsigned<_StorageType>::value, "__trailing_mask only works with unsigned types");
+  return static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz);
+}
+
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz) {
+  static_assert(is_unsigned<_StorageType>::value, "__middle_mask only works with unsigned types");
+  return static_cast<_StorageType>(
+      static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
+      std::__trailing_mask<_StorageType>(__clz));
+}
 
 // This function is designed to operate correctly even for smaller integral types like `uint8_t`, `uint16_t`,
 // or `unsigned short`. Casting back to _StorageType is crucial to prevent undefined behavior that can arise

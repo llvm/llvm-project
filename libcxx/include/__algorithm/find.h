@@ -106,7 +106,7 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_ty
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
-    __storage_type __m     = std::__middle_mask<__storage_type>(__first.__ctz_, __clz_f - __dn);
+    __storage_type __m     = std::__middle_mask<__storage_type>(__clz_f - __dn, __first.__ctz_);
     __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
     if (__b)
       return _It(__first.__seg_, static_cast<unsigned>(std::__countr_zero(__b)));
