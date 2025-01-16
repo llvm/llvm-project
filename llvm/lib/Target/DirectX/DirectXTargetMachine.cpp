@@ -61,7 +61,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILTranslateMetadataLegacyPass(*PR);
   initializeDXILResourceMDWrapperPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
-  initializeDXILFinalizeLinkageLegacyPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -91,7 +90,6 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
-    addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     addPass(createDXILFlattenArraysLegacyPass());

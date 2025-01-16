@@ -57,6 +57,7 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
+#include "llvm/Transforms/HLSL/DXILFinalizeLinkage.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
@@ -1163,6 +1164,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
     MPM.addPass(HipStdParAllocationInterpositionPass());
+
+  if (LangOpts.HLSL) {
+    // HLSL legalization passes
+    MPM.addPass(DXILFinalizeLinkage());
+  }
 
   // Now that we have all of the passes ready, run them.
   {

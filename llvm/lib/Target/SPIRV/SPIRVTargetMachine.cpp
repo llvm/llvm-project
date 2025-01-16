@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTargetMachine.h"
+#include "../DirectX/DirectX.h"
 #include "SPIRV.h"
 #include "SPIRVCallLowering.h"
 #include "SPIRVGlobalRegistry.h"
@@ -224,6 +225,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
+
   addPass(new Legalizer());
   addPass(createSPIRVPostLegalizerPass());
   return false;
