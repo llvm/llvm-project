@@ -251,7 +251,7 @@ def MPI_RetvalCheckOp : MPI_Op<"retval_check", []> {
 
 
 //===----------------------------------------------------------------------===//
-// RetvalCheckOp
+// ErrorClassOp
 //===----------------------------------------------------------------------===//
 
 def MPI_ErrorClassOp : MPI_Op<"error_class", []> {
