@@ -1674,14 +1674,6 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
     }
   }
 
-  AttributeMask PtrOnlyAttrs;
-  for (auto K :
-       {Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-        Attribute::NoAlias, Attribute::NoCapture, Attribute::NoFree,
-        Attribute::NonNull, Attribute::NullPointerIsValid, Attribute::ReadNone,
-        Attribute::ReadOnly, Attribute::WriteOnly}) {
-    PtrOnlyAttrs.addAttribute(K);
-  }
   SmallVector<AttributeSet> ArgAttrs;
   AttributeList OldAttrs = OldF->getAttributes();
 
@@ -1697,12 +1689,16 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
     AttributeSet ArgAttr = OldAttrs.getParamAttrs(I);
     // Intrinsics get their attributes fixed later.
     if (OldArgTy != NewArgTy && !IsIntrinsic)
-      ArgAttr = ArgAttr.removeAttributes(NewF->getContext(), PtrOnlyAttrs);
+      ArgAttr = ArgAttr.removeAttributes(
+          NewF->getContext(),
+          AttributeFuncs::typeIncompatible(NewArgTy, ArgAttr));
     ArgAttrs.push_back(ArgAttr);
   }
   AttributeSet RetAttrs = OldAttrs.getRetAttrs();
   if (OldF->getReturnType() != NewF->getReturnType() && !IsIntrinsic)
-    RetAttrs = RetAttrs.removeAttributes(NewF->getContext(), PtrOnlyAttrs);
+    RetAttrs = RetAttrs.removeAttributes(
+        NewF->getContext(),
+        AttributeFuncs::typeIncompatible(NewF->getReturnType(), RetAttrs));
   NewF->setAttributes(AttributeList::get(
       NewF->getContext(), OldAttrs.getFnAttrs(), RetAttrs, ArgAttrs));
   return NewF;

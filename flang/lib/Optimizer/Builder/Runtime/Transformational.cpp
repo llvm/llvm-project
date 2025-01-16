@@ -25,7 +25,7 @@ struct ForcedBesselJn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -42,7 +42,7 @@ struct ForcedBesselJn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -91,7 +91,7 @@ struct ForcedBesselYn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -108,7 +108,7 @@ struct ForcedBesselYn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));

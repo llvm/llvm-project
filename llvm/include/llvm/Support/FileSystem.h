@@ -44,9 +44,7 @@
 #include <system_error>
 #include <vector>
 
-#ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 
 namespace llvm {
 namespace sys {

@@ -28,18 +28,14 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 #if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif

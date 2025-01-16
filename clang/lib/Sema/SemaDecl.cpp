@@ -17310,7 +17310,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         return nullptr;
       if (EnumUnderlying) {
         EnumDecl *ED = cast<EnumDecl>(New);
-        if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo *>())
+        if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying))
           ED->setIntegerTypeSourceInfo(TI);
         else
           ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
@@ -17943,7 +17943,7 @@ CreateNewDecl:
 
     if (EnumUnderlying) {
       EnumDecl *ED = cast<EnumDecl>(New);
-      if (TypeSourceInfo *TI = EnumUnderlying.dyn_cast<TypeSourceInfo*>())
+      if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying))
         ED->setIntegerTypeSourceInfo(TI);
       else
         ED->setIntegerType(QualType(cast<const Type *>(EnumUnderlying), 0));
@@ -19232,6 +19232,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         if (FT.hasNonTrivialToPrimitiveCopyCUnion() || Record->isUnion())
           Record->setHasNonTrivialToPrimitiveCopyCUnion(true);
       }
+      if (FD->hasAttr<ExplicitInitAttr>())
+        Record->setHasUninitializedExplicitInitFields(true);
       if (FT.isDestructedType()) {
         Record->setNonTrivialToPrimitiveDestroy(true);
         Record->setParamDestroyedInCallee(true);
