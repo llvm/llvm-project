@@ -14,7 +14,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
-#include <optional>
 
 namespace llvm {
 
