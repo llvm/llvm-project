@@ -795,12 +795,11 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 
   if (LowerAllowCheckPass::IsRequested()) {
-    LowerAllowCheckPass::Options Opts;
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
-    PB.registerOptimizerEarlyEPCallback([&Opts](ModulePassManager &MPM,
-                                                OptimizationLevel Level,
-                                                ThinOrFullLTOPhase Phase) {
-      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
+    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
+                                           OptimizationLevel Level,
+                                           ThinOrFullLTOPhase Phase) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
     });
   }
 }
@@ -1033,7 +1032,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           static_assert(SanitizerKind::SO_LocalBounds <=
                             std::numeric_limits<
                                 decltype(Options.GuardKind)::value_type>::max(),
-                        "Update type of llvm.allow.ubsan.check.");
+                        "Update type of llvm.allow.ubsan.check to represent "
+                        "SanitizerKind::SO_LocalBounds.");
           Options.GuardKind = SanitizerKind::SO_LocalBounds;
         }
         Options.Merge =

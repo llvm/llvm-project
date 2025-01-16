@@ -617,9 +617,11 @@ def err_ambiguous_inherited_constructor : Error<
   "constructor of %0 inherited from multiple base class subobjects">;
 def note_ambiguous_inherited_constructor_using : Note<
   "inherited from base class %0 here">;
-def note_using_decl_class_member_workaround : Note<
-  "use %select{an alias declaration|a typedef declaration|a reference|"
-  "a const variable|a constexpr variable}0 instead">;
+def note_using_decl_class_member_workaround
+    : Note<"use %enum_select<MemClassWorkaround>{%AliasDecl{an alias "
+           "declaration}|%TypedefDecl{a typedef declaration}|%ReferenceDecl{a "
+           "reference}|%ConstVar{a const variable}|%ConstexprVar{a constexpr "
+           "variable}}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def note_namespace_using_decl : Note<
@@ -2202,6 +2204,8 @@ def err_invalid_qualified_constructor : Error<
   "'%0' qualifier is not allowed on a constructor">;
 def err_ref_qualifier_constructor : Error<
   "ref-qualifier '%select{&&|&}0' is not allowed on a constructor">;
+def err_invalid_ctor_dtor_decl : Error<
+  "invalid %select{constructor|destructor}0 declaration">;
 
 def err_constructor_return_type : Error<
   "constructor cannot have a return type">;
@@ -2347,6 +2351,9 @@ def err_init_reference_member_uninitialized : Error<
   "reference member of type %0 uninitialized">;
 def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
+def warn_field_requires_explicit_init : Warning<
+  "field %select{%1|in %1}0 requires explicit initialization but is not "
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -9298,7 +9305,7 @@ def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
 def err_typecheck_expect_any_scalar_or_vector : Error<
-  "invalid operand of type %0 where a scalar or vector is required">;
+  "invalid operand of type %0%select{| where a scalar or vector is required}1">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;

@@ -35,62 +35,56 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 //===----------------------------------------------------------------------===//
 
 FloatType Builder::getFloat4E2M1FNType() {
-  return FloatType::getFloat4E2M1FN(context);
+  return Float4E2M1FNType::get(context);
 }
 
 FloatType Builder::getFloat6E2M3FNType() {
-  return FloatType::getFloat6E2M3FN(context);
+  return Float6E2M3FNType::get(context);
 }
 
 FloatType Builder::getFloat6E3M2FNType() {
-  return FloatType::getFloat6E3M2FN(context);
+  return Float6E3M2FNType::get(context);
 }
 
-FloatType Builder::getFloat8E5M2Type() {
-  return FloatType::getFloat8E5M2(context);
-}
+FloatType Builder::getFloat8E5M2Type() { return Float8E5M2Type::get(context); }
 
-FloatType Builder::getFloat8E4M3Type() {
-  return FloatType::getFloat8E4M3(context);
-}
+FloatType Builder::getFloat8E4M3Type() { return Float8E4M3Type::get(context); }
 
 FloatType Builder::getFloat8E4M3FNType() {
-  return FloatType::getFloat8E4M3FN(context);
+  return Float8E4M3FNType::get(context);
 }
 
 FloatType Builder::getFloat8E5M2FNUZType() {
-  return FloatType::getFloat8E5M2FNUZ(context);
+  return Float8E5M2FNUZType::get(context);
 }
 
 FloatType Builder::getFloat8E4M3FNUZType() {
-  return FloatType::getFloat8E4M3FNUZ(context);
+  return Float8E4M3FNUZType::get(context);
 }
 
 FloatType Builder::getFloat8E4M3B11FNUZType() {
-  return FloatType::getFloat8E4M3B11FNUZ(context);
+  return Float8E4M3B11FNUZType::get(context);
 }
 
-FloatType Builder::getFloat8E3M4Type() {
-  return FloatType::getFloat8E3M4(context);
-}
+FloatType Builder::getFloat8E3M4Type() { return Float8E3M4Type::get(context); }
 
 FloatType Builder::getFloat8E8M0FNUType() {
-  return FloatType::getFloat8E8M0FNU(context);
+  return Float8E8M0FNUType::get(context);
 }
 
-FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
+FloatType Builder::getBF16Type() { return BFloat16Type::get(context); }
 
-FloatType Builder::getF16Type() { return FloatType::getF16(context); }
+FloatType Builder::getF16Type() { return Float16Type::get(context); }
 
-FloatType Builder::getTF32Type() { return FloatType::getTF32(context); }
+FloatType Builder::getTF32Type() { return FloatTF32Type::get(context); }
 
-FloatType Builder::getF32Type() { return FloatType::getF32(context); }
+FloatType Builder::getF32Type() { return Float32Type::get(context); }
 
-FloatType Builder::getF64Type() { return FloatType::getF64(context); }
+FloatType Builder::getF64Type() { return Float64Type::get(context); }
 
-FloatType Builder::getF80Type() { return FloatType::getF80(context); }
+FloatType Builder::getF80Type() { return Float80Type::get(context); }
 
-FloatType Builder::getF128Type() { return FloatType::getF128(context); }
+FloatType Builder::getF128Type() { return Float128Type::get(context); }
 
 IndexType Builder::getIndexType() { return IndexType::get(context); }
 

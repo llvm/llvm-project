@@ -202,6 +202,26 @@ static Error writeStoreRegSeq(AppendFtor &Append, unsigned DstLocReg,
   return Append(Instr);
 }
 
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 2 &&
+           "PLT block edge count != 2");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
 const char *getPointerSigningFunctionSectionName() { return "$__ptrauth_sign"; }
 
 /// Creates a pointer signing function section, block, and symbol to reserve
