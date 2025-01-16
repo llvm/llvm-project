@@ -4342,7 +4342,7 @@ private:
   }
 
   bool IsGfx90aCoarseGrainUsmMapEnabledImpl() override final {
-    return !EnableGFX90ACoarseGrainUsmMaps;
+    return EnableGFX90ACoarseGrainUsmMaps;
   }
 
   bool hasAPUDeviceImpl() override final { return IsAPU; }
