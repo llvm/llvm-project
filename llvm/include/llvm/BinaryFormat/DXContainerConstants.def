@@ -56,18 +56,18 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #ifdef ROOT_ELEMENT_FLAG
 
 
-ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout, "")
-ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(6, AllowStreamOutput, "")
-ROOT_ELEMENT_FLAG(7, LocalRootSignature, "")
-ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess, "")
-ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed, "")
-ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed, "")
+ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout, "The app is opting in to using the Input Assembler")
+ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess, "Denies the vertex shader access to the root signature.")
+ROOT_ELEMENT_FLAG(2, DenyHullShaderRootAccess, "Denies the hull shader access to the root signature.")
+ROOT_ELEMENT_FLAG(3, DenyDomainShaderRootAccess, "Denies the domain shader access to the root signature.")
+ROOT_ELEMENT_FLAG(4, DenyGeometryShaderRootAccess, "Denies the geometry shader access to the root signature.")
+ROOT_ELEMENT_FLAG(5, DenyPixelShaderRootAccess, "Denies the pixel shader access to the root signature.")
+ROOT_ELEMENT_FLAG(6, AllowStreamOutput, "The app is opting in to using Stream Output.")
+ROOT_ELEMENT_FLAG(7, LocalRootSignature, "The root signature is to be used with raytracing shaders to define resource bindings sourced from shader records in shader tables.")
+ROOT_ELEMENT_FLAG(8, DenyAmplificationShaderRootAccess, "Denies the amplification shader access to the root signature.")
+ROOT_ELEMENT_FLAG(9, DenyMeshShaderRootAccess, "Denies the mesh shader access to the root signature.")
+ROOT_ELEMENT_FLAG(10, CBVSRVUAVHeapDirectlyIndexed, "The shaders are allowed to index the CBV/SRV/UAV descriptor heap directly, using the ResourceDescriptorHeap built-in variable.")
+ROOT_ELEMENT_FLAG(11, SamplerHeapDirectlyIndexed, "The shaders are allowed to index the sampler descriptor heap directly, using the SamplerDescriptorHeap built-in variable.")
 #undef ROOT_ELEMENT_FLAG
 #endif // ROOT_ELEMENT_FLAG
 
