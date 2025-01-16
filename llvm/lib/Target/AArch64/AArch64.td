@@ -69,7 +69,7 @@ def SVE2Unsupported : AArch64Unsupported {
 }
 
 def SVEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE, HasSVEorSME],
+  let F = !listconcat([HasSVE, HasSVE_or_SME],
                       SVE2Unsupported.F);
 }
 
