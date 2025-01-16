@@ -2367,7 +2367,7 @@ mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
@@ -2518,7 +2518,7 @@ mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
@@ -2544,7 +2544,7 @@ mlir::Value IntrinsicLibrary::genAtand(mlir::Type resultType,
   }
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), llvm::APFloat(180.0) / pi);
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
@@ -2569,7 +2569,7 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
   }
   llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
   mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::FloatType::getF64(context), inv_pi);
+      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
 }
@@ -3124,7 +3124,7 @@ mlir::Value IntrinsicLibrary::genCosd(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
@@ -4418,12 +4418,12 @@ IntrinsicLibrary::genIeeeCopySign(mlir::Type resultType,
   mlir::FloatType yRealType =
       mlir::dyn_cast<mlir::FloatType>(yRealVal.getType());
 
-  if (yRealType == mlir::FloatType::getBF16(builder.getContext())) {
+  if (yRealType == mlir::BFloat16Type::get(builder.getContext())) {
     // Workaround: CopySignOp and BitcastOp don't work for kind 3 arg Y.
     // This conversion should always preserve the sign bit.
     yRealVal = builder.createConvert(
-        loc, mlir::FloatType::getF32(builder.getContext()), yRealVal);
-    yRealType = mlir::FloatType::getF32(builder.getContext());
+        loc, mlir::Float32Type::get(builder.getContext()), yRealVal);
+    yRealType = mlir::Float32Type::get(builder.getContext());
   }
 
   // Args have the same type.
@@ -4979,7 +4979,7 @@ mlir::Value IntrinsicLibrary::genIeeeReal(mlir::Type resultType,
 
   assert(args.size() == 2);
   mlir::Type i1Ty = builder.getI1Type();
-  mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
   mlir::Value a = args[0];
   mlir::Type aType = a.getType();
 
@@ -5179,7 +5179,7 @@ mlir::Value IntrinsicLibrary::genIeeeRem(mlir::Type resultType,
   mlir::Value x = args[0];
   mlir::Value y = args[1];
   if (mlir::dyn_cast<mlir::FloatType>(resultType).getWidth() < 32) {
-    mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+    mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
     x = builder.create<fir::ConvertOp>(loc, f32Ty, x);
     y = builder.create<fir::ConvertOp>(loc, f32Ty, y);
   } else {
@@ -5213,7 +5213,7 @@ mlir::Value IntrinsicLibrary::genIeeeRint(mlir::Type resultType,
   }
   if (mlir::cast<mlir::FloatType>(resultType).getWidth() == 16)
     a = builder.create<fir::ConvertOp>(
-        loc, mlir::FloatType::getF32(builder.getContext()), a);
+        loc, mlir::Float32Type::get(builder.getContext()), a);
   mlir::Value result = builder.create<fir::ConvertOp>(
       loc, resultType, genRuntimeCall("nearbyint", a.getType(), a));
   if (isStaticallyPresent(args[1])) {
@@ -5298,10 +5298,10 @@ mlir::Value IntrinsicLibrary::genIeeeSignbit(mlir::Type resultType,
   mlir::Value realVal = args[0];
   mlir::FloatType realType = mlir::dyn_cast<mlir::FloatType>(realVal.getType());
   int bitWidth = realType.getWidth();
-  if (realType == mlir::FloatType::getBF16(builder.getContext())) {
+  if (realType == mlir::BFloat16Type::get(builder.getContext())) {
     // Workaround: can't bitcast or convert real(3) to integer(2) or real(2).
     realVal = builder.createConvert(
-        loc, mlir::FloatType::getF32(builder.getContext()), realVal);
+        loc, mlir::Float32Type::get(builder.getContext()), realVal);
     bitWidth = 32;
   }
   mlir::Type intType = builder.getIntegerType(bitWidth);
@@ -6065,7 +6065,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
   auto fastMathFlags = builder.getFastMathFlags();
   // F128 arith::RemFOp may be lowered to a runtime call that may be unsupported
   // on the target, so generate a call to Fortran Runtime's ModuloReal16.
-  if (resultType == mlir::FloatType::getF128(builder.getContext()) ||
+  if (resultType == mlir::Float128Type::get(builder.getContext()) ||
       (fastMathFlags & mlir::arith::FastMathFlags::ninf) ==
           mlir::arith::FastMathFlags::none)
     return builder.createConvert(
@@ -6254,7 +6254,7 @@ mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
     mlir::FloatType yType = mlir::dyn_cast<mlir::FloatType>(args[1].getType());
     const unsigned yBitWidth = yType.getWidth();
     if (xType != yType) {
-      mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
+      mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
       if (xBitWidth < 32)
         x1 = builder.createConvert(loc, f32Ty, x1);
       if (yBitWidth > 32 && yBitWidth > xBitWidth)
@@ -7205,7 +7205,7 @@ mlir::Value IntrinsicLibrary::genSind(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
@@ -7286,7 +7286,7 @@ mlir::Value IntrinsicLibrary::genTand(mlir::Type resultType,
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::FloatType::getF64(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
   mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
