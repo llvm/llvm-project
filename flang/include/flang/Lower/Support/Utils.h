@@ -547,49 +547,35 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ImpliedDo<A> &x,
                       const Fortran::evaluate::ImpliedDo<A> &y) {
-    using Expr = Fortran::evaluate::Expr<A>;
-    for (const auto &[xValue, yValue] : llvm::zip(x.values(), y.values())) {
-      bool checkValue = Fortran::common::visit(
-          common::visitors{
-              [&](const Expr &v, const Expr &w) { return isEqual(v, w); },
-              [&](const auto &, const auto &) {
-                llvm::report_fatal_error("isEqual is not handled yet for "
-                                         "the element type in ImpliedDo");
-                return false;
-              },
-          },
-          xValue.u, yValue.u);
-      if (!checkValue) {
-        return false;
-      }
-    }
-    return isEqual(x.lower(), y.lower()) && isEqual(x.upper(), y.upper()) &&
-           isEqual(x.stride(), y.stride());
+    return isEqual(x.values(), y.values()) && isEqual(x.lower(), y.lower()) &&
+           isEqual(x.upper(), y.upper()) && isEqual(x.stride(), y.stride());
   }
   template <typename A>
-  static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
-                      const Fortran::evaluate::ArrayConstructor<A> &y) {
+  static bool isEqual(const Fortran::evaluate::ArrayConstructorValue<A> &x,
+                      const Fortran::evaluate::ArrayConstructorValue<A> &y) {
+    using Expr = Fortran::evaluate::Expr<A>;
+    using ImpliedDo = Fortran::evaluate::ImpliedDo<A>;
     for (const auto &[xValue, yValue] : llvm::zip(x, y)) {
-      using Expr = Fortran::evaluate::Expr<A>;
-      using ImpliedDo = Fortran::evaluate::ImpliedDo<A>;
       bool checkElement = Fortran::common::visit(
           common::visitors{
               [&](const Expr &v, const Expr &w) { return isEqual(v, w); },
               [&](const ImpliedDo &v, const ImpliedDo &w) {
                 return isEqual(v, w);
               },
-              [&](const auto &, const auto &) {
-                llvm::report_fatal_error("isEqual is not handled yet for "
-                                         "the element type in ImpliedDo");
-                return false;
-              },
+              [&](const Expr &, const ImpliedDo &) { return false; },
+              [&](const ImpliedDo &, const Expr &) { return false; },
           },
           xValue.u, yValue.u);
       if (!checkElement) {
         return false;
       }
     }
-    return x.GetType() == y.GetType();
+    return true;
+  }
+  template <typename A>
+  static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
+                      const Fortran::evaluate::ArrayConstructor<A> &y) {
+    return isEqual(x, y) && x.GetType() == y.GetType();
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {
