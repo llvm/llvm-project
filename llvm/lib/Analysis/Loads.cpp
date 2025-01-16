@@ -170,8 +170,7 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI &&
-      (!UseDerefAtPointSemantics || CtxI->getFunction()->doesNotFreeMemory())) {
+  if (CtxI && (!UseDerefAtPointSemantics || !V->canBeFreed())) {
     /// Look through assumes to see if both dereferencability and alignment can
     /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
