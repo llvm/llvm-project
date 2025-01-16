@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=x86_64 -mattr=+avx512f                        < %s | FileCheck %s --check-prefixes=CHECK,AVX512F
 ; RUN: llc -mtriple=x86_64 -mattr=+avx512f,+avx512vl,+avx512vbmi2 < %s | FileCheck %s --check-prefixes=CHECK,AVX512VL
 
-define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru) {
+define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -64,7 +64,7 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> 
     ret <4 x i32> %out
 }
 
-define <4 x float> @test_compress_v4f32(<4 x float> %vec, <4 x i1> %mask, <4 x float> %passthru) {
+define <4 x float> @test_compress_v4f32(<4 x float> %vec, <4 x i1> %mask, <4 x float> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -129,7 +129,7 @@ define <4 x float> @test_compress_v4f32(<4 x float> %vec, <4 x i1> %mask, <4 x f
     ret <4 x float> %out
 }
 
-define <2 x i64> @test_compress_v2i64(<2 x i64> %vec, <2 x i1> %mask, <2 x i64> %passthru) {
+define <2 x i64> @test_compress_v2i64(<2 x i64> %vec, <2 x i1> %mask, <2 x i64> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $63, %xmm1, %xmm1
@@ -181,7 +181,7 @@ define <2 x i64> @test_compress_v2i64(<2 x i64> %vec, <2 x i1> %mask, <2 x i64> 
     ret <2 x i64> %out
 }
 
-define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask, <2 x double> %passthru) {
+define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask, <2 x double> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v2f64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsllq $63, %xmm1, %xmm1
@@ -236,18 +236,14 @@ define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask, <2 x
     ret <2 x double> %out
 }
 
-define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> %passthru) {
+define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v8i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
-; AVX2-NEXT:    .cfi_offset %rbx, -24
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsrad $31, %ymm1, %ymm3
@@ -315,7 +311,6 @@ define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> 
 ; AVX2-NEXT:    leaq -8(%rbp), %rsp
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_compress_v8i32:
@@ -340,14 +335,11 @@ define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> 
     ret <8 x i32> %out
 }
 
-define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x float> %passthru) {
+define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x float> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v8f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
@@ -424,7 +416,6 @@ define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x f
 ; AVX2-NEXT:    vmovaps (%rsp), %ymm0
 ; AVX2-NEXT:    movq %rbp, %rsp
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_compress_v8f32:
@@ -449,14 +440,11 @@ define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x f
     ret <8 x float> %out
 }
 
-define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> %passthru) {
+define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> %passthru) nounwind {
 ; AVX2-LABEL: test_compress_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -499,7 +487,6 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    vmovaps (%rsp), %ymm0
 ; AVX2-NEXT:    movq %rbp, %rsp
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_compress_v4i64:
@@ -525,7 +512,7 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
     ret <4 x i64> %out
 }
 
-define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x double> %passthru) {
+define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x double> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v4f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
@@ -549,7 +536,7 @@ define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x
     ret <4 x double> %out
 }
 
-define <16 x i32> @test_compress_v16i32(<16 x i32> %vec, <16 x i1> %mask, <16 x i32> %passthru) {
+define <16 x i32> @test_compress_v16i32(<16 x i32> %vec, <16 x i1> %mask, <16 x i32> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v16i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
@@ -570,7 +557,7 @@ define <16 x i32> @test_compress_v16i32(<16 x i32> %vec, <16 x i1> %mask, <16 x 
     ret <16 x i32> %out
 }
 
-define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <16 x float> %passthru) {
+define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <16 x float> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v16f32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
@@ -591,7 +578,7 @@ define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <1
     ret <16 x float> %out
 }
 
-define <8 x i64> @test_compress_v8i64(<8 x i64> %vec, <8 x i1> %mask, <8 x i64> %passthru) {
+define <8 x i64> @test_compress_v8i64(<8 x i64> %vec, <8 x i1> %mask, <8 x i64> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v8i64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
@@ -612,7 +599,7 @@ define <8 x i64> @test_compress_v8i64(<8 x i64> %vec, <8 x i1> %mask, <8 x i64> 
     ret <8 x i64> %out
 }
 
-define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x double> %passthru) {
+define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x double> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v8f64:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
@@ -633,7 +620,7 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
     ret <8 x double> %out
 }
 
-define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> %passthru) {
+define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask, <16 x i8> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
@@ -657,7 +644,7 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask, <16 x i8>
     ret <16 x i8> %out
 }
 
-define <8 x i16> @test_compress_v8i16(<8 x i16> %vec, <8 x i1> %mask, <8 x i16> %passthru) {
+define <8 x i16> @test_compress_v8i16(<8 x i16> %vec, <8 x i1> %mask, <8 x i16> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v8i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
@@ -681,14 +668,11 @@ define <8 x i16> @test_compress_v8i16(<8 x i16> %vec, <8 x i1> %mask, <8 x i16> 
     ret <8 x i16> %out
 }
 
-define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8> %passthru) {
+define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v32i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $64, %rsp
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
@@ -719,7 +703,6 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX512F-NEXT:    vpblendvb %ymm0, (%rsp), %ymm2, %ymm0
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_compress_v32i8:
@@ -733,7 +716,7 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
     ret <32 x i8> %out
 }
 
-define <16 x i16> @test_compress_v16i16(<16 x i16> %vec, <16 x i1> %mask, <16 x i16> %passthru) {
+define <16 x i16> @test_compress_v16i16(<16 x i16> %vec, <16 x i1> %mask, <16 x i16> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v16i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
@@ -756,7 +739,7 @@ define <16 x i16> @test_compress_v16i16(<16 x i16> %vec, <16 x i1> %mask, <16 x 
     ret <16 x i16> %out
 }
 
-define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8> %passthru) {
+define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8> %passthru) nounwind {
 ; AVX512VL-LABEL: test_compress_v64i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $7, %zmm1, %zmm1
@@ -768,14 +751,11 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
     ret <64 x i8> %out
 }
 
-define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x i16> %passthru) {
+define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x i16> %passthru) nounwind {
 ; AVX512F-LABEL: test_compress_v32i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
 ; AVX512F-NEXT:    subq $128, %rsp
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
@@ -814,7 +794,6 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_compress_v32i16:
@@ -828,14 +807,11 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
     ret <32 x i16> %out
 }
 
-define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i32> %passthru) {
+define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i32> %passthru) nounwind {
 ; AVX512VL-LABEL: test_compress_large:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    pushq %rbp
-; AVX512VL-NEXT:    .cfi_def_cfa_offset 16
-; AVX512VL-NEXT:    .cfi_offset %rbp, -16
 ; AVX512VL-NEXT:    movq %rsp, %rbp
-; AVX512VL-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512VL-NEXT:    andq $-64, %rsp
 ; AVX512VL-NEXT:    subq $576, %rsp # imm = 0x240
 ; AVX512VL-NEXT:    vpsllw $7, %zmm0, %zmm0
@@ -896,13 +872,12 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %zmm3
 ; AVX512VL-NEXT:    movq %rbp, %rsp
 ; AVX512VL-NEXT:    popq %rbp
-; AVX512VL-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512VL-NEXT:    retq
     %out = call <64 x i32> @llvm.experimental.vector.compress(<64 x i32> %vec, <64 x i1> %mask, <64 x i32> undef)
     ret <64 x i32> %out
 }
 
-define <4 x i32> @test_compress_all_const() {
+define <4 x i32> @test_compress_all_const() nounwind {
 ; AVX2-LABEL: test_compress_all_const:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = [5,9,0,0]
@@ -923,7 +898,7 @@ define <4 x i32> @test_compress_all_const() {
     ret <4 x i32> %out
 }
 
-define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) {
+define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_const_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3,2,3]
@@ -932,7 +907,7 @@ define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) {
     ret <4 x i32> %out
 }
 
-define <4 x i32> @test_compress_const_mask_passthrough(<4 x i32> %vec, <4 x i32> %passthru) {
+define <4 x i32> @test_compress_const_mask_passthrough(<4 x i32> %vec, <4 x i32> %passthru) nounwind {
 ; CHECK-LABEL: test_compress_const_mask_passthrough:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[2,3]
@@ -941,7 +916,7 @@ define <4 x i32> @test_compress_const_mask_passthrough(<4 x i32> %vec, <4 x i32>
     ret <4 x i32> %out
 }
 
-define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) {
+define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_const_mask_const_passthrough:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
@@ -956,7 +931,7 @@ define <4 x i32> @test_compress_const_mask_const_passthrough(<4 x i32> %vec) {
 
 ; We pass a placeholder value for the const_mask* tests to check that they are converted to a no-op by simply copying
 ; the second vector input register to the return register or doing nothing.
-define <4 x i32> @test_compress_const_splat1_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+define <4 x i32> @test_compress_const_splat1_mask(<4 x i32> %ignore, <4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_const_splat1_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
@@ -964,21 +939,21 @@ define <4 x i32> @test_compress_const_splat1_mask(<4 x i32> %ignore, <4 x i32> %
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 -1), <4 x i32> undef)
     ret <4 x i32> %out
 }
-define <4 x i32> @test_compress_const_splat0_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+define <4 x i32> @test_compress_const_splat0_mask(<4 x i32> %ignore, <4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_const_splat0_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> undef)
     ret <4 x i32> %out
 }
-define <4 x i32> @test_compress_undef_mask(<4 x i32> %ignore, <4 x i32> %vec) {
+define <4 x i32> @test_compress_undef_mask(<4 x i32> %ignore, <4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_undef_mask:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> undef, <4 x i32> undef)
     ret <4 x i32> %out
 }
-define <4 x i32> @test_compress_const_splat0_mask_with_passthru(<4 x i32> %ignore, <4 x i32> %vec, <4 x i32> %passthru) {
+define <4 x i32> @test_compress_const_splat0_mask_with_passthru(<4 x i32> %ignore, <4 x i32> %vec, <4 x i32> %passthru) nounwind {
 ; CHECK-LABEL: test_compress_const_splat0_mask_with_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm2, %xmm0
@@ -986,7 +961,7 @@ define <4 x i32> @test_compress_const_splat0_mask_with_passthru(<4 x i32> %ignor
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> splat (i1 0), <4 x i32> %passthru)
     ret <4 x i32> %out
 }
-define <4 x i32> @test_compress_const_splat0_mask_without_passthru(<4 x i32> %ignore, <4 x i32> %vec) {
+define <4 x i32> @test_compress_const_splat0_mask_without_passthru(<4 x i32> %ignore, <4 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_compress_const_splat0_mask_without_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
@@ -994,7 +969,7 @@ define <4 x i32> @test_compress_const_splat0_mask_without_passthru(<4 x i32> %ig
     ret <4 x i32> %out
 }
 
-define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
+define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) nounwind {
 ; AVX512F-LABEL: test_compress_small:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -1017,7 +992,7 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) {
     ret <4 x i8> %out
 }
 
-define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mask) {
+define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_illegal_element_type:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
@@ -1059,7 +1034,7 @@ define <4 x i4> @test_compress_illegal_element_type(<4 x i4> %vec, <4 x i1> %mas
     ret <4 x i4> %out
 }
 
-define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
+define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_narrow:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm1
@@ -1132,7 +1107,7 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
     ret <3 x i32> %out
 }
 
-define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i1> %mask) {
+define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_narrow_illegal_element_type:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %ecx, %xmm0
@@ -1222,7 +1197,7 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
     ret <3 x i3> %out
 }
 
-define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %mask) {
+define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %mask) nounwind {
 ; AVX2-LABEL: test_compress_v4i32_zero_passthru:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
