@@ -83,6 +83,7 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -1168,6 +1169,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (LangOpts.HLSL) {
     // HLSL legalization passes
     MPM.addPass(DXILFinalizeLinkage());
+    MPM.addPass(GlobalOptPass());
   }
 
   // Now that we have all of the passes ready, run them.
