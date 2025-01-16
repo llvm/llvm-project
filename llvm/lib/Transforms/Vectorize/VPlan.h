@@ -3526,6 +3526,15 @@ public:
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
 class VPBasicBlock : public VPBlockBase {
+  friend class VPlan;
+
+  /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
+  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
+      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+    if (Recipe)
+      appendRecipe(Recipe);
+  }
+
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
 
@@ -3537,12 +3546,6 @@ protected:
       : VPBlockBase(BlockSC, Name.str()) {}
 
 public:
-  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
-    if (Recipe)
-      appendRecipe(Recipe);
-  }
-
   ~VPBasicBlock() override {
     while (!Recipes.empty())
       Recipes.pop_back();
@@ -3665,14 +3668,17 @@ private:
 /// Note: At the moment, VPIRBasicBlock can only be used to wrap VPlan's
 /// preheader block.
 class VPIRBasicBlock : public VPBasicBlock {
+  friend class VPlan;
+
   BasicBlock *IRBB;
 
-public:
+  /// Use VPlan::createVPIRBasicBlock to create VPIRBasicBlocks.
   VPIRBasicBlock(BasicBlock *IRBB)
       : VPBasicBlock(VPIRBasicBlockSC,
                      (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
         IRBB(IRBB) {}
 
+public:
   ~VPIRBasicBlock() override {}
 
   static inline bool classof(const VPBlockBase *V) {
@@ -3697,6 +3703,8 @@ public:
 /// candidate VF's. The actual replication takes place only once the desired VF
 /// and UF have been determined.
 class VPRegionBlock : public VPBlockBase {
+  friend class VPlan;
+
   /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
   VPBlockBase *Entry;
 
@@ -3708,7 +3716,7 @@ class VPRegionBlock : public VPBlockBase {
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
-public:
+  /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
@@ -3722,6 +3730,7 @@ public:
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
+public:
   ~VPRegionBlock() override {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
