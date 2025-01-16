@@ -1608,14 +1608,10 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   // Add subranges to array type.
   DINodeArray Elements = CTy->getElements();
   for (DINode *E : Elements) {
-    // FIXME: Should this really be such a loose cast?
-    if (auto *Element = dyn_cast_or_null<DINode>(E)) {
-      if (Element->getTag() == dwarf::DW_TAG_subrange_type)
-        constructSubrangeDIE(Buffer, cast<DISubrange>(Element), IdxTy);
-      else if (Element->getTag() == dwarf::DW_TAG_generic_subrange)
-        constructGenericSubrangeDIE(Buffer, cast<DIGenericSubrange>(Element),
-                                    IdxTy);
-    }
+    if (auto *Element = dyn_cast_or_null<DISubrange>(E))
+      constructSubrangeDIE(Buffer, Element, IdxTy);
+    else if (auto *Element = dyn_cast_or_null<DIGenericSubrange>(E))
+      constructGenericSubrangeDIE(Buffer, Element, IdxTy);
   }
 }
 
