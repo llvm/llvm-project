@@ -550,10 +550,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWCVT_RTZ_X_F_V:
   case RISCV::VFWCVT_F_XU_V:
   case RISCV::VFWCVT_F_X_V:
-  case RISCV::VFWCVT_F_F_V: {
-    unsigned Log2EEW = IsMODef ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
-  }
+  case RISCV::VFWCVT_F_F_V:
+  case RISCV::VFWCVTBF16_F_F_V:
+    return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
   case RISCV::VWADDU_WV:
@@ -571,8 +570,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWSUB_WV: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Integer Extension
@@ -610,11 +608,11 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFNCVT_F_XU_W:
   case RISCV::VFNCVT_F_X_W:
   case RISCV::VFNCVT_F_F_W:
-  case RISCV::VFNCVT_ROD_F_F_W: {
+  case RISCV::VFNCVT_ROD_F_F_W:
+  case RISCV::VFNCVTBF16_F_F_W: {
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Mask Instructions
@@ -728,8 +726,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
     bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
-    unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
-    return Log2EEW;
+    return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   default:
@@ -948,6 +945,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMERGE_VIM:
   case RISCV::VMERGE_VVM:
   case RISCV::VMERGE_VXM:
+  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+  case RISCV::VADC_VIM:
+  case RISCV::VADC_VVM:
+  case RISCV::VADC_VXM:
   // Vector Widening Integer Multiply-Add Instructions
   case RISCV::VWMACCU_VV:
   case RISCV::VWMACCU_VX:
@@ -963,6 +964,15 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMV_V_I:
   case RISCV::VMV_V_X:
   case RISCV::VMV_V_V:
+  // Vector Single-Width Averaging Add and Subtract
+  case RISCV::VAADDU_VV:
+  case RISCV::VAADDU_VX:
+  case RISCV::VAADD_VV:
+  case RISCV::VAADD_VX:
+  case RISCV::VASUBU_VV:
+  case RISCV::VASUBU_VX:
+  case RISCV::VASUB_VV:
+  case RISCV::VASUB_VX:
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
@@ -1037,6 +1047,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFWCVT_F_XU_V:
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V:
+  case RISCV::VFWCVTBF16_F_F_V:
   // Narrowing Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFNCVT_XU_F_W:
   case RISCV::VFNCVT_X_F_W:
@@ -1046,6 +1057,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFNCVT_F_X_W:
   case RISCV::VFNCVT_F_F_W:
   case RISCV::VFNCVT_ROD_F_F_W:
+  case RISCV::VFNCVTBF16_F_F_W:
     return true;
   }
 

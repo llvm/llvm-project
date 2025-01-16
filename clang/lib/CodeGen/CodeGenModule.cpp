@@ -73,6 +73,7 @@
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
+#include <set>
 
 using namespace clang;
 using namespace CodeGen;
@@ -2748,17 +2749,26 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }
+  // Add metadata for AArch64 Function Multi Versioning.
   if (getTarget().getTriple().isAArch64()) {
     llvm::SmallVector<StringRef, 8> Feats;
-    if (TV)
+    bool IsDefault = false;
+    if (TV) {
+      IsDefault = TV->isDefaultVersion();
       TV->getFeatures(Feats);
-    else if (TC)
+    } else if (TC) {
+      IsDefault = TC->isDefaultVersion(GD.getMultiVersionIndex());
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-    if (!Feats.empty()) {
-      llvm::sort(Feats);
+    }
+    if (IsDefault) {
+      Attrs.addAttribute("fmv-features");
+      AddedAttr = true;
+    } else if (!Feats.empty()) {
+      // Sort features and remove duplicates.
+      std::set<StringRef> OrderedFeats(Feats.begin(), Feats.end());
       std::string FMVFeatures;
-      for (StringRef F : Feats)
-        FMVFeatures.append(",+" + F.str());
+      for (StringRef F : OrderedFeats)
+        FMVFeatures.append("," + F.str());
       Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
       AddedAttr = true;
     }
@@ -2800,6 +2810,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         llvm::AttributeMask RemoveAttrs;
         RemoveAttrs.addAttribute("target-cpu");
         RemoveAttrs.addAttribute("target-features");
+        RemoveAttrs.addAttribute("fmv-features");
         RemoveAttrs.addAttribute("tune-cpu");
         F->removeFnAttrs(RemoveAttrs);
         F->addFnAttrs(Attrs);

@@ -620,6 +620,18 @@ def CountBits :  DXILOp<31, unaryBits> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def FirstbitLo : DXILOp<32, unaryBits> {
+  let Doc = "Returns the location of the first set bit starting from "
+            "the lowest order bit and working upward.";
+  let intrinsics = [ IntrinSelect<int_dx_firstbitlow> ];
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FirstbitHi :  DXILOp<33, unaryBits> {
   let Doc = "Returns the location of the first set bit starting from "
             "the highest order bit and working downward.";
@@ -897,6 +909,26 @@ def RawBufferLoad : DXILOp<139, rawBufferLoad> {
   // Handle, Coord0, Coord1, Mask, Alignment
   let arguments = [HandleTy, Int32Ty, Int32Ty, Int8Ty, Int32Ty];
   let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_2,
+              [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,
+    Overloads<DXIL1_3,
+              [
+                ResRetHalfTy, ResRetFloatTy, ResRetDoubleTy, ResRetInt16Ty,
+                ResRetInt32Ty, ResRetInt64Ty
+              ]>
+  ];
+  let stages = [Stages<DXIL1_2, [all_stages]>];
+}
+
+def RawBufferStore : DXILOp<140, rawBufferStore> {
+  let Doc = "writes to a RWByteAddressBuffer or RWStructuredBuffer";
+  // Handle, Coord0, Coord1, Val0, Val1, Val2, Val3, Mask, Alignment
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy,
+    Int8Ty, Int32Ty
+  ];
+  let result = VoidTy;
   let overloads = [
     Overloads<DXIL1_2,
               [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>,

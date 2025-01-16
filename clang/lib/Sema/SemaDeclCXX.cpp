@@ -4877,7 +4877,7 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     QualType ParamType = Param->getType().getNonReferenceType();
 
     // Suppress copying zero-width bitfields.
-    if (Field->isZeroLengthBitField(SemaRef.Context))
+    if (Field->isZeroLengthBitField())
       return false;
 
     Expr *MemberExprBase =
@@ -13254,18 +13254,18 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         if (getLangOpts().CPlusPlus11) {
           // Convert 'using X::Y;' to 'using Y = X::Y;'.
           Diag(SS.getBeginLoc(), diag::note_using_decl_class_member_workaround)
-            << 0 // alias declaration
-            << FixItHint::CreateInsertion(SS.getBeginLoc(),
-                                          NameInfo.getName().getAsString() +
-                                              " = ");
+              << diag::MemClassWorkaround::AliasDecl
+              << FixItHint::CreateInsertion(SS.getBeginLoc(),
+                                            NameInfo.getName().getAsString() +
+                                                " = ");
         } else {
           // Convert 'using X::Y;' to 'typedef X::Y Y;'.
           SourceLocation InsertLoc = getLocForEndOfToken(NameInfo.getEndLoc());
           Diag(InsertLoc, diag::note_using_decl_class_member_workaround)
-            << 1 // typedef declaration
-            << FixItHint::CreateReplacement(UsingLoc, "typedef")
-            << FixItHint::CreateInsertion(
-                   InsertLoc, " " + NameInfo.getName().getAsString());
+              << diag::MemClassWorkaround::TypedefDecl
+              << FixItHint::CreateReplacement(UsingLoc, "typedef")
+              << FixItHint::CreateInsertion(
+                     InsertLoc, " " + NameInfo.getName().getAsString());
         }
       } else if (R->getAsSingle<VarDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
@@ -13278,8 +13278,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << 2 // reference declaration
-          << FixIt;
+            << diag::MemClassWorkaround::ReferenceDecl << FixIt;
       } else if (R->getAsSingle<EnumConstantDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
         // repeating the type of the enumeration here, and we can't do so if
@@ -13293,8 +13292,10 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << (getLangOpts().CPlusPlus11 ? 4 : 3) // const[expr] variable
-          << FixIt;
+            << (getLangOpts().CPlusPlus11
+                    ? diag::MemClassWorkaround::ConstexprVar
+                    : diag::MemClassWorkaround::ConstVar)
+            << FixIt;
       }
     }
 
@@ -15078,7 +15079,7 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     }
 
     // Suppress assigning zero-width bitfields.
-    if (Field->isZeroLengthBitField(Context))
+    if (Field->isZeroLengthBitField())
       continue;
 
     QualType FieldType = Field->getType().getNonReferenceType();
@@ -15465,7 +15466,7 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     }
 
     // Suppress assigning zero-width bitfields.
-    if (Field->isZeroLengthBitField(Context))
+    if (Field->isZeroLengthBitField())
       continue;
 
     QualType FieldType = Field->getType().getNonReferenceType();

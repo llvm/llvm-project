@@ -856,8 +856,7 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
   if (sym_ctx.symbol)
     module_sp = sym_ctx.symbol->GetAddressRef().GetModule();
   if (!module_sp && sym_ctx.function)
-    module_sp =
-        sym_ctx.function->GetAddressRange().GetBaseAddress().GetModule();
+    module_sp = sym_ctx.function->GetAddress().GetModule();
   if (!module_sp)
     return false;
 
