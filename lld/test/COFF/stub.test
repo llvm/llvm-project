@@ -27,7 +27,7 @@ CHECK1: AddressOfNewExeHeader: 64
 CHECK2: lld-link: error: /stub: invalid DOS signature: {{.*}}
 
 ## Unlike MS linker, we accept non-8byte-aligned stubs and we add paddings ourselves
-# RUN: lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub64mz %t.obj
+# RUN: lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub68mz %t.obj
 # RUN: llvm-readobj --file-headers %t.exe | FileCheck -check-prefix=CHECK3 %s
 
 CHECK3: Magic: MZ
