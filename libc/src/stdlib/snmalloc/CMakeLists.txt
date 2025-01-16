@@ -24,7 +24,45 @@ target_compile_options(
     -isystem ${COMPILER_RESOURCE_DIR}/include
     -isystem ${LIBC_INCLUDE_DIR}
 )
+
 add_dependencies(snmalloc libc-headers)
+
+set(SNMALLOC_DEPS
+  # includes
+  libc.include.errno
+  libc.include.fcntl
+  libc.include.limits
+  libc.include.pthread
+  libc.include.stdio
+  libc.include.stdint
+  libc.include.stdlib
+  libc.include.string
+  libc.include.strings
+  libc.include.sys_mman
+  libc.include.sys_prctl
+  libc.include.sys_random
+  libc.include.sys_syscall
+  libc.include.sys_uio
+  libc.include.unistd
+  # symbols
+  libc.src.errno.errno
+  libc.src.fcntl.open
+  libc.src.pthread.pthread_key_create
+  libc.src.pthread.pthread_setspecific
+  libc.src.stdlib.abort
+  libc.src.stdlib.atexit
+  libc.src.string.memset
+  libc.src.string.strlen
+  libc.src.sys.mman.madvise
+  libc.src.sys.mman.mmap
+  libc.src.sys.uio.writev
+  libc.src.time.clock_gettime
+  libc.src.unistd.__llvm_libc_syscall
+  libc.src.unistd.close
+  libc.src.unistd.fsync
+  libc.src.unistd.getentropy
+  libc.src.unistd.read
+)
 
 add_entrypoint_object(
   malloc
@@ -40,6 +78,7 @@ add_entrypoint_object(
     calloc.cpp
   DEPENDS
     snmalloc
+    ${SNMALLOC_DEPS}
 )
 
 add_entrypoint_object(
@@ -48,6 +87,7 @@ add_entrypoint_object(
     realloc.cpp
   DEPENDS
     snmalloc
+    ${SNMALLOC_DEPS}
 )
 
 add_entrypoint_object(
@@ -56,6 +96,7 @@ add_entrypoint_object(
     aligned_alloc.cpp
   DEPENDS
     snmalloc
+    ${SNMALLOC_DEPS}
 )
 
 add_entrypoint_object(
@@ -64,6 +105,7 @@ add_entrypoint_object(
     free.cpp
   DEPENDS
     snmalloc
+    ${SNMALLOC_DEPS}
 )
 
 add_entrypoint_object(
@@ -72,4 +114,5 @@ add_entrypoint_object(
     mallopt.cpp
   DEPENDS
     snmalloc
+    ${SNMALLOC_DEPS}
 )
