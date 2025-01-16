@@ -950,6 +950,8 @@ Bug Fixes to C++ Support
 - Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
 - Fixed a crash when __PRETTY_FUNCTION__ or __FUNCSIG__ (clang-cl) appears in the trailing return type of the lambda (#GH121274)
+- Fixed a crash caused by the incorrect construction of template arguments for CTAD alias guides when type
+  constraints are applied. (#GH122134)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
