@@ -43,7 +43,7 @@ jobs:
       - name: Print PR Information
         run: |
           echo "PR_NUMBER=$PR_NUMBER"
-          echo "PR_TITLE=$PR_TITLE"   
+          echo "PR_TITLE=$PR_TITLE"
           echo "PR_SHA=$PR_SHA"
           echo "PR_URL=$PR_URL"
           echo "BASE_BRANCH=$BASE_BRANCH"
@@ -53,7 +53,7 @@ jobs:
           
       - name: Trigger Buildbot Build
         run: |          
-          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"${{ env.PR_TITLE }}" -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }} -p REPO_URL:${{ env.REPO_URL }}
+          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"${{ env.PR_TITLE }}"  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }} -p REPO_URL:${{ env.REPO_URL }}
          
       - name: Poll Buildbot build status
         run: |
