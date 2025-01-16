@@ -635,8 +635,9 @@ TEST_F(LexerTest, FindNextTokenIncludingComments) {
     GeneratedByNextToken.push_back(getSourceText(*T, *T));
     Loc = T->getLocation();
   }
-  EXPECT_THAT(GeneratedByNextToken, ElementsAre("abcd", "=", "0", ";", "// A comment.", "int",
-                                                "xyz", "=", "abcd", ";"));
+  EXPECT_THAT(GeneratedByNextToken,
+              ElementsAre("abcd", "=", "0", ";", "// A comment.", "int", "xyz",
+                          "=", "abcd", ";"));
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
