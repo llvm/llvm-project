@@ -445,10 +445,10 @@ static Error handleArgs(const CommonConfig &Config,
   return Error::success();
 }
 
-Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
-                                             const MachOConfig &MachOConfig,
-                                             object::MachOObjectFile &In,
-                                             raw_ostream &Out) {
+Error objcopy::macho::executeObjcopyOnBinary(
+    const CommonConfig &Config, const MachOConfig &MachOConfig,
+    object::MachOObjectFile &In, raw_ostream &Out,
+    function_ref<void(const Twine &)> WarningCallback) {
   MachOReader Reader(In);
   Expected<std::unique_ptr<Object>> O = Reader.create();
   if (!O)
@@ -484,14 +484,14 @@ Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
 
 Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
     const MultiFormatConfig &Config, const MachOUniversalBinary &In,
-    raw_ostream &Out) {
+    raw_ostream &Out, function_ref<void(const Twine &)> WarningCallback) {
   SmallVector<OwningBinary<Binary>, 2> Binaries;
   SmallVector<Slice, 2> Slices;
   for (const auto &O : In.objects()) {
     Expected<std::unique_ptr<Archive>> ArOrErr = O.getAsArchive();
     if (ArOrErr) {
       Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
-          createNewArchiveMembers(Config, **ArOrErr);
+          createNewArchiveMembers(Config, **ArOrErr, WarningCallback);
       if (!NewArchiveMembersOrErr)
         return NewArchiveMembersOrErr.takeError();
       auto Kind = (*ArOrErr)->kind();
@@ -542,8 +542,9 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
     if (!MachO)
       return MachO.takeError();
 
-    if (Error E = executeObjcopyOnBinary(Config.getCommonConfig(), *MachO,
-                                         **ObjOrErr, MemStream))
+    if (Error E =
+            executeObjcopyOnBinary(Config.getCommonConfig(), *MachO, **ObjOrErr,
+                                   MemStream, WarningCallback))
       return E;
 
     auto MB = std::make_unique<SmallVectorMemoryBuffer>(

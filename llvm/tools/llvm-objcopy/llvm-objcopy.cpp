@@ -71,6 +71,10 @@ static ErrorSuccess reportWarning(Error E) {
   return Error::success();
 }
 
+static void reportWarningMsg(const Twine &Msg) {
+  WithColor::warning(errs(), ToolName) << Msg << '\n';
+}
+
 static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
   StringRef Stem = sys::path::stem(ToolName);
   auto Is = [=](StringRef Tool) {
@@ -105,7 +109,7 @@ static Error executeObjcopyOnIHex(ConfigManager &ConfigMgr, MemoryBuffer &In,
     return ELFConfig.takeError();
 
   return elf::executeObjcopyOnIHex(ConfigMgr.getCommonConfig(), *ELFConfig, In,
-                                   Out);
+                                   Out, reportWarningMsg);
 }
 
 /// The function executeObjcopyOnRawBinary does the dispatch based on the format
@@ -126,7 +130,8 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
     if (!ELFConfig)
       return ELFConfig.takeError();
 
-    return elf::executeObjcopyOnRawBinary(Config, *ELFConfig, In, Out);
+    return elf::executeObjcopyOnRawBinary(Config, *ELFConfig, In, Out,
+                                          reportWarningMsg);
   }
 
   llvm_unreachable("unsupported output format");
@@ -176,13 +181,13 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
       // Handle Archive.
-      if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
+      if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar, reportWarningMsg))
         return E;
     } else {
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),
-                                      OutFile);
+                                      OutFile, reportWarningMsg);
       };
     }
   }

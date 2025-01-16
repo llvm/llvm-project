@@ -20,10 +20,12 @@ class MultiFormatConfig;
 
 /// Applies the transformations described by \p Config to
 /// each member in archive \p Ar.
+/// Warnings can be printed via \p WarningCallback.
 /// \returns Vector of transformed archive members.
 Expected<std::vector<NewArchiveMember>>
 createNewArchiveMembers(const MultiFormatConfig &Config,
-                        const object::Archive &Ar);
+                        const object::Archive &Ar,
+                        function_ref<void(const Twine &)> WarningCallback);
 
 } // end namespace objcopy
 } // end namespace llvm

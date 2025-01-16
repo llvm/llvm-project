@@ -9,9 +9,12 @@
 #ifndef LLVM_OBJCOPY_MACHO_MACHOOBJCOPY_H
 #define LLVM_OBJCOPY_MACHO_MACHOOBJCOPY_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
+
 namespace llvm {
 class Error;
 class raw_ostream;
+class Twine;
 
 namespace object {
 class MachOObjectFile;
@@ -26,17 +29,20 @@ class MultiFormatConfig;
 namespace macho {
 /// Apply the transformations described by \p Config and \p MachOConfig to
 /// \p In and writes the result into \p Out.
+/// Warnings can be printed via \p WarningCallback.
 /// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const CommonConfig &Config,
                              const MachOConfig &MachOConfig,
-                             object::MachOObjectFile &In, raw_ostream &Out);
+                             object::MachOObjectFile &In, raw_ostream &Out,
+                             function_ref<void(const Twine &)> WarningCallback);
 
 /// Apply the transformations described by \p Config and \p MachOConfig to
 /// \p In and writes the result into \p Out.
+/// Warnings can be printed via \p WarningCallback.
 /// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnMachOUniversalBinary(
     const MultiFormatConfig &Config, const object::MachOUniversalBinary &In,
-    raw_ostream &Out);
+    raw_ostream &Out, function_ref<void(const Twine &)> WarningCallback);
 
 } // end namespace macho
 } // end namespace objcopy

@@ -125,7 +125,8 @@ callObjCopy(ConfigManager &Config, object::Binary &In,
             function_ref<bool(const Binary &File)> IsValidFormat) {
   raw_svector_ostream OutStream(DataVector);
 
-  if (Error Err = objcopy::executeObjcopyOnBinary(Config, In, OutStream))
+  if (Error Err = objcopy::executeObjcopyOnBinary(Config, In, OutStream,
+                                                  [](const Twine &) {}))
     return std::move(Err);
 
   MemoryBufferRef Buffer(StringRef(DataVector.data(), DataVector.size()),
