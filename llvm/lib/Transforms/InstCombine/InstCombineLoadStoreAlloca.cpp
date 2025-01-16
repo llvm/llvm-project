@@ -112,11 +112,6 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
             (Call->onlyReadsMemory(DataOpNo) && NoCapture))
           continue;
-
-        // If this is being passed as a byval argument, the caller is making a
-        // copy, so it is only a read of the alloca.
-        if (IsArgOperand && Call->isByValArgument(DataOpNo))
-          continue;
       }
 
       // Lifetime intrinsics can be handled by the caller.
