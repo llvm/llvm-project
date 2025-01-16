@@ -62,6 +62,7 @@ private:
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
   void pseudoOpConvertToVOP2(MachineInstr &MI,
                              const GCNSubtarget &ST) const;
+  MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
 
@@ -1092,58 +1093,10 @@ bool isConvertibleToSDWA(MachineInstr &MI,
 }
 } // namespace
 
-bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
-                                   const SDWAOperandsVector &SDWAOperands) {
-
-  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
-
-  // Convert to sdwa
+MachineInstr* SIPeepholeSDWA::createSDWAVersion(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-
-  // If the MI is already SDWA, preserve any existing opsel
-  if (TII->isSDWA(Opcode)) {
-    auto SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
-    MI.getParent()->insert(MI.getIterator(), SDWAInst);
-
-    // Apply all sdwa operand patterns.
-    bool Converted = false;
-    for (auto &Operand : SDWAOperands) {
-      LLVM_DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
-      // There should be no intersection between SDWA operands and potential MIs
-      // e.g.:
-      // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
-      // v_and_b32 v2, 0xff, v0 -> src:v0 sel:BYTE_0
-      // v_add_u32 v3, v4, v2
-      //
-      // In that example it is possible that we would fold 2nd instruction into
-      // 3rd (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd
-      // (that was already destroyed). So if SDWAOperand is also a potential MI
-      // then do not apply it.
-      if (PotentialMatches.count(Operand->getParentInst()) == 0)
-        Converted |= Operand->convertToSDWA(*SDWAInst, TII, true);
-    }
-
-    if (Converted) {
-      ConvertedInstructions.push_back(SDWAInst);
-      for (MachineOperand &MO : SDWAInst->uses()) {
-        if (!MO.isReg())
-          continue;
-
-        MRI->clearKillFlags(MO.getReg());
-      }
-    } else {
-      SDWAInst->eraseFromParent();
-      return false;
-    }
-
-    LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
-    ++NumSDWAInstructionsPeepholed;
-
-    MI.eraseFromParent();
-    return true;
-  }
-
   assert(!TII->isSDWA(Opcode));
+
   int SDWAOpcode = AMDGPU::getSDWAOp(Opcode);
   if (SDWAOpcode == -1)
     SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(Opcode));
@@ -1279,6 +1232,61 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     SDWAInst.add(Tied);
     SDWAInst->tieOperands(PreserveDstIdx, SDWAInst->getNumOperands() - 1);
   }
+
+  return SDWAInst.getInstr();
+}
+
+bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
+                                   const SDWAOperandsVector &SDWAOperands) {
+  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
+
+  // Convert to sdwa
+  unsigned Opcode = MI.getOpcode();
+
+  // If the MI is already SDWA, preserve any existing opsel
+  if (TII->isSDWA(Opcode)) {
+    auto SDWAInst = MI.getParent()->getParent()->CloneMachineInstr(&MI);
+    MI.getParent()->insert(MI.getIterator(), SDWAInst);
+
+    // Apply all sdwa operand patterns.
+    bool Converted = false;
+    for (auto &Operand : SDWAOperands) {
+      LLVM_DEBUG(dbgs() << *SDWAInst << "\nOperand: " << *Operand);
+      // There should be no intersection between SDWA operands and potential MIs
+      // e.g.:
+      // v_and_b32 v0, 0xff, v1 -> src:v1 sel:BYTE_0
+      // v_and_b32 v2, 0xff, v0 -> src:v0 sel:BYTE_0
+      // v_add_u32 v3, v4, v2
+      //
+      // In that example it is possible that we would fold 2nd instruction into
+      // 3rd (v_add_u32_sdwa) and then try to fold 1st instruction into 2nd
+      // (that was already destroyed). So if SDWAOperand is also a potential MI
+      // then do not apply it.
+      if (PotentialMatches.count(Operand->getParentInst()) == 0)
+        Converted |= Operand->convertToSDWA(*SDWAInst, TII, true);
+    }
+
+    if (Converted) {
+      ConvertedInstructions.push_back(SDWAInst);
+      for (MachineOperand &MO : SDWAInst->uses()) {
+        if (!MO.isReg())
+          continue;
+
+        MRI->clearKillFlags(MO.getReg());
+      }
+    } else {
+      SDWAInst->eraseFromParent();
+      return false;
+    }
+
+    LLVM_DEBUG(dbgs() << "\nInto:" << *SDWAInst << '\n');
+    ++NumSDWAInstructionsPeepholed;
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  MachineInstr *SDWAInst{createSDWAVersion(MI)};
 
   // Apply all sdwa operand patterns.
   bool Converted = false;
