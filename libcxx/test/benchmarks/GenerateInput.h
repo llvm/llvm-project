@@ -195,7 +195,7 @@ template <>
 struct Generate<std::string> {
   static std::string arbitrary() { return "hello world"; }
   static std::string cheap() { return "small"; }
-  static std::string expensive() { return "large stringggggggggggggggggggggggggggggggggggggggggggggggggggg"; }
+  static std::string expensive() { return std::string(256, 'x'); }
 };
 
 #endif // BENCHMARK_GENERATE_INPUT_H

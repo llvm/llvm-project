@@ -15,8 +15,8 @@
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  ContainerBenchmarks::back_insertable_container_benchmarks<std::vector<int>>("std::vector<int>");
-  ContainerBenchmarks::back_insertable_container_benchmarks<std::vector<std::string>>("std::vector<std::string>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::vector<int>>("std::vector<int>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::vector<std::string>>("std::vector<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

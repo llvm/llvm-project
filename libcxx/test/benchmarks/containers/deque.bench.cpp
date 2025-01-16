@@ -15,8 +15,8 @@
 #include "benchmark/benchmark.h"
 
 int main(int argc, char** argv) {
-  ContainerBenchmarks::back_insertable_container_benchmarks<std::deque<int>>("std::deque<int>");
-  ContainerBenchmarks::back_insertable_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::deque<int>>("std::deque<int>");
+  ContainerBenchmarks::sequence_container_benchmarks<std::deque<std::string>>("std::deque<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

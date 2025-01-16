@@ -15,6 +15,7 @@
 #include <iterator>
 #include <ranges> // for std::from_range
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "benchmark/benchmark.h"
@@ -39,13 +40,10 @@ void DoNotOptimizeData(Container& c) {
 template <class Container>
 void BM_ctor_size(benchmark::State& st) {
   auto size = st.range(0);
-  char buffer[sizeof(Container)];
+
   for (auto _ : st) {
-    std::construct_at(reinterpret_cast<Container*>(buffer), size);
-    benchmark::DoNotOptimize(buffer);
-    st.PauseTiming();
-    std::destroy_at(reinterpret_cast<Container*>(buffer));
-    st.ResumeTiming();
+    Container c(size); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(c);
   }
 }
 
@@ -55,13 +53,10 @@ void BM_ctor_size_value(benchmark::State& st, Generator gen) {
   const auto size = st.range(0);
   ValueType value = gen();
   benchmark::DoNotOptimize(value);
-  char buffer[sizeof(Container)];
+
   for (auto _ : st) {
-    std::construct_at(reinterpret_cast<Container*>(buffer), size, value);
-    benchmark::DoNotOptimize(buffer);
-    st.PauseTiming();
-    std::destroy_at(reinterpret_cast<Container*>(buffer));
-    st.ResumeTiming();
+    Container c(size, value); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(c);
   }
 }
 
@@ -74,86 +69,103 @@ void BM_ctor_iter_iter(benchmark::State& st, Generator gen) {
   const auto begin = in.begin();
   const auto end   = in.end();
   benchmark::DoNotOptimize(in);
-  char buffer[sizeof(Container)];
+
   for (auto _ : st) {
-    std::construct_at(reinterpret_cast<Container*>(buffer), begin, end);
-    benchmark::DoNotOptimize(buffer);
-    st.PauseTiming();
-    std::destroy_at(reinterpret_cast<Container*>(buffer));
-    st.ResumeTiming();
+    Container c(begin, end); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(c);
   }
 }
 
 #if TEST_STD_VER >= 23
-template <class Container>
-void BM_ctor_from_range(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_ctor_from_range(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const auto size = st.range(0);
-  std::vector<ValueType> in(size);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
   benchmark::DoNotOptimize(in);
-  char buffer[sizeof(Container)];
+
   for (auto _ : st) {
-    std::construct_at(reinterpret_cast<Container*>(buffer), std::from_range, in);
-    benchmark::DoNotOptimize(buffer);
-    st.PauseTiming();
-    std::destroy_at(reinterpret_cast<Container*>(buffer));
-    st.ResumeTiming();
+    Container c(std::from_range, in); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(c);
   }
 }
 #endif
 
-template <class Container>
-void BM_ctor_copy(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_ctor_copy(benchmark::State& st, Generator gen) {
   auto size = st.range(0);
-  Container c(size);
-  char buffer[sizeof(Container)];
+  Container in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
   for (auto _ : st) {
-    std::construct_at(reinterpret_cast<Container*>(buffer), c);
-    benchmark::DoNotOptimize(buffer);
-    st.PauseTiming();
-    std::destroy_at(reinterpret_cast<Container*>(buffer));
-    st.ResumeTiming();
+    Container c(in); // we assume the destructor doesn't dominate the benchmark
+    DoNotOptimizeData(c);
+    DoNotOptimizeData(in);
   }
 }
 
-template <class Container>
-void BM_assignment(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_assignment(benchmark::State& st, Generator gen) {
   auto size = st.range(0);
-  Container c1;
-  Container c2(size);
+  Container in1, in2;
+  std::generate_n(std::back_inserter(in1), size, gen);
+  std::generate_n(std::back_inserter(in2), size, gen);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
+
+  // Assign from one of two containers in succession to avoid
+  // hitting a self-assignment corner-case
+  Container c(in1);
+  bool toggle = false;
   for (auto _ : st) {
-    c1 = c2;
-    DoNotOptimizeData(c1);
-    DoNotOptimizeData(c2);
+    c      = toggle ? in1 : in2;
+    toggle = !toggle;
+    DoNotOptimizeData(c);
+    DoNotOptimizeData(in1);
+    DoNotOptimizeData(in2);
   }
 }
 
-template <typename Container>
-void BM_assign_inputiter(benchmark::State& st) {
+// Benchmark Container::assign(input-iter, input-iter) when the container already contains
+// the same number of elements that we're assigning. The intent is to check whether the
+// implementation basically creates a new container from scratch or manages to reuse the
+// pre-existing storage.
+template <typename Container, class Generator>
+void BM_assign_input_iter_full(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   auto size       = st.range(0);
-  std::vector<ValueType> inputs(size);
-  Container c(inputs.begin(), inputs.end());
-  DoNotOptimizeData(c);
-  DoNotOptimizeData(inputs);
-  ValueType* first = inputs.data();
-  ValueType* last  = inputs.data() + inputs.size();
+  std::vector<ValueType> in1, in2;
+  std::generate_n(std::back_inserter(in1), size, gen);
+  std::generate_n(std::back_inserter(in2), size, gen);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
 
+  Container c(in1.begin(), in1.end());
+  bool toggle = false;
   for (auto _ : st) {
+    std::vector<ValueType>& in = toggle ? in1 : in2;
+    auto first                 = in.data();
+    auto last                  = in.data() + in.size();
     c.assign(cpp17_input_iterator(first), cpp17_input_iterator(last));
-    benchmark::ClobberMemory();
+    toggle = !toggle;
+    DoNotOptimizeData(c);
   }
 }
 
-template <class Container>
-void BM_insert_start(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_insert_start(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  Container c(inputs.begin(), inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c(in.begin(), in.end());
   DoNotOptimizeData(c);
 
-  ValueType value{};
+  ValueType value = gen();
   benchmark::DoNotOptimize(value);
 
   for (auto _ : st) {
@@ -164,20 +176,23 @@ void BM_insert_start(benchmark::State& st) {
   }
 }
 
-template <class Container>
+template <class Container, class Generator>
   requires std::random_access_iterator<typename Container::iterator>
-void BM_insert_middle(benchmark::State& st) {
+void BM_insert_middle(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  Container c(inputs.begin(), inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c(in.begin(), in.end());
   DoNotOptimizeData(c);
 
-  ValueType value{};
+  ValueType value = gen();
   benchmark::DoNotOptimize(value);
 
   for (auto _ : st) {
-    auto mid = c.begin() + (count / 2); // requires random-access iterators in order to make sense
+    auto mid = c.begin() + (size / 2); // requires random-access iterators in order to make sense
     c.insert(mid, value);
     DoNotOptimizeData(c);
 
@@ -185,76 +200,91 @@ void BM_insert_middle(benchmark::State& st) {
   }
 }
 
-template <class Container>
-void BM_insert_input_iter_with_reserve_no_realloc(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_insert_start_input_iter_with_reserve_no_realloc(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  const auto beg = cpp17_input_iterator(inputs.begin());
-  const auto end = cpp17_input_iterator(inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+  auto first = in.data();
+  auto last  = in.data() + in.size();
 
-  auto size = 100; // arbitrary
-  Container c(size);
-  c.reserve(size + inputs.size()); // ensure no reallocation
+  const int small = 100; // arbitrary
+  Container c;
+  c.reserve(size + small); // ensure no reallocation
+  std::generate_n(std::back_inserter(c), small, gen);
+
   for (auto _ : st) {
-    c.insert(c.begin(), beg, end);
+    c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
 
     st.PauseTiming();
-    c.erase(c.begin() + size, c.end()); // avoid growing indefinitely
+    c.erase(c.begin() + small, c.end()); // avoid growing indefinitely
     st.ResumeTiming();
   }
 }
 
-template <class Container>
-void BM_insert_input_iter_with_reserve_half_filled(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_insert_start_input_iter_with_reserve_half_filled(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  const auto beg = cpp17_input_iterator(inputs.begin());
-  const auto end = cpp17_input_iterator(inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+  auto first = in.data();
+  auto last  = in.data() + in.size();
 
   for (auto _ : st) {
     st.PauseTiming();
-    Container c(count / 2);
     // Half the elements in [beg, end) can fit in the vector without reallocation, so we'll reallocate halfway through
-    c.reserve(count);
+    Container c;
+    c.reserve(size);
+    std::generate_n(std::back_inserter(c), size / 2, gen);
     st.ResumeTiming();
 
-    c.insert(c.begin(), beg, end);
+    c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
   }
 }
 
-template <class Container>
-void BM_insert_input_iter_with_reserve_near_full(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_insert_start_input_iter_with_reserve_near_full(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  const auto beg = cpp17_input_iterator(inputs.begin());
-  const auto end = cpp17_input_iterator(inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+  auto first = in.data();
+  auto last  = in.data() + in.size();
 
   for (auto _ : st) {
     st.PauseTiming();
-    Container c(count);
-    c.reserve(count + 5); // Make sure the container is almost full
+    // Create an almost full container
+    Container c;
+    c.reserve(size + 5);
+    std::generate_n(std::back_inserter(c), size, gen);
     st.ResumeTiming();
 
-    c.insert(c.begin(), beg, end);
+    c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
   }
 }
 
-template <class Container>
-void BM_erase_start(benchmark::State& st) {
+template <class Container, class Generator>
+void BM_erase_start(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  Container c(inputs.begin(), inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c(in.begin(), in.end());
   DoNotOptimizeData(c);
 
-  ValueType value{};
+  ValueType value = gen();
   benchmark::DoNotOptimize(value);
+
   for (auto _ : st) {
     c.erase(c.begin());
     DoNotOptimizeData(c);
@@ -263,20 +293,23 @@ void BM_erase_start(benchmark::State& st) {
   }
 }
 
-template <class Container>
+template <class Container, class Generator>
   requires std::random_access_iterator<typename Container::iterator>
-void BM_erase_middle(benchmark::State& st) {
+void BM_erase_middle(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  Container c(inputs.begin(), inputs.end());
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c(in.begin(), in.end());
   DoNotOptimizeData(c);
 
-  ValueType value{};
+  ValueType value = gen();
   benchmark::DoNotOptimize(value);
 
   for (auto _ : st) {
-    auto mid = c.begin() + (count / 2);
+    auto mid = c.begin() + (size / 2);
     c.erase(mid);
     DoNotOptimizeData(c);
 
@@ -284,107 +317,143 @@ void BM_erase_middle(benchmark::State& st) {
   }
 }
 
+template <class Container, class Generator>
+void BM_push_back(benchmark::State& st, Generator gen) {
+  using ValueType = typename Container::value_type;
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c;
+  DoNotOptimizeData(c);
+  while (st.KeepRunningBatch(size)) {
+    c.clear();
+    for (int i = 0; i != size; ++i) {
+      c.push_back(in[i]);
+    }
+    DoNotOptimizeData(c);
+  }
+}
+
+template <class Container, class Generator>
+void BM_push_back_with_reserve(benchmark::State& st, Generator gen) {
+  using ValueType = typename Container::value_type;
+  const int size  = st.range(0);
+  std::vector<ValueType> in;
+  std::generate_n(std::back_inserter(in), size, gen);
+  DoNotOptimizeData(in);
+
+  Container c;
+  c.reserve(size);
+  DoNotOptimizeData(c);
+  while (st.KeepRunningBatch(size)) {
+    c.clear();
+    for (int i = 0; i != size; ++i) {
+      c.push_back(in[i]);
+    }
+    DoNotOptimizeData(c);
+  }
+}
+
 template <class Container>
 void sequence_container_benchmarks(std::string container) {
   using ValueType = typename Container::value_type;
-  auto cheap      = [] { return Generate<ValueType>::cheap(); };
-  auto expensive  = [] { return Generate<ValueType>::expensive(); };
+
+  using Generator     = ValueType (*)();
+  Generator cheap     = [] { return Generate<ValueType>::cheap(); };
+  Generator expensive = [] { return Generate<ValueType>::expensive(); };
+  auto tostr          = [&](Generator gen) { return gen == cheap ? " (cheap elements)" : " (expensive elements)"; };
+  std::vector<Generator> generators;
+  generators.push_back(cheap);
+  if constexpr (!std::is_integral_v<ValueType>) {
+    generators.push_back(expensive);
+  }
 
   // constructors
   benchmark::RegisterBenchmark(container + "::ctor(size)", BM_ctor_size<Container>)->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(size, value_type) (cheap elements)", [=](auto& st) {
-    BM_ctor_size_value<Container>(st, cheap);
-  })->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(size, value_type) (expensive elements)", [=](auto& st) {
-    BM_ctor_size_value<Container>(st, expensive);
-  })->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator) (cheap elements)", [=](auto& st) {
-    BM_ctor_iter_iter<Container>(st, cheap);
-  })->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator) (expensive elements)", [=](auto& st) {
-    BM_ctor_iter_iter<Container>(st, expensive);
-  })->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::ctor(size, value_type)" + tostr(gen), [=](auto& st) {
+      BM_ctor_size_value<Container>(st, gen);
+    })->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::ctor(Iterator, Iterator)" + tostr(gen), [=](auto& st) {
+      BM_ctor_iter_iter<Container>(st, gen);
+    })->Arg(1024);
 #if TEST_STD_VER >= 23
-  benchmark::RegisterBenchmark(container + "::ctor(Range)", BM_ctor_from_range<Container>)->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::ctor(Range)" + tostr(gen), [=](auto& st) {
+      BM_ctor_from_range<Container>(st, gen);
+    })->Arg(1024);
 #endif
-  benchmark::RegisterBenchmark(container + "::ctor(const&)", BM_ctor_copy<Container>)->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::ctor(const&)" + tostr(gen), [=](auto& st) {
+      BM_ctor_copy<Container>(st, gen);
+    })->Arg(1024);
 
   // assignment
-  benchmark::RegisterBenchmark(container + "::operator=", BM_assignment<Container>)->Arg(1024);
-  benchmark::RegisterBenchmark(container + "::assign(input-iter, input-iter)", BM_assign_inputiter<Container>)
-      ->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::operator=(const&)" + tostr(gen), [=](auto& st) {
+      BM_assignment<Container>(st, gen);
+    })->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::assign(input-iter, input-iter) (full container)" + tostr(gen),
+                                 [=](auto& st) { BM_assign_input_iter_full<Container>(st, gen); })
+        ->Arg(1024);
 
   // insert
-  benchmark::RegisterBenchmark(container + "::insert(start)", BM_insert_start<Container>)->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::insert(begin)" + tostr(gen), [=](auto& st) {
+      BM_insert_start<Container>(st, gen);
+    })->Arg(1024);
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
-    benchmark::RegisterBenchmark(container + "::insert(middle)", BM_insert_middle<Container>)->Arg(1024);
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(container + "::insert(middle)" + tostr(gen), [=](auto& st) {
+        BM_insert_middle<Container>(st, gen);
+      })->Arg(1024);
   }
   if constexpr (requires(Container c) { c.reserve(0); }) {
-    benchmark::RegisterBenchmark(container + "::insert(input-iter, input-iter) (no realloc)",
-                                 BM_insert_input_iter_with_reserve_no_realloc<Container>)
-        ->Arg(514048);
-    benchmark::RegisterBenchmark(container + "::insert(input-iter, input-iter) (half filled)",
-                                 BM_insert_input_iter_with_reserve_no_realloc<Container>)
-        ->Arg(514048);
-    benchmark::RegisterBenchmark(container + "::insert(input-iter, input-iter) (near full)",
-                                 BM_insert_input_iter_with_reserve_near_full<Container>)
-        ->Arg(514048);
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(
+          container + "::insert(input-iter, input-iter) (insert at front, no realloc)" + tostr(gen),
+          [=](auto& st) { BM_insert_start_input_iter_with_reserve_no_realloc<Container>(st, gen); })
+          ->Arg(1024);
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(
+          container + "::insert(input-iter, input-iter) (insert at front, half filled)" + tostr(gen),
+          [=](auto& st) { BM_insert_start_input_iter_with_reserve_half_filled<Container>(st, gen); })
+          ->Arg(1024);
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(
+          container + "::insert(input-iter, input-iter) (insert at front, near full)" + tostr(gen),
+          [=](auto& st) { BM_insert_start_input_iter_with_reserve_near_full<Container>(st, gen); })
+          ->Arg(1024);
   }
 
   // erase
-  benchmark::RegisterBenchmark(container + "::erase(start)", BM_erase_start<Container>)->Arg(1024);
+  for (auto gen : generators)
+    benchmark::RegisterBenchmark(container + "::erase(start)" + tostr(gen), [=](auto& st) {
+      BM_erase_start<Container>(st, gen);
+    })->Arg(1024);
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
-    benchmark::RegisterBenchmark(container + "::erase(middle)", BM_erase_middle<Container>)->Arg(1024);
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(container + "::erase(middle)" + tostr(gen), [=](auto& st) {
+        BM_erase_middle<Container>(st, gen);
+      })->Arg(1024);
   }
-}
 
-//
-// "Back-insertable" sequence container operations
-//
-template <class Container>
-void BM_push_back(benchmark::State& st) {
-  using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  benchmark::DoNotOptimize(inputs);
-
-  Container c;
-  DoNotOptimizeData(c);
-  while (st.KeepRunningBatch(count)) {
-    c.clear();
-    for (int i = 0; i != count; ++i) {
-      c.push_back(inputs[i]);
+  // push_back (optional)
+  if constexpr (requires(Container c, ValueType v) { c.push_back(v); }) {
+    for (auto gen : generators)
+      benchmark::RegisterBenchmark(container + "::push_back()" + tostr(gen), [=](auto& st) {
+        BM_push_back<Container>(st, gen);
+      })->Arg(1024);
+    if constexpr (requires(Container c) { c.reserve(0); }) {
+      for (auto gen : generators)
+        benchmark::RegisterBenchmark(container + "::push_back() (with reserve)" + tostr(gen), [=](auto& st) {
+          BM_push_back_with_reserve<Container>(st, gen);
+        })->Arg(1024);
     }
-    DoNotOptimizeData(c);
-  }
-}
-
-template <class Container>
-void BM_push_back_with_reserve(benchmark::State& st) {
-  using ValueType = typename Container::value_type;
-  const int count = st.range(0);
-  std::vector<ValueType> inputs(count);
-  benchmark::DoNotOptimize(inputs);
-
-  Container c;
-  c.reserve(count);
-  DoNotOptimizeData(c);
-  while (st.KeepRunningBatch(count)) {
-    c.clear();
-    for (int i = 0; i != count; ++i) {
-      c.push_back(inputs[i]);
-    }
-    DoNotOptimizeData(c);
-  }
-}
-
-template <class Container>
-void back_insertable_container_benchmarks(std::string container) {
-  sequence_container_benchmarks<Container>(container);
-  benchmark::RegisterBenchmark(container + "::push_back()", BM_push_back<Container>)->Arg(1024);
-  if constexpr (requires(Container c) { c.reserve(0); }) {
-    benchmark::RegisterBenchmark(container + "::push_back() (with reserve)", BM_push_back_with_reserve<Container>)
-        ->Arg(1024);
   }
 }
 
