@@ -116,7 +116,8 @@ public:
   /// SDWA selection in
   /// \p NewOp .
   /// For example, if we have existing BYTE_0 Sel and are attempting to fold
-  /// WORD_1 Sel: BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
+  /// WORD_1 Sel:
+  ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
   bool combineSdwaSel(SdwaSel ExistingOp, SdwaSel FoldedOp, SdwaSel &NewOp) {
     if (ExistingOp == SdwaSel::DWORD) {
       NewOp = FoldedOp;
@@ -151,7 +152,7 @@ public:
         NewOp = SdwaSel::WORD_1;
 
       return true;
-    }    
+    }
 
     return false;
   }
