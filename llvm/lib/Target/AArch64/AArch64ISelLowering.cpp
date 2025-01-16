@@ -1190,7 +1190,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   if (Subtarget->hasSME())
-    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i1, Custom);
 
   if (Subtarget->isNeonAvailable()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
@@ -27631,15 +27631,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
       return;
     }
-    case Intrinsic::aarch64_sme_in_streaming_mode: {
-      SDLoc DL(N);
-      SDValue Chain = DAG.getEntryNode();
-      SDValue RuntimePStateSM =
-          getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
-      Results.push_back(
-          DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
-      return;
-    }
     case Intrinsic::experimental_vector_match:
     case Intrinsic::get_active_lane_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
@@ -27653,6 +27644,24 @@ void AArch64TargetLowering::ReplaceNodeResults(
       SDLoc DL(N);
       auto V = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, N->ops());
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+      return;
+    }
+    }
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    Intrinsic::ID IntID =
+        static_cast<Intrinsic::ID>(N->getConstantOperandVal(1));
+    switch (IntID) {
+    default:
+      return;
+    case Intrinsic::aarch64_sme_in_streaming_mode: {
+      SDValue Chain = N->getOperand(0);
+      SDLoc DL(N);
+      SDValue RuntimePStateSM =
+          getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, RuntimePStateSM));
+      Results.push_back(Chain);
       return;
     }
     }
