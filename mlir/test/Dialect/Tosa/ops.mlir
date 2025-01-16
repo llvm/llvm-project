@@ -562,7 +562,8 @@ func.func @test_slice(%arg0: tensor<13x21x3xf32>) -> tensor<4x11x1xf32> {
 // -----
 // CHECK-LABEL: tile
 func.func @test_tile(%arg0: tensor<13x21x3xf32>) -> tensor<39x21x6xf32> {
-  %0 = tosa.tile %arg0 {multiples = array<i64: 3, 1, 2>} : (tensor<13x21x3xf32>) -> tensor<39x21x6xf32>
+  %cst = tosa.const_shape { value = dense<[3, 1, 2]> : tensor<3xindex> } : () -> !tosa.shape<3>
+  %0 = tosa.tile %arg0, %cst: (tensor<13x21x3xf32>, !tosa.shape<3>) -> tensor<39x21x6xf32>
   return %0 : tensor<39x21x6xf32>
 }
 
@@ -691,4 +692,11 @@ func.func @test_while_loop(%arg0: tensor<10xi32>, %arg1: tensor<i32>) {
 func.func @test_custom(%arg0: tensor<10xi32>) -> tensor<10xi32> {
   %0 = tosa.custom %arg0 {operator_name="custom_test", domain_name="tosa.mlir_test", implementation_attrs="" } : (tensor<10xi32>) -> (tensor<10xi32>)
   return %0 : tensor<10xi32>
+}
+
+// -----
+// CHECK-LABEL: const_shape
+func.func @test_const_shape() -> !tosa.shape<4> {
+  %cst = tosa.const_shape {value = dense<1> : tensor<4xindex>} : () -> !tosa.shape<4>
+  return %cst : !tosa.shape<4>
 }

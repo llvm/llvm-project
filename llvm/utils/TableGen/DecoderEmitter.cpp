@@ -2146,7 +2146,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
         InsnOperands.push_back(std::move(OpInfo));
     }
   }
-  Operands[Opc] = InsnOperands;
+  Operands[Opc] = std::move(InsnOperands);
 
 #if 0
   LLVM_DEBUG({

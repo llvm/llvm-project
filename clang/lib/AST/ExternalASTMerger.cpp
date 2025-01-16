@@ -276,8 +276,8 @@ bool ExternalASTMerger::HasImporterForOrigin(ASTContext &OriginContext) {
 template <typename CallbackType>
 void ExternalASTMerger::ForEachMatchingDC(const DeclContext *DC,
                                           CallbackType Callback) {
-  if (Origins.count(DC)) {
-    ExternalASTMerger::DCOrigin Origin = Origins[DC];
+  if (auto It = Origins.find(DC); It != Origins.end()) {
+    ExternalASTMerger::DCOrigin Origin = It->second;
     LazyASTImporter &Importer = LazyImporterForOrigin(*this, *Origin.AST);
     Callback(Importer, Importer.GetReverse(), Origin.DC);
   } else {

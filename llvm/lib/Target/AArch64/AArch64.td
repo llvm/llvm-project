@@ -74,7 +74,8 @@ def SVEUnsupported : AArch64Unsupported {
 }
 
 let F = [HasSME2p2, HasSVE2p2orSME2p2, HasNonStreamingSVEorSME2p2,
-         HasNonStreamingSVE2p2orSME2p2, HasNonStreamingSVE2orSSVE_BitPerm] in
+         HasNonStreamingSVE2p2orSME2p2, HasNonStreamingSVE2orSSVE_BitPerm,
+         HasSME_MOP4, HasSME_TMOP] in
 def SME2p2Unsupported : AArch64Unsupported;
 
 def SME2p1Unsupported : AArch64Unsupported {
