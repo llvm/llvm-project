@@ -58,6 +58,29 @@ code bases.
   containing strict-aliasing violations. The new default behavior can be
   disabled using ``-fno-pointer-tbaa``.
 
+- Clang will now more aggressively use undefined behavior on pointer addition
+  overflow for optimization purposes. For example, a check like
+  ``ptr + unsigned_offset < ptr`` will now optimize to ``false``, because
+  ``ptr + unsigned_offset`` will cause undefined behavior if it overflows (or
+  advances past the end of the object).
+
+  Previously, ``ptr + unsigned_offset < ptr`` was optimized (by both Clang and
+  GCC) to ``(ssize_t)unsigned_offset < 0``. This also results in an incorrect
+  overflow check, but in a way that is less apparent when only testing with
+  pointers in the low half of the address space.
+
+  To avoid pointer addition overflow, it is necessary to perform the addition
+  on integers, for example using
+  ``(uintptr_t)ptr + unsigned_offset < (uintptr_t)ptr``. Sometimes, it is also
+  possible to rewrite checks by only comparing the offset. For example,
+  ``ptr + offset < end_ptr && ptr + offset >= ptr`` can be written as
+  ``offset < (uintptr_t)(end_ptr - ptr)``.
+
+  Undefined behavior due to pointer addition overflow can be reliably detected
+  using ``-fsanitize=pointer-overflow``. It is also possible to use
+  ``-fno-strict-overflow`` to opt-in to a language dialect where signed integer
+  and pointer overflow are well-defined.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -446,6 +469,10 @@ Non-comprehensive list of changes in this release
 - Matrix types (a Clang extension) can now be used in pseudo-destructor expressions,
   which allows them to be stored in STL containers.
 
+- In the ``-ftime-report`` output, the new "Clang time report" group replaces
+  the old "Clang front-end time report" and includes "Front end", "LLVM IR
+  generation", "Optimizer", and "Machine code generation".
+
 New Compiler Flags
 ------------------
 
@@ -761,6 +788,7 @@ Improvements to Clang's diagnostics
       scope.Unlock();
       require(scope); // Warning!  Requires mu1.
     }
+- Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -923,6 +951,11 @@ Bug Fixes to C++ Support
   (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
 - Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
+- Fixed a crash when __PRETTY_FUNCTION__ or __FUNCSIG__ (clang-cl) appears in the trailing return type of the lambda (#GH121274)
+- Fixed a crash caused by the incorrect construction of template arguments for CTAD alias guides when type
+  constraints are applied. (#GH122134)
+- Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1041,10 +1074,22 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Implementation of SVE2.1 and SME2.1 in accordance with the Arm C Language
+  Extensions (ACLE) is now available.
+
 - In the ARM Target, the frame pointer (FP) of a leaf function can be retained
   by using the ``-fno-omit-frame-pointer`` option. If you want to eliminate the FP
   in leaf functions after enabling ``-fno-omit-frame-pointer``, you can do so by adding
   the ``-momit-leaf-frame-pointer`` option.
+
+- SME keyword attributes which apply to function types are now represented in the
+  mangling of the type. This means that ``void foo(void (*f)() __arm_streaming);``
+  now has a different mangling from ``void foo(void (*f)());``.
+
+- The ``__arm_agnostic`` keyword attribute was added to let users describe
+  a function that preserves SME state enabled by PSTATE.ZA without having to share
+  this state with its callers and without making the assumption that this state
+  exists.
 
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
@@ -1183,6 +1228,12 @@ libclang
 --------
 - Add ``clang_isBeforeInTranslationUnit``. Given two source locations, it determines
   whether the first one comes strictly before the second in the source code.
+- Add ``clang_getTypePrettyPrinted``.  It allows controlling the PrintingPolicy used
+  to pretty-print a type.
+- Added ``clang_visitCXXBaseClasses``, which allows visiting the base classes
+  of a class.
+- Added ``clang_getOffsetOfBase``, which allows computing the offset of a base
+  class in a class's layout.
 
 Static Analyzer
 ---------------
@@ -1323,10 +1374,19 @@ Sanitizers
 Python Binding Changes
 ----------------------
 - Fixed an issue that led to crashes when calling ``Type.get_exception_specification_kind``.
-- Added bindings for ``clang_getCursorPrettyPrinted`` and related functions,
-  which allow changing the formatting of pretty-printed code.
-- Added binding for ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if
-  a declaration is an anonymous union or anonymous struct.
+- Added ``Cursor.pretty_printed``, a binding for ``clang_getCursorPrettyPrinted``,
+  and related functions, which allow changing the formatting of pretty-printed code.
+- Added ``Cursor.is_anonymous_record_decl``, a binding for
+  ``clang_Cursor_isAnonymousRecordDecl``, which allows checking if a
+  declaration is an anonymous union or anonymous struct.
+- Added ``Type.pretty_printed`, a binding for ``clang_getTypePrettyPrinted``,
+  which allows changing the formatting of pretty-printed types.
+- Added ``Cursor.is_virtual_base``, a binding for ``clang_isVirtualBase``,
+  which checks whether a base class is virtual.
+- Added ``Type.get_bases``, a binding for ``clang_visitCXXBaseClasses``, which
+  allows visiting the base classes of a class.
+- Added ``Cursor.get_base_offsetof``, a binding for ``clang_getOffsetOfBase``,
+  which allows computing the offset of a base class in a class's layout.
 
 OpenMP Support
 --------------
@@ -1338,6 +1398,7 @@ OpenMP Support
   always build support for AMDGPU and NVPTX targets.
 - Added support for combined masked constructs  'omp parallel masked taskloop',
   'omp parallel masked taskloop simd','omp masked taskloop' and 'omp masked taskloop simd' directive.
+- Added support for align-modifier in 'allocate' clause.
 
 Improvements
 ^^^^^^^^^^^^
