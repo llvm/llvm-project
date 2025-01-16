@@ -267,3 +267,74 @@ func.func @compare_scf_for(%a: index, %b: index, %c: index) {
   }
   return
 }
+
+// -----
+
+func.func @scf_for_result_infer() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg = %c0) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c10) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_for_result_infer_dynamic_init(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg = %i) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  %6 = arith.addi %i, %c10 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %6) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @scf_for_result_infer_dynamic_init_big_step(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c5 = arith.constant 5 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c2 iter_args(%arg = %i) -> index {
+    %2 = "test.some_use"() : () -> (i1)
+    %3 = scf.if %2 -> (index) {
+        %5 = arith.addi %arg, %c1 : index
+        scf.yield %5 : index
+    } else {
+        scf.yield %arg : index
+    }
+    scf.yield %3 : index
+  }
+  %6 = arith.addi %i, %c5 : index
+  %7 = arith.addi %i, %c4 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %6) {cmp = "LE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %7) {cmp = "LE"} : (index, index) -> ()
+  return
+}

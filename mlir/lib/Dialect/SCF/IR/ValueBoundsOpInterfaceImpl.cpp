@@ -70,6 +70,22 @@ struct ForOpInterface
         cstr.bound(value) == cstr.getExpr(initArg);
       }
     }
+
+    if (dim.has_value() || isa<BlockArgument>(value))
+      return;
+
+    // `value` is result of `forOp`, we can prove that:
+    // %result == %init_arg + trip_count * (%yielded_value - %iter_arg).
+    // Where trip_count is (ub - lb) / step.
+    AffineExpr lbExpr = cstr.getExpr(forOp.getLowerBound());
+    AffineExpr ubExpr = cstr.getExpr(forOp.getUpperBound());
+    AffineExpr stepExpr = cstr.getExpr(forOp.getStep());
+    AffineExpr tripCountExpr =
+        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+    AffineExpr oneIterAdvanceExpr =
+        cstr.getExpr(yieldedValue) - cstr.getExpr(iterArg);
+    cstr.bound(value) ==
+        cstr.getExpr(initArg) + AffineExpr(tripCountExpr * oneIterAdvanceExpr);
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,
