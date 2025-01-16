@@ -93,8 +93,6 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   bool CallAccessesFPEnv = false;
   if (IsFPConstrained) {
     if (const auto *Func = dyn_cast<Function>(Callee)) {
-      // Some intrinsic functions in non-default FP mode must have FP operand
-      // bundles to indicate a side effect due to read/write FP environment.
       if (Intrinsic::ID ID = Func->getIntrinsicID()) {
         LLVMContext &C = Func->getContext();
         CallAccessesFPEnv = IntrinsicInst::canAccessFPEnvironment(C, ID);

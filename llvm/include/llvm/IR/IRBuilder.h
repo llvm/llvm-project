@@ -2443,7 +2443,8 @@ public:
   CallInst *CreateCall(FunctionType *FTy, Value *Callee,
                        ArrayRef<Value *> Args = {}, const Twine &Name = "",
                        MDNode *FPMathTag = nullptr) {
-    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name, FPMathTag);
+    return CreateCall(FTy, Callee, Args, DefaultOperandBundles, Name,
+                      FPMathTag);
   }
 
   CallInst *CreateCall(FunctionType *FTy, Value *Callee, ArrayRef<Value *> Args,
