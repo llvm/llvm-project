@@ -2082,7 +2082,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        converter.copyHostAssociateVar(*sym, &insp);
+        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
       }
     }
   }
@@ -2511,7 +2511,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, symTable);
+                           enableDelayedPrivatization, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;

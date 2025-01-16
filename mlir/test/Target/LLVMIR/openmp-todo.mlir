@@ -271,17 +271,6 @@ llvm.func @target_host_eval(%x : i32) {
 
 // -----
 
-llvm.func @target_if(%x : i1) {
-  // expected-error@below {{not yet implemented: Unhandled clause if in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target if(%x) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -404,17 +393,6 @@ llvm.func @task_in_reduction(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
   omp.task in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @task_priority(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause priority in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task priority(%x : i32) {
     omp.terminator
   }
   llvm.return

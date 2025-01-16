@@ -14,19 +14,4 @@ implicit none
   ! Set PRIVATE by default to explicitly only export what is meant
   ! to be exported by this MODULE.
 
-  interface
-    attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
-      real, intent(in), value :: x, y
-      real :: __fadd_rd
-    end function
-  end interface
-  public :: __fadd_rd
-
-  interface
-    attributes(device) function __fadd_ru(x, y) bind(c, name='__nv_fadd_ru')
-      real, intent(in), value :: x, y
-      real :: __fadd_ru
-    end function
-  end interface
-  public :: __fadd_ru
 end module

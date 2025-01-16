@@ -2141,6 +2141,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
   }
 
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
+  }
+
   return false;
 }
 
@@ -4805,12 +4815,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
