@@ -460,9 +460,11 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.quick_exit
   )
 
-  # Only baremetal and GPU has an in-tree 'malloc' implementation.
-  if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
-      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  # Only baremetal, snmalloc and GPU has an in-tree 'malloc'
+  # implementation.
+  if(LIBC_TARGET_OS_IS_BAREMETAL
+      OR (LIBC_TARGET_OS_IS_GPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+      OR NOT "${LLVM_LIBC_INCLUDE_SNMALLOC}")
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY
