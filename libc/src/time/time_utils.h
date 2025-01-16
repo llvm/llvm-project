@@ -127,19 +127,46 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
 }
 
 LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
-                                          struct tm *result) {
+                                          struct tm *input) {
+  static struct tm result;
   int64_t t = *t_ptr;
 
+  result.tm_sec = input->tm_sec;
+  result.tm_min = input->tm_min;
+  result.tm_hour = input->tm_hour;
+  result.tm_mday = input->tm_mday;
+  result.tm_mon = input->tm_mon;
+  result.tm_year = input->tm_year;
+  result.tm_wday = input->tm_wday;
+  result.tm_yday = input->tm_yday;
+  result.tm_isdst = input->tm_isdst;
+
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(t, result) < 0) {
+  if (update_from_seconds(t, &result) < 0) {
     out_of_range();
     return nullptr;
   }
 
-  int isdst = calculate_dst(result);
-  result->tm_isdst = isdst;
+  int isdst = calculate_dst(&result);
+  result.tm_isdst = isdst;
 
-  return result;
+  return &result;
+}
+
+// for windows only, implemented on gnu/linux for compatibility reasons
+LIBC_INLINE int localtime_s(const time_t *t_ptr, struct tm *input) {
+  static struct tm *result = localtime_internal(t_ptr, input);
+  time_t t = LIBC_NAMESPACE::mktime(result);
+
+  if (*t_ptr < t) {
+    return -1;
+  }
+
+  if (*t_ptr > t) {
+    return 1;
+  }
+
+  return 0;
 }
 
 // Returns number of years from (1, year).
