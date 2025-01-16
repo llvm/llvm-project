@@ -170,7 +170,7 @@ headers_not_available = list(map(Header, [
     "linalg",
     "rcu",
     "spanstream",
-    "stacktrace",
+    "stacktrace",  # TODO(stacktrace23): remove this when stacktrace is taken out of experimental
     "stdfloat",
     "text_encoding",
 ]))
@@ -208,6 +208,7 @@ lit_header_restrictions = {
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
+    "experimental/stacktrace": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
     "experimental/utility": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
@@ -275,6 +276,7 @@ mandatory_inclusions = {
     "regex": ["compare", "initializer_list"],
     "set": ["compare", "initializer_list"],
     "stack": ["compare", "initializer_list"],
+    "stacktrace": ["compare"],
     "string_view": ["compare"],
     "string": ["compare", "initializer_list"],
     "syncstream": ["ostream"],
