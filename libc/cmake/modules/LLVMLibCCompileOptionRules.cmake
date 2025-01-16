@@ -257,18 +257,31 @@ function(_get_common_test_compile_options output_var c_test flags)
       if(NOT c_test)
         list(APPEND compile_options "-fext-numeric-literals")
       endif()
-    else()
-      list(APPEND compile_options "-Wno-c99-extensions")
-      list(APPEND compile_options "-Wno-gnu-imaginary-constant")
-    endif()
-    list(APPEND compile_options "-Wno-pedantic")
-    if(NOT CMAKE_COMPILER_IS_GNUCXX)
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wstrict-prototypes")
       list(APPEND compile_options "-Wthread-safety")
-      list(APPEND compile_options "-Wglobal-constructors")
+      # TODO(https://github.com/llvm/llvm-project/issues/119281) triggered in TEST_F implementation
+      list(APPEND compile_options "-Wno-global-constructors") 
+
+      # TODO(https://github.com/llvm/llvm-project/issues/119281)
+      # These have been disabled for the time being to create explicit PRs for each change.
+      list(APPEND compile_options "-Wno-unused-parameter")
+      list(APPEND compile_options "-Wno-implicit-int-conversion")
+      list(APPEND compile_options "-Wno-shorten-64-to-32")
+      list(APPEND compile_options "-Wno-float-conversion")
+      list(APPEND compile_options "-Wno-implicit-float-conversion")
+      list(APPEND compile_options "-Wno-extra-semi")
+
+
+      list(APPEND compile_options "-Wno-c99-extensions")
+      list(APPEND compile_options "-Wno-gnu-imaginary-constant")
+
     endif()
+
+    list(APPEND compile_options "-Wno-pedantic")
+
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()
