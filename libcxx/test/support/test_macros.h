@@ -360,6 +360,24 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #define TEST_NOINLINE
 #endif
 
+// Disables tail-call optimization for "outbound" calls
+// performed in the function annotated with this attribute.
+#if __has_cpp_attribute(_Clang::__disable_tail_calls__)
+#define TEST_NO_TAIL_CALLS_OUT [[_Clang::__disable_tail_calls__]]
+#elif __has_cpp_attribute(__gnu__::__optimize__)
+#define TEST_NO_TAIL_CALLS_OUT [[__gnu__::__optimize__("no-optimize-sibling-calls")]]
+#else
+#define TEST_NO_TAIL_CALLS_OUT
+#endif
+
+// Disables tail-call optimization for "inbound" calls -- that is,
+// calls from some other function calling the one having this attribute.
+#if __has_cpp_attribute(_Clang::__not_tail_called__)
+#define TEST_NO_TAIL_CALLS_IN [[_Clang::__not_tail_called__]]
+#else
+#define TEST_NO_TAIL_CALLS_IN
+#endif
+
 #ifdef _WIN32
 #define TEST_NOT_WIN32(...) ((void)0)
 #else
