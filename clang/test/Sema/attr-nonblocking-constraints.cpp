@@ -255,6 +255,15 @@ void nb14(unsigned idx) [[clang::nonblocking]]
 
 	FPArray src{ nb, nullptr };
 	FP f = src[idx]; // This should not generate a warning.
+
+	FP twoDim[2][2] = {};
+	FP g = twoDim[1][1];
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-extension"
+	FP vla[idx];
+#pragma clang diagnostic pop
+	FP h = vla[0];
 }
 
 // Block variables
