@@ -216,8 +216,6 @@ private:
   SDValue BitConvertToInteger(SDValue Op);
   SDValue BitConvertVectorToIntegerVector(SDValue Op);
   SDValue CreateStackStoreLoad(SDValue Op, EVT DestVT);
-  SDValue PackBitcastInRegister(SDNode *N) const;
-  SDValue UnpackBitcastInRegister(SDNode *N) const;
   SDValue LowerBitcastInRegister(SDNode *N) const;
   bool CustomLowerNode(SDNode *N, EVT VT, bool LegalizeResult);
   bool CustomWidenLowerNode(SDNode *N, EVT VT);
