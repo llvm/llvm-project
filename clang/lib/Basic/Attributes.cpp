@@ -153,12 +153,22 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
 
 AttributeCommonInfo::AttrArgsInfo
 AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
+  StringRef AttrName =
+      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
 #define CXX11_ATTR_ARGS_INFO
-  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(
-             normalizeName(Name, /*Scope*/ nullptr, Syntax::AS_CXX11))
+  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(AttrName)
 #include "clang/Basic/CXX11AttributeInfo.inc"
       .Default(AttributeCommonInfo::AttrArgsInfo::None);
 #undef CXX11_ATTR_ARGS_INFO
+}
+
+bool AttributeCommonInfo::hasCXX11Attr(const IdentifierInfo *Name,
+                                       const TargetInfo &Target,
+                                       const LangOptions &LangOpts) {
+  StringRef AttrName =
+      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
+  return hasAttributeImpl(Syntax::AS_CXX11, AttrName, /*ScopeName*/ "", Target,
+                          LangOpts) > 0;
 }
 
 std::string AttributeCommonInfo::getNormalizedFullName() const {

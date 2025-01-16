@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 
 namespace clang {
@@ -247,6 +248,9 @@ public:
                             const IdentifierInfo *Scope, Syntax SyntaxUsed);
 
   static AttrArgsInfo getCXX11AttrArgsInfo(const IdentifierInfo *Name);
+
+  static bool hasCXX11Attr(const IdentifierInfo *Name, const TargetInfo &Target,
+                           const LangOptions &LangOpts);
 
 private:
   /// Get an index into the attribute spelling list
