@@ -109,8 +109,16 @@ public:
 
 /// The list scheduler.
 class Scheduler {
+  /// This is a list-scheduler and this is the list containing the instructions
+  /// that are ready, meaning that all their dependency successors have already
+  /// been scheduled.
   ReadyListContainer ReadyList;
+  /// The dependency graph is used by the scheduler to determine the legal
+  /// ordering of instructions.
   DependencyGraph DAG;
+  /// This is the top of the schedule, i.e. the location where the scheduler
+  /// is about to place the scheduled instructions. It gets updated as we
+  /// schedule.
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
@@ -145,7 +153,11 @@ class Scheduler {
 public:
   Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx) {}
   ~Scheduler() {}
-
+  /// Tries to build a schedule that includes all of \p Instrs scheduled at the
+  /// same scheduling cycle. This essentially checks that there are no
+  /// dependencies among \p Instrs. This function may involve scheduling
+  /// intermediate instructions or canceling and re-scheduling if needed.
+  /// \Returns true on success, false otherwise.
   bool trySchedule(ArrayRef<Instruction *> Instrs);
   /// Clear the scheduler's state, including the DAG.
   void clear() {

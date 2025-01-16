@@ -76,8 +76,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
 
   Address resolved_addr;
 
-  SectionLoadList &section_load_list = target.GetSectionLoadList();
-  if (section_load_list.IsEmpty())
+  if (!target.HasLoadedSections())
     // No sections are loaded, so we must assume we are not running yet and
     // need to operate only on file address.
     target.ResolveFileAddress(addr, resolved_addr);

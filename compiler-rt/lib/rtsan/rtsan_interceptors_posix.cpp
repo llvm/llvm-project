@@ -376,6 +376,95 @@ INTERCEPTOR(void, setbuffer, FILE *stream, char *buf, int size) {
 #define RTSAN_MAYBE_INTERCEPT_SETBUFFER
 #endif
 
+#if SANITIZER_INTERCEPT_FSEEK
+INTERCEPTOR(int, fgetpos, FILE *stream, fpos_t *pos) {
+  __rtsan_notify_intercepted_call("fgetpos");
+  return REAL(fgetpos)(stream, pos);
+}
+
+INTERCEPTOR(int, fseek, FILE *stream, long offset, int whence) {
+  __rtsan_notify_intercepted_call("fseek");
+  return REAL(fseek)(stream, offset, whence);
+}
+
+INTERCEPTOR(int, fseeko, FILE *stream, off_t offset, int whence) {
+  __rtsan_notify_intercepted_call("fseeko");
+  return REAL(fseeko)(stream, offset, whence);
+}
+
+INTERCEPTOR(int, fsetpos, FILE *stream, const fpos_t *pos) {
+  __rtsan_notify_intercepted_call("fsetpos");
+  return REAL(fsetpos)(stream, pos);
+}
+
+INTERCEPTOR(long, ftell, FILE *stream) {
+  __rtsan_notify_intercepted_call("ftell");
+  return REAL(ftell)(stream);
+}
+
+INTERCEPTOR(off_t, ftello, FILE *stream) {
+  __rtsan_notify_intercepted_call("ftello");
+  return REAL(ftello)(stream);
+}
+
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+INTERCEPTOR(int, fgetpos64, FILE *stream, fpos64_t *pos) {
+  __rtsan_notify_intercepted_call("fgetpos64");
+  return REAL(fgetpos64)(stream, pos);
+}
+
+INTERCEPTOR(int, fseeko64, FILE *stream, off64_t offset, int whence) {
+  __rtsan_notify_intercepted_call("fseeko64");
+  return REAL(fseeko64)(stream, offset, whence);
+}
+
+INTERCEPTOR(int, fsetpos64, FILE *stream, const fpos64_t *pos) {
+  __rtsan_notify_intercepted_call("fsetpos64");
+  return REAL(fsetpos64)(stream, pos);
+}
+
+INTERCEPTOR(off64_t, ftello64, FILE *stream) {
+  __rtsan_notify_intercepted_call("ftello64");
+  return REAL(ftello64)(stream);
+}
+#endif
+
+INTERCEPTOR(void, rewind, FILE *stream) {
+  __rtsan_notify_intercepted_call("rewind");
+  return REAL(rewind)(stream);
+}
+#define RTSAN_MAYBE_INTERCEPT_FGETPOS INTERCEPT_FUNCTION(fgetpos)
+#define RTSAN_MAYBE_INTERCEPT_FSEEK INTERCEPT_FUNCTION(fseek)
+#define RTSAN_MAYBE_INTERCEPT_FSEEKO INTERCEPT_FUNCTION(fseeko)
+#define RTSAN_MAYBE_INTERCEPT_FSETPOS INTERCEPT_FUNCTION(fsetpos)
+#define RTSAN_MAYBE_INTERCEPT_FTELL INTERCEPT_FUNCTION(ftell)
+#define RTSAN_MAYBE_INTERCEPT_FTELLO INTERCEPT_FUNCTION(ftello)
+#define RTSAN_MAYBE_INTERCEPT_REWIND INTERCEPT_FUNCTION(rewind)
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+#define RTSAN_MAYBE_INTERCEPT_FGETPOS64 INTERCEPT_FUNCTION(fgetpos64)
+#define RTSAN_MAYBE_INTERCEPT_FSEEKO64 INTERCEPT_FUNCTION(fseeko64)
+#define RTSAN_MAYBE_INTERCEPT_FSETPOS64 INTERCEPT_FUNCTION(fsetpos64)
+#define RTSAN_MAYBE_INTERCEPT_FTELLO64 INTERCEPT_FUNCTION(ftello64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FGETPOS64
+#define RTSAN_MAYBE_INTERCEPT_FSEEKO64
+#define RTSAN_MAYBE_INTERCEPT_FSETPOS64
+#define RTSAN_MAYBE_INTERCEPT_FTELLO64
+#endif
+#else
+#define RTSAN_MAYBE_INTERCEPT_FGETPOS
+#define RTSAN_MAYBE_INTERCEPT_FSEEK
+#define RTSAN_MAYBE_INTERCEPT_FSEEKO
+#define RTSAN_MAYBE_INTERCEPT_FSETPOS
+#define RTSAN_MAYBE_INTERCEPT_FTELL
+#define RTSAN_MAYBE_INTERCEPT_FTELLO
+#define RTSAN_MAYBE_INTERCEPT_REWIND
+#define RTSAN_MAYBE_INTERCEPT_FGETPOS64
+#define RTSAN_MAYBE_INTERCEPT_FSEEKO64
+#define RTSAN_MAYBE_INTERCEPT_FSETPOS64
+#define RTSAN_MAYBE_INTERCEPT_FTELLO64
+#endif
+
 INTERCEPTOR(int, puts, const char *s) {
   __rtsan_notify_intercepted_call("puts");
   return REAL(puts)(s);
@@ -1042,6 +1131,17 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_SETVBUF;
   RTSAN_MAYBE_INTERCEPT_SETLINEBUF;
   RTSAN_MAYBE_INTERCEPT_SETBUFFER;
+  RTSAN_MAYBE_INTERCEPT_FGETPOS;
+  RTSAN_MAYBE_INTERCEPT_FSEEK;
+  RTSAN_MAYBE_INTERCEPT_FSEEKO;
+  RTSAN_MAYBE_INTERCEPT_FSETPOS;
+  RTSAN_MAYBE_INTERCEPT_FTELL;
+  RTSAN_MAYBE_INTERCEPT_FTELLO;
+  RTSAN_MAYBE_INTERCEPT_REWIND;
+  RTSAN_MAYBE_INTERCEPT_FGETPOS64;
+  RTSAN_MAYBE_INTERCEPT_FSEEKO64;
+  RTSAN_MAYBE_INTERCEPT_FSETPOS64;
+  RTSAN_MAYBE_INTERCEPT_FTELLO64;
   INTERCEPT_FUNCTION(lseek);
   RTSAN_MAYBE_INTERCEPT_LSEEK64;
   INTERCEPT_FUNCTION(dup);

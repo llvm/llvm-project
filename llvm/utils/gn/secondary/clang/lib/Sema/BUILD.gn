@@ -94,6 +94,7 @@ static_library("Sema") {
     "SemaObjC.cpp",
     "SemaObjCProperty.cpp",
     "SemaOpenACC.cpp",
+    "SemaOpenACCClause.cpp",
     "SemaOpenCL.cpp",
     "SemaOpenMP.cpp",
     "SemaOverload.cpp",
