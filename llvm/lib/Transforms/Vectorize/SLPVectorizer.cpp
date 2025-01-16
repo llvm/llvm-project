@@ -10023,7 +10023,7 @@ void BoUpSLP::transformNodes() {
 
   if (LoadEntriesToVectorize.empty()) {
     // Single load node - exit.
-    if (VectorizableTree.size() <= 1 &&
+    if (VectorizableTree.size() <= 1 && VectorizableTree.front()->hasState() &&
         VectorizableTree.front()->getOpcode() == Instruction::Load)
       return;
     // Small graph with small VF - exit.
@@ -18141,8 +18141,9 @@ static RecurKind getRdxKind(Value *V);
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
-      VectorizableTree.front()->getOpcode() == Instruction::Store ||
-      VectorizableTree.front()->getOpcode() == Instruction::InsertElement;
+      VectorizableTree.front()->hasState() &&
+      (VectorizableTree.front()->getOpcode() == Instruction::Store ||
+       VectorizableTree.front()->getOpcode() == Instruction::InsertElement);
   if ((IsStoreOrInsertElt || UserIgnoreList) &&
       ExtraBitWidthNodes.size() <= 1 &&
       (!CastMaxMinBWSizes || CastMaxMinBWSizes->second == 0 ||
