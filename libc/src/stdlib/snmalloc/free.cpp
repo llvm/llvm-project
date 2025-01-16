@@ -11,7 +11,7 @@
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(void, free, (void * ptr)) {
+LLVM_LIBC_FUNCTION(void, free, (void *ptr)) {
   return snmalloc::libc::free(ptr);
 }
 } // namespace LIBC_NAMESPACE_DECL
