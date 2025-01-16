@@ -66,7 +66,9 @@ function(add_flang_library name)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   clang_target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
-  mlir_target_link_libraries(${name} PRIVATE ${ARG_MLIR_LIBS})
+  if (ARG_MLIR_LIBS)
+    mlir_target_link_libraries(${name} PRIVATE ${ARG_MLIR_LIBS})
+  endif()
 
   if (TARGET ${name})
 
