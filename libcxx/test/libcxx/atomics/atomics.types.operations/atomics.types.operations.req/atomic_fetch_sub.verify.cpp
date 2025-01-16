@@ -63,12 +63,12 @@ struct S {
 void member_function_pointer() {
   {
     volatile std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no member named 'fetch_sub' in}}
+    // expected-error@*:* {{no matching function for call to 'atomic_fetch_sub'}}
     std::atomic_fetch_sub(&fun, 0);
   }
   {
     std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no member named 'fetch_sub' in}}
+    // expected-error@*:* {{no matching function for call to 'atomic_fetch_sub'}}
     std::atomic_fetch_sub(&fun, 0);
   }
 }
