@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILShaderFlags.h"
+#include "DXILRootSignature.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -23,7 +24,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -63,6 +63,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
@@ -151,17 +152,15 @@ void DXContainerGlobals::addSignature(Module &M,
 void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
-  std::optional<RootSignatureDesc> Desc =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>()
-          .getModuleMetadata()
-          .RootSignatureDesc;
-  if (!Desc.has_value())
+  std::optional<ModuleRootSignature> MRS =
+      getAnalysis<RootSignatureAnalysisWrapper>()
+          .getRootSignature();
+  if (!MRS.has_value())
     return;
 
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
-  RootSignatureDescWriter writer(&Desc.value());
-  writer.write(OS);
+  MRS->write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
