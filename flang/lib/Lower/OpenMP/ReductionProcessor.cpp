@@ -25,6 +25,7 @@
 #include "flang/Parser/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
+#include <string>
 
 static llvm::cl::opt<bool> forceByrefReduction(
     "force-byref-reduction",
@@ -514,18 +515,36 @@ static bool doReductionByRef(mlir::Value reductionVar) {
   return false;
 }
 
+mlir::omp::ReductionModifier
+translateReductionModifier(const ReductionModifier &m) {
+  switch (m) {
+  case ReductionModifier::Default:
+    return mlir::omp::ReductionModifier::defaultmod;
+  case ReductionModifier::Inscan:
+    return mlir::omp::ReductionModifier::inscan;
+  case ReductionModifier::Task:
+    return mlir::omp::ReductionModifier::task;
+  }
+  return mlir::omp::ReductionModifier::defaultmod;
+}
+
 void ReductionProcessor::addDeclareReduction(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
     const omp::clause::Reduction &reduction,
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols) {
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  if (std::get<std::optional<omp::clause::Reduction::ReductionModifier>>(
-          reduction.t))
-    TODO(currentLocation, "Reduction modifiers are not supported");
+  auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
+  if (mod.has_value() && (mod.value() != ReductionModifier::Inscan)) {
+    std::string modStr = "default";
+    if (mod.value() == ReductionModifier::Task)
+      modStr = "task";
+    TODO(currentLocation, "Reduction modifier " + modStr + " is not supported");
+  }
 
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{
@@ -649,6 +668,11 @@ void ReductionProcessor::addDeclareReduction(
                                   currentLocation, isByRef);
     reductionDeclSymbols.push_back(
         mlir::SymbolRefAttr::get(firOpBuilder.getContext(), decl.getSymName()));
+    auto redMod = std::get<std::optional<ReductionModifier>>(reduction.t);
+    if (redMod.has_value())
+      *reductionMod = mlir::omp::ReductionModifierAttr::get(
+          firOpBuilder.getContext(),
+          translateReductionModifier(redMod.value()));
   }
 }
 
