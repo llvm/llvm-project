@@ -1,20 +1,19 @@
 %feature("docstring",
-"A container for options to use when saving a core file.
+"A container to specify how to save a core file.
 
 SBSaveCoreOptions includes API's to specify the memory regions and threads to include
-when generating a core file. These options are not exclusive the existing SaveCoreStyle option.
+when generating a core file. It extends the existing SaveCoreStyle option.
 
-Full will save off all thread and memory regions, ignoring the memory regions and threads in
+* eSaveCoreFull will save off all thread and memory regions, ignoring the memory regions and threads in
 the options object.
 
-Dirty pages will capture all threads and all rw- memory regions, in addition to the regions specified
+* eSaveCoreDirtyOnly pages will capture all threads and all rw- memory regions, in addition to the regions specified
 in the options object if they are not already captured.
 
-Stacks will capture all threads, but no memory regions unless specified.
+* eSaveCoreStackOnly will capture all threads, but no memory regions unless specified.
 
-Custom defers entirely to the SBSaveCoreOptions object and will only save what is specified.
-
-Picking custom and specifying nothing will result in an error being returned.
+* eSaveCoreCustomOnly Custom defers entirely to the SBSaveCoreOptions object and will only save what is specified. 
+  Picking custom and specifying nothing will result in an error being returned.
 
 Note that currently ELF Core files are not supported.
 ")
