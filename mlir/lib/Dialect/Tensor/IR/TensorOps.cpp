@@ -1156,20 +1156,6 @@ void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ReplaceEmptyTensorStaticShapeDims>(context);
 }
 
-/// Try to remove a tensor operation if it would only reshape a constant.
-/// Removes the op and replaces the constant with a new constant of the result
-/// shape. When an optional cst attribute is passed, it is reshaped only if the
-/// splat value matches the value in the attribute.
-static OpFoldResult
-reshapeConstantSource(DenseElementsAttr source, TensorType result,
-                      std::optional<Attribute> cst = std::nullopt) {
-  if (source && source.isSplat() && result.hasStaticShape() &&
-      (!cst.has_value() || source.getSplatValue<Attribute>() == cst.value()))
-    return source.resizeSplat(result);
-
-  return {};
-}
-
 //===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
