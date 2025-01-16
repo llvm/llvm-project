@@ -90,6 +90,8 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     if (!Ctx->emitConstUint32(Offset, E))
       return false;
     return Ctx->emitArrayElemPtrPopUint32(E);
+  case K_RVO:
+    return Ctx->emitRVOPtr(E);
   case K_InitList:
     return true;
   default:
@@ -2137,6 +2139,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
 
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
   }
 
   return false;
@@ -4803,12 +4815,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4998,6 +5005,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       if (!this->visit(RE))
         return false;
     } else {
+      InitLinkScope<Emitter> ILS(this, InitLink::RVO());
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
         return false;

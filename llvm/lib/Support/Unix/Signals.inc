@@ -53,9 +53,7 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
 #if HAVE_DLFCN_H
 #include <dlfcn.h>
 #endif

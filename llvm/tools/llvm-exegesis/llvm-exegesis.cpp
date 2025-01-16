@@ -132,10 +132,7 @@ static cl::opt<BenchmarkPhaseSelectorE> BenchmarkPhaseSelector(
         clEnumValN(
             BenchmarkPhaseSelectorE::Measure, "measure",
             "Same as prepare-measured-code, but also runs the measurement "
-            "(default)"),
-        clEnumValN(
-            BenchmarkPhaseSelectorE::DryRunMeasure, "dry-run-measurement",
-            "Same as measure, but does not actually execute the snippet")),
+            "(default)")),
     cl::init(BenchmarkPhaseSelectorE::Measure));
 
 static cl::opt<bool>
@@ -479,7 +476,7 @@ static void runBenchmarkConfigurations(
 }
 
 void benchmarkMain() {
-  if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure &&
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
       !UseDummyPerfCounters) {
 #ifndef HAVE_LIBPFM
     ExitWithError(
@@ -504,7 +501,7 @@ void benchmarkMain() {
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
-  if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure)
+  if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure)
     ExitOnErr(State.getExegesisTarget().checkFeatureSupport());
 
   if (ExecutionMode == BenchmarkRunner::ExecutionModeE::SubProcess &&
@@ -523,7 +520,7 @@ void benchmarkMain() {
   const auto Opcodes = getOpcodesOrDie(State);
   std::vector<BenchmarkCode> Configurations;
 
-  unsigned LoopRegister =
+  MCRegister LoopRegister =
       State.getExegesisTarget().getDefaultLoopCounterRegister(
           State.getTargetMachine().getTargetTriple());
 

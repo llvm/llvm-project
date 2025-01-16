@@ -237,8 +237,15 @@ void GPUProfGlobals::dump() const {
   outs() << "========== Data ===========\n";
   for (const auto &ProfData : Data) {
     outs() << "{ ";
+// The ProfData.Name maybe array, eg: NumValueSites[IPVK_Last+1] .
+// If we print out it directly, we are accessing out of bound data.
+// Skip dumping the array for now.
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer)                     \
-  outs() << ProfData.Name << " ";
+  if (sizeof(#Name) > 2 && #Name[sizeof(#Name) - 2] == ']') {                  \
+    outs() << "[...] ";                                                        \
+  } else {                                                                     \
+    outs() << ProfData.Name << " ";                                            \
+  }
 #include "llvm/ProfileData/InstrProfData.inc"
     outs() << "}\n";
   }

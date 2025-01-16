@@ -232,6 +232,12 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
+    // Run SimplifyHLFIRIntrinsics pass late after CSE,
+    // and allow introducing operations with new side effects.
+    addNestedPassToAllTopLevelOperations<PassConstructor>(pm, []() {
+      return hlfir::createSimplifyHLFIRIntrinsics(
+          {/*allowNewSideEffects=*/true});
+    });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
