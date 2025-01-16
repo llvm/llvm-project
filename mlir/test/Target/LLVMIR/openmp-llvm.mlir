@@ -2766,7 +2766,9 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
 // CHECK:         br label %[[VAL_20:.*]]
-// CHECK:       task.body:                                        ; preds = %omp.private.copy
+// CHECK:       [[VAL_20]]:
+// CHECK:         br label %task.body
+// CHECK:       task.body:                                        ; preds = %[[VAL_20]]
 // CHECK:         br label %omp.task.region
 // CHECK:       omp.task.region:                                  ; preds = %task.body
 // CHECK:         call void @foo(ptr %[[VAL_15]])
