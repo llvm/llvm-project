@@ -181,11 +181,13 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
   if (Lang.CPlusPlus &&
       hasAttribute(AttributeCommonInfo::Syntax::AS_CXX11, /*Scope*/ nullptr, II,
                    PP.getTargetInfo(), Lang) > 0) {
-    AttributeCommonInfo::Kind AttrKind = AttributeCommonInfo::getParsedKind(
-        II, /*Scope*/ nullptr, AttributeCommonInfo::Syntax::AS_CXX11);
-    return !((AttrKind == AttributeCommonInfo::Kind::AT_Likely ||
-              AttrKind == AttributeCommonInfo::Kind::AT_Unlikely) &&
-             PP.isNextPPTokenLParen());
+    AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
+        AttributeCommonInfo::getCXX11AttrArgsInfo(II);
+    if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
+      return PP.isNextPPTokenLParen();
+
+    return !PP.isNextPPTokenLParen() ||
+           AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
 }

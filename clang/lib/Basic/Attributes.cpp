@@ -151,6 +151,16 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
   return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
 }
 
+AttributeCommonInfo::AttrArgsInfo
+AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
+#define CXX11_ATTR_ARGS_INFO
+  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(
+             normalizeName(Name, /*Scope*/ nullptr, Syntax::AS_CXX11))
+#include "clang/Basic/CXX11AttributeInfo.inc"
+      .Default(AttributeCommonInfo::AttrArgsInfo::None);
+#undef CXX11_ATTR_ARGS_INFO
+}
+
 std::string AttributeCommonInfo::getNormalizedFullName() const {
   return static_cast<std::string>(
       normalizeName(getAttrName(), getScopeName(), getSyntax()));

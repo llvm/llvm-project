@@ -68,6 +68,11 @@ public:
     UnknownAttribute,
   };
   enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, GSL, RISCV };
+  enum class AttrArgsInfo {
+    None,
+    Optional,
+    Required,
+  };
 
 private:
   const IdentifierInfo *AttrName = nullptr;
@@ -240,6 +245,8 @@ public:
 
   static Kind getParsedKind(const IdentifierInfo *Name,
                             const IdentifierInfo *Scope, Syntax SyntaxUsed);
+
+  static AttrArgsInfo getCXX11AttrArgsInfo(const IdentifierInfo *Name);
 
 private:
   /// Get an index into the attribute spelling list
