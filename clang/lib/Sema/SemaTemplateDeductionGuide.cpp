@@ -1061,13 +1061,14 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // f, this ensures all template parameter occurrences are updated
   // correctly.
   //
-  // The template argument list is formed from the `DeducedArgs`, two parts:
-  //  1) appeared template parameters of alias: transfrom the deduced
-  //  template argument;
-  //  2) non-deduced template parameters of f: rebuild a
-  //  template argument;
+  // The template argument list is formed, in order, from
+  //   1) For the template parameters of the alias, the corresponding deduced
+  //      template arguments
+  //   2) For the non-deduced template parameters of f. the
+  //      (rebuilt) template arguments corresponding.
   //
-  // We now perform 1), as case 2) might refer to substituted 1).
+  // Note: the non-deduced template arguments of `f` might refer to arguments
+  // deduced in 1), as in a type constraint.
   MultiLevelTemplateArgumentList Args;
   Args.setKind(TemplateSubstitutionKind::Rewrite);
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
