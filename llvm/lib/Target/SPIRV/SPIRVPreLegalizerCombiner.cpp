@@ -50,6 +50,14 @@ namespace {
 #include "SPIRVGenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
+/// This match is part of a combine that
+/// rewrites length(X - Y) to distance(X, Y)
+///   (f32 (g_intrinsic length
+///           (g_fsub (vXf32 X) (vXf32 Y))))
+/// ->
+///   (f32 (g_intrinsic distance
+///           (vXf32 X) (vXf32 Y)))
+///
 bool matchLengthToDistance(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (MI.getOpcode() != TargetOpcode::G_INTRINSIC ||
       cast<GIntrinsic>(MI).getIntrinsicID() != Intrinsic::spv_length)
