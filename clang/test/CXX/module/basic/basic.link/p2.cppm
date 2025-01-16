@@ -62,11 +62,12 @@ import M;
 
 void use_from_module_impl() {
   external_linkage_fn();
-  module_linkage_fn();   // expected-error {{use of undeclared identifier 'module_linkage_fn'}}
+  module_linkage_fn();   // expected-error {{declaration of 'module_linkage_fn' must be imported}}
   internal_linkage_fn(); // expected-error {{declaration of 'internal_linkage_fn' must be imported}}
   (void)external_linkage_class{};
   (void)module_linkage_class{}; // expected-error {{undeclared identifier}} expected-error 0+{{}}
   (void)internal_linkage_class{}; // expected-error {{undeclared identifier}} expected-error 0+{{}}
+  // expected-note@M.cppm:9 {{declaration here is not visible}}
   // expected-note@M.cppm:10 {{declaration here is not visible}}
   (void)external_linkage_var;
   (void)module_linkage_var; // expected-error {{undeclared identifier}}
