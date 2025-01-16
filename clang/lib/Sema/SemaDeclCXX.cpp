@@ -1009,14 +1009,16 @@ struct BindingInitWalker {
   using BindingItrTy = typename ArrayRef<BindingDecl *>::iterator;
   using PackExprItrTy = typename MutableArrayRef<Expr *>::iterator;
   Sema &SemaRef;
+  DecompositionDecl *DecompDecl;
   ArrayRef<BindingDecl *> Bindings;
   ResolvedUnexpandedPackExpr *PackExpr = nullptr;
   MutableArrayRef<Expr *> PackExprNodes;
   BindingItrTy BindingItr;
   PackExprItrTy PackExprItr;
 
-  BindingInitWalker(Sema &S, ArrayRef<BindingDecl *> Bs)
-      : SemaRef(S), Bindings(Bs), BindingItr(Bindings.begin()) {}
+  BindingInitWalker(Sema &S, DecompositionDecl *DD, ArrayRef<BindingDecl *> Bs)
+      : SemaRef(S), DecompDecl(DD), Bindings(Bs), BindingItr(Bindings.begin()) {
+  }
 
   BindingDecl *get() { return *BindingItr; }
 
@@ -1037,7 +1039,7 @@ struct BindingInitWalker {
                               B->getLocation(), B->getIdentifier(), T);
 
       NestedBD->setBinding(T, E);
-      NestedBD->setDecomposedDecl(nullptr);
+      NestedBD->setDecomposedDecl(DecompDecl);
       auto *DE = SemaRef.BuildDeclRefExpr(NestedBD, T.getNonReferenceType(),
                                           VK_LValue, B->getLocation());
       *PackExprItr = DE;
@@ -1065,7 +1067,7 @@ static bool checkSimpleDecomposition(
     return true;
   }
 
-  auto Walker = BindingInitWalker(S, Bindings);
+  auto Walker = BindingInitWalker(S, cast<DecompositionDecl>(Src), Bindings);
   for (unsigned I = 0; I < NumElems; I++) {
     BindingDecl *B = Walker.get();
     SourceLocation Loc = B->getLocation();
@@ -1350,7 +1352,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     }
   }
 
-  auto Walker = BindingInitWalker(S, Bindings);
+  auto Walker = BindingInitWalker(S, cast<DecompositionDecl>(Src), Bindings);
   for (unsigned I = 0; I < NumElems; I++) {
     BindingDecl *B = Walker.get();
     InitializingBinding InitContext(S, B);
@@ -1541,7 +1543,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     return true;
   }
 
-  auto Walker = BindingInitWalker(S, Bindings);
+  auto Walker = BindingInitWalker(S, cast<DecompositionDecl>(Src), Bindings);
 
   //   all of E's non-static data members shall be [...] well-formed
   //   when named as e.name in the context of the structured binding,

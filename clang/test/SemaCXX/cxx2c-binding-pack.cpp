@@ -73,8 +73,24 @@ void decompose_array() {
   auto [...pack] = arr2;
 }
 
+// Test case by Younan Zhang.
+template <unsigned... P>
+struct S {
+  template <unsigned... Q>
+  struct N {
+    void foo() {
+      int arr[] = {P..., Q...};
+      auto [x, y, ...rest] = arr;
+      [&]() {
+        static_assert(sizeof...(rest) + 2 == sizeof...(P) + sizeof...(Q));
+      }();
+    }
+  };
+};
+
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
   decompose_struct<my_struct>();
+  S<1, 2, 3, 4>::N<5, 6>().foo();
 }
