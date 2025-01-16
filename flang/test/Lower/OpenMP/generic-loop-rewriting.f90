@@ -11,7 +11,13 @@ subroutine target_teams_loop
 end subroutine target_teams_loop
 
 !CHECK-LABEL: func.func @_QPtarget_teams_loop
-!CHECK:         omp.target map_entries(
+!CHECK:         omp.target
+!CHECK-SAME:    host_eval(
+!CHECK-SAME:      %c0{{[^[:space:]]+}} -> %[[LB:[^[:space:]]+]],
+!CHECK-SAME:      %c10{{[^[:space:]]+}} -> %[[UB:[^[:space:]]+]],
+!CHECK-SAME:      %c1{{[^[:space:]]+}} -> %[[STEP:[^[:space:]]+]]
+!CHECK-SAME:      : i32, i32, i32)
+!CHECK-SAME:    map_entries(
 !CHECK-SAME:      %{{.*}} -> %[[I_ARG:[^[:space:]]+]],
 !CHECK-SAME:      %{{.*}} -> %[[X_ARG:[^[:space:]]+]] : {{.*}}) {
 
@@ -19,10 +25,6 @@ end subroutine target_teams_loop
 !CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ARG]]
 
 !CHECK:           omp.teams {
-
-!CHECK:             %[[LB:.*]] = arith.constant 0 : i32
-!CHECK:             %[[UB:.*]] = arith.constant 10 : i32
-!CHECK:             %[[STEP:.*]] = arith.constant 1 : i32
 
 !CHECK:             omp.parallel private(@{{.*}} %[[I_DECL]]#0 
 !CHECK-SAME:          -> %[[I_PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {

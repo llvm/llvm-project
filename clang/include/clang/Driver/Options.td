@@ -7101,6 +7101,7 @@ defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of 
 defm logical_abbreviations : OptInFC1FFlag<"logical-abbreviations", "Enable logical abbreviations">;
 defm implicit_none : OptInFC1FFlag<"implicit-none", "No implicit typing allowed unless overridden by IMPLICIT statements">;
 defm underscoring : OptInFC1FFlag<"underscoring", "Appends one trailing underscore to external names">;
+defm offload_global_filtering : OptInFC1FFlag<"offload-global-filtering", "Enable/disable OpenMP global filtering pass">;
 defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-vector-element-order",
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
@@ -7121,6 +7122,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
+
+def do_concurrent_parallel_EQ : Joined<["-"], "fdo-concurrent-parallel=">,
+  HelpText<"Try to map `do concurrent` loops to OpenMP (on host or device)">,
+      Values<"none,host,device">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -8502,7 +8507,7 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 // CUDA Options
 //===----------------------------------------------------------------------===//
 
-let Visibility = [CC1Option] in {
+let Visibility = [CC1Option, FC1Option] in {
 
 def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,

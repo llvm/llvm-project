@@ -134,7 +134,7 @@
 // CHECK-NEXT:           "{{.*}}tu_save_temps_module.o"
 // CHECK:                "{{.*}}tu_save_temps_module.s"
 // CHECK:              ]
-// CHECK-NEXT:         "executable": "clang_tool"
+// CHECK-NEXT:         "executable": [[CLANG:"[^"]*clang"]]
 // CHECK:              "input-file": "[[PREFIX]]{{.}}tu_save_temps_module.c"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ]

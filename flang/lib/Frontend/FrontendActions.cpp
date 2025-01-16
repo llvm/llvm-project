@@ -352,16 +352,38 @@ bool CodeGenAction::beginSourceFileAction() {
   // Add OpenMP-related passes
   // WARNING: These passes must be run immediately after the lowering to ensure
   // that the FIR is correct with respect to OpenMP operations/attributes.
-  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP)) {
-    bool isDevice = false;
+  bool isOpenMPEnabled =
+      ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP);
+
+  fir::OpenMPFIRPassPipelineOpts opts;
+
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+  opts.doConcurrentMappingKind =
+      ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
+  opts.enableOffloadGlobalFiltering =
+      ci.getInvocation().getCodeGenOpts().OffloadGlobalFiltering;
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
+      !isOpenMPEnabled) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "lowering `do concurrent` loops to OpenMP is only supported if "
+        "OpenMP is enabled");
+    ci.getDiagnostics().Report(diagID);
+  }
+
+  if (isOpenMPEnabled) {
+    opts.isTargetDevice = false;
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
-      isDevice = offloadMod.getIsTargetDevice();
+      opts.isTargetDevice = offloadMod.getIsTargetDevice();
+
     // WARNING: This pipeline must be run immediately after the lowering to
     // ensure that the FIR is correct with respect to OpenMP operations/
     // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, isDevice);
+    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);

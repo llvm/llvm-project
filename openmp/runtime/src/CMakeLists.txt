@@ -153,6 +153,11 @@ set(LIBOMP_CONFIGURED_CXXFLAGS "${LIBOMP_CONFIGURED_CXXFLAGS} ${OPENMP_SOURCE_DE
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
+# Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
+# to avoid an unwanted dependency on libstdc++/libc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
+add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
+
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
 if(NOT ${LIBOMP_USE_STDCPPLIB})

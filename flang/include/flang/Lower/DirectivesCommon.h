@@ -981,7 +981,10 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         // If it is a scalar subscript, then the upper bound
         // is equal to the lower bound, and the extent is one.
         ubound = lbound;
-        extent = one;
+        if (treatIndexAsSection)
+          extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
+        else
+          extent = one;
       } else {
         asFortran << ':';
         Fortran::semantics::MaybeExpr upper =

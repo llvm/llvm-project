@@ -813,6 +813,10 @@ uint64_t getAllocaAddressSpace(mlir::DataLayout *dataLayout);
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
 
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

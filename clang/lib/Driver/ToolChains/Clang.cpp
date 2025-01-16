@@ -9139,7 +9139,9 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());
 
-  const char *Exec = getToolChain().getDriver().getClangProgramPath();
+  // TODO This is a workaround to enable using -save-temps with flang-new
+  // const char *Exec = getToolChain().getDriver().getClangProgramPath();
+  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("clang"));
   if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke cc1as directly in this process.
     C.addCommand(std::make_unique<CC1Command>(
