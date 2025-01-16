@@ -5636,21 +5636,7 @@ The fields used by CP for code objects before V3 also match those specified in
      30      1 bit   ENABLE_EXCEPTION_INT_DIVIDE_BY  Integer Division by Zero
                      _ZERO                           (rcp_iflag_f32 instruction
                                                      only)
-     31      1 bit   RESERVED                        GFX6-GFX11
-                                                       Reserved, must be 0.
-                     WGP_TAKEOVER                    GFX12
-                                                       Places 16 waves on each of
-                                                       the 4 SIMD of a WGP and
-                                                       allocates all the VGPRs
-                                                       in the WGP to the 64 waves.
-                                                       The only defined usage mode
-                                                       is: ME0.Pipe0,1 (CSG), CS
-                                                       Wave 32, 256 VGPRs per wave,
-                                                       16 waves per workgroup,
-                                                       WGP-centric, 64KB LDS.
-
-                                                       Used by CP to set up
-                                                       ``COMPUTE_PGM_RSRC2.WGP_TAKEOVER``.
+     31      1 bit   RESERVED                        Reserved, must be 0.
      32      **Total size 4 bytes.**
      ======= ===================================================================================================================
 
