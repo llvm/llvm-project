@@ -456,10 +456,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   bool HasPlainEdge = false;
   bool HasAbnormalEdge = false;
 
-  // Ignore default cases that aren't likely to be reachable because all
-  // enums in a switch(X) have explicit case statements.
   CFGBlock::FilterOptions FO;
-  FO.IgnoreDefaultsWithCoveredEnums = 1;
 
   for (CFGBlock::filtered_pred_iterator I =
            cfg->getExit().filtered_pred_start_end(FO);

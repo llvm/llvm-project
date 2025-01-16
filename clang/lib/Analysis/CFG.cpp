@@ -4408,17 +4408,9 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   }
 
   // If we have no "default:" case, the default transition is to the code
-  // following the switch body.  Moreover, take into account if all the
-  // cases of a switch are covered (e.g., switching on an enum value).
-  //
-  // Note: We add a successor to a switch that is considered covered yet has no
-  //       case statements if the enumeration has no enumerators.
-  bool SwitchAlwaysHasSuccessor = false;
-  SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  // following the switch body.
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
-               !SwitchAlwaysHasSuccessor);
+               !switchExclusivelyCovered);
 
   // Add the terminator and condition in the switch block.
   SwitchTerminatedBlock->setTerminator(Terminator);

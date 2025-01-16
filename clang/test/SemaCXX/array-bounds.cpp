@@ -133,7 +133,7 @@ int test_pr9296() {
 
 int test_sizeof_as_condition(int flag) {
   int arr[2] = { 0, 0 }; // expected-note {{array 'arr' declared here}}
-  if (flag) 
+  if (flag)
     return sizeof(char) != sizeof(char) ? arr[2] : arr[1];
   return sizeof(char) == sizeof(char) ? arr[2] : arr[1]; // expected-warning {{array index 2 is past the end of the array (that has type 'int[2]')}}
 }
@@ -170,16 +170,14 @@ void test_nested_switch() {
   }
 }
 
-// Test that if all the values of an enum covered, that the 'default' branch
-// is unreachable.
+// Test that a warning is not emitted if the code is unreachable.
 enum Values { A, B, C, D };
 void test_all_enums_covered(enum Values v) {
   int x[2];
-  switch (v) {
-  case A: return;
-  case B: return;
-  case C: return;
-  case D: return;
+  if(v == A) {
+    return;
+  } else {
+    return;
   }
   x[2] = 0; // no-warning
 }
@@ -244,7 +242,7 @@ void test_pr10771() {
 }
 
 int test_pr11007_aux(const char * restrict, ...);
-  
+
 // Test checking with varargs.
 void test_pr11007() {
   double a[5]; // expected-note {{array 'a' declared here}}
