@@ -29,19 +29,29 @@
 #  include <thread>
 #endif
 
-template <class A, bool Integral>
+// detect existence of the difference_type member type
+template <class...>
+using myvoid_t = void;
+template <typename T, typename = void>
+struct has_difference_type : std::false_type {};
+template <typename T>
+struct has_difference_type<T, myvoid_t<typename T::difference_type> > : std::true_type {};
+
+template <class A, bool IntegralOrFloating, bool Pointer>
 struct test_atomic {
   test_atomic() {
+    static_assert(!IntegralOrFloating || !Pointer, "");
     A a;
     (void)a;
 #if TEST_STD_VER >= 17
     static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
+    static_assert(!has_difference_type<A>::value, "");
 #endif
   }
 };
 
 template <class A>
-struct test_atomic<A, true> {
+struct test_atomic<A, true, false> {
   test_atomic() {
     A a;
     (void)a;
@@ -53,7 +63,7 @@ struct test_atomic<A, true> {
 };
 
 template <class A>
-struct test_atomic<A*, false> {
+struct test_atomic<A, false, true> {
   test_atomic() {
     A a;
     (void)a;
@@ -70,7 +80,10 @@ void test() {
 #if TEST_STD_VER >= 17
   static_assert((std::is_same_v<typename A::value_type, T>), "");
 #endif
-  test_atomic<A, std::is_integral<T>::value && !std::is_same<T, bool>::value>();
+  constexpr bool IntegralOrFloating =
+      (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value;
+  constexpr bool Pointer = std::is_pointer<T>::value;
+  test_atomic<A, IntegralOrFloating, Pointer>();
 }
 
 struct TriviallyCopyable {
@@ -148,6 +161,11 @@ int main(int, char**) {
 
   test<std::uintmax_t>();
   test<std::uintmax_t>();
+
+  test<void*>();
+  test<const void*>();
+  test<int*>();
+  test<const int*>();
 
   test<TriviallyCopyable>();
   test<PaddedTriviallyCopyable>();
