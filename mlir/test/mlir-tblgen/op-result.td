@@ -180,6 +180,27 @@ def OpL4 : NS_Op<"two_inference_edges", [
 // CHECK: inferredReturnTypes[1] = odsInferredType1
 // CHECK: inferredReturnTypes[2] = odsInferredType2
 
+def OpL5 : NS_Op<"op_with_same_but_unconstraint_results",
+    [AllTypesMatch<["result_a", "result_b"]>]> {
+  let results = (outs AnyType:$result_a, AnyType:$result_b);
+}
+
+// CHECK-NOT: LogicalResult OpL5::inferReturnTypes
+
+def OpL6 : NS_Op<"op_with_same_and_constraint_results",
+    [AllTypesMatch<["result_a", "result_b", "result_c"]>]> {
+  let results = (outs AnyType:$result_a, AnyType:$result_b, I32:$result_c);
+}
+
+// CHECK-LABEL: LogicalResult OpL6::inferReturnTypes
+// CHECK-NOT: }
+// CHECK: odsInferredType0 = odsBuilder.getIntegerType(32);
+// CHECK: odsInferredType1 = odsBuilder.getIntegerType(32);
+// CHECK: odsInferredType2 = odsBuilder.getIntegerType(32);
+// CHECK: inferredReturnTypes[0] = odsInferredType0;
+// CHECK: inferredReturnTypes[1] = odsInferredType1;
+// CHECK: inferredReturnTypes[2] = odsInferredType2;
+
 def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResultSegments]> {
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Optional<AnyTensor>:$output3);
 }

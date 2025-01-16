@@ -586,8 +586,8 @@ public:
   bool shouldPrefetchAddressSpace(unsigned AS) const { return !AS; }
 
   InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
                           TTI::PartialReductionExtendKind OpAExtend,
                           TTI::PartialReductionExtendKind OpBExtend,
                           std::optional<unsigned> BinOp = std::nullopt) const {

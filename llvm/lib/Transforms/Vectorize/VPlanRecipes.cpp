@@ -51,24 +51,7 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInstructionSC:
-    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
-      return false;
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::AnyOf:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -115,6 +98,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -303,7 +288,16 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
   VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
 
+  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
+  auto *InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
+                                                     : BinOpR->getOperand(0));
+  auto *InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
+                                                     : BinOpR->getOperand(1));
+
   auto GetExtendKind = [](VPRecipeBase *R) {
+    // The extend could come from outside the plan.
+    if (!R)
+      return TargetTransformInfo::PR_None;
     auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
     if (!WidenCastR)
       return TargetTransformInfo::PR_None;
@@ -314,11 +308,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     return TargetTransformInfo::PR_None;
   };
 
-  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *ExtTy = Ctx.Types.inferScalarType(ExtAR->getOperand(0));
-
-  return Ctx.TTI.getPartialReductionCost(getOpcode(), ExtTy, PhiType, VF,
-                                         GetExtendKind(ExtAR),
+  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
+                                         PhiType, VF, GetExtendKind(ExtAR),
                                          GetExtendKind(ExtBR), Opcode);
 }
 
@@ -765,6 +756,26 @@ void VPInstruction::execute(VPTransformState &State) {
       "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
+}
+
+bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
+  if (Instruction::isBinaryOp(getOpcode()))
+    return false;
+  switch (getOpcode()) {
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case VPInstruction::AnyOf:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExtractFromEnd:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::Not:
+  case VPInstruction::PtrAdd:
+    return false;
+  default:
+    return true;
+  }
 }
 
 bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
@@ -1231,6 +1242,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-SELECT ";
   printAsOperand(O, SlotTracker);
   O << " = select ";
+  printFlags(O);
   getOperand(0)->printAsOperand(O, SlotTracker);
   O << ", ";
   getOperand(1)->printAsOperand(O, SlotTracker);
@@ -1255,6 +1267,8 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   Value *Op1 = State.get(getOperand(2));
   Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
   State.set(this, Sel);
+  if (isa<FPMathOperator>(Sel))
+    setFlags(cast<Instruction>(Sel));
   State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
 }
 
@@ -1412,10 +1426,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     Value *C = nullptr;
     if (FCmp) {
       // Propagate fast math flags.
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
-        Builder.setFastMathFlags(I->getFastMathFlags());
-      C = Builder.CreateFCmp(getPredicate(), A, B);
+      C = Builder.CreateFCmpFMF(
+          getPredicate(), A, B,
+          dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
@@ -2388,6 +2401,7 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 Value *VPScalarCastRecipe ::generate(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(vputils::onlyFirstLaneUsed(this) &&
          "Codegen only implemented for first lane.");
   switch (Opcode) {
@@ -3429,7 +3443,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       ScalarPHI ? StartV->getType() : VectorType::get(StartV->getType(), VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
+  assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   auto *Phi = PHINode::Create(VecTy, 2, "vec.phi");
   Phi->insertBefore(HeaderBB->getFirstInsertionPt());

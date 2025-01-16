@@ -639,7 +639,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS, false);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
-          &Clang->getPreprocessor().getHeaderSearchInfo());
+          &Clang->getPreprocessor().getHeaderSearchInfo(),
+          Cfg.Style.QuotedHeaders, Cfg.Style.AngledHeaders);
       ArrayRef<Inclusion> MainFileIncludes;
       if (Preamble) {
         MainFileIncludes = Preamble->Includes.MainFileIncludes;

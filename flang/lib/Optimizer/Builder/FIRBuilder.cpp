@@ -1626,6 +1626,25 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
                                            cPtr, addrFieldIndex);
 }
 
+mlir::Value fir::factory::genCDevPtrAddr(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value cDevPtr, mlir::Type ty) {
+  auto recTy = mlir::cast<fir::RecordType>(ty);
+  assert(recTy.getTypeList().size() == 1);
+  auto cptrFieldName = recTy.getTypeList()[0].first;
+  mlir::Type cptrFieldTy = recTy.getTypeList()[0].second;
+  auto fieldIndexType = fir::FieldType::get(ty.getContext());
+  mlir::Value cptrFieldIndex = builder.create<fir::FieldIndexOp>(
+      loc, fieldIndexType, cptrFieldName, recTy,
+      /*typeParams=*/mlir::ValueRange{});
+  auto cptrCoord = builder.create<fir::CoordinateOp>(
+      loc, builder.getRefType(cptrFieldTy), cDevPtr, cptrFieldIndex);
+  auto [addrFieldIndex, addrFieldTy] =
+      genCPtrOrCFunptrFieldIndex(builder, loc, cptrFieldTy);
+  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(addrFieldTy),
+                                           cptrCoord, addrFieldIndex);
+}
+
 mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
                                                 mlir::Location loc,
                                                 mlir::Value cPtr) {
@@ -1720,4 +1739,18 @@ uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
     if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
       return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
   return 0;
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::deduceOptimalExtents(mlir::ValueRange extents1,
+                                   mlir::ValueRange extents2) {
+  llvm::SmallVector<mlir::Value> extents;
+  extents.reserve(extents1.size());
+  for (auto [extent1, extent2] : llvm::zip(extents1, extents2)) {
+    if (!fir::getIntIfConstant(extent1) && fir::getIntIfConstant(extent2))
+      extents.push_back(extent2);
+    else
+      extents.push_back(extent1);
+  }
+  return extents;
 }

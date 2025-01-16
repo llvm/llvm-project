@@ -80,12 +80,9 @@ public:
 
   void linkerMain(llvm::ArrayRef<const char *> args);
 
-  void setMachine(llvm::COFF::MachineTypes machine);
+  void addFile(InputFile *file);
 
   void addClangLibSearchPaths(const std::string &argv0);
-
-  // Used by the resolver to parse .drectve section contents.
-  void parseDirectives(InputFile *file);
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
@@ -109,18 +106,14 @@ private:
   StringRef findLib(StringRef filename);
   StringRef findLibMinGW(StringRef filename);
 
-  bool findUnderscoreMangle(StringRef sym);
-
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
   // Adds various search paths based on the sysroot.  Must only be called once
-  // config->machine has been set.
+  // config.machine has been set.
   void addWinSysRootLibSearchPaths();
 
-  // Symbol names are mangled by prepending "_" on x86.
-  StringRef mangle(StringRef sym);
-
+  void setMachine(llvm::COFF::MachineTypes machine);
   llvm::Triple::ArchType getArch();
 
   uint64_t getDefaultImageBase();
@@ -143,6 +136,9 @@ private:
   std::string getImportName(bool asLib);
 
   void createImportLibrary(bool asLib);
+
+  // Used by the resolver to parse .drectve section contents.
+  void parseDirectives(InputFile *file);
 
   void parseModuleDefs(StringRef path);
 
@@ -171,22 +167,6 @@ private:
   std::set<llvm::sys::fs::UniqueID> visitedFiles;
 
   std::set<std::string> visitedLibs;
-
-  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
-
-  void addUndefinedGlob(StringRef arg);
-
-  StringRef mangleMaybe(Symbol *s);
-
-  // Windows specific -- "main" is not the only main function in Windows.
-  // You can choose one from these four -- {w,}{WinMain,main}.
-  // There are four different entry point functions for them,
-  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
-  // choose the right one depending on which "main" function is defined.
-  // This function looks up the symbol table and resolve corresponding
-  // entry point name.
-  StringRef findDefaultEntry();
-  WindowsSubsystem inferSubsystem();
 
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
@@ -279,6 +259,8 @@ private:
   // Create export thunks for exported and patchable Arm64EC function symbols.
   void createECExportThunks();
   void maybeCreateECExportThunk(StringRef name, Symbol *&sym);
+
+  bool ltoCompilationDone = false;
 };
 
 // Create enum with OPT_xxx values for each option in Options.td
