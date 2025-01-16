@@ -1859,7 +1859,24 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
         (VTy && VTy->getElementType()->isScalarType()))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_any_scalar_or_vector)
-        << ArgType;
+        << ArgType << 1;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+  QualType BoolType = S->getASTContext().BoolTy;
+  assert(TheCall->getNumArgs() >= 1);
+  QualType ArgType = TheCall->getArg(0)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // is the bool or vector<bool>
+  if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
+      (VTy &&
+       S->Context.hasSameUnqualifiedType(VTy->getElementType(), BoolType))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_any_scalar_or_vector)
+        << ArgType << 0;
     return true;
   }
   return false;
@@ -2154,6 +2171,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
     TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckWaveActive(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic
