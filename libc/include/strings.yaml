@@ -1,4 +1,5 @@
 header: strings.h
+header_template: strings.h.def
 macros: []
 types: []
 enums: []

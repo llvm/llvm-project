@@ -206,7 +206,12 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
   Documentation<HasDocumentation>,
   Dependencies<[CallAndMessageModeling]>;
 
-def DereferenceChecker : Checker<"NullDereference">,
+def DereferenceModeling : Checker<"DereferenceModeling">,
+  HelpText<"General support for dereference related checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
   CheckerOptions<[
     CmdLineOption<Boolean,
@@ -215,7 +220,8 @@ def DereferenceChecker : Checker<"NullDereference">,
                   "true",
                   Released>
   ]>,
-  Documentation<HasDocumentation>;
+  Documentation<HasDocumentation>,
+  Dependencies<[DereferenceModeling]>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "

@@ -10,23 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "clang/Basic/BuiltinsBase.td"
-
-class X86Builtin<string prototype> : TargetBuiltin {
-  let Spellings = ["__builtin_ia32_" # NAME];
-  let Prototype = prototype;
-  let EnableOpenCLLong = 1;
-}
-
-class X86NoPrefixBuiltin<string prototype> : TargetBuiltin {
-  let Spellings = [NAME];
-  let Prototype = prototype;
-}
-
-class X86LibBuiltin<string prototype> : TargetLibBuiltin {
-  let Spellings = [NAME];
-  let Prototype = prototype;
-}
+include "clang/Basic/BuiltinsX86Base.td"
 
 def rdpmc : X86Builtin<"unsigned long long int(int)">;
 def rdtsc : X86Builtin<"unsigned long long int()">;

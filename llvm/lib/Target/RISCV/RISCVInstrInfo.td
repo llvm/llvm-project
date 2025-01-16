@@ -1424,6 +1424,10 @@ def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
                                (ins GPR:$scratch),
                                []>,
                                Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
 }
 
 /// HI and ADD_LO address nodes.

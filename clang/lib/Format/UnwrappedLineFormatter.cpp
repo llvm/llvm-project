@@ -535,7 +535,7 @@ private:
       // Try to merge records.
       if (TheLine->Last->is(TT_EnumLBrace)) {
         ShouldMerge = Style.AllowShortEnumsOnASingleLine;
-      } else if (TheLine->Last->is(TT_RequiresExpressionLBrace)) {
+      } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace)) {
         // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
@@ -1460,7 +1460,7 @@ unsigned UnwrappedLineFormatter::format(
     bool ContinueFormatting =
         TheLine.Level > RangeMinLevel ||
         (TheLine.Level == RangeMinLevel && !PreviousRBrace &&
-         !TheLine.startsWith(tok::r_brace));
+         !TheLine.startsWith(TT_NamespaceRBrace));
 
     bool FixIndentation = (FixBadIndentation || ContinueFormatting) &&
                           Indent != TheLine.First->OriginalColumn;

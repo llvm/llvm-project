@@ -975,7 +975,7 @@ static void sortSegmentsAndSections() {
   TimeTraceScope timeScope("Sort segments and sections");
   sortOutputSegments();
 
-  DenseMap<const InputSection *, size_t> isecPriorities =
+  DenseMap<const InputSection *, int> isecPriorities =
       priorityBuilder.buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
@@ -1008,7 +1008,7 @@ static void sortSegmentsAndSections() {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
           llvm::stable_sort(
               merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
+                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
               });
         }
       }

@@ -721,6 +721,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   }
   Reg = MIB->getOperand(0).getReg();
   DT.add(GVar, &MIRBuilder.getMF(), Reg);
+  addGlobalObject(GVar, &MIRBuilder.getMF(), Reg);
 
   // Set to Reg the same type as ResVReg has.
   auto MRI = MIRBuilder.getMRI();

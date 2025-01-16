@@ -298,10 +298,14 @@ public:
     static_assert(ARRAY_LEN < 256); // so we can encode the values.
 
     // Minimum alignment to test implementation for bugs related to assuming
-    // incorrect association between alignment and element size.
-    alignas(1) uint8_t buf[BUF_SIZE];
+    // incorrect association between alignment and element size. The buffer is
+    // 'static' as otherwise it will exhaust the stack on the GPU targets.
+    alignas(1) static uint8_t buf[BUF_SIZE];
 
-    const auto fill_buf = [&buf](size_t elem_size) {
+    // GCC still requires capturing the constant ARRAY_INITIAL_VALS in the
+    // lambda hence, let's use & to implicitly capture all needed variables
+    // automatically.
+    const auto fill_buf = [&](size_t elem_size) {
       for (size_t i = 0; i < BUF_SIZE; ++i) {
         buf[i] = 0;
       }

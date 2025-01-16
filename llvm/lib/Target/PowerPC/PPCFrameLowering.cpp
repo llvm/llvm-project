@@ -2307,7 +2307,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
     const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
     unsigned Size = TRI.getSpillSize(RC);
     Align Alignment = TRI.getSpillAlign(RC);
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
 
     // Might we have over-aligned allocas?
     bool HasAlVars =
@@ -2315,8 +2315,7 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
 
     // These kinds of spills might need two registers.
     if (spillsCR(MF) || HasAlVars)
-      RS->addScavengingFrameIndex(
-          MFI.CreateStackObject(Size, Alignment, false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
   }
 }
 
