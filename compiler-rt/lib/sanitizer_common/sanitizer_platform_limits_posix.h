@@ -788,6 +788,16 @@ struct __sanitizer_addrinfo {
   struct __sanitizer_addrinfo *ai_next;
 };
 
+#  if SANITIZER_LINUX
+struct __sanitizer_gaicb {
+  const char *ar_name;
+  const char *ar_service;
+  const struct __sanitizer_addrinfo *ar_request;
+  struct __sanitizer_addrinfo *ar_result;
+  int __pad[6];
+};
+#  endif
+
 struct __sanitizer_hostent {
   char *h_name;
   char **h_aliases;
