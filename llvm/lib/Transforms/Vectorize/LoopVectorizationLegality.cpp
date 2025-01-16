@@ -1635,8 +1635,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
     if (isa<SCEVCouldNotCompute>(EC)) {
-      UncountableExitingBlocks.push_back(BB);
-
       SmallVector<BasicBlock *, 2> Succs(successors(BB));
       if (Succs.size() != 2) {
         reportVectorizationFailure(
@@ -1653,7 +1651,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
         assert(!TheLoop->contains(Succs[1]));
         ExitBlock = Succs[1];
       }
-      UncountableExitBlocks.push_back(ExitBlock);
+      UncountableEdges.push_back({BB, ExitBlock});
     } else
       CountableExitingBlocks.push_back(BB);
   }
@@ -1664,7 +1662,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   // We only support one uncountable early exit.
-  if (getUncountableExitingBlocks().size() != 1) {
+  if (getUncountableEdges().size() != 1) {
     reportVectorizationFailure(
         "Loop has too many uncountable exits",
         "Cannot vectorize early exit loop with more than one early exit",
@@ -1812,7 +1810,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -1822,10 +1819,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else {
-      HasUncountableEarlyExit = true;
       if (!isVectorizableEarlyExitLoop()) {
-        UncountableExitingBlocks.clear();
-        HasUncountableEarlyExit = false;
+        UncountableEdges.clear();
         if (DoExtraAnalysis)
           Result = false;
         else

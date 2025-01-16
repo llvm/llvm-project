@@ -391,25 +391,24 @@ public:
 
   /// Returns true if the loop has an uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const { return HasUncountableEarlyExit; }
+  bool hasUncountableEarlyExit() const { return getUncountableEdges().size(); }
 
   /// Returns the uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitingBlock() const {
-    if (!HasUncountableEarlyExit) {
-      assert(getUncountableExitingBlocks().empty() &&
-             "Expected no uncountable exiting blocks");
+    if (!hasUncountableEarlyExit())
       return nullptr;
-    }
-    assert(getUncountableExitingBlocks().size() == 1 &&
+    assert(getUncountableEdges().size() == 1 &&
            "Expected only a single uncountable exiting block");
-    return getUncountableExitingBlocks()[0];
+    return getUncountableEdges()[0].first;
   }
 
   /// Returns the destination of an uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitBlock() const {
-    assert(getUncountableExitBlocks().size() == 1 &&
+    if (!hasUncountableEarlyExit())
+      return nullptr;
+    assert(getUncountableEdges().size() == 1 &&
            "Expected only a single uncountable exit block");
-    return getUncountableExitBlocks()[0];
+    return getUncountableEdges()[0].second;
   }
 
   /// Returns true if vector representation of the instruction \p I
@@ -463,14 +462,10 @@ public:
     return CountableExitingBlocks;
   }
 
-  /// Returns all the exiting blocks with an uncountable exit.
-  const SmallVector<BasicBlock *, 4> &getUncountableExitingBlocks() const {
-    return UncountableExitingBlocks;
-  }
-
-  /// Returns all the exit blocks from uncountable exiting blocks.
-  SmallVector<BasicBlock *, 4> getUncountableExitBlocks() const {
-    return UncountableExitBlocks;
+  /// Returns all the loop edges that have an uncountable exit.
+  const SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> &
+  getUncountableEdges() const {
+    return UncountableEdges;
   }
 
 private:
@@ -654,18 +649,13 @@ private:
   /// supported.
   bool StructVecCallFound = false;
 
-  /// Indicates whether this loop has an uncountable early exit, i.e. an
-  /// uncountable exiting block that is not the latch.
-  bool HasUncountableEarlyExit = false;
-
   /// Keep track of all the countable and uncountable exiting blocks if
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
-  SmallVector<BasicBlock *, 4> UncountableExitingBlocks;
 
-  /// Keep track of the destinations of all uncountable exits if the
-  /// exact backedge taken count is not computable.
-  SmallVector<BasicBlock *, 4> UncountableExitBlocks;
+  /// Keep track of all the loop edges with uncountable exits, where each entry
+  /// is a pair of (Exiting, Exit) blocks.
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> UncountableEdges;
 };
 
 } // namespace llvm
