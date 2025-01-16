@@ -1,9 +1,9 @@
 /*
-{0}: Dialect CppShortName
+{0}: Dialect BaseTypeName
 */
 
 R"(
-class {0}Type : public ::mlir::Type {{
+class {0} : public ::mlir::Type {{
 public:
   using Type::Type;
 

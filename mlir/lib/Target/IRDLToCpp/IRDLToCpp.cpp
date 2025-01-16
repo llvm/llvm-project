@@ -38,17 +38,20 @@ constexpr char dialectDefTemplateText[] =
 #include "Templates/DialectDef.txt"
     ;
 
-
 constexpr char declarationMacroFlag[] = "GEN_DIALECT_DECL_HEADER";
 constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
 
 constexpr char typeHeaderDeclTemplateText[] =
 #include "Templates/TypeHeaderDecl.txt"
-  ;
+    ;
 
 constexpr char typeHeaderDefTemplateText[] =
 #include "Templates/TypeHeaderDef.txt"
-  ;
+    ;
+
+constexpr char typeDeclTemplateText[] =
+#include "Templates/TypeDecl.txt"
+    ;
 
 namespace {
 
@@ -56,17 +59,47 @@ struct UsefulStrings {
   StringRef dialectName;
   StringRef dialectCppName;
   StringRef dialectCppShortName;
+  StringRef dialectBaseTypeName;
 
   StringRef namespaceOpen;
   StringRef namespaceClose;
   StringRef namespacePathString;
 };
 
+struct TypeStrings {
+  StringRef typeName;
+  StringRef typeCppName;
+  StringRef typeCppShortName;
+};
+
+static std::string capitalize(StringRef str) {
+  return llvm::formatv("{0}{1}", llvm::toUpper(str[0]),
+                       str.slice(1, str.size()));
+}
+
 } // namespace
 
+static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
+                                         UsefulStrings &usefulStrings) {
+
+  std::string typeCppShortName = capitalize(type.getSymName());
+  std::string typeCppName = llvm::formatv("{0}Type", typeCppShortName);
+
+  TypeStrings typeStrings;
+  typeStrings.typeName = type.getSymName();
+  typeStrings.typeCppShortName = typeCppShortName;
+  typeStrings.typeCppName = typeCppName;
+
+  output << llvm::formatv(typeDeclTemplateText, usefulStrings.dialectName,
+                          usefulStrings.dialectBaseTypeName,
+                          typeStrings.typeName, typeStrings.typeCppName);
+
+  return success();
+}
+
 static LogicalResult generateInclude(irdl::DialectOp dialect,
-                                    raw_ostream &output,
-                                    UsefulStrings &usefulStrings) {
+                                     raw_ostream &output,
+                                     UsefulStrings &usefulStrings) {
   output << "#ifdef " << declarationMacroFlag << "\n#undef "
          << declarationMacroFlag << "\n";
 
@@ -75,29 +108,39 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
       usefulStrings.namespacePathString, usefulStrings.dialectName);
 
-  output << llvm::formatv(
-    typeHeaderDeclTemplateText, usefulStrings.dialectCppShortName
-  );
+  output << usefulStrings.namespaceOpen;
+  output << llvm::formatv(typeHeaderDeclTemplateText,
+                          usefulStrings.dialectBaseTypeName);
+
+  auto &&region = dialect->getRegion(0);
+  auto &&block = region.getBlocks().front();
+  for (auto &&op : block) {
+    if (auto typeop = llvm::dyn_cast_or_null<irdl::TypeOp>(op))
+      generateTypeInclude(typeop, output, usefulStrings);
+  }
+
+  output << usefulStrings.namespaceClose;
 
   output << "#endif // " << declarationMacroFlag << "\n";
 
   return success();
 }
 
-static LogicalResult generateLib(irdl::DialectOp dialect,
-                                    raw_ostream &output,
-                                    UsefulStrings &usefulStrings) {
+static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
+                                 UsefulStrings &usefulStrings) {
   output << "#ifdef " << definitionMacroFlag << "\n#undef "
          << definitionMacroFlag << "\n";
 
-  output << llvm::formatv(
-      dialectDefTemplateText, usefulStrings.namespaceOpen,
-      usefulStrings.namespaceClose, usefulStrings.dialectCppName,
-      usefulStrings.namespacePathString);
+  output << llvm::formatv(dialectDefTemplateText, usefulStrings.namespaceOpen,
+                          usefulStrings.namespaceClose,
+                          usefulStrings.dialectCppName,
+                          usefulStrings.namespacePathString);
 
-  output << llvm::formatv(
-    typeHeaderDefTemplateText, usefulStrings.dialectCppShortName, usefulStrings.dialectCppName
-  );
+  output << usefulStrings.namespaceOpen;
+  output << llvm::formatv(typeHeaderDefTemplateText,
+                          usefulStrings.dialectBaseTypeName,
+                          usefulStrings.dialectCppName);
+  output << usefulStrings.namespaceClose;
 
   output << "#endif // " << definitionMacroFlag << "\n";
 
@@ -121,7 +164,6 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   // TODO: allow more complex path.
   llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
                                                                 dialectName};
-
   std::string namespaceOpen;
   std::string namespaceClose;
   std::string namespacePathString;
@@ -135,11 +177,15 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   }
 
   // TODO: allow control over C++ name.
-  std::string cppShortName = llvm::formatv("{0}{1}", llvm::toUpper(dialectName[0]), dialectName.slice(1, dialectName.size()));
+  std::string cppShortName =
+      llvm::formatv("{0}{1}", llvm::toUpper(dialectName[0]),
+                    dialectName.slice(1, dialectName.size()));
+  std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
   std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
   UsefulStrings usefulStrings;
   usefulStrings.dialectName = dialectName;
+  usefulStrings.dialectBaseTypeName = dialectBaseTypeName;
   usefulStrings.dialectCppName = cppName;
   usefulStrings.dialectCppShortName = cppShortName;
   usefulStrings.namespaceOpen = namespaceOpen;
@@ -156,4 +202,3 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
 
   return success();
 }
-

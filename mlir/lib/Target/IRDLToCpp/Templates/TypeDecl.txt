@@ -1,12 +1,12 @@
 /*
 {0}: Dialect Name
-{1}: Dialect CppName
+{1}: Dialect BaseTypeName
 {2}: Type Name
 {3}: Type CppName
 */
 
 R"(
-class {3}Type : public ::mlir::Type::TypeBase<{3}Type, {1}Type, ::mlir::TypeStorage> {
+class {3} : public ::mlir::Type::TypeBase<{3}, {1}, ::mlir::TypeStorage> {
 public:
   using Base::Base;
   static constexpr ::llvm::StringLiteral name = "{0}.{2}";
