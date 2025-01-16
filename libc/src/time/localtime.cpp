@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/localtime.h"
+#include "localtime.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/time/time_utils.h"
+#include "time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::time_utils::TimeConstants;
+
 LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *t_ptr)) {
-  if (t_ptr == nullptr || *t_ptr > cpp::numeric_limits<int32_t>::max()) {
+  if (t_ptr == nullptr) {
     return nullptr;
   }
 

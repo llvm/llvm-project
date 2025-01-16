@@ -51,6 +51,13 @@ functions:
     arguments:
       - type: const time_t *
       - type: struct tm *
+  - name: localtime_s
+    standard:
+      - stdc
+    return_type: struct tm *
+    arguments:
+      - type: const time_t *
+      - type: struct tm *
   - name: clock
     standard:
       - stdc
