@@ -114,12 +114,12 @@
 ! CHECK:           %[[VAL_44:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_45:.*]] = arith.constant false
 ! CHECK:           %[[VAL_46:.*]] = arith.constant false
-! CHECK:           %[[VAL_47:.*]] = fir.call @_FortranAStopStatement(%[[VAL_44]], %[[VAL_45]], %[[VAL_46]]) fastmath<contract> : (i32, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_44]], %[[VAL_45]], %[[VAL_46]]) fastmath<contract> : (i32, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb2:
 ! CHECK:           return
 ! CHECK:         }
-! CHECK:         func.func private @_FortranAStopStatement(i32, i1, i1) -> none attributes {fir.runtime}
+! CHECK:         func.func private @_FortranAStopStatement(i32, i1, i1) attributes {fir.runtime}
 
 subroutine s(x)
     integer :: x
