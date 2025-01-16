@@ -47,7 +47,7 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wstrict-prototypes")
       list(APPEND compile_options "-Wthread-safety")
       # TODO(https://github.com/llvm/llvm-project/issues/119281) triggered in TEST_F implementation
-      list(APPEND compile_options "-Wno-global-constructors") 
+      list(APPEND compile_options "-Wno-global-constructors")
 
       # TODO(https://github.com/llvm/llvm-project/issues/119281)
       # These have been disabled for the time being to create explicit PRs for each change.
