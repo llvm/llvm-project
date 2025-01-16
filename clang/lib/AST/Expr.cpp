@@ -3160,6 +3160,8 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     return E;
   };
 
+  // Used when Clang generates calls to std::get for decomposing
+  // structured bindings.
   auto IgnoreImplicitCallSingleStep = [](Expr *E) {
     if (auto *C = dyn_cast<CallExpr>(E)) {
       auto NumArgs = C->getNumArgs();
