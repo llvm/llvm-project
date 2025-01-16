@@ -75,6 +75,8 @@ implicit none
   end interface
   public :: threadfence_system
 
+  ! Math API
+
   interface
     attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
       real, intent(in), value :: x, y
