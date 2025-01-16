@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILShaderFlags.h"
 #include "DXILRootSignature.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -153,8 +153,7 @@ void DXContainerGlobals::addRootSignature(Module &M,
                                           SmallVector<GlobalValue *> &Globals) {
 
   std::optional<ModuleRootSignature> MRS =
-      getAnalysis<RootSignatureAnalysisWrapper>()
-          .getRootSignature();
+      getAnalysis<RootSignatureAnalysisWrapper>().getRootSignature();
   if (!MRS.has_value())
     return;
 

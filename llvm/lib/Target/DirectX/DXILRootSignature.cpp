@@ -1,4 +1,5 @@
-//===- DXILRootSignature.cpp - DXIL Root Signature helper objects ---------------===//
+//===- DXILRootSignature.cpp - DXIL Root Signature helper objects
+//---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +29,8 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
   auto Value = Flag->getZExtValue();
 
-  // Root Element validation, as specified: https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
+  // Root Element validation, as specified:
+  // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
   if ((Value & ~0x80000fff) != 0)
     return true;
 
@@ -36,7 +38,8 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
   return false;
 }
 
-static bool parseRootSignatureElement(ModuleRootSignature *MRS, MDNode *Element) {
+static bool parseRootSignatureElement(ModuleRootSignature *MRS,
+                                      MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
 
   assert(ElementText != nullptr && "First preoperty of element is not ");
@@ -72,8 +75,7 @@ static bool parseRootSignatureElement(ModuleRootSignature *MRS, MDNode *Element)
   return true;
 }
 
-bool ModuleRootSignature::parse( int32_t Version,
-                        NamedMDNode *Root) {
+bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
   this->Version = Version;
   bool HasError = false;
 
@@ -103,37 +105,35 @@ void ModuleRootSignature::write(raw_ostream &OS) {
     Out.swapBytes();
   }
 
-  OS.write(reinterpret_cast<const char *>(&Out), sizeof(dxbc::RootSignatureDesc));
+  OS.write(reinterpret_cast<const char *>(&Out),
+           sizeof(dxbc::RootSignatureDesc));
 }
 
 AnalysisKey RootSignatureAnalysis::Key;
 
 ModuleRootSignature RootSignatureAnalysis::run(Module &M,
-                                           ModuleAnalysisManager &AM) { 
-    ModuleRootSignature MRSI;
+                                               ModuleAnalysisManager &AM) {
+  ModuleRootSignature MRSI;
 
-    NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-    if (RootSignatureNode) {
-        MRSI.parse(1, RootSignatureNode);
-    }
+  NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
+  if (RootSignatureNode) {
+    MRSI.parse(1, RootSignatureNode);
+  }
 
-    return MRSI;
-
+  return MRSI;
 }
-
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
   ModuleRootSignature MRS;
 
-    NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-    if (RootSignatureNode) {
-        MRS.parse(1, RootSignatureNode);
-        this->MRS = MRS;
-    }
+  NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
+  if (RootSignatureNode) {
+    MRS.parse(1, RootSignatureNode);
+    this->MRS = MRS;
+  }
 
-
-    return false;
+  return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -142,5 +142,5 @@ void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
 
 char RootSignatureAnalysisWrapper::ID = 0;
 
-INITIALIZE_PASS(RootSignatureAnalysisWrapper, "dx-root-signature-analysis", 
-          "DXIL Root Signature Analysis", true, true)
+INITIALIZE_PASS(RootSignatureAnalysisWrapper, "dx-root-signature-analysis",
+                "DXIL Root Signature Analysis", true, true)
