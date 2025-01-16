@@ -3374,6 +3374,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_shared);
   CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
+  CheckCrayPointee(x.v, "SHARED");
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   SymbolSourceMap symbols;
@@ -3381,6 +3382,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_private);
   CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
+  CheckCrayPointee(x.v, "PRIVATE");
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
@@ -3460,6 +3462,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_firstprivate);
 
   CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
+  CheckCrayPointee(x.v, "FIRSTPRIVATE");
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
@@ -4552,6 +4555,22 @@ void OmpStructureChecker::CheckProcedurePointer(
           "Procedure pointer '%s' may not appear in a %s clause"_err_en_US,
           symbol->name(),
           parser::ToUpperCaseLetters(getClauseName(clause).str()));
+    }
+  }
+}
+
+void OmpStructureChecker::CheckCrayPointee(
+    const parser::OmpObjectList &objectList, llvm::StringRef clause) {
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(objectList, symbols);
+  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+    const auto *symbol{it->first};
+    const auto source{it->second};
+    if (symbol->test(Symbol::Flag::CrayPointee)) {
+      context_.Say(source,
+          "Cray Pointee '%s' may not appear in %s clause, use Cray Pointer '%s' instead"_err_en_US,
+          symbol->name(), clause.str(),
+          semantics::GetCrayPointer(*symbol).name());
     }
   }
 }
