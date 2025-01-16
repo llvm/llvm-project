@@ -40,6 +40,14 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/builder.cpp
+  stacktrace/linux/impl.cpp
+  stacktrace/macos/impl.cpp
+  stacktrace/to_string.cpp
+  stacktrace/tools/tools.cpp
+  stacktrace/unwind/impl.cpp
+  stacktrace/windows/dll.cpp
+  stacktrace/windows/impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
@@ -335,6 +343,7 @@ endif()
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
 target_link_libraries(cxx_experimental PUBLIC cxx-headers)
+
 if (LIBCXX_ENABLE_SHARED)
   target_link_libraries(cxx_experimental PRIVATE cxx_shared)
 else()
