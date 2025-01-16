@@ -200,6 +200,8 @@ void BM_insert_middle(benchmark::State& st, Generator gen) {
   }
 }
 
+// Insert at the start of a vector in a scenario where the vector already
+// has enough capacity to hold all the elements we are inserting.
 template <class Container, class Generator>
 void BM_insert_begin_input_iter_with_reserve_no_realloc(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
@@ -225,8 +227,11 @@ void BM_insert_begin_input_iter_with_reserve_no_realloc(benchmark::State& st, Ge
   }
 }
 
+// Insert at the start of a vector in a scenario where the vector already
+// has almost enough capacity to hold all the elements we are inserting,
+// but does need to reallocate.
 template <class Container, class Generator>
-void BM_insert_begin_input_iter_with_reserve_half_filled(benchmark::State& st, Generator gen) {
+void BM_insert_begin_input_iter_with_reserve_almost_no_realloc(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -235,19 +240,24 @@ void BM_insert_begin_input_iter_with_reserve_half_filled(benchmark::State& st, G
   auto first = in.data();
   auto last  = in.data() + in.size();
 
-  for (auto _ : st) {
-    st.PauseTiming();
-    // Half the elements in [beg, end) can fit in the vector without reallocation, so we'll reallocate halfway through
-    Container c;
-    c.reserve(size);
-    std::generate_n(std::back_inserter(c), size / 2, gen);
-    st.ResumeTiming();
+  const int overflow = size / 10; // 10% of elements won't fit in the vector when we insert
+  Container c;
+  c.reserve(size);
+  std::generate_n(std::back_inserter(c), overflow, gen);
 
+  for (auto _ : st) {
     c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
+
+    st.PauseTiming();
+    c.erase(c.begin() + overflow, c.end()); // avoid growing indefinitely
+    st.ResumeTiming();
   }
 }
 
+// Insert at the start of a vector in a scenario where the vector can fit a few
+// more elements, but needs to reallocate almost immediately to fit the remaining
+// elements.
 template <class Container, class Generator>
 void BM_insert_begin_input_iter_with_reserve_near_full(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
@@ -258,16 +268,18 @@ void BM_insert_begin_input_iter_with_reserve_near_full(benchmark::State& st, Gen
   auto first = in.data();
   auto last  = in.data() + in.size();
 
-  for (auto _ : st) {
-    st.PauseTiming();
-    // Create an almost full container
-    Container c;
-    c.reserve(size + 5);
-    std::generate_n(std::back_inserter(c), size, gen);
-    st.ResumeTiming();
+  const int overflow = 9 * (size / 10); // 90% of elements won't fit in the vector when we insert
+  Container c;
+  c.reserve(size);
+  std::generate_n(std::back_inserter(c), overflow, gen);
 
+  for (auto _ : st) {
     c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
+
+    st.PauseTiming();
+    c.erase(c.begin() + overflow, c.end()); // avoid growing indefinitely
+    st.ResumeTiming();
   }
 }
 
@@ -421,7 +433,7 @@ void sequence_container_benchmarks(std::string container) {
     for (auto gen : generators)
       benchmark::RegisterBenchmark(
           container + "::insert(begin, input-iter, input-iter) (half filled)" + tostr(gen),
-          [=](auto& st) { BM_insert_begin_input_iter_with_reserve_half_filled<Container>(st, gen); })
+          [=](auto& st) { BM_insert_begin_input_iter_with_reserve_almost_no_realloc<Container>(st, gen); })
           ->Arg(1024);
     for (auto gen : generators)
       benchmark::RegisterBenchmark(
