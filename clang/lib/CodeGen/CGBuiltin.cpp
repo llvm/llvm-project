@@ -2240,7 +2240,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   SanitizerScope SanScope(this);
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::Builtin),
+  EmitCheck(std::make_pair(Cond, SanitizerKind::SO_Builtin),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
@@ -2255,7 +2255,7 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
 
   SanitizerScope SanScope(this);
   EmitCheck(
-      std::make_pair(ArgValue, SanitizerKind::Builtin),
+      std::make_pair(ArgValue, SanitizerKind::SO_Builtin),
       SanitizerHandler::InvalidBuiltin,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
@@ -2290,7 +2290,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
 
   // TODO: support -ftrapv-handler.
   if (SanitizeOverflow) {
-    CGF.EmitCheck({{NotOverflow, SanitizerKind::SignedIntegerOverflow}},
+    CGF.EmitCheck({{NotOverflow, SanitizerKind::SO_SignedIntegerOverflow}},
                   SanitizerHandler::NegateOverflow,
                   {CGF.EmitCheckSourceLocation(E->getArg(0)->getExprLoc()),
                    CGF.EmitCheckTypeDescriptor(E->getType())},
@@ -19186,6 +19186,23 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
+// Return wave active sum that corresponds to the QT scalar type
+static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
+                                               CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return llvm::Intrinsic::spv_wave_reduce_sum;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return llvm::Intrinsic::dx_wave_reduce_usum;
+    return llvm::Intrinsic::dx_wave_reduce_sum;
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveSum"
+                     " not supported by target architecture");
+  }
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -19316,13 +19333,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         "hlsl.dot4add.u8packed");
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
-
     Value *X = EmitScalarExpr(E->getArg(0));
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/ConvertType(E->getType()),
         getFirstBitHighIntrinsic(CGM.getHLSLRuntime(), E->getArg(0)->getType()),
         ArrayRef<Value *>{X}, nullptr, "hlsl.firstbithigh");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_firstbitlow: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/ConvertType(E->getType()),
+        CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.firstbitlow");
   }
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -19333,20 +19357,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
         ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
-  }
-  case Builtin::BI__builtin_hlsl_length: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "length operand must have a float representation");
-    // if the operand is a scalar, we can use the fabs llvm intrinsic directly
-    if (!E->getArg(0)->getType()->isVectorType())
-      return EmitFAbs(*this, X);
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType()->getScalarType(),
-        CGM.getHLSLRuntime().getLengthIntrinsic(), ArrayRef<Value *>{X},
-        nullptr, "hlsl.length");
   }
   case Builtin::BI__builtin_hlsl_normalize: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -19504,6 +19514,23 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID),
         ArrayRef{OpExpr});
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+    // Due to the use of variadic arguments, explicitly retreive argument
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType()}, false);
+    Intrinsic::ID IID = getWaveActiveSumIntrinsic(
+        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(IID, ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr}, "hlsl.wave.active.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in

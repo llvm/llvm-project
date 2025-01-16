@@ -269,8 +269,6 @@ lazyReexports(LazyReexportsManager &LRM, SymbolAliasMap Reexports) {
 }
 
 class SimpleLazyReexportsSpeculator : public LazyReexportsManager::Listener {
-  friend std::shared_ptr<SimpleLazyReexportsSpeculator> std::make_shared();
-
 public:
   using RecordExecutionFunction =
       unique_function<void(const CallThroughInfo &CTI)>;
