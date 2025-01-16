@@ -9,7 +9,6 @@
 #include "llvm/Transforms/HLSL/DXILFinalizeLinkage.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "dxil-finalize-linkage"
@@ -18,6 +17,12 @@ using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
   SmallPtrSet<Function *, 8> Funcs;
+
+  for(auto &Var : M.globals()) {
+    if (Var.getLinkage() == GlobalValue::ExternalLinkage) {
+      Var.setLinkage(GlobalValue::InternalLinkage);
+    }
+  }
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
