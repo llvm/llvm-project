@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include <cassert>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -31,8 +32,7 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
   // Root Element validation, as specified:
   // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
-  if ((Value & ~0x80000fff) != 0)
-    return true;
+  assert((Value & ~0x80000fff) != 0 && "Invalid flag for RootFlag Element");
 
   MRS->Flags = Value;
   return false;
@@ -41,8 +41,7 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 static bool parseRootSignatureElement(ModuleRootSignature *MRS,
                                       MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
-
-  assert(ElementText != nullptr && "First preoperty of element is not ");
+  assert(ElementText != nullptr && "First preoperty of element is not a string");
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
@@ -84,13 +83,14 @@ bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
     MDNode *Node = cast<MDNode>(Root->getOperand(Sid));
 
     // Not sure what use this for...
-    Metadata *Func = Node->getOperand(0).get();
+    // Metadata *Func = Node->getOperand(0).get();
 
-    // This should be an if, for error handling
     MDNode *Elements = cast<MDNode>(Node->getOperand(1).get());
+    assert(Elements && "Invalid Metadata type on root signature");
 
     for (unsigned int Eid = 0; Eid < Elements->getNumOperands(); Eid++) {
       MDNode *Element = cast<MDNode>(Elements->getOperand(Eid));
+      assert(Element && "Invalid Metadata type on root element");
 
       HasError = HasError || parseRootSignatureElement(this, Element);
     }
