@@ -575,7 +575,11 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
                       const Fortran::evaluate::ArrayConstructor<A> &y) {
-    return isEqual(x, y) && x.GetType() == y.GetType();
+    bool checkCharacterType = true;
+    if constexpr (A::category == Fortran::common::TypeCategory::Character) {
+      checkCharacterType = x.LEN() == y.LEN();
+    }
+    return isEqual(x, y) && x.GetType() == y.GetType() && checkCharacterType;
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {
