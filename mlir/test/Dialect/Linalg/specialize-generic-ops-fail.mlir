@@ -21,8 +21,8 @@ func.func @transpose_and_broadcast(%arg0: tensor<7x8xf32>, %arg1: tensor<8x7x9xf
 #map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
 #map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
-// Verifies that the pass crashes when trying to specialize a linalg.generic op with 
-// a reduction iterator when there is no valid reduction operation in the contraction body.
+// This tests checks that the pass does not crash when trying to specialize a 
+// contraction-like generic op with no reduction operation in its body.
 // CHECK-LABEL: @specialize_reduction
 func.func private @specialize_reduction(%arg0: tensor<1x31x8xi32>) -> tensor<31x31xi32> {
   %c-2351_i32 = arith.constant -2351 : i32
