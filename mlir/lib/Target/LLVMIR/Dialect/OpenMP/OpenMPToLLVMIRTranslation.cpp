@@ -1350,11 +1350,9 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
-  if (allocaTerminator->getNumSuccessors() != 1) {
-    splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-                allocaIP.getBlock(), allocaTerminator->getIterator()),
-            true, "omp.region.after_alloca");
-  }
+  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
+                                               allocaTerminator->getIterator()),
+          true, "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Update the allocaTerminator in case the alloca block was split above.
