@@ -1719,7 +1719,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  /// Append all superclasses to \p Classes.
+  /// Append all superclasses in post-order to \p Classes.
   void getSuperClasses(std::vector<const Record *> &Classes) const {
     for (const auto &[SC, R] : DirectSuperClasses) {
       SC->getSuperClasses(Classes);
@@ -1727,7 +1727,7 @@ public:
     }
   }
 
-  /// Return all superclasses.
+  /// Return all superclasses in post-order.
   std::vector<const Record *> getSuperClasses() const {
     std::vector<const Record *> Classes;
     getSuperClasses(Classes);
