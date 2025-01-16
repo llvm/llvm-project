@@ -206,6 +206,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
 
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+  const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
   // We bail out early for instructions that have passthru with non NoRegister,
   // which means they are using TU policy. We are not interested in these
@@ -551,6 +552,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWCVT_F_XU_V:
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V:
+  case RISCV::VFWCVTBF16_F_F_V:
     return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
@@ -567,7 +569,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFWADD_WV:
   case RISCV::VFWSUB_WF:
   case RISCV::VFWSUB_WV: {
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
+    bool IsOp1 = (HasPassthru && !IsTied) ? MO.getOperandNo() == 2
+                                          : MO.getOperandNo() == 1;
     bool TwoTimes = IsMODef || IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
@@ -607,7 +610,9 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VFNCVT_F_XU_W:
   case RISCV::VFNCVT_F_X_W:
   case RISCV::VFNCVT_F_F_W:
-  case RISCV::VFNCVT_ROD_F_F_W: {
+  case RISCV::VFNCVT_ROD_F_F_W:
+  case RISCV::VFNCVTBF16_F_F_W: {
+    assert(!IsTied);
     bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
     bool TwoTimes = IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
@@ -1045,6 +1050,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFWCVT_F_XU_V:
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V:
+  case RISCV::VFWCVTBF16_F_F_V:
   // Narrowing Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFNCVT_XU_F_W:
   case RISCV::VFNCVT_X_F_W:
@@ -1054,6 +1060,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFNCVT_F_X_W:
   case RISCV::VFNCVT_F_F_W:
   case RISCV::VFNCVT_ROD_F_F_W:
+  case RISCV::VFNCVTBF16_F_F_W:
     return true;
   }
 

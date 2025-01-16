@@ -1151,6 +1151,78 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
 uint4 firstbithigh(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// firstbitlow builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T firstbitlow(T Val)
+/// \brief Returns the location of the first set bit starting from the lowest
+/// order bit and working upward, per component.
+/// \param Val the input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // floor builtins
 //===----------------------------------------------------------------------===//
 
@@ -1877,6 +1949,23 @@ half3 cross(half3, half3);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
 float3 cross(float3, float3);
+
+//===----------------------------------------------------------------------===//
+// D3DCOLORtoUBYTE4 builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T D3DCOLORtoUBYTE4(T x)
+/// \brief Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
+/// \param x [in] The floating-point vector4 to convert.
+///
+/// The return value is the UBYTE4 representation of the \a x parameter.
+///
+/// This function swizzles and scales components of the \a x parameter. Use this
+/// function to compensate for the lack of UBYTE4 support in some hardware.
+
+constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
+  return __detail::d3d_color_to_ubyte4_impl(V);
+}
 
 //===----------------------------------------------------------------------===//
 // rcp builtins

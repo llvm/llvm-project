@@ -2547,13 +2547,9 @@ public:
   WRAP_STATIC_PREDICATE(isGE);
   WRAP_STATIC_PREDICATE(isLE);
 
-  static bool isImpliedTrueByMatchingCmp(CmpPredicate Pred1,
-                                         CmpPredicate Pred2) {
-    return llvm::ICmpInst::isImpliedTrueByMatchingCmp(Pred1, Pred2);
-  }
-  static bool isImpliedFalseByMatchingCmp(CmpPredicate Pred1,
-                                          CmpPredicate Pred2) {
-    return llvm::ICmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2) {
+    return llvm::ICmpInst::isImpliedByMatchingCmp(Pred1, Pred2);
   }
 
   static auto predicates() { return llvm::ICmpInst::predicates(); }

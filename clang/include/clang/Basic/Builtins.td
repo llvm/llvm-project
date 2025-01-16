@@ -3347,10 +3347,12 @@ def VFork : LibBuiltin<"unistd.h"> {
 }
 
 // POSIX pthread.h
-// FIXME: This should be a GNULibBuiltin, but it's currently missing the prototype.
 
-def PthreadCreate : CustomEntry {
-  let Entry = "LIBBUILTIN(pthread_create, \"\",  \"fC<2,3>\", PTHREAD_H, ALL_GNU_LANGUAGES)";
+def PthreadCreate : GNULibBuiltin<"pthread.h"> {
+  let Spellings = ["pthread_create"];
+  let Attributes = [FunctionWithoutBuiltinPrefix, Callback<[2, 3]>];
+  // Note that we don't have an expressable prototype so we leave it empty.
+  let Prototype = "";
 }
 
 def SigSetJmp : LibBuiltin<"setjmp.h"> {
@@ -4849,6 +4851,12 @@ def HLSLDot4AddU8Packed : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_firstbithigh"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLFirstBitLow : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbitlow"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

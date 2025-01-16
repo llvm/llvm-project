@@ -334,7 +334,7 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
   APInt DefaultProcMask(ProcModelMap.size(), 0);
   APInt DefaultPredMask(NumUniquePredicates, 0);
   for (std::pair<APInt, APInt> &MaskPair : OpcodeMasks)
-    MaskPair = std::pair(DefaultProcMask, DefaultPredMask);
+    MaskPair = {DefaultProcMask, DefaultPredMask};
 
   // Construct a OpcodeInfo object for every unique opcode declared by an
   // InstructionEquivalenceClass definition.
@@ -384,7 +384,7 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
 
         auto PopulationCountAndLeftBit =
             [](const APInt &Other) -> std::pair<int, int> {
-          return std::pair<int, int>(Other.popcount(), -Other.countl_zero());
+          return {Other.popcount(), -Other.countl_zero()};
         };
         auto lhsmask_first = PopulationCountAndLeftBit(LhsMasks.first);
         auto rhsmask_first = PopulationCountAndLeftBit(RhsMasks.first);
@@ -415,9 +415,9 @@ void CodeGenSchedModels::collectSTIPredicates() {
   for (const Record *R : Records.getAllDerivedDefinitions("STIPredicate")) {
     const Record *Decl = R->getValueAsDef("Declaration");
 
-    const auto [It, Inserted] =
-        Decl2Index.try_emplace(Decl, STIPredicates.size());
-    if (Inserted) {
+    const auto It = Decl2Index.find(Decl);
+    if (It == Decl2Index.end()) {
+      Decl2Index[Decl] = STIPredicates.size();
       STIPredicateFunction Predicate(Decl);
       Predicate.addDefinition(R);
       STIPredicates.emplace_back(std::move(Predicate));
@@ -545,7 +545,7 @@ void CodeGenSchedModels::collectProcModels() {
 /// ProcessorItineraries.
 void CodeGenSchedModels::addProcModel(const Record *ProcDef) {
   const Record *ModelKey = getModelOrItinDef(ProcDef);
-  if (!ProcModelMap.insert(std::pair(ModelKey, ProcModels.size())).second)
+  if (!ProcModelMap.try_emplace(ModelKey, ProcModels.size()).second)
     return;
 
   std::string Name = std::string(ModelKey->getName());

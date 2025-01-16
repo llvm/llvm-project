@@ -1882,9 +1882,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << '\n';
     OS << "\tCoveredBySubregs: " << R.CoveredBySubRegs << '\n';
     OS << "\tHasDisjunctSubRegs: " << R.HasDisjunctSubRegs << '\n';
-    for (std::pair<CodeGenSubRegIndex *, CodeGenRegister *> P :
-         R.getSubRegs()) {
-      OS << "\tSubReg " << P.first->getName() << " = " << P.second->getName()
+    for (auto &[SubIdx, SubReg] : R.getSubRegs()) {
+      OS << "\tSubReg " << SubIdx->getName() << " = " << SubReg->getName()
          << '\n';
     }
   }
