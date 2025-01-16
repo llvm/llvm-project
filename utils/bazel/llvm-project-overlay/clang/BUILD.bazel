@@ -712,6 +712,7 @@ cc_library(
         "include/clang/Basic/DiagnosticFrontendKinds.inc",
         "include/clang/Basic/DiagnosticGroups.inc",
         "include/clang/Basic/DiagnosticIndexName.inc",
+        "include/clang/Basic/DiagnosticInstallAPIKinds.inc",
         "include/clang/Basic/DiagnosticLexKinds.inc",
         "include/clang/Basic/DiagnosticParseKinds.inc",
         "include/clang/Basic/DiagnosticRefactoringKinds.inc",
