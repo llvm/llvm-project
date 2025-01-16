@@ -23811,6 +23811,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // value.
   unsigned OneConstExtractIndex = ~0u;
 
+  // Count the number of extract_vector_elt sources (i.e. non-constant or undef)
   unsigned NumExtracts = 0;
 
   for (unsigned i = 0; i != NumElems; ++i) {
@@ -23849,9 +23850,7 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
         ExtractedFromVec.getValueType().getVectorElementType())
       return SDValue();
 
-    if (OneConstExtractIndex == ~0u)
-      OneConstExtractIndex = ExtractIdx->getZExtValue();
-
+    OneConstExtractIndex = ExtractIdx->getZExtValue();
     ++NumExtracts;
 
     // Have we seen this input vector before?
@@ -23878,14 +23877,16 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   if (VecIn.size() == 2) {
     // If we only found a single constant indexed extract_vector_elt feeding the
     // build_vector, do not produce a more complicated shuffle if the extract is
-    // cheap.
+    // cheap with other constant/undef elements. Skip broadcast patterns with
+    // multiple uses in the build_vector.
 
-    // TODO: This should be more aggressive about skipping the shuffle formation
-    // (e.g., always do this for VecIn[1]->hasOneUse())
-    if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
+    // TODO: This should be more aggressive about skipping the shuffle
+    // formation, particularly if VecIn[1].hasOneUse(), and regardless of the
+    // index.
+    if (NumExtracts == 1 &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
         TLI.isTypeLegal(VT.getVectorElementType()) &&
-        // VecIn[1].hasOneUse() &&
-        NumExtracts == 1 && TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
+        TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
       return SDValue();
 
     unsigned MaxIndex = 0;
