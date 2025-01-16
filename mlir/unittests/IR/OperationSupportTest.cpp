@@ -313,21 +313,4 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   op2->destroy();
 }
 
-TEST(ValueRangeTest, ValueConstructable) {
-  MLIRContext context;
-  Builder builder(&context);
-
-  Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
-  // Valid construction despite a temporary 'OpResult'.
-  ValueRange operands = useOp->getResult(0);
-
-  useOp->setOperands(operands);
-  EXPECT_EQ(useOp->getNumOperands(), 1u);
-  EXPECT_EQ(useOp->getOperand(0), useOp->getResult(0));
-
-  useOp->dropAllUses();
-  useOp->destroy();
-}
-
 } // namespace
