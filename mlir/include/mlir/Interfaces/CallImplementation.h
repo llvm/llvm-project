@@ -20,8 +20,6 @@
 
 namespace mlir {
 
-class OpWithArgumentAttributesInterface;
-
 namespace call_interface_impl {
 
 /// Parse a function or call result list.
@@ -65,8 +63,7 @@ ParseResult parseFunctionSignature(OpAsmParser &parser,
 ///                            -> function-result-list
 ///   ssa-function-arg-list  ::= ssa-function-arg (`,` ssa-function-arg)*
 ///   ssa-function-arg       ::= `%`name `:` type attribute-dict?
-void printFunctionSignature(OpAsmPrinter &p,
-                            OpWithArgumentAttributesInterface op,
+void printFunctionSignature(OpAsmPrinter &p, ArgumentAttributesOpInterface op,
                             TypeRange argTypes, bool isVariadic,
                             TypeRange resultTypes, Region *body = nullptr,
                             bool printEmptyResult = true);

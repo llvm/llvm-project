@@ -95,7 +95,7 @@ static void printFunctionResultList(OpAsmPrinter &p, TypeRange types,
 }
 
 void call_interface_impl::printFunctionSignature(
-    OpAsmPrinter &p, OpWithArgumentAttributesInterface op, TypeRange argTypes,
+    OpAsmPrinter &p, ArgumentAttributesOpInterface op, TypeRange argTypes,
     bool isVariadic, TypeRange resultTypes, Region *body,
     bool printEmptyResult) {
   bool isExternal = !body || body->empty();

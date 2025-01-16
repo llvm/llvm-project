@@ -20,9 +20,10 @@ include "mlir/IR/OpBase.td"
 
 /// Interface for operations with arguments attributes (both call-like
 /// and callable operations).
-def OpWithArgumentAttributesInterface : OpInterface<"OpWithArgumentAttributesInterface"> {
+def ArgumentAttributesOpInterface : OpInterface<"ArgumentAttributesOpInterface"> {
   let description = [{
-    A call-like or callable operation that may define attributes for its arguments. 
+    A call-like or callable operation that can hold attributes for its arguments
+    and results.
   }];
   let cppNamespace = "::mlir";
   let methods = [
@@ -32,40 +33,34 @@ def OpWithArgumentAttributesInterface : OpInterface<"OpWithArgumentAttributesInt
         number to the number of arguments. Alternatively, the method can
         return null to indicate that the region has no argument attributes.
       }],
-      "::mlir::ArrayAttr", "getArgAttrsAttr", (ins),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+      "::mlir::ArrayAttr", "getArgAttrsAttr">,
     InterfaceMethod<[{
         Get the array of result attribute dictionaries. The method should return
         an array attribute containing only dictionary attributes equal in number
         to the number of results. Alternatively, the method can return
         null to indicate that the region has no result attributes.
       }],
-      "::mlir::ArrayAttr", "getResAttrsAttr", (ins),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+      "::mlir::ArrayAttr", "getResAttrsAttr">,
     InterfaceMethod<[{
       Set the array of argument attribute dictionaries.
     }],
-    "void", "setArgAttrsAttr", (ins "::mlir::ArrayAttr":$attrs),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return; }]>,
+    "void", "setArgAttrsAttr", (ins "::mlir::ArrayAttr":$attrs)>,
     InterfaceMethod<[{
       Set the array of result attribute dictionaries.
     }],
-    "void", "setResAttrsAttr", (ins "::mlir::ArrayAttr":$attrs),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return; }]>,
+    "void", "setResAttrsAttr", (ins "::mlir::ArrayAttr":$attrs)>,
     InterfaceMethod<[{
       Remove the array of argument attribute dictionaries. This is the same as
       setting all argument attributes to an empty dictionary. The method should
       return the removed attribute.
     }],
-    "::mlir::Attribute", "removeArgAttrsAttr", (ins),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+    "::mlir::Attribute", "removeArgAttrsAttr">,
     InterfaceMethod<[{
       Remove the array of result attribute dictionaries. This is the same as
       setting all result attributes to an empty dictionary. The method should
       return the removed attribute.
     }],
-    "::mlir::Attribute", "removeResAttrsAttr", (ins),
-      /*methodBody=*/[{}], /*defaultImplementation=*/[{ return nullptr; }]>,
+    "::mlir::Attribute", "removeResAttrsAttr">
   ];
 }
 
@@ -74,8 +69,7 @@ def OpWithArgumentAttributesInterface : OpInterface<"OpWithArgumentAttributesInt
 // a call-like operation. This represents the destination of the call.
 
 /// Interface for call-like operations.
-def CallOpInterface : OpInterface<"CallOpInterface",
-    [OpWithArgumentAttributesInterface]> {
+def CallOpInterface : OpInterface<"CallOpInterface"> {
   let description = [{
     A call-like operation is one that transfers control from one sub-routine to
     another. These operations may be traditional direct calls `call @foo`, or
@@ -138,8 +132,7 @@ def CallOpInterface : OpInterface<"CallOpInterface",
 }
 
 /// Interface for callable operations.
-def CallableOpInterface : OpInterface<"CallableOpInterface",
-    [OpWithArgumentAttributesInterface]> {
+def CallableOpInterface : OpInterface<"CallableOpInterface"> {
   let description = [{
     A callable operation is one who represents a potential sub-routine, and may
     be a target for a call-like operation (those providing the CallOpInterface
