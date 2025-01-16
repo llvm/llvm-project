@@ -1687,7 +1687,7 @@ is not specified.
 def ExplicitInitDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
-The ``clang::requires_explicit_initialization`` attribute indicates that a
+The ``clang::require_explicit_initialization`` attribute indicates that a
 field of an aggregate must be initialized explicitly by the user when an object
 of the aggregate type is constructed. The attribute supports both C and C++,
 but its usage is invalid on non-aggregates.
@@ -1704,13 +1704,13 @@ initializers exist):
 .. code-block:: c++
 
   struct Buffer {
-    void *address [[clang::requires_explicit_initialization]];
-    size_t length [[clang::requires_explicit_initialization]] = 0;
+    void *address [[clang::require_explicit_initialization]];
+    size_t length [[clang::require_explicit_initialization]] = 0;
   };
 
   struct ArrayIOParams {
-    size_t count [[clang::requires_explicit_initialization]];
-    size_t element_size [[clang::requires_explicit_initialization]];
+    size_t count [[clang::require_explicit_initialization]];
+    size_t element_size [[clang::require_explicit_initialization]];
     int flags = 0;
   };
 

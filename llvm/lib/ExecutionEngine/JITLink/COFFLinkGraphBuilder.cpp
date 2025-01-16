@@ -635,32 +635,16 @@ Symbol *GetImageBaseSymbol::operator()(LinkGraph &G) {
     return *ImageBase;
 
   auto IBN = G.intern(ImageBaseName);
+  ImageBase = G.findExternalSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findAbsoluteSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
+  ImageBase = G.findDefinedSymbolByName(IBN);
+  if (*ImageBase)
+    return *ImageBase;
 
-  // Check external symbols for image base.
-  for (auto *Sym : G.external_symbols()) {
-    if (Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  // Check absolute symbols (unexpected, but legal).
-  for (auto *Sym : G.absolute_symbols()) {
-    if (Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  // Finally, check defined symbols.
-  for (auto *Sym : G.defined_symbols()) {
-    if (Sym->hasName() && Sym->getName() == IBN) {
-      ImageBase = Sym;
-      return Sym;
-    }
-  }
-
-  ImageBase = nullptr;
   return nullptr;
 }
 

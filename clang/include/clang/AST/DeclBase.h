@@ -1671,7 +1671,7 @@ protected:
     uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
 
     /// True if any field is marked as requiring explicit initialization with
-    /// [[clang::requires_explicit_initialization]].
+    /// [[clang::require_explicit_initialization]].
     /// In C++, this is also set for types without a user-provided default
     /// constructor, and is propagated from any base classes and/or member
     /// variables whose types are aggregates.

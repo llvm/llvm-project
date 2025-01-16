@@ -421,7 +421,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 #define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
   Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
   Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
-                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+                      Twine(ARM_ACLE_VERSION(2024, 3, 0)));
 #undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));

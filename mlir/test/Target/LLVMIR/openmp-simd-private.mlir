@@ -12,6 +12,9 @@ omp.private {type = private} @i_privatizer : !llvm.ptr alloc {
 // CHECK:         %{{.*}} = alloca i32, i64 1, align 4
 // CHECK:         %[[DUMMY:.*]] = alloca float, i64 1, align 4
 // CHECK:         %[[PRIV_I:.*]] = alloca i32, i64 1, align 4
+// CHECK:         br label %[[LATE_ALLOC:.*]]
+
+// CHECK:     [[LATE_ALLOC]]:
 // CHECK:         br label %[[AFTER_ALLOC:.*]]
 
 // CHECK:       [[AFTER_ALLOC]]:

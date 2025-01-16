@@ -3934,7 +3934,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return FixedScalableVFPair::getNone();
   }
 
-  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
+  ScalarEvolution *SE = PSE.getSE();
+  unsigned TC = SE->getSmallConstantTripCount(TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != MaxTC)
@@ -3943,6 +3944,22 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     reportVectorizationFailure("Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
+    return FixedScalableVFPair::getNone();
+  }
+
+  // If BTC matches the widest induction type and is -1 then the trip count
+  // computation will wrap to 0 and the vector trip count will be 0. Do not try
+  // to vectorize.
+  const SCEV *BTC = SE->getBackedgeTakenCount(TheLoop);
+  if (!isa<SCEVCouldNotCompute>(BTC) &&
+      BTC->getType()->getScalarSizeInBits() >=
+          Legal->getWidestInductionType()->getScalarSizeInBits() &&
+      SE->isKnownPredicate(CmpInst::ICMP_EQ, BTC,
+                           SE->getMinusOne(BTC->getType()))) {
+    reportVectorizationFailure(
+        "Trip count computation wrapped",
+        "backedge-taken count is -1, loop trip count wrapped to 0",
+        "TripCountWrapped", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
   }
 
@@ -8947,8 +8964,9 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBuilder VectorPHBuilder(
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSinglePredecessor()));
+      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
   VPValue *OneVPV = Plan.getOrAddLiveIn(
@@ -8983,6 +9001,8 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
     // start value provides the value if the loop is bypassed.
     bool IsFOR = isa<VPFirstOrderRecurrencePHIRecipe>(VectorPhiR);
     auto *ResumeFromVectorLoop = VectorPhiR->getBackedgeValue();
+    assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
+           "Cannot handle loops with uncountable early exits");
     if (IsFOR)
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
           VPInstruction::ExtractFromEnd, {ResumeFromVectorLoop, OneVPV}, {},
@@ -9087,6 +9107,9 @@ static void addExitUsersForFirstOrderRecurrences(
     auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
     if (!FOR)
       continue;
+
+    assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
+           "Cannot handle loops with uncountable early exits");
 
     // This is the second phase of vectorizing first-order recurrences, creating
     // extract for users outside the loop. An overview of the transformation is
