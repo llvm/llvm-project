@@ -45,19 +45,25 @@ def am_sme_indexed_b4 : ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0, 15>
 // If the operands do not match this pattern, the pseudos are expanded
 // to a REG_SEQUENCE using the post-isel hook.
 
-def FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO :
-  Pseudo<(outs ZPR2Mul2:$tup),
-         (ins ZPR:$zn0, ZPR:$zn1), []>, Sched<[]>{
+class sme_form_transpose_x2_pseudo<RegisterClass multi_vector_class>
+    : Pseudo<(outs multi_vector_class:$tup), (ins ZPR:$zn0, ZPR:$zn1), []>,
+      Sched<[]> {
   let hasSideEffects = 0;
   let hasPostISelHook = 1;
 }
 
-def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO :
-  Pseudo<(outs ZPR4Mul4:$tup),
-         (ins ZPR:$zn0, ZPR:$zn1, ZPR:$zn2, ZPR:$zn3), []>, Sched<[]>{
+def FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO    : sme_form_transpose_x2_pseudo<ZPR2>;
+def FORM_TRANSPOSED_REG_TUPLE_MULX2_PSEUDO : sme_form_transpose_x2_pseudo<ZPR2Mul2>;
+
+class sme_form_transpose_x4_pseudo<RegisterClass multi_vector_class>
+    : Pseudo<(outs multi_vector_class:$tup), (ins ZPR:$zn0, ZPR:$zn1, ZPR:$zn2, ZPR:$zn3), []>,
+      Sched<[]> {
   let hasSideEffects = 0;
   let hasPostISelHook = 1;
 }
+
+def FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO    : sme_form_transpose_x4_pseudo<ZPR4>;
+def FORM_TRANSPOSED_REG_TUPLE_MULX4_PSEUDO : sme_form_transpose_x4_pseudo<ZPR4Mul4>;
 
 def SDTZALoadStore : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisPtrTy<1>, SDTCisInt<2>]>;
 def AArch64SMELdr : SDNode<"AArch64ISD::SME_ZA_LDR", SDTZALoadStore,
@@ -164,14 +170,14 @@ class SME2_ZA_TwoOp_Multi_Single_Pat<string name, SDPatternOperator intrinsic, O
 class SME2_ZA_TwoOp_VG2_Multi_Single_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ZPRRegOp zpr_ty,
                                          ValueType vt, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zm),
-          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR2, vt:$Zn1, zsub0, vt:$Zn2, zsub1),
+          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zn1, vt:$Zn2),
                                               zpr_ty:$Zm)>;
 class SME2_ZA_TwoOp_VG4_Multi_Single_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ZPRRegOp zpr_ty,
                                          ValueType vt, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)),
                      vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4, vt:$Zm),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                              (REG_SEQUENCE ZPR4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
+                                              (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
                                               zpr_ty:$Zm)>;
 
 class SME2_ZA_TwoOp_VG2_Multi_Multi_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ValueType vt, ComplexPattern tileslice>
@@ -197,14 +203,14 @@ class SME2_ZA_TwoOp_VG2_Multi_Index_Pat<string name, SDPatternOperator intrinsic
                                         Operand imm_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zm, (i32 imm_ty:$i)),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                              (FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO vt:$Zn1,vt:$Zn2), zpr_ty:$Zm, imm_ty:$i)>;
+                                              (FORM_TRANSPOSED_REG_TUPLE_MULX2_PSEUDO vt:$Zn1,vt:$Zn2), zpr_ty:$Zm, imm_ty:$i)>;
 
 class SME2_ZA_TwoOp_VG4_Multi_Index_Pat<string name, SDPatternOperator intrinsic, Operand index_ty, ZPRRegOp zpr_ty, ValueType vt,
                                         Operand imm_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)),
                      vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4, vt:$Zm, (i32 imm_ty:$i)),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset,
-                                              (FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
+                                              (FORM_TRANSPOSED_REG_TUPLE_MULX4_PSEUDO vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
                                               zpr_ty:$Zm, imm_ty:$i)>;
 
 class SME2_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt, Operand imm_ty>

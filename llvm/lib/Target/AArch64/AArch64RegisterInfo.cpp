@@ -1109,13 +1109,14 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // so we add the strided registers as a hint.
   unsigned RegID = MRI.getRegClass(VirtReg)->getID();
   // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
+  const AArch64InstrInfo *TII =
+      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   if ((RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
        RegID == AArch64::ZPR4StridedOrContiguousRegClassID) &&
-      any_of(MRI.use_nodbg_instructions(VirtReg), [](const MachineInstr &Use) {
-        return Use.getOpcode() ==
-                   AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
-               Use.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
-      })) {
+      any_of(MRI.use_nodbg_instructions(VirtReg),
+             [&TII](const MachineInstr &Use) {
+               return TII->isFormTransposedOpcode(Use.getOpcode());
+             })) {
     const TargetRegisterClass *StridedRC =
         RegID == AArch64::ZPR2StridedOrContiguousRegClassID
             ? &AArch64::ZPR2StridedRegClass
@@ -1130,8 +1131,7 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   }
 
   for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {
-    if (MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-        MI.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
+    if (!TII->isFormTransposedOpcode(MI.getOpcode()))
       return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
                                                        MF, VRM);
 

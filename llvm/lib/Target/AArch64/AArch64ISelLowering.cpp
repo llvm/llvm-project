@@ -8759,7 +8759,7 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
 //   %6:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO ..
 //   %7:zpr = COPY %6.zsub1:zpr2stridedorcontiguous
 //   %8:zpr = COPY %6.zsub0:zpr2stridedorcontiguous
-//   %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %5:zpr, %8:zpr
+//   %9:zpr2mul2 = FORM_TRANSPOSED_REG_TUPLE_MULX2_PSEUDO %5:zpr, %8:zpr
 //
 bool shouldUseFormStridedPseudo(MachineInstr &MI) {
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -8767,9 +8767,11 @@ bool shouldUseFormStridedPseudo(MachineInstr &MI) {
   const TargetRegisterClass *RegClass = nullptr;
   switch (MI.getOpcode()) {
   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_MULX2_PSEUDO:
     RegClass = &AArch64::ZPR2StridedOrContiguousRegClass;
     break;
   case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+  case AArch64::FORM_TRANSPOSED_REG_TUPLE_MULX4_PSEUDO:
     RegClass = &AArch64::ZPR4StridedOrContiguousRegClass;
     break;
   default:
@@ -8824,14 +8826,14 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     }
   }
 
-  if (MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
-      MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO) {
+  const AArch64InstrInfo *TII =
+      MI.getMF()->getSubtarget<AArch64Subtarget>().getInstrInfo();
+  if (TII->isFormTransposedOpcode(MI.getOpcode())) {
     // If input values to the FORM_TRANSPOSED_REG_TUPLE pseudo aren't copies
     // from a StridedOrContiguous class, fall back on REG_SEQUENCE node.
     if (shouldUseFormStridedPseudo(MI))
       return;
 
-    const TargetInstrInfo *TII = Subtarget->getInstrInfo();
     MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                       TII->get(TargetOpcode::REG_SEQUENCE),
                                       MI.getOperand(0).getReg());
