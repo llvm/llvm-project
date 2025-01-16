@@ -148,20 +148,19 @@ MCSymbol *DebugHandlerBase::getLabelAfterInsn(const MachineInstr *MI) {
 /// If this type is derived from a base type then return base type size.
 uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
   assert(Ty);
-  const DIDerivedType *DDTy = dyn_cast<DIDerivedType>(Ty);
-  if (!DDTy)
-    return Ty->getSizeInBits();
 
-  unsigned Tag = DDTy->getTag();
+  unsigned Tag = Ty->getTag();
 
   if (Tag != dwarf::DW_TAG_member && Tag != dwarf::DW_TAG_typedef &&
       Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type &&
       Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type &&
       Tag != dwarf::DW_TAG_immutable_type &&
       Tag != dwarf::DW_TAG_template_alias)
-    return DDTy->getSizeInBits();
+    return Ty->getSizeInBits();
 
-  DIType *BaseType = DDTy->getBaseType();
+  DIType *BaseType = nullptr;
+  if (const DIDerivedType *DDTy = dyn_cast<DIDerivedType>(Ty))
+    BaseType = DDTy->getBaseType();
 
   if (!BaseType)
     return 0;
