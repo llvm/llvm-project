@@ -17,7 +17,7 @@
 # RUN: llvm-readobj -r %t/ld.32.so | FileCheck --check-prefix=LD32-REL %s
 # RUN: llvm-readelf -x .got %t/ld.32.so | FileCheck --check-prefix=LD32-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/ld.32.so | FileCheck --check-prefixes=LD32 %s
-# RUN: ld.lld -shared %t/a.32.relax.o -o %t/ld.32.relax.so
+# RUN: ld.lld --relax -shared %t/a.32.relax.o -o %t/ld.32.relax.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t/ld.32.relax.so | FileCheck --check-prefixes=LD32-RELAX %s
 
 ## LA32 LD -> LE
@@ -25,7 +25,7 @@
 # RUN: llvm-readelf -r %t/le.32 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.32 | FileCheck --check-prefix=LE32-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/le.32 | FileCheck --check-prefixes=LE32 %s
-# RUN: ld.lld %t/a.32.relax.o %t/tga.32.o -o %t/le.32.relax
+# RUN: ld.lld --relax %t/a.32.relax.o %t/tga.32.o -o %t/le.32.relax
 # RUN: llvm-readelf -x .got %t/le.32.relax | FileCheck --check-prefix=LE32-GOT-RELAX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/le.32.relax | FileCheck --check-prefixes=LE32-RELAX %s
 
@@ -34,7 +34,7 @@
 # RUN: llvm-readobj -r %t/ld.64.so | FileCheck --check-prefix=LD64-REL %s
 # RUN: llvm-readelf -x .got %t/ld.64.so | FileCheck --check-prefix=LD64-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/ld.64.so | FileCheck --check-prefixes=LD64 %s
-# RUN: ld.lld -shared %t/a.64.relax.o -o %t/ld.64.relax.so
+# RUN: ld.lld --relax -shared %t/a.64.relax.o -o %t/ld.64.relax.so
 # RUN: llvm-objdump -d --no-show-raw-insn %t/ld.64.relax.so | FileCheck --check-prefixes=LD64-RELAX %s
 
 ## LA64 LD -> LE
@@ -42,7 +42,7 @@
 # RUN: llvm-readelf -r %t/le.64 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.64 | FileCheck --check-prefix=LE64-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/le.64 | FileCheck --check-prefixes=LE64 %s
-# RUN: ld.lld %t/a.64.relax.o %t/tga.64.o -o %t/le.64.relax
+# RUN: ld.lld --relax %t/a.64.relax.o %t/tga.64.o -o %t/le.64.relax
 # RUN: llvm-readelf -x .got %t/le.64.relax | FileCheck --check-prefix=LE64-GOT-RELAX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/le.64.relax | FileCheck --check-prefixes=LE64-RELAX %s
 

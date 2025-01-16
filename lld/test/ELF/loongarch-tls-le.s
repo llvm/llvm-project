@@ -8,12 +8,12 @@
 # RUN: ld.lld %t.32.o -o %t.32
 # RUN: llvm-nm -p %t.32 | FileCheck --check-prefixes=NM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.32 | FileCheck --check-prefixes=LE,LE32 %s
-# RUN: ld.lld %t.32.relax.o -o %t.32.relax
+# RUN: ld.lld --relax %t.32.relax.o -o %t.32.relax
 # RUN: llvm-objdump -d --no-show-raw-insn %t.32.relax | FileCheck --check-prefixes=LE,LE32-RELAX %s
 
 # RUN: ld.lld %t.64.o -o %t.64
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=LE,LE64 %s
-# RUN: ld.lld %t.64.relax.o -o %t.64.relax
+# RUN: ld.lld --relax %t.64.relax.o -o %t.64.relax
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64.relax | FileCheck --check-prefixes=LE,LE64-RELAX %s
 
 # RUN: not ld.lld -shared %t.32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:

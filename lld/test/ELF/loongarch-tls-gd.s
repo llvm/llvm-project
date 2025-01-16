@@ -20,7 +20,7 @@
 # RUN: ld.lld -shared %t/a.32.o %t/bc.32.o -o %t/gd.32.so
 # RUN: llvm-readobj -r %t/gd.32.so | FileCheck --check-prefix=GD32-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
-# RUN: ld.lld -shared %t/a.32.relax.o %t/bc.32.o -o %t/gd.32.relax.so
+# RUN: ld.lld --relax -shared %t/a.32.relax.o %t/bc.32.o -o %t/gd.32.relax.so
 # RUN: llvm-readobj -r %t/gd.32.relax.so | FileCheck --check-prefix=GD32-REL-RELAX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.relax.so | FileCheck --check-prefix=GD32-RELAX %s
 
@@ -41,7 +41,7 @@
 # RUN: ld.lld -shared %t/a.64.o %t/bc.64.o -o %t/gd.64.so
 # RUN: llvm-readobj -r %t/gd.64.so | FileCheck --check-prefix=GD64-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
-# RUN: ld.lld -shared %t/a.64.relax.o %t/bc.64.o -o %t/gd.64.relax.so
+# RUN: ld.lld --relax -shared %t/a.64.relax.o %t/bc.64.o -o %t/gd.64.relax.so
 # RUN: llvm-readobj -r %t/gd.64.relax.so | FileCheck --check-prefix=GD64-REL-RELAX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.relax.so | FileCheck --check-prefix=GD64-RELAX %s
 
