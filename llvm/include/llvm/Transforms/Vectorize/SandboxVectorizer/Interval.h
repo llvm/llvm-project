@@ -136,7 +136,13 @@ public:
     return bottom()->comesBefore(Other.top());
   }
   /// \Returns true if this and \p Other have nothing in common.
-  bool disjoint(const Interval &Other) const;
+  bool disjoint(const Interval &Other) const {
+    if (Other.empty())
+      return true;
+    if (empty())
+      return true;
+    return Other.Bottom->comesBefore(Top) || Bottom->comesBefore(Other.Top);
+  }
   /// \Returns the intersection between this and \p Other.
   // Example:
   // |----|   this
@@ -226,7 +232,23 @@ public:
   }
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const {
+    auto *Top = top();
+    auto *Bot = bottom();
+    OS << "Top: ";
+    if (Top != nullptr)
+      OS << *Top;
+    else
+      OS << "nullptr";
+    OS << "\n";
+
+    OS << "Bot: ";
+    if (Bot != nullptr)
+      OS << *Bot;
+    else
+      OS << "nullptr";
+    OS << "\n";
+  }
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
