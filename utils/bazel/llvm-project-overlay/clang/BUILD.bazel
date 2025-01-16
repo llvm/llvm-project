@@ -1954,12 +1954,7 @@ cc_library(
         ],
         exclude = ["lib/Interpreter/Wasm.cpp"],
     ),
-    hdrs = glob(
-        [
-            "include/clang/Interpreter/*.h",
-        ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
-    ),
+    hdrs = glob(["include/clang/Interpreter/*.h"]),
     includes = ["include"],
     deps = [
         ":analysis",
