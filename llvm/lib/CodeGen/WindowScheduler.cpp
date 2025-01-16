@@ -645,7 +645,7 @@ void WindowScheduler::expand() {
 
 void WindowScheduler::updateLiveIntervals() {
   SmallVector<Register, 128> UsedRegs;
-  for (MachineInstr &MI : *MBB)
+  for (MachineInstr &MI : *MBB) {
     for (const MachineOperand &MO : MI.operands()) {
       if (!MO.isReg() || MO.getReg() == 0)
         continue;
@@ -653,6 +653,9 @@ void WindowScheduler::updateLiveIntervals() {
       if (!is_contained(UsedRegs, Reg))
         UsedRegs.push_back(Reg);
     }
+    // Remove the residual slot index of newly cloned MI.
+    Context->LIS->getSlotIndexes()->removeMachineInstrFromMaps(MI, true);
+  }
   Context->LIS->repairIntervalsInRange(MBB, MBB->begin(), MBB->end(), UsedRegs);
 }
 

@@ -1,0 +1,61 @@
+# REQUIRES: asserts
+# 
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1\
+# RUN: | FileCheck %s
+
+# The bug was reported at https://github.com/llvm/llvm-project/issues/123165.
+# It is caused by the corruption of live intervals in certain scenarios.
+#
+# We check window scheduling logs to ensure that there is no crashing.
+# CHECK: Start analyzing II:
+# CHECK: MaxCycle is {{[0-9]+}}.
+# CHECK: MaxStallCycle is {{[0-9]+}}.
+# CHECK: Start scheduling Phis:
+# CHECK: Current window Offset is {{[0-9]+}} and II is {{[0-9]+}}.
+# CHECK: Window scheduling is not needed!
+
+...
+---
+name:            _ZN10CInArchive17GetNextFolderItemEv
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r0
+  
+    %0:intregs = COPY $r0
+    J2_loop0i %bb.1, 1, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %1:intregs = L2_loadri_io %0, 0
+    %2:intregs = L2_loadrub_io killed %1, 0
+    %3:intregs = PS_loadriabs 0
+    S2_storerb_io killed %3, 0, killed %2
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+  
+  bb.2:
+    successors: %bb.4(0x80000000)
+  
+    %4:intregs = A2_tfrsi 0
+    %5:intregs = A2_tfrsi -1
+    J2_loop0i %bb.4, 1, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.4, implicit-def $pc
+  
+  bb.3:
+    S2_storeri_io %0, 0, %6
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.4:
+    successors: %bb.3(0x04000000), %bb.4(0x7c000000)
+  
+    %7:intregs = PHI %5, %bb.2, %8, %bb.4
+    %6:intregs = PHI %4, %bb.2, %9, %bb.4
+    %8:intregs = A2_addi %7, 1
+    %9:intregs = S2_setbit_i %8, 0
+    ENDLOOP0 %bb.4, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def $pc
+
+...
