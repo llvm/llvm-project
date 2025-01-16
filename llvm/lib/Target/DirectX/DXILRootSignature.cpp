@@ -1,4 +1,4 @@
-//===- DXILRootSignature.cpp - DXIL Root Signature helper objects -------===//
+//===- DXILRootSignature.cpp - DXIL Root Signature helper objects ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,226 +13,134 @@
 #include "DXILRootSignature.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
-#include <optional>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool reportError(LLVMContext *Ctx, Twine Message,
-                        DiagnosticSeverity Severity = DS_Error) {
-  Ctx->diagnose(DiagnosticInfoGeneric(Message, Severity));
-  return true;
-}
+static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
-static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
-                           MDNode *RootFlagNode) {
-
-  if (RootFlagNode->getNumOperands() != 2)
-    return reportError(Ctx, "Invalid format for RootFlag Element");
-
+  assert(RootFlagNode->getNumOperands() == 2 &&
+         "Invalid format for RootFlag Element");
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  RSD.Flags = Flag->getZExtValue();
+  auto Value = Flag->getZExtValue();
 
+  // Root Element validation, as specified: https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
+  if ((Value & ~0x80000fff) != 0)
+    return true;
+
+  MRS->Flags = Value;
   return false;
 }
 
-static bool parseRootSignatureElement(LLVMContext *Ctx,
-                                      mcdxbc::RootSignatureDesc &RSD,
-                                      MDNode *Element) {
+static bool parseRootSignatureElement(ModuleRootSignature *MRS, MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
-  if (ElementText == nullptr)
-    return reportError(Ctx, "Invalid format for Root Element");
+
+  assert(ElementText != nullptr && "First preoperty of element is not ");
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
-          .Default(RootSignatureElementKind::Error);
+          .Case("RootConstants", RootSignatureElementKind::RootConstants)
+          .Case("RootCBV", RootSignatureElementKind::RootDescriptor)
+          .Case("RootSRV", RootSignatureElementKind::RootDescriptor)
+          .Case("RootUAV", RootSignatureElementKind::RootDescriptor)
+          .Case("Sampler", RootSignatureElementKind::RootDescriptor)
+          .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
+          .Case("StaticSampler", RootSignatureElementKind::StaticSampler)
+          .Default(RootSignatureElementKind::None);
 
   switch (ElementKind) {
 
-  case RootSignatureElementKind::RootFlags:
-    return parseRootFlags(Ctx, RSD, Element);
-  case RootSignatureElementKind::Error:
-    return reportError(Ctx, "Invalid Root Signature Element: " +
-                                ElementText->getString());
+  case RootSignatureElementKind::RootFlags: {
+    return parseRootFlags(MRS, Element);
+    break;
   }
 
-  llvm_unreachable("Unhandled RootSignatureElementKind enum.");
+  case RootSignatureElementKind::RootConstants:
+  case RootSignatureElementKind::RootDescriptor:
+  case RootSignatureElementKind::DescriptorTable:
+  case RootSignatureElementKind::StaticSampler:
+  case RootSignatureElementKind::None:
+    llvm_unreachable("Not Implemented yet");
+    break;
+  }
+
+  return true;
 }
 
-static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
-                  MDNode *Node) {
+bool ModuleRootSignature::parse( int32_t Version,
+                        NamedMDNode *Root) {
+  this->Version = Version;
   bool HasError = false;
 
-  // Loop through the Root Elements of the root signature.
-  for (const auto &Operand : Node->operands()) {
-    MDNode *Element = dyn_cast<MDNode>(Operand);
-    if (Element == nullptr)
-      return reportError(Ctx, "Missing Root Element Metadata Node.");
+  for (unsigned int Sid = 0; Sid < Root->getNumOperands(); Sid++) {
+    // This should be an if, for error handling
+    MDNode *Node = cast<MDNode>(Root->getOperand(Sid));
 
-    HasError = HasError || parseRootSignatureElement(Ctx, RSD, Element);
+    // Not sure what use this for...
+    Metadata *Func = Node->getOperand(0).get();
+
+    // This should be an if, for error handling
+    MDNode *Elements = cast<MDNode>(Node->getOperand(1).get());
+
+    for (unsigned int Eid = 0; Eid < Elements->getNumOperands(); Eid++) {
+      MDNode *Element = cast<MDNode>(Elements->getOperand(Eid));
+
+      HasError = HasError || parseRootSignatureElement(this, Element);
+    }
   }
-
   return HasError;
 }
 
-static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(RSD.Flags)) {
-    return reportError(Ctx, "Invalid Root Signature flag value");
-  }
-  return false;
-}
+void ModuleRootSignature::write(raw_ostream &OS) {
+  dxbc::RootSignatureDesc Out{this->Version, this->Flags};
 
-static SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
-analyzeModule(Module &M) {
-
-  /** Root Signature are specified as following in the metadata:
-
-    !dx.rootsignatures = !{!2} ; list of function/root signature pairs
-    !2 = !{ ptr @main, !3 } ; function, root signature
-    !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
-
-    So for each MDNode inside dx.rootsignatures NamedMDNode
-    (the Root parameter of this function), the parsing process needs
-    to loop through each of its operands and process the function,
-    signature pair.
- */
-
-  LLVMContext *Ctx = &M.getContext();
-
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> RSDMap;
-
-  NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode == nullptr)
-    return RSDMap;
-
-  for (const auto &RSDefNode : RootSignatureNode->operands()) {
-    if (RSDefNode->getNumOperands() != 2) {
-      reportError(Ctx, "Invalid format for Root Signature Definition. Pairs "
-                       "of function, root signature expected.");
-      continue;
-    }
-
-    // Function was pruned during compilation.
-    const MDOperand &FunctionPointerMdNode = RSDefNode->getOperand(0);
-    if (FunctionPointerMdNode == nullptr) {
-      reportError(
-          Ctx, "Function associated with Root Signature definition is null.");
-      continue;
-    }
-
-    ValueAsMetadata *VAM =
-        llvm::dyn_cast<ValueAsMetadata>(FunctionPointerMdNode.get());
-    if (VAM == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Value");
-      continue;
-    }
-
-    Function *F = dyn_cast<Function>(VAM->getValue());
-    if (F == nullptr) {
-      reportError(Ctx, "First element of root signature is not a Function");
-      continue;
-    }
-
-    Metadata *RootElementListOperand = RSDefNode->getOperand(1).get();
-
-    if (RootElementListOperand == nullptr) {
-      reportError(Ctx, "Root Element mdnode is null.");
-      continue;
-    }
-
-    MDNode *RootElementListNode = dyn_cast<MDNode>(RootElementListOperand);
-    if (RootElementListNode == nullptr) {
-      reportError(Ctx, "Root Element is not a metadata node.");
-      continue;
-    }
-
-    mcdxbc::RootSignatureDesc RSD;
-
-    if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
-      return RSDMap;
-    }
-
-    RSDMap.insert(std::make_pair(F, RSD));
+  if (sys::IsBigEndianHost) {
+    Out.swapBytes();
   }
 
-  return RSDMap;
+  OS.write(reinterpret_cast<const char *>(&Out), sizeof(dxbc::RootSignatureDesc));
 }
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
-RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  return analyzeModule(M);
+ModuleRootSignature RootSignatureAnalysis::run(Module &M,
+                                           ModuleAnalysisManager &AM) { 
+    ModuleRootSignature MRSI;
+
+    NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
+    if (RootSignatureNode) {
+        MRSI.parse(1, RootSignatureNode);
+    }
+
+    return MRSI;
+
 }
 
-//===----------------------------------------------------------------------===//
-
-PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
-
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
-      AM.getResult<RootSignatureAnalysis>(M);
-  OS << "Root Signature Definitions"
-     << "\n";
-  uint8_t Space = 0;
-  for (const Function &F : M) {
-    auto It = RSDMap.find(&F);
-    if (It == RSDMap.end())
-      continue;
-    const auto &RS = It->second;
-    OS << "Definition for '" << F.getName() << "':\n";
-
-    // start root signature header
-    Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << ":\n";
-    OS << indent(Space) << "Version: " << RS.Version << ":\n";
-    OS << indent(Space) << "NumParameters: " << RS.NumParameters << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << RS.RootParametersOffset
-       << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << RS.NumStaticSamplers
-       << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
-       << ":\n";
-    Space--;
-    // end root signature header
-  }
-
-  return PreservedAnalyses::all();
-}
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  FuncToRsMap = analyzeModule(M);
-  return false;
+  ModuleRootSignature MRS;
+
+    NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
+    if (RootSignatureNode) {
+        MRS.parse(1, RootSignatureNode);
+        this->MRS = MRS;
+    }
+
+
+    return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;
 
-INITIALIZE_PASS_BEGIN(RootSignatureAnalysisWrapper,
-                      "dxil-root-signature-analysis",
-                      "DXIL Root Signature Analysis", true, true)
-INITIALIZE_PASS_END(RootSignatureAnalysisWrapper,
-                    "dxil-root-signature-analysis",
-                    "DXIL Root Signature Analysis", true, true)
+INITIALIZE_PASS(RootSignatureAnalysisWrapper, "dx-root-signature-analysis", 
+          "DXIL Root Signature Analysis", true, true)
