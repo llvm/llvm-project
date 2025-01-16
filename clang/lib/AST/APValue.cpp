@@ -44,6 +44,48 @@ APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
     : Ptr(P), Local{I, V} {}
 
+// Separated definitions of these template functions to avoid nasty build issues
+// caused by header dependency.
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T, bool>
+APValue::LValueBase::is() const {
+  if (!isa<DynamicAllocOrForgedPtrLValue>(Ptr))
+    return false;
+  DynamicAllocOrForgedPtrLValue::BaseTy DAOrForged =
+      cast<DynamicAllocOrForgedPtrLValue>(Ptr);
+  return isa<T>(DAOrForged);
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue, bool>
+APValue::LValueBase::is<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue, bool>
+APValue::LValueBase::is<DynamicAllocLValue>() const;
+
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T> APValue::LValueBase::get() const {
+  DynamicAllocOrForgedPtrLValue::BaseTy DAOrForged =
+      cast<DynamicAllocOrForgedPtrLValue>(Ptr);
+  return cast<T>(DAOrForged);
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue>
+APValue::LValueBase::get<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue>
+APValue::LValueBase::get<DynamicAllocLValue>() const;
+
+template <class T>
+APValue::LValueBase::EnableIfDAOrForged<T>
+APValue::LValueBase::dyn_cast() const {
+  if (is<T>())
+    return cast<DynamicAllocOrForgedPtrLValue>(Ptr).dyn_cast<T>();
+  return T();
+}
+
+template APValue::LValueBase::EnableIfDAOrForged<ForgedPtrLValue>
+APValue::LValueBase::dyn_cast<ForgedPtrLValue>() const;
+template APValue::LValueBase::EnableIfDAOrForged<DynamicAllocLValue>
+APValue::LValueBase::dyn_cast<DynamicAllocLValue>() const;
+
 APValue::LValueBase APValue::LValueBase::getDynamicAlloc(DynamicAllocLValue LV,
                                                          QualType Type) {
   LValueBase Base;

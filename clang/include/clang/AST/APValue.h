@@ -120,18 +120,19 @@ public:
 class DynamicAllocOrForgedPtrLValue
     : public llvm::PointerUnion<DynamicAllocLValue, ForgedPtrLValue> {
 
+public:
   using BaseTy = llvm::PointerUnion<DynamicAllocLValue, ForgedPtrLValue>;
 
-public:
   DynamicAllocOrForgedPtrLValue() = default;
   DynamicAllocOrForgedPtrLValue(DynamicAllocLValue LV) : BaseTy(LV) {}
   DynamicAllocOrForgedPtrLValue(ForgedPtrLValue LV) : BaseTy(LV) {}
 
   explicit operator bool() const {
-    if (is<DynamicAllocLValue>()) {
-      return static_cast<bool>(get<DynamicAllocLValue>());
+    PointerUnion pu = *this;
+    if (isa<DynamicAllocLValue>(pu)) {
+      return static_cast<bool>(cast<DynamicAllocLValue>(pu));
     }
-    return static_cast<bool>(get<ForgedPtrLValue>());
+    return static_cast<bool>(cast<ForgedPtrLValue>(pu));
   }
 
   static DynamicAllocOrForgedPtrLValue getFromOpaqueValue(void *Value) {
@@ -250,30 +251,19 @@ public:
       return isa<T>(Ptr);
     }
 
-    template <class T> EnableIfDAOrForged<T, bool> is() const {
-      if (!Ptr.is<DynamicAllocOrForgedPtrLValue>())
-        return false;
-      return Ptr.get<DynamicAllocOrForgedPtrLValue>().is<T>();
-    }
+    template <class T> EnableIfDAOrForged<T, bool> is() const;
 
     template <class T> EnableIfNotDANorForged<T> get() const {
       return cast<T>(Ptr);
     }
 
-    template <class T> EnableIfDAOrForged<T> get() const {
-      assert(is<T>() && "Invalid accessor called");
-      return Ptr.get<DynamicAllocOrForgedPtrLValue>().get<T>();
-    }
+    template <class T> EnableIfDAOrForged<T> get() const;
 
     template <class T> EnableIfNotDANorForged<T> dyn_cast() const {
       return Ptr.dyn_cast<T>();
     }
 
-    template <class T> EnableIfDAOrForged<T> dyn_cast() const {
-      if (is<T>())
-        return Ptr.get<DynamicAllocOrForgedPtrLValue>().dyn_cast<T>();
-      return T();
-    }
+    template <class T> EnableIfDAOrForged<T> dyn_cast() const;
 
     void *getOpaqueValue() const;
     // TO_UPSTREAM(BoundsSafety)
