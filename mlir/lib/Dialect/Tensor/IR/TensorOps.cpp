@@ -10,7 +10,9 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -4519,8 +4521,8 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 template <typename PackOrUnpackOp>
 static bool isLikePadUnPad(PackOrUnpackOp packOp,
                            RankedTensorType packedTensorType) {
-  static_assert(std::is_same<PackOrUnpackOp, tensor::PackOp>::value ||
-                    std::is_same<PackOrUnpackOp, tensor::UnPackOp>::value,
+  static_assert(std::is_same<PackOrUnpackOp, PackOp>::value ||
+                    std::is_same<PackOrUnpackOp, UnPackOp>::value,
                 "Function meant for pack/unpack");
   // This is a pad if packing only adds ones and we don't transpose dimensions.
 
@@ -4721,7 +4723,7 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
   /// unpack(pack(x)) -> x
-  if (PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>()) {
+  if (PackOp packOp = unPackOp.getSource().getDefiningOp<PackOp>()) {
     if (packOp.getSourceType() != unPackOp.getDestType())
       return failure();
     if (packOp.getPaddingValue() ||
@@ -4757,7 +4759,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
       dest =
           rewriter.create<tensor::CastOp>(loc, newDestType, unPackOp.getDest());
     }
-    Value newOp = rewriter.create<tensor::UnPackOp>(
+    Value newOp = rewriter.create<UnPackOp>(
         loc, source, dest, unPackOp.getInnerDimsPos(), unPackOp.getMixedTiles(),
         unPackOp.getOuterDimsPerm());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(
@@ -4833,7 +4835,7 @@ getNewMixedTileSizes(PatternRewriter &rewriter, Type newPackedTy,
   return newMixedTileSizes;
 }
 
-/// Folds a tensor.cast op into a consuming tensor::PackOp op if the
+/// Folds a tensor.cast op into a consuming PackOp op if the
 /// `tensor.cast` has source that is more static than the consuming op.
 ///
 /// Example:
@@ -4886,7 +4888,7 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
   }
 };
 
-/// Folds a tensor.cast op into a consuming tensor::UnPackOp op if the
+/// Folds a tensor.cast op into a consuming UnPackOp op if the
 /// `tensor.cast` has source that is more static than the consuming op.
 ///
 /// Example:
@@ -4964,9 +4966,11 @@ struct FoldTensorCastProducerOp
   LogicalResult matchAndRewrite(DestinationStyleOpInterface op,
                                 PatternRewriter &rewriter) const override {
 
-    // Reject tensor::PackOp - there's dedicated pattern for that instead.
+    // Reject PackOp/UnpackOp (i.e. RelayoutOps) - there are dedicated patterns
+    // for that instead.
     if (!foldTensorCastPrecondition(op) ||
-        isa<tensor::RelayoutOpInterface>(*op))
+        isa<tensor::RelayoutOpInterface>(*op) ||
+        isa<linalg::RelayoutOpInterface>(*op))
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());

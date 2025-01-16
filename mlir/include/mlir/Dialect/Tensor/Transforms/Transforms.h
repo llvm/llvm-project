@@ -86,15 +86,6 @@ void populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
 /// that it can be bufferized into a sequence of copies.
 void populateDecomposeTensorConcatPatterns(RewritePatternSet &patterns);
 
-/// Populates `patterns` with patterns that simplify `tensor.pack` and
-/// `tensor.unpack` operations.
-void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` with patterns that fold operations like `tensor.pad`
-/// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
-/// respectively.
-void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
-
 using ControlFoldFn = std::function<bool(OpOperand *)>;
 
 /// Populates `patterns` with patterns that replace tensor ops (such as

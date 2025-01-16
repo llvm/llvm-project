@@ -178,6 +178,16 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
   ];
 }
 
+def LinalgRelayoutOpInterface : OpInterface<"RelayoutOpInterface"> {
+  let description = [{
+    A Linalg relayout-op is either linalg.pack or linalg.unpack.
+
+    While we could extend this interface with methods from Linalg_RelayoutOp,
+    this is currently not needed and left as a TODO.
+  }];
+  let cppNamespace = "::mlir::linalg";
+}
+
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   let description = [{
     A fill operation is defined in general terms:

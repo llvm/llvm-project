@@ -118,7 +118,7 @@ static void applyPermToRange(SmallVector<OpFoldResult> &offsets,
 }
 
 struct PackOpTiling
-    : public TilingInterface::ExternalModel<PackOpTiling, PackOp> {
+    : public TilingInterface::ExternalModel<PackOpTiling, tensor::PackOp> {
 
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     // Note that here we only consider untiled dimensions and outer tiled data
@@ -491,7 +491,7 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
 }
 
 struct UnPackOpTiling
-    : public TilingInterface::ExternalModel<UnPackOpTiling, UnPackOp> {
+    : public TilingInterface::ExternalModel<UnPackOpTiling, tensor::UnPackOp> {
 
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto unpackOp = cast<UnPackOp>(op);
