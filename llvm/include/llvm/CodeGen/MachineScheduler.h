@@ -1385,6 +1385,24 @@ std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
 
+class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+  const TargetMachine *TM;
+
+public:
+  MachineSchedulerPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class PostMachineSchedulerPass
+    : public PassInfoMixin<PostMachineSchedulerPass> {
+  const TargetMachine *TM;
+
+public:
+  PostMachineSchedulerPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINESCHEDULER_H
