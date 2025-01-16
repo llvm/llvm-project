@@ -22,7 +22,7 @@ class TestStepUntilAPI(TestBase):
             CFLAGS_EXTRAS="-funique-basic-block-section-names "
             + "-ffunction-sections -fbasic-block-sections=list="
             + self.getSourcePath("function.list"),
-            LD_EXTRAS="-Wl,--section-ordering-file="
+            LD_EXTRAS="-Wl,--script="
             + self.getSourcePath("symbol.order"),
         )
 
