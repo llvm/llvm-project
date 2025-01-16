@@ -1421,3 +1421,15 @@ hlfir::Entity hlfir::loadElementAt(mlir::Location loc,
   return loadTrivialScalar(loc, builder,
                            getElementAt(loc, builder, entity, oneBasedIndices));
 }
+
+llvm::SmallVector<mlir::Value>
+hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
+                        hlfir::Entity entity) {
+  entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+  mlir::Value shape = hlfir::genShape(loc, builder, entity);
+  llvm::SmallVector<mlir::Value, Fortran::common::maxRank> extents =
+      hlfir::getExplicitExtentsFromShape(shape, builder);
+  if (shape.getUses().empty())
+    shape.getDefiningOp()->erase();
+  return extents;
+}
