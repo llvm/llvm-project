@@ -42,12 +42,10 @@ jobs:
             env_file.write(f'REPO_URL={repo_url}\n')"
       - name: Print PR Information
         run: |
-          echo "PR_NUMBER=$PR_NUMBER"
-          echo "PR_TITLE=$PR_TITLE"
+          echo "PR_NUMBER=$PR_NUMBER" 
           echo "PR_SHA=$PR_SHA"
           echo "PR_URL=$PR_URL"
           echo "BASE_BRANCH=$BASE_BRANCH"
-          echo "REPO_OWNER=$REPO_OWNER"
           echo "REPO_NAME=$REPO_NAME"
           echo "REPO_URL=$REPO_URL"
           
