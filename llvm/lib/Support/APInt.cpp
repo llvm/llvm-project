@@ -3118,11 +3118,11 @@ APInt APIntOps::pow(const APInt &X, int64_t N) {
   int64_t RemainingExponent = N;
   while (RemainingExponent > 0) {
     while (RemainingExponent % 2 == 0) {
-      Base = Base * Base;
+      Base *= Base;
       RemainingExponent /= 2;
     }
     --RemainingExponent;
-    Acc = Acc * Base;
+    Acc *= Base;
   }
   return Acc;
 };
