@@ -4199,8 +4199,16 @@ class DecompositionDecl final
         NumBindings(Bindings.size()) {
     std::uninitialized_copy(Bindings.begin(), Bindings.end(),
                             getTrailingObjects<BindingDecl *>());
-    for (auto *B : Bindings)
+    for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
+      if (B->isParameterPack()) {
+        for (Expr *E : B->getBindingPackExprs()) {
+          auto *DRE = cast<DeclRefExpr>(E);
+          auto *NestedB = cast<BindingDecl>(DRE->getDecl());
+          NestedB->setDecomposedDecl(this);
+        }
+      }
+    }
   }
 
   void anchor() override;

@@ -981,20 +981,14 @@ static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
   }
 
   if (IsValid && HasPack) {
-    TemplateTypeParmDecl *DummyTemplateParam = TemplateTypeParmDecl::Create(
-        S.Context, S.Context.getTranslationUnitDecl(),
-        /*KeyLoc*/ SourceLocation(), /*NameLoc*/ SourceLocation(),
-        /*TemplateDepth*/ 0, /*AutoParameterPosition*/ 0,
-        /*Identifier*/ nullptr, false, /*IsParameterPack*/ true);
-
     // create the pack expr and assign it to the binding
     unsigned PackSize = MemberCount - Bindings.size() + 1;
     QualType PackType = S.Context.getPackExpansionType(
-        QualType(DummyTemplateParam->getTypeForDecl(), 0), PackSize);
-    (*BindingWithPackItr)
-        ->setBinding(PackType,
-                     ResolvedUnexpandedPackExpr::Create(
-                         S.Context, DD->getBeginLoc(), DecompType, PackSize));
+        S.Context.DependentTy, std::nullopt, /*ExpectsPackInType=*/false);
+    BindingDecl *BD = (*BindingWithPackItr);
+    BD->setBinding(PackType,
+                   ResolvedUnexpandedPackExpr::Create(
+                       S.Context, DD->getBeginLoc(), DecompType, PackSize));
   }
 
   if (IsValid)

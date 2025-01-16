@@ -1996,7 +1996,7 @@ ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
       new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
 
   auto Exprs = New->getExprs();
-  std::fill(Exprs.begin(), Exprs.end(), nullptr);
+  std::uninitialized_fill(Exprs.begin(), Exprs.end(), nullptr);
 
   return New;
 }
@@ -2005,7 +2005,7 @@ ResolvedUnexpandedPackExpr *
 ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
                                    QualType T, ArrayRef<Expr *> Exprs) {
   auto *New = Create(Ctx, BL, T, Exprs.size());
-  std::copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
+  std::uninitialized_copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
   return New;
 }
 
