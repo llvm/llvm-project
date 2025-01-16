@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
+#include "../int_endianness.h"
 
 // int __aeabi_dcmp{eq,lt,le,ge,gt}(double a, double b) {
 //   int result = __{eq,lt,le,ge,gt}df2(a, b);
@@ -17,10 +18,17 @@
 //   }
 // }
 
+
 #if defined(COMPILER_RT_ARMHF_TARGET)
-#  define CONVERT_DCMP_ARGS_TO_DF2_ARGS                    \
+#  if _YUGA_BIG_ENDIAN
+#    define CONVERT_DCMP_ARGS_TO_DF2_ARGS                  \
+        vmov      d0, r1, r0                     SEPARATOR \
+        vmov      d1, r3, r2
+#  else
+#    define CONVERT_DCMP_ARGS_TO_DF2_ARGS                  \
         vmov      d0, r0, r1                     SEPARATOR \
         vmov      d1, r2, r3
+#  endif
 #else
 #  define CONVERT_DCMP_ARGS_TO_DF2_ARGS
 #endif
