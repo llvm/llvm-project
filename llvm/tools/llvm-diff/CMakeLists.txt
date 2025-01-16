@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   Core
   IRReader
+  Passes
   Support
+  TransformUtils
   )
 
 add_llvm_tool(llvm-diff
