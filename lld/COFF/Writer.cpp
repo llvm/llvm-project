@@ -2586,15 +2586,11 @@ void Writer::createDynamicRelocs() {
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
 
-  if (ctx.symtab.entry || ctx.hybridSymtab->entry) {
-    Defined *entrySym = ctx.hybridSymtab->entry
-                            ? dyn_cast<Defined>(ctx.hybridSymtab->entry)
-                            : nullptr;
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry)
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            peHeaderOffset +
                                offsetof(pe32plus_header, AddressOfEntryPoint),
-                           entrySym);
-  }
+                           cast_or_null<Defined>(ctx.hybridSymtab->entry));
 
   // Set the hybrid load config to the EC load config.
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
