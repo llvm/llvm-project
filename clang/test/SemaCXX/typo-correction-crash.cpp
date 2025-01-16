@@ -32,8 +32,7 @@ FooRecord::NestedNamespace::type x; // expected-error {{no member named 'NestedN
 
 void cast_expr(int g) { +int(n)(g); } // expected-error {{undeclared identifier 'n'}}
 
-void bind() { for (const auto& [test,_] : _test_) { }; } // expected-error {{undeclared identifier '_test_'}} \
-                                                         // expected-note {{'test' declared here}}
+void bind() { for (const auto& [test,_] : _test_) { }; } // expected-error {{undeclared identifier '_test_'}}
 
 namespace NoCrash {
 class S {
