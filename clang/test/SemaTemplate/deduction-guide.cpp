@@ -478,3 +478,53 @@ A a{.f1 = {1}};
 // CHECK-NEXT:     `-DeclRefExpr {{.+}} <col:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
 
 } // namespace GH83368
+
+namespace GH122134 {
+
+template <class, class>
+concept Constraint = true;
+
+template <class T, int> struct Struct {
+  Struct(Constraint<T> auto) {}
+};
+
+template <int N = 0> using Test = Struct<int, N>;
+
+Test test(42);
+
+// CHECK-LABEL: Dumping GH122134::<deduction guide for Test>:
+// CHECK-NEXT: FunctionTemplateDecl {{.*}} implicit <deduction guide for Test>
+// CHECK-NEXT: |-NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 0 N
+// CHECK-NEXT: | `-TemplateArgument {{.*}} expr '0'
+// CHECK-NEXT: |   `-IntegerLiteral {{.*}} 'int' 0
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} Concept {{.*}} 'Constraint' depth 0 index 1 auto:1
+// CHECK-NEXT: | `-ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'Constraint'
+// CHECK-NEXT: |   |-ImplicitConceptSpecializationDecl {{.*}}
+// CHECK-NEXT: |   | |-TemplateArgument type 'type-parameter-0-1'
+// CHECK-NEXT: |   | | `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+// CHECK-NEXT: |   | `-TemplateArgument type 'int'
+// CHECK-NEXT: |   |   `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |   |-TemplateArgument {{.*}} type 'auto:1':'type-parameter-0-1'
+// CHECK-NEXT: |   | `-TemplateTypeParmType {{.*}} 'auto:1' dependent depth 0 index 1
+// CHECK-NEXT: |   |   `-TemplateTypeParm {{.*}} 'auto:1'
+// CHECK-NEXT: |   `-TemplateArgument {{.*}} type 'int'
+// CHECK-NEXT: |     `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
+// CHECK-NEXT: | |-DeducedTemplateSpecializationType {{.*}} 'GH122134::Test' dependent
+// CHECK-NEXT: | | `-name: 'GH122134::Test'
+// CHECK-NEXT: | |   `-TypeAliasTemplateDecl {{.*}} Test
+// CHECK-NEXT: | `-TemplateSpecializationType {{.*}} 'Struct<int, N>' dependent
+// CHECK-NEXT: |   |-name: 'Struct':'GH122134::Struct' qualified
+// CHECK-NEXT: |   | `-ClassTemplateDecl {{.*}} Struct
+// CHECK-NEXT: |   |-TemplateArgument type 'int'
+// CHECK-NEXT: |   | `-SubstTemplateTypeParmType {{.*}} 'int' sugar class depth 0 index 0 T
+// CHECK-NEXT: |   |   |-FunctionTemplate {{.*}} '<deduction guide for Struct>'
+// CHECK-NEXT: |   |   `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: |   `-TemplateArgument expr 'N'
+// CHECK-NEXT: |     `-SubstNonTypeTemplateParmExpr {{.*}} 'int'
+// CHECK-NEXT: |       |-NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 1
+// CHECK-NEXT: |       `-DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'N' 'int'
+// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for Test> 'auto (auto:1) -> Struct<int, N>'
+// CHECK-NEXT: | `-ParmVarDecl {{.*}} 'auto:1'
+
+} // namespace GH122134
