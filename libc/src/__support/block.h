@@ -24,17 +24,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal {
-// Types of corrupted blocks, and functions to crash with an error message
-// corresponding to each type.
-enum class BlockStatus {
-  VALID,
-  MISALIGNED,
-  PREV_MISMATCHED,
-  NEXT_MISMATCHED,
-};
-} // namespace internal
-
 /// Returns the value rounded down to the nearest multiple of alignment.
 LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
   // Note this shouldn't overflow since the result will always be <= value.
