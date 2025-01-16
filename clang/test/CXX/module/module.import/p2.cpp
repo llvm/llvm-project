@@ -23,7 +23,10 @@ export A f();
 //--- Use.cpp
 import M;
 void test() {
-  A a; // expected-error {{unknown type name 'A'}}
+  A a; // expected-error {{definition of 'A' must be imported from module 'M' before it is required}}
+       // expected-error@-1 {{definition of 'A' must be imported from module 'M' before it is required}} expected-error@-1 {{}}
+       // expected-note@impl.cppm:2 {{declaration here is not visible}}
+       // expected-note@impl.cppm:2 {{definition here is not reachable}} expected-note@impl.cppm:2 {{}}
 }
 
 //--- UseInPartA.cppm
@@ -37,7 +40,10 @@ void test() {
 export module B;
 import M;
 void test() {
-  A a; // expected-error {{unknown type name 'A'}}
+  A a; // expected-error {{declaration of 'A' must be imported from module 'M'}}
+       // expected-error@-1 {{definition of 'A' must be imported from module 'M'}} expected-error@-1 {{}}
+       // expected-note@impl.cppm:2 {{declaration here is not visible}}
+       // expected-note@impl.cppm:2 {{definition here is not reachable}} expected-note@impl.cppm:2 {{}}
 }
 
 //--- Private.cppm

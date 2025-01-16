@@ -316,8 +316,6 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
-- Implemented module level lookup for C++20 modules. (#GH90154)
-
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -90,9 +90,9 @@ ExternalASTSource::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   return nullptr;
 }
 
-bool ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                       DeclarationName Name,
-                                                       Module *NamedModule) {
+bool
+ExternalASTSource::FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                                  DeclarationName Name) {
   return false;
 }
 
