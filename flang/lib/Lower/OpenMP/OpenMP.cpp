@@ -2082,7 +2082,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        converter.copyHostAssociateVar(*sym, &insp);
+        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
       }
     }
   }
