@@ -107,7 +107,7 @@ public:
     // TargetRewrite will require querying the type storage sizes, if it was
     // not set already, create a DataLayoutSpec for the ModuleOp now.
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/true);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "module operation must carry a data layout attribute "
