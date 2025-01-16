@@ -459,6 +459,25 @@ Changes to LLDB
 
 * [New Core File API](https://lldb.llvm.org/python_api/lldb.SBSaveCoreOptions.html). This gives greater control on the data captured into the core file, relative to the existing `process save-core` styles.
 
+* When opening ELF core files, LLDB will print additional information about the
+  signal that killed the process and the disassembly view will display actual
+  (relocated) targets of the jump instructions instead of raw offsets encoded in
+  the instruction. This matches existing behavior for live processes.
+
+  Old:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = signal SIGSEGV
+
+  0x7f1e3193e0a7 <+23>:  ja     0xfe100        ; <+112>
+  ```
+
+  New:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)
+
+  0x7f1e3193e0a7 <+23>:  ja     0x7f1e3193e100 ; <+112>
+  ```
+
 * `lldb-server` now listens to a single port for gdbserver connections and provides
   that port to the connection handler processes. This means that only 2 ports need
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
