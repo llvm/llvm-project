@@ -209,8 +209,11 @@ ConversionValueMapping::lookupOrDefault(Value from,
       }
     }
     if (next != current) {
-      // If at least one value was replaced, continue the lookup from there.
       current = std::move(next);
+      // Special case 1; return the most recently mapped values.
+      if (desiredTypes.empty())
+        break;
+      // If at least one value was replaced, continue the lookup from there.
       continue;
     }
 
