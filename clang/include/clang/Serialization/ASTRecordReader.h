@@ -335,18 +335,15 @@ public:
   Attr *readAttr();
 
   /// Reads attributes from the current stream position, advancing Idx.
-  void readAttributes(AttrVec &Attrs);
+  /// For some attributes (where type depends on itself recursively), defer
+  /// reading the attribute until the type has been read.
+  void readAttributes(AttrVec &Attrs, Decl *D = nullptr);
 
   /// Reads one attribute from the current stream position, advancing Idx.
-  Attr *readOrDeferAttr(Decl *D);
-
-  /// Reads attributes from the current stream position, advancing Idx.
-  void readOrDeferAttributes(AttrVec &Attrs, Decl *D);
+  Attr *readOrDeferAttrFor(Decl *D);
 
   /// Read an BTFTypeTagAttr object.
-  BTFTypeTagAttr *readBTFTypeTagAttr() {
-    return cast<BTFTypeTagAttr>(readAttr());
-  }
+  BTFTypeTagAttr *readBTFTypeTagAttr();
 
   /// Reads a token out of a record, advancing Idx.
   Token readToken() {
@@ -361,10 +358,6 @@ public:
   SwitchCase *getSwitchCaseWithID(unsigned ID) {
     return Reader->getSwitchCaseWithID(ID);
   }
-
-private:
-  Attr *readOrDeferAttrImpl(Decl *D);
-  void readOrDeferAttributesImpl(AttrVec &Attrs, Decl *D);
 };
 
 /// Helper class that saves the current stream position and

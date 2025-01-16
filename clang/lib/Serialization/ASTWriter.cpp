@@ -4910,14 +4910,11 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   if (!A)
     return Record.push_back(0);
 
-  Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
-
   auto SkipIdx = Record.size();
-  if (A->getKind() == attr::PreferredName) {
-    // Add placeholder for the size of preferred_name attribute.
-    Record.push_back(0);
-  }
+  // Add placeholder for the size of deferred attribute.
+  Record.push_back(0);
 
+  Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
   Record.AddIdentifierRef(A->getAttrName());
   Record.AddIdentifierRef(A->getScopeName());
   Record.AddSourceRange(A->getRange());
@@ -4929,9 +4926,9 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
 
 #include "clang/Serialization/AttrPCHWrite.inc"
 
-  if (A->getKind() == attr::PreferredName) {
-    // Record the actual size of preferred_name attribute (-1 to count the
-    // placeholder).
+  if (A->shouldDeferDeserialization()) {
+    // Record the actual size of deferred attribute (-1 to count the size bit
+    // itself).
     Record[SkipIdx] = Record.size() - SkipIdx - 1;
   }
 }

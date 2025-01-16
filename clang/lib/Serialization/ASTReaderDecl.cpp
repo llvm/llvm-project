@@ -612,7 +612,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
 
   if (HasAttrs) {
     AttrVec Attrs;
-    Record.readOrDeferAttributes(Attrs, D);
+    Record.readAttributes(Attrs, D);
     // Avoid calling setAttrs() directly because it uses Decl::getASTContext()
     // internally which is unsafe during derialization.
     D->setAttrsImpl(Attrs, Reader.getContext());
@@ -3129,7 +3129,7 @@ public:
 }
 
 /// Reads one attribute from the current stream position, advancing Idx.
-Attr *ASTRecordReader::readOrDeferAttrImpl(Decl *D) {
+Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   auto V = Record.readInt();
   if (!V)
@@ -3139,20 +3139,6 @@ Attr *ASTRecordReader::readOrDeferAttrImpl(Decl *D) {
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
   // Attr pointer.
   auto Kind = static_cast<attr::Kind>(V - 1);
-  // Some attributes refer to themselves during deserialization, thus
-  // their deserialization must be deferred until their underlying type
-  // is resolved.
-  if (Kind == attr::PreferredName) {
-    if (D != nullptr) {
-      Reader->PendingDeferredAttributes.push_back(
-          {Record.getCurrentIdx() - 1, D});
-      auto SkipCount = Record.readInt();
-      Record.skipInts(SkipCount);
-      return nullptr;
-    }
-    // Ignore the skip count when resolving pending actions.
-    Record.readInt();
-  }
   ASTContext &Context = getContext();
 
   IdentifierInfo *AttrName = Record.readIdentifier();
@@ -3178,31 +3164,34 @@ Attr *ASTRecordReader::readOrDeferAttrImpl(Decl *D) {
   return New;
 }
 
-void ASTRecordReader::readOrDeferAttributesImpl(AttrVec &Attrs, Decl *D) {
+/// Reads attributes from the current stream position, advancing Idx.
+/// For some attributes (where type depends on itself recursively), defer
+/// reading the attribute until the type has been read.
+void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
-    if (auto *A = readOrDeferAttr(D))
+    if (auto *A = readOrDeferAttrFor(D))
       Attrs.push_back(A);
 }
 
-Attr *ASTRecordReader::readAttr() { return readOrDeferAttrImpl(nullptr); }
-
-/// Reads attributes from the current stream position.
-void ASTRecordReader::readAttributes(AttrVec &Attrs) {
-  readOrDeferAttributesImpl(Attrs, nullptr);
-}
 
 /// Reads one attribute from the current stream position, advancing Idx.
 /// For some attributes (where type depends on itself recursively), defer
 /// reading the attribute until the type has been read.
-Attr *ASTRecordReader::readOrDeferAttr(Decl *D) {
-  return readOrDeferAttrImpl(D);
+Attr *ASTRecordReader::readOrDeferAttrFor(Decl *D) {
+  AttrReader Record(*this);
+  unsigned SkipCount = Record.readInt();
+  if (!SkipCount)
+    return readAttr();
+  Reader->PendingDeferredAttributes.push_back({Record.getCurrentIdx(), D});
+  Record.skipInts(SkipCount);
+  return nullptr;
 }
 
-/// Reads attributes from the current stream position, advancing Idx.
-/// For some attributes (where type depends on itself recursively), defer
-/// reading the attribute until the type has been read.
-void ASTRecordReader::readOrDeferAttributes(AttrVec &Attrs, Decl *D) {
-  readOrDeferAttributesImpl(Attrs, D);
+BTFTypeTagAttr *ASTRecordReader::readBTFTypeTagAttr() {
+  AttrReader Record(*this);
+  // Read and ignore the skip count, since this attribute is not deferred.
+  Record.readInt();
+  return cast<BTFTypeTagAttr>(readAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4464,7 +4453,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
 }
 
 void ASTReader::loadDeferredAttribute(const DeferredAttribute &DA) {
-  Decl *D = DA.ParentDecl;
+  Decl *D = DA.TargetedDecl;
   ModuleFile *M = getOwningModuleFile(D);
 
   unsigned LocalDeclIndex = D->getGlobalID().getLocalDeclIndex();
@@ -4502,7 +4491,7 @@ void ASTReader::loadDeferredAttribute(const DeferredAttribute &DA) {
   }
 
   Record.skipInts(DA.RecordIdx);
-  Attr *A = Record.readOrDeferAttr(nullptr);
+  Attr *A = Record.readAttr();
   getContext().getDeclAttrs(D).push_back(A);
 }
 

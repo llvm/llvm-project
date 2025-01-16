@@ -713,6 +713,10 @@ class Attr {
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
   list<Documentation> Documentation;
+  // Set to true if deserialization of this attribute must be deferred until 
+  // the parent Decl is fully deserialized (during header module file
+  // deserialization).
+  bit DeferDeserialization = 0;
 }
 
 /// Used to define a set of mutually exclusive attributes.
@@ -3240,6 +3244,7 @@ def PreferredName : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let MeaningfulToClassTemplateDefinition = 1;
   let TemplateDependent = 1;
+  let DeferDeserialization = 1;
 }
 
 def PreserveMost : DeclOrTypeAttr {

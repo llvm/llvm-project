@@ -1212,9 +1212,10 @@ private:
   /// More attributes that store TypeSourceInfo might be potentially affected,
   /// see https://github.com/llvm/llvm-project/issues/56490 for details.
   struct DeferredAttribute {
+    // Index of the deferred attribute in the Record of the TargetedDecl.
     uint64_t RecordIdx;
     // Decl to attach a deferred attribute to.
-    Decl *ParentDecl;
+    Decl *TargetedDecl;
   };
 
   /// The collection of Decls that have been loaded but some of their attributes
