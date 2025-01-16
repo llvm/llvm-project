@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -fclang-abi-compat=latest -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -118,9 +118,32 @@ namespace test1 {
   // CHECK-LABEL: define linkonce_odr noundef signext i16 @_ZN5test11bIsEEDTcp3foocvT__EEES1_(
   template <class T> auto b(T t) -> decltype((foo)(T())) { return (foo)(t); }
 
+  // CHECK-LABEL: define {{.*}} @_ZN5test11cEs(
+  inline short *c(short s) {
+    using test1::foo;
+    void *foo(void *);
+    // CHECK: = call {{.*}} @_ZZN5test11cEsENKUlT_E_clIsEEPDTcl3foofp_EES0_(
+    return [](auto t) -> decltype((foo)(t)) * {
+      static auto x = (foo)(t);
+      return &x;
+    }(s);
+  }
+
+  // CHECK-LABEL: define {{.*}} @_ZN5test11dEs(
+  inline short *d(short s) {
+    using test1::foo;
+    // CHECK: = call {{.*}} @_ZZN5test11dEsENKUlT_E_clIsEEPDTcp3foodeadfp_EES0_(
+    return [](auto t) -> decltype((foo)(*&t)) * {
+      static auto x = (foo)(t);
+      return &x;
+    }(s);
+  }
+
   void test(short s) {
     a(s);
     b(s);
+    c(s);
+    d(s);
   }
 }
 
