@@ -201,7 +201,7 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
     """
 
     if len(workflow_metrics) == 0:
-        print("No metrics found to upload.", file=sys.stdout)
+        print("No metrics found to upload.", file=sys.stderr)
         return
 
     metrics_batch = []
@@ -259,7 +259,7 @@ def main():
         )
 
         upload_metrics(current_metrics, grafana_metrics_userid, grafana_api_key)
-        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stdout)
+        print(f"Uploaded {len(current_metrics)} metrics", file=sys.stderr)
 
         for workflow_metric in reversed(current_metrics):
             if isinstance(workflow_metric, JobMetrics):
