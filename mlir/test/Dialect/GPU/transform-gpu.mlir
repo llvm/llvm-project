@@ -545,9 +545,9 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPBLIN:.*]] = affine_map<(d0, d1, d2) -> (d0 + d1 * 12 + d2 * 108)>
-// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<(d0, d1, d2) -> ((d0 + d1 * 12 + d2 * 108) mod 7)>
-// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<(d0, d1, d2) -> ((d0 + d1 * 12 + d2 * 108) floordiv 7)>
+// CHECK-DAG: #[[$MAPBLIN:.*]] = affine_map<()[s0, s1, s2] -> (s0 + s1 * 12 + s2 * 108)> 
+// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<()[s0, s1, s2] -> ((s0 + s1 * 12 + s2 * 108) mod 7)>
+// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<()[s0, s1, s2] -> ((s0 + s1 * 12 + s2 * 108) floordiv 7)>
 
 // CHECK-LABEL: func.func @block_linear_existing_launch(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -566,9 +566,9 @@ func.func @block_linear_existing_launch(
 //  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
 //  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
 //  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
-//  CHECK-DAG: %[[BIDLIN:.*]] = affine.apply #[[$MAPBLIN]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
-//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
-//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
+//  CHECK-DAG: %[[BIDLIN:.*]] = affine.apply #[[$MAPBLIN]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
+//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
+//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //  CHECK-DAG: %[[CMPLIN:.*]] = arith.cmpi ult, %[[BIDLIN]], %[[C63]] : index
 //     CHECK: scf.if %[[CMPLIN]]
 //      CHECK:   memref.load %[[ARGX]][%[[BLX]], %[[BLY]]]
@@ -600,8 +600,8 @@ module attributes {transform.with_named_sequence} {
 !type = memref<2 x 32 x f32>
 !type1d = memref<32 x f32>
 
-// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<(d0) -> (d0 mod 7)>
-// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<(d0, d1, d2) -> (d1 + d2 * 9 + d0 floordiv 7)>
+// CHECK-DAG: #[[$MAPBX:.*]] = affine_map<()[s0] -> (s0 mod 7)>
+// CHECK-DAG: #[[$MAPBY:.*]] = affine_map<()[s0, s1, s2] -> (s1 + s2 * 9 + s0 floordiv 7)>
 
 // CHECK-LABEL: func.func @block_linear_generate_launch(
 // CHECK-SAME:    %[[ARGX:[0-9a-z]+]]: memref<2x32xf32>
@@ -620,8 +620,8 @@ func.func @block_linear_generate_launch(
 //  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id  x
 //  CHECK-DAG: %[[BIDY:.*]] = gpu.block_id  y
 //  CHECK-DAG: %[[BIDZ:.*]] = gpu.block_id  z
-//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]](%[[BIDX]])
-//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]](%[[BIDX]], %[[BIDY]], %[[BIDZ]])
+//  CHECK-DAG: %[[BLX:.*]] = affine.apply #[[$MAPBX]]()[%[[BIDX]]]
+//  CHECK-DAG: %[[BLY:.*]] = affine.apply #[[$MAPBY]]()[%[[BIDX]], %[[BIDY]], %[[BIDZ]]]
 //      CHECK:   memref.load %[[ARGX]][%[[BLX]], %[[BLY]]]
 //      CHECK:   memref.load %[[ARGY]][%[[BLX]], %[[BLY]]]
   scf.forall (%i, %j) in (%c7, %c9) {
@@ -647,7 +647,7 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d0) -> (d0 *  128)>
 #map1 = affine_map<(d0) -> (d0 * 32)>
 
-// CHECK-DAG: #[[$MAPB:.*]] = affine_map<(d0) -> (d0 * 128)>
+// CHECK-DAG: #[[$MAPB:.*]] = affine_map<()[s0] -> (s0 * 128)> 
 // CHECK-DAG: #[[$MAPW:.*]] = affine_map<()[s0, s1, s2] -> (s2 * 32 + ((s0 + s1 * 4) floordiv 32) * 32)>
 
 // CHECK-LABEL: func.func @simple_fill(
@@ -660,7 +660,7 @@ func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
 //       CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
 //       CHECK:     %[[BIDX:.*]] = gpu.block_id  x
-//       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]](%[[BIDX]])
+//       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
     scf.forall (%arg2) in (4) {

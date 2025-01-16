@@ -63,8 +63,6 @@ class PredOpTrait<string descr, Pred pred, list<Trait> traits = []>
 
 // Op defines an affine scope.
 def AffineScope : NativeOpTrait<"AffineScope">;
-// Op defines an affine symbol.
-def AffineSymbol : NativeOpTrait<"AffineSymbol">;
 // Op defines an automatic allocation scope.
 def AutomaticAllocationScope :
   NativeOpTrait<"AutomaticAllocationScope">;

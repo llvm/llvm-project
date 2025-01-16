@@ -223,16 +223,6 @@ affine.load, and affine.store. The polyhedral scope defined by an operation with
 this trait includes all operations in its region excluding operations that are
 nested inside of other operations that themselves have this trait.
 
-*   `OpTrait::AffineSymbol` -- `AffineSymbol`
-
-This trait will make the results of the operation that holds it become valid symbols.
-It complements the AffineScope trait, allowing SSA values in the region of operation
-to be used as operands for various Affine dialect operations depending on the AffineScope
-trait, without altering the properties of the operation. In contrast, the AffineSymbol
-trait directly changes the properties of the operations. Additionally, the AffineScope
-trait cannot make SSA values in the nested region of operations valid symbols, operations
-can hold the AffineSymbol trait, then their results whill be vaild symbols.
-
 ### AutomaticAllocationScope
 
 *   `OpTrait::AutomaticAllocationScope` -- `AutomaticAllocationScope`

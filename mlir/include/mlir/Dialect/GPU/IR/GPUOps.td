@@ -223,7 +223,7 @@ def GPU_GridDimOp : GPU_IndexOp<"grid_dim"> {
     There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
   }];
 }
-def GPU_ThreadIdOp : GPU_IndexOp<"thread_id", [AffineSymbol]> {
+def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
   let description = [{
     Returns the thread id, i.e. the index of the current thread within the block
     along the x, y, or z `dimension`.
