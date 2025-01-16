@@ -728,10 +728,8 @@ void Writer::writePEChecksum() {
   uint32_t *buf = (uint32_t *)buffer->getBufferStart();
   uint32_t size = (uint32_t)(buffer->getBufferSize());
 
-  coff_file_header *coffHeader =
-      (coff_file_header *)((uint8_t *)buf + dosStubSize + sizeof(PEMagic));
-  pe32_header *peHeader =
-      (pe32_header *)((uint8_t *)coffHeader + sizeof(coff_file_header));
+  pe32_header *peHeader = (pe32_header *)((uint8_t *)buf + coffHeaderOffset +
+                                          sizeof(coff_file_header));
 
   uint64_t sum = 0;
   uint32_t count = size;
@@ -1038,7 +1036,7 @@ void Writer::sortSections() {
 
 void Writer::calculateStubDependentSizes() {
   if (ctx.config.dosStub)
-    dosStubSize = ctx.config.dosStub->getBufferSize();
+    dosStubSize = alignTo(ctx.config.dosStub->getBufferSize(), 8);
   else
     dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
 
@@ -1690,11 +1688,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
            config->dosStub->getBufferSize());
     // MS link.exe accepts an invalid `e_lfanew` (AddressOfNewExeHeader) and
     // updates it automatically. Replicate the same behaviour.
-    dos->AddressOfNewExeHeader = config->dosStub->getBufferSize();
-    buf += config->dosStub->getBufferSize();
+    dos->AddressOfNewExeHeader = alignTo(config->dosStub->getBufferSize(), 8);
     // Unlike MS link.exe, LLD accepts non-8-byte-aligned stubs.
     // In that case, we add zero paddings ourselves.
-    buf += (8 - (config->dosStub->getBufferSize() % 8)) % 8;
+    buf += alignTo(config->dosStub->getBufferSize(), 8);
   } else {
     buf += sizeof(dos_header);
     dos->Magic[0] = 'M';
