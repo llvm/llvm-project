@@ -322,18 +322,31 @@ func.func @test_vector_extract_scalar() {
 // -----
 
 // ALL-LABEL: test_vector_bitcast
-// ALL-SAME: (%[[ORIG_ARG:.*]]: vector<4x1xf32>)
-func.func @test_vector_bitcast(%arg0: vector<4x1xf32>) -> vector<4x2xf16> {
+// ALL-SAME: %[[ORIG_ARG:.*]]: vector<4x4xf32>
+func.func @test_vector_bitcast(%arg0: vector<4x4xf32>) -> vector<4x8xf16> {
+  // DEFAULT: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x4xf32> to vector<16xf32>
+  // DEFAULT: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<16xf32> to vector<32xf16>
+  // DEFAULT: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<32xf16> to vector<4x8xf16>
 
-  // DEFAULT: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x1xf32> to vector<4xf32>
-  // DEFAULT: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<4xf32> to vector<8xf16>
-  // DEFAULT: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<8xf16> to vector<4x2xf16>
+  // BW-128: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<4x4xf32> to vector<4x8xf16>
+  // BW-0: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<4x4xf32> to vector<4x8xf16>
+  %1 = vector.bitcast %arg0 : vector<4x4xf32> to vector<4x8xf16>
+  return %1 : vector<4x8xf16>
+}
 
-  // BW-128: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x1xf32> to vector<4xf32>
-  // BW-128: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<4xf32> to vector<8xf16>
-  // BW-128: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<8xf16> to vector<4x2xf16>
+// -----
 
-  // BW-0: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<4x1xf32> to vector<4x2xf16>
-  %1 = vector.bitcast %arg0 : vector<4x1xf32> to vector<4x2xf16>
-  return %1 : vector<4x2xf16>
+// ALL-LABEL: test_vector_bitcast
+// ALL-SAME: %[[ORIG_ARG:.*]]: vector<4x2xf32>
+func.func @test_vector_bitcast(%arg0: vector<4x2xf32>) -> vector<4x4xf16> {
+  // DEFAULT: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x2xf32> to vector<8xf32>
+  // DEFAULT: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<8xf32> to vector<16xf16>
+  // DEFAULT: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<16xf16> to vector<4x4xf16>
+  // BW-128: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x2xf32> to vector<8xf32>
+  // BW-128: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<8xf32> to vector<16xf16>
+  // BW-128: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<16xf16> to vector<4x4xf16>
+
+  // BW-0: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<4x2xf32> to vector<4x4xf16>
+  %1 = vector.bitcast %arg0 : vector<4x2xf32> to vector<4x4xf16>
+  return %1 : vector<4x4xf16>
 }
