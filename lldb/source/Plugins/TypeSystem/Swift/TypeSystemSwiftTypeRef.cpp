@@ -1941,10 +1941,8 @@ UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
   if (!target_sp)
     return nullptr;
   if (ctx_obj != nullptr) {
-    lldb_assert(0,
-                "Swift doesn't support 'evaluate in the context"
-                " of an object'.",
-                __FUNCTION__, __FILE__, __LINE__);
+    lldbassert(false &&
+               "Swift doesn't support 'evaluate in the context of an object'.");
     return nullptr;
   }
 

@@ -297,8 +297,8 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   swift::remote::RemoteAbsolutePointer tagged_pointer("", tagged_address);
   if (tagged_address !=
       (uint64_t)signedPointerStripper(tagged_pointer).getOffset()) {
-    lldb_assert(false, "Tagged pointer runs into pointer authentication mask!",
-                __FUNCTION__, __FILE__, __LINE__);
+    lldbassert(false &&
+               "Tagged pointer runs into pointer authentication mask!");
     return process_pointer;
   }
 
@@ -531,10 +531,9 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
       (uint64_t)signedPointerStripper(
           swift::remote::RemoteAbsolutePointer("", module_end_address))
           .getOffset()) {
-    lldb_assert(false,
-                "LLDBMemoryReader module to address map ran into pointer "
-                "authentication mask!",
-                __FUNCTION__, __FILE__, __LINE__);
+    lldbassert(false &&
+               "LLDBMemoryReader module to address map ran into pointer "
+               "authentication mask!");
     return {};
   }
   // The address for the next image is the next pointer aligned address
