@@ -1460,7 +1460,6 @@ cc_library(
     hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
-        ":codegen",
         ":driver",
         ":frontend",
         ":lex",
@@ -2021,7 +2020,6 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
         "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:Coroutines",
         "//llvm:Coverage",
