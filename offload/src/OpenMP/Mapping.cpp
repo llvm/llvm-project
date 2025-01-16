@@ -274,8 +274,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
       if (Device.RTL->is_gfx90a(Device.DeviceID) && HstPtrBegin &&
-          (!Device.RTL->is_gfx90a_coarse_grain_usm_map_enabled(
-              Device.DeviceID))) {
+          Device.RTL->is_gfx90a_coarse_grain_usm_map_enabled(Device.DeviceID)) {
         Device.RTL->set_coarse_grain_mem_region(Device.DeviceID, HstPtrBegin,
                                                 Size);
         INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
