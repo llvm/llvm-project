@@ -458,7 +458,7 @@ void Instruction::dropPoisonGeneratingFlags() {
 }
 
 bool Instruction::hasPoisonGeneratingMetadata() const {
-  return any_of(PoisonGeneratingMetadataIDs,
+  return any_of(Metadata::PoisonGeneratingIDs,
                 [this](unsigned ID) { return hasMetadata(ID); });
 }
 
@@ -486,7 +486,7 @@ bool Instruction::hasNonDebugLocLoopMetadata() const {
 }
 
 void Instruction::dropPoisonGeneratingMetadata() {
-  for (unsigned ID : PoisonGeneratingMetadataIDs)
+  for (unsigned ID : Metadata::PoisonGeneratingIDs)
     eraseMetadata(ID);
 }
 
