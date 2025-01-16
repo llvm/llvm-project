@@ -1530,7 +1530,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
                          ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP});
+                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP,
+                         ISD::VECTOR_SHUFFLE});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -17076,6 +17077,37 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT.getSimpleVT(), StridedLoad);
 }
 
+/// Custom legalize <N x i128> or <N x i256> to <M x ELEN>.  This runs
+/// during the combine phase before type legalization, and relies on
+/// DAGCombine not undoing the transform if isShuffleMaskLegal returns false
+/// for the source mask.
+static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget,
+                                            const RISCVTargetLowering &TLI) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  const unsigned ElementSize = VT.getScalarSizeInBits();
+  SDValue V1 = N->getOperand(0);
+  SDValue V2 = N->getOperand(1);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
+
+  if (TLI.isTypeLegal(VT) || ElementSize <= Subtarget.getELen() ||
+      !isPowerOf2_64(ElementSize) || VT.getVectorNumElements() % 2 != 0 ||
+      VT.isFloatingPoint() || TLI.isShuffleMaskLegal(Mask, VT))
+    return SDValue();
+
+  SmallVector<int, 8> NewMask;
+  narrowShuffleMaskElts(2, Mask, NewMask);
+
+  LLVMContext &C = *DAG.getContext();
+  EVT NewEltVT = EVT::getIntegerVT(C, ElementSize / 2);
+  EVT NewVT = EVT::getVectorVT(C, NewEltVT, VT.getVectorNumElements() * 2);
+  SDValue Res = DAG.getVectorShuffle(NewVT, DL, DAG.getBitcast(NewVT, V1),
+                                     DAG.getBitcast(NewVT, V2), NewMask);
+  return DAG.getBitcast(VT, Res);
+}
+
+
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
 
@@ -18303,6 +18335,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::CONCAT_VECTORS:
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
+  case ISD::VECTOR_SHUFFLE:
+    if (SDValue V = performVECTOR_SHUFFLECombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case ISD::INSERT_VECTOR_ELT:
