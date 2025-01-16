@@ -3967,15 +3967,21 @@ struct OmpBindClause {
 
 // Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:109]
 //
+// When used as a data-sharing clause:
 // default-clause ->
 //    DEFAULT(data-sharing-attribute)               // since 4.5
 // data-sharing-attribute ->
 //    SHARED | NONE |                               // since 4.5
 //    PRIVATE | FIRSTPRIVATE                        // since 5.0
+//
+// When used in METADIRECTIVE:
+// default-clause ->
+//    DEFAULT(directive-specification)              // since 5.0, until 5.1
 // See also otherwise-clause.
 struct OmpDefaultClause {
   ENUM_CLASS(DataSharingAttribute, Private, Firstprivate, Shared, None)
-  WRAPPER_CLASS_BOILERPLATE(OmpDefaultClause, DataSharingAttribute);
+  UNION_CLASS_BOILERPLATE(OmpDefaultClause);
+  std::variant<DataSharingAttribute, OmpDirectiveSpecification> u;
 };
 
 // Ref: [4.5:103-107], [5.0:324-325], [5.1:357-358], [5.2:161-162]

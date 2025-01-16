@@ -533,12 +533,17 @@ TYPE_PARSER(construct<OmpAffinityClause>(
     Parser<OmpObjectList>{}))
 
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
-TYPE_PARSER(construct<OmpDefaultClause>(
+TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
     "PRIVATE" >> pure(OmpDefaultClause::DataSharingAttribute::Private) ||
     "FIRSTPRIVATE" >>
         pure(OmpDefaultClause::DataSharingAttribute::Firstprivate) ||
     "SHARED" >> pure(OmpDefaultClause::DataSharingAttribute::Shared) ||
     "NONE" >> pure(OmpDefaultClause::DataSharingAttribute::None)))
+
+TYPE_PARSER(construct<OmpDefaultClause>(
+    construct<OmpDefaultClause>(
+        Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
+    construct<OmpDefaultClause>(Parser<OmpDirectiveSpecification>{})))
 
 // 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD)
 TYPE_PARSER(construct<OmpProcBindClause>(

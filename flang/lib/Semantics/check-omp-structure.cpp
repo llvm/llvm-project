@@ -215,6 +215,11 @@ private:
 
 bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   // Do not do clause checks while processing METADIRECTIVE.
+  // Context selectors can contain clauses that are not given as a part
+  // of a construct, but as trait properties. Testing whether they are
+  // valid or not is deferred to the checks of the context selectors.
+  // As it stands now, these clauses would appear as if they were present
+  // on METADIRECTIVE, leading to incorrect diagnostics.
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
     return true;
   }

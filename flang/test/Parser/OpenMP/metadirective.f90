@@ -21,11 +21,11 @@ end
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
-subroutine f10
+subroutine f01
   !$omp metadirective when(device={kind(host), device_num(1)}: nothing)
 end
 
-!UNPARSE: SUBROUTINE f10
+!UNPARSE: SUBROUTINE f01
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(DEVICE={KIND(host), DEVICE_NUM(1_4)}: NOTHING)
 !UNPARSE: END SUBROUTINE
 
@@ -46,11 +46,11 @@ end
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
-subroutine f20
+subroutine f02
   !$omp metadirective when(target_device={kind(any), device_num(7)}: nothing)
 end
 
-!UNPARSE: SUBROUTINE f20
+!UNPARSE: SUBROUTINE f02
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(TARGET_DEVICE={KIND(any), DEVICE_NUM(7_4)}: NOTHING)
 !UNPARSE: END SUBROUTINE
 
@@ -71,12 +71,12 @@ end
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
-subroutine f30
+subroutine f03
   !$omp metadirective &
-  !$omp when(implementation={atomic_default_mem_order(acq_rel)}: nothing)
+  !$omp & when(implementation={atomic_default_mem_order(acq_rel)}: nothing)
 end
 
-!UNPARSE: SUBROUTINE f30
+!UNPARSE: SUBROUTINE f03
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(IMPLEMENTATION={ATOMIC_DEFAULT_MEM_ORDER(ACQ_REL)}: &
 !UNPARSE: !$OMP&NOTHING)
 !UNPARSE: END SUBROUTINE
@@ -93,12 +93,12 @@ end
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
-subroutine f31
+subroutine f04
   !$omp metadirective &
-  !$omp when(implementation={extension(haha(1), foo(baz, "bar"(1)))}: nothing)
+  !$omp & when(implementation={extension(haha(1), foo(baz, "bar"(1)))}: nothing)
 end
 
-!UNPARSE: SUBROUTINE f31
+!UNPARSE: SUBROUTINE f04
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(IMPLEMENTATION={EXTENSION(haha(1_4), foo(baz,bar(1_4)))}: &
 !UNPARSE: !$OMP&NOTHING)
 !UNPARSE: END SUBROUTINE
@@ -125,17 +125,17 @@ end
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 
-subroutine f40(x)
+subroutine f05(x)
   integer :: x
   !$omp metadirective &
-  !$omp when(user={condition(score(100): .true.)}: &
-  !$omp     parallel do reduction(+: x)) &
-  !$omp otherwise(nothing)
+  !$omp & when(user={condition(score(100): .true.)}: &
+  !$omp &    parallel do reduction(+: x)) &
+  !$omp & otherwise(nothing)
   do i = 1, 10
   enddo
 end
 
-!UNPARSE: SUBROUTINE f40 (x)
+!UNPARSE: SUBROUTINE f05 (x)
 !UNPARSE:  INTEGER x
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(SCORE(100_4): .true._4)}: PARALLEL DO REDUCTION(+&
 !UNPARSE: !$OMP&: x)) OTHERWISE(NOTHING)
@@ -164,13 +164,14 @@ end
 !PARSE-TREE: | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | OmpClauseList ->
 
-subroutine f41
+subroutine f06
   ! Two trait set selectors
   !$omp metadirective &
-  !$omp when(implementation={vendor("amd")}, user={condition(.true.)}: nothing)
+  !$omp & when(implementation={vendor("amd")}, &
+  !$omp &      user={condition(.true.)}: nothing)
 end
 
-!UNPARSE: SUBROUTINE f41
+!UNPARSE: SUBROUTINE f06
 !UNPARSE: !$OMP METADIRECTIVE  WHEN(IMPLEMENTATION={VENDOR(amd)}, USER={CONDITION(.true._4)}: NO&
 !UNPARSE: !$OMP&THING)
 !UNPARSE: END SUBROUTINE
@@ -194,3 +195,4 @@ end
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
+
