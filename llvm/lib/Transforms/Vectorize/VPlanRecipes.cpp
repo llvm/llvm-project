@@ -1122,7 +1122,7 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // Assume that a non-constant update value (or a constant != 1) requires
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
-      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
   if (IncAmt->isLiveIn()) {
     ConstantInt *CI = dyn_cast<ConstantInt>(IncAmt->getLiveInIRValue());
 
@@ -1139,7 +1139,7 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
 
   // Add the costs together with the add/sub operation.
   return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost +
-         Ctx.TTI.getArithmeticInstrCost(Opcode, VTy);
+         Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
