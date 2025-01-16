@@ -228,7 +228,7 @@ class DependencyGraph {
     unsigned Depth;
 
     DependencyEdge CriticalPredecessor;
-    SmallVector<DependencyEdge, 8> OutgoingEdges;
+    SmallVector<DependencyEdge, 0> OutgoingEdges;
   };
   SmallVector<DGNode, 16> Nodes;
 
