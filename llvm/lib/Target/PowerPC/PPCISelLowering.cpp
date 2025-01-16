@@ -196,9 +196,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
-  // PowerPC uses addo,addo_carry,subo,subo_carry to propagate carry.
   setOperationAction(ISD::UADDO, RegVT, Custom);
   setOperationAction(ISD::USUBO, RegVT, Custom);
+
+  // PowerPC uses addo_carry,subo_carry to propagate carry.
   setOperationAction(ISD::UADDO_CARRY, RegVT, Custom);
   setOperationAction(ISD::USUBO_CARRY, RegVT, Custom);
 
@@ -18443,8 +18444,9 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
                               DAG.getConstant(NegConstant, DL, MVT::i64));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
     SDValue Addc =
-        DAG.getNode(ISD::UADDO, DL, DAG.getVTList(MVT::i64, CarryType), AddOrZ,
-                    DAG.getConstant(-1ULL, DL, MVT::i64));
+        DAG.getNode(ISD::UADDO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
+                    AddOrZ, DAG.getConstant(-1ULL, DL, MVT::i64),
+                    DAG.getConstant(0, DL, CarryType));
     return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
                        DAG.getConstant(0, DL, MVT::i64),
                        SDValue(Addc.getNode(), 1));
@@ -18460,8 +18462,9 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
                               DAG.getConstant(NegConstant, DL, MVT::i64));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
     SDValue Subc =
-        DAG.getNode(ISD::USUBO, DL, DAG.getVTList(MVT::i64, CarryType),
-                    DAG.getConstant(0, DL, MVT::i64), AddOrZ);
+        DAG.getNode(ISD::USUBO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
+                    DAG.getConstant(0, DL, MVT::i64), AddOrZ,
+                    DAG.getConstant(0, DL, CarryType));
     SDValue Invert = DAG.getNode(ISD::XOR, DL, CarryType, Subc.getValue(1),
                                  DAG.getAllOnesConstant(DL, CarryType));
     return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
