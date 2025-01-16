@@ -197,7 +197,7 @@ TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
     for (size_t i = 0; i < T::BITS; ++i) {
       const auto l_one = T::all_ones() << i; // 0b111...000
       const auto r_one = T::all_ones() >> i; // 0b000...111
-      const int zeros = static_cast<int>(i);
+      const int zeros = i;
       const int ones = T::BITS - zeros;
       ASSERT_EQ(cpp::countr_one(r_one), ones);
       ASSERT_EQ(cpp::countl_one(l_one), ones);

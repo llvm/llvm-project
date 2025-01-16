@@ -41,7 +41,7 @@ TYPED_TEST(LlvmLibcBitTest, HasSingleBit, UnsignedTypes) {
   constexpr auto LSB = T(1);
   constexpr auto MSB = T(~(ALL_ONES >> 1));
   for (T value = 1; value; value <<= 1) {
-    T two_bits_value = value | ((value <= MIDPOINT) ? MSB : LSB);
+    auto two_bits_value = value | ((value <= MIDPOINT) ? MSB : LSB);
     EXPECT_FALSE(has_single_bit<T>(two_bits_value));
   }
 }
