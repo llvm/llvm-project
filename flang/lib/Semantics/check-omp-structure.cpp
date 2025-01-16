@@ -213,11 +213,12 @@ private:
   std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
 
-// `OmpDesignatorChecker` is used to check if the designator
-// can appear within the OpenMP construct
-class OmpDesignatorChecker {
+// `OmpUnitedTaskDesignatorChecker` is used to check if the designator
+// can appear within the TASK construct
+class OmpUnitedTaskDesignatorChecker {
 public:
-  OmpDesignatorChecker(SemanticsContext &context) : context_{context} {}
+  OmpUnitedTaskDesignatorChecker(SemanticsContext &context)
+      : context_{context} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
@@ -1199,8 +1200,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     const auto &clauses{std::get<parser::OmpClauseList>(beginBlockDir.t)};
     for (const auto &clause : clauses.v) {
       if (std::get_if<parser::OmpClause::Untied>(&clause.u)) {
-        OmpDesignatorChecker ompDesignatorChecker{context_};
-        parser::Walk(block, ompDesignatorChecker);
+        OmpUnitedTaskDesignatorChecker check{context_};
+        parser::Walk(block, check);
       }
     }
     break;
