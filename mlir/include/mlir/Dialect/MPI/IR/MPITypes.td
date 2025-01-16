@@ -40,4 +40,34 @@ def MPI_Retval : MPI_Type<"Retval", "retval"> {
   }];
 }
 
+// TODO
+def MPI_Comm : MPI_Type<"Comm", "comm"> {
+  let summary = "..."
+  let description = [{
+    This type represents a handler to the MPI communicator.
+  }]
+}
+
+// TODO
+def MPI_Request : MPI_Type<"Request", "request"> {
+  let summary = "..."
+  let description = [{
+    This type represents a handler to an asynchronous requests.
+  }]
+}
+
+// TODO
+def MPI_Status : MPI_Type<"Status", "status"> {
+  let summary = "";
+  let description = [{
+  }];
+}
+
+// TODO
+def MPI_Op : MPI_Type<"Op", "op"> {
+  let summary = "";
+  let description = [{
+  }];
+}
+
 #endif // MLIR_DIALECT_MPI_IR_MPITYPES_TD
