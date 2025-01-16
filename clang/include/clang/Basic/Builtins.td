@@ -3347,10 +3347,12 @@ def VFork : LibBuiltin<"unistd.h"> {
 }
 
 // POSIX pthread.h
-// FIXME: This should be a GNULibBuiltin, but it's currently missing the prototype.
 
-def PthreadCreate : CustomEntry {
-  let Entry = "LIBBUILTIN(pthread_create, \"\",  \"fC<2,3>\", PTHREAD_H, ALL_GNU_LANGUAGES)";
+def PthreadCreate : GNULibBuiltin<"pthread.h"> {
+  let Spellings = ["pthread_create"];
+  let Attributes = [FunctionWithoutBuiltinPrefix, Callback<[2, 3]>];
+  // Note that we don't have an expressable prototype so we leave it empty.
+  let Prototype = "";
 }
 
 def SigSetJmp : LibBuiltin<"setjmp.h"> {
@@ -3566,6 +3568,19 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def Sincos : FPMathTemplate, GNULibBuiltin<"math.h"> {
+  let Spellings = ["sincos"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(T, T*, T*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def SincosF16F128 : F16F128MathTemplate, Builtin {
+  let Spellings = ["__builtin_sincos"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Prototype = "void(T, T*, T*)";
 }
 
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4780,6 +4795,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int(bool)";
 }
 
+def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
   let Attributes = [NoThrow, Const];
@@ -4840,6 +4861,12 @@ def HLSLFirstBitHigh : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLFirstBitLow : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_firstbitlow"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
   let Attributes = [NoThrow, Const];
@@ -4848,12 +4875,6 @@ def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_isinf"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
-def HLSLLength : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

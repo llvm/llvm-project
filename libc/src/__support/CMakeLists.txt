@@ -12,6 +12,7 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
     libc.src.__support.CPP.type_traits
+    libc.src.__support.math_extras
 )
 
 add_object_library(
@@ -267,7 +268,9 @@ add_header_library(
   HDRS
     fixedvector.h
   DEPENDS
+    .libc_assert
     libc.src.__support.CPP.array
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_header_library(

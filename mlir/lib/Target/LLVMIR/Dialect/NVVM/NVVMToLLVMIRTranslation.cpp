@@ -237,15 +237,7 @@ public:
       generateMetadata(value.getInt(), "maxnreg");
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
-      llvm::Metadata *llvmMetadataKernel[] = {
-          llvm::ValueAsMetadata::get(llvmFunc),
-          llvm::MDString::get(llvmContext, "kernel"),
-          llvm::ValueAsMetadata::get(
-              llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext), 1))};
-      llvm::MDNode *llvmMetadataNode =
-          llvm::MDNode::get(llvmContext, llvmMetadataKernel);
-      moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
-          ->addOperand(llvmMetadataNode);
+      llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
     }
     return success();
   }

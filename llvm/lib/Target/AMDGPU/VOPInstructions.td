@@ -1909,8 +1909,8 @@ multiclass VOP3_Realtriple_t16_gfx11<bits<10> op, string asmName, string opName 
 
 multiclass VOP3_Realtriple_t16_and_fake16_gfx11<bits<10> op, string asmName, string opName = NAME,
                                                 string pseudo_mnemonic = "", bit isSingle = 0> {
-  defm _t16: VOP3_Realtriple_t16_gfx11<op, opName#"_t16", asmName, pseudo_mnemonic, isSingle>;
-  defm _fake16: VOP3_Realtriple_t16_gfx11<op, opName#"_fake16", asmName, pseudo_mnemonic, isSingle>;
+  defm _t16: VOP3_Realtriple_t16_gfx11<op, asmName, opName#"_t16", pseudo_mnemonic, isSingle>;
+  defm _fake16: VOP3_Realtriple_t16_gfx11<op, asmName, opName#"_fake16", pseudo_mnemonic, isSingle>;
 }
 
 multiclass VOP3Only_Realtriple_t16_gfx11<bits<10> op, string asmName,
@@ -2033,7 +2033,7 @@ def VOP2InfoTable : VOPInfoTable<"VOP2">;
 def VOP3InfoTable : VOPInfoTable<"VOP3">;
 
 class VOPC64Table <string Format> : GenericTable {
-  let FilterClass = "VOPC64_" # Format # "_Base";
+  let FilterClass = "VOPC64_" # Format;
   let CppTypeName = "VOPC64DPPInfo";
   let Fields = ["Opcode"];
 

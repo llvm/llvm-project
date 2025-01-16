@@ -833,7 +833,11 @@ public:
           if_builder.end();
         },
         [&](const auto &) -> void {
-          if (skipDefaultInit)
+          // Always initialize allocatable component descriptor, even when the
+          // value is later copied from the host (e.g. firstprivate) because the
+          // assignment from the host to the copy will fail if the component
+          // descriptors are not initialized.
+          if (skipDefaultInit && !hlfir::mayHaveAllocatableComponent(hSymType))
             return;
           // Initialize local/private derived types with default
           // initialization (Fortran 2023 section 11.1.7.5 and OpenMP 5.2
@@ -887,9 +891,10 @@ public:
                  isPointer, Fortran::semantics::Symbol::Flags());
   }
 
-  void copyHostAssociateVar(
-      const Fortran::semantics::Symbol &sym,
-      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) override final {
+  void
+  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
+                       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr,
+                       bool hostIsSource = true) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
@@ -904,16 +909,14 @@ public:
            "Host and associated symbol boxes are the same");
 
     // 3) Perform the assignment.
-    mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(*builder);
     if (copyAssignIP && copyAssignIP->isSet())
       builder->restoreInsertionPoint(*copyAssignIP);
     else
       builder->setInsertionPointAfter(sb.getAddr().getDefiningOp());
 
     Fortran::lower::SymbolBox *lhs_sb, *rhs_sb;
-    if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
-      // lastprivate case
+    if (!hostIsSource) {
       lhs_sb = &hsb;
       rhs_sb = &sb;
     } else {
@@ -922,11 +925,6 @@ public:
     }
 
     copyVar(sym, *lhs_sb, *rhs_sb, sym.flags());
-
-    if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
-      builder->restoreInsertionPoint(insPt);
-    }
   }
 
   void genEval(Fortran::lower::pft::Evaluation &eval,

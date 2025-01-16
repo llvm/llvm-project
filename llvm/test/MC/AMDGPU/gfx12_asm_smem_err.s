@@ -29,3 +29,21 @@ s_buffer_load_dwordx8 s[4:11], null, s101
 
 s_buffer_load_dwordx16 s[4:19], null, s101
 // NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_atc_probe_buffer 7, null, s2
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_buffer_prefetch_data null, 100, s10, 7
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_buffer_load_i8 s5, null, s0
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_buffer_load_u8 s5, null, s0
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_buffer_load_i16 s5, null, s0
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_buffer_load_u16 s5, null, s0
+// NOGFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

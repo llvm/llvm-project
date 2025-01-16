@@ -765,6 +765,18 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
   }
 
+  // Since there are no opcodes for atomic loads and stores comparing to
+  // SelectionDAG, we add CheckMMOIsNonAtomic predicate immediately after the
+  // opcode predicate to make a logical combination of them.
+  if (SrcGIEquivOrNull &&
+      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
+  else if (SrcGIEquivOrNull &&
+           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+  }
+
   unsigned OpIdx = 0;
   for (const TypeSetByHwMode &VTy : Src.getExtTypes()) {
     // Results don't have a name unless they are the root node. The caller will
@@ -825,15 +837,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Src pattern child has predicate (" +
                           explainPredicates(Src) + ")");
     }
-  }
-
-  if (SrcGIEquivOrNull &&
-      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
-  else if (SrcGIEquivOrNull &&
-           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
 
   if (Src.isLeaf()) {
@@ -1429,15 +1432,15 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
   action_iterator InsertPt = InsertPtOrError.get();
   BuildMIAction &DstMIBuilder = *static_cast<BuildMIAction *>(InsertPt->get());
 
-  for (auto PhysInput : InsnMatcher.getPhysRegInputs()) {
+  for (auto PhysOp : M.physoperands()) {
     InsertPt = M.insertAction<BuildMIAction>(
         InsertPt, M.allocateOutputInsnID(),
         &Target.getInstruction(RK.getDef("COPY")));
     BuildMIAction &CopyToPhysRegMIBuilder =
         *static_cast<BuildMIAction *>(InsertPt->get());
-    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(
-        Target, PhysInput.first, true);
-    CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
+    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(Target,
+                                                            PhysOp.first, true);
+    CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysOp.first);
   }
 
   if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst,
@@ -2216,8 +2219,8 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(
