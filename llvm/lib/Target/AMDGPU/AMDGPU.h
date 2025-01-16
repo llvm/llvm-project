@@ -253,8 +253,8 @@ void initializeAMDGPUIdxRegAllocPass(PassRegistry &);
 extern char &AMDGPUIdxRegAllocID;
 
 #endif /* LLPC_BUILD_NPI */
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;

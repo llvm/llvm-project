@@ -38,6 +38,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SILoadStoreOptimizer.h"
+#include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
@@ -550,7 +551,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
   initializeSIWholeQuadModePass(*PR);
-  initializeSILowerControlFlowPass(*PR);
+  initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
@@ -1517,7 +1518,7 @@ void GCNPassConfig::addFastRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowID);
+  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
@@ -1538,7 +1539,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowID);
+  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
 #if LLPC_BUILD_NPI
   if (isPassEnabled(EnablePromotePrivate))
