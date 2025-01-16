@@ -3,31 +3,34 @@
 
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
-; RUN: llc -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
-; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
-; When 'partition-static-data-sections' is enabled, static data splitter pass will
-; categorize jump tables and assembly printer will place hot jump tables in the
-; `.rodata.hot`-prefixed section, and cold ones in the `.rodata.unlikely`-prefixed section.
-; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTHOT
-; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -function-sections=false -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
-
-; RUN: llc -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTCOLD
- 
  ; Tests stat messages are expected.
 ; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
 ; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
 
-; Tests that the first and third jump table are placed in a hot-suffixed section,
-; and the second and fourth are placed in the original section.
-; FUNC: .section .rodata.hot.foo,"a",@progbits
+; When 'partition-static-data-sections' is enabled, static data splitter pass will
+; categorize jump tables and assembly printer will place hot jump tables in the
+; `.rodata.hot`-prefixed section, and cold ones in the `.rodata.unlikely`-prefixed section.
+; Section names will optionally have `.<func>` if -function-sections is enabled.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2 -unique-section-names=false  %s -o - 2>&1 | FileCheck %s --check-prefixes=LINEAR,JT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTHOT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=false -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT --implicit-check-not=unique
+
+; Tests that `-static-data-default-hotness` can override hotness for data with
+; unknown hotness.
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTCOLD
+
+; LINEAR:    .section .rodata.hot,"a",@progbits,unique,2
+; FUNC:     .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS: .section .rodata.hot,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; FUNC: .section .rodata.unlikely.foo,"a",@progbits
-; FUNCLESS: .section .rodata.unlikely,"a",@progbits
+; LINEAR:    	.section	.rodata.unlikely,"a",@progbits,unique,3
+; FUNC:       .section .rodata.unlikely.foo,"a",@progbits
+; FUNCLESS:   .section .rodata.unlikely,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
 ; DEFAULTHOT: .section .rodata.hot.func_without_entry_count,"a",@progbits
