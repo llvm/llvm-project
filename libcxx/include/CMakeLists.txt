@@ -991,10 +991,17 @@ set(files
   experimental/__simd/traits.h
   experimental/__simd/utility.h
   experimental/__simd/vec_ext.h
+  experimental/__stacktrace/basic_stacktrace.h
+  experimental/__stacktrace/detail/alloc.h
+  experimental/__stacktrace/detail/context.h
+  experimental/__stacktrace/detail/entry.h
+  experimental/__stacktrace/detail/to_string.h
+  experimental/__stacktrace/stacktrace_entry.h
   experimental/iterator
   experimental/memory
   experimental/propagate_const
   experimental/simd
+  experimental/stacktrace
   experimental/type_traits
   experimental/utility
   ext/__hash

@@ -2225,6 +2225,16 @@ module std [system] {
       header "experimental/simd"
       export *
     }
+    module stacktrace {
+      private header "experimental/__stacktrace/basic_stacktrace.h"
+      private header "experimental/__stacktrace/detail/alloc.h"
+      private header "experimental/__stacktrace/detail/context.h"
+      private header "experimental/__stacktrace/detail/entry.h"
+      private header "experimental/__stacktrace/detail/to_string.h"
+      private header "experimental/__stacktrace/stacktrace_entry.h"
+      header "experimental/stacktrace"
+      export *
+    }
   }
 
   // Implementation detail headers that are private to libc++. These modules
