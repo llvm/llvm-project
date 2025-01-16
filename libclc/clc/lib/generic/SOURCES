@@ -1,3 +1,4 @@
+common/clc_smoothstep.cl
 geometric/clc_dot.cl
 integer/clc_abs.cl
 integer/clc_abs_diff.cl

@@ -108,19 +108,23 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
-- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
-  the configuration options of the `Clang Static Analyzer Checks
-  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
+- Improved :program:`clang-tidy-diff.py` script. Add the `-only-check-in-db`
+  option to exclude files not present in the compilation database, avoiding
+  false-negative results.
 
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
-- Improved :program:`clang-tidy` by accepting parameters file in command line.
+- Improved :program:`clang-tidy`:
 
-- Removed :program:`clang-tidy`'s global options for most of checks. All options
-  are changed to local options except `IncludeStyle`, `StrictMode` and
-  `IgnoreMacros`. Global scoped `StrictMode` and `IgnoreMacros` are deprecated
-  and will be removed in further releases.
+  - add support for `--verify-config` flag to check the configuration options of
+    the `Clang Static Analyzer Checks <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
+  - accept parameters file in command line.
+  - fix incorrect configuration file path resolving when file paths contain ``..``.
+  - remove global options for most of checks. All options are changed to local
+    options except `IncludeStyle`, `StrictMode` and `IgnoreMacros`. Global scoped
+    `StrictMode` and `IgnoreMacros` are deprecated and will be removed in further
+    releases.
 
 .. csv-table::
   :header: "Check", "Options removed from global option"
@@ -145,6 +149,13 @@ New checks
   Warns about code that tries to cast between pointers by means of
   ``std::bit_cast`` or ``memcpy``.
 
+- New :doc:`bugprone-incorrect-enable-shared-from-this
+  <clang-tidy/checks/bugprone/incorrect-enable-shared-from-this>` check.
+
+  Detect classes or structs that do not publicly inherit from 
+  ``std::enable_shared_from_this``, because unintended behavior will 
+  otherwise occur when calling ``shared_from_this``.
+  
 - New :doc:`bugprone-nondeterministic-pointer-iteration-order
   <clang-tidy/checks/bugprone/nondeterministic-pointer-iteration-order>`
   check.
@@ -192,7 +203,7 @@ Changes in existing checks
   the offending code with ``reinterpret_cast``, to more clearly express intent.
 
 - Improved :doc:`bugprone-dangling-handle
-  <clang-tidy/checks/bugprone/dangling-handle>` check to treat `std::span` as a
+  <clang-tidy/checks/bugprone/dangling-handle>` check to treat ``std::span`` as a
   handle class.
 
 - Improved :doc:`bugprone-exception-escape
@@ -202,6 +213,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
+
+- Improve :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` to avoid incorrect check
+  results when floating point type is not ``float``, ``double`` and
+  ``long double``.
 
 - Improved :doc:`bugprone-optional-value-conversion
   <clang-tidy/checks/bugprone/optional-value-conversion>` to support detecting
@@ -230,7 +246,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
-  `bsl::optional` and `bdlb::NullableValue` from
+  ``bsl::optional`` and ``bdlb::NullableValue`` from
   <https://github.com/bloomberg/bde>_.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
@@ -292,7 +308,7 @@ Changes in existing checks
   overloaded ``operator new`` and ``operator delete``.
 
 - Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using 
+  <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using
   ``std::span`` as a replacement for parameters of incomplete C array type in
   C++20 and ``std::array`` or ``std::vector`` before C++20.
 
@@ -339,6 +355,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check to fix a crash when
   an argument type is declared but not defined.
 
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check
+  to consider static member functions the same way as free functions.
+
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
   any class that has a ``contains`` method. Fix some false negatives in the
@@ -360,9 +380,18 @@ Changes in existing checks
   case of the literal suffix in fixes and fixing false positive for implicit
   conversion of comparison result in C23.
 
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check
+  by addressing a false positive in aggregate initialization through
+  parenthesized list.
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
-  remove `->`, when redundant `get()` is removed.
+  remove ``->``, when redundant ``get()`` is removed.
+
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check to use correct template
+  type in ``std::min`` and ``std::max`` when operand is integer literal.
 
 Removed checks
 ^^^^^^^^^^^^^^

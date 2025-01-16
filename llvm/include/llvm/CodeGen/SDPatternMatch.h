@@ -138,6 +138,8 @@ struct Opcode_match {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
+inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 

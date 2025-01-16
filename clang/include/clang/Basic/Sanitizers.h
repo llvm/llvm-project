@@ -171,6 +171,10 @@ struct SanitizerSet {
     return static_cast<bool>(Mask & K);
   }
 
+  bool has(SanitizerKind::SanitizerOrdinal O) const {
+    return has(SanitizerMask::bitPosToMask(O));
+  }
+
   /// Check if one or more sanitizers are enabled.
   bool hasOneOf(SanitizerMask K) const { return static_cast<bool>(Mask & K); }
 

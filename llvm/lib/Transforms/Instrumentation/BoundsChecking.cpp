@@ -41,7 +41,13 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-using BuilderTy = IRBuilder<TargetFolder>;
+class BuilderTy : public IRBuilder<TargetFolder> {
+public:
+  BuilderTy(BasicBlock *TheBB, BasicBlock::iterator IP, TargetFolder Folder)
+      : IRBuilder<TargetFolder>(TheBB, IP, Folder) {
+    SetNoSanitizeMetadata();
+  }
+};
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///
@@ -208,8 +214,15 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
         Or = getBoundsCheckCond(AI->getPointerOperand(), AI->getValOperand(),
                                 DL, TLI, ObjSizeEval, IRB, SE);
     }
-    if (Or)
+    if (Or) {
+      if (Opts.GuardKind) {
+        llvm::Value *Allow = IRB.CreateIntrinsic(
+            IRB.getInt1Ty(), Intrinsic::allow_ubsan_check,
+            {llvm::ConstantInt::getSigned(IRB.getInt8Ty(), *Opts.GuardKind)});
+        Or = IRB.CreateAnd(Or, Allow);
+      }
       TrapInfo.push_back(std::make_pair(&I, Or));
+    }
   }
 
   std::string Name;
@@ -293,5 +306,7 @@ void BoundsCheckingPass::printPipeline(
   }
   if (Opts.Merge)
     OS << ";merge";
+  if (Opts.GuardKind)
+    OS << ";guard=" << static_cast<int>(*Opts.GuardKind);
   OS << ">";
 }

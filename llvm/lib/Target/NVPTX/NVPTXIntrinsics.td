@@ -6,19 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Utility class to wrap up information about a register and DAG type for more
-// convenient iteration and parameterization
-class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
-  ValueType Ty = ty;
-  NVPTXRegClass RC = rc;
-  Operand Imm = imm;
-  int Size = ty.Size;
-}
-
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
-
-
 def immFloat0 : PatLeaf<(fpimm), [{
     float f = (float)N->getValueAPF().convertToFloat();
     return (f==0.0f);
@@ -1721,11 +1708,6 @@ def : Pat<(int_nvvm_f2bf16_rz f32:$a),
           (CVT_bf16_f32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a),
           (CVT_bf16_f32 $a, CvtRZ_RELU)>;
-
-def CVT_tf32_f32 :
-   NVPTXInst<(outs Int32Regs:$dest), (ins Float32Regs:$a),
-                   "cvt.rna.tf32.f32 \t$dest, $a;",
-       [(set i32:$dest, (int_nvvm_f2tf32_rna f32:$a))]>;
 
 def INT_NVVM_LOHI_I2D : F_MATH_2<"mov.b64 \t$dst, {{$src0, $src1}};",
   Float64Regs, Int32Regs, Int32Regs, int_nvvm_lohi_i2d>;
