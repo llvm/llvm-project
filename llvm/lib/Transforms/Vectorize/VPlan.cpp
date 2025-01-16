@@ -312,12 +312,10 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   }
 
   auto *LastInst = cast<Instruction>(get(Def, LastLane));
-  auto OldIP = Builder.saveIP();
-  // TODO: Remove once VPDerivedRecipe can be simplified, which requires
-  // vector trip count being modeled in VPlan.
   // Set the insert point after the last scalarized instruction or after the
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
+  auto OldIP = Builder.saveIP();
   auto NewIP =
       isa<PHINode>(LastInst)
           ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())

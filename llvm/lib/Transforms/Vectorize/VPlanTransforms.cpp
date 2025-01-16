@@ -759,8 +759,7 @@ void VPlanTransforms::optimizeInductionExitUsers(
     if (!WideIV)
       continue;
     VPValue *EndValue = EndValues.lookup(WideIV);
-    if (!EndValue)
-      continue;
+    assert(EndValue && "end value must have been pre-computed");
 
     if (Incoming != WideIV) {
       ExitIRI->setOperand(0, EndValue);

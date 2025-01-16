@@ -8977,6 +8977,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
     if (!ScalarPhiI)
       break;
 
+    // TODO: Extract final value from induction recipe initially, optimize to pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(Builder.getRecipe(ScalarPhiI));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
@@ -9522,7 +9523,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  // IVEndValues are not used yet in the native path.
+  // TODO: IVEndValues are not used yet in the native path, to optimize exit values.
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
