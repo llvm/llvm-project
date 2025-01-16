@@ -106,7 +106,7 @@ public:
                                            const GCNSubtarget &ST,
                                            SDWAOperandsMap *PotentialMatches = nullptr) = 0;
   virtual bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                             bool Combine = false) = 0;
+                             bool CombineSelections = false) = 0;
 
   MachineOperand *getTargetOperand() const { return Target; }
   MachineOperand *getReplacedOperand() const { return Replaced; }
@@ -186,7 +186,7 @@ public:
                                    const GCNSubtarget &ST,
                                    SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                     bool Combine = false) override;
+                     bool CombineSelections = false) override;
 
   SdwaSel getSrcSel() const { return SrcSel; }
   bool getAbs() const { return Abs; }
@@ -216,7 +216,7 @@ public:
                                    const GCNSubtarget &ST,
                                    SDWAOperandsMap *PotentialMatches = nullptr) override;
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                     bool Combine = false) override;
+                     bool CombineSelections = false) override;
 
   SdwaSel getDstSel() const { return DstSel; }
   DstUnused getDstUnused() const { return DstUn; }
@@ -237,7 +237,7 @@ public:
         Preserve(PreserveOp) {}
 
   bool convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                     bool Combine = false) override;
+                     bool CombineSelections = false) override;
 
   MachineOperand *getPreservedOperand() const { return Preserve; }
 
@@ -427,7 +427,7 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
 }
 
 bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                                   bool Combine) {
+                                   bool CombineSelections) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_CVT_F32_FP8_sdwa:
   case AMDGPU::V_CVT_F32_BF8_sdwa:
@@ -503,7 +503,7 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
   }
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
-    if (Combine) {
+    if (CombineSelections) {
       SdwaSel NewOp;
       bool CanCombine =
           combineSdwaSel((SdwaSel)SrcSel->getImm(), getSrcSel(), NewOp);
@@ -541,7 +541,7 @@ MachineInstr *SDWADstOperand::potentialToConvert(const SIInstrInfo *TII,
 }
 
 bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
-                                   bool Combine) {
+                                   bool CombineSelections) {
   // Replace vdst operand in MI with target operand. Set dst_sel and dst_unused
 
   if ((MI.getOpcode() == AMDGPU::V_FMAC_F16_sdwa ||
@@ -560,7 +560,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
   copyRegOperand(*Operand, *getTargetOperand());
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
-  if (Combine) {
+  if (CombineSelections) {
     SdwaSel NewOp;
     bool CanCombine =
         combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel(), NewOp);
@@ -582,7 +582,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
 
 bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
                                            const SIInstrInfo *TII,
-                                           bool Combine) {
+                                           bool CombineSelections) {
   // MI should be moved right before v_or_b32.
   // For this we should clear all kill flags on uses of MI src-operands or else
   // we can encounter problem with use of killed operand.
@@ -607,7 +607,7 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
                  MI.getNumOperands() - 1);
 
   // Convert MI as any other SDWADstOperand and remove v_or_b32
-  return SDWADstOperand::convertToSDWA(MI, TII, Combine);
+  return SDWADstOperand::convertToSDWA(MI, TII, CombineSelections);
 }
 
 std::optional<int64_t>
