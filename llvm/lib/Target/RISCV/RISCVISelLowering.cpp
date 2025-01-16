@@ -280,7 +280,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                    MVT::i1, Promote);
 
   // TODO: add all necessary setOperationAction calls.
-  setOperationAction(ISD::DYNAMIC_STACKALLOC, XLenVT, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, XLenVT, Custom);
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, XLenVT, Expand);
@@ -7727,6 +7727,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
                            Op.getOperand(2), Flags, DL);
   }
+  case ISD::DYNAMIC_STACKALLOC:
+    return lowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:
     return lowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:
@@ -16229,6 +16231,68 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::BREV8, DL, VT, Src.getOperand(0));
 }
 
+static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  // Fold:
+  //    vp.reverse(vp.load(ADDR, MASK)) -> vp.strided.load(ADDR, -1, MASK)
+
+  // Check if its first operand is a vp.load.
+  auto *VPLoad = dyn_cast<VPLoadSDNode>(N->getOperand(0));
+  if (!VPLoad)
+    return SDValue();
+
+  EVT LoadVT = VPLoad->getValueType(0);
+  // We do not have a strided_load version for masks, and the evl of vp.reverse
+  // and vp.load should always be the same.
+  if (!LoadVT.getVectorElementType().isByteSized() ||
+      N->getOperand(2) != VPLoad->getVectorLength() ||
+      !N->getOperand(0).hasOneUse())
+    return SDValue();
+
+  // Check if the mask of outer vp.reverse are all 1's.
+  if (!isOneOrOneSplat(N->getOperand(1)))
+    return SDValue();
+
+  SDValue LoadMask = VPLoad->getMask();
+  // If Mask is all ones, then load is unmasked and can be reversed.
+  if (!isOneOrOneSplat(LoadMask)) {
+    // If the mask is not all ones, we can reverse the load if the mask was also
+    // reversed by an unmasked vp.reverse with the same EVL.
+    if (LoadMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
+        !isOneOrOneSplat(LoadMask.getOperand(1)) ||
+        LoadMask.getOperand(2) != VPLoad->getVectorLength())
+      return SDValue();
+    LoadMask = LoadMask.getOperand(0);
+  }
+
+  // Base = LoadAddr + (NumElem - 1) * ElemWidthByte
+  SDLoc DL(N);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue NumElem = VPLoad->getVectorLength();
+  uint64_t ElemWidthByte = VPLoad->getValueType(0).getScalarSizeInBits() / 8;
+
+  SDValue Temp1 = DAG.getNode(ISD::SUB, DL, XLenVT, NumElem,
+                              DAG.getConstant(1, DL, XLenVT));
+  SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
+                              DAG.getConstant(ElemWidthByte, DL, XLenVT));
+  SDValue Base = DAG.getNode(ISD::ADD, DL, XLenVT, VPLoad->getBasePtr(), Temp2);
+  SDValue Stride = DAG.getConstant(-ElemWidthByte, DL, XLenVT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo PtrInfo(VPLoad->getAddressSpace());
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, VPLoad->getMemOperand()->getFlags(),
+      LocationSize::beforeOrAfterPointer(), VPLoad->getAlign());
+
+  SDValue Ret = DAG.getStridedLoadVP(
+      LoadVT, DL, VPLoad->getChain(), Base, Stride, LoadMask,
+      VPLoad->getVectorLength(), MMO, VPLoad->isExpandingLoad());
+
+  DAG.ReplaceAllUsesOfValueWith(SDValue(VPLoad, 1), Ret.getValue(1));
+
+  return Ret;
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -18372,6 +18436,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     }
   }
+  case ISD::EXPERIMENTAL_VP_REVERSE:
+    return performVP_REVERSECombine(N, DAG, Subtarget);
   case ISD::BITCAST: {
     assert(Subtarget.useRVVForFixedLengthVectors());
     SDValue N0 = N->getOperand(0);
@@ -19641,6 +19707,8 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_INX:
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
+  case RISCV::PROBED_STACKALLOC_DYN:
+    return emitDynamicProbedAlloc(MI, BB);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while jal call instruction (where statepoint will be lowered at the end)
@@ -20873,6 +20941,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SF_VC_V_IVW_SE)
   NODE_NAME_CASE(SF_VC_V_VVW_SE)
   NODE_NAME_CASE(SF_VC_V_FVW_SE)
+  NODE_NAME_CASE(PROBED_ALLOCA)
   }
   // clang-format on
   return nullptr;
@@ -22601,4 +22670,96 @@ unsigned RISCVTargetLowering::getStackProbeSize(const MachineFunction &MF,
   // Round down to the stack alignment.
   StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
   return StackProbeSize ? StackProbeSize : StackAlign.value();
+}
+
+SDValue RISCVTargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  if (!hasInlineStackProbe(MF))
+    return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  // Get the inputs.
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+
+  // Construct the new SP value in a GPR.
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, RISCV::X2, XLenVT);
+  Chain = SP.getValue(1);
+  SP = DAG.getNode(ISD::SUB, dl, XLenVT, SP, Size);
+  if (Align)
+    SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                     DAG.getSignedConstant(-(uint64_t)Align->value(), dl, VT));
+
+  // Set the real SP to the new value with a probing loop.
+  Chain = DAG.getNode(RISCVISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
+  return DAG.getMergeValues({SP, Chain}, dl);
+}
+
+MachineBasicBlock *
+RISCVTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
+                                            MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  DebugLoc DL = MBB->findDebugLoc(MBBI);
+  Register TargetReg = MI.getOperand(1).getReg();
+
+  const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
+  bool IsRV64 = Subtarget.is64Bit();
+  Align StackAlign = Subtarget.getFrameLowering()->getStackAlign();
+  const RISCVTargetLowering *TLI = Subtarget.getTargetLowering();
+  uint64_t ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+
+  MachineFunction::iterator MBBInsertPoint = std::next(MBB->getIterator());
+  MachineBasicBlock *LoopTestMBB =
+      MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(MBBInsertPoint, LoopTestMBB);
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MBB->getBasicBlock());
+  MF.insert(MBBInsertPoint, ExitMBB);
+  Register SPReg = RISCV::X2;
+  Register ScratchReg =
+      MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+
+  // ScratchReg = ProbeSize
+  TII->movImm(*MBB, MBBI, DL, ScratchReg, ProbeSize, MachineInstr::NoFlags);
+
+  // LoopTest:
+  //   SUB SP, SP, ProbeSize
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::SUB), SPReg)
+      .addReg(SPReg)
+      .addReg(ScratchReg);
+
+  //   s[d|w] zero, 0(sp)
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+          TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
+      .addReg(RISCV::X0)
+      .addReg(SPReg)
+      .addImm(0);
+
+  //  BLT TargetReg, SP, LoopTest
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(RISCV::BLT))
+      .addReg(TargetReg)
+      .addReg(SPReg)
+      .addMBB(LoopTestMBB);
+
+  // Adjust with: MV SP, TargetReg.
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(RISCV::ADDI), SPReg)
+      .addReg(TargetReg)
+      .addImm(0);
+
+  ExitMBB->splice(ExitMBB->end(), MBB, std::next(MBBI), MBB->end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  LoopTestMBB->addSuccessor(ExitMBB);
+  LoopTestMBB->addSuccessor(LoopTestMBB);
+  MBB->addSuccessor(LoopTestMBB);
+
+  MI.eraseFromParent();
+  MF.getInfo<RISCVMachineFunctionInfo>()->setDynamicAllocation();
+  return ExitMBB->begin()->getParent();
 }
