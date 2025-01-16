@@ -52,12 +52,21 @@ public:
                lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;
+
+  // Get all attribute values for a given DIE, including following any
+  // specification or abstract origin attributes and including those in the
+  // results.
+  //
+  // When following specifications/abstract origins, the attributes
+  // on the referring DIE are guaranteed to be visited before the attributes of
+  // the referenced DIE.
+  //
+  // \param[in]
+  // \param[in]
+  //
+  // \returns output may have duplicate entries
   DWARFAttributes GetAttributes(DWARFUnit *cu,
-                                Recurse recurse = Recurse::yes) const {
-    DWARFAttributes attrs;
-    GetAttributes(cu, attrs, recurse, 0 /* curr_depth */);
-    return attrs;
-  }
+                                Recurse recurse = Recurse::yes) const;
 
   dw_offset_t GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
                                 DWARFFormValue &formValue,
@@ -180,8 +189,10 @@ protected:
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 
 private:
-  void GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
-                     uint32_t curr_depth) const;
+  // Helper for the public \ref DWARFDebugInfoEntry::GetAttributes API.
+  bool GetAttributes(DWARFUnit const *cu, llvm::SmallVector<DWARFDIE> &worklist,
+                     llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
+                     DWARFAttributes &attributes) const;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin
