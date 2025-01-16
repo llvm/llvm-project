@@ -8366,9 +8366,9 @@ void ASTReader::FindFileRegionDecls(FileID File,
         *DInfo.Mod, LocalDeclID::get(*this, *DInfo.Mod, *DIt))));
 }
 
-bool
-ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                          DeclarationName Name) {
+bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
+                                               DeclarationName Name,
+                                               const DeclContext *OriginalDC) {
   assert(DC->hasExternalVisibleStorage() && DC == DC->getPrimaryContext() &&
          "DeclContext has no visible decls in storage");
   if (!Name)
