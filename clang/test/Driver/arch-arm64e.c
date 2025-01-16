@@ -35,6 +35,9 @@
 // RUN: %clang -fapple-kext -target arm64e-apple-ios -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT
 // DEFAULT: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"{{.*}}
 
+// RUN: %clang -target arm64e-apple-none-macho -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-MACHO
+// DEFAULT-MACHO: "-fptrauth-returns" "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-indirect-gotos" "-fptrauth-auth-traps" {{.*}}"-target-cpu" "apple-a12"{{.*}}
+
 
 // RUN: %clang -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
 // RUN: %clang -mkernel -target arm64e-apple-ios -fno-ptrauth-calls -c %s -### 2>&1 | FileCheck %s --check-prefix DEFAULT-NOCALL
