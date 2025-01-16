@@ -16316,11 +16316,10 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDValue StoreMask = VPStore->getMask();
-  // If Mask is not all 1's, try to replace the mask if it's opcode
-  // is EXPERIMENTAL_VP_REVERSE and it's operand can be directly extracted.
+  // If Mask is all ones, then load is unmasked and can be reversed.
   if (!isOneOrOneSplat(StoreMask)) {
-    // Check if the mask of vp.reverse in vp.store are all 1's and
-    // the length of mask is same as evl.
+    // If the mask is not all ones, we can reverse the store if the mask was
+    // also reversed by an unmasked vp.reverse with the same EVL.
     if (StoreMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
         !isOneOrOneSplat(StoreMask.getOperand(1)) ||
         StoreMask.getOperand(2) != VPStore->getVectorLength())
