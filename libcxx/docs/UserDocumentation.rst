@@ -70,6 +70,7 @@ when ``-fexperimental-library`` is passed:
 
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``<stacktrace>``
 * ``<syncstream>``
 
 .. note::
