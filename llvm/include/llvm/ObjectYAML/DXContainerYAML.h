@@ -73,7 +73,7 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
+#define ROOT_ELEMENT_FLAG(Num, Val, Str) bool Val = false;
 struct RootSignatureDesc {
   RootSignatureDesc() = default;
   RootSignatureDesc(const dxbc::RootSignatureDesc &Data);
