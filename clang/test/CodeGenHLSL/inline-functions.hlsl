@@ -61,7 +61,7 @@ unsigned RemoveDupes(unsigned Buf[MAX], unsigned size) {
 }
 
 
-RWBuffer<unsigned> Indices;
+RWBuffer<unsigned> Indices : register(u0);
 
 // The mangled version of main only remains without inlining
 // because it has internal linkage from the start
