@@ -56,6 +56,7 @@ public:
     for (auto [Lane, Orig] : enumerate(Origs)) {
       auto Pair = OrigToVectorMap.try_emplace(Orig, Vec);
       assert(Pair.second && "Orig already exists in the map!");
+      (void)Pair;
       OrigToLaneMap[Orig] = Lane;
     }
   }
