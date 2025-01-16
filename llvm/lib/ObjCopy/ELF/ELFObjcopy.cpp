@@ -623,7 +623,6 @@ struct RemoveNoteDetail {
   static std::vector<uint8_t> updateData(ArrayRef<uint8_t> OldData,
                                          ArrayRef<DeletedRange> ToRemove);
 };
-
 } // namespace
 
 template <class ELFT>
