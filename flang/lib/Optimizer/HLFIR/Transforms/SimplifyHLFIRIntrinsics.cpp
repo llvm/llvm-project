@@ -163,11 +163,8 @@ private:
   static mlir::Value genResultShape(mlir::Location loc,
                                     fir::FirOpBuilder &builder,
                                     hlfir::Entity array) {
-    mlir::Value inShape = hlfir::genShape(loc, builder, array);
-    llvm::SmallVector<mlir::Value> inExtents =
-        hlfir::getExplicitExtentsFromShape(inShape, builder);
-    if (inShape.getUses().empty())
-      inShape.getDefiningOp()->erase();
+    llvm::SmallVector<mlir::Value, 2> inExtents =
+        hlfir::genExtentsVector(loc, builder, array);
 
     // transpose indices
     assert(inExtents.size() == 2 && "checked in TransposeOp::validate");
@@ -210,7 +207,7 @@ public:
     mlir::Value resultShape, dimExtent;
     llvm::SmallVector<mlir::Value> arrayExtents;
     if (isTotalReduction)
-      arrayExtents = genArrayExtents(loc, builder, array);
+      arrayExtents = hlfir::genExtentsVector(loc, builder, array);
     else
       std::tie(resultShape, dimExtent) =
           genResultShapeForPartialReduction(loc, builder, array, dimVal);
@@ -338,17 +335,6 @@ public:
   }
 
 private:
-  static llvm::SmallVector<mlir::Value>
-  genArrayExtents(mlir::Location loc, fir::FirOpBuilder &builder,
-                  hlfir::Entity array) {
-    mlir::Value inShape = hlfir::genShape(loc, builder, array);
-    llvm::SmallVector<mlir::Value> inExtents =
-        hlfir::getExplicitExtentsFromShape(inShape, builder);
-    if (inShape.getUses().empty())
-      inShape.getDefiningOp()->erase();
-    return inExtents;
-  }
-
   // Return fir.shape specifying the shape of the result
   // of a SUM reduction with DIM=dimVal. The second return value
   // is the extent of the DIM dimension.
@@ -357,7 +343,7 @@ private:
                                     fir::FirOpBuilder &builder,
                                     hlfir::Entity array, int64_t dimVal) {
     llvm::SmallVector<mlir::Value> inExtents =
-        genArrayExtents(loc, builder, array);
+        hlfir::genExtentsVector(loc, builder, array);
     assert(dimVal > 0 && dimVal <= static_cast<int64_t>(inExtents.size()) &&
            "DIM must be present and a positive constant not exceeding "
            "the array's rank");
@@ -624,16 +610,10 @@ private:
   static std::tuple<mlir::Value, mlir::Value>
   genResultShape(mlir::Location loc, fir::FirOpBuilder &builder,
                  hlfir::Entity input1, hlfir::Entity input2) {
-    mlir::Value input1Shape = hlfir::genShape(loc, builder, input1);
-    llvm::SmallVector<mlir::Value> input1Extents =
-        hlfir::getExplicitExtentsFromShape(input1Shape, builder);
-    if (input1Shape.getUses().empty())
-      input1Shape.getDefiningOp()->erase();
-    mlir::Value input2Shape = hlfir::genShape(loc, builder, input2);
-    llvm::SmallVector<mlir::Value> input2Extents =
-        hlfir::getExplicitExtentsFromShape(input2Shape, builder);
-    if (input2Shape.getUses().empty())
-      input2Shape.getDefiningOp()->erase();
+    llvm::SmallVector<mlir::Value, 2> input1Extents =
+        hlfir::genExtentsVector(loc, builder, input1);
+    llvm::SmallVector<mlir::Value, 2> input2Extents =
+        hlfir::genExtentsVector(loc, builder, input2);
 
     llvm::SmallVector<mlir::Value, 2> newExtents;
     mlir::Value innerProduct1Extent, innerProduct2Extent;
@@ -958,16 +938,10 @@ private:
                                       fir::FirOpBuilder &builder,
                                       hlfir::Entity input1,
                                       hlfir::Entity input2) {
-    mlir::Value input1Shape = hlfir::genShape(loc, builder, input1);
     llvm::SmallVector<mlir::Value, 1> input1Extents =
-        hlfir::getExplicitExtentsFromShape(input1Shape, builder);
-    if (input1Shape.getUses().empty())
-      input1Shape.getDefiningOp()->erase();
-    mlir::Value input2Shape = hlfir::genShape(loc, builder, input2);
+        hlfir::genExtentsVector(loc, builder, input1);
     llvm::SmallVector<mlir::Value, 1> input2Extents =
-        hlfir::getExplicitExtentsFromShape(input2Shape, builder);
-    if (input2Shape.getUses().empty())
-      input2Shape.getDefiningOp()->erase();
+        hlfir::genExtentsVector(loc, builder, input2);
 
     assert(input1Extents.size() == 1 && input2Extents.size() == 1 &&
            "hlfir.dot_product arguments must be vectors");
