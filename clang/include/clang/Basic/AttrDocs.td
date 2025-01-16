@@ -121,12 +121,12 @@ def InitPriorityDocs : Documentation {
 In C++, the order in which global variables are initialized across translation
 units is unspecified, unlike the ordering within a single translation unit. The
 ``init_priority`` attribute allows you to specify a relative ordering for the
-initialization of objects declared at namespace scope in C++, even between translation
-units (but within a single final linked image). The priority is given as an integer
-constant expression between 101 and 65535 (inclusive). Priorities outside of that
-range are reserved for use by the implementation. A lower value indicates a higher
-priority of initialization. Note that only the relative ordering of values is
-important. For example:
+initialization of objects declared at namespace scope in C++ within a single
+linked image on supported platforms. The priority is given as an integer constant
+expression between 101 and 65535 (inclusive). Priorities outside of that range are
+reserved for use by the implementation. A lower value indicates a higher priority
+of initialization. Note that only the relative ordering of values is important.
+For example:
 
 .. code-block:: c++
 
@@ -144,11 +144,11 @@ On Windows, ``init_seg(compiler)`` is represented with a priority of 200 and
 ``init_seg(library)`` is represented with a priority of 400. ``init_seg(user)``
 uses the default 65535 priority.
 
+On MachO platforms, this attribute also does not control the order of initialization
+across translation units, where it only affects the order within a single TU.
+
 This attribute is only supported for C++ and Objective-C++ and is ignored in
 other language modes. Currently, this attribute is not implemented on z/OS.
-This attribute also does not control the order of initialization across
-translation units on Mach-O platforms, where it only affects the order within
-a single TU.
   }];
 }
 
