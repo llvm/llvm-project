@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // This test verifies that <stdatomic.h> DOES NOT redirect to <atomic> before C++23,
 // since doing so is a breaking change. Several things can break when that happens,
