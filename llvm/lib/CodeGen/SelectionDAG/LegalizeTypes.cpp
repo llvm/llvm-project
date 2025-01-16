@@ -924,7 +924,7 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
 
   // Pack the values in register
   if (FromVT.isVector() && ToVT.isScalarInteger()) {
-    
+
     EVT ElemVT = FromVT.getVectorElementType();
     unsigned NumElems = FromVT.getVectorNumElements();
     unsigned ElemBits = ElemVT.getSizeInBits();
@@ -942,7 +942,8 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
           DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElemVT, N->getOperand(0),
                       DAG.getIntPtrConstant(ElementIndex, DL));
       SDValue ExtElem = DAG.getNode(ISD::ZERO_EXTEND, DL, PackVT, Elem);
-      SDValue ShiftAmount = DAG.getShiftAmountConstant(ElemBits * I, PackVT, DL);
+      SDValue ShiftAmount =
+          DAG.getShiftAmountConstant(ElemBits * I, PackVT, DL);
       SDValue ShiftedElem =
           DAG.getNode(ISD::SHL, DL, PackVT, ExtElem, ShiftAmount);
 
