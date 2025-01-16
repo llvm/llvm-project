@@ -113,49 +113,37 @@ public:
   MachineInstr *getParentInst() const { return Target->getParent(); }
 
   /// Fold a \p FoldedOp SDWA selection into an \p ExistingOp existing SDWA
-  /// selection. If the selections are compatible, \p return true and store the
-  /// SDWA selection in
-  /// \p NewOp .
-  /// For example, if we have existing BYTE_0 Sel and are attempting to fold
-  /// WORD_1 Sel:
+  /// selection. If the selections are compatible, return the combined
+  /// selection, otherwise return a nullopt. For example, if we have existing
+  /// BYTE_0 Sel and are attempting to fold WORD_1 Sel:
   ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-  bool combineSdwaSel(SdwaSel ExistingOp, SdwaSel FoldedOp, SdwaSel &NewOp) {
-    if (ExistingOp == SdwaSel::DWORD) {
-      NewOp = FoldedOp;
-      return true;
-    }
+  std::optional<SdwaSel> combineSdwaSel(SdwaSel ExistingOp, SdwaSel FoldedOp) {
+    if (ExistingOp == SdwaSel::DWORD)
+      return FoldedOp;
 
-    if (FoldedOp == SdwaSel::DWORD) {
-      NewOp = ExistingOp;
-      return true;
-    }
+    if (FoldedOp == SdwaSel::DWORD)
+      return ExistingOp;
 
     if (ExistingOp == SdwaSel::WORD_1 || ExistingOp == SdwaSel::BYTE_2 ||
         ExistingOp == SdwaSel::BYTE_3)
-      return false;
+      return {};
 
-    if (ExistingOp == FoldedOp) {
-      NewOp = ExistingOp;
-      return true;
-    }
+    if (ExistingOp == FoldedOp)
+      return ExistingOp;
 
-    if (FoldedOp == SdwaSel::WORD_0) {
-      NewOp = ExistingOp;
-      return true;
-    }
+    if (FoldedOp == SdwaSel::WORD_0)
+      return ExistingOp;
 
     if (FoldedOp == SdwaSel::WORD_1) {
       if (ExistingOp == SdwaSel::BYTE_0)
-        NewOp = SdwaSel::BYTE_2;
-      else if (ExistingOp == SdwaSel::BYTE_1)
-        NewOp = SdwaSel::BYTE_3;
-      else if (ExistingOp == SdwaSel::WORD_0)
-        NewOp = SdwaSel::WORD_1;
-
-      return true;
+        return SdwaSel::BYTE_2;
+      if (ExistingOp == SdwaSel::BYTE_1)
+        return SdwaSel::BYTE_3;
+      if (ExistingOp == SdwaSel::WORD_0)
+        return SdwaSel::WORD_1;
     }
 
-    return false;
+    return {};
   }
 
   MachineRegisterInfo *getMRI() const {
@@ -504,12 +492,11 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     if (CombineSelections) {
-      SdwaSel NewOp;
-      bool CanCombine =
-          combineSdwaSel((SdwaSel)SrcSel->getImm(), getSrcSel(), NewOp);
-      if (!CanCombine)
+      std::optional<SdwaSel> NewOp =
+          combineSdwaSel((SdwaSel)SrcSel->getImm(), getSrcSel());
+      if (!NewOp.has_value())
         return false;
-      SrcSel->setImm(NewOp);
+      SrcSel->setImm(NewOp.value());
     } else {
       SrcSel->setImm(getSrcSel());
     }
@@ -561,12 +548,11 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII,
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
   if (CombineSelections) {
-    SdwaSel NewOp;
-    bool CanCombine =
-        combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel(), NewOp);
-    if (!CanCombine)
+    std::optional<SdwaSel> NewOp =
+     combineSdwaSel((SdwaSel)DstSel->getImm(), getDstSel());
+    if (!NewOp.has_value())
       return false;
-    DstSel->setImm(NewOp);
+    DstSel->setImm(NewOp.value());
   } else {
     DstSel->setImm(getDstSel());
   }
