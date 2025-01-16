@@ -1098,7 +1098,6 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
 
   // Convert to sdwa
-  int SDWAOpcode;
   unsigned Opcode = MI.getOpcode();
 
   // If the MI is already SDWA, preserve any existing opsel
@@ -1144,13 +1143,10 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     return true;
   }
 
-  if (TII->isSDWA(Opcode)) {
-    SDWAOpcode = Opcode;
-  } else {
-    SDWAOpcode = AMDGPU::getSDWAOp(Opcode);
-    if (SDWAOpcode == -1)
-      SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(Opcode));
-  }
+  assert(!TII->isSDWA(Opcode));
+  int SDWAOpcode = AMDGPU::getSDWAOp(Opcode);
+  if (SDWAOpcode == -1)
+    SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(Opcode));
   assert(SDWAOpcode != -1);
 
   const MCInstrDesc &SDWADesc = TII->get(SDWAOpcode);
