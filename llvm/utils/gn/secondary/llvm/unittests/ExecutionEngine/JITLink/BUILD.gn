@@ -23,5 +23,6 @@ unittest("JITLinkTests") {
     "MachOLinkGraphTests.cpp",
     "MemoryManagerErrorTests.cpp",
     "StubsTests.cpp",
+    "X86_64Tests.cpp",
   ]
 }
