@@ -141,6 +141,24 @@ for.cond.cleanup:
 }
 
 
+define i32 @issue_121372(<4 x i32> %v) {
+; CHECK-LABEL: issue_121372:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    csetm w0, lt
+; CHECK-NEXT:    ret
+  %cmp_ule = icmp ule <4 x i32> %v, zeroinitializer
+  %sext_v4i1 = sext <4 x i1> %cmp_ule to <4 x i32>
+  %cmp_sge = icmp sge <4 x i32> zeroinitializer, %sext_v4i1
+  %ext = extractelement <4 x i1> %cmp_sge, i32 0
+  %res = sext i1 %ext to i32
+  ret i32 %res
+}
+
+
 ; Negative tests
 
 define i1 @extract_icmp_v4i32_splat_rhs(<4 x i32> %a, i32 %b) {
@@ -163,9 +181,9 @@ define i1 @extract_icmp_v4i32_splat_rhs_mul_use(<4 x i32> %a, ptr %p) {
 ; CHECK-LABEL: extract_icmp_v4i32_splat_rhs_mul_use:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #235
-; CHECK-NEXT:    adrp x9, .LCPI7_0
+; CHECK-NEXT:    adrp x9, .LCPI8_0
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI7_0]
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI8_0]
 ; CHECK-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    xtn v1.4h, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
