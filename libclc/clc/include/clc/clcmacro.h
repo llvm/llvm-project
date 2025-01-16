@@ -102,29 +102,6 @@
                           FUNCTION(x.hi, y.hi, z.hi));                         \
   }
 
-#define _CLC_V_S_S_V_VECTORIZE(DECLSPEC, RET_TYPE, FUNCTION, ARG1_TYPE,        \
-                               ARG2_TYPE, ARG3_TYPE)                           \
-  DECLSPEC RET_TYPE##2 FUNCTION(ARG1_TYPE x, ARG2_TYPE y, ARG3_TYPE##2 z) {    \
-    return (RET_TYPE##2)(FUNCTION(x, y, z.lo), FUNCTION(x, y, z.hi));          \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##3 FUNCTION(ARG1_TYPE x, ARG2_TYPE y, ARG3_TYPE##3 z) {    \
-    return (RET_TYPE##3)(FUNCTION(x, y, z.x), FUNCTION(x, y, z.y),             \
-                         FUNCTION(x, y, z.z));                                 \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##4 FUNCTION(ARG1_TYPE x, ARG2_TYPE y, ARG3_TYPE##4 z) {    \
-    return (RET_TYPE##4)(FUNCTION(x, y, z.lo), FUNCTION(x, y, z.hi));          \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##8 FUNCTION(ARG1_TYPE x, ARG2_TYPE y, ARG3_TYPE##8 z) {    \
-    return (RET_TYPE##8)(FUNCTION(x, y, z.lo), FUNCTION(x, y, z.hi));          \
-  }                                                                            \
-                                                                               \
-  DECLSPEC RET_TYPE##16 FUNCTION(ARG1_TYPE x, ARG2_TYPE y, ARG3_TYPE##16 z) {  \
-    return (RET_TYPE##16)(FUNCTION(x, y, z.lo), FUNCTION(x, y, z.hi));         \
-  }
-
 #define _CLC_V_V_VP_VECTORIZE(DECLSPEC, RET_TYPE, FUNCTION, ARG1_TYPE,         \
                               ADDR_SPACE, ARG2_TYPE)                           \
   DECLSPEC __CLC_XCONCAT(RET_TYPE, 2)                                          \
