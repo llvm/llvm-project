@@ -6,7 +6,7 @@
         .globl  f1
         .type   f1,@function
 f1:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -32,7 +32,7 @@ f1:
         .globl  f_intermediate_overwrite1
         .type   f_intermediate_overwrite1,@function
 f_intermediate_overwrite1:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -58,7 +58,7 @@ f_intermediate_overwrite1:
         .globl  f_intermediate_overwrite2
         .type   f_intermediate_overwrite2,@function
 f_intermediate_overwrite2:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -86,7 +86,7 @@ f_intermediate_overwrite2:
         .globl  f_intermediate_read
         .type   f_intermediate_read,@function
 f_intermediate_read:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -101,7 +101,7 @@ f_intermediate_read:
         .globl  f_intermediate_overwrite3
         .type   f_intermediate_overwrite3,@function
 f_intermediate_overwrite3:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -129,7 +129,7 @@ f_intermediate_overwrite3:
         .globl  f_nonx30_ret
         .type   f_nonx30_ret,@function
 f_nonx30_ret:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -160,7 +160,7 @@ f_nonx30_ret:
         .globl  f_autiasp
         .type   f_autiasp,@function
 f_autiasp:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -174,7 +174,7 @@ f_autiasp:
         .globl  f_autibsp
         .type   f_autibsp,@function
 f_autibsp:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -188,7 +188,7 @@ f_autibsp:
         .globl  f_autiaz
         .type   f_autiaz,@function
 f_autiaz:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -202,7 +202,7 @@ f_autiaz:
         .globl  f_autibz
         .type   f_autibz,@function
 f_autibz:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -216,7 +216,7 @@ f_autibz:
         .globl  f_autia1716
         .type   f_autia1716,@function
 f_autia1716:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -242,7 +242,7 @@ f_autia1716:
         .globl  f_autib1716
         .type   f_autib1716,@function
 f_autib1716:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -268,7 +268,7 @@ f_autib1716:
         .globl  f_autiax12
         .type   f_autiax12,@function
 f_autiax12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -294,7 +294,7 @@ f_autiax12:
         .globl  f_autibx12
         .type   f_autibx12,@function
 f_autibx12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -320,7 +320,7 @@ f_autibx12:
         .globl  f_autiax30
         .type   f_autiax30,@function
 f_autiax30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -334,7 +334,7 @@ f_autiax30:
         .globl  f_autibx30
         .type   f_autibx30,@function
 f_autibx30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -349,7 +349,7 @@ f_autibx30:
         .globl  f_autdax12
         .type   f_autdax12,@function
 f_autdax12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -375,7 +375,7 @@ f_autdax12:
         .globl  f_autdbx12
         .type   f_autdbx12,@function
 f_autdbx12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -401,7 +401,7 @@ f_autdbx12:
         .globl  f_autdax30
         .type   f_autdax30,@function
 f_autdax30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -415,7 +415,7 @@ f_autdax30:
         .globl  f_autdbx30
         .type   f_autdbx30,@function
 f_autdbx30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -430,7 +430,7 @@ f_autdbx30:
         .globl  f_autizax12
         .type   f_autizax12,@function
 f_autizax12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -456,7 +456,7 @@ f_autizax12:
         .globl  f_autizbx12
         .type   f_autizbx12,@function
 f_autizbx12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -482,7 +482,7 @@ f_autizbx12:
         .globl  f_autizax30
         .type   f_autizax30,@function
 f_autizax30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -496,7 +496,7 @@ f_autizax30:
         .globl  f_autizbx30
         .type   f_autizbx30,@function
 f_autizbx30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -511,7 +511,7 @@ f_autizbx30:
         .globl  f_autdzax12
         .type   f_autdzax12,@function
 f_autdzax12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -537,7 +537,7 @@ f_autdzax12:
         .globl  f_autdzbx12
         .type   f_autdzbx12,@function
 f_autdzbx12:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -563,7 +563,7 @@ f_autdzbx12:
         .globl  f_autdzax30
         .type   f_autdzax30,@function
 f_autdzax30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -577,7 +577,7 @@ f_autdzax30:
         .globl  f_autdzbx30
         .type   f_autdzbx30,@function
 f_autdzbx30:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -591,7 +591,7 @@ f_autdzbx30:
         .globl  f_retaa
         .type   f_retaa,@function
 f_retaa:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -604,7 +604,7 @@ f_retaa:
         .globl  f_retab
         .type   f_retab,@function
 f_retab:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -617,7 +617,7 @@ f_retab:
         .globl  f_eretaa
         .type   f_eretaa,@function
 f_eretaa:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -631,7 +631,7 @@ f_eretaa:
         .globl  f_eretab
         .type   f_eretab,@function
 f_eretab:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -645,7 +645,7 @@ f_eretab:
         .globl  f_eret
         .type   f_eret,@function
 f_eret:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -675,7 +675,7 @@ f_movx30reg:
 f_autiasppci:
 0:
         pacnbiasppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -691,7 +691,7 @@ f_autiasppci:
 f_autibsppci:
 0:
         pacnbibsppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -708,7 +708,7 @@ f_autibsppci:
 f_autiasppcr:
 0:
         pacnbiasppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -723,7 +723,7 @@ f_autiasppcr:
 f_autibsppcr:
 0:
         pacnbibsppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -740,7 +740,7 @@ f_autibsppcr:
 f_retaasppci:
 0:
         pacnbiasppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -755,7 +755,7 @@ f_retaasppci:
 f_retabsppci:
 0:
         pacnbibsppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -771,7 +771,7 @@ f_retabsppci:
 f_retaasppcr:
 0:
         pacnbiasppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -785,7 +785,7 @@ f_retaasppcr:
 f_retabsppcr:
 0:
         pacnbibsppc
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -799,7 +799,7 @@ f_retabsppcr:
         .globl  f_autia171615
         .type   f_autia171615,@function
 f_autia171615:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
@@ -825,7 +825,7 @@ f_autia171615:
         .globl  f_autib171615
         .type   f_autib171615,@function
 f_autib171615:
-        hint    #25
+        paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
         bl      g
