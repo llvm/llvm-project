@@ -535,34 +535,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   auto setBF16OperationAction = [&](unsigned Op, MVT VT, LegalizeAction Action,
                                     LegalizeAction NoBF16Action) {
-    bool IsOpSupported = STI.hasBF16Math();
-    switch (Op) {
-    // Several BF16 instructions are available on sm_90 only.
-    case ISD::FADD:
-    case ISD::FMUL:
-    case ISD::FSUB:
-    case ISD::SELECT:
-    case ISD::SELECT_CC:
-    case ISD::SETCC:
-    case ISD::FEXP2:
-    case ISD::FCEIL:
-    case ISD::FFLOOR:
-    case ISD::FNEARBYINT:
-    case ISD::FRINT:
-    case ISD::FROUNDEVEN:
-    case ISD::FTRUNC:
-      IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 78;
-      break;
-    // Several BF16 instructions are available on sm_80 only.
-    case ISD::FMINNUM:
-    case ISD::FMAXNUM:
-    case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE:
-    case ISD::FMAXIMUM:
-    case ISD::FMINIMUM:
-      IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
-      break;
-    }
+    bool IsOpSupported = STI.hasNativeBF16Support(Op);
     setOperationAction(
         Op, VT, IsOpSupported ? Action : NoBF16Action);
   };
@@ -862,11 +835,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
-  // Lower bf16 add/mul/sub as fma when it avoids promotion
+  // On SM80, we select add/mul/sub as fma to avoid promotion to float
   for (const auto &Op : {ISD::FADD, ISD::FMUL, ISD::FSUB}) {
     for (const auto &VT : {MVT::bf16, MVT::v2bf16}) {
-      if (getOperationAction(Op, VT) != Legal &&
-          getOperationAction(ISD::FMA, VT) == Legal) {
+      if (!STI.hasNativeBF16Support(Op) && STI.hasNativeBF16Support(ISD::FMA)) {
         setOperationAction(Op, VT, Custom);
       }
     }

@@ -2464,18 +2464,17 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     return false;
 
   const NVPTXSubtarget *STI = TM.getSubtargetImpl();
-  const bool IsNativelySupported =
-      STI->getSmVersion() >= 90 && STI->getPTXVersion() >= 78;
-  if (IsNativelySupported)
+  if (STI->hasNativeBF16Support(N->getOpcode()))
     return false;
 
-  assert(VT == MVT::bf16 || VT == MVT::v2bf16);
-  const bool IsVec = VT == MVT::v2bf16;
+  const bool IsVec = VT.isVector();
+  assert(!IsVec || VT.getVectorNumElements() == 2);
   SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SmallVector<SDValue, 3> Operands;
   auto GetConstant = [&](float Value) -> SDValue {
+    // BF16 immediates must be legalized to integer register values
     APFloat APF(Value);
     bool LosesInfo;
     APF.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &LosesInfo);
