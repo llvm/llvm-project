@@ -3526,11 +3526,12 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
     return SDValue();
 
   // Check that we know Idx lies within VT
-  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
-    if (CIdx->getZExtValue() >= VT.getVectorElementCount().getKnownMinValue())
+  if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits())) {
+    auto *CIdx = dyn_cast(Idx);
+    if (!CIdx ||
+        CIdx->getZExtValue() >= VT.getVectorElementCount().getKnownMinValue())
       return SDValue();
-  } else if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
-    return SDValue();
+  }
 
   // Convert fixed length vectors to scalable
   MVT ContainerVT = VT;
