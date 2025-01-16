@@ -152,7 +152,7 @@ void DetailedRecordsEmitter::printTemplateArgs(const Record &Rec,
 // are enclosed in parentheses.
 void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
                                                raw_ostream &OS) {
-  SmallVector<std::pair<const Record *, SMRange>> Superclasses;
+  SmallVector<const Record *> Superclasses;
   Rec.getSuperClasses(Superclasses);
   if (Superclasses.empty()) {
     OS << "  Superclasses: (none)\n";
@@ -160,7 +160,7 @@ void DetailedRecordsEmitter::printSuperclasses(const Record &Rec,
   }
 
   OS << "  Superclasses:";
-  for (const auto &[ClassRec, Loc] : Superclasses) {
+  for (const auto *ClassRec : Superclasses) {
     if (Rec.hasDirectSuperClass(ClassRec))
       OS << formatv(" {0}", ClassRec->getNameInitAsString());
     else

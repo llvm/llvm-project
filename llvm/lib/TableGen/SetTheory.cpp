@@ -312,9 +312,9 @@ const RecVec *SetTheory::expand(const Record *Set) {
     return &I->second;
 
   // This is the first time we see Set. Find a suitable expander.
-  SmallVector<std::pair<const Record *, SMRange>> SCs;
+  SmallVector<const Record *> SCs;
   Set->getSuperClasses(SCs);
-  for (const auto &[SuperClass, Loc] : SCs) {
+  for (const auto *SuperClass : SCs) {
     // Skip unnamed superclasses.
     if (!isa<StringInit>(SuperClass->getNameInit()))
       continue;

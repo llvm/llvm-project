@@ -2976,11 +2976,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  SmallVector<std::pair<const Record *, SMRange>> SC;
-  R.getSuperClasses(SC);
-  if (!SC.empty()) {
+  SmallVector<const Record *> SCs;
+  R.getSuperClasses(SCs);
+  if (!SCs.empty()) {
     OS << "\t//";
-    for (const auto &[SC, _] : SC)
+    for (const auto *SC : SCs)
       OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";

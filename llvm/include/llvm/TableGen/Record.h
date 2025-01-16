@@ -1719,11 +1719,10 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  void getSuperClasses(
-      SmallVectorImpl<std::pair<const Record *, SMRange>> &Classes) const {
+  void getSuperClasses(SmallVectorImpl<const Record *> &Classes) const {
     for (const auto &[SC, R] : DirectSuperClasses) {
       SC->getSuperClasses(Classes);
-      Classes.emplace_back(SC, R);
+      Classes.push_back(SC);
     }
   }
 
