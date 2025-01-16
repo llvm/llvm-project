@@ -2522,13 +2522,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Value *V = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        if (auto *CI = dyn_cast<CallInst>(V))
-          CI->andIRFlags(M);
+        Value *V = Builder.CreateBinaryIntrinsic(
+            IID, X, ConstantFP::get(Arg0->getType(), Res),
+            FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }
     }
@@ -2623,13 +2622,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fmuladd: {
     // Try to simplify the underlying FMul.
-    if (Value *V = simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
-                                    II->getFastMathFlags(),
-                                    SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, II->getArgOperand(2));
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+    if (Value *V =
+            simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
+                             II->getFastMathFlags(), SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, II->getArgOperand(2),
+                                           II->getFastMathFlags());
 
     [[fallthrough]];
   }
@@ -2656,11 +2653,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
     if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
-                                   SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, Src2);
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+                                   SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
     // This is always valid for -0.0, but requires nsz for +0.0 as
@@ -2754,8 +2748,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
       CallInst *AbsSign =
-          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
-      AbsSign->copyFastMathFlags(II);
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -2862,16 +2855,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
         Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
       } else if (match(SelectLHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
         Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
       }
 
       if (NewLdexp) {
         Select->takeName(II);
-        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
         return replaceInstUsesWith(*II, Select);
       }
     }
