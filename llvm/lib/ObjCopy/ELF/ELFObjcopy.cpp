@@ -614,7 +614,6 @@ struct RemoveNoteDetail {
   struct DeletedRange {
     uint64_t OldFrom;
     uint64_t OldTo;
-    uint64_t NewPos;
   };
 
   template <class ELFT>
@@ -634,7 +633,6 @@ RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT);
   std::vector<DeletedRange> ToRemove;
   uint64_t CurPos = 0;
-  uint64_t NewPos = 0;
   while (CurPos + sizeof(Elf_Nhdr) <= Data.size()) {
     auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data() + CurPos);
     size_t FullSize = Nhdr->getSize(Align);
@@ -647,9 +645,7 @@ RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
                  (NoteInfo.Name.empty() || NoteInfo.Name == Note.getName());
         });
     if (ShouldRemove)
-      ToRemove.push_back({CurPos, CurPos + FullSize, NewPos});
-    else
-      NewPos += FullSize;
+      ToRemove.push_back({CurPos, CurPos + FullSize});
     CurPos += FullSize;
   }
   return ToRemove;
@@ -666,7 +662,6 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
       NewData.insert(NewData.end(), Slice.begin(), Slice.end());
     }
-    assert(RemRange.NewPos == NewData.size());
     CurPos = RemRange.OldTo;
   }
   if (CurPos < OldData.size()) {
