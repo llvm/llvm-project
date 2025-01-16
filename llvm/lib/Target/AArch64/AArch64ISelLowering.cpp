@@ -5279,25 +5279,31 @@ SDValue AArch64TargetLowering::LowerALIAS_LANE_MASK(SDValue Op,
   unsigned IntrinsicID = 0;
   uint64_t EltSize = Op.getOperand(2)->getAsZExtVal();
   bool IsWriteAfterRead = Op.getOperand(3)->getAsZExtVal() == 1;
-  IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr
-                                 : Intrinsic::aarch64_sve_whilerw;
   EVT VT = Op.getValueType();
   MVT SimpleVT = VT.getSimpleVT();
   // Make sure that the promoted mask size and element size match
   switch (EltSize) {
   case 1:
+    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_b
+                                   : Intrinsic::aarch64_sve_whilerw_b;
     assert((SimpleVT == MVT::v16i8 || SimpleVT == MVT::nxv16i1) &&
            "Unexpected mask or element size");
     break;
   case 2:
+    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_h
+                                   : Intrinsic::aarch64_sve_whilerw_h;
     assert((SimpleVT == MVT::v8i8 || SimpleVT == MVT::nxv8i1) &&
            "Unexpected mask or element size");
     break;
   case 4:
+    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_s
+                                   : Intrinsic::aarch64_sve_whilerw_s;
     assert((SimpleVT == MVT::v4i16 || SimpleVT == MVT::nxv4i1) &&
            "Unexpected mask or element size");
     break;
   case 8:
+    IntrinsicID = IsWriteAfterRead ? Intrinsic::aarch64_sve_whilewr_d
+                                   : Intrinsic::aarch64_sve_whilerw_d;
     assert((SimpleVT == MVT::v2i32 || SimpleVT == MVT::nxv2i1) &&
            "Unexpected mask or element size");
     break;
