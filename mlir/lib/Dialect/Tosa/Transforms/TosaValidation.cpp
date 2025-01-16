@@ -536,13 +536,23 @@ bool TosaValidation::isValidElementType(Type type) {
         return true;
       }
     }
+  } else if (mlir::isa<tosa::shapeType>(type)) {
+    return true;
   }
   return false;
 }
 
 void TosaValidation::runOnOperation() {
   configLevelAndProfile();
+
+  TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
+  if (!tosaDialect)
+    return;
+
   getOperation().walk([&](Operation *op) {
+    if (op->getDialect() != tosaDialect)
+      return;
+
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {

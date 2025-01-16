@@ -1841,20 +1841,20 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
   // Skip special artifical variable llvm.global.annotations.
   if (GV.getName() == "llvm.global.annotations")
     return;
-  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+  Constant *Init = nullptr;
+  if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
-    Constant *Init = GV.getInitializer();
+    Init = GV.getInitializer();
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if ((!GV.hasInitializer() || isa<UndefValue>(GV.getInitializer())) &&
-      GV.getNumUses() == 0)
+  if (!Init && GV.getNumUses() == 0)
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -1876,18 +1876,6 @@ bool SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
   return true;
 }
 
-static unsigned roundingModeMDToDecorationConst(StringRef S) {
-  if (S == "rte")
-    return SPIRV::FPRoundingMode::FPRoundingMode::RTE;
-  if (S == "rtz")
-    return SPIRV::FPRoundingMode::FPRoundingMode::RTZ;
-  if (S == "rtp")
-    return SPIRV::FPRoundingMode::FPRoundingMode::RTP;
-  if (S == "rtn")
-    return SPIRV::FPRoundingMode::FPRoundingMode::RTN;
-  return std::numeric_limits<unsigned>::max();
-}
-
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
                                                 IRBuilder<> &B) {
   // TODO: extend the list of functions with known result types
@@ -1905,9 +1893,10 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
       Function *CalledF = CI->getCalledFunction();
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
-      std::string Postfix;
+      FPDecorationId DecorationId = FPDecorationId::NONE;
       if (DemangledName.length() > 0)
-        DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName, &Postfix);
+        DemangledName =
+            SPIRV::lookupBuiltinNameHelper(DemangledName, &DecorationId);
       auto ResIt = ResTypeWellKnown.find(DemangledName);
       if (ResIt != ResTypeWellKnown.end()) {
         IsKnown = true;
@@ -1919,18 +1908,29 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
           break;
         }
       }
-      // check if a floating rounding mode info is present
-      StringRef S = Postfix;
-      SmallVector<StringRef, 8> Parts;
-      S.split(Parts, "_", -1, false);
-      if (Parts.size() > 1) {
-        // Convert the info about rounding mode into a decoration record.
-        unsigned RoundingModeDeco = roundingModeMDToDecorationConst(Parts[1]);
-        if (RoundingModeDeco != std::numeric_limits<unsigned>::max())
-          createRoundingModeDecoration(CI, RoundingModeDeco, B);
-        // Check if the SaturatedConversion info is present.
-        if (Parts[1] == "sat")
-          createSaturatedConversionDecoration(CI, B);
+      // check if a floating rounding mode or saturation info is present
+      switch (DecorationId) {
+      default:
+        break;
+      case FPDecorationId::SAT:
+        createSaturatedConversionDecoration(CI, B);
+        break;
+      case FPDecorationId::RTE:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTE, B);
+        break;
+      case FPDecorationId::RTZ:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTZ, B);
+        break;
+      case FPDecorationId::RTP:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTP, B);
+        break;
+      case FPDecorationId::RTN:
+        createRoundingModeDecoration(
+            CI, SPIRV::FPRoundingMode::FPRoundingMode::RTN, B);
+        break;
       }
     }
   }

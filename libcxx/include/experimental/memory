@@ -49,8 +49,9 @@ public:
 }
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/experimental/memory>
+#else
 #  include <__config>
 #  include <__cstddef/nullptr_t.h>
 #  include <__cstddef/size_t.h>
@@ -199,6 +200,6 @@ _LIBCPP_END_NAMESPACE_STD
 #    include <cstddef>
 #    include <limits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif /* _LIBCPP_EXPERIMENTAL_MEMORY */

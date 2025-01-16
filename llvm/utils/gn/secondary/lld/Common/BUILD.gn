@@ -33,6 +33,7 @@ static_library("Common") {
   ]
   sources = [
     "Args.cpp",
+    "BPSectionOrdererBase.cpp",
     "CommonLinkerContext.cpp",
     "DWARF.cpp",
     "DriverDispatcher.cpp",

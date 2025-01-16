@@ -1187,10 +1187,9 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
   if (AllocationOrder.empty()) {
     const Function &Fn = MF.getFunction();
     if (EmitError) {
-      DiagnosticInfoRegAllocFailure DI(
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "no registers from class available to allocate", Fn,
-          MI.getDebugLoc());
-      Fn.getContext().diagnose(DI);
+          MI.getDebugLoc()));
     }
 
     ArrayRef<MCPhysReg> RawRegs = RC.getRegisters();
@@ -1206,10 +1205,9 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
           "inline assembly requires more registers than available");
     } else {
       const Function &Fn = MBB->getParent()->getFunction();
-      DiagnosticInfoRegAllocFailure DI(
+      Fn.getContext().diagnose(DiagnosticInfoRegAllocFailure(
           "ran out of registers during register allocation", Fn,
-          MI.getDebugLoc());
-      Fn.getContext().diagnose(DI);
+          MI.getDebugLoc()));
     }
   }
 

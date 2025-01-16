@@ -32,8 +32,9 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/uchar.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -54,6 +55,6 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 #    endif
 
 #  endif // _LIBCPP_CXX03_LANG
-#endif   // 0
+#endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_UCHAR_H

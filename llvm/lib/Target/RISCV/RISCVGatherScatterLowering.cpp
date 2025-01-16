@@ -63,8 +63,7 @@ public:
   }
 
 private:
-  bool tryCreateStridedLoadStore(IntrinsicInst *II, Type *DataType, Value *Ptr,
-                                 Value *AlignOp);
+  bool tryCreateStridedLoadStore(IntrinsicInst *II);
 
   std::pair<Value *, Value *> determineBaseAndStride(Instruction *Ptr,
                                                      IRBuilderBase &Builder);
@@ -483,12 +482,46 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   return P;
 }
 
-bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
-                                                           Type *DataType,
-                                                           Value *Ptr,
-                                                           Value *AlignOp) {
+bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
+  VectorType *DataType;
+  Value *StoreVal = nullptr, *Ptr, *Mask, *EVL = nullptr;
+  MaybeAlign MA;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::masked_gather:
+    DataType = cast<VectorType>(II->getType());
+    Ptr = II->getArgOperand(0);
+    MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
+    Mask = II->getArgOperand(2);
+    break;
+  case Intrinsic::vp_gather:
+    DataType = cast<VectorType>(II->getType());
+    Ptr = II->getArgOperand(0);
+    MA = II->getParamAlign(0).value_or(
+        DL->getABITypeAlign(DataType->getElementType()));
+    Mask = II->getArgOperand(1);
+    EVL = II->getArgOperand(2);
+    break;
+  case Intrinsic::masked_scatter:
+    DataType = cast<VectorType>(II->getArgOperand(0)->getType());
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
+    MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
+    Mask = II->getArgOperand(3);
+    break;
+  case Intrinsic::vp_scatter:
+    DataType = cast<VectorType>(II->getArgOperand(0)->getType());
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
+    MA = II->getParamAlign(1).value_or(
+        DL->getABITypeAlign(DataType->getElementType()));
+    Mask = II->getArgOperand(2);
+    EVL = II->getArgOperand(3);
+    break;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
+
   // Make sure the operation will be supported by the backend.
-  MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
   EVT DataTypeVT = TLI->getValueType(*DL, DataType);
   if (!MA || !TLI->isLegalStridedLoadStore(DataTypeVT, *MA))
     return false;
@@ -514,23 +547,27 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
 
   Builder.SetInsertPoint(II);
 
-  Value *EVL = Builder.CreateElementCount(
-      IntegerType::get(Ctx, 32), cast<VectorType>(DataType)->getElementCount());
+  if (!EVL)
+    EVL = Builder.CreateElementCount(
+        Builder.getInt32Ty(), cast<VectorType>(DataType)->getElementCount());
 
   CallInst *Call;
-  if (II->getIntrinsicID() == Intrinsic::masked_gather) {
+
+  if (!StoreVal) {
     Call = Builder.CreateIntrinsic(
         Intrinsic::experimental_vp_strided_load,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {BasePtr, Stride, II->getArgOperand(2), EVL});
-    Call = Builder.CreateIntrinsic(
-        Intrinsic::vp_select, {DataType},
-        {II->getOperand(2), Call, II->getArgOperand(3), EVL});
+        {BasePtr, Stride, Mask, EVL});
+
+    // Merge llvm.masked.gather's passthru
+    if (II->getIntrinsicID() == Intrinsic::masked_gather)
+      Call = Builder.CreateIntrinsic(Intrinsic::vp_select, {DataType},
+                                     {Mask, Call, II->getArgOperand(3), EVL});
   } else
     Call = Builder.CreateIntrinsic(
         Intrinsic::experimental_vp_strided_store,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3), EVL});
+        {StoreVal, BasePtr, Stride, Mask, EVL});
 
   Call->takeName(II);
   II->replaceAllUsesWith(Call);
@@ -558,30 +595,31 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
 
   StridedAddrs.clear();
 
-  SmallVector<IntrinsicInst *, 4> Gathers;
-  SmallVector<IntrinsicInst *, 4> Scatters;
+  SmallVector<IntrinsicInst *, 4> Worklist;
 
   bool Changed = false;
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
-        Gathers.push_back(II);
-      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
-        Scatters.push_back(II);
+      if (!II)
+        continue;
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_gather:
+      case Intrinsic::masked_scatter:
+      case Intrinsic::vp_gather:
+      case Intrinsic::vp_scatter:
+        Worklist.push_back(II);
+        break;
+      default:
+        break;
       }
     }
   }
 
   // Rewrite gather/scatter to form strided load/store if possible.
-  for (auto *II : Gathers)
-    Changed |= tryCreateStridedLoadStore(
-        II, II->getType(), II->getArgOperand(0), II->getArgOperand(1));
-  for (auto *II : Scatters)
-    Changed |=
-        tryCreateStridedLoadStore(II, II->getArgOperand(0)->getType(),
-                                  II->getArgOperand(1), II->getArgOperand(2));
+  for (auto *II : Worklist)
+    Changed |= tryCreateStridedLoadStore(II);
 
   // Remove any dead phis.
   while (!MaybeDeadPHIs.empty()) {

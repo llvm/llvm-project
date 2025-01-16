@@ -31,16 +31,16 @@ entry:
 
 ; Verify that we use correct register types.
   store i8 1, ptr %s8, align 1
-; CHECK: mov.u16 [[R1:%rs[0-9]]], 1;
+; CHECK: mov.b16 [[R1:%rs[0-9]]], 1;
 ; CHECK-NEXT: st.u8 {{.*}}, [[R1]]
   store i8 2, ptr %u8, align 1
-; CHECK: mov.u16 [[R2:%rs[0-9]]], 2;
+; CHECK: mov.b16 [[R2:%rs[0-9]]], 2;
 ; CHECK-NEXT: st.u8 {{.*}}, [[R2]]
   store i16 3, ptr %s16, align 2
-; CHECK: mov.u16 [[R3:%rs[0-9]]], 3;
+; CHECK: mov.b16 [[R3:%rs[0-9]]], 3;
 ; CHECK-NEXT: st.u16 {{.*}}, [[R3]]
   store i16 4, ptr %u16, align 2
-; CHECK: mov.u16 [[R4:%rs[0-9]]], 4;
+; CHECK: mov.b16 [[R4:%rs[0-9]]], 4;
 ; CHECK-NEXT: st.u16 {{.*}}, [[R4]]
   store i32 5, ptr %s32, align 4
 ; CHECK: mov.b32 [[R5:%r[0-9]]], 5;
@@ -49,10 +49,10 @@ entry:
 ; CHECK: mov.b32 [[R6:%r[0-9]]], 6;
 ; CHECK-NEXT: st.u32 {{.*}}, [[R6]]
   store i64 7, ptr %s64, align 8
-; CHECK: mov.u64 [[R7:%rd[0-9]]], 7;
+; CHECK: mov.b64 [[R7:%rd[0-9]]], 7;
 ; CHECK-NEXT: st.u64 {{.*}}, [[R7]]
   store i64 8, ptr %u64, align 8
-; CHECK: mov.u64 [[R8:%rd[0-9]]], 8;
+; CHECK: mov.b64 [[R8:%rd[0-9]]], 8;
 ; CHECK-NEXT: st.u64 {{.*}}, [[R8]]
 
 ; FP constants are stored via integer registers, but that's an

@@ -246,6 +246,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
+                                  clang::driver::options::OPT_fno_unroll_loops,
+                                  (opts.OptimizationLevel > 1));
+
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   // -mframe-pointer=none/non-leaf/all option.
@@ -749,6 +753,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::driver::options::OPT_fno_logical_abbreviations,
                    false));
 
+  // -f{no-}unsigned
+  opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
+                       args.hasFlag(clang::driver::options::OPT_funsigned,
+                                    clang::driver::options::OPT_fno_unsigned,
+                                    false));
+
   // -f{no-}xor-operator
   opts.features.Enable(
       Fortran::common::LanguageFeature::XOROperator,
@@ -758,6 +768,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   // -fno-automatic
   if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
+  }
+
+  // -fsave-main-program
+  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
   }
 
   if (args.hasArg(
@@ -1378,6 +1393,11 @@ bool CompilerInvocation::createFromArgs(
       invoc.getDiagnosticOpts().Remarks.push_back(a->getValue());
   }
 
+  // -frealloc-lhs is the default.
+  if (!args.hasFlag(clang::driver::options::OPT_frealloc_lhs,
+                    clang::driver::options::OPT_fno_realloc_lhs, true))
+    invoc.loweringOpts.setReallocateLHS(false);
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
@@ -1419,6 +1439,10 @@ bool CompilerInvocation::createFromArgs(
       os << ' ' << *it;
     }
   }
+
+  // Process the timing-related options.
+  if (args.hasArg(clang::driver::options::OPT_ftime_report))
+    invoc.enableTimers = true;
 
   invoc.setArgv0(argv0);
 

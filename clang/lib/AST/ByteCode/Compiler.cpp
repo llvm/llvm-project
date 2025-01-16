@@ -90,6 +90,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     if (!Ctx->emitConstUint32(Offset, E))
       return false;
     return Ctx->emitArrayElemPtrPopUint32(E);
+  case K_RVO:
+    return Ctx->emitRVOPtr(E);
+  case K_InitList:
+    return true;
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -1717,6 +1721,8 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
+  InitLinkScope<Emitter> ILS(this, InitLink::InitList());
+
   QualType QT = E->getType();
   if (const auto *AT = QT->getAs<AtomicType>())
     QT = AT->getValueType();
@@ -1754,6 +1760,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       if (!this->visit(Init))
         return false;
 
@@ -1766,6 +1773,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                   const Expr *Init) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
+
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
       if (!this->emitGetPtrField(FieldToInit->Offset, Init))
@@ -2131,6 +2139,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
 
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
   }
 
   return false;
@@ -3427,6 +3445,38 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  const Type *TypeInfoType = E->getType().getTypePtr();
+
+  if (!E->isPotentiallyEvaluated()) {
+    if (DiscardResult)
+      return true;
+
+    if (E->isTypeOperand())
+      return this->emitGetTypeid(
+          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
+    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
+                               TypeInfoType, E);
+  }
+
+  // Otherwise, we need to evaluate the expression operand.
+  assert(E->getExprOperand());
+  assert(E->getExprOperand()->isLValue());
+
+  if (!Ctx.getLangOpts().CPlusPlus20 && !this->emitDiagTypeid(E))
+    return false;
+
+  if (!this->visit(E->getExprOperand()))
+    return false;
+
+  if (!this->emitGetTypeidPtr(TypeInfoType, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -3780,6 +3830,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
     return this->visitInitializer(E);
   }
 
@@ -4764,12 +4815,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4816,18 +4862,49 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
-  if (!InitStackActive || !E->isImplicit())
+  if (!InitStackActive)
     return this->emitThis(E);
 
-  if (InitStackActive && !InitStack.empty()) {
+  if (!InitStack.empty()) {
+    // If our init stack is, for example:
+    // 0 Stack: 3 (decl)
+    // 1 Stack: 6 (init list)
+    // 2 Stack: 1 (field)
+    // 3 Stack: 6 (init list)
+    // 4 Stack: 1 (field)
+    //
+    // We want to find the LAST element in it that's an init list,
+    // which is marked with the K_InitList marker. The index right
+    // before that points to an init list. We need to find the
+    // elements before the K_InitList element that point to a base
+    // (e.g. a decl or This), optionally followed by field, elem, etc.
+    // In the example above, we want to emit elements [0..2].
     unsigned StartIndex = 0;
+    unsigned EndIndex = 0;
+    // Find the init list.
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
+      if (InitStack[StartIndex].Kind == InitLink::K_InitList ||
+          InitStack[StartIndex].Kind == InitLink::K_This) {
+        EndIndex = StartIndex;
+        --StartIndex;
+        break;
+      }
+    }
+
+    // Walk backwards to find the base.
+    for (; StartIndex > 0; --StartIndex) {
+      if (InitStack[StartIndex].Kind == InitLink::K_InitList)
+        continue;
+
       if (InitStack[StartIndex].Kind != InitLink::K_Field &&
           InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
-    for (unsigned I = StartIndex, N = InitStack.size(); I != N; ++I) {
+    // Emit the instructions.
+    for (unsigned I = StartIndex; I != EndIndex; ++I) {
+      if (InitStack[I].Kind == InitLink::K_InitList)
+        continue;
       if (!InitStack[I].template emit<Emitter>(this, E))
         return false;
     }
@@ -4928,6 +5005,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       if (!this->visit(RE))
         return false;
     } else {
+      InitLinkScope<Emitter> ILS(this, InitLink::RVO());
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
         return false;
@@ -4974,20 +5052,35 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelElse))
       return false;
-    if (!visitStmt(IS->getThen()))
-      return false;
+    {
+      LocalScope<Emitter> ThenScope(this);
+      if (!visitStmt(IS->getThen()))
+        return false;
+      if (!ThenScope.destroyLocals())
+        return false;
+    }
     if (!this->jump(LabelEnd))
       return false;
     this->emitLabel(LabelElse);
-    if (!visitStmt(Else))
-      return false;
+    {
+      LocalScope<Emitter> ElseScope(this);
+      if (!visitStmt(Else))
+        return false;
+      if (!ElseScope.destroyLocals())
+        return false;
+    }
     this->emitLabel(LabelEnd);
   } else {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelEnd))
       return false;
-    if (!visitStmt(IS->getThen()))
-      return false;
+    {
+      LocalScope<Emitter> ThenScope(this);
+      if (!visitStmt(IS->getThen()))
+        return false;
+      if (!ThenScope.destroyLocals())
+        return false;
+    }
     this->emitLabel(LabelEnd);
   }
 
@@ -6483,14 +6576,6 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
   QualType ToType = E->getType();
   std::optional<PrimType> ToT = classify(ToType);
 
-  // Bitcasting TO nullptr_t is always fine.
-  if (ToType->isNullPtrType()) {
-    if (!this->discard(SubExpr))
-      return false;
-
-    return this->emitNullPtr(0, nullptr, E);
-  }
-
   assert(!ToType->isReferenceType());
 
   // Prepare storage for the result in case we discard.
@@ -6523,8 +6608,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return false;
   }
 
-  if (!ToT || ToT == PT_Ptr) {
-    if (!this->emitBitCastPtr(E))
+  if (!ToT) {
+    if (!this->emitBitCast(E))
       return false;
     return DiscardResult ? this->emitPopPtr(E) : true;
   }
@@ -6540,8 +6625,8 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
                         ToType->isSpecificBuiltinType(BuiltinType::Char_U));
   uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
-  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
-                         ResultBitWidth, TargetSemantics, E))
+  if (!this->emitBitCastPrim(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
+                             ResultBitWidth, TargetSemantics, E))
     return false;
 
   if (DiscardResult)

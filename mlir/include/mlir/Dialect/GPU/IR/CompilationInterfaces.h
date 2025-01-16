@@ -51,7 +51,7 @@ public:
   /// obtaining the parent symbol table. The default compilation target is
   /// `Fatbin`.
   TargetOptions(
-      StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
+      StringRef toolkitPath = {}, ArrayRef<Attribute> librariesToLink = {},
       StringRef cmdOptions = {}, StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
@@ -66,8 +66,8 @@ public:
   /// Returns the toolkit path.
   StringRef getToolkitPath() const;
 
-  /// Returns the files to link to.
-  ArrayRef<std::string> getLinkFiles() const;
+  /// Returns the LLVM libraries to link to.
+  ArrayRef<Attribute> getLibrariesToLink() const;
 
   /// Returns the command line options.
   StringRef getCmdOptions() const;
@@ -113,7 +113,7 @@ protected:
   /// appropiate value: ie. `TargetOptions(TypeID::get<DerivedClass>())`.
   TargetOptions(
       TypeID typeID, StringRef toolkitPath = {},
-      ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
+      ArrayRef<Attribute> librariesToLink = {}, StringRef cmdOptions = {},
       StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
@@ -126,7 +126,7 @@ protected:
   std::string toolkitPath;
 
   /// List of files to link with the LLVM module.
-  SmallVector<std::string> linkFiles;
+  SmallVector<Attribute> librariesToLink;
 
   /// An optional set of command line options to be used by the compilation
   /// process.

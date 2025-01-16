@@ -114,15 +114,15 @@ void ArchiveFile::parse() {
   file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
-  if (isArm64EC(ctx.config.machine)) {
+  if (ctx.symtabEC) {
     iterator_range<Archive::symbol_iterator> symbols =
         CHECK(file->ec_symbols(), this);
     if (!symbols.empty()) {
       for (const Archive::Symbol &sym : symbols)
-        ctx.symtab.addLazyArchive(this, sym);
+        ctx.symtabEC->addLazyArchive(this, sym);
 
       // Read both EC and native symbols on ARM64X.
-      if (ctx.config.machine != ARM64X)
+      if (!ctx.hybridSymtab)
         return;
     }
   }
@@ -149,11 +149,19 @@ std::vector<MemoryBufferRef>
 lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   std::vector<MemoryBufferRef> v;
   Error err = Error::success();
+
+  // Thin archives refer to .o files, so --reproduces needs the .o files too.
+  bool addToTar = file->isThin() && ctx.driver.tar;
+
   for (const Archive::Child &c : file->children(err)) {
     MemoryBufferRef mbref =
         CHECK(c.getMemoryBufferRef(),
               file->getFileName() +
                   ": could not get the buffer for a child of the archive");
+    if (addToTar) {
+      ctx.driver.tar->append(relativeToRoot(check(c.getFullName())),
+                             mbref.getBuffer());
+    }
     v.push_back(mbref);
   }
   if (err)
@@ -162,13 +170,27 @@ lld::coff::getArchiveMembers(COFFLinkerContext &ctx, Archive *file) {
   return v;
 }
 
-ObjFile::ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy)
-    : InputFile(ctx.symtab, ObjectKind, m, lazy) {}
+ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
+    : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
+      coffObj(coffObj) {}
+
+ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
+  // Parse a memory buffer as a COFF file.
+  Expected<std::unique_ptr<Binary>> bin = createBinary(m);
+  if (!bin)
+    Fatal(ctx) << "Could not parse " << m.getBufferIdentifier();
+
+  auto *obj = dyn_cast<COFFObjectFile>(bin->get());
+  if (!obj)
+    Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
+
+  bin->release();
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
+                       lazy);
+}
 
 void ObjFile::parseLazy() {
   // Native object file.
-  std::unique_ptr<Binary> coffObjPtr = CHECK(createBinary(mb), this);
-  COFFObjectFile *coffObj = cast<COFFObjectFile>(coffObjPtr.get());
   uint32_t numSymbols = coffObj->getNumberOfSymbols();
   for (uint32_t i = 0; i < numSymbols; ++i) {
     COFFSymbolRef coffSym = check(coffObj->getSymbol(i));
@@ -179,6 +201,8 @@ void ObjFile::parseLazy() {
     if (coffSym.isAbsolute() && ignoredSymbolName(name))
       continue;
     symtab.addLazyObject(this, name);
+    if (!lazy)
+      return;
     i += coffSym.getNumberOfAuxSymbols();
   }
 }
@@ -219,16 +243,6 @@ void ObjFile::initializeECThunks() {
 }
 
 void ObjFile::parse() {
-  // Parse a memory buffer as a COFF file.
-  std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
-
-  if (auto *obj = dyn_cast<COFFObjectFile>(bin.get())) {
-    bin.release();
-    coffObj.reset(obj);
-  } else {
-    Fatal(symtab.ctx) << toString(this) << " is not a COFF file";
-  }
-
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
@@ -341,7 +355,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     MergeChunk::addSection(symtab.ctx, c);
   else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
-  else
+  else if (!(sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_INFO))
     chunks.push_back(c);
 
   return c;
@@ -732,6 +746,26 @@ std::optional<Symbol *> ObjFile::createDefined(
   if (sectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
 
+  if (sym.isEmptySectionDeclaration()) {
+    // As there is no coff_section in the object file for these, make a
+    // new virtual one, with everything zeroed out (i.e. an empty section),
+    // with only the name and characteristics set.
+    StringRef name = getName();
+    auto *hdr = make<coff_section>();
+    memset(hdr, 0, sizeof(*hdr));
+    strncpy(hdr->Name, name.data(),
+            std::min(name.size(), (size_t)COFF::NameSize));
+    // We have no idea what characteristics should be assumed here; pick
+    // a default. This matches what is used for .idata sections in the regular
+    // object files in import libraries.
+    hdr->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+                           IMAGE_SCN_MEM_WRITE | IMAGE_SCN_ALIGN_4BYTES;
+    auto *sc = make<SectionChunk>(this, hdr);
+    chunks.push_back(sc);
+    return make<DefinedRegular>(this, /*name=*/"", /*isCOMDAT=*/false,
+                                /*isExternal=*/false, sym.getGeneric(), sc);
+  }
+
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))
     Fatal(ctx) << toString(this) << ": " << getName()
                << " should not refer to special section "
@@ -807,9 +841,7 @@ std::optional<Symbol *> ObjFile::createDefined(
 }
 
 MachineTypes ObjFile::getMachineType() const {
-  if (coffObj)
-    return static_cast<MachineTypes>(coffObj->getMachine());
-  return IMAGE_FILE_MACHINE_UNKNOWN;
+  return static_cast<MachineTypes>(coffObj->getMachine());
 }
 
 ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {
@@ -1290,8 +1322,11 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   for (const lto::InputFile::Symbol &sym : obj->symbols())
-    if (!sym.isUndefined())
+    if (!sym.isUndefined()) {
       symtab.addLazyObject(this, sym.getName());
+      if (!lazy)
+        return;
+    }
 }
 
 MachineTypes BitcodeFile::getMachineType() const {
@@ -1405,5 +1440,5 @@ void DLLFile::makeImport(DLLFile::Symbol *s) {
   memcpy(p, s->dllName.data(), s->dllName.size());
   MemoryBufferRef mbref = MemoryBufferRef(StringRef(buf, size), s->dllName);
   ImportFile *impFile = make<ImportFile>(symtab.ctx, mbref);
-  symtab.addFile(impFile);
+  symtab.ctx.driver.addFile(impFile);
 }

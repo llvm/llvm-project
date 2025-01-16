@@ -191,8 +191,9 @@ using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 /// an identifier. The 'asterisk' means 'the rest'.
 class OpenACCDeviceTypeClause final
     : public OpenACCClauseWithParams,
-      public llvm::TrailingObjects<OpenACCDeviceTypeClause,
+      private llvm::TrailingObjects<OpenACCDeviceTypeClause,
                                    DeviceTypeArgument> {
+  friend TrailingObjects;
   // Data stored in trailing objects as IdentifierInfo* /SourceLocation pairs. A
   // nullptr IdentifierInfo* represents an asterisk.
   unsigned NumArchs;
@@ -326,18 +327,89 @@ public:
                                  SourceLocation EndLoc);
 };
 
-/// A 'self' clause, which has an optional condition expression.
-class OpenACCSelfClause : public OpenACCClauseWithCondition {
+/// A 'self' clause, which has an optional condition expression, or, in the
+/// event of an 'update' directive, contains a 'VarList'.
+class OpenACCSelfClause final
+    : public OpenACCClauseWithParams,
+      private llvm::TrailingObjects<OpenACCSelfClause, Expr *> {
+  friend TrailingObjects;
+  // Holds whether this HAS a condition expression. Lacks a value if this is NOT
+  // a condition-expr self clause.
+  std::optional<bool> HasConditionExpr;
+  // Holds the number of stored expressions.  In the case of a condition-expr
+  // self clause, this is expected to be ONE (and there to be 1 trailing
+  // object), whether or not that is null.
+  unsigned NumExprs;
+
   OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     Expr *ConditionExpr, SourceLocation EndLoc);
+  OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+
+  // Intentionally internal, meant to be an implementation detail of everything
+  // else. All non-internal uses should go through getConditionExpr/getVarList.
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Self;
   }
+
+  bool isConditionExprClause() const { return HasConditionExpr.has_value(); }
+
+  bool hasConditionExpr() const {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    return *HasConditionExpr;
+  }
+
+  const Expr *getConditionExpr() const {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    assert(getExprs().size() == 1 &&
+           "ConditionExpr Self Clause with too many Exprs");
+    return getExprs()[0];
+  }
+
+  Expr *getConditionExpr() {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    assert(getExprs().size() == 1 &&
+           "ConditionExpr Self Clause with too many Exprs");
+    return getExprs()[0];
+  }
+
+  ArrayRef<Expr *> getVarList() {
+    assert(!HasConditionExpr.has_value() &&
+           "Condition Expr self clause asked about var list");
+    return getExprs();
+  }
+  ArrayRef<Expr *> getVarList() const {
+    assert(!HasConditionExpr.has_value() &&
+           "Condition Expr self clause asked about var list");
+    return getExprs();
+  }
+
+  child_range children() {
+    return child_range(
+        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>()),
+        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>() + NumExprs));
+  }
+
+  const_child_range children() const {
+    child_range Children = const_cast<OpenACCSelfClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
                                    SourceLocation LParenLoc,
                                    Expr *ConditionExpr, SourceLocation EndLoc);
+  static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> ConditionExpr,
+                                   SourceLocation EndLoc);
 };
 
 /// Represents a clause that has one or more expressions associated with it.
@@ -377,7 +449,8 @@ public:
 // Represents the 'devnum' and expressions lists for the 'wait' clause.
 class OpenACCWaitClause final
     : public OpenACCClauseWithExprs,
-      public llvm::TrailingObjects<OpenACCWaitClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCWaitClause, Expr *> {
+  friend TrailingObjects;
   SourceLocation QueuesLoc;
   OpenACCWaitClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     Expr *DevNumExpr, SourceLocation QueuesLoc,
@@ -419,7 +492,8 @@ public:
 
 class OpenACCNumGangsClause final
     : public OpenACCClauseWithExprs,
-      public llvm::TrailingObjects<OpenACCNumGangsClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCNumGangsClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCNumGangsClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                         ArrayRef<Expr *> IntExprs, SourceLocation EndLoc)
@@ -449,7 +523,8 @@ public:
 
 class OpenACCTileClause final
     : public OpenACCClauseWithExprs,
-      public llvm::TrailingObjects<OpenACCTileClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCTileClause, Expr *> {
+  friend TrailingObjects;
   OpenACCTileClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     ArrayRef<Expr *> SizeExprs, SourceLocation EndLoc)
       : OpenACCClauseWithExprs(OpenACCClauseKind::Tile, BeginLoc, LParenLoc,
@@ -503,7 +578,8 @@ public:
 
 class OpenACCGangClause final
     : public OpenACCClauseWithExprs,
-      public llvm::TrailingObjects<OpenACCGangClause, Expr *, OpenACCGangKind> {
+      private llvm::TrailingObjects<OpenACCGangClause, Expr *, OpenACCGangKind> {
+  friend TrailingObjects;
 protected:
   OpenACCGangClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     ArrayRef<OpenACCGangKind> GangKinds,
@@ -614,6 +690,33 @@ public:
                                     SourceLocation EndLoc);
 };
 
+class OpenACCDeviceNumClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCDeviceNumClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                     Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DeviceNum;
+  }
+  static OpenACCDeviceNumClause *Create(const ASTContext &C,
+                                        SourceLocation BeginLoc,
+                                        SourceLocation LParenLoc, Expr *IntExpr,
+                                        SourceLocation EndLoc);
+};
+
+class OpenACCDefaultAsyncClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCDefaultAsyncClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DefaultAsync;
+  }
+  static OpenACCDefaultAsyncClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         Expr *IntExpr, SourceLocation EndLoc);
+};
+
 /// Represents a 'collapse' clause on a 'loop' construct. This clause takes an
 /// integer constant expression 'N' that represents how deep to collapse the
 /// construct. It also takes an optional 'force' tag that permits intervening
@@ -658,7 +761,8 @@ public:
 
 class OpenACCPrivateClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -680,7 +784,8 @@ public:
 
 class OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCFirstPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                             ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -702,7 +807,8 @@ public:
 
 class OpenACCDevicePtrClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCDevicePtrClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCDevicePtrClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCDevicePtrClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -724,7 +830,8 @@ public:
 
 class OpenACCAttachClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCAttachClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCAttachClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCAttachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -746,7 +853,8 @@ public:
 
 class OpenACCDetachClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCDetachClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCDetachClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCDetachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -768,7 +876,8 @@ public:
 
 class OpenACCDeleteClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCDeleteClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCDeleteClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCDeleteClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -790,7 +899,8 @@ public:
 
 class OpenACCUseDeviceClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCUseDeviceClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCUseDeviceClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCUseDeviceClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                          ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -812,7 +922,8 @@ public:
 
 class OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCNoCreateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -834,7 +945,8 @@ public:
 
 class OpenACCPresentClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCPresentClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCPresentClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCPresentClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
@@ -853,10 +965,57 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
+class OpenACCHostClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCHostClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCHostClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Host, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Host;
+  }
+  static OpenACCHostClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Device, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Device;
+  }
+  static OpenACCDeviceClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
 
 class OpenACCCopyClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
+  friend TrailingObjects;
 
   OpenACCCopyClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
                     SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
@@ -885,7 +1044,8 @@ public:
 
 class OpenACCCopyInClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
+  friend TrailingObjects;
   bool IsReadOnly;
 
   OpenACCCopyInClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
@@ -917,7 +1077,8 @@ public:
 
 class OpenACCCopyOutClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
+  friend TrailingObjects;
   bool IsZero;
 
   OpenACCCopyOutClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
@@ -949,7 +1110,8 @@ public:
 
 class OpenACCCreateClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
+  friend TrailingObjects;
   bool IsZero;
 
   OpenACCCreateClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
@@ -981,7 +1143,8 @@ public:
 
 class OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
-      public llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
+  friend TrailingObjects;
   OpenACCReductionOperator Op;
 
   OpenACCReductionClause(SourceLocation BeginLoc, SourceLocation LParenLoc,

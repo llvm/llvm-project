@@ -2585,6 +2585,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
                              : RTLIB::getLDEXP(N->getValueType(0));
 
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+    // Scalarize vector FPOWI instead of promoting the type. This allows the
+    // scalar FPOWIs to be visited and converted to libcalls before promoting
+    // the type.
+    // FIXME: This should be done in LegalizeVectorOps/LegalizeDAG, but call
+    // lowering needs the unpromoted EVT.
+    if (IsPowI && N->getValueType(0).isVector())
+      return DAG.UnrollVectorOp(N);
     SmallVector<SDValue, 3> NewOps(N->ops());
     NewOps[1 + OpOffset] = SExtPromotedInteger(N->getOperand(1 + OpOffset));
     return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);

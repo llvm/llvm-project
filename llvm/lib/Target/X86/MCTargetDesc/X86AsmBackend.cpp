@@ -811,7 +811,7 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   SmallString<256> Code;
   Code.append(PrefixBytesToAdd, Prefix);
   Code.append(RF.getContents().begin(), RF.getContents().end());
-  RF.getContents() = Code;
+  RF.setContents(Code);
 
   // Adjust the fixups for the change in offsets
   for (auto &F : RF.getFixups()) {
@@ -843,7 +843,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
   if (Delta > RemainingSize)
     return false;
   RF.setInst(Relaxed);
-  RF.getContents() = Code;
+  RF.setContents(Code);
   RF.getFixups() = Fixups;
   RemainingSize -= Delta;
   return true;

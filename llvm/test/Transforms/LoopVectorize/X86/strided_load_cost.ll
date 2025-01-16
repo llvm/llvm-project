@@ -222,8 +222,8 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 96, [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP149]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], [[FOR_BODY1]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ], [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
@@ -454,8 +454,8 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP170:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP168]])
 ; MAX-BW-NEXT:    br i1 true, label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
 ; MAX-BW:       vec.epilog.scalar.ph:
-; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 96, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; MAX-BW-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP149]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
+; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK:%.*]] ], [ 96, [[VEC_EPILOG_ITER_CHECK]] ]
+; MAX-BW-NEXT:    [[BC_MERGE_RDX13:%.*]] = phi i32 [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 0, [[ITER_CHECK]] ], [ [[TMP149]], [[VEC_EPILOG_ITER_CHECK]] ]
 ; MAX-BW-NEXT:    br label [[FOR_BODY1:%.*]]
 ; MAX-BW:       for.cond.cleanup:
 ; MAX-BW-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], [[FOR_BODY1]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ], [ [[TMP170]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]

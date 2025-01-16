@@ -734,12 +734,9 @@ static void addData(SmallVectorImpl<char> &DataBytes,
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
     } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
-      const SmallVectorImpl<char> &Contents = LEB->getContents();
-      llvm::append_range(DataBytes, Contents);
+      llvm::append_range(DataBytes, LEB->getContents());
     } else {
-      const auto &DataFrag = cast<MCDataFragment>(Frag);
-      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-      llvm::append_range(DataBytes, Contents);
+      llvm::append_range(DataBytes, cast<MCDataFragment>(Frag).getContents());
     }
   }
 
@@ -1896,14 +1893,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
           report_fatal_error("invalid .init_array section priority");
       }
       const auto &DataFrag = cast<MCDataFragment>(Frag);
-      const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-      for (const uint8_t *
-               P = (const uint8_t *)Contents.data(),
-              *End = (const uint8_t *)Contents.data() + Contents.size();
-           P != End; ++P) {
-        if (*P != 0)
-          report_fatal_error("non-symbolic data in .init_array section");
-      }
+      assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==
                MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));

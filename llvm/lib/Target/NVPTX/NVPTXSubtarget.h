@@ -42,7 +42,6 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // FullSmVersion.
   unsigned int SmVersion;
 
-  const NVPTXTargetMachine &TM;
   NVPTXInstrInfo InstrInfo;
   NVPTXTargetLowering TLInfo;
   std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
@@ -81,7 +80,6 @@ public:
   bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
-  bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
   bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;
@@ -113,7 +111,14 @@ public:
   // - 0 represents base GPU model,
   // - non-zero value identifies particular architecture-accelerated variant.
   bool hasAAFeatures() const { return getFullSmVersion() % 10; }
-  std::string getTargetName() const { return TargetName; }
+
+  // If the user did not provide a target we default to the `sm_30` target.
+  std::string getTargetName() const {
+    return TargetName.empty() ? "sm_30" : TargetName;
+  }
+  bool hasTargetName() const { return !TargetName.empty(); }
+
+  bool hasNativeBF16Support(int Opcode) const;
 
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
