@@ -67,9 +67,6 @@ public:
   void loadMinGWSymbols();
   bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
 
-  // Returns a list of chunks of selected symbols.
-  std::vector<Chunk *> getChunks() const;
-
   // Returns a symbol for a given name. Returns a nullptr if not found.
   Symbol *find(StringRef name) const;
   Symbol *findUnderscore(StringRef name) const;
