@@ -80,27 +80,22 @@ static PreservedAnalyses runSanitizeRealtimeBlocking(Function &Fn) {
   return rtsanPreservedCFGAnalyses();
 }
 
-RealtimeSanitizerPass::RealtimeSanitizerPass(
-    const RealtimeSanitizerOptions &Options) {}
-
-PreservedAnalyses RealtimeSanitizerPass::run(Function &Fn,
-                                             AnalysisManager<Function> &AM) {
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtime))
-    return runSanitizeRealtime(Fn);
-
-  if (Fn.hasFnAttribute(Attribute::SanitizeRealtimeBlocking))
-    return runSanitizeRealtimeBlocking(Fn);
-
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses ModuleRealtimeSanitizerPass::run(Module &M,
-                                                   ModuleAnalysisManager &MAM) {
+PreservedAnalyses RealtimeSanitizerPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
   getOrCreateSanitizerCtorAndInitFunctions(
       M, kRtsanModuleCtorName, kRtsanInitName, /*InitArgTypes=*/{},
       /*InitArgs=*/{},
       // This callback is invoked when the functions are created the first
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
+
+  for (Function &F : M) {
+    if (F.hasFnAttribute(Attribute::SanitizeRealtime))
+      runSanitizeRealtime(F);
+
+    if (F.hasFnAttribute(Attribute::SanitizeRealtimeBlocking))
+      runSanitizeRealtimeBlocking(F);
+  }
+
   return PreservedAnalyses::none();
 }

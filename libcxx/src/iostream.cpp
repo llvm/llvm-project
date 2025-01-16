@@ -11,10 +11,6 @@
 #include <new>
 #include <string>
 
-#ifdef _LIBCPP_MSVCRT_LIKE
-#  include <__locale_dir/locale_guard.h>
-#endif
-
 #define _str(s) #s
 #define str(s) _str(s)
 #define _LIBCPP_ABI_NAMESPACE_STR str(_LIBCPP_ABI_NAMESPACE)
@@ -109,7 +105,7 @@ static void force_locale_initialization() {
   static bool once = []() {
     auto loc = __locale::__newlocale(LC_ALL_MASK, "C", 0);
     {
-      __locale_guard g(loc); // forces initialization of locale TLS
+      __locale::__locale_guard g(loc); // forces initialization of locale TLS
       ((void)g);
     }
     __locale::__freelocale(loc);

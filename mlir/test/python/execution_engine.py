@@ -5,7 +5,14 @@ from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
 from mlir.runtime import *
-from ml_dtypes import bfloat16, float8_e5m2
+
+try:
+    from ml_dtypes import bfloat16, float8_e5m2
+
+    HAS_ML_DTYPES = True
+except ModuleNotFoundError:
+    HAS_ML_DTYPES = False
+
 
 MLIR_RUNNER_UTILS = os.getenv(
     "MLIR_RUNNER_UTILS", "../../../../lib/libmlir_runner_utils.so"
@@ -74,7 +81,7 @@ run(testInvalidModule)
 
 def lowerToLLVM(module):
     pm = PassManager.parse(
-        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)"
+        "builtin.module(convert-complex-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-arith-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)"
     )
     pm.run(module.operation)
     return module
@@ -306,7 +313,7 @@ def testUnrankedMemRefWithOffsetCallback():
         log(arr)
 
     with Context():
-        # The module takes a subview of the argument memref, casts it to an unranked memref and 
+        # The module takes a subview of the argument memref, casts it to an unranked memref and
         # calls the callback with it.
         module = Module.parse(
             r"""
@@ -564,7 +571,8 @@ def testBF16Memref():
         log(npout)
 
 
-run(testBF16Memref)
+if HAS_ML_DTYPES:
+    run(testBF16Memref)
 
 
 # Test f8E5M2 memrefs
@@ -603,7 +611,8 @@ def testF8E5M2Memref():
         log(npout)
 
 
-run(testF8E5M2Memref)
+if HAS_ML_DTYPES:
+    run(testF8E5M2Memref)
 
 
 #  Test addition of two 2d_memref

@@ -1886,11 +1886,11 @@ SystemZDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
     // physical CC register, which in turn is glued and chained to the
     // actual instruction that uses the CC value.  Bail out if we have
     // anything else than that.
-    SDNode *CCUser = *U->use_begin();
+    SDNode *CCUser = *U->user_begin();
     SDNode *CCRegUser = nullptr;
     if (CCUser->getOpcode() == ISD::CopyToReg ||
         cast<RegisterSDNode>(CCUser->getOperand(1))->getReg() == SystemZ::CC) {
-      for (auto *U : CCUser->uses()) {
+      for (auto *U : CCUser->users()) {
         if (CCRegUser == nullptr)
           CCRegUser = U;
         else if (CCRegUser != U)

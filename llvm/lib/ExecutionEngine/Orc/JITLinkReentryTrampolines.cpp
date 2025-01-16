@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 
 #include <memory>
@@ -86,12 +87,17 @@ JITLinkReentryTrampolines::Create(ObjectLinkingLayer &ObjLinkingLayer) {
 
   EmitTrampolineFn EmitTrampoline;
 
-  switch (ObjLinkingLayer.getExecutionSession().getTargetTriple().getArch()) {
+  const auto &TT = ObjLinkingLayer.getExecutionSession().getTargetTriple();
+  switch (TT.getArch()) {
   case Triple::aarch64:
     EmitTrampoline = aarch64::createAnonymousReentryTrampoline;
     break;
+  case Triple::x86_64:
+    EmitTrampoline = x86_64::createAnonymousReentryTrampoline;
+    break;
   default:
-    return make_error<StringError>("Architecture not supported",
+    return make_error<StringError>("JITLinkReentryTrampolines: architecture " +
+				   TT.getArchName() + " not supported",
                                    inconvertibleErrorCode());
   }
 
@@ -117,16 +123,13 @@ void JITLinkReentryTrampolines::emit(ResourceTrackerSP RT,
 
   JITDylibSP JD(&RT->getJITDylib());
   auto &ES = ObjLinkingLayer.getExecutionSession();
-  Triple TT = ES.getTargetTriple();
 
   auto ReentryGraphSym =
       ES.intern(("__orc_reentry_graph_#" + Twine(++ReentryGraphIdx)).str());
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      (*ReentryGraphSym).str(), ES.getSymbolStringPool(), TT,
-      TT.isArch64Bit() ? 8 : 4,
-      TT.isLittleEndian() ? endianness::little : endianness::big,
-      jitlink::getGenericEdgeKindName);
+      (*ReentryGraphSym).str(), ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
 
   auto &ReentryFnSym = G->addExternalSymbol(ReentryFnName, 0, false);
 
@@ -167,7 +170,8 @@ void JITLinkReentryTrampolines::emit(ResourceTrackerSP RT,
 Expected<std::unique_ptr<LazyReexportsManager>>
 createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   RedirectableSymbolManager &RSMgr,
-                                  JITDylib &PlatformJD) {
+                                  JITDylib &PlatformJD,
+                                  LazyReexportsManager::Listener *L) {
   auto JLT = JITLinkReentryTrampolines::Create(ObjLinkingLayer);
   if (!JLT)
     return JLT.takeError();
@@ -178,7 +182,7 @@ createJITLinkLazyReexportsManager(ObjectLinkingLayer &ObjLinkingLayer,
                                   OnTrampolinesReady) mutable {
         JLT->emit(std::move(RT), NumTrampolines, std::move(OnTrampolinesReady));
       },
-      RSMgr, PlatformJD);
+      RSMgr, PlatformJD, L);
 }
 
 } // namespace llvm::orc

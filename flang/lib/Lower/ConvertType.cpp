@@ -20,6 +20,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "flang-lower-type"
 
@@ -34,17 +36,17 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
-      return mlir::FloatType::getF16(context);
+      return mlir::Float16Type::get(context);
     case 3:
-      return mlir::FloatType::getBF16(context);
+      return mlir::BFloat16Type::get(context);
     case 4:
-      return mlir::FloatType::getF32(context);
+      return mlir::Float32Type::get(context);
     case 8:
-      return mlir::FloatType::getF64(context);
+      return mlir::Float64Type::get(context);
     case 10:
-      return mlir::FloatType::getF80(context);
+      return mlir::Float80Type::get(context);
     case 16:
-      return mlir::FloatType::getF128(context);
+      return mlir::Float128Type::get(context);
     }
   }
   llvm_unreachable("REAL type translation not implemented");
@@ -76,7 +78,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
       return mlir::IntegerType::get(context, getIntegerBits<16>(), signedness);
     }
   }
-  llvm_unreachable("INTEGER kind not translated");
+  llvm_unreachable("INTEGER or UNSIGNED kind not translated");
 }
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
@@ -107,7 +109,9 @@ genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
   case Fortran::common::TypeCategory::Real:
     return genRealType(context, kind);
   case Fortran::common::TypeCategory::Integer:
-    return genIntegerType(context, kind);
+    return genIntegerType(context, kind, false);
+  case Fortran::common::TypeCategory::Unsigned:
+    return genIntegerType(context, kind, true);
   case Fortran::common::TypeCategory::Complex:
     return genComplexType(context, kind);
   case Fortran::common::TypeCategory::Logical:
@@ -156,7 +160,7 @@ struct TypeBuilderImpl {
     } else if (category == Fortran::common::TypeCategory::Derived) {
       baseType = genDerivedType(dynamicType->GetDerivedTypeSpec());
     } else {
-      // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
+      // INTEGER, UNSIGNED, REAL, COMPLEX, CHARACTER, LOGICAL
       llvm::SmallVector<Fortran::lower::LenParameterTy> params;
       translateLenParameters(params, category, expr);
       baseType = genFIRType(context, category, dynamicType->kind(), params);
@@ -383,9 +387,20 @@ struct TypeBuilderImpl {
     // with dozens of components/parents (modern Fortran).
     derivedTypeInConstruction.try_emplace(&derivedScope, rec);
 
+    auto targetTriple{llvm::Triple(
+        llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()))};
+    // Always generate packed FIR struct type for bind(c) derived type for AIX
+    if (targetTriple.getOS() == llvm::Triple::OSType::AIX &&
+        tySpec.typeSymbol().attrs().test(Fortran::semantics::Attr::BIND_C) &&
+        !IsIsoCType(&tySpec) && !fir::isa_builtin_cdevptr_type(rec)) {
+      rec.pack(true);
+    }
+
     // Gather the record type fields.
     // (1) The data components.
     if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+      size_t prev_offset{0};
+      unsigned padCounter{0};
       // In HLFIR the parent component is the first fir.type component.
       for (const auto &componentName :
            typeSymbol.get<Fortran::semantics::DerivedTypeDetails>()
@@ -395,7 +410,38 @@ struct TypeBuilderImpl {
                "failed to find derived type component symbol");
         const Fortran::semantics::Symbol &component = scopeIter->second.get();
         mlir::Type ty = genSymbolType(component);
+        if (rec.isPacked()) {
+          auto compSize{component.size()};
+          auto compOffset{component.offset()};
+
+          if (prev_offset < compOffset) {
+            size_t pad{compOffset - prev_offset};
+            mlir::Type i8Ty{mlir::IntegerType::get(context, 8)};
+            fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
+            mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
+            prev_offset += pad;
+            cs.emplace_back("__padding" + std::to_string(padCounter++), padTy);
+          }
+          prev_offset += compSize;
+        }
         cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
+        if (rec.isPacked()) {
+          // For the last component, determine if any padding is needed.
+          if (componentName ==
+              typeSymbol.get<Fortran::semantics::DerivedTypeDetails>()
+                  .componentNames()
+                  .back()) {
+            auto compEnd{component.offset() + component.size()};
+            if (compEnd < derivedScope.size()) {
+              size_t pad{derivedScope.size() - compEnd};
+              mlir::Type i8Ty{mlir::IntegerType::get(context, 8)};
+              fir::SequenceType::Shape shape{static_cast<int64_t>(pad)};
+              mlir::Type padTy{fir::SequenceType::get(shape, i8Ty)};
+              cs.emplace_back("__padding" + std::to_string(padCounter++),
+                              padTy);
+            }
+          }
+        }
       }
     } else {
       for (const auto &component :

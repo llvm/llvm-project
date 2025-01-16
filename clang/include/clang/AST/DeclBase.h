@@ -271,16 +271,12 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
-  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
+  bool isInSemaDC() const { return isa<DeclContext *>(DeclCtx); }
+  bool isOutOfSemaDC() const { return isa<MultipleDC *>(DeclCtx); }
 
-  MultipleDC *getMultipleDC() const {
-    return DeclCtx.get<MultipleDC*>();
-  }
+  MultipleDC *getMultipleDC() const { return cast<MultipleDC *>(DeclCtx); }
 
-  DeclContext *getSemanticDC() const {
-    return DeclCtx.get<DeclContext*>();
-  }
+  DeclContext *getSemanticDC() const { return cast<DeclContext *>(DeclCtx); }
 
   /// Loc - The location of this decl.
   SourceLocation Loc;
@@ -1338,9 +1334,9 @@ public:
 
     reference operator*() const {
       assert(Ptr && "dereferencing end() iterator");
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         return CurNode->D;
-      return Ptr.get<NamedDecl*>();
+      return cast<NamedDecl *>(Ptr);
     }
     void operator->() const { } // Unsupported.
     bool operator==(const iterator &X) const { return Ptr == X.Ptr; }
@@ -1348,7 +1344,7 @@ public:
     inline iterator &operator++() { // ++It
       assert(!Ptr.isNull() && "Advancing empty iterator");
 
-      if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
+      if (DeclListNode *CurNode = dyn_cast<DeclListNode *>(Ptr))
         Ptr = CurNode->Rest;
       else
         Ptr = nullptr;
@@ -1449,6 +1445,9 @@ class DeclContext {
   /// For hasNeedToReconcileExternalVisibleStorage,
   /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
   friend class ASTWriter;
+
+protected:
+  enum { NumOdrHashBits = 25 };
 
   // We use uint64_t in the bit-fields below since some bit-fields
   // cross the unsigned boundary and this breaks the packing.
@@ -1671,6 +1670,14 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
 
+    /// True if any field is marked as requiring explicit initialization with
+    /// [[clang::require_explicit_initialization]].
+    /// In C++, this is also set for types without a user-provided default
+    /// constructor, and is propagated from any base classes and/or member
+    /// variables whose types are aggregates.
+    LLVM_PREFERRED_TYPE(bool)
+    uint64_t HasUninitializedExplicitInitFields : 1;
+
     /// Indicates whether this struct is destroyed in the callee.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t ParamDestroyedInCallee : 1;
@@ -1685,7 +1692,7 @@ class DeclContext {
 
     /// True if a valid hash is stored in ODRHash. This should shave off some
     /// extra storage and prevent CXXRecordDecl to store unused bits.
-    uint64_t ODRHash : 26;
+    uint64_t ODRHash : NumOdrHashBits;
   };
 
   /// Number of inherited and non-inherited bits in RecordDeclBitfields.

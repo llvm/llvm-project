@@ -104,7 +104,7 @@ static cl::opt<unsigned> UnrollMaxPercentThresholdBoost(
 
 static cl::opt<unsigned> UnrollMaxIterationsCountToAnalyze(
     "unroll-max-iteration-count-to-analyze", cl::init(10), cl::Hidden,
-    cl::desc("Don't allow loop unrolling to simulate more than this number of"
+    cl::desc("Don't allow loop unrolling to simulate more than this number of "
              "iterations when checking full unroll profitability"));
 
 static cl::opt<unsigned> UnrollCount(

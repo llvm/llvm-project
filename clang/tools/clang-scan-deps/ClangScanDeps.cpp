@@ -50,12 +50,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 const llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -65,7 +66,8 @@ const llvm::opt::OptTable::Info InfoTable[] = {
 
 class ScanDepsOptTable : public llvm::opt::GenericOptTable {
 public:
-  ScanDepsOptTable() : GenericOptTable(InfoTable) {
+  ScanDepsOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -911,7 +913,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       return llvm::nulls();
 
     std::error_code EC;
-    FileOS.emplace(OutputFileName, EC);
+    FileOS.emplace(OutputFileName, EC, llvm::sys::fs::OF_Text);
     if (EC) {
       llvm::errs() << "Failed to open output file '" << OutputFileName
                    << "': " << llvm::errorCodeToError(EC) << '\n';
@@ -1001,9 +1003,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           auto OSIter = OSs.find(MakeformatOutputPath);
           if (OSIter == OSs.end()) {
             std::error_code EC;
-            OSIter =
-                OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath, EC)
-                    .first;
+            OSIter = OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath,
+                                     EC, llvm::sys::fs::OF_Text)
+                         .first;
             if (EC)
               llvm::errs() << "Failed to open P1689 make format output file \""
                            << MakeformatOutputPath << "\" for " << EC.message()

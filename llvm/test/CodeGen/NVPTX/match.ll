@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | %ptxas-verify -arch=sm_70 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx60 | %ptxas-verify -arch=sm_70 %}
 
 declare i32 @llvm.nvvm.match.any.sync.i32(i32, i32)
 declare i32 @llvm.nvvm.match.any.sync.i64(i32, i64)

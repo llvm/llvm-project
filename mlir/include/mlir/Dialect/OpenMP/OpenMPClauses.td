@@ -85,6 +85,32 @@ class OpenMP_AllocateClauseSkip<
 def OpenMP_AllocateClause : OpenMP_AllocateClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// LLVM OpenMP extension `ompx_bare` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_BareClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    UnitAttr:$bare
+  );
+
+  let optAssemblyFormat = [{
+    `ompx_bare` $bare
+  }];
+
+  let description = [{
+    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
+    explicit number of teams and threads. This clause also allows the teams and
+    threads sizes to have up to 3 dimensions.
+  }];
+}
+
+def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
 //===----------------------------------------------------------------------===//
 
@@ -443,6 +469,44 @@ class OpenMP_HintClauseSkip<
 }
 
 def OpenMP_HintClause : OpenMP_HintClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold host-evaluated values.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_HostEvalClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface, IsolatedFromAbove
+  ];
+
+  let arguments = (ins
+    Variadic<AnyType>:$host_eval_vars
+  );
+
+  let extraClassDeclaration = [{
+    unsigned numHostEvalBlockArgs() {
+      return getHostEvalVars().size();
+    }
+  }];
+
+  let description = [{
+    The optional `host_eval_vars` holds values defined outside of the region of
+    the `IsolatedFromAbove` operation for which a corresponding entry block
+    argument is defined. The only legal uses for these captured values are the
+    following:
+      - `num_teams` or `thread_limit` clause of an immediately nested
+      `omp.teams` operation.
+      - If the operation is the top-level `omp.target` of a target SPMD kernel:
+        - `num_threads` clause of the nested `omp.parallel` operation.
+        - Bounds and steps of the nested `omp.loop_nest` operation.
+  }];
+}
+
+def OpenMP_HostEvalClause : OpenMP_HostEvalClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [3.4] `if` clause

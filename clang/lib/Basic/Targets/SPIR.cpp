@@ -13,10 +13,23 @@
 #include "SPIR.h"
 #include "AMDGPU.h"
 #include "Targets.h"
+#include "clang/Basic/MacroBuilder.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
+
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsSPIRV.inc"
+};
+
+ArrayRef<Builtin::Info> SPIRVTargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::SPIRV::LastTSBuiltin - Builtin::FirstTSBuiltin);
+}
 
 void SPIRTargetInfo::getTargetDefines(const LangOptions &Opts,
                                       MacroBuilder &Builder) const {
@@ -81,9 +94,8 @@ SPIRV64AMDGCNTargetInfo::convertConstraint(const char *&Constraint) const {
   return AMDGPUTI.convertConstraint(Constraint);
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-SPIRV64AMDGCNTargetInfo::getTargetBuiltinStorage() const {
-  return AMDGPUTI.getTargetBuiltinStorage();
+ArrayRef<Builtin::Info> SPIRV64AMDGCNTargetInfo::getTargetBuiltins() const {
+  return AMDGPUTI.getTargetBuiltins();
 }
 
 void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,

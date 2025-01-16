@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
-; RUN: llc < %s -march=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
 
 ; CHECK-LABEL: f128_ops:
 ; CHECK:      ldd

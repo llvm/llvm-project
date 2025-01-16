@@ -61,7 +61,10 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
     "Run vector unrolling to convert vector types in function bodies">,
     Option<"convertGPUModules", "convert-gpu-modules", "bool",
     /*default=*/"false",
-    "Clone and convert GPU modules">
+    "Clone and convert GPU modules">,
+    Option<"nestInGPUModule", "nest-in-gpu-module", "bool",
+    /*default=*/"false",
+    "Put converted SPIR-V module inside the gpu.module instead of alongside it.">,
   ];
 }
 
@@ -460,10 +463,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
-
-    Note that until https://github.com/llvm/llvm-project/issues/70982 is resolved,
-    this pass includes patterns that lower `arith` and `cf` to LLVM. This is legacy
-    code due to when they were all converted in the same pass.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -518,6 +517,12 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
+          >,
+    Option<"typeCheckKernelArgs", "type-check-kernel-args", "bool",
+           /*default=*/"false",
+             "Require all kernel arguments to be memrefs of rank 1 and with a "
+             "32-bit element size. This is a temporary option that will be "
+             "removed; TODO(https://github.com/llvm/llvm-project/issues/73457)."
           >
   ];
 
@@ -553,9 +558,9 @@ def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleO
     "Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
-    Option<"indexBitwidth", "index-bitwidth", "unsigned",
-           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"use64bitIndex", "use-64bit-index",
+           "bool", /*default=*/"false",
+           "Use 64-bit integers to convert index types">,
   ];
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=bpf < %s | FileCheck %s
+; RUN: llc -mtriple=bpf < %s | FileCheck %s
 ;
 ; The IR is generated from a bpftrace script (https://github.com/iovisor/bpftrace/issues/1305)
 ; and then slightly adapted for easy unit testing.

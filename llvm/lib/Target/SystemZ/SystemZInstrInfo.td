@@ -951,10 +951,10 @@ def IILL : BinaryRI<"iill", 0xA53, insertll, GR32, imm32ll16>;
 def IILH : BinaryRI<"iilh", 0xA52, insertlh, GR32, imm32lh16>;
 def IIHL : BinaryRI<"iihl", 0xA51, insertll, GRH32, imm32ll16>;
 def IIHH : BinaryRI<"iihh", 0xA50, insertlh, GRH32, imm32lh16>;
-def IILL64 : BinaryAliasRI<insertll, GR64, imm64ll16>;
-def IILH64 : BinaryAliasRI<insertlh, GR64, imm64lh16>;
-def IIHL64 : BinaryAliasRI<inserthl, GR64, imm64hl16>;
-def IIHH64 : BinaryAliasRI<inserthh, GR64, imm64hh16>;
+def IILL64 : BinaryAliasRI<insertll64, GR64, imm64ll16>;
+def IILH64 : BinaryAliasRI<insertlh64, GR64, imm64lh16>;
+def IIHL64 : BinaryAliasRI<inserthl64, GR64, imm64hl16>;
+def IIHH64 : BinaryAliasRI<inserthh64, GR64, imm64hh16>;
 
 // ...likewise for 32-bit immediates.  For GR32s this is a general
 // full-width move.  (We use IILF rather than something like LLILF
@@ -1859,6 +1859,23 @@ let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   let isAsmParserOnly = 1 in {
     defm CUUTF : SideEffectTernaryMemMemRRFcOpt<"cuutf", 0xB2A6, GR128, GR128>;
     defm CUTFU : SideEffectTernaryMemMemRRFcOpt<"cutfu", 0xB2A7, GR128, GR128>;
+  }
+}
+
+//--------------------------------------------------------------------------
+// Setjmp/Longjmp.
+//--------------------------------------------------------------------------
+let isBarrier = 1,  hasNoSchedulingInfo = 1 in {
+  let hasSideEffects = 1, usesCustomInserter = 1 in {
+    def EH_SjLj_SetJmp : Pseudo<(outs GR32:$dst), (ins ADDR64:$R2), 
+                        [(set GR32:$dst, (z_eh_sjlj_setjmp ADDR64:$R2))]>;
+    let isTerminator = 1 in {
+      def EH_SjLj_LongJmp : Pseudo<(outs), (ins ADDR64:$R2), 
+                           [(z_eh_sjlj_longjmp  ADDR64:$R2)]>;
+    }
+  }
+  let isTerminator = 1, isCodeGenOnly = 1, Size = 0 in {
+    def EH_SjLj_Setup : Pseudo<(outs), (ins brtarget32:$dst), []>;
   }
 }
 

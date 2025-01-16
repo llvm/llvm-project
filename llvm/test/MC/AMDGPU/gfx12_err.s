@@ -113,3 +113,6 @@ s_prefetch_inst s[14:15], 0xffffff, m0, 7
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 24-bit signed offset
 // GFX12-ERR: s_prefetch_inst s[14:15], 0xffffff, m0, 7
 // GFX12-ERR:                           ^
+
+s_endpgm_ordered_ps_done
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

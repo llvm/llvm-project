@@ -601,7 +601,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;
@@ -1090,6 +1090,8 @@ extern unsigned struct_ppp_stats_sz;
 extern unsigned struct_sioc_sg_req_sz;
 extern unsigned struct_sioc_vif_req_sz;
 #endif
+
+extern unsigned fpos_t_sz;
 
 // ioctl request identifiers
 

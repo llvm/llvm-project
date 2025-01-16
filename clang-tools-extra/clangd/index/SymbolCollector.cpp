@@ -550,9 +550,14 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
     return false;
+
+  // System headers that end with `intrin.h` likely contain useful symbols.
   if (!Opts.CollectReserved &&
       (hasReservedName(ND) || hasReservedScope(*ND.getDeclContext())) &&
-      ASTCtx.getSourceManager().isInSystemHeader(ND.getLocation()))
+      ASTCtx.getSourceManager().isInSystemHeader(ND.getLocation()) &&
+      !ASTCtx.getSourceManager()
+           .getFilename(ND.getLocation())
+           .ends_with("intrin.h"))
     return false;
 
   return true;

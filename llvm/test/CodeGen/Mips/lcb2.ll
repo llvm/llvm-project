@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcb
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true < %s | FileCheck %s -check-prefix=lcb
 
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true   < %s | FileCheck %s -check-prefix=lcbn
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands=true < %s | FileCheck %s -check-prefix=lcbn
 
 @i = global i32 0, align 4
 @j = common global i32 0, align 4
