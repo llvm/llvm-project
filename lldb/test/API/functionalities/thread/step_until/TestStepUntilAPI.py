@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class StepUntilTestCase(TestBase):
+class TestStepUntilAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

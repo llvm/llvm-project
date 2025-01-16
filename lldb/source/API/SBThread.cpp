@@ -841,8 +841,10 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     // function, and then if there are no addresses remaining, give an
     // appropriate error message.
 
+    // Function block range information is valid even without parsing the entire
+    // block.
+    Block &fun_block = frame_sc.function->GetBlock(/*can_create=*/false);
     bool all_in_function = true;
-    AddressRanges fun_ranges = frame_sc.function->GetAddressRanges();
 
     std::vector<addr_t> step_over_until_addrs;
     const bool abort_other_plans = false;
@@ -859,9 +861,9 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       addr_t step_addr =
           sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
       if (step_addr != LLDB_INVALID_ADDRESS) {
-        if (llvm::any_of(fun_ranges, [&](const AddressRange &r) {
-              return r.ContainsLoadAddress(step_addr, target);
-            }))
+        AddressRange unused_range;
+        if (fun_block.GetRangeContainingLoadAddress(step_addr, *target,
+                                                    unused_range))
           step_over_until_addrs.push_back(step_addr);
         else
           all_in_function = false;
