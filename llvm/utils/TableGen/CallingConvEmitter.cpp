@@ -109,12 +109,11 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
   // Emit all of the actions, in order.
   for (unsigned I = 0, E = CCActions->size(); I != E; ++I) {
     const Record *Action = CCActions->getElementAsRecord(I);
-    SmallVector<const Record *> SCs;
-    Action->getSuperClasses(SCs);
-    SwiftAction = llvm::any_of(SCs, [](const Record *Class) {
-      std::string Name = Class->getNameInitAsString();
-      return StringRef(Name).starts_with("CCIfSwift");
-    });
+    SwiftAction =
+        llvm::any_of(Action->getSuperClasses(), [](const Record *Class) {
+          std::string Name = Class->getNameInitAsString();
+          return StringRef(Name).starts_with("CCIfSwift");
+        });
 
     O << "\n";
     emitAction(Action, indent(2), O);

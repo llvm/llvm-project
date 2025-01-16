@@ -151,9 +151,7 @@ void JSONEmitter::run(raw_ostream &OS) {
 
     json::Array SuperClasses;
     // Add this def to the instance list for each of its superclasses.
-    SmallVector<const Record *> SCs;
-    Def->getSuperClasses(SCs);
-    for (const auto *SuperClass : SCs) {
+    for (const auto *SuperClass : Def->getSuperClasses()) {
       std::string SuperName = SuperClass->getNameInitAsString();
       SuperClasses.push_back(SuperName);
       InstanceLists[SuperName].push_back(Name);

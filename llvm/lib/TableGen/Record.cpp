@@ -2976,8 +2976,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  SmallVector<const Record *> SCs;
-  R.getSuperClasses(SCs);
+  std::vector<const Record *> SCs = R.getSuperClasses();
   if (!SCs.empty()) {
     OS << "\t//";
     for (const auto *SC : SCs)

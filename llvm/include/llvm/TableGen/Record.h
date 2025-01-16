@@ -1719,11 +1719,19 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  void getSuperClasses(SmallVectorImpl<const Record *> &Classes) const {
+  /// Append all superclasses to \p Classes.
+  void getSuperClasses(std::vector<const Record *> &Classes) const {
     for (const auto &[SC, R] : DirectSuperClasses) {
       SC->getSuperClasses(Classes);
       Classes.push_back(SC);
     }
+  }
+
+  /// Return all superclasses.
+  std::vector<const Record *> getSuperClasses() const {
+    std::vector<const Record *> Classes;
+    getSuperClasses(Classes);
+    return Classes;
   }
 
   /// Determine whether this record has the specified direct superclass.

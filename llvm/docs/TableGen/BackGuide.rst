@@ -629,10 +629,9 @@ then iterates over the pairs in the returned array.
   }
 
 The ``Record`` class also provides a function, ``getSuperClasses``, to
-append *all* superclasses of a record to a given vector of type
-``SmallVectorImpl<Record *>``. The superclasses are in post-order: the order
-in which the superclasses were visited while copying their fields into the
-record.
+return a vector of *all* superclasses of a record. The superclasses are in
+post-order: the order in which the superclasses were visited while copying
+their fields into the record.
 
 Emitting Text to the Output Stream
 ==================================
