@@ -27526,9 +27526,11 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
-  // If all result lanes but 1 are undefined, no need to splat the scalar
-  // result.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
+    // All but one element should have an undef input, which will fold to a
+    // constant or undef. Avoid splatting which would over-define potentially
+    // undefined elements.
+
     // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
     //   build_vec ..undef, (bo X, Y), undef...
     SmallVector<SDValue, 16> EltsX, EltsY, EltsResult;
