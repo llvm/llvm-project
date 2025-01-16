@@ -222,13 +222,19 @@ protected:
   /// track which instructions last wrote to this register.
   std::vector<uint16_t> Reg2StateIdx;
 
-  bool isTrackingReg(MCPhysReg Reg) const {
-    return llvm::is_contained(RegsToTrackInstsFor, Reg);
+  SmallPtrSet<const MCInst *, 4> &lastWritingInsts(State &S,
+                                                   MCPhysReg Reg) const {
+    assert(Reg < Reg2StateIdx.size());
+    return S.LastInstWritingReg[Reg2StateIdx[Reg]];
+  }
+  const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const State &S,
+                                                         MCPhysReg Reg) const {
+    assert(Reg < Reg2StateIdx.size());
+    return S.LastInstWritingReg[Reg2StateIdx[Reg]];
   }
 
-  uint16_t reg2StateIdx(MCPhysReg Reg) const {
-    assert(Reg < Reg2StateIdx.size());
-    return Reg2StateIdx[Reg];
+  bool isTrackingReg(MCPhysReg Reg) const {
+    return llvm::is_contained(RegsToTrackInstsFor, Reg);
   }
 
   void preflight() {}
@@ -279,21 +285,16 @@ protected:
     Next.NonAutClobRegs |= Written;
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:
-    if (TrackingLastInsts) {
-      for (auto WrittenReg : Written.set_bits()) {
-        if (isTrackingReg(WrittenReg)) {
-          Next.LastInstWritingReg[reg2StateIdx(WrittenReg)] = {};
-          Next.LastInstWritingReg[reg2StateIdx(WrittenReg)].insert(&Point);
-        }
-      }
-    }
+    for (MCPhysReg Reg : RegsToTrackInstsFor)
+      if (Written[Reg])
+        lastWritingInsts(Next, Reg) = {&Point};
 
     ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
     if (AutReg && *AutReg != BC.MIB->getNoRegister()) {
       Next.NonAutClobRegs.reset(
           BC.MIB->getAliases(*AutReg, /*OnlySmaller=*/true));
       if (TrackingLastInsts && isTrackingReg(*AutReg))
-        Next.LastInstWritingReg[reg2StateIdx(*AutReg)] = {};
+        lastWritingInsts(Next, *AutReg).clear();
     }
 
     LLVM_DEBUG({
@@ -319,8 +320,7 @@ public:
       // been tracked.
       std::set<const MCInst *> LastWritingInsts;
       for (MCPhysReg TrackedReg : DirtyRawRegs.set_bits()) {
-        for (const MCInst *LastInstWriting :
-             S.LastInstWritingReg[reg2StateIdx(TrackedReg)])
+        for (const MCInst *LastInstWriting : lastWritingInsts(S, TrackedReg))
           LastWritingInsts.insert(LastInstWriting);
       }
       std::vector<MCInstReference> Result;
