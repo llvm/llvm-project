@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-pixel %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefix=SPIRV
 
 
-void test_scalar(float Buf) {
+export void test_scalar(float Buf) {
   // CHECK:      define void @{{.*}}test_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load float, ptr [[VALP]].addr, align 4
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt float [[LOAD]], 0.000000e+00
@@ -20,7 +20,7 @@ void test_scalar(float Buf) {
   clip(Buf);
 }
 
-void test_vector4(float4 Buf) {
+export void test_vector4(float4 Buf) {
   // CHECK:      define void @{{.*}}test_vector{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load <4 x float>, ptr [[VALP]].addr, align 16
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <4 x float> [[LOAD]], zeroinitializer

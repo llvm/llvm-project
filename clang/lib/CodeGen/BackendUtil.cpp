@@ -56,6 +56,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/HLSL/HLSLFinalizeLinkage.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
@@ -1114,6 +1115,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
   if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC));
+
+  if (LangOpts.HLSL && !CodeGenOpts.DisableLLVMPasses) {
+    // Passes required by HLSL for every backend.
+    MPM.addPass(HLSLFinalizeLinkage());
+  }
 
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in

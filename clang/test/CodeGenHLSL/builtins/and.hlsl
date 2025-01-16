@@ -9,7 +9,7 @@
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and i1 [[X]], [[Y]]
 // CHECK-NEXT:    ret i1 [[HLSL_AND]]
 //
-bool test_and_scalar(bool x, bool y) {
+export bool test_and_scalar(bool x, bool y) {
   return and(x, y);
 }
 
@@ -19,7 +19,7 @@ bool test_and_scalar(bool x, bool y) {
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <2 x i1> [[X]], [[Y]]
 // CHECK-NEXT:    ret <2 x i1> [[HLSL_AND]]
 //
-bool2 test_and_bool2(bool2 x, bool2 y) {
+export bool2 test_and_bool2(bool2 x, bool2 y) {
   return and(x, y);
 }
 
@@ -29,7 +29,7 @@ bool2 test_and_bool2(bool2 x, bool2 y) {
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <3 x i1> [[X]], [[Y]]
 // CHECK-NEXT:    ret <3 x i1> [[HLSL_AND]]
 //
-bool3 test_and_bool3(bool3 x, bool3 y) {
+export bool3 test_and_bool3(bool3 x, bool3 y) {
   return and(x, y);
 }
 
@@ -39,7 +39,7 @@ bool3 test_and_bool3(bool3 x, bool3 y) {
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[X]], [[Y]]
 // CHECK-NEXT:    ret <4 x i1> [[HLSL_AND]]
 //
-bool4 test_and_bool4(bool4 x, bool4 y) {
+export bool4 test_and_bool4(bool4 x, bool4 y) {
   return and(x, y);
 }
 
@@ -51,7 +51,7 @@ bool4 test_and_bool4(bool4 x, bool4 y) {
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[TOBOOL]], [[TOBOOL1]]
 // CHECK-NEXT:    ret <4 x i1> [[HLSL_AND]]
 //
-bool4 test_and_int4(int4 x, int4 y) {
+export bool4 test_and_int4(int4 x, int4 y) {
   return and(x, y);
 }
 
@@ -63,6 +63,6 @@ bool4 test_and_int4(int4 x, int4 y) {
 // CHECK-NEXT:    [[HLSL_AND:%.*]] = and <4 x i1> [[TOBOOL]], [[TOBOOL1]]
 // CHECK-NEXT:    ret <4 x i1> [[HLSL_AND]]
 //
-bool4 test_and_float4(float4 x, float4 y) {
+export bool4 test_and_float4(float4 x, float4 y) {
   return and(x, y);
 }
