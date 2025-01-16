@@ -315,6 +315,24 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
+  experimental/stacktrace/alloc.cpp
+  experimental/stacktrace/common/debug.cpp
+  experimental/stacktrace/common/fd.cpp
+  experimental/stacktrace/context.cpp
+  experimental/stacktrace/linux/linux-dl.cpp
+  experimental/stacktrace/linux/linux-elf.cpp
+  experimental/stacktrace/linux/linux-sym.cpp
+  experimental/stacktrace/osx/osx.cpp
+  experimental/stacktrace/stacktrace.cpp
+  experimental/stacktrace/tools/addr2line.cpp
+  experimental/stacktrace/tools/atos.cpp
+  experimental/stacktrace/tools/llvm_symbolizer.cpp
+  experimental/stacktrace/tools/toolspawner.cpp
+  experimental/stacktrace/unwind/unwind.cpp
+  experimental/stacktrace/windows/dbghelp_dll.cpp
+  experimental/stacktrace/windows/dll.cpp
+  experimental/stacktrace/windows/psapi_dll.cpp
+  experimental/stacktrace/windows/win_impl.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
