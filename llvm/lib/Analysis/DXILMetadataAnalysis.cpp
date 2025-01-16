@@ -24,8 +24,6 @@
 using namespace llvm;
 using namespace dxil;
 
-
-
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
   Triple TT(Triple(M.getTargetTriple()));
