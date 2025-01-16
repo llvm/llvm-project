@@ -31,7 +31,7 @@ TEST(APIntTest, ValueInit) {
 
 // Test that 0^5 == 0
 TEST(APIntTest, PowZeroTo5) {
-  APInt Zero = APInt();
+  APInt Zero = APInt::getZero(32);
   EXPECT_TRUE(!Zero);
   APInt ZeroTo5 = APIntOps::pow(Zero, 5);
   EXPECT_TRUE(!ZeroTo5);
@@ -39,14 +39,14 @@ TEST(APIntTest, PowZeroTo5) {
 
 // Test that 1^16 == 1
 TEST(APIntTest, PowOneTo16) {
-  APInt One = APInt::getZero(32) + 1;
+  APInt One(32, 1);
   APInt OneTo16 = APIntOps::pow(One, 16);
   EXPECT_EQ(One, OneTo16);
 }
 
 // Test that 2^10 == 1024
 TEST(APIntTest, PowerTwoTo10) {
-  APInt Two = APInt::getZero(32) + 2;
+  APInt Two(32, 2);
   APInt TwoTo20 = APIntOps::pow(Two, 10);
   APInt V_1024 = APInt::getZero(32) + 1024;
   EXPECT_EQ(TwoTo20, V_1024);
@@ -54,9 +54,9 @@ TEST(APIntTest, PowerTwoTo10) {
 
 // Test that 3^3 == 27
 TEST(APIntTest, PowerThreeTo3) {
-  APInt Three = APInt::getZero(32) + 3;
+  APInt Three(32, 3);
   APInt ThreeTo3 = APIntOps::pow(Three, 3);
-  APInt V_27 = APInt::getZero(32) + 27;
+  APInt V_27(32, 27);
   EXPECT_EQ(ThreeTo3, V_27);
 }
 
@@ -91,7 +91,7 @@ TEST(APIntTest, PowerSignedMinValueTo1) {
 // Test that MaxValue^3 == MaxValue
 TEST(APIntTest, ZeroToZero) {
   APInt Zero = APInt::getZero(32);
-  APInt One = APInt::getZero(32) + 1;
+  APInt One(32,1);
   APInt ZeroToZero = APIntOps::pow(Zero, 0);
   EXPECT_EQ(ZeroToZero, One);
 }
