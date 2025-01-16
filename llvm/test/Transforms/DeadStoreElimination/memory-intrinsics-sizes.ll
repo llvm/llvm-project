@@ -133,8 +133,7 @@ define void @memset_pattern_and_store_2(ptr %ptr, i64 %len) {
 
 define void @memset_pattern_and_store_3(ptr %ptr) {
 ; CHECK-LABEL: @memset_pattern_and_store_3(
-; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR]], i8 0, i64 13, i1 false)
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i8.i64(ptr align 1 [[PTR:%.*]], i8 0, i64 13, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   store i64 0, ptr %ptr

@@ -45,9 +45,7 @@
 # include <dlfcn.h>
 #endif
 
-#ifdef HAVE_FCNTL_H
 # include <fcntl.h>
-#endif
 
 /// This function builds an error message into \p ErrMsg using the \p prefix
 /// string and the Unix error number given by \p errnum. If errnum is -1, the

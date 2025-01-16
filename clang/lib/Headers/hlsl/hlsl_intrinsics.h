@@ -1151,6 +1151,78 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
 uint4 firstbithigh(uint64_t4);
 
 //===----------------------------------------------------------------------===//
+// firstbitlow builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T firstbitlow(T Val)
+/// \brief Returns the location of the first set bit starting from the lowest
+/// order bit and working upward, per component.
+/// \param Val the input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint firstbitlow(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint2 firstbitlow(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint3 firstbitlow(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbitlow)
+uint4 firstbitlow(uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // floor builtins
 //===----------------------------------------------------------------------===//
 

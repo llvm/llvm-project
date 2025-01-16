@@ -7,20 +7,20 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<19>;
 ; CHECK-NEXT:    .reg .b32 %r<16>;
-; CHECK-NEXT:    .reg .b64 %rd<129>;
+; CHECK-NEXT:    .reg .b64 %rd<127>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd45, %rd46}, [srem_i128_param_0];
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd49, %rd50}, [srem_i128_param_1];
 ; CHECK-NEXT:    shr.s64 %rd2, %rd46, 63;
-; CHECK-NEXT:    mov.b64 %rd119, 0;
-; CHECK-NEXT:    sub.cc.s64 %rd52, %rd119, %rd45;
-; CHECK-NEXT:    subc.cc.s64 %rd53, %rd119, %rd46;
+; CHECK-NEXT:    mov.b64 %rd117, 0;
+; CHECK-NEXT:    sub.cc.s64 %rd52, %rd117, %rd45;
+; CHECK-NEXT:    subc.cc.s64 %rd53, %rd117, %rd46;
 ; CHECK-NEXT:    setp.lt.s64 %p1, %rd46, 0;
 ; CHECK-NEXT:    selp.b64 %rd4, %rd53, %rd46, %p1;
 ; CHECK-NEXT:    selp.b64 %rd3, %rd52, %rd45, %p1;
-; CHECK-NEXT:    sub.cc.s64 %rd54, %rd119, %rd49;
-; CHECK-NEXT:    subc.cc.s64 %rd55, %rd119, %rd50;
+; CHECK-NEXT:    sub.cc.s64 %rd54, %rd117, %rd49;
+; CHECK-NEXT:    subc.cc.s64 %rd55, %rd117, %rd50;
 ; CHECK-NEXT:    setp.lt.s64 %p2, %rd50, 0;
 ; CHECK-NEXT:    selp.b64 %rd6, %rd55, %rd50, %p2;
 ; CHECK-NEXT:    selp.b64 %rd5, %rd54, %rd49, %p2;
@@ -44,7 +44,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    add.s64 %rd64, %rd63, 64;
 ; CHECK-NEXT:    selp.b64 %rd65, %rd62, %rd64, %p7;
 ; CHECK-NEXT:    sub.cc.s64 %rd66, %rd61, %rd65;
-; CHECK-NEXT:    subc.cc.s64 %rd67, %rd119, 0;
+; CHECK-NEXT:    subc.cc.s64 %rd67, %rd117, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p8, %rd67, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p9, %rd67, 0;
 ; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p9;
@@ -57,14 +57,14 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    xor.b64 %rd68, %rd66, 127;
 ; CHECK-NEXT:    or.b64 %rd69, %rd68, %rd67;
 ; CHECK-NEXT:    setp.eq.s64 %p13, %rd69, 0;
-; CHECK-NEXT:    selp.b64 %rd128, 0, %rd4, %p12;
-; CHECK-NEXT:    selp.b64 %rd127, 0, %rd3, %p12;
+; CHECK-NEXT:    selp.b64 %rd126, 0, %rd4, %p12;
+; CHECK-NEXT:    selp.b64 %rd125, 0, %rd3, %p12;
 ; CHECK-NEXT:    or.pred %p14, %p12, %p13;
 ; CHECK-NEXT:    @%p14 bra $L__BB0_5;
 ; CHECK-NEXT:  // %bb.3: // %udiv-bb1
-; CHECK-NEXT:    add.cc.s64 %rd121, %rd66, 1;
-; CHECK-NEXT:    addc.cc.s64 %rd122, %rd67, 0;
-; CHECK-NEXT:    or.b64 %rd72, %rd121, %rd122;
+; CHECK-NEXT:    add.cc.s64 %rd119, %rd66, 1;
+; CHECK-NEXT:    addc.cc.s64 %rd120, %rd67, 0;
+; CHECK-NEXT:    or.b64 %rd72, %rd119, %rd120;
 ; CHECK-NEXT:    setp.eq.s64 %p15, %rd72, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r9, %rd66;
 ; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
@@ -75,12 +75,12 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
 ; CHECK-NEXT:    shl.b64 %rd76, %rd3, %r12;
 ; CHECK-NEXT:    setp.gt.s32 %p16, %r10, 63;
-; CHECK-NEXT:    selp.b64 %rd126, %rd76, %rd75, %p16;
-; CHECK-NEXT:    shl.b64 %rd125, %rd3, %r10;
-; CHECK-NEXT:    mov.u64 %rd116, %rd119;
+; CHECK-NEXT:    selp.b64 %rd124, %rd76, %rd75, %p16;
+; CHECK-NEXT:    shl.b64 %rd123, %rd3, %r10;
+; CHECK-NEXT:    mov.u64 %rd114, %rd117;
 ; CHECK-NEXT:    @%p15 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd121;
+; CHECK-NEXT:    cvt.u32.u64 %r13, %rd119;
 ; CHECK-NEXT:    shr.u64 %rd79, %rd3, %r13;
 ; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
 ; CHECK-NEXT:    shl.b64 %rd80, %rd4, %r14;
@@ -88,61 +88,59 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    add.s32 %r15, %r13, -64;
 ; CHECK-NEXT:    shr.u64 %rd82, %rd4, %r15;
 ; CHECK-NEXT:    setp.gt.s32 %p17, %r13, 63;
-; CHECK-NEXT:    selp.b64 %rd123, %rd82, %rd81, %p17;
-; CHECK-NEXT:    shr.u64 %rd124, %rd4, %r13;
+; CHECK-NEXT:    selp.b64 %rd121, %rd82, %rd81, %p17;
+; CHECK-NEXT:    shr.u64 %rd122, %rd4, %r13;
 ; CHECK-NEXT:    add.cc.s64 %rd35, %rd5, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd36, %rd6, -1;
-; CHECK-NEXT:    mov.b64 %rd116, 0;
-; CHECK-NEXT:    mov.u64 %rd119, %rd116;
+; CHECK-NEXT:    mov.b64 %rd114, 0;
+; CHECK-NEXT:    mov.u64 %rd117, %rd114;
 ; CHECK-NEXT:  $L__BB0_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    shr.u64 %rd83, %rd123, 63;
-; CHECK-NEXT:    shl.b64 %rd84, %rd124, 1;
+; CHECK-NEXT:    shr.u64 %rd83, %rd121, 63;
+; CHECK-NEXT:    shl.b64 %rd84, %rd122, 1;
 ; CHECK-NEXT:    or.b64 %rd85, %rd84, %rd83;
-; CHECK-NEXT:    shl.b64 %rd86, %rd123, 1;
-; CHECK-NEXT:    shr.u64 %rd87, %rd126, 63;
+; CHECK-NEXT:    shl.b64 %rd86, %rd121, 1;
+; CHECK-NEXT:    shr.u64 %rd87, %rd124, 63;
 ; CHECK-NEXT:    or.b64 %rd88, %rd86, %rd87;
-; CHECK-NEXT:    shr.u64 %rd89, %rd125, 63;
-; CHECK-NEXT:    shl.b64 %rd90, %rd126, 1;
+; CHECK-NEXT:    shr.u64 %rd89, %rd123, 63;
+; CHECK-NEXT:    shl.b64 %rd90, %rd124, 1;
 ; CHECK-NEXT:    or.b64 %rd91, %rd90, %rd89;
-; CHECK-NEXT:    shl.b64 %rd92, %rd125, 1;
-; CHECK-NEXT:    or.b64 %rd125, %rd119, %rd92;
-; CHECK-NEXT:    or.b64 %rd126, %rd116, %rd91;
+; CHECK-NEXT:    shl.b64 %rd92, %rd123, 1;
+; CHECK-NEXT:    or.b64 %rd123, %rd117, %rd92;
+; CHECK-NEXT:    or.b64 %rd124, %rd114, %rd91;
 ; CHECK-NEXT:    sub.cc.s64 %rd93, %rd35, %rd88;
 ; CHECK-NEXT:    subc.cc.s64 %rd94, %rd36, %rd85;
 ; CHECK-NEXT:    shr.s64 %rd95, %rd94, 63;
-; CHECK-NEXT:    and.b64 %rd119, %rd95, 1;
+; CHECK-NEXT:    and.b64 %rd117, %rd95, 1;
 ; CHECK-NEXT:    and.b64 %rd96, %rd95, %rd5;
 ; CHECK-NEXT:    and.b64 %rd97, %rd95, %rd6;
-; CHECK-NEXT:    sub.cc.s64 %rd123, %rd88, %rd96;
-; CHECK-NEXT:    subc.cc.s64 %rd124, %rd85, %rd97;
-; CHECK-NEXT:    add.cc.s64 %rd121, %rd121, -1;
-; CHECK-NEXT:    addc.cc.s64 %rd122, %rd122, -1;
-; CHECK-NEXT:    or.b64 %rd98, %rd121, %rd122;
+; CHECK-NEXT:    sub.cc.s64 %rd121, %rd88, %rd96;
+; CHECK-NEXT:    subc.cc.s64 %rd122, %rd85, %rd97;
+; CHECK-NEXT:    add.cc.s64 %rd119, %rd119, -1;
+; CHECK-NEXT:    addc.cc.s64 %rd120, %rd120, -1;
+; CHECK-NEXT:    or.b64 %rd98, %rd119, %rd120;
 ; CHECK-NEXT:    setp.eq.s64 %p18, %rd98, 0;
 ; CHECK-NEXT:    @%p18 bra $L__BB0_4;
 ; CHECK-NEXT:    bra.uni $L__BB0_2;
 ; CHECK-NEXT:  $L__BB0_4: // %udiv-loop-exit
-; CHECK-NEXT:    shr.u64 %rd99, %rd125, 63;
-; CHECK-NEXT:    shl.b64 %rd100, %rd126, 1;
+; CHECK-NEXT:    shr.u64 %rd99, %rd123, 63;
+; CHECK-NEXT:    shl.b64 %rd100, %rd124, 1;
 ; CHECK-NEXT:    or.b64 %rd101, %rd100, %rd99;
-; CHECK-NEXT:    shl.b64 %rd102, %rd125, 1;
-; CHECK-NEXT:    or.b64 %rd127, %rd119, %rd102;
-; CHECK-NEXT:    or.b64 %rd128, %rd116, %rd101;
+; CHECK-NEXT:    shl.b64 %rd102, %rd123, 1;
+; CHECK-NEXT:    or.b64 %rd125, %rd117, %rd102;
+; CHECK-NEXT:    or.b64 %rd126, %rd114, %rd101;
 ; CHECK-NEXT:  $L__BB0_5: // %udiv-end
-; CHECK-NEXT:    mul.hi.u64 %rd103, %rd5, %rd127;
-; CHECK-NEXT:    mul.lo.s64 %rd104, %rd5, %rd128;
-; CHECK-NEXT:    add.s64 %rd105, %rd103, %rd104;
-; CHECK-NEXT:    mul.lo.s64 %rd106, %rd6, %rd127;
-; CHECK-NEXT:    add.s64 %rd107, %rd105, %rd106;
-; CHECK-NEXT:    mul.lo.s64 %rd108, %rd5, %rd127;
-; CHECK-NEXT:    sub.cc.s64 %rd109, %rd3, %rd108;
-; CHECK-NEXT:    subc.cc.s64 %rd110, %rd4, %rd107;
-; CHECK-NEXT:    xor.b64 %rd111, %rd109, %rd2;
-; CHECK-NEXT:    xor.b64 %rd112, %rd110, %rd2;
-; CHECK-NEXT:    sub.cc.s64 %rd113, %rd111, %rd2;
-; CHECK-NEXT:    subc.cc.s64 %rd114, %rd112, %rd2;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd113, %rd114};
+; CHECK-NEXT:    mul.hi.u64 %rd103, %rd5, %rd125;
+; CHECK-NEXT:    mad.lo.s64 %rd104, %rd5, %rd126, %rd103;
+; CHECK-NEXT:    mad.lo.s64 %rd105, %rd6, %rd125, %rd104;
+; CHECK-NEXT:    mul.lo.s64 %rd106, %rd5, %rd125;
+; CHECK-NEXT:    sub.cc.s64 %rd107, %rd3, %rd106;
+; CHECK-NEXT:    subc.cc.s64 %rd108, %rd4, %rd105;
+; CHECK-NEXT:    xor.b64 %rd109, %rd107, %rd2;
+; CHECK-NEXT:    xor.b64 %rd110, %rd108, %rd2;
+; CHECK-NEXT:    sub.cc.s64 %rd111, %rd109, %rd2;
+; CHECK-NEXT:    subc.cc.s64 %rd112, %rd110, %rd2;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd111, %rd112};
 ; CHECK-NEXT:    ret;
   %div = srem i128 %lhs, %rhs
   ret i128 %div
@@ -153,7 +151,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<17>;
 ; CHECK-NEXT:    .reg .b32 %r<16>;
-; CHECK-NEXT:    .reg .b64 %rd<115>;
+; CHECK-NEXT:    .reg .b64 %rd<113>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd41, %rd42}, [urem_i128_param_0];
@@ -177,9 +175,9 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    cvt.u64.u32 %rd52, %r4;
 ; CHECK-NEXT:    add.s64 %rd53, %rd52, 64;
 ; CHECK-NEXT:    selp.b64 %rd54, %rd51, %rd53, %p5;
-; CHECK-NEXT:    mov.b64 %rd105, 0;
+; CHECK-NEXT:    mov.b64 %rd103, 0;
 ; CHECK-NEXT:    sub.cc.s64 %rd56, %rd50, %rd54;
-; CHECK-NEXT:    subc.cc.s64 %rd57, %rd105, 0;
+; CHECK-NEXT:    subc.cc.s64 %rd57, %rd103, 0;
 ; CHECK-NEXT:    setp.eq.s64 %p6, %rd57, 0;
 ; CHECK-NEXT:    setp.ne.s64 %p7, %rd57, 0;
 ; CHECK-NEXT:    selp.u32 %r5, -1, 0, %p7;
@@ -192,14 +190,14 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    xor.b64 %rd58, %rd56, 127;
 ; CHECK-NEXT:    or.b64 %rd59, %rd58, %rd57;
 ; CHECK-NEXT:    setp.eq.s64 %p11, %rd59, 0;
-; CHECK-NEXT:    selp.b64 %rd114, 0, %rd42, %p10;
-; CHECK-NEXT:    selp.b64 %rd113, 0, %rd41, %p10;
+; CHECK-NEXT:    selp.b64 %rd112, 0, %rd42, %p10;
+; CHECK-NEXT:    selp.b64 %rd111, 0, %rd41, %p10;
 ; CHECK-NEXT:    or.pred %p12, %p10, %p11;
 ; CHECK-NEXT:    @%p12 bra $L__BB1_5;
 ; CHECK-NEXT:  // %bb.3: // %udiv-bb1
-; CHECK-NEXT:    add.cc.s64 %rd107, %rd56, 1;
-; CHECK-NEXT:    addc.cc.s64 %rd108, %rd57, 0;
-; CHECK-NEXT:    or.b64 %rd62, %rd107, %rd108;
+; CHECK-NEXT:    add.cc.s64 %rd105, %rd56, 1;
+; CHECK-NEXT:    addc.cc.s64 %rd106, %rd57, 0;
+; CHECK-NEXT:    or.b64 %rd62, %rd105, %rd106;
 ; CHECK-NEXT:    setp.eq.s64 %p13, %rd62, 0;
 ; CHECK-NEXT:    cvt.u32.u64 %r9, %rd56;
 ; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
@@ -210,12 +208,12 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
 ; CHECK-NEXT:    shl.b64 %rd66, %rd41, %r12;
 ; CHECK-NEXT:    setp.gt.s32 %p14, %r10, 63;
-; CHECK-NEXT:    selp.b64 %rd112, %rd66, %rd65, %p14;
-; CHECK-NEXT:    shl.b64 %rd111, %rd41, %r10;
-; CHECK-NEXT:    mov.u64 %rd102, %rd105;
+; CHECK-NEXT:    selp.b64 %rd110, %rd66, %rd65, %p14;
+; CHECK-NEXT:    shl.b64 %rd109, %rd41, %r10;
+; CHECK-NEXT:    mov.u64 %rd100, %rd103;
 ; CHECK-NEXT:    @%p13 bra $L__BB1_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd107;
+; CHECK-NEXT:    cvt.u32.u64 %r13, %rd105;
 ; CHECK-NEXT:    shr.u64 %rd69, %rd41, %r13;
 ; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
 ; CHECK-NEXT:    shl.b64 %rd70, %rd42, %r14;
@@ -223,57 +221,55 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    add.s32 %r15, %r13, -64;
 ; CHECK-NEXT:    shr.u64 %rd72, %rd42, %r15;
 ; CHECK-NEXT:    setp.gt.s32 %p15, %r13, 63;
-; CHECK-NEXT:    selp.b64 %rd109, %rd72, %rd71, %p15;
-; CHECK-NEXT:    shr.u64 %rd110, %rd42, %r13;
+; CHECK-NEXT:    selp.b64 %rd107, %rd72, %rd71, %p15;
+; CHECK-NEXT:    shr.u64 %rd108, %rd42, %r13;
 ; CHECK-NEXT:    add.cc.s64 %rd33, %rd3, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd34, %rd4, -1;
-; CHECK-NEXT:    mov.b64 %rd102, 0;
-; CHECK-NEXT:    mov.u64 %rd105, %rd102;
+; CHECK-NEXT:    mov.b64 %rd100, 0;
+; CHECK-NEXT:    mov.u64 %rd103, %rd100;
 ; CHECK-NEXT:  $L__BB1_2: // %udiv-do-while
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    shr.u64 %rd73, %rd109, 63;
-; CHECK-NEXT:    shl.b64 %rd74, %rd110, 1;
+; CHECK-NEXT:    shr.u64 %rd73, %rd107, 63;
+; CHECK-NEXT:    shl.b64 %rd74, %rd108, 1;
 ; CHECK-NEXT:    or.b64 %rd75, %rd74, %rd73;
-; CHECK-NEXT:    shl.b64 %rd76, %rd109, 1;
-; CHECK-NEXT:    shr.u64 %rd77, %rd112, 63;
+; CHECK-NEXT:    shl.b64 %rd76, %rd107, 1;
+; CHECK-NEXT:    shr.u64 %rd77, %rd110, 63;
 ; CHECK-NEXT:    or.b64 %rd78, %rd76, %rd77;
-; CHECK-NEXT:    shr.u64 %rd79, %rd111, 63;
-; CHECK-NEXT:    shl.b64 %rd80, %rd112, 1;
+; CHECK-NEXT:    shr.u64 %rd79, %rd109, 63;
+; CHECK-NEXT:    shl.b64 %rd80, %rd110, 1;
 ; CHECK-NEXT:    or.b64 %rd81, %rd80, %rd79;
-; CHECK-NEXT:    shl.b64 %rd82, %rd111, 1;
-; CHECK-NEXT:    or.b64 %rd111, %rd105, %rd82;
-; CHECK-NEXT:    or.b64 %rd112, %rd102, %rd81;
+; CHECK-NEXT:    shl.b64 %rd82, %rd109, 1;
+; CHECK-NEXT:    or.b64 %rd109, %rd103, %rd82;
+; CHECK-NEXT:    or.b64 %rd110, %rd100, %rd81;
 ; CHECK-NEXT:    sub.cc.s64 %rd83, %rd33, %rd78;
 ; CHECK-NEXT:    subc.cc.s64 %rd84, %rd34, %rd75;
 ; CHECK-NEXT:    shr.s64 %rd85, %rd84, 63;
-; CHECK-NEXT:    and.b64 %rd105, %rd85, 1;
+; CHECK-NEXT:    and.b64 %rd103, %rd85, 1;
 ; CHECK-NEXT:    and.b64 %rd86, %rd85, %rd3;
 ; CHECK-NEXT:    and.b64 %rd87, %rd85, %rd4;
-; CHECK-NEXT:    sub.cc.s64 %rd109, %rd78, %rd86;
-; CHECK-NEXT:    subc.cc.s64 %rd110, %rd75, %rd87;
-; CHECK-NEXT:    add.cc.s64 %rd107, %rd107, -1;
-; CHECK-NEXT:    addc.cc.s64 %rd108, %rd108, -1;
-; CHECK-NEXT:    or.b64 %rd88, %rd107, %rd108;
+; CHECK-NEXT:    sub.cc.s64 %rd107, %rd78, %rd86;
+; CHECK-NEXT:    subc.cc.s64 %rd108, %rd75, %rd87;
+; CHECK-NEXT:    add.cc.s64 %rd105, %rd105, -1;
+; CHECK-NEXT:    addc.cc.s64 %rd106, %rd106, -1;
+; CHECK-NEXT:    or.b64 %rd88, %rd105, %rd106;
 ; CHECK-NEXT:    setp.eq.s64 %p16, %rd88, 0;
 ; CHECK-NEXT:    @%p16 bra $L__BB1_4;
 ; CHECK-NEXT:    bra.uni $L__BB1_2;
 ; CHECK-NEXT:  $L__BB1_4: // %udiv-loop-exit
-; CHECK-NEXT:    shr.u64 %rd89, %rd111, 63;
-; CHECK-NEXT:    shl.b64 %rd90, %rd112, 1;
+; CHECK-NEXT:    shr.u64 %rd89, %rd109, 63;
+; CHECK-NEXT:    shl.b64 %rd90, %rd110, 1;
 ; CHECK-NEXT:    or.b64 %rd91, %rd90, %rd89;
-; CHECK-NEXT:    shl.b64 %rd92, %rd111, 1;
-; CHECK-NEXT:    or.b64 %rd113, %rd105, %rd92;
-; CHECK-NEXT:    or.b64 %rd114, %rd102, %rd91;
+; CHECK-NEXT:    shl.b64 %rd92, %rd109, 1;
+; CHECK-NEXT:    or.b64 %rd111, %rd103, %rd92;
+; CHECK-NEXT:    or.b64 %rd112, %rd100, %rd91;
 ; CHECK-NEXT:  $L__BB1_5: // %udiv-end
-; CHECK-NEXT:    mul.hi.u64 %rd93, %rd3, %rd113;
-; CHECK-NEXT:    mul.lo.s64 %rd94, %rd3, %rd114;
-; CHECK-NEXT:    add.s64 %rd95, %rd93, %rd94;
-; CHECK-NEXT:    mul.lo.s64 %rd96, %rd4, %rd113;
-; CHECK-NEXT:    add.s64 %rd97, %rd95, %rd96;
-; CHECK-NEXT:    mul.lo.s64 %rd98, %rd3, %rd113;
-; CHECK-NEXT:    sub.cc.s64 %rd99, %rd41, %rd98;
-; CHECK-NEXT:    subc.cc.s64 %rd100, %rd42, %rd97;
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd99, %rd100};
+; CHECK-NEXT:    mul.hi.u64 %rd93, %rd3, %rd111;
+; CHECK-NEXT:    mad.lo.s64 %rd94, %rd3, %rd112, %rd93;
+; CHECK-NEXT:    mad.lo.s64 %rd95, %rd4, %rd111, %rd94;
+; CHECK-NEXT:    mul.lo.s64 %rd96, %rd3, %rd111;
+; CHECK-NEXT:    sub.cc.s64 %rd97, %rd41, %rd96;
+; CHECK-NEXT:    subc.cc.s64 %rd98, %rd42, %rd95;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd97, %rd98};
 ; CHECK-NEXT:    ret;
   %div = urem i128 %lhs, %rhs
   ret i128 %div
