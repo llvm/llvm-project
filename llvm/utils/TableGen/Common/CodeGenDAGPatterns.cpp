@@ -3006,7 +3006,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       // Check that the ComplexPattern uses are consistent: "(MY_PAT $a, $b)"
       // and "(MY_PAT $b, $a)" should not be allowed in the same pattern;
       // neither should "(MY_PAT_1 $a, $b)" and "(MY_PAT_2 $a, $b)".
-      auto OperandId = std::make_pair(Operator, i);
+      auto OperandId = std::pair(Operator, i);
       auto [PrevOp, Inserted] =
           ComplexPatternOperands.try_emplace(Child->getName(), OperandId);
       if (!Inserted && PrevOp->getValue() != OperandId) {

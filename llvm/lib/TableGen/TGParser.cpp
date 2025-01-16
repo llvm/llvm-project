@@ -3162,7 +3162,7 @@ void TGParser::ParseDagArgList(
         Lex.Lex();  // eat the VarName.
       }
 
-      Result.push_back(std::make_pair(Val, VarName));
+      Result.push_back(std::pair(Val, VarName));
     }
     if (!consume(tgtok::comma))
       break;
@@ -4152,9 +4152,8 @@ bool TGParser::ParseMultiClass() {
     return TokError("expected identifier after multiclass for name");
   std::string Name = Lex.getCurStrVal();
 
-  auto Result =
-    MultiClasses.insert(std::make_pair(Name,
-                    std::make_unique<MultiClass>(Name, Lex.getLoc(),Records)));
+  auto Result = MultiClasses.insert(std::pair(
+      Name, std::make_unique<MultiClass>(Name, Lex.getLoc(), Records)));
 
   if (!Result.second)
     return TokError("multiclass '" + Name + "' already defined");

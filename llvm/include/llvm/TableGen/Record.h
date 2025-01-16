@@ -1816,7 +1816,7 @@ public:
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    SuperClasses.push_back(std::make_pair(R, Range));
+    SuperClasses.push_back(std::pair(R, Range));
   }
 
   /// If there are any field references that refer to fields that have been
@@ -1971,21 +1971,22 @@ public:
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins = Classes.insert(std::make_pair(std::string(R->getName()),
-                                             std::move(R))).second;
+    bool Ins =
+        Classes.insert(std::pair(std::string(R->getName()), std::move(R)))
+            .second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.insert(std::make_pair(std::string(R->getName()),
-                                          std::move(R))).second;
+    bool Ins =
+        Defs.insert(std::pair(std::string(R->getName()), std::move(R))).second;
     (void)Ins;
     assert(Ins && "Record already exists");
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {
-    bool Ins = ExtraGlobals.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = ExtraGlobals.insert(std::pair(std::string(Name), I)).second;
     (void)Ins;
     assert(!getDef(Name));
     assert(Ins && "Global already exists");
@@ -2071,14 +2072,14 @@ struct LessRecordRegister {
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
         bool IsDigit = isDigit(Curr[I]);
         if (IsDigit != IsDigitPart) {
-          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+          Parts.push_back(std::pair(IsDigitPart, StringRef(Start, Len)));
           Len = 0;
           Start = &Curr[I];
           IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+      Parts.push_back(std::pair(IsDigitPart, StringRef(Start, Len)));
     }
 
     size_t size() { return Parts.size(); }
