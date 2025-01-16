@@ -27526,8 +27526,8 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
-  // If all lanes but 1 are undefined, no need to splat the scalar result.
-  // TODO: Keep track of undefs and use that info in the general case.
+  // If all result lanes but 1 are undefined, no need to splat the scalar
+  // result.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
     // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
     //   build_vec ..undef, (bo X, Y), undef...
