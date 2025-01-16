@@ -2351,7 +2351,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // and after the early return when just writing an import library.
   if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN) {
     llvm::TimeTraceScope timeScope("Infer subsystem");
-    config->subsystem = ctx.symtab.inferSubsystem();
+    config->subsystem = mainSymtab.inferSubsystem();
     if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
       Fatal(ctx) << "subsystem must be defined";
   }
@@ -2571,9 +2571,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           ctx.symtab.addLibcall(s);
       }
 
-      // Windows specific -- if __load_config_used can be resolved, resolve it.
-      if (ctx.symtab.findUnderscore("_load_config_used"))
-        ctx.symtab.addGCRoot(ctx.symtab.mangle("_load_config_used"));
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        // Windows specific -- if __load_config_used can be resolved, resolve
+        // it.
+        if (symtab.findUnderscore("_load_config_used"))
+          symtab.addGCRoot(symtab.mangle("_load_config_used"));
+      });
 
       if (args.hasArg(OPT_include_optional)) {
         // Handle /includeoptional

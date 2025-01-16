@@ -9,7 +9,10 @@
 ! CUDA Fortran procedures available in device subprogram
 
 module cudadevice
-  use __cuda_device, only: __fadd_rd, __fadd_ru
+  use __cuda_device
+  use, intrinsic :: __fortran_builtins, only: dim3 => __builtin_dim3
+  use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
+  use, intrinsic :: __fortran_builtins, only: c_devloc => __builtin_c_devloc
 implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant

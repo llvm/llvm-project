@@ -472,8 +472,7 @@ static bool importSpecializationsIfNeeded(Decl *D, ASTImporter *Importer) {
 }
 
 bool ExternalASTMerger::FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                                       DeclarationName Name,
-                                                       Module *NamedModule) {
+                                                       DeclarationName Name) {
   llvm::SmallVector<NamedDecl *, 1> Decls;
   llvm::SmallVector<Candidate, 4> Candidates;
 

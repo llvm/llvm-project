@@ -617,9 +617,11 @@ def err_ambiguous_inherited_constructor : Error<
   "constructor of %0 inherited from multiple base class subobjects">;
 def note_ambiguous_inherited_constructor_using : Note<
   "inherited from base class %0 here">;
-def note_using_decl_class_member_workaround : Note<
-  "use %select{an alias declaration|a typedef declaration|a reference|"
-  "a const variable|a constexpr variable}0 instead">;
+def note_using_decl_class_member_workaround
+    : Note<"use %enum_select<MemClassWorkaround>{%AliasDecl{an alias "
+           "declaration}|%TypedefDecl{a typedef declaration}|%ReferenceDecl{a "
+           "reference}|%ConstVar{a const variable}|%ConstexprVar{a constexpr "
+           "variable}}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def note_namespace_using_decl : Note<

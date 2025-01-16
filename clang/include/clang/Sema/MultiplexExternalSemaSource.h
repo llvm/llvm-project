@@ -95,8 +95,7 @@ public:
   /// Find all declarations with the given name in the
   /// given context.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name,
-                                      Module *NamedModule) override;
+                                      DeclarationName Name) override;
 
   bool LoadExternalSpecializations(const Decl *D, bool OnlyPartial) override;
 
