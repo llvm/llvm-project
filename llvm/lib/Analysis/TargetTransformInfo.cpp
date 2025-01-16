@@ -1383,11 +1383,11 @@ bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
 }
 
-uint64_t TargetTransformInfo::getFeatureMask(Function &F) const {
+uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 
-bool TargetTransformInfo::isMultiversionedFunction(Function &F) const {
+bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
   return TTIImpl->isMultiversionedFunction(F);
 }
 

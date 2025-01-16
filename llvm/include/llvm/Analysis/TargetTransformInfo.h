@@ -1872,10 +1872,10 @@ public:
 
   /// Returns a bitmask constructed from the target-features or fmv-features
   /// metadata of a function.
-  uint64_t getFeatureMask(Function &F) const;
+  uint64_t getFeatureMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.
-  bool isMultiversionedFunction(Function &F) const;
+  bool isMultiversionedFunction(const Function &F) const;
 
   /// \return The maximum number of function arguments the target supports.
   unsigned getMaxNumArgs() const;
@@ -2319,8 +2319,8 @@ public:
   virtual VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
-  virtual uint64_t getFeatureMask(Function &F) const = 0;
-  virtual bool isMultiversionedFunction(Function &F) const = 0;
+  virtual uint64_t getFeatureMask(const Function &F) const = 0;
+  virtual bool isMultiversionedFunction(const Function &F) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
   virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
                                                Type *ArrayType) const = 0;
@@ -3153,11 +3153,11 @@ public:
     return Impl.hasArmWideBranch(Thumb);
   }
 
-  uint64_t getFeatureMask(Function &F) const override {
+  uint64_t getFeatureMask(const Function &F) const override {
     return Impl.getFeatureMask(F);
   }
 
-  bool isMultiversionedFunction(Function &F) const override {
+  bool isMultiversionedFunction(const Function &F) const override {
     return Impl.isMultiversionedFunction(F);
   }
 
