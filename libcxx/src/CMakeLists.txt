@@ -40,6 +40,11 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/images.cpp
+  stacktrace/impl_generic.cpp
+  stacktrace/impl_windows.cpp
+  stacktrace/impl.cpp
+  stacktrace/unwinding.h
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
