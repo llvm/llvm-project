@@ -34,7 +34,6 @@ add_llvm_target(DirectXCodeGen
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
-  
   LINK_COMPONENTS
   Analysis
   AsmPrinter

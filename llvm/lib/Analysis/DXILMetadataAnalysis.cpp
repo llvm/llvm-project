@@ -15,7 +15,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
@@ -24,82 +23,8 @@
 
 using namespace llvm;
 using namespace dxil;
-using namespace llvm::mcdxbc;
 
-static bool parseRootFlags(MDNode *RootFlagNode, RootSignatureDesc *Desc) {
 
-  assert(RootFlagNode->getNumOperands() == 2 &&
-         "Invalid format for RootFlag Element");
-  auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  auto Value = (RootSignatureFlags)Flag->getZExtValue();
-
-  if ((Value & ~RootSignatureFlags::ValidFlags) != RootSignatureFlags::None)
-    return true;
-
-  Desc->Flags = Value;
-  return false;
-}
-
-static bool parseRootSignatureElement(MDNode *Element,
-                                      RootSignatureDesc *Desc) {
-  MDString *ElementText = cast<MDString>(Element->getOperand(0));
-
-  assert(ElementText != nullptr && "First preoperty of element is not ");
-
-  RootSignatureElementKind ElementKind =
-      StringSwitch<RootSignatureElementKind>(ElementText->getString())
-          .Case("RootFlags", RootSignatureElementKind::RootFlags)
-          .Case("RootConstants", RootSignatureElementKind::RootConstants)
-          .Case("RootCBV", RootSignatureElementKind::RootDescriptor)
-          .Case("RootSRV", RootSignatureElementKind::RootDescriptor)
-          .Case("RootUAV", RootSignatureElementKind::RootDescriptor)
-          .Case("Sampler", RootSignatureElementKind::RootDescriptor)
-          .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
-          .Case("StaticSampler", RootSignatureElementKind::StaticSampler)
-          .Default(RootSignatureElementKind::None);
-
-  switch (ElementKind) {
-
-  case RootSignatureElementKind::RootFlags: {
-    return parseRootFlags(Element, Desc);
-    break;
-  }
-
-  case RootSignatureElementKind::RootConstants:
-  case RootSignatureElementKind::RootDescriptor:
-  case RootSignatureElementKind::DescriptorTable:
-  case RootSignatureElementKind::StaticSampler:
-  case RootSignatureElementKind::None:
-    llvm_unreachable("Not Implemented yet");
-    break;
-  }
-
-  return true;
-}
-
-bool parseRootSignature(RootSignatureDesc *Desc, int32_t Version,
-                        NamedMDNode *Root) {
-  Desc->Version = Version;
-  bool HasError = false;
-
-  for (unsigned int Sid = 0; Sid < Root->getNumOperands(); Sid++) {
-    // This should be an if, for error handling
-    MDNode *Node = cast<MDNode>(Root->getOperand(Sid));
-
-    // Not sure what use this for...
-    Metadata *Func = Node->getOperand(0).get();
-
-    // This should be an if, for error handling
-    MDNode *Elements = cast<MDNode>(Node->getOperand(1).get());
-
-    for (unsigned int Eid = 0; Eid < Elements->getNumOperands(); Eid++) {
-      MDNode *Element = cast<MDNode>(Elements->getOperand(Eid));
-
-      HasError = HasError || parseRootSignatureElement(Element, Desc);
-    }
-  }
-  return HasError;
-}
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
@@ -115,15 +40,6 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
-  }
-
-  NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
-  if (RootSignatureNode) {
-    mcdxbc::RootSignatureDesc Desc;
-
-    parseRootSignature(&Desc, 1, RootSignatureNode);
-
-    MMDAI.RootSignatureDesc = Desc;
   }
 
   // For all HLSL Shader functions

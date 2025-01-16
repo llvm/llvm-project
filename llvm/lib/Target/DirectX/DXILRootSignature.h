@@ -1,4 +1,4 @@
-//===- DXILRootSignature.h - DXIL Root Signature helper objects -----------===//
+//===- DXILRootSignature.h - DXIL Root Signature helper objects ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,67 +11,65 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/DXILMetadataAnalysis.h"
-#include "llvm/IR/DiagnosticInfo.h"
+
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include <optional>
 
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind { Error = 0, RootFlags = 1 };
-class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
-  friend AnalysisInfoMixin<RootSignatureAnalysis>;
-  static AnalysisKey Key;
 
-public:
-  RootSignatureAnalysis() = default;
+    enum class RootSignatureElementKind {
+    None = 0,
+    RootFlags = 1,
+    RootConstants = 2,
+    RootDescriptor = 3,
+    DescriptorTable = 4,
+    StaticSampler = 5
+    };
 
-  using Result = SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>;
+    struct ModuleRootSignature {
+        uint32_t Version;
+        uint32_t Flags;
 
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
-  run(Module &M, ModuleAnalysisManager &AM);
-};
+        ModuleRootSignature() = default;
 
-/// Wrapper pass for the legacy pass manager.
-///
-/// This is required because the passes that will depend on this are codegen
-/// passes which run through the legacy pass manager.
-class RootSignatureAnalysisWrapper : public ModulePass {
-private:
-  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
+        bool parse( int32_t Version, NamedMDNode *Root);
+        void write(raw_ostream &OS);
+    };
 
-public:
-  static char ID;
+    class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
+    friend AnalysisInfoMixin<RootSignatureAnalysis>;
+    static AnalysisKey Key;
 
-  RootSignatureAnalysisWrapper() : ModulePass(ID) {}
+    public:
+    RootSignatureAnalysis() = default;
 
-  using iterator =
-      SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
+    using Result = ModuleRootSignature;
 
-  iterator find(const Function *F) { return FuncToRsMap.find(F); }
+    ModuleRootSignature run(Module &M, ModuleAnalysisManager &AM);
+    };
 
-  iterator end() { return FuncToRsMap.end(); }
+    /// Wrapper pass for the legacy pass manager.
+    ///
+    /// This is required because the passes that will depend on this are codegen
+    /// passes which run through the legacy pass manager.
+    class RootSignatureAnalysisWrapper : public ModulePass {
+    std::optional<ModuleRootSignature> MRS;
 
-  bool runOnModule(Module &M) override;
+    public:
+    static char ID;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
+    RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-/// Printer pass for RootSignatureAnalysis results.
-class RootSignatureAnalysisPrinter
-    : public PassInfoMixin<RootSignatureAnalysisPrinter> {
-  raw_ostream &OS;
+    const std::optional<ModuleRootSignature> &getRootSignature() { return MRS; }
 
-public:
-  explicit RootSignatureAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
+    bool runOnModule(Module &M) override;
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override;
+    };
 
 } // namespace dxil
 } // namespace llvm
