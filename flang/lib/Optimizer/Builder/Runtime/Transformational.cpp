@@ -331,9 +331,8 @@ struct ForcedMatmulTypeModel {
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::runtime::getModel<const char *>()(ctx);
       auto intTy = fir::runtime::getModel<int>()(ctx);
-      auto voidTy = fir::runtime::getModel<void>()(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {voidTy});
+          ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {});
     };
   }
 };

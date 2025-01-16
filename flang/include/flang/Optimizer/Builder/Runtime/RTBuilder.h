@@ -674,6 +674,8 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
+      if (mlir::isa<mlir::NoneType>(retTy))
+        return mlir::FunctionType::get(ctxt, argTys, {});
       return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }
@@ -776,9 +778,6 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
   if (func)
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
-  if (funTy.getResults().size() == 1 &&
-      mlir::isa<mlir::NoneType>(funTy.getResult(0)))
-    funTy = mlir::FunctionType::get(funTy.getContext(), funTy.getInputs(), {});
   func = builder.createFunction(loc, name, funTy);
   func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
   return func;
