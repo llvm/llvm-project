@@ -3088,9 +3088,7 @@ public:
     return Reader.readInt();
   }
 
-  uint64_t peekNextInt() {
-    return Reader.peekNextInt();
-  }
+  uint64_t peekNextInt() { return Reader.peekNextInt(); }
 
   bool readBool() { return Reader.readBool(); }
 
@@ -3136,7 +3134,7 @@ public:
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   auto V = Record.readInt();
-   if (!V)
+  if (!V)
     return nullptr;
 
   // Read and ignore the skip count, since attribute deserialization is not
