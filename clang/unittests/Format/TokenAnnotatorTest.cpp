@@ -2638,6 +2638,40 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
                     "endmodule");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
+
+  // Escaped identifiers.
+  Tokens = Annotate(R"(\busa+index)");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  Tokens = Annotate(R"(\busa+index ;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index)");
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  Tokens = Annotate(R"(\busa+index
+;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  // The escaped identifier can be broken by an escaped newline. The result is
+  // still 1 identifier.
+  Tokens = Annotate(R"(\busa+index\
++
+;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index\
++)");
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  // An escaped newline should not be treated as an escaped identifier.
+  Tokens = Annotate("\\\n");
+  ASSERT_EQ(Tokens.size(), 1u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::eof, TT_Unknown);
+  // Macros.
+  Tokens = Annotate("`define x x``x");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::hash, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::hashhash, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {

@@ -26,12 +26,6 @@ using namespace llvm;
 namespace {
 
 class AMDGPUPrivateObjectVGPRs : public MachineFunctionPass {
-  struct LiveInRange {
-    MachineBasicBlock *MBB;
-    MCPhysReg BaseReg;
-    unsigned NumRegs;
-  };
-
 public:
   static char ID;
 
@@ -49,9 +43,6 @@ public:
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool processMI(MachineInstr &MI, SmallVectorImpl<LiveInRange> &LiveIns);
 };
 
 } // End anonymous namespace.
@@ -67,41 +58,71 @@ FunctionPass *llvm::createAMDGPUPrivateObjectVGPRsPass() {
   return new AMDGPUPrivateObjectVGPRs();
 }
 
-bool AMDGPUPrivateObjectVGPRs::processMI(
-    MachineInstr &MI, SmallVectorImpl<LiveInRange> &LiveIns) {
+// Return metadata describing the object the passed instruction refers to,
+// if any, or nullptr otherwise.
+static const MDNode *getPromotedPrivateObject(const MachineInstr &MI) {
   if (MI.getOpcode() != AMDGPU::V_LOAD_IDX &&
       MI.getOpcode() != AMDGPU::V_STORE_IDX)
-    return false;
+    return nullptr;
 
   const MachineMemOperand *MMO = *MI.memoperands_begin();
   assert(MMO);
   const Value *Ptr = MMO->getValue();
   if (!Ptr)
-    return false;
+    return nullptr;
 
   if (auto *GEP = dyn_cast<GEPOperator>(Ptr))
     Ptr = GEP->getPointerOperand();
   const auto *Alloca = dyn_cast<AllocaInst>(Ptr);
   if (!Alloca)
-    return false;
+    return nullptr;
 
-  const MDNode *AllocatedVGPRs = Alloca->getMetadata("amdgpu.allocated.vgprs");
-  if (!AllocatedVGPRs)
-    return false;
+  const MDNode *Obj = Alloca->getMetadata("amdgpu.allocated.vgprs");
+  if (!Obj)
+    return nullptr;
 
+  return Obj;
+}
+
+static void getObjectRegs(const MDNode *Obj, MCPhysReg &BaseReg,
+                          unsigned &NumRegs) {
   unsigned Offset =
       cast<ConstantInt>(
-          cast<ConstantAsMetadata>(AllocatedVGPRs->getOperand(0))->getValue())
+          cast<ConstantAsMetadata>(Obj->getOperand(0))->getValue())
           ->getZExtValue();
-  unsigned Size =
-      cast<ConstantInt>(
-          cast<ConstantAsMetadata>(AllocatedVGPRs->getOperand(1))->getValue())
-          ->getZExtValue();
+  unsigned Size = cast<ConstantInt>(
+                      cast<ConstantAsMetadata>(Obj->getOperand(1))->getValue())
+                      ->getZExtValue();
 
   assert(Offset % 4 == 0 && Size % 4 == 0);
-  MCPhysReg BaseReg = AMDGPU::VGPR0 + Offset / 4;
-  unsigned NumRegs = Size / 4;
-  LiveIns.push_back({MI.getParent(), BaseReg, NumRegs});
+  BaseReg = AMDGPU::VGPR0 + Offset / 4;
+  NumRegs = Size / 4;
+}
+
+static void insertObjectDef(MachineInstr &MI, const MDNode *Obj,
+                            const SIInstrInfo &TII) {
+  MCPhysReg BaseReg;
+  unsigned NumRegs;
+  getObjectRegs(Obj, BaseReg, NumRegs);
+
+  MachineBasicBlock::instr_iterator DefPt = MI.getIterator();
+  while (DefPt->isBundledWithPred())
+    --DefPt;
+
+  for (unsigned I : seq(NumRegs)) {
+    MCPhysReg Reg = BaseReg + I;
+    BuildMI(*MI.getParent(), DefPt, DebugLoc(),
+            TII.get(TargetOpcode::IMPLICIT_DEF), Reg);
+  }
+}
+
+static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj) {
+  assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
+         MI.getOpcode() == AMDGPU::V_STORE_IDX);
+
+  MCPhysReg BaseReg;
+  unsigned NumRegs;
+  getObjectRegs(Obj, BaseReg, NumRegs);
 
   for (unsigned I : seq(NumRegs)) {
     // In general case, we don't know which VGPRs are read or written, so
@@ -120,8 +141,17 @@ bool AMDGPUPrivateObjectVGPRs::processMI(
           MachineOperand::CreateReg(Reg, /*isDef=*/true, /*isImp=*/true));
     }
   }
+}
 
-  return true;
+static void addLiveInRegs(MachineBasicBlock &MBB, const MDNode *Obj) {
+  MCPhysReg BaseReg;
+  unsigned NumRegs;
+  getObjectRegs(Obj, BaseReg, NumRegs);
+
+  for (unsigned I : seq(NumRegs)) {
+    MCPhysReg Reg = BaseReg + I;
+    MBB.addLiveIn(Reg);
+  }
 }
 
 bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
@@ -129,24 +159,117 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.hasVGPRIndexingRegisters())
     return false;
 
-  SmallVector<LiveInRange, 16> LiveIns;
-  bool Changed = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB.instrs())
-      Changed |= processMI(MI, LiveIns);
+  // Compute reachable objects. Use SmallVector to avoid wasting memory
+  // storing lots of empty or nearly empty sets.
+  DenseMap<const MachineBasicBlock *, SmallVector<const MDNode *, 4>>
+      ReachableObjs;
+  SmallSet<MachineBasicBlock *, 16> Worklist;
+  for (MachineBasicBlock &MBB : MF)
+    Worklist.insert(&MBB);
+  while (!Worklist.empty()) {
+    MachineBasicBlock &MBB = **Worklist.begin();
+    Worklist.erase(&MBB);
+    SmallVectorImpl<const MDNode *> &BlockReachable = ReachableObjs[&MBB];
+    bool Updated = false;
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (const MDNode *Obj = getPromotedPrivateObject(MI);
+          Obj && !is_contained(BlockReachable, Obj)) {
+        BlockReachable.push_back(Obj);
+        Updated = true;
+      }
+    }
+    for (MachineBasicBlock *Succ : MBB.successors()) {
+      for (const MDNode *Obj : ReachableObjs[Succ]) {
+        if (!is_contained(BlockReachable, Obj)) {
+          BlockReachable.push_back(Obj);
+          Updated = true;
+        }
+      }
+    }
+    if (Updated)
+      Worklist.insert(MBB.predecessors().begin(), MBB.predecessors().end());
   }
 
-  // Add live-ins and propagate them through all predecessors up to the
-  // entry block.
-  while (!LiveIns.empty()) {
-    auto [MBB, BaseReg, NumRegs] = LiveIns.pop_back_val();
-    if (MBB->isLiveIn(BaseReg))
-      continue;
+  // Collect promoted private objects that must be live at the
+  // beginnings of basic blocks (live-ins). All live-in objects of a
+  // block and all objects referred to in that block and live-ins
+  // of any successors of that block must also be live-ins of all its
+  // successors, unless they are unreachable there.
+  DenseMap<const MachineBasicBlock *, SmallVector<const MDNode *, 4>> LiveIns;
+  for (MachineBasicBlock &MBB : MF)
+    Worklist.insert(&MBB);
+  while (!Worklist.empty()) {
+    // Gather objects that are live at the end of the block.
+    MachineBasicBlock &MBB = **Worklist.begin();
+    Worklist.erase(&MBB);
+    SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (const MDNode *Obj = getPromotedPrivateObject(MI);
+          Obj && !is_contained(LiveObjs, Obj))
+        LiveObjs.push_back(Obj);
+    }
 
-    for (unsigned I : seq(NumRegs))
-      MBB->addLiveIn(BaseReg + I);
-    for (MachineBasicBlock *Pred : MBB->predecessors())
-      LiveIns.push_back({Pred, BaseReg, NumRegs});
+    // Add objects that must be defined at the beginnings of successors.
+    for (MachineBasicBlock *Succ : MBB.successors()) {
+      for (const MDNode *Obj : LiveIns[Succ]) {
+        if (!is_contained(LiveObjs, Obj))
+          LiveObjs.push_back(Obj);
+      }
+    }
+
+    // Propagate all objects that are defined in this block to successors.
+    for (MachineBasicBlock *Succ : MBB.successors()) {
+      SmallVectorImpl<const MDNode *> &SuccLiveIns = LiveIns[Succ];
+      const SmallVectorImpl<const MDNode *> &Reachables = ReachableObjs[Succ];
+      for (const MDNode *Obj : LiveObjs) {
+        if (!is_contained(SuccLiveIns, Obj) && is_contained(Reachables, Obj)) {
+          SuccLiveIns.push_back(Obj);
+          Worklist.insert(Succ);
+          for (MachineBasicBlock *Pred : Succ->predecessors()) {
+            if (Pred != &MBB)
+              Worklist.insert(Pred);
+          }
+        }
+      }
+    }
+  }
+
+  // Add use/def operands and live-in registers, and insert object
+  // definitions. Object definitions are inserted where control
+  // transitions from where objects don't have to be live to where they
+  // must be live. For all objects that are not live-ins of a block but
+  // used in it we insert a definition right before the corresponding
+  // V_LOAD/STORE_IDX pseudo. Also, if an object must be defined in a
+  // successor of a block but is not a live-in of that block nor it is
+  // referred to within that block, we insert a definition for that
+  // object just before the first terminator of the block.
+  const SIInstrInfo &TII = *ST.getInstrInfo();
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
+    for (const MDNode *Obj : LiveObjs)
+      addLiveInRegs(MBB, Obj);
+
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (const MDNode *Obj = getPromotedPrivateObject(MI)) {
+        addUseDefOperands(MI, Obj);
+        if (!is_contained(LiveObjs, Obj)) {
+          LiveObjs.push_back(Obj);
+          insertObjectDef(MI, Obj, TII);
+        }
+        Changed = true;
+      }
+    }
+
+    for (MachineBasicBlock *Succ : MBB.successors()) {
+      for (const MDNode *Obj : LiveIns[Succ]) {
+        if (!is_contained(LiveObjs, Obj)) {
+          LiveObjs.push_back(Obj);
+          insertObjectDef(*MBB.getFirstTerminator(), Obj, TII);
+          Changed = true;
+        }
+      }
+    }
   }
 
   return Changed;

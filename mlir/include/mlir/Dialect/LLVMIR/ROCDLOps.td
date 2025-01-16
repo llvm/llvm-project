@@ -512,9 +512,16 @@ def ROCDL_RawBufferLoadOp :
                  LLVM_Type:$soffset,
                  LLVM_Type:$aux)> {
   string llvmBuilder = [{
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       $res = createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_load, {$rsrc, $offset,
+#ifdef LLPC_BUILD_NPI
+          $soffset, $aux}, {$_resultType, rsrcType});
+#else /* LLPC_BUILD_NPI */
           $soffset, $aux}, {$_resultType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -528,9 +535,16 @@ def ROCDL_RawBufferStoreOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
     auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+#ifdef LLPC_BUILD_NPI
+    auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_store, {$vdata, $rsrc,
+#ifdef LLPC_BUILD_NPI
+          $offset, $soffset, $aux}, {vdataType, rsrcType});
+#else /* LLPC_BUILD_NPI */
           $offset, $soffset, $aux}, {vdataType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -545,9 +559,16 @@ def ROCDL_RawBufferAtomicCmpSwap :
                  I32:$soffset,
                  I32:$aux)>{
   string llvmBuilder = [{
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       $res = createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_cmpswap, {$src, $cmp, $rsrc,
+#ifdef LLPC_BUILD_NPI
+            $offset, $soffset, $aux}, {$_resultType, rsrcType});
+#else /* LLPC_BUILD_NPI */
             $offset, $soffset, $aux}, {$_resultType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let assemblyFormat = [{
     attr-dict `(` operands `)` `:` type($res) `,` type($rsrc)
@@ -566,9 +587,16 @@ def ROCDL_RawBufferAtomicFAddOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fadd, {$vdata, $rsrc,
+#ifdef LLPC_BUILD_NPI
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
+#else /* LLPC_BUILD_NPI */
             $offset, $soffset, $aux}, {vdataType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -585,9 +613,16 @@ def ROCDL_RawBufferAtomicFMaxOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_fmax, {$vdata, $rsrc,
+#ifdef LLPC_BUILD_NPI
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
+#else /* LLPC_BUILD_NPI */
             $offset, $soffset, $aux}, {vdataType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -604,9 +639,16 @@ def ROCDL_RawBufferAtomicSMaxOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_smax, {$vdata, $rsrc,
+#ifdef LLPC_BUILD_NPI
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
+#else /* LLPC_BUILD_NPI */
             $offset, $soffset, $aux}, {vdataType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -623,9 +665,16 @@ def ROCDL_RawBufferAtomicUMinOp :
                  LLVM_Type:$aux)>{
   string llvmBuilder = [{
       auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
+#ifdef LLPC_BUILD_NPI
+      auto rsrcType = moduleTranslation.convertType(op.getRsrc().getType());
+#endif /* LLPC_BUILD_NPI */
       createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_raw_buffer_atomic_umin, {$vdata, $rsrc,
+#ifdef LLPC_BUILD_NPI
+            $offset, $soffset, $aux}, {vdataType, rsrcType});
+#else /* LLPC_BUILD_NPI */
             $offset, $soffset, $aux}, {vdataType});
+#endif /* LLPC_BUILD_NPI */
   }];
   let hasCustomAssemblyFormat = 1;
 }

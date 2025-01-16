@@ -355,7 +355,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     MergeChunk::addSection(symtab.ctx, c);
   else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
-  else
+  else if (!(sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_INFO))
     chunks.push_back(c);
 
   return c;
@@ -745,6 +745,26 @@ std::optional<Symbol *> ObjFile::createDefined(
   int32_t sectionNumber = sym.getSectionNumber();
   if (sectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
+
+  if (sym.isEmptySectionDeclaration()) {
+    // As there is no coff_section in the object file for these, make a
+    // new virtual one, with everything zeroed out (i.e. an empty section),
+    // with only the name and characteristics set.
+    StringRef name = getName();
+    auto *hdr = make<coff_section>();
+    memset(hdr, 0, sizeof(*hdr));
+    strncpy(hdr->Name, name.data(),
+            std::min(name.size(), (size_t)COFF::NameSize));
+    // We have no idea what characteristics should be assumed here; pick
+    // a default. This matches what is used for .idata sections in the regular
+    // object files in import libraries.
+    hdr->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+                           IMAGE_SCN_MEM_WRITE | IMAGE_SCN_ALIGN_4BYTES;
+    auto *sc = make<SectionChunk>(this, hdr);
+    chunks.push_back(sc);
+    return make<DefinedRegular>(this, /*name=*/"", /*isCOMDAT=*/false,
+                                /*isExternal=*/false, sym.getGeneric(), sc);
+  }
 
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))
     Fatal(ctx) << toString(this) << ": " << getName()
