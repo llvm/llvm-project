@@ -1,5 +1,5 @@
 SECTIONS {
-  .text : {
+  .text.ordered : {
     *(.text.call_me)
     *(.text.foo)
     *(.text.call_me.call_me.__part.1)
