@@ -553,6 +553,38 @@ it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
 
+'``llvm.nvvm.cp.async.bulk.prefetch.L2``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.prefetch.L2``' intrinsic
+corresponds to the ``cp.async.bulk.prefetch.L2.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+prefetch of bulk data from global memory to the L2 cache.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+prefetched in terms of bytes and it must be a multiple of 16.
+
+* The last argument to these intrinsics is boolean flag indicating
+  support for cache_hint. These flag argument must be compile-time
+  constant. The backend looks through this flag and lowers the
+  intrinsic appropriately.
+
+* The Nth argument (denoted by ``i1 %flag_ch``) when set, indicates
+  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

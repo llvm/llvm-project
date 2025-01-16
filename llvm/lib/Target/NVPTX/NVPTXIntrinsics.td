@@ -547,6 +547,25 @@ multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
 
+//------------------------------
+// Bulk Copy Prefetch Functions
+//------------------------------
+multiclass CP_ASYNC_BULK_PREFETCH_INTR {
+  defvar prefetch = "cp.async.bulk.prefetch.L2.global";
+  def "": NVPTXInst<(outs),
+            (ins Int64Regs:$src, Int32Regs:$size),
+            !strconcat(prefetch," [$src], $size;"),
+            []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def _CH: NVPTXInst<(outs),
+                  (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(prefetch,".L2::cache_hint [$src], $size, $ch;"),
+                  []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+defm CP_ASYNC_BULK_PREFETCH : CP_ASYNC_BULK_PREFETCH_INTR;
+
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
