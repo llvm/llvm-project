@@ -175,6 +175,15 @@ llvm::Triple::ArchType LinkerDriver::getArch() {
   return getMachineArchType(ctx.config.machine);
 }
 
+std::vector<Chunk *> LinkerDriver::getChunks() const {
+  std::vector<Chunk *> res;
+  for (ObjFile *file : ctx.objFileInstances) {
+    ArrayRef<Chunk *> v = file->getChunks();
+    res.insert(res.end(), v.begin(), v.end());
+  }
+  return res;
+}
+
 static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
     return true;
@@ -491,8 +500,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      ctx.config.entry =
-          file->symtab.addGCRoot(file->symtab.mangle(arg->getValue()), true);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
+      });
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
@@ -1092,7 +1102,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
 
   // Get a list of all comdat sections for error checking.
   DenseSet<StringRef> set;
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : ctx.driver.getChunks())
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         set.insert(sec->sym->getName());
@@ -1394,8 +1404,9 @@ void LinkerDriver::createECExportThunks() {
     }
   }
 
-  if (ctx.config.entry)
-    maybeCreateECExportThunk(ctx.config.entry->getName(), ctx.config.entry);
+  if (ctx.symtabEC->entry)
+    maybeCreateECExportThunk(ctx.symtabEC->entry->getName(),
+                             ctx.symtabEC->entry);
   for (Export &e : ctx.config.exports) {
     if (!e.data)
       maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
@@ -2357,33 +2368,32 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /entry and /dll
-  {
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      config->entry =
-          ctx.symtab.addGCRoot(ctx.symtab.mangle(arg->getValue()), true);
-    } else if (!config->entry && !config->noEntry) {
+      symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
+    } else if (!symtab.entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = ctx.symtab.addGCRoot(s, true);
+        symtab.entry = symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry =
-            ctx.symtab.addGCRoot(ctx.symtab.mangle("_NtProcessStartup"), true);
+        symtab.entry =
+            symtab.addGCRoot(symtab.mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
-        StringRef s = ctx.symtab.findDefaultEntry();
+        StringRef s = symtab.findDefaultEntry();
         if (s.empty())
           Fatal(ctx) << "entry point must be defined";
-        config->entry = ctx.symtab.addGCRoot(s, true);
+        symtab.entry = symtab.addGCRoot(s, true);
         Log(ctx) << "Entry name inferred: " << s;
       }
     }
-  }
+  });
 
   // Handle /delayload
   {
@@ -2522,10 +2532,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("Add unresolved symbols");
     do {
-      // Windows specific -- if entry point is not found,
-      // search for its mangled names.
-      if (config->entry)
-        ctx.symtab.mangleMaybe(config->entry);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        // Windows specific -- if entry point is not found,
+        // search for its mangled names.
+        if (symtab.entry)
+          symtab.mangleMaybe(symtab.entry);
+      });
 
       // Windows specific -- Make sure we resolve all dllexported symbols.
       for (Export &e : config->exports) {

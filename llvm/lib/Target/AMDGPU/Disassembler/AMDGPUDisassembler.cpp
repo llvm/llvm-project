@@ -2478,14 +2478,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
   PRINT_DIRECTIVE(".amdhsa_exception_int_div_zero",
                   COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO);
 
-  // Bits [31].
-  if (isGFX12Plus()) {
-    PRINT_PSEUDO_DIRECTIVE_COMMENT("WGP_TAKEOVER",
-                                   COMPUTE_PGM_RSRC2_GFX12_PLUS_WGP_TAKEOVER);
-  } else {
-    CHECK_RESERVED_BITS_DESC(COMPUTE_PGM_RSRC2_GFX6_GFX11_RESERVED0,
-                             "COMPUTE_PGM_RSRC2_GFX6_GFX11");
-  }
+  CHECK_RESERVED_BITS_DESC(COMPUTE_PGM_RSRC2_RESERVED0, "COMPUTE_PGM_RSRC2");
 
   return true;
 }
