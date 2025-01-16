@@ -888,11 +888,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       Previous.clear();
     }
 
-    QualType QT = Context.DependentTy;
+    QualType QT;
     if (B.EllipsisLoc.isValid()) {
       if (!cast<Decl>(DC)->isTemplated())
         Diag(B.EllipsisLoc, diag::err_pack_outside_template);
-      QT = Context.getPackExpansionType(QT, std::nullopt,
+      QT = Context.getPackExpansionType(Context.DependentTy, std::nullopt,
                                         /*ExpectsPackInType=*/false);
     }
 
