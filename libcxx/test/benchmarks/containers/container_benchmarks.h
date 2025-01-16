@@ -155,7 +155,7 @@ void BM_assign_input_iter_full(benchmark::State& st, Generator gen) {
 }
 
 template <class Container, class Generator>
-void BM_insert_start(benchmark::State& st, Generator gen) {
+void BM_insert_begin(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -201,7 +201,7 @@ void BM_insert_middle(benchmark::State& st, Generator gen) {
 }
 
 template <class Container, class Generator>
-void BM_insert_start_input_iter_with_reserve_no_realloc(benchmark::State& st, Generator gen) {
+void BM_insert_begin_input_iter_with_reserve_no_realloc(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -226,7 +226,7 @@ void BM_insert_start_input_iter_with_reserve_no_realloc(benchmark::State& st, Ge
 }
 
 template <class Container, class Generator>
-void BM_insert_start_input_iter_with_reserve_half_filled(benchmark::State& st, Generator gen) {
+void BM_insert_begin_input_iter_with_reserve_half_filled(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -249,7 +249,7 @@ void BM_insert_start_input_iter_with_reserve_half_filled(benchmark::State& st, G
 }
 
 template <class Container, class Generator>
-void BM_insert_start_input_iter_with_reserve_near_full(benchmark::State& st, Generator gen) {
+void BM_insert_begin_input_iter_with_reserve_near_full(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -272,7 +272,7 @@ void BM_insert_start_input_iter_with_reserve_near_full(benchmark::State& st, Gen
 }
 
 template <class Container, class Generator>
-void BM_erase_start(benchmark::State& st, Generator gen) {
+void BM_erase_begin(benchmark::State& st, Generator gen) {
   using ValueType = typename Container::value_type;
   const int size  = st.range(0);
   std::vector<ValueType> in;
@@ -404,7 +404,7 @@ void sequence_container_benchmarks(std::string container) {
   // insert
   for (auto gen : generators)
     benchmark::RegisterBenchmark(container + "::insert(begin)" + tostr(gen), [=](auto& st) {
-      BM_insert_start<Container>(st, gen);
+      BM_insert_begin<Container>(st, gen);
     })->Arg(1024);
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
     for (auto gen : generators)
@@ -415,25 +415,25 @@ void sequence_container_benchmarks(std::string container) {
   if constexpr (requires(Container c) { c.reserve(0); }) {
     for (auto gen : generators)
       benchmark::RegisterBenchmark(
-          container + "::insert(input-iter, input-iter) (insert at front, no realloc)" + tostr(gen),
-          [=](auto& st) { BM_insert_start_input_iter_with_reserve_no_realloc<Container>(st, gen); })
+          container + "::insert(begin, input-iter, input-iter) (no realloc)" + tostr(gen),
+          [=](auto& st) { BM_insert_begin_input_iter_with_reserve_no_realloc<Container>(st, gen); })
           ->Arg(1024);
     for (auto gen : generators)
       benchmark::RegisterBenchmark(
-          container + "::insert(input-iter, input-iter) (insert at front, half filled)" + tostr(gen),
-          [=](auto& st) { BM_insert_start_input_iter_with_reserve_half_filled<Container>(st, gen); })
+          container + "::insert(begin, input-iter, input-iter) (half filled)" + tostr(gen),
+          [=](auto& st) { BM_insert_begin_input_iter_with_reserve_half_filled<Container>(st, gen); })
           ->Arg(1024);
     for (auto gen : generators)
       benchmark::RegisterBenchmark(
-          container + "::insert(input-iter, input-iter) (insert at front, near full)" + tostr(gen),
-          [=](auto& st) { BM_insert_start_input_iter_with_reserve_near_full<Container>(st, gen); })
+          container + "::insert(begin, input-iter, input-iter) (near full)" + tostr(gen),
+          [=](auto& st) { BM_insert_begin_input_iter_with_reserve_near_full<Container>(st, gen); })
           ->Arg(1024);
   }
 
   // erase
   for (auto gen : generators)
-    benchmark::RegisterBenchmark(container + "::erase(start)" + tostr(gen), [=](auto& st) {
-      BM_erase_start<Container>(st, gen);
+    benchmark::RegisterBenchmark(container + "::erase(begin)" + tostr(gen), [=](auto& st) {
+      BM_erase_begin<Container>(st, gen);
     })->Arg(1024);
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
     for (auto gen : generators)
