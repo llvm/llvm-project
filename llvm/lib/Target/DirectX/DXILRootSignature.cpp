@@ -41,7 +41,8 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 static bool parseRootSignatureElement(ModuleRootSignature *MRS,
                                       MDNode *Element) {
   MDString *ElementText = cast<MDString>(Element->getOperand(0));
-  assert(ElementText != nullptr && "First preoperty of element is not a string");
+  assert(ElementText != nullptr &&
+         "First preoperty of element is not a string");
 
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
