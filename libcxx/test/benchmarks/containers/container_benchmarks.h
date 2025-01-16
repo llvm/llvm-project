@@ -383,7 +383,10 @@ void sequence_container_benchmarks(std::string container) {
   }
 
   // constructors
-  benchmark::RegisterBenchmark(container + "::ctor(size)", BM_ctor_size<Container>)->Arg(1024);
+  if constexpr (std::is_constructible_v<Container, std::size_t>) {
+    // not all containers provide this one
+    benchmark::RegisterBenchmark(container + "::ctor(size)", BM_ctor_size<Container>)->Arg(1024);
+  }
   for (auto gen : generators)
     benchmark::RegisterBenchmark(container + "::ctor(size, value_type)" + tostr(gen), [=](auto& st) {
       BM_ctor_size_value<Container>(st, gen);
