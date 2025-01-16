@@ -1194,8 +1194,8 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
     // icmp ne (and x, 1), (and y, 1) <=> trunc (xor x, y) to i1
     // icmp eq (and x, 1), (and y, 1) <=> not (trunc (xor x, y) to i1)
     if (Pred == CmpInst::ICMP_NE
-            ? match(CmpV, m_Trunc(m_Xor(m_Value(X), m_Value(Y))))
-            : match(CmpV, m_Not(m_Trunc(m_Xor(m_Value(X), m_Value(Y))))))
+            ? match(CmpV, m_Trunc(m_XorLike(m_Value(X), m_Value(Y))))
+            : match(CmpV, m_Not(m_Trunc(m_XorLike(m_Value(X), m_Value(Y))))))
       return {{OpNo == 0 ? X : Y, 0, 1}};
 
     auto *Cmp = dyn_cast<ICmpInst>(CmpV);
@@ -1210,7 +1210,7 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
     // (icmp ult (xor x, y), 1 << C) so also look for that.
     if (Pred == CmpInst::ICMP_EQ && Cmp->getPredicate() == CmpInst::ICMP_ULT) {
       if (!match(Cmp->getOperand(1), m_Power2(C)) ||
-          !match(Cmp->getOperand(0), m_Xor(m_Value(), m_Value())))
+          !match(Cmp->getOperand(0), m_XorLike(m_Value(), m_Value())))
         return std::nullopt;
     }
 
@@ -1219,7 +1219,7 @@ Value *InstCombinerImpl::foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd) {
     else if (Pred == CmpInst::ICMP_NE &&
              Cmp->getPredicate() == CmpInst::ICMP_UGT) {
       if (!match(Cmp->getOperand(1), m_LowBitMask(C)) ||
-          !match(Cmp->getOperand(0), m_Xor(m_Value(), m_Value())))
+          !match(Cmp->getOperand(0), m_XorLike(m_Value(), m_Value())))
         return std::nullopt;
     } else {
       return std::nullopt;
@@ -1922,7 +1922,7 @@ static Instruction *foldOrToXor(BinaryOperator &I,
   // (A ^ B) | ~(A | B) --> ~(A & B)
   // (A ^ B) | ~(B | A) --> ~(A & B)
   if (Op0->hasOneUse() || Op1->hasOneUse())
-    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+    if (match(Op0, m_XorLike(m_Value(A), m_Value(B))) &&
         match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
@@ -2066,7 +2066,7 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
         match(Op1, m_OneUse(m_Not(m_CombineAnd(
                        m_Value(Y),
                        m_c_BinOp(Opcode, m_Specific(C),
-                                 m_c_Xor(m_Specific(A), m_Specific(B)))))))) {
+                                 m_c_XorLike(m_Specific(A), m_Specific(B)))))))) {
       // X = ~(A | B)
       // Y = (C | (A ^ B)
       Value *Or = cast<BinaryOperator>(X)->getOperand(0);
@@ -2435,7 +2435,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (match(Op1, m_APInt(C))) {
     const APInt *XorC;
-    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {
+    if (match(Op0, m_OneUse(m_XorLike(m_Value(X), m_APInt(XorC))))) {
       // (X ^ C1) & C2 --> (X & C2) ^ (C1&C2)
       Constant *NewC = ConstantInt::get(Ty, *C & *XorC);
       Value *And = Builder.CreateAnd(X, Op1);
@@ -2551,7 +2551,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // This is intentionally placed after the narrowing transforms for
     // efficiency (transform directly to the narrow logic op if possible).
     // If the mask is only needed on one incoming arm, push the 'and' op up.
-    if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_Value(Y)))) ||
+    if (match(Op0, m_OneUse(m_XorLike(m_Value(X), m_Value(Y)))) ||
         match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       APInt NotAndMask(~(*C));
       BinaryOperator::BinaryOps BinOp = cast<BinaryOperator>(Op0)->getOpcode();
@@ -2684,15 +2684,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   {
     Value *A, *B, *C;
     // A & ~(A ^ B) --> A & B
-    if (match(Op1, m_Not(m_c_Xor(m_Specific(Op0), m_Value(B)))))
+    if (match(Op1, m_Not(m_c_XorLike(m_Specific(Op0), m_Value(B)))))
       return BinaryOperator::CreateAnd(Op0, B);
     // ~(A ^ B) & A --> A & B
-    if (match(Op0, m_Not(m_c_Xor(m_Specific(Op1), m_Value(B)))))
+    if (match(Op0, m_Not(m_c_XorLike(m_Specific(Op1), m_Value(B)))))
       return BinaryOperator::CreateAnd(Op1, B);
 
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
-    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
-        match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A)))) {
+    if (match(Op0, m_XorLike(m_Value(A), m_Value(B))) &&
+        match(Op1, m_XorLike(m_XorLike(m_Specific(B), m_Value(C)), m_Specific(A)))) {
       Value *NotC = Op1->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
@@ -2701,8 +2701,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
 
     // ((A ^ C) ^ B) & (B ^ A) -> (B ^ A) & ~C
-    if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))) &&
-        match(Op1, m_Xor(m_Specific(B), m_Specific(A)))) {
+    if (match(Op0, m_XorLike(m_XorLike(m_Value(A), m_Value(C)), m_Value(B))) &&
+        match(Op1, m_XorLike(m_Specific(B), m_Specific(A)))) {
       Value *NotC = Op0->hasOneUse()
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
@@ -2714,7 +2714,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // (A | B) & (B ^ ~A) -> A & B
     // (B | A) & (~A ^ B) -> A & B
     // (B | A) & (B ^ ~A) -> A & B
-    if (match(Op1, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+    if (match(Op1, m_c_XorLike(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
 
@@ -2722,7 +2722,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // (~A ^ B) & (B | A) -> A & B
     // (B ^ ~A) & (A | B) -> A & B
     // (B ^ ~A) & (B | A) -> A & B
-    if (match(Op0, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+    if (match(Op0, m_c_XorLike(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
 
@@ -2731,7 +2731,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // (B | ~A) & (A ^ B) -> ~A & B
     // (B | ~A) & (B ^ A) -> ~A & B
     if (match(Op0, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
+        match(Op1, m_c_XorLike(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
 
     // (A ^ B) & (~A | B) -> ~A & B
@@ -2739,7 +2739,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     // (A ^ B) & (B | ~A) -> ~A & B
     // (B ^ A) & (B | ~A) -> ~A & B
     if (match(Op1, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
-        match(Op0, m_c_Xor(m_Specific(A), m_Specific(B))))
+        match(Op0, m_c_XorLike(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
   }
 
@@ -3208,8 +3208,8 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
   // If both operands are xor'd with constants using the same sexted boolean
   // operand, see if the constants are inverse bitmasks.
   // TODO: Use ConstantExpr::getNot()?
-  if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AConst)))) &&
-      match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BConst)))) &&
+  if (match(A, (m_XorLike(m_SExt(m_Value(Cond)), m_Constant(AConst)))) &&
+      match(B, (m_XorLike(m_SExt(m_Specific(Cond)), m_Constant(BConst)))) &&
       Cond->getType()->isIntOrIntVectorTy(1) &&
       areInverseVectorBitmasks(AConst, BConst)) {
     AConst = ConstantExpr::getTrunc(AConst, CmpInst::makeCmpResultType(Ty));
@@ -3631,7 +3631,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   Value *X, *Y;
   const APInt *CV;
-  if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
+  if (match(&I, m_c_Or(m_OneUse(m_XorLike(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
       !CV->isAllOnes() && MaskedValueIsZero(Y, *CV, 0, &I)) {
     // (X ^ C) | Y -> (X | Y) ^ C iff Y & C == 0
     // The check for a 'not' op is for efficiency (if Y is known zero --> ~X).
@@ -3665,10 +3665,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateOr(Builder.CreateAnd(X, *C1), A);
 
         // ((X ^ B) & MaskC) | (B & ~MaskC) -> (X & MaskC) ^ B
-        if (match(A, m_c_Xor(m_Value(X), m_Specific(B))))
+        if (match(A, m_c_XorLike(m_Value(X), m_Specific(B))))
           return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C0), B);
         // (A & MaskC) | ((X ^ A) & ~MaskC) -> (X & ~MaskC) ^ A
-        if (match(B, m_c_Xor(m_Specific(A), m_Value(X))))
+        if (match(B, m_c_XorLike(m_Specific(A), m_Value(X))))
           return BinaryOperator::CreateXor(Builder.CreateAnd(X, *C1), A);
       }
 
@@ -3739,17 +3739,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
+  if (match(Op0, m_XorLike(m_Value(A), m_Value(B))))
     if (match(Op1,
-              m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))) ||
-        match(Op1, m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)), m_Specific(B))))
+              m_c_XorLike(m_c_XorLike(m_Specific(B), m_Value(C)), m_Specific(A))) ||
+        match(Op1, m_c_XorLike(m_c_XorLike(m_Specific(A), m_Value(C)), m_Specific(B))))
       return BinaryOperator::CreateOr(Op0, C);
 
   // ((B ^ C) ^ A) | (A ^ B) -> (A ^ B) | C
-  if (match(Op1, m_Xor(m_Value(A), m_Value(B))))
+  if (match(Op1, m_XorLike(m_Value(A), m_Value(B))))
     if (match(Op0,
-              m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))) ||
-        match(Op0, m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)), m_Specific(B))))
+              m_c_XorLike(m_c_XorLike(m_Specific(B), m_Value(C)), m_Specific(A))) ||
+        match(Op0, m_c_XorLike(m_c_XorLike(m_Specific(A), m_Value(C)), m_Specific(B))))
       return BinaryOperator::CreateOr(Op1, C);
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
@@ -3757,12 +3757,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   // Canonicalize xor to the RHS.
   bool SwappedForXor = false;
-  if (match(Op0, m_Xor(m_Value(), m_Value()))) {
+  if (match(Op0, m_XorLike(m_Value(), m_Value()))) {
     std::swap(Op0, Op1);
     SwappedForXor = true;
   }
 
-  if (match(Op1, m_Xor(m_Value(A), m_Value(B)))) {
+  if (match(Op1, m_XorLike(m_Value(A), m_Value(B)))) {
     // (A | ?) | (A ^ B) --> (A | ?) | B
     // (B | ?) | (A ^ B) --> (B | ?) | A
     if (match(Op0, m_c_Or(m_Specific(A), m_Value())))
@@ -3889,9 +3889,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     // ((A & B) ^ B) | ((A & B) ^ A) -> A ^ B
     // (B ^ (A & B)) | (A ^ (A & B)) -> A ^ B
     const auto TryXorOpt = [&](Value *Lhs, Value *Rhs) -> Instruction * {
-      if (match(Lhs, m_c_Xor(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
+      if (match(Lhs, m_c_XorLike(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
           match(Rhs,
-                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Specific(B)))) {
+                m_c_XorLike(m_And(m_Specific(A), m_Specific(B)), m_Specific(B)))) {
         return BinaryOperator::CreateXor(A, B);
       }
       return nullptr;
@@ -4090,7 +4090,7 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (A & B) ^ (B | A) -> A ^ B
   // (A | B) ^ (A & B) -> A ^ B
   // (A | B) ^ (B & A) -> A ^ B
-  if (match(&I, m_c_Xor(m_And(m_Value(A), m_Value(B)),
+  if (match(&I, m_c_XorLike(m_And(m_Value(A), m_Value(B)),
                         m_c_Or(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
@@ -4098,7 +4098,7 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (~B | A) ^ (~A | B) -> A ^ B
   // (~A | B) ^ (A | ~B) -> A ^ B
   // (B | ~A) ^ (A | ~B) -> A ^ B
-  if (match(&I, m_Xor(m_c_Or(m_Value(A), m_Not(m_Value(B))),
+  if (match(&I, m_XorLike(m_c_Or(m_Value(A), m_Not(m_Value(B))),
                       m_c_Or(m_Not(m_Deferred(A)), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
@@ -4106,7 +4106,7 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   // (~B & A) ^ (~A & B) -> A ^ B
   // (~A & B) ^ (A & ~B) -> A ^ B
   // (B & ~A) ^ (A & ~B) -> A ^ B
-  if (match(&I, m_Xor(m_c_And(m_Value(A), m_Not(m_Value(B))),
+  if (match(&I, m_XorLike(m_c_And(m_Value(A), m_Not(m_Value(B))),
                       m_c_And(m_Not(m_Deferred(A)), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
@@ -4269,9 +4269,9 @@ static Instruction *visitMaskedMerge(BinaryOperator &I,
                                      InstCombiner::BuilderTy &Builder) {
   Value *B, *X, *D;
   Value *M;
-  if (!match(&I, m_c_Xor(m_Value(B),
+  if (!match(&I, m_c_XorLike(m_Value(B),
                          m_OneUse(m_c_And(
-                             m_CombineAnd(m_c_Xor(m_Deferred(B), m_Value(X)),
+                             m_CombineAnd(m_c_XorLike(m_Deferred(B), m_Value(X)),
                                           m_Value(D)),
                              m_Value(M))))))
     return nullptr;
@@ -4303,7 +4303,7 @@ static Instruction *foldNotXor(BinaryOperator &I,
   Value *X, *Y;
   // FIXME: one-use check is not needed in general, but currently we are unable
   // to fold 'not' into 'icmp', if that 'icmp' has multiple uses. (D35182)
-  if (!match(&I, m_Not(m_OneUse(m_Xor(m_Value(X), m_Value(Y))))))
+  if (!match(&I, m_Not(m_OneUse(m_XorLike(m_Value(X), m_Value(Y))))))
     return nullptr;
 
   auto hasCommonOperand = [](Value *A, Value *B, Value *C, Value *D) {
@@ -4697,7 +4697,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   // (X | Y) ^ M -> (X ^ M) ^ Y
   // (X | Y) ^ M -> (Y ^ M) ^ X
-  if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
+  if (match(&I, m_c_XorLike(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
                         m_Value(M)))) {
     if (Value *XorAC = simplifyXorInst(X, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorAC, Y);
@@ -4710,7 +4710,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
   // calls in there are unnecessary as SimplifyDemandedInstructionBits should
   // have already taken care of those cases.
-  if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
+  if (match(&I, m_c_XorLike(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value())))) {
     if (isGuaranteedNotToBeUndef(M))
       return BinaryOperator::CreateDisjointOr(Op0, Op1);
@@ -4844,7 +4844,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     ConstantInt *C1, *C2, *C3;
     // ((X^C1) >> C2) ^ C3 -> (X>>C2) ^ ((C1>>C2)^C3)
     if (match(Op1, m_ConstantInt(C3)) &&
-        match(Op0, m_LShr(m_Xor(m_Value(X), m_ConstantInt(C1)),
+        match(Op0, m_LShr(m_XorLike(m_Value(X), m_ConstantInt(C1)),
                           m_ConstantInt(C2))) &&
         Op0->hasOneUse()) {
       // fold (C1 >> C2) ^ C3
@@ -4884,23 +4884,23 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   Value *A, *B, *C;
   // (A ^ B) ^ (A | C) --> (~A & C) ^ B -- There are 4 commuted variants.
-  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
+  if (match(&I, m_c_XorLike(m_OneUse(m_XorLike(m_Value(A), m_Value(B))),
                         m_OneUse(m_c_Or(m_Deferred(A), m_Value(C))))))
       return BinaryOperator::CreateXor(
           Builder.CreateAnd(Builder.CreateNot(A), C), B);
 
   // (A ^ B) ^ (B | C) --> (~B & C) ^ A -- There are 4 commuted variants.
-  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(A), m_Value(B))),
+  if (match(&I, m_c_XorLike(m_OneUse(m_XorLike(m_Value(A), m_Value(B))),
                         m_OneUse(m_c_Or(m_Deferred(B), m_Value(C))))))
       return BinaryOperator::CreateXor(
           Builder.CreateAnd(Builder.CreateNot(B), C), A);
 
   // (A & B) ^ (A ^ B) -> (A | B)
   if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
+      match(Op1, m_c_XorLike(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateOr(A, B);
   // (A ^ B) ^ (A & B) -> (A | B)
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+  if (match(Op0, m_XorLike(m_Value(A), m_Value(B))) &&
       match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
     return BinaryOperator::CreateOr(A, B);
 
@@ -4911,7 +4911,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
   // (~A & B) ^ A --> A | B -- There are 4 commuted variants.
-  if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(A)), m_Value(B)), m_Deferred(A))))
+  if (match(&I, m_c_XorLike(m_c_And(m_Not(m_Value(A)), m_Value(B)), m_Deferred(A))))
     return BinaryOperator::CreateOr(A, B);
 
   // (~A | B) ^ A --> ~(A & B)
@@ -4939,7 +4939,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   // (A & B) ^ (A | C) --> A ? ~B : C -- There are 4 commuted variants.
   if (I.getType()->isIntOrIntVectorTy(1) &&
-      match(&I, m_c_Xor(m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B))),
+      match(&I, m_c_XorLike(m_OneUse(m_LogicalAnd(m_Value(A), m_Value(B))),
                         m_OneUse(m_LogicalOr(m_Value(C), m_Value(D)))))) {
     bool NeedFreeze = isa<SelectInst>(Op0) && isa<SelectInst>(Op1) && B == D;
     if (B == C || B == D)
@@ -4969,7 +4969,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C
   // Just like we do in other places, we completely avoid the fold
   // for constantexprs, at least to avoid endless combine loop.
-  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_CombineAnd(m_Value(X),
+  if (match(&I, m_c_XorLike(m_OneUse(m_XorLike(m_CombineAnd(m_Value(X),
                                                     m_Unless(m_ConstantExpr())),
                                        m_ImmConstant(C1))),
                         m_Value(Y))))

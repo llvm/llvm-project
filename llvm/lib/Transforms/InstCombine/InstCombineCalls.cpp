@@ -1921,8 +1921,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     //      -> (and X, ~Neg_Pow2)
     // (smin X, (xor X, Neg_Pow2))
     //      -> (or X, Neg_Pow2)
-    if ((match(I0, m_c_Xor(m_Specific(I1), m_Value(X))) ||
-         match(I1, m_c_Xor(m_Specific(I0), m_Value(X)))) &&
+    if ((match(I0, m_c_XorLike(m_Specific(I1), m_Value(X))) ||
+         match(I1, m_c_XorLike(m_Specific(I0), m_Value(X)))) &&
         isKnownToBeAPowerOfTwo(X, /* OrZero */ true)) {
       bool UseOr = IID == Intrinsic::smax || IID == Intrinsic::umax;
       bool UseAndN = IID == Intrinsic::smin || IID == Intrinsic::umin;
@@ -3003,7 +3003,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to use the builtin XOR in AESE and AESD to eliminate a prior XOR
     Value *Data, *Key;
     if (match(KeyArg, m_ZeroInt()) &&
-        match(DataArg, m_Xor(m_Value(Data), m_Value(Key)))) {
+        match(DataArg, m_XorLike(m_Value(Data), m_Value(Key)))) {
       replaceOperand(*II, 0, Data);
       replaceOperand(*II, 1, Key);
       return II;

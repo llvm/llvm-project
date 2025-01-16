@@ -1662,7 +1662,7 @@ Instruction *InstCombinerImpl::foldICmpXorShiftConst(ICmpInst &Cmp,
     return nullptr;
   Value *X;
   const APInt *ShiftC;
-  if (!match(Xor, m_OneUse(m_c_Xor(m_Value(X),
+  if (!match(Xor, m_OneUse(m_c_XorLike(m_Value(X),
                                    m_AShr(m_Deferred(X), m_APInt(ShiftC))))))
     return nullptr;
   uint64_t Shift = ShiftC->getLimitedValue();
@@ -2045,7 +2045,7 @@ static Value *foldICmpOrXorSubChain(ICmpInst &Cmp, BinaryOperator *Or,
       Value *Lhs, *Rhs;
 
       if (match(OrOperatorArgument,
-                m_OneUse(m_Xor(m_Value(Lhs), m_Value(Rhs))))) {
+                m_OneUse(m_XorLike(m_Value(Lhs), m_Value(Rhs))))) {
         CmpValues.emplace_back(Lhs, Rhs);
         return;
       }
@@ -4360,10 +4360,10 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
 
     // (X ^ -X) is a ~Mask
     if (Not)
-      return match(V, m_c_Xor(m_Value(X), m_Neg(m_Deferred(X))));
+      return match(V, m_c_XorLike(m_Value(X), m_Neg(m_Deferred(X))));
     // (X ^ (X - 1)) is a Mask
     else
-      return match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
+      return match(V, m_c_XorLike(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
   case Instruction::Select:
     // c ? Mask0 : Mask1 is a Mask.
     return isMaskOrZero(I->getOperand(1), Not, Q, Depth) &&
@@ -5013,11 +5013,11 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
   // Normalize xor operand as operand 0.
   CmpInst::Predicate Pred = I.getPredicate();
-  if (match(Op1, m_c_Xor(m_Specific(Op0), m_Value()))) {
+  if (match(Op1, m_c_XorLike(m_Specific(Op0), m_Value()))) {
     std::swap(Op0, Op1);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
-  if (!match(Op0, m_c_Xor(m_Specific(Op1), m_Value(A))))
+  if (!match(Op0, m_c_XorLike(m_Specific(Op1), m_Value(A))))
     return nullptr;
 
   // icmp (X ^ Y_NonZero) u>= X --> icmp (X ^ Y_NonZero) u> X
@@ -5720,12 +5720,12 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
     // ((A-1) ^ A) u< A --> ctpop(A) > 1 (two commuted variants)
 
     if ((Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
-        match(Op0, m_OneUse(m_c_Xor(m_Add(m_Specific(Op1), m_AllOnes()),
+        match(Op0, m_OneUse(m_c_XorLike(m_Add(m_Specific(Op1), m_AllOnes()),
                                     m_Specific(Op1))))) {
       A = Op1;
       CheckIs = Pred == ICmpInst::ICMP_UGE;
     } else if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) &&
-               match(Op1, m_OneUse(m_c_Xor(m_Add(m_Specific(Op0), m_AllOnes()),
+               match(Op1, m_OneUse(m_c_XorLike(m_Add(m_Specific(Op0), m_AllOnes()),
                                            m_Specific(Op0))))) {
       A = Op0;
       CheckIs = Pred == ICmpInst::ICMP_ULE;
@@ -5751,13 +5751,13 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
   Value *A, *B, *C, *D;
-  if (match(Op0, m_Xor(m_Value(A), m_Value(B)))) {
+  if (match(Op0, m_XorLike(m_Value(A), m_Value(B)))) {
     if (A == Op1 || B == Op1) { // (A^B) == A  ->  B == 0
       Value *OtherVal = A == Op1 ? B : A;
       return new ICmpInst(Pred, OtherVal, Constant::getNullValue(A->getType()));
     }
 
-    if (match(Op1, m_Xor(m_Value(C), m_Value(D)))) {
+    if (match(Op1, m_XorLike(m_Value(C), m_Value(D)))) {
       // A^c1 == C^c2 --> A == C^(c1^c2)
       ConstantInt *C1, *C2;
       if (match(B, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2)) &&
@@ -5779,7 +5779,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
-  if (match(Op1, m_Xor(m_Value(A), m_Value(B))) && (A == Op0 || B == Op0)) {
+  if (match(Op1, m_XorLike(m_Value(A), m_Value(B))) && (A == Op0 || B == Op0)) {
     // A == (A^B)  ->  B == 0
     Value *OtherVal = A == Op0 ? B : A;
     return new ICmpInst(Pred, OtherVal, Constant::getNullValue(A->getType()));
@@ -5961,7 +5961,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   // Canonicalize:
   // icmp eq/ne OneUse(A ^ Cst), B --> icmp eq/ne (A ^ B), Cst
   Constant *Cst;
-  if (match(&I, m_c_ICmp(m_OneUse(m_Xor(m_Value(A), m_ImmConstant(Cst))),
+  if (match(&I, m_c_ICmp(m_OneUse(m_XorLike(m_Value(A), m_ImmConstant(Cst))),
                          m_CombineAnd(m_Value(B), m_Unless(m_ImmConstant())))))
     return new ICmpInst(Pred, Builder.CreateXor(A, B), Cst);
 
@@ -5969,7 +5969,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     // (icmp eq/ne (and (add/sub/xor X, P2), P2), P2)
     auto m_Matcher =
         m_CombineOr(m_CombineOr(m_c_Add(m_Value(B), m_Deferred(A)),
-                                m_c_Xor(m_Value(B), m_Deferred(A))),
+                                m_c_XorLike(m_Value(B), m_Deferred(A))),
                     m_Sub(m_Value(B), m_Deferred(A)));
     std::optional<bool> IsZero = std::nullopt;
     if (match(&I, m_c_ICmp(m_OneUse(m_c_And(m_Value(A), m_Matcher)),

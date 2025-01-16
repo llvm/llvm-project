@@ -767,10 +767,10 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
 
   if (match(LHS, m_Add(m_Value(X), m_One()))) {
     // if XOR on other side, swap
-    if (match(RHS, m_Xor(m_Value(Y), m_APInt(C1))))
+    if (match(RHS, m_XorLike(m_Value(Y), m_APInt(C1))))
       std::swap(X, RHS);
 
-    if (match(X, m_Xor(m_Value(Y), m_APInt(C1)))) {
+    if (match(X, m_XorLike(m_Value(Y), m_APInt(C1)))) {
       // X = XOR(Y, C1), Y = OR(Z, C2), C2 = NOT(C1) ==> X == NOT(AND(Z, C1))
       // ADD(ADD(X, 1), RHS) == ADD(X, ADD(RHS, 1)) == SUB(RHS, AND(Z, C1))
       if (match(Y, m_Or(m_Value(Z), m_APInt(C2))) && (*C2 == ~(*C1))) {
@@ -790,13 +790,13 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
   RHS = I.getOperand(1);
 
   // if XOR is on other side, swap
-  if (match(RHS, m_Xor(m_Value(Y), m_APInt(C1))))
+  if (match(RHS, m_XorLike(m_Value(Y), m_APInt(C1))))
     std::swap(LHS, RHS);
 
   // C2 is ODD
   // LHS = XOR(Y, C1), Y = AND(Z, C2), C1 == (C2 + 1) => LHS == NEG(OR(Z, ~C2))
   // ADD(LHS, RHS) == SUB(RHS, OR(Z, ~C2))
-  if (match(LHS, m_Xor(m_Value(Y), m_APInt(C1))))
+  if (match(LHS, m_XorLike(m_Value(Y), m_APInt(C1))))
     if (C1->countr_zero() == 0)
       if (match(Y, m_And(m_Value(Z), m_APInt(C2))) && *C1 == (*C2 + 1)) {
         Value *NewOr = Builder.CreateOr(Z, ~(*C2));
@@ -937,11 +937,11 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
 
   // Is this add the last step in a convoluted sext?
   // add(zext(xor i16 X, -32768), -32768) --> sext X
-  if (match(Op0, m_ZExt(m_Xor(m_Value(X), m_APInt(C2)))) &&
+  if (match(Op0, m_ZExt(m_XorLike(m_Value(X), m_APInt(C2)))) &&
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
 
-  if (match(Op0, m_Xor(m_Value(X), m_APInt(C2)))) {
+  if (match(Op0, m_XorLike(m_Value(X), m_APInt(C2)))) {
     // (X ^ signmask) + C --> (X + (signmask ^ C))
     if (C2->isSignMask())
       return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C2 ^ *C));
@@ -1685,7 +1685,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   // (add (xor A, B) (and A, B)) --> (or A, B)
   // (add (and A, B) (xor A, B)) --> (or A, B)
-  if (match(&I, m_c_BinOp(m_Xor(m_Value(A), m_Value(B)),
+  if (match(&I, m_c_BinOp(m_XorLike(m_Value(A), m_Value(B)),
                           m_c_And(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateOr(A, B);
 
@@ -1857,7 +1857,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
             m_c_Add(
                 m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
                               m_One())),
-                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
+                m_OneUse(m_ZExtOrSelf(m_OneUse(m_XorLike(
                     m_OneUse(m_TruncOrSelf(m_OneUse(
                         m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
                     m_APInt(XorC))))))) &&
@@ -2433,16 +2433,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   const APInt *Op0C;
   if (match(Op0, m_APInt(Op0C))) {
-    if (Op0C->isMask()) {
-      // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
-      // zero. We don't use information from dominating conditions so this
-      // transform is easier to reverse if necessary.
-      KnownBits RHSKnown = llvm::computeKnownBits(
-          Op1, 0, SQ.getWithInstruction(&I).getWithoutDomCondCache());
-      if ((*Op0C | RHSKnown.Zero).isAllOnes())
-        return BinaryOperator::CreateXor(Op1, Op0);
-    }
-
     // C - ((C3 -nuw X) & C2) --> (C - (C2 & C3)) + (X & C2) when:
     // (C3 - ((C2 & C3) - 1)) is pow2
     // ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
@@ -2511,7 +2501,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // (sub (or A, B), (xor A, B)) --> (and A, B)
   {
     Value *A, *B;
-    if (match(Op1, m_Xor(m_Value(A), m_Value(B))) &&
+    if (match(Op1, m_XorLike(m_Value(A), m_Value(B))) &&
         match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
   }
@@ -2519,7 +2509,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // (sub (xor A, B) (or A, B)) --> neg (and A, B)
   {
     Value *A, *B;
-    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+    if (match(Op0, m_XorLike(m_Value(A), m_Value(B))) &&
         match(Op1, m_c_Or(m_Specific(A), m_Specific(B))) &&
         (Op0->hasOneUse() || Op1->hasOneUse()))
       return BinaryOperator::CreateNeg(Builder.CreateAnd(A, B));
@@ -2557,7 +2547,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
     Value *C, *X;
     auto m_SubXorCmp = [&C, &X](Value *LHS, Value *RHS) {
-      return match(LHS, m_OneUse(m_c_Xor(m_Value(X), m_Specific(RHS)))) &&
+      return match(LHS, m_OneUse(m_c_XorLike(m_Value(X), m_Specific(RHS)))) &&
              match(RHS, m_SExt(m_Value(C))) &&
              (C->getType()->getScalarSizeInBits() == 1);
     };
@@ -2692,7 +2682,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
       Op1->hasNUses(2) && *ShAmt == BitWidth - 1 &&
-      match(Op0, m_OneUse(m_c_Xor(m_Specific(A), m_Specific(Op1))))) {
+      match(Op0, m_OneUse(m_c_XorLike(m_Specific(A), m_Specific(Op1))))) {
     // B = ashr i32 A, 31 ; smear the sign bit
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A

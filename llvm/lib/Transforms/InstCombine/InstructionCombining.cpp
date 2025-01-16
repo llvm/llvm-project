@@ -2612,7 +2612,7 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
 
   // If `V` is of the form `A ^ ~B` then `~(A ^ ~B)` can be folded
   // into `A ^ B` if we are willing to invert all of the uses.
-  if (match(V, m_Xor(m_Value(A), m_Value(B)))) {
+  if (match(V, m_XorLike(m_Value(A), m_Value(B)))) {
     if (auto *BV = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                          DoesConsume, Depth))
       return Builder ? Builder->CreateXor(A, BV) : NonNull;

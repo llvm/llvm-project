@@ -1430,6 +1430,39 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+template <typename LHS, typename RHS, bool Commutable = false>
+struct XorLike_match {
+  LHS L;
+  RHS R;
+
+  XorLike_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      bool CheckCommuted = Commutable;
+      if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
+          PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
+        CheckCommuted = false;
+      else if (Op->getOpcode() != Instruction::Xor)
+        return false;
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (CheckCommuted && L.match(Op->getOperand(1)) &&
+              R.match(Op->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline auto m_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_c_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS, /*Commutable=*/true>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //

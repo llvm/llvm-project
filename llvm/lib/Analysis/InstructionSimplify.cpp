@@ -624,7 +624,7 @@ static Value *simplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // The no-wrapping add guarantees that the top bit will be set by the add.
   // Therefore, the xor must be clearing the already set sign bit of Y.
   if ((IsNSW || IsNUW) && match(Op1, m_SignMask()) &&
-      match(Op0, m_Xor(m_Value(Y), m_SignMask())))
+      match(Op0, m_XorLike(m_Value(Y), m_SignMask())))
     return Y;
 
   // add nuw %x, -1  ->  -1, because %x can only be 0.
@@ -2162,17 +2162,17 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // ((X | Y) ^ X ) & ((X | Y) ^ Y) --> 0
   // ((X | Y) ^ Y ) & ((X | Y) ^ X) --> 0
   BinaryOperator *Or;
-  if (match(Op0, m_c_Xor(m_Value(X),
+  if (match(Op0, m_c_XorLike(m_Value(X),
                          m_CombineAnd(m_BinOp(Or),
                                       m_c_Or(m_Deferred(X), m_Value(Y))))) &&
-      match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
+      match(Op1, m_c_XorLike(m_Specific(Or), m_Specific(Y))))
     return Constant::getNullValue(Op0->getType());
 
   const APInt *C1;
   Value *A;
   // (A ^ C) & (A ^ ~C) -> 0
-  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
-      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+  if (match(Op0, m_XorLike(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_XorLike(m_Specific(A), m_SpecificInt(~*C1))))
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
@@ -2225,13 +2225,13 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
 
   // (A ^ B) | (A | B) --> A | B
   // (A ^ B) | (B | A) --> B | A
-  if (match(X, m_Xor(m_Value(A), m_Value(B))) &&
+  if (match(X, m_XorLike(m_Value(A), m_Value(B))) &&
       match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
     return Y;
 
   // ~(A ^ B) | (A | B) --> -1
   // ~(A ^ B) | (B | A) --> -1
-  if (match(X, m_Not(m_Xor(m_Value(A), m_Value(B)))) &&
+  if (match(X, m_Not(m_XorLike(m_Value(A), m_Value(B)))) &&
       match(Y, m_c_Or(m_Specific(A), m_Specific(B))))
     return ConstantInt::getAllOnesValue(Ty);
 
@@ -2240,14 +2240,14 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // (A & ~B) | (B ^ A) --> B ^ A
   // (~B & A) | (B ^ A) --> B ^ A
   if (match(X, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+      match(Y, m_c_XorLike(m_Specific(A), m_Specific(B))))
     return Y;
 
   // (~A ^ B) | (A & B) --> ~A ^ B
   // (B ^ ~A) | (A & B) --> B ^ ~A
   // (~A ^ B) | (B & A) --> ~A ^ B
   // (B ^ ~A) | (B & A) --> B ^ ~A
-  if (match(X, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
+  if (match(X, m_c_XorLike(m_Not(m_Value(A)), m_Value(B))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return X;
 
@@ -2256,7 +2256,7 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // (B | ~A) | (A ^ B) --> -1
   // (B | ~A) | (B ^ A) --> -1
   if (match(X, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
-      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+      match(Y, m_c_XorLike(m_Specific(A), m_Specific(B))))
     return ConstantInt::getAllOnesValue(Ty);
 
   // (~A & B) | ~(A | B) --> ~A
@@ -2279,7 +2279,7 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // ~(A ^ B) | (A & B) --> ~(A ^ B)
   // ~(A ^ B) | (B & A) --> ~(A ^ B)
   Value *NotAB;
-  if (match(X, m_CombineAnd(m_Not(m_Xor(m_Value(A), m_Value(B))),
+  if (match(X, m_CombineAnd(m_Not(m_XorLike(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return NotAB;
@@ -2288,7 +2288,7 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // ~(A & B) | (B ^ A) --> ~(A & B)
   if (match(X, m_CombineAnd(m_Not(m_And(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
-      match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
+      match(Y, m_c_XorLike(m_Specific(A), m_Specific(B))))
     return NotAB;
 
   return nullptr;
@@ -2443,8 +2443,8 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   // (A ^ C) | (A ^ ~C) -> -1, i.e. all bits set to one.
-  if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
-      match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
+  if (match(Op0, m_XorLike(m_Value(A), m_APInt(C1))) &&
+      match(Op1, m_XorLike(m_Specific(A), m_SpecificInt(~*C1))))
     return Constant::getAllOnesValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
@@ -5113,7 +5113,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       }
       // gep (gep V, C), (xor V, -1) -> C-1
       if (match(Indices.back(),
-                m_Xor(m_PtrToInt(m_Specific(StrippedBasePtr)), m_AllOnes())) &&
+                m_XorLike(m_PtrToInt(m_Specific(StrippedBasePtr)), m_AllOnes())) &&
           !BasePtrOffset.isOne()) {
         auto *CI = ConstantInt::get(GEPTy->getContext(), BasePtrOffset - 1);
         return ConstantExpr::getIntToPtr(CI, GEPTy);
