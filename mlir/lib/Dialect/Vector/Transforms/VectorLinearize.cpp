@@ -461,6 +461,14 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+/// This pattern converts the BitCastOp that works on nD (n > 1)
+/// vectors to a BitCastOp that works on linearized vectors.
+/// Following,
+///   vector.bitcast %v1: vector<4x2xf32> to vector<4x4xf16>
+/// is converted to :
+///   %v1_1d = vector.shape_cast %v1: vector<4x2xf32> to vector<8xf32>
+///   %out_1d = vector.bitcast %v1_1d: vector<8xf32> to vector<16xf16>
+///   %out_nd = vector.shape_cast %out_1d: vector<16xf16> to vector<4x4xf16>
 struct LinearizeVectorBitCast final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;

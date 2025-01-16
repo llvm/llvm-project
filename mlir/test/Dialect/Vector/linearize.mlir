@@ -350,3 +350,36 @@ func.func @test_vector_bitcast(%arg0: vector<4x2xf32>) -> vector<4x4xf16> {
   %1 = vector.bitcast %arg0 : vector<4x2xf32> to vector<4x4xf16>
   return %1 : vector<4x4xf16>
 }
+
+// -----
+
+// ALL-LABEL: test_vector_bitcast
+// ALL-SAME: %[[ORIG_ARG:.*]]: vector<4x[2]xf32>
+func.func @test_vector_bitcast(%arg0: vector<4x[2]xf32>) -> vector<4x[4]xf16> {
+  // DEFAULT: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x[2]xf32> to vector<[8]xf32>
+  // DEFAULT: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<[8]xf32> to vector<[16]xf16>
+  // DEFAULT: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<[16]xf16> to vector<4x[4]xf16>
+  // BW-128: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<4x[2]xf32> to vector<[8]xf32>
+  // BW-128: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<[8]xf32> to vector<[16]xf16>
+  // BW-128: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<[16]xf16> to vector<4x[4]xf16>
+
+  // BW-0: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<4x[2]xf32> to vector<4x[4]xf16>
+  %1 = vector.bitcast %arg0 : vector<4x[2]xf32> to vector<4x[4]xf16>
+  return %1 : vector<4x[4]xf16>
+}
+
+// -----
+// ALL-LABEL: test_vector_bitcast
+// ALL-SAME: %[[ORIG_ARG:.*]]: vector<[4]x2xf32>
+func.func @test_vector_bitcast(%arg0: vector<[4]x2xf32>) -> vector<[4]x4xf16> {
+  // DEFAULT: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<[4]x2xf32> to vector<[8]xf32>
+  // DEFAULT: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<[8]xf32> to vector<[16]xf16>
+  // DEFAULT: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<[16]xf16> to vector<[4]x4xf16>
+  // BW-128: %[[R0:.*]] = vector.shape_cast %[[ORIG_ARG]] : vector<[4]x2xf32> to vector<[8]xf32>
+  // BW-128: %[[R1:.*]] = vector.bitcast %[[R0]] : vector<[8]xf32> to vector<[16]xf16>
+  // BW-128: %[[R2:.*]] = vector.shape_cast %[[R1]] : vector<[16]xf16> to vector<[4]x4xf16>
+
+  // BW-0: %[[R2:.*]] = vector.bitcast %[[ORIG_ARG]] : vector<[4]x2xf32> to vector<[4]x4xf16>
+  %1 = vector.bitcast %arg0 : vector<[4]x2xf32> to vector<[4]x4xf16>
+  return %1 : vector<[4]x4xf16>
+}
