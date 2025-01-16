@@ -38,8 +38,7 @@ public:
       llvm::SmallVectorImpl<clang::Decl *> &Result) override;
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name,
-                                      clang::Module *NamedModule) override;
+                                      clang::DeclarationName Name) override;
 
   void CompleteType(clang::TagDecl *tag_decl) override;
 
