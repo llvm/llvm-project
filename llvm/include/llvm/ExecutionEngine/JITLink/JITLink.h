@@ -336,6 +336,18 @@ public:
     return make_range(Edges.begin(), Edges.end());
   }
 
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
+  /// Returns an iterator over all edges at the given offset within the block.
+  auto edges_at(Edge::OffsetT O) const {
+    return make_filter_range(edges(),
+                             [O](const Edge &E) { return E.getOffset() == O; });
+  }
+
   /// Return the size of the edges list.
   size_t edges_size() const { return Edges.size(); }
 
