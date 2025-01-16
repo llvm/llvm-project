@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetMachine.h"
+#include "X86MatchJumptablePass.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86.h"
@@ -596,6 +597,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
+  addPass(createX86MatchJumptablePass());
   addPass(createX86IndirectBranchTrackingPass());
 
   addPass(createX86IssueVZeroUpperPass());
