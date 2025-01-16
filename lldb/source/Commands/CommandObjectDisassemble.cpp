@@ -269,10 +269,10 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
   };
 
   Target &target = GetTarget();
-  if (!target.GetSectionLoadList().IsEmpty()) {
+  if (target.HasLoadedSections()) {
     Address symbol_containing_address;
-    if (target.GetSectionLoadList().ResolveLoadAddress(
-            m_options.symbol_containing_addr, symbol_containing_address)) {
+    if (target.ResolveLoadAddress(m_options.symbol_containing_addr,
+                                  symbol_containing_address)) {
       get_range(symbol_containing_address);
     }
   } else {

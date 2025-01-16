@@ -221,6 +221,25 @@ define i1 @different_preds(<4 x i32> %a) {
   ret i1 %r
 }
 
+; Negative test with integer and fp predicates.
+
+define i1 @different_preds_typemismtach(<4 x float> %a, <4 x i32> %b) {
+; CHECK-LABEL: @different_preds_typemismtach(
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 2
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[E1]], 4.200000e+01
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ugt i32 [[E2]], -8
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e1 = extractelement <4 x float> %a, i32 1
+  %e2 = extractelement <4 x i32> %b, i32 2
+  %cmp1 = fcmp ogt float %e1, 42.0
+  %cmp2 = icmp samesign ugt i32 %e2, -8
+  %r = and i1 %cmp1, %cmp2
+  ret i1 %r
+}
+
 ; Negative test - need 1 source vector.
 
 define i1 @different_source_vec(<4 x i32> %a, <4 x i32> %b) {

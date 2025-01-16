@@ -79,8 +79,12 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name, string mnemonic>
-    : Builtin_Type<name, mnemonic, /*traits=*/[], "::mlir::FloatType"> {
+class Builtin_FloatType<string name, string mnemonic,
+                        list<string> declaredInterfaceMethods = []>
+    : Builtin_Type<name, mnemonic, /*traits=*/[
+        DeclareTypeInterfaceMethods<
+            FloatTypeInterface,
+            ["getFloatSemantics"] # declaredInterfaceMethods>]> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -322,14 +326,16 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 //===----------------------------------------------------------------------===//
 // BFloat16Type
 
-def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
+def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "bfloat16 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float16Type
 
-def Builtin_Float16 : Builtin_FloatType<"Float16", "f16"> {
+def Builtin_Float16 : Builtin_FloatType<"Float16", "f16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "16-bit floating-point type";
 }
 
@@ -343,7 +349,8 @@ def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32", "tf32"> {
 //===----------------------------------------------------------------------===//
 // Float32Type
 
-def Builtin_Float32 : Builtin_FloatType<"Float32", "f32"> {
+def Builtin_Float32 : Builtin_FloatType<"Float32", "f32",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "32-bit floating-point type";
 }
 
