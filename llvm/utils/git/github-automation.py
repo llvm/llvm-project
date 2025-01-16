@@ -209,7 +209,7 @@ Author: {self.pr.user.name} ({self.pr.user.login})
         return None
 
 
-def get_top_values(values : dict, top : int = 3) -> list:
+def get_top_values(values: dict, top: int = 3) -> list:
     return [v for v in sorted(values.items(), key=lambda x: x[1], reverse=True)][:top]
 
 
