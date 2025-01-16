@@ -88,11 +88,11 @@ static cl::opt<bool>
                               "always print a module IR"),
                      cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    LoopPrintFuncScope("print-loop-func-scope",
-                       cl::desc("When printing IR for print-[before|after]{-all} "
-                                "for a loop pass, always print function IR"),
-                       cl::init(false), cl::Hidden);
+static cl::opt<bool> LoopPrintFuncScope(
+    "print-loop-func-scope",
+    cl::desc("When printing IR for print-[before|after]{-all} "
+             "for a loop pass, always print function IR"),
+    cl::init(false), cl::Hidden);
 
 // See the description for -print-changed for an explanation of the use
 // of this option.
