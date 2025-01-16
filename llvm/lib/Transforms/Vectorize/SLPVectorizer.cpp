@@ -2442,12 +2442,12 @@ public:
           // operations or alternating sequences (e.g., +, -), we can safely
           // tell the inverse operations by checking commutativity.
           if (isa<PoisonValue>(VL[Lane])) {
-            if (auto *EI = dyn_cast<ExtractElementInst>(VL0)) {
+            if (auto *EI = dyn_cast<ExtractElementInst>(S.getMainOp())) {
               if (OpIdx == 0) {
                 OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
                 continue;
               }
-            } else if (auto *EV = dyn_cast<ExtractValueInst>(VL0)) {
+            } else if (auto *EV = dyn_cast<ExtractValueInst>(S.getMainOp())) {
               if (OpIdx == 0) {
                 OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
                 continue;
