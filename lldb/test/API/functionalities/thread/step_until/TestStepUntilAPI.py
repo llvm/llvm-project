@@ -22,8 +22,7 @@ class TestStepUntilAPI(TestBase):
             CFLAGS_EXTRAS="-funique-basic-block-section-names "
             + "-ffunction-sections -fbasic-block-sections=list="
             + self.getSourcePath("function.list"),
-            LD_EXTRAS="-Wl,--script="
-            + self.getSourcePath("symbol.order"),
+            LD_EXTRAS="-Wl,--script=" + self.getSourcePath("symbol.order"),
         )
 
     def _do_until(self, build_dict, args, until_line, expected_line):
