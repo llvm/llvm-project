@@ -400,9 +400,6 @@ namespace {
 // ConvertVectorStore
 //===----------------------------------------------------------------------===//
 
-///
-///
-
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
