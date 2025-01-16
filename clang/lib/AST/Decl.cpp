@@ -4599,18 +4599,24 @@ void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
     Init = NewInit;
 }
 
-unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
+unsigned FieldDecl::getBitWidthValue() const {
   assert(isBitField() && "not a bitfield");
-  return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
+  assert(isa<ConstantExpr>(getBitWidth()));
+  assert(cast<ConstantExpr>(getBitWidth())->hasAPValueResult());
+  assert(cast<ConstantExpr>(getBitWidth())->getAPValueResult().isInt());
+  return cast<ConstantExpr>(getBitWidth())
+      ->getAPValueResult()
+      .getInt()
+      .getZExtValue();
 }
 
-bool FieldDecl::isZeroLengthBitField(const ASTContext &Ctx) const {
+bool FieldDecl::isZeroLengthBitField() const {
   return isUnnamedBitField() && !getBitWidth()->isValueDependent() &&
-         getBitWidthValue(Ctx) == 0;
+         getBitWidthValue() == 0;
 }
 
 bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
-  if (isZeroLengthBitField(Ctx))
+  if (isZeroLengthBitField())
     return true;
 
   // C++2a [intro.object]p7:
@@ -5025,6 +5031,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setHasNonTrivialToPrimitiveDefaultInitializeCUnion(false);
   setHasNonTrivialToPrimitiveDestructCUnion(false);
   setHasNonTrivialToPrimitiveCopyCUnion(false);
+  setHasUninitializedExplicitInitFields(false);
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(RecordArgPassingKind::CanPassInRegs);
   setIsRandomized(false);
@@ -5225,9 +5232,10 @@ unsigned RecordDecl::getODRHash() {
   // Only calculate hash on first call of getODRHash per record.
   ODRHash Hash;
   Hash.AddRecordDecl(this);
-  // For RecordDecl the ODRHash is stored in the remaining 26
-  // bit of RecordDeclBits, adjust the hash to accomodate.
-  setODRHash(Hash.CalculateHash() >> 6);
+  // For RecordDecl the ODRHash is stored in the remaining
+  // bits of RecordDeclBits, adjust the hash to accommodate.
+  static_assert(sizeof(Hash.CalculateHash()) * CHAR_BIT == 32);
+  setODRHash(Hash.CalculateHash() >> (32 - NumOdrHashBits));
   return RecordDeclBits.ODRHash;
 }
 
