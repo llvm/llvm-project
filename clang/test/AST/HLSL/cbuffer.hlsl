@@ -41,7 +41,7 @@ typedef float EmptyArrayTypedef[10][0];
 cbuffer CB {
   // CHECK: VarDecl {{.*}} col:9 used a1 'float'
   float a1;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB definition
   // CHECK: FieldDecl {{.*}} a1 'float'
 }
 
@@ -60,7 +60,7 @@ cbuffer CB {
   float d2[0];
   // CHECK: VarDecl {{.*}} col:9 e2 'float'
   float e2;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.1 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.1 definition
   // CHECK: FieldDecl {{.*}} a2 'float'
   // CHECK-NEXT: FieldDecl {{.*}} e2 'float'
 }
@@ -76,11 +76,11 @@ cbuffer CB {
   B s2;
   // CHECK: VarDecl {{.*}} col:12 s3 'CTypedef':'C
   CTypedef s3;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.B definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.B definition
   // CHECK: FieldDecl {{.*}} a 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.2 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.2 definition
   // CHECK: FieldDecl {{.*}} s1 'A'
-  // CHECK: FieldDecl {{.*}} s2 '__hostlayout.struct.B'
+  // CHECK: FieldDecl {{.*}} s2 '__layout.B'
 }
 
 // check that layout struct is created for D because of its base struct
@@ -90,15 +90,15 @@ cbuffer CB {
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s4 'D'
   D s4;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.D definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.D definition
   // CHECK: FieldDecl {{.*}} b 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.3 definition
-  // CHECK: FieldDecl {{.*}} s4 '__hostlayout.struct.D'
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.3 definition
+  // CHECK: FieldDecl {{.*}} s4 '__layout.D'
 }
 
 // check that layout struct is created for E because because its base struct
 // is empty and should be eliminated, and BTypedef should reuse the previously
-// defined '__hostlayout.struct.B' 
+// defined '__layout.B' 
 // CHECK: HLSLBufferDecl {{.*}} line:105:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
@@ -107,12 +107,12 @@ cbuffer CB {
   E s5;
   // CHECK: VarDecl {{.*}} s6 'BTypedef':'B'
   BTypedef s6;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.E definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.E definition
   // CHECK: FieldDecl {{.*}} c 'float'
-  // CHECK-NOT: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.B definition
-  // CHECK: CXXRecordDecl {{.*}}  implicit class __hostlayout.struct.CB.4 definition
-  // CHECK: FieldDecl {{.*}} s5 '__hostlayout.struct.E'
-  // CHECK: FieldDecl {{.*}} s6 '__hostlayout.struct.B'
+  // CHECK-NOT: CXXRecordDecl {{.*}} implicit class __layout.B definition
+  // CHECK: CXXRecordDecl {{.*}}  implicit class __layout.CB.4 definition
+  // CHECK: FieldDecl {{.*}} s5 '__layout.E'
+  // CHECK: FieldDecl {{.*}} s6 '__layout.B'
 }
 
 // check that this produces empty layout struct
@@ -130,7 +130,7 @@ cbuffer CB {
   RWBuffer<float> Buf;
   // CHECK: VarDecl {{.*}} ea 'EmptyArrayTypedef':'float[10][0]'
   EmptyArrayTypedef ea;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.5 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.5 definition
   // CHECK-NOT: FieldDecl
 }
 
@@ -141,10 +141,10 @@ cbuffer CB {
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s8 'F'
   F s8;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.F definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.F definition
   // CHECK: public 'A'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.6 definition
-  // CHECK: FieldDecl {{.*}} s8 '__hostlayout.struct.F'
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.6 definition
+  // CHECK: FieldDecl {{.*}} s8 '__layout.F'
 }
 
 // anonymous structs
@@ -170,13 +170,13 @@ cbuffer CB {
     RWBuffer<float> f;
   } s10;
   // CHECK: VarDecl {{.*}} s10 'struct (unnamed struct at {{.*}}cbuffer.hlsl:166:3
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.anon definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.anon definition
   // CHECK: FieldDecl {{.*}} e 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.anon.1 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.anon.1 definition
   // CHECK: FieldDecl {{.*}} g 'int'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __hostlayout.struct.CB.7 definition
-  // CHECK: FieldDecl {{.*}} s9 '__hostlayout.struct.anon'
-  // CHECK: FieldDecl {{.*}} s10 '__hostlayout.struct.anon.1'
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.7 definition
+  // CHECK: FieldDecl {{.*}} s9 '__layout.anon'
+  // CHECK: FieldDecl {{.*}} s10 '__layout.anon.1'
 }
 
 // Add uses for the constant buffer declarations so they are not optimized away

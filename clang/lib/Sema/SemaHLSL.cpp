@@ -318,7 +318,7 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
     MustBeUnique = true;
   }
 
-  std::string Name = "__hostlayout.struct." + NameBase;
+  std::string Name = "__layout." + NameBase;
   IdentifierInfo *II = &AST.Idents.get(Name, tok::TokenKind::identifier);
   if (!MustBeUnique)
     return II;
@@ -443,8 +443,8 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S, CXXRecordDecl *StructDecl,
 // - empty structs
 // - zero-sized arrays
 // - non-variable declarations
-static CXXRecordDecl *createHostLayoutStructForBuffer(Sema &S,
-                                                      HLSLBufferDecl *BufDecl) {
+// The layour struct will be added to the HLSLBufferDecl declarations.
+void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   ASTContext &AST = S.getASTContext();
   IdentifierInfo *II = getHostLayoutStructName(S, BufDecl->getIdentifier(),
                                                true, BufDecl->getDeclContext());
@@ -466,7 +466,6 @@ static CXXRecordDecl *createHostLayoutStructForBuffer(Sema &S,
   }
   LS->completeDefinition();
   BufDecl->addDecl(LS);
-  return LS;
 }
 
 // Handle end of cbuffer/tbuffer declaration
@@ -477,8 +476,7 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   validatePackoffset(SemaRef, BufDecl);
 
   // create buffer layout struct
-  CXXRecordDecl *LayoutStruct =
-      createHostLayoutStructForBuffer(SemaRef, BufDecl);
+  createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
   SemaRef.PopDeclContext();
 }
