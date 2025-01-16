@@ -464,8 +464,7 @@ LoongArchTargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
   SDValue Val = Op.getOperand(0);
   SDValue Idx = DAG.getConstant(0, DL, Subtarget.getGRLenVT());
 
-  Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, OpVT, Vector, Val, Idx);
-  return Vector;
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, OpVT, Vector, Val, Idx);
 }
 
 SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
