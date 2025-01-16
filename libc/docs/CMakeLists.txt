@@ -56,6 +56,7 @@ if (SPHINX_FOUND)
       sys/mman
       sys/resource
       sys/time
+      sys/wait
       threads
       uchar
       wchar

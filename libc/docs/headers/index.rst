@@ -29,6 +29,7 @@ Implementation Status
    sys/mman
    sys/resource
    sys/time
+   sys/wait
    threads
    time
    uchar

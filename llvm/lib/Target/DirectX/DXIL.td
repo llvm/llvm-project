@@ -620,6 +620,18 @@ def CountBits :  DXILOp<31, unaryBits> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def FirstbitLo : DXILOp<32, unaryBits> {
+  let Doc = "Returns the location of the first set bit starting from "
+            "the lowest order bit and working upward.";
+  let intrinsics = [ IntrinSelect<int_dx_firstbitlow> ];
+  let arguments = [OverloadTy];
+  let result = Int32Ty;
+  let overloads =
+      [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def FirstbitHi :  DXILOp<33, unaryBits> {
   let Doc = "Returns the location of the first set bit starting from "
             "the highest order bit and working downward.";
