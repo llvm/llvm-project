@@ -1966,10 +1966,10 @@ let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
   // S_SET_VGPR_FRAMES does not write to SQ_WAVE_MODE.
   def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16">;
 
-  def S_SEMA_SIGNAL            : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
-  def S_SEMA_WAIT              : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
-  def S_SEMA_SET_LIMIT         : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
-  def S_SEMA_SIGNAL_AFTER_VALU : SOPP_Pseudo<"s_sema_signal_after_valu", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_SIGNAL       : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_signal s_sema_signal_imm:$simm16)]>;
+  def S_SEMA_WAIT         : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_sema_wait s_sema_wait_imm:$simm16)]>;
+  def S_SEMA_SET_LIMIT    : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_SIGNAL_AFTER : SOPP_Pseudo<"s_sema_signal_after", (ins i16imm:$simm16), "$simm16">;
 }
 
 def s_sema_set_state_imm : ImmLeaf<
@@ -3239,22 +3239,22 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !cast<SOPP_Pseudo>(NAME)
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
-defm S_WAKEUP_imm             : SOPP_Real_32_gfx13<0x003>;
-defm S_BARRIER_WAIT           : SOPP_Real_32_gfx13<0x2b>;
-defm S_MONITOR_SLEEP          : SOPP_Real_32_gfx13<0x2c>;
-defm S_SET_VGPR_FRAMES        : SOPP_Real_32_gfx13<0x1c>;
-defm S_DELAY_ALU              : SOPP_Real_32_gfx13<0x2e>;
-defm S_WAIT_EVENT             : SOPP_Real_32_gfx13<0x2f>;
-defm S_BARRIER_LEAVE_IMM      : SOPP_Real_32_gfx13<0x31>;
-defm S_SEMA_SIGNAL            : SOPP_Real_32_gfx13<0x32>;
-defm S_SEMA_WAIT              : SOPP_Real_32_gfx13<0x33>;
-defm S_SEMA_SET_LIMIT         : SOPP_Real_32_gfx13<0x34>;
-defm S_SEMA_SIGNAL_AFTER_VALU : SOPP_Real_32_gfx13<0x35>;
+defm S_WAKEUP_imm        : SOPP_Real_32_gfx13<0x003>;
+defm S_BARRIER_WAIT      : SOPP_Real_32_gfx13<0x2b>;
+defm S_MONITOR_SLEEP     : SOPP_Real_32_gfx13<0x2c>;
+defm S_SET_VGPR_FRAMES   : SOPP_Real_32_gfx13<0x1c>;
+defm S_DELAY_ALU         : SOPP_Real_32_gfx13<0x2e>;
+defm S_WAIT_EVENT        : SOPP_Real_32_gfx13<0x2f>;
+defm S_BARRIER_LEAVE_IMM : SOPP_Real_32_gfx13<0x31>;
+defm S_SEMA_SIGNAL       : SOPP_Real_32_gfx13<0x32>;
+defm S_SEMA_WAIT         : SOPP_Real_32_gfx13<0x33>;
+defm S_SEMA_SET_LIMIT    : SOPP_Real_32_gfx13<0x34>;
+defm S_SEMA_SIGNAL_AFTER : SOPP_Real_32_gfx13<0x35>;
 // TODO-GFX13: Rename the pseudo to S_WAIT_BVHRTSCNT to reduce the potential
 //             for confusion (probably best to do post-upstreaming to reduce
 //             conflicts)
-defm S_WAIT_BVHCNT            : SOPP_Real_32_gfx13<0x4c, "s_wait_rtscnt", 0>;
-defm S_WAIT_SWCCNT            : SOPP_Real_32_gfx13<0x4d>;
+defm S_WAIT_BVHCNT       : SOPP_Real_32_gfx13<0x4c, "s_wait_rtscnt", 0>;
+defm S_WAIT_SWCCNT       : SOPP_Real_32_gfx13<0x4d>;
 #else /* LLPC_BUILD_NPI */
 defm S_ADDK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<0x00f, "s_addk_co_i32">;
 defm S_MULK_I32         : SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<0x010>;
