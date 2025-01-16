@@ -224,6 +224,8 @@ static bool inDeviceContext(mlir::Operation *op) {
     return true;
   if (auto funcOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
     return true;
+  if (auto funcOp = op->getParentOfType<mlir::gpu::LaunchOp>())
+    return true;
   if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
