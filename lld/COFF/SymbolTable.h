@@ -143,6 +143,9 @@ public:
 
   bool isEC() const { return machine == ARM64EC; }
 
+  // An entry point symbol.
+  Symbol *entry = nullptr;
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
