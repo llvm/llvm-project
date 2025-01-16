@@ -1,7 +1,6 @@
 
-
-// RUN: %clang_cc1 -O0  -fbounds-safety -emit-llvm %s -o /dev/null
-// RUN: %clang_cc1 -O2  -fbounds-safety -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -O0  -fbounds-safety -emit-llvm -triple arm64-apple-darwin %s -o /dev/null
+// RUN: %clang_cc1 -O2  -fbounds-safety -emit-llvm -triple arm64-apple-darwin %s -o - | FileCheck %s
 #include <ptrcheck.h>
 
 int foo(int *__counted_by(*out_len)* out_buf, int *out_len) {

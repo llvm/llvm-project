@@ -1,5 +1,5 @@
 
-// RUN: %clang_cc1 -O0 -debug-info-kind=standalone -dwarf-version=5 -fbounds-safety -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -O0 -debug-info-kind=standalone -dwarf-version=5 -fbounds-safety -emit-llvm -triple arm64-apple-darwin %s -o %t.ll
 // RUN: echo "; __SEPERATOR__" > %t.sep
 // RUN: cat %t.ll %t.sep %t.ll > %t.repeated.ll
 // RUN: FileCheck %s --input-file=%t.repeated.ll

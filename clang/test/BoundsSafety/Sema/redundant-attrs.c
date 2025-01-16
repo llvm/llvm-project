@@ -116,11 +116,11 @@ int *__terminated_by(0) __terminated_by(0u) ptrTerminatedByDifferentSignedness; 
 int *__terminated_by(0) __terminated_by(0l) ptrTerminatedByDifferentWidth; //expected-warning{{pointer annotated with __terminated_by multiple times. Annotate only once to remove this warning}}
 int *const __terminated_by(0) _Nullable __terminated_by(0) * _Nullable __terminated_by(0) ptrTerminatedNestedAndNullable; //expected-warning{{pointer annotated with __terminated_by multiple times. Annotate only once to remove this warning}}
 
-typedef int *__nullable __bidi_indexable nullableBidiPtr;
+typedef int *_Nullable __bidi_indexable nullableBidiPtr;
 nullableBidiPtr __single ptrNullableBidiSingleConflict; //expected-error{{pointer cannot have more than one bound attribute}}
 
-typedef int *__nullable nullablePtr;
+typedef int *_Nullable nullablePtr;
 nullablePtr __single ptrAttributedTypeSeparateDecl;
 
-typedef int *__nullable __null_terminated __bidi_indexable nullableNTBidiPtr; //expected-error{{'__terminated_by' attribute currently can be applied only to '__single' pointers}}
+typedef int *_Nullable __null_terminated __bidi_indexable nullableNTBidiPtr; //expected-error{{'__terminated_by' attribute currently can be applied only to '__single' pointers}}
 nullableNTBidiPtr ptrNullableNTBidi;

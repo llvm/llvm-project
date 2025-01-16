@@ -1,4 +1,4 @@
-
+// REQUIRES: system-darwin
 // Test without pch.
 // RUN: %clang_cc1 -fbounds-safety -include %s -fsyntax-only -verify %s
 

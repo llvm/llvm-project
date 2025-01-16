@@ -15,7 +15,7 @@ bidiPtr2 __bidi_indexable ptrBoundBound2;
 // CHECK:      VarDecl {{.*}} ptrBoundBound 'bidiPtr':'int *__bidi_indexable'
 // CHECK-NEXT: VarDecl {{.*}} ptrBoundBound2 'int *__bidi_indexable'
 
-typedef const int * __nullable __bidi_indexable my_c_ptr_nullable_bidi_t;
+typedef const int * _Nullable __bidi_indexable my_c_ptr_nullable_bidi_t;
 my_c_ptr_nullable_bidi_t __bidi_indexable def_c_nullable_bidi_ptr;
 // CHECK: TypedefDecl {{.*}} referenced my_c_ptr_nullable_bidi_t 'const int *__bidi_indexable _Nullable':'const int *__bidi_indexable'
 // CHECK-NEXT: AttributedType {{.*}} 'const int *__bidi_indexable _Nullable' sugar
