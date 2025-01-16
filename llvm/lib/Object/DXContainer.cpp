@@ -206,7 +206,6 @@ Error DXContainer::parsePartOffsets() {
     case dxbc::PartType::RTS0:
       if (Error Err = parseRootSignature(PartData))
         return Err;
-
       break;
     }
   }
