@@ -46,7 +46,8 @@ CHECK3: AddressOfRelocationTable: 64
 CHECK3: OverlayNumber: 0
 CHECK3: OEMid: 0
 CHECK3: OEMinfo: 0
-CHECK3: AddressOfNewExeHeader: 64
+## 68 is unaligned and rounded up to 72 by LLD
+CHECK3: AddressOfNewExeHeader: 72
 
 ## Too-small stub (must be at least 64 bytes long) && Unaligned
 # RUN: not lld-link /out:%t.exe /entry:main /stub:%p/Inputs/stub63mz %t.obj 2>&1 | FileCheck -check-prefix=CHECK4 %s
