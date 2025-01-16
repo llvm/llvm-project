@@ -320,7 +320,7 @@ constexpr TypeBuilderFunc getModel<unsigned long long>() {
 template <>
 constexpr TypeBuilderFunc getModel<double>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::FloatType::getF64(context);
+    return mlir::Float64Type::get(context);
   };
 }
 template <>
@@ -347,11 +347,11 @@ constexpr TypeBuilderFunc getModel<long double>() {
     static_assert(size == 16 || size == 10 || size == 8,
                   "unsupported long double size");
     if constexpr (size == 16)
-      return mlir::FloatType::getF128(context);
+      return mlir::Float128Type::get(context);
     if constexpr (size == 10)
-      return mlir::FloatType::getF80(context);
+      return mlir::Float80Type::get(context);
     if constexpr (size == 8)
-      return mlir::FloatType::getF64(context);
+      return mlir::Float64Type::get(context);
     llvm_unreachable("failed static assert");
   };
 }
@@ -369,7 +369,7 @@ constexpr TypeBuilderFunc getModel<const long double *>() {
 template <>
 constexpr TypeBuilderFunc getModel<float>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::FloatType::getF32(context);
+    return mlir::Float32Type::get(context);
   };
 }
 template <>

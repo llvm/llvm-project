@@ -1850,28 +1850,15 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
   }
 }
 
-Module *Decl::getTopLevelOwningNamedModule() const {
-  if (getOwningModule() &&
-      getOwningModule()->getTopLevelModule()->isNamedModule())
-    return getOwningModule()->getTopLevelModule();
-
-  return nullptr;
-}
-
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
-  return lookupImpl(Name, cast<Decl>(this)->getTopLevelOwningNamedModule());
-}
-
-DeclContext::lookup_result DeclContext::lookupImpl(DeclarationName Name,
-                                                   Module *NamedModule) const {
   // For transparent DeclContext, we should lookup in their enclosing context.
   if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
-    return getParent()->lookupImpl(Name, NamedModule);
+    return getParent()->lookup(Name);
 
   const DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)
-    return PrimaryContext->lookupImpl(Name, NamedModule);
+    return PrimaryContext->lookup(Name);
 
   // If we have an external source, ensure that any later redeclarations of this
   // context have been loaded, since they may add names to the result of this
@@ -1902,8 +1889,7 @@ DeclContext::lookup_result DeclContext::lookupImpl(DeclarationName Name,
     if (!R.second && !R.first->second.hasExternalDecls())
       return R.first->second.getLookupResult();
 
-    if (Source->FindExternalVisibleDeclsByName(this, Name, NamedModule) ||
-        !R.second) {
+    if (Source->FindExternalVisibleDeclsByName(this, Name) || !R.second) {
       if (StoredDeclsMap *Map = LookupPtr) {
         StoredDeclsMap::iterator I = Map->find(Name);
         if (I != Map->end())
@@ -2129,8 +2115,7 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
     if (ExternalASTSource *Source = getParentASTContext().getExternalSource())
       if (hasExternalVisibleStorage() &&
           Map->find(D->getDeclName()) == Map->end())
-        Source->FindExternalVisibleDeclsByName(
-            this, D->getDeclName(), D->getTopLevelOwningNamedModule());
+        Source->FindExternalVisibleDeclsByName(this, D->getDeclName());
 
   // Insert this declaration into the map.
   StoredDeclsList &DeclNameEntries = (*Map)[D->getDeclName()];
