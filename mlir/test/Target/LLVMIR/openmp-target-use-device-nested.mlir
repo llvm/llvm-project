@@ -12,6 +12,9 @@
 // CHECK-NEXT:         br i1 %[[VAL_7]], label %[[VAL_8:.*]], label %[[VAL_9:.*]]
 // CHECK:            user_code.entry:                                  ; preds = %[[VAL_10:.*]]
 // CHECK-NEXT:         %[[VAL_11:.*]] = load ptr, ptr %[[VAL_3]], align 8
+// CHECK-NEXT:         br label %[[AFTER_ALLOC:.*]]
+
+// CHECK:            [[AFTER_ALLOC]]:
 // CHECK-NEXT:         br label %[[VAL_12:.*]]
 
 // CHECK:            [[VAL_12]]:

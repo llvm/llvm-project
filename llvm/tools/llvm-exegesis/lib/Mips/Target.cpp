@@ -58,12 +58,12 @@ public:
       : ExegesisTarget(MipsCpuPfmCounters, Mips_MC::isOpcodeAvailable) {}
 
 private:
-  unsigned getScratchMemoryRegister(const Triple &TT) const override;
+  MCRegister getScratchMemoryRegister(const Triple &TT) const override;
   unsigned getMaxMemoryAccessSize() const override { return 64; }
-  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
+  void fillMemoryOperands(InstructionTemplate &IT, MCRegister Reg,
                           unsigned Offset) const override;
 
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
     return Arch == Triple::mips || Arch == Triple::mipsel ||
@@ -73,7 +73,7 @@ private:
 } // end anonymous namespace
 
 // Generates instructions to load an immediate value into a register.
-static std::vector<MCInst> loadImmediate(unsigned Reg, bool IsGPR32,
+static std::vector<MCInst> loadImmediate(MCRegister Reg, bool IsGPR32,
                                          const APInt &Value) {
   unsigned ZeroReg;
   unsigned ORi, LUi, SLL;
@@ -134,12 +134,13 @@ static std::vector<MCInst> loadImmediate(unsigned Reg, bool IsGPR32,
   llvm_unreachable("Not implemented for values wider than 32 bits");
 }
 
-unsigned ExegesisMipsTarget::getScratchMemoryRegister(const Triple &TT) const {
+MCRegister
+ExegesisMipsTarget::getScratchMemoryRegister(const Triple &TT) const {
   return TT.isArch64Bit() ? Mips::A0_64 : Mips::A0;
 }
 
 void ExegesisMipsTarget::fillMemoryOperands(InstructionTemplate &IT,
-                                            unsigned Reg,
+                                            MCRegister Reg,
                                             unsigned Offset) const {
   assert(!isInvalidMemoryInstr(IT.getInstr()) &&
          "fillMemoryOperands requires a valid memory instruction");
@@ -149,7 +150,7 @@ void ExegesisMipsTarget::fillMemoryOperands(InstructionTemplate &IT,
 }
 
 std::vector<MCInst> ExegesisMipsTarget::setRegTo(const MCSubtargetInfo &STI,
-                                                 unsigned Reg,
+                                                 MCRegister Reg,
                                                  const APInt &Value) const {
   if (Mips::GPR32RegClass.contains(Reg))
     return loadImmediate(Reg, true, Value);
