@@ -50,8 +50,7 @@ void ClangExternalASTSourceCallbacks::FindExternalLexicalDecls(
 }
 
 bool ClangExternalASTSourceCallbacks::FindExternalVisibleDeclsByName(
-    const clang::DeclContext *DC, clang::DeclarationName Name,
-    clang::Module *NamedModule) {
+    const clang::DeclContext *DC, clang::DeclarationName Name) {
   llvm::SmallVector<clang::NamedDecl *, 4> decls;
   // Objective-C methods are not added into the LookupPtr when they originate
   // from an external source. SetExternalVisibleDeclsForName() adds them.
