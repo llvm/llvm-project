@@ -22,6 +22,8 @@ Templ(T t) -> Templ<T>;
 //--- Use.cpp
 import Templ;
 void func() {
-    Templ t(5); // expected-error {{unknown type name 'Templ'}}
+    Templ t(5); // expected-error {{declaration of 'Templ' must be imported from module 'Templ' before it is required}}
+                // expected-error@-1 {{unknown type name 'Templ'}}
+                // expected-note@Templ.cppm:3 {{declaration here is not visible}}
 }
 
