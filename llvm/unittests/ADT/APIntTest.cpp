@@ -77,8 +77,8 @@ TEST(APIntTest, PowerMaxValue) {
 // Test that SignedMinValue^3 == 0
 TEST(APIntTest, PowerSignedMinValueTo3) {
   APInt SignedMinValue = APInt::getSignedMinValue(32);
-  APInt MaxTo3 = APIntOps::pow(SignedMinValue, 3);
-  EXPECT_TRUE(MaxTo3.isZero());
+  APInt MinTo3 = APIntOps::pow(SignedMinValue, 3);
+  EXPECT_TRUE(MinTo3.isZero());
 }
 
 // Test that SignedMinValue^1 == SignedMinValue
