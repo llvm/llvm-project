@@ -3088,7 +3088,7 @@ public:
     return Reader.readInt();
   }
 
-  uint64_t peekNextInt() { return Reader.peekNextInt(); }
+  uint64_t peekInts(unsigned N) { return Reader.peekInts(N); }
 
   bool readBool() { return Reader.readBool(); }
 
@@ -3120,6 +3120,8 @@ public:
     return Reader.readVersionTuple();
   }
 
+  void skipInt() { Reader.skipInts(1); }
+
   void skipInts(unsigned N) { Reader.skipInts(N); }
 
   unsigned getCurrentIdx() { return Reader.getIdx(); }
@@ -3139,7 +3141,7 @@ Attr *ASTRecordReader::readAttr() {
 
   // Read and ignore the skip count, since attribute deserialization is not
   // deferred on this pass.
-  Record.readInt();
+  Record.skipInt();
 
   Attr *New = nullptr;
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
@@ -3184,7 +3186,7 @@ void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
 /// reading the attribute until the type has been read.
 Attr *ASTRecordReader::readOrDeferAttrFor(Decl *D) {
   AttrReader Record(*this);
-  unsigned SkipCount = Record.peekNextInt();
+  unsigned SkipCount = Record.peekInts(1);
   if (!SkipCount)
     return readAttr();
   Reader->PendingDeferredAttributes.push_back({Record.getCurrentIdx(), D});

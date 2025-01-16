@@ -83,8 +83,11 @@ public:
   /// Returns the current value in this record, without advancing.
   uint64_t peekInt() { return Record[Idx]; }
 
-  /// Returns the next value in this record, without advancing.
-  uint64_t peekNextInt() { return Record[Idx + 1]; }
+  /// Returns the next N values in this record, without advancing.
+  uint64_t peekInts(unsigned N) { return Record[Idx + N]; }
+
+  /// Skips the current value.
+  void skipInt() { Idx += 1; }
 
   /// Skips the specified number of values.
   void skipInts(unsigned N) { Idx += N; }
