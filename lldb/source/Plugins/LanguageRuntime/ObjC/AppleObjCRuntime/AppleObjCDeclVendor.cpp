@@ -30,8 +30,7 @@ public:
       : m_decl_vendor(decl_vendor) {}
 
   bool FindExternalVisibleDeclsByName(const clang::DeclContext *decl_ctx,
-                                      clang::DeclarationName name,
-                                      clang::Module *NamedModule) override {
+                                      clang::DeclarationName name) override {
 
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
