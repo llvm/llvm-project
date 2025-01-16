@@ -136,23 +136,17 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
-          if (D->isScalar(II)) {
-            Direction = 'S';
-            Dep.push_back(Direction);
-          } else {
-            unsigned Dir = D->getDirection(II);
-            if (Dir == Dependence::DVEntry::LT ||
-                Dir == Dependence::DVEntry::LE)
-              Direction = '<';
-            else if (Dir == Dependence::DVEntry::GT ||
-                     Dir == Dependence::DVEntry::GE)
-              Direction = '>';
-            else if (Dir == Dependence::DVEntry::EQ)
-              Direction = '=';
-            else
-              Direction = '*';
-            Dep.push_back(Direction);
-          }
+          unsigned Dir = D->getDirection(II);
+          if (Dir == Dependence::DVEntry::LT || Dir == Dependence::DVEntry::LE)
+            Direction = '<';
+          else if (Dir == Dependence::DVEntry::GT ||
+                   Dir == Dependence::DVEntry::GE)
+            Direction = '>';
+          else if (Dir == Dependence::DVEntry::EQ)
+            Direction = '=';
+          else
+            Direction = '*';
+          Dep.push_back(Direction);
         }
         while (Dep.size() != Level) {
           Dep.push_back('I');

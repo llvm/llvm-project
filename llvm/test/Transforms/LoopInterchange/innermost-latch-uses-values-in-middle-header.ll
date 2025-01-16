@@ -1,3 +1,11 @@
+; Remove 'S' Scalar Dependencies #119345
+; Scalar dependencies are not handled correctly, so they were removed to avoid
+; miscompiles. The loop nest in this test case used to be interchanged, but it's
+; no longer triggering. XFAIL'ing this test to indicate that this test should
+; interchanged if scalar deps are handled correctly.
+;
+; XFAIL: *
+
 ; RUN: opt < %s -passes=loop-interchange -verify-dom-info -verify-loop-info -pass-remarks-output=%t -disable-output
 ; RUN: FileCheck -input-file %t %s
 
