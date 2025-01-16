@@ -199,6 +199,7 @@ Changes to the RISC-V Backend
 * `-mcpu=tt-ascalon-d8` was added.
 * `-mcpu=mips-p8700` was added.
 * `-mcpu=sifive-p550` was added.
+* `-mcpu=xiangshan-kunminghu` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
