@@ -254,7 +254,7 @@ void LinkerDriver::parseDosStub(StringRef path) {
   // MS link.exe compatibility:
   // 1. stub must greater than or equal to 64 bytes
   // 2. stub must start with a valid dos signature 'MZ'
-  if (bufferSize < 0x40)
+  if (bufferSize < 64)
     Err(ctx) << "/stub: stub must be greater than or equal to 64 bytes: "
              << path;
   if (bufferStart[0] != 'M' || bufferStart[1] != 'Z')
