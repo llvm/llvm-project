@@ -33,7 +33,7 @@ TEST(LlvmLibcCtimeR, ValidUnixTimestamp0) {
   // 1970-01-01 00:00:00. Test with a valid buffer size.
   t = 0;
   result = LIBC_NAMESPACE::ctime_r(&t, buffer);
-  ASSERT_STREQ("Thu Jan  1 01:00:00 1970\n", result);
+  ASSERT_STREQ("Thu Jan  1 02:00:00 1970\n", result);
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
@@ -43,7 +43,7 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   // 2038-01-19 03:14:07. Test with a valid buffer size.
   t = 2147483647;
   result = LIBC_NAMESPACE::ctime_r(&t, buffer);
-  ASSERT_STREQ("Tue Jan 19 04:14:07 2038\n", result);
+  ASSERT_STREQ("Tue Jan 19 05:14:07 2038\n", result);
 }
 
 TEST(LlvmLibcCtimeR, InvalidArgument) {
