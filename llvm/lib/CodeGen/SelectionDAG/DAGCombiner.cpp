@@ -23811,6 +23811,8 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // value.
   unsigned OneConstExtractIndex = ~0u;
 
+  unsigned NumExtracts = 0;
+
   for (unsigned i = 0; i != NumElems; ++i) {
     SDValue Op = N->getOperand(i);
 
@@ -23847,7 +23849,10 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
         ExtractedFromVec.getValueType().getVectorElementType())
       return SDValue();
 
-    OneConstExtractIndex = ExtractIdx->getZExtValue();
+    if (OneConstExtractIndex == ~0u)
+      OneConstExtractIndex = ExtractIdx->getZExtValue();
+
+    ++NumExtracts;
 
     // Have we seen this input vector before?
     // The vectors are expected to be tiny (usually 1 or 2 elements), so using
@@ -23878,8 +23883,11 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     // TODO: This should be more aggressive about skipping the shuffle formation
     // (e.g., always do this for VecIn[1]->hasOneUse())
     if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
-        (VecIn[1].hasOneUse() &&
-         TLI.isExtractVecEltCheap(VT, OneConstExtractIndex)))
+        TLI.isTypeLegal(VT.getVectorElementType()) &&
+        // VecIn[1].hasOneUse() &&
+        NumExtracts == 1
+        //&& TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
+    )
       return SDValue();
 
     unsigned MaxIndex = 0;

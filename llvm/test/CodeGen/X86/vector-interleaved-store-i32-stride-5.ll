@@ -18,24 +18,24 @@
 define void @store_i32_stride5_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecptr2, ptr %in.vecptr3, ptr %in.vecptr4, ptr %out.vec) nounwind {
 ; SSE-LABEL: store_i32_stride5_vf2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    movaps %xmm2, %xmm5
-; SSE-NEXT:    unpcklps {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
-; SSE-NEXT:    movaps %xmm0, %xmm6
-; SSE-NEXT:    unpcklps {{.*#+}} xmm6 = xmm6[0],xmm1[0],xmm6[1],xmm1[1]
-; SSE-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm5[0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,1,1,1]
+; SSE-NEXT:    movdqa %xmm2, %xmm6
+; SSE-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1]
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm6[0]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm1[1,1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm4[0],xmm0[1,2,3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,1,1]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,1,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE-NEXT:    movq %xmm2, 32(%r9)
-; SSE-NEXT:    movaps %xmm6, (%r9)
+; SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
+; SSE-NEXT:    movq %xmm5, 32(%r9)
+; SSE-NEXT:    movdqa %xmm3, (%r9)
 ; SSE-NEXT:    movaps %xmm0, 16(%r9)
 ; SSE-NEXT:    retq
 ;
