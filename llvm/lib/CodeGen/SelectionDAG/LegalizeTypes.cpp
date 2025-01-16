@@ -911,8 +911,7 @@ SDValue DAGTypeLegalizer::CreateStackStoreLoad(SDValue Op,
 }
 
 SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
-  // Try the pack, if we aren't going from vector -> scalar it will backout
-  // immediately.
+  // Lower a bitcast into in-register shift operations
   assert(N->getOpcode() == ISD::BITCAST && "Unexpected opcode!");
 
   EVT FromVT = N->getOperand(0)->getValueType(0);
@@ -922,7 +921,6 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
 
   bool IsBigEndian = DAG.getDataLayout().isBigEndian();
 
-  // Pack the values in register
   if (FromVT.isVector() && ToVT.isScalarInteger()) {
 
     EVT ElemVT = FromVT.getVectorElementType();
@@ -958,12 +956,10 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
     unsigned NumElems = ToVT.getVectorNumElements();
     unsigned ElemBits = ElemVT.getSizeInBits();
 
-    // Ensure the integer has enough bits
     unsigned PackedBits = FromVT.getSizeInBits();
     assert(PackedBits >= ElemBits * NumElems &&
            "Vector does not have enough bits to unpack scalar type.");
 
-    // Hold all the vector elements
     SmallVector<SDValue, 8> Elements;
     Elements.reserve(NumElems);
 
