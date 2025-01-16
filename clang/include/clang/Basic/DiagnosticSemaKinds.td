@@ -2204,6 +2204,8 @@ def err_invalid_qualified_constructor : Error<
   "'%0' qualifier is not allowed on a constructor">;
 def err_ref_qualifier_constructor : Error<
   "ref-qualifier '%select{&&|&}0' is not allowed on a constructor">;
+def err_invalid_ctor_dtor_decl : Error<
+  "invalid %select{constructor|destructor}0 declaration">;
 
 def err_constructor_return_type : Error<
   "constructor cannot have a return type">;
