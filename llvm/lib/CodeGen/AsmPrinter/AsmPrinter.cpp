@@ -2916,7 +2916,8 @@ void AsmPrinter::emitJumpTableInfo() {
     emitJumpTables(
         ArrayRef<unsigned>(JumpTableIndices)
             .take_back(JT.size() - NextHotJumpTableIndex),
-        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices[NextHotJumpTableIndex]]),
+        TLOF.getSectionForJumpTable(
+          F, TM, &JT[JumpTableIndices[NextHotJumpTableIndex]]),
         JTInDiffSection, *MJTI);
   }
 
