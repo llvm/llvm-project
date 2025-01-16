@@ -523,7 +523,7 @@ public:
         isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
     bool tailFloatingPoint =
         isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
+    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg2);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
@@ -2890,7 +2890,7 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   dims.erase(dims.begin() + reductionDim);
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
-  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
+  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maxnumf,
                                                  elementType, b, loc,
                                                  /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =

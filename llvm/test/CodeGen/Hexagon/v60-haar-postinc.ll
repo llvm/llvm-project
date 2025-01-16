@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK: vmem(r{{[0-9]+}}++#1)
 ; CHECK: vmem(r{{[0-9]+}}++#1)

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_CHAR_H
-#define _LIBCPP___FORMAT_FORMATTER_CHAR_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_CHAR_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_CHAR_H
 
 #include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__config>
@@ -90,4 +90,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter<wchar_t, wchar_t> : public __formatter_cha
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_CHAR_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_CHAR_H

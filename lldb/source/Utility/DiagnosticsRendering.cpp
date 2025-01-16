@@ -20,6 +20,46 @@ lldb::ErrorType DiagnosticError::GetErrorType() const {
   return lldb::eErrorTypeExpression;
 }
 
+StructuredData::ObjectSP Serialize(llvm::ArrayRef<DiagnosticDetail> details) {
+  auto make_array = []() { return std::make_unique<StructuredData::Array>(); };
+  auto make_dict = []() {
+    return std::make_unique<StructuredData::Dictionary>();
+  };
+  auto dict_up = make_dict();
+  dict_up->AddIntegerItem("version", 1u);
+  auto array_up = make_array();
+  for (const DiagnosticDetail &diag : details) {
+    auto detail_up = make_dict();
+    if (auto &sloc = diag.source_location) {
+      auto sloc_up = make_dict();
+      sloc_up->AddStringItem("file", sloc->file.GetPath());
+      sloc_up->AddIntegerItem("line", sloc->line);
+      sloc_up->AddIntegerItem("length", sloc->length);
+      sloc_up->AddBooleanItem("hidden", sloc->hidden);
+      sloc_up->AddBooleanItem("in_user_input", sloc->in_user_input);
+      detail_up->AddItem("source_location", std::move(sloc_up));
+    }
+    llvm::StringRef severity = "unknown";
+    switch (diag.severity) {
+    case lldb::eSeverityError:
+      severity = "error";
+      break;
+    case lldb::eSeverityWarning:
+      severity = "warning";
+      break;
+    case lldb::eSeverityInfo:
+      severity = "note";
+      break;
+    }
+    detail_up->AddStringItem("severity", severity);
+    detail_up->AddStringItem("message", diag.message);
+    detail_up->AddStringItem("rendered", diag.rendered);
+    array_up->AddItem(std::move(detail_up));
+  }
+  dict_up->AddItem("details", std::move(array_up));
+  return dict_up;
+}
+
 static llvm::raw_ostream &PrintSeverity(Stream &stream,
                                         lldb::Severity severity) {
   llvm::HighlightColor color;

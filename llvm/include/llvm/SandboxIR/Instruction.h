@@ -1744,11 +1744,12 @@ public:
 
 class CatchSwitchInst
     : public SingleLLVMInstructionImpl<llvm::CatchSwitchInst> {
-public:
   CatchSwitchInst(llvm::CatchSwitchInst *CSI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::CatchSwitch, Opcode::CatchSwitch,
                                   CSI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
                                  unsigned NumHandlers, InsertPosition Pos,
                                  Context &Ctx, const Twine &Name = "");
@@ -1833,10 +1834,11 @@ public:
 };
 
 class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
-public:
   ResumeInst(llvm::ResumeInst *CSI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Resume, Opcode::Resume, CSI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static ResumeInst *create(Value *Exn, InsertPosition Pos, Context &Ctx);
   Value *getValue() const;
   unsigned getNumSuccessors() const {
@@ -1848,10 +1850,11 @@ public:
 };
 
 class SwitchInst : public SingleLLVMInstructionImpl<llvm::SwitchInst> {
-public:
   SwitchInst(llvm::SwitchInst *SI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Switch, Opcode::Switch, SI, Ctx) {}
+  friend class Context; // For accessing the constructor in create*()
 
+public:
   static constexpr const unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
@@ -2508,13 +2511,6 @@ public:
   WRAP_STATIC_PREDICATE(isOrdered);
   WRAP_STATIC_PREDICATE(isUnordered);
 
-  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-    return llvm::CmpInst::isImpliedTrueByMatchingCmp(Pred1, Pred2);
-  }
-  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
-    return llvm::CmpInst::isImpliedFalseByMatchingCmp(Pred1, Pred2);
-  }
-
   /// Method for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ICmp ||
@@ -2550,6 +2546,11 @@ public:
   WRAP_STATIC_PREDICATE(isLT);
   WRAP_STATIC_PREDICATE(isGE);
   WRAP_STATIC_PREDICATE(isLE);
+
+  static std::optional<bool> isImpliedByMatchingCmp(CmpPredicate Pred1,
+                                                    CmpPredicate Pred2) {
+    return llvm::ICmpInst::isImpliedByMatchingCmp(Pred1, Pred2);
+  }
 
   static auto predicates() { return llvm::ICmpInst::predicates(); }
   static bool compare(const APInt &LHS, const APInt &RHS,

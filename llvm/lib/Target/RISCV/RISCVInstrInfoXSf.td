@@ -238,7 +238,6 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
@@ -251,7 +250,6 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -265,7 +263,6 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
@@ -278,7 +275,6 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -292,7 +288,6 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -307,7 +302,6 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasSEWOp = 1;
   let hasSideEffects = 0;
   let Constraints = "$rd = $rs3";
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,

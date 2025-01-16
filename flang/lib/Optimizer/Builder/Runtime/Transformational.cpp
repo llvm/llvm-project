@@ -25,7 +25,7 @@ struct ForcedBesselJn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -42,7 +42,7 @@ struct ForcedBesselJn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -91,7 +91,7 @@ struct ForcedBesselYn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -108,7 +108,7 @@ struct ForcedBesselYn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -372,9 +372,12 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
   auto arrBEleTy = mlir::cast<fir::SequenceType>(arrBTy).getElementType();
   auto [bCat, bKind] = fir::mlirTypeToCategoryKind(loc, arrBEleTy);
 
+// Unsigned is treated as Integer when both operands are unsigned/integer
 #define MATMUL_INSTANCE(ACAT, AKIND, BCAT, BKIND)                              \
-  if (!func && aCat == TypeCategory::ACAT && aKind == AKIND &&                 \
-      bCat == TypeCategory::BCAT && bKind == BKIND) {                          \
+  if (!func && aKind == AKIND && bKind == BKIND &&                             \
+      ((aCat == TypeCategory::ACAT && bCat == TypeCategory::BCAT) ||           \
+       ((aCat == TypeCategory::Integer || aCat == TypeCategory::Unsigned) &&   \
+        (bCat == TypeCategory::Integer || bCat == TypeCategory::Unsigned)))) { \
     func =                                                                     \
         fir::runtime::getRuntimeFunc<ForcedMatmul##ACAT##AKIND##BCAT##BKIND>(  \
             loc, builder);                                                     \

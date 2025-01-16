@@ -1430,11 +1430,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
       llvm_unreachable("not possible");
     case Module::Error: {
       // Emit an error if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2))
-        return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting values in '" +
-                         SrcM->getModuleIdentifier() + "' and '" +
-                         DstM.getModuleIdentifier() + "'");
+      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
+        std::string Str;
+        raw_string_ostream(Str)
+            << "linking module flags '" << ID->getString()
+            << "': IDs have conflicting values: '" << *SrcOp->getOperand(2)
+            << "' from " << SrcM->getModuleIdentifier() << ", and '"
+            << *DstOp->getOperand(2) << "' from " + DstM.getModuleIdentifier();
+        return stringErr(Str);
+      }
       continue;
     }
     case Module::Warning: {
@@ -1558,10 +1562,6 @@ Error IRLinker::run() {
   bool EnableDLWarning = true;
   bool EnableTripleWarning = true;
   if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
-    std::string ModuleId = SrcM->getModuleIdentifier();
-    StringRef FileName = llvm::sys::path::filename(ModuleId);
-    bool SrcIsLibDevice =
-        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
@@ -1572,8 +1572,8 @@ Error IRLinker::run() {
                                   SrcTriple.getOSName() == "gpulibs") ||
                                  (SrcTriple.getVendorName() == "unknown" &&
                                   SrcTriple.getOSName() == "unknown");
-    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
-    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+    EnableTripleWarning = !SrcHasLibDeviceTriple;
+    EnableDLWarning = !(SrcHasLibDeviceTriple && SrcHasLibDeviceDL);
   }
 
   if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {

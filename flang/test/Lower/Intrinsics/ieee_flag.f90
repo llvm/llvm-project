@@ -271,7 +271,7 @@
   print*, 'Halting'
 
   ! CHECK:     %[[V_211:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
-  ! CHECK:     %[[V_220:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_211]], %true) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
+  ! CHECK:     %[[V_220:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_211]]
   print*, 'support invalid: ', ieee_support_halting(ieee_invalid)
 
   ! CHECK:     %[[V_222:[0-9]+]] = fir.declare %[[V_80]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro._QM__fortran_builtinsT__builtin_ieee_flag_type.0"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>

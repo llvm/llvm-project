@@ -23,14 +23,12 @@
 // Variadic functions may be implemented as templates with a parameter pack instead
 // of C-style variadic functions.
 //
-// TODO: I think __uselocale() is not necessary if we refactor a bit.
 // TODO: __localeconv shouldn't take a reference, but the Windows implementation doesn't allow copying __locale_t
 //
 // Locale management
 // -----------------
 // namespace __locale {
 //  using __locale_t = implementation-defined;
-//  __locale_t  __uselocale(__locale_t);
 //  __locale_t  __newlocale(int, const char*, __locale_t);
 //  void        __freelocale(__locale_t);
 //  lconv*      __localeconv(__locale_t&);
@@ -58,6 +56,7 @@
 //  int     __strcoll(const char*, const char*, __locale_t);
 //  size_t  __strxfrm(char*, const char*, size_t, __locale_t);
 //
+//  int     __iswctype(wint_t, wctype_t, __locale_t);
 //  int     __iswspace(wint_t, __locale_t);
 //  int     __iswprint(wint_t, __locale_t);
 //  int     __iswcntrl(wint_t, __locale_t);
@@ -98,31 +97,27 @@
 #  include <__locale_dir/support/apple.h>
 #elif defined(__FreeBSD__)
 #  include <__locale_dir/support/freebsd.h>
+#elif defined(_LIBCPP_MSVCRT_LIKE)
+#  include <__locale_dir/support/windows.h>
+#elif defined(__Fuchsia__)
+#  include <__locale_dir/support/fuchsia.h>
 #else
 
 // TODO: This is a temporary definition to bridge between the old way we defined the locale base API
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#  if defined(_LIBCPP_MSVCRT_LIKE)
-#    include <__locale_dir/locale_base_api/win32.h>
-#  elif defined(_AIX) || defined(__MVS__)
+#  if defined(_AIX) || defined(__MVS__)
 #    include <__locale_dir/locale_base_api/ibm.h>
 #  elif defined(__ANDROID__)
 #    include <__locale_dir/locale_base_api/android.h>
 #  elif defined(__OpenBSD__)
 #    include <__locale_dir/locale_base_api/openbsd.h>
-#  elif defined(__Fuchsia__)
-#    include <__locale_dir/locale_base_api/fuchsia.h>
 #  elif defined(__wasi__) || _LIBCPP_HAS_MUSL_LIBC
 #    include <__locale_dir/locale_base_api/musl.h>
 #  endif
 
-#  ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#    include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
-#  else
-#    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
-#  endif
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 
 #  include <__cstddef/size_t.h>
 #  include <__utility/forward.h>
@@ -137,11 +132,7 @@ namespace __locale {
 //
 // Locale management
 //
-using __locale_t = locale_t;
-
-#  ifndef _LIBCPP_MSVCRT_LIKE
-inline _LIBCPP_HIDE_FROM_ABI __locale_t __uselocale(__locale_t __loc) { return uselocale(__loc); }
-#  endif
+using __locale_t _LIBCPP_NODEBUG = locale_t;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __name, __locale_t __loc) {
   return newlocale(__category_mask, __name, __loc);
@@ -197,6 +188,9 @@ inline _LIBCPP_HIDE_FROM_ABI int __wcscoll(const wchar_t* __s1, const wchar_t* _
 }
 inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __src, size_t __n, __locale_t __loc) {
   return wcsxfrm_l(__dest, __src, __n, __loc);
+}
+inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __ch, wctype_t __type, __locale_t __loc) {
+  return iswctype_l(__ch, __type, __loc);
 }
 inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __ch, __locale_t __loc) { return iswspace_l(__ch, __loc); }
 inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __ch, __locale_t __loc) { return iswprint_l(__ch, __loc); }

@@ -102,7 +102,8 @@ bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
   return GetBaseSymbolFile().ParseVendorDWARFOpcode(op, opcodes, offset, stack);
 }
 
-SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARFDwo::GetDIEToType() {
   return GetBaseSymbolFile().GetDIEToType();
 }
 

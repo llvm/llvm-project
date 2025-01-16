@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_READABLE_TRAITS_H
-#define _LIBCPP___ITERATOR_READABLE_TRAITS_H
+#ifndef _LIBCPP___CXX03___ITERATOR_READABLE_TRAITS_H
+#define _LIBCPP___CXX03___ITERATOR_READABLE_TRAITS_H
 
 #include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__config>
@@ -78,4 +78,4 @@ struct indirectly_readable_traits<_Tp> : __cond_value_type<typename _Tp::value_t
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_READABLE_TRAITS_H
+#endif // _LIBCPP___CXX03___ITERATOR_READABLE_TRAITS_H

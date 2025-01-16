@@ -140,6 +140,17 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   let hasVerifier = 1;
 }
 
+def cuf_SyncDescriptorOp : cuf_Op<"sync_descriptor", []> {
+  let summary =
+      "Synchronize the host and device descriptor of a Fortran pointer";
+
+  let arguments = (ins SymbolRefAttr:$globalName);
+
+  let assemblyFormat = [{
+    $globalName attr-dict
+  }];
+}
+
 def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   let summary = "Represent a data transfer between host and device memory";
 
@@ -211,7 +222,8 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     }
 
     void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+      (*this)->setAttr(getCalleeAttrName(),
+                       llvm::cast<mlir::SymbolRefAttr>(callee));
     }
     mlir::FunctionType getFunctionType();
 
@@ -321,6 +333,18 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
     mlir::StringAttr getKernelName();
     mlir::StringAttr getKernelModuleName();
   }];
+}
+
+def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
+  let summary = "Get the device address from a host symbol";
+
+  let arguments = (ins SymbolRefAttr:$hostSymbol);
+
+  let assemblyFormat = [{
+    $hostSymbol attr-dict `->` type($addr)
+  }];
+
+  let results = (outs fir_ReferenceType:$addr);
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

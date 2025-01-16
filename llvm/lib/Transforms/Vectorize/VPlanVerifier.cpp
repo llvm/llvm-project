@@ -26,6 +26,7 @@ using namespace llvm;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
+  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -58,7 +59,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -134,53 +136,43 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
     }
     return true;
   };
-  for (const VPUser *U : EVL.users()) {
-    if (!TypeSwitch<const VPUser *, bool>(U)
-             .Case<VPWidenIntrinsicRecipe>(
-                 [&](const VPWidenIntrinsicRecipe *S) {
-                   return VerifyEVLUse(*S, S->getNumOperands() - 1);
-                 })
-             .Case<VPWidenStoreEVLRecipe>([&](const VPWidenStoreEVLRecipe *S) {
-               return VerifyEVLUse(*S, 2);
-             })
-             .Case<VPWidenLoadEVLRecipe>([&](const VPWidenLoadEVLRecipe *L) {
-               return VerifyEVLUse(*L, 1);
-             })
-             .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
-               return VerifyEVLUse(
-                   *W, Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
-             })
-             .Case<VPReductionEVLRecipe>([&](const VPReductionEVLRecipe *R) {
-               return VerifyEVLUse(*R, 2);
-             })
-             .Case<VPScalarCastRecipe>(
-                 [&](const VPScalarCastRecipe *S) { return true; })
-             .Case<VPInstruction>([&](const VPInstruction *I) {
-               if (I->getOpcode() != Instruction::Add) {
-                 errs()
-                     << "EVL is used as an operand in non-VPInstruction::Add\n";
-                 return false;
-               }
-               if (I->getNumUsers() != 1) {
-                 errs() << "EVL is used in VPInstruction:Add with multiple "
-                           "users\n";
-                 return false;
-               }
-               if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-                 errs() << "Result of VPInstruction::Add with EVL operand is "
-                           "not used by VPEVLBasedIVPHIRecipe\n";
-                 return false;
-               }
-               return true;
-             })
-             .Default([&](const VPUser *U) {
-               errs() << "EVL has unexpected user\n";
-               return false;
-             })) {
-      return false;
-    }
-  }
-  return true;
+  return all_of(EVL.users(), [&VerifyEVLUse](VPUser *U) {
+    return TypeSwitch<const VPUser *, bool>(U)
+        .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
+          return VerifyEVLUse(*S, S->getNumOperands() - 1);
+        })
+        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
+            [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
+        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
+            [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
+        .Case<VPWidenEVLRecipe>([&](const VPWidenEVLRecipe *W) {
+          return VerifyEVLUse(*W,
+                              Instruction::isUnaryOp(W->getOpcode()) ? 1 : 2);
+        })
+        .Case<VPScalarCastRecipe>(
+            [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
+        .Case<VPInstruction>([&](const VPInstruction *I) {
+          if (I->getOpcode() != Instruction::Add) {
+            errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
+            return false;
+          }
+          if (I->getNumUsers() != 1) {
+            errs() << "EVL is used in VPInstruction:Add with multiple "
+                      "users\n";
+            return false;
+          }
+          if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+            errs() << "Result of VPInstruction::Add with EVL operand is "
+                      "not used by VPEVLBasedIVPHIRecipe\n";
+            return false;
+          }
+          return true;
+        })
+        .Default([&](const VPUser *U) {
+          errs() << "EVL has unexpected user\n";
+          return false;
+        });
+  });
 }
 
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
@@ -195,7 +187,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     RecipeNumbering[&R] = Cnt++;
 
   for (const VPRecipeBase &R : *VPBB) {
-    if (isa<VPIRInstruction>(&R) ^ isa<VPIRBasicBlock>(VPBB)) {
+    if (isa<VPIRInstruction>(&R) && !isa<VPIRBasicBlock>(VPBB)) {
       errs() << "VPIRInstructions ";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       R.dump();
@@ -205,6 +197,14 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
       return false;
     }
     for (const VPValue *V : R.definedValues()) {
+      // Verify that we can infer a scalar type for each defined value. With
+      // assertions enabled, inferScalarType will perform some consistency
+      // checks during type inference.
+      if (!TypeInfo.inferScalarType(V)) {
+        errs() << "Failed to infer scalar type!\n";
+        return false;
+      }
+
       for (const VPUser *U : V->users()) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         // TODO: check dominance of incoming values for phis properly.
@@ -416,6 +416,8 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
-  VPlanVerifier Verifier(VPDT);
+  VPTypeAnalysis TypeInfo(
+      const_cast<VPlan &>(Plan).getCanonicalIV()->getScalarType());
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

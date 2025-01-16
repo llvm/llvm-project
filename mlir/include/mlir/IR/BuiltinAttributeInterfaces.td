@@ -35,6 +35,24 @@ def TypedAttrInterface : AttrInterface<"TypedAttr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BlobAttrInterface
+//===----------------------------------------------------------------------===//
+
+def BlobAttrInterface : AttrInterface<"BlobAttr"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This interface allows an attribute to expose a blob of data without more
+    information. The data must be stored so that it can be accessed as a
+    contiguous ArrayRef.
+  }];
+
+  let methods = [InterfaceMethod<
+    "Get the attribute's data",
+    "::llvm::ArrayRef<char>", "getData"
+  >];
+}
+
+//===----------------------------------------------------------------------===//
 // ElementsAttrInterface
 //===----------------------------------------------------------------------===//
 

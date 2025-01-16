@@ -1,0 +1,98 @@
+## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced by non-control flow instructions.
+## It invokes BOLT twice first testing CFG path, and second when functions have to be disassembled.
+
+# REQUIRES: system-linux, asserts
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt --no-threads %t.exe --icf -debug-only=bolt-icf \
+# RUN:        -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf \
+# RUN:        -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf \
+# RUN:        --skip-funcs=helper1Func,main -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECKNOCFG %s
+
+# ICFCHECK:      ICF iteration 1
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
+# ICFCHECK-NEXT: folding barSubFunc into fooSubFunc
+
+# SAFEICFCHECK: skipping function with reference taken barAddFunc
+# SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: folding barSubFunc into fooSubFunc
+# SAFEICFCHECK-NEXT: ===---------
+
+# SAFEICFCHECKNOCFG: skipping function with reference taken barAddFunc
+# SAFEICFCHECKNOCFG-NEXT: ICF iteration 1
+# SAFEICFCHECKNOCFG-NEXT: folding barSubFunc into fooSubFunc
+# SAFEICFCHECKNOCFG-NEXT: ===---------
+
+## clang++ -c main.cpp -o main.o
+## extern int FooVar;
+## extern int BarVar;
+## [[clang::noinline]]
+## int fooSub(int a, int b) {
+##   return a - b;
+## }
+## [[clang::noinline]]
+## int barSub(int a, int b) {
+##   return a - b;
+## }
+## [[clang::noinline]]
+## int fooAdd(int a, int b) {
+##   return a + b;
+## }
+## [[clang::noinline]]
+## int barAdd(int a, int b) {
+##   return a + b;
+## }
+## int main(int argc, char **argv) {
+##   int temp = helper1(barAdd, FooVar, BarVar) +
+##              fooSub(FooVar, BarVar) +
+##              barSub(FooVar, BarVar) + fooAdd(FooVar, BarVar);
+##   return temp;
+## }
+	.globl	fooSubFunc
+	.type	fooSubFunc,@function
+fooSubFunc:
+	subl	-8(%rbp), %eax
+	retq
+	.size	fooSubFunc, .-fooSubFunc
+
+	.globl	barSubFunc
+	.type	barSubFunc,@function
+barSubFunc:
+	subl	-8(%rbp), %eax
+	retq
+	.size	barSubFunc, .-barSubFunc
+
+	.globl	fooAddFunc
+	.type	fooAddFunc,@function
+fooAddFunc:
+	addl	-8(%rbp), %eax
+	retq
+	.size	fooAddFunc, .-fooAddFunc
+
+	.globl	barAddFunc
+	.type	barAddFunc,@function
+barAddFunc:
+	addl	-8(%rbp), %eax
+	retq
+	.size	barAddFunc, .-barAddFunc
+
+	.globl	helper1Func
+	.type	helper1Func,@function
+helper1Func:
+	leaq	barAddFunc(%rip), %rax
+	cmpq	%rax, -16(%rbp)
+	retq
+	.size	helper1Func, .-helper1Func
+
+	.globl	main
+	.type	main,@function
+main:
+	leaq	barAddFunc(%rip), %rdi
+	callq	helper1Func
+	callq	fooSubFunc
+	callq	barSubFunc
+	callq	fooAddFunc
+	retq
+	.size	main, .-main

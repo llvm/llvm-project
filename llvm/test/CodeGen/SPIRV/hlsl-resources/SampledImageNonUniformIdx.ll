@@ -32,13 +32,13 @@ define void @main() #0 {
 ; CHECK: [[ac0]] = OpAccessChain [[BufferPtrType]] [[Var]] [[Zero]]
 ; CHECK: [[ld0]] = OpLoad [[BufferType]] [[ac0]]
   %buffer0 = call target("spirv.Image", i32, 0, 2, 0, 0, 1, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_1_24(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_1_24(
           i32 3, i32 4, i32 3, i32 0, i1 true)
 
 ; CHECK: [[ac1:%[0-9]+]] = OpAccessChain [[BufferPtrType]] [[Var]] [[One]]
 ; CHECK: [[ld1]] = OpLoad [[BufferType]] [[ac1]]
   %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 1, 24)
-      @llvm.spv.handle.fromBinding.tspirv.Image_f32_0_2_0_0_1_24(
+      @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_1_24(
           i32 3, i32 4, i32 3, i32 1, i1 true)
   ret void
 }

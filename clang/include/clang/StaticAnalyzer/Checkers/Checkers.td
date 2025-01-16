@@ -206,7 +206,12 @@ def CallAndMessageChecker : Checker<"CallAndMessage">,
   Documentation<HasDocumentation>,
   Dependencies<[CallAndMessageModeling]>;
 
-def DereferenceChecker : Checker<"NullDereference">,
+def DereferenceModeling : Checker<"DereferenceModeling">,
+  HelpText<"General support for dereference related checkers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
   CheckerOptions<[
     CmdLineOption<Boolean,
@@ -215,7 +220,8 @@ def DereferenceChecker : Checker<"NullDereference">,
                   "true",
                   Released>
   ]>,
-  Documentation<HasDocumentation>;
+  Documentation<HasDocumentation>,
+  Dependencies<[DereferenceModeling]>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -273,10 +279,6 @@ def CastToStructChecker : Checker<"CastToStruct">,
 
 def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
-  Documentation<HasDocumentation>;
-
-def IdenticalExprChecker : Checker<"IdenticalExpr">,
-  HelpText<"Warn about unintended use of identical expressions in operators">,
   Documentation<HasDocumentation>;
 
 def FixedAddressChecker : Checker<"FixedAddr">,
@@ -457,6 +459,12 @@ def CStringModeling : Checker<"CStringModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def CStringNotNullTerm : Checker<"NotNullTerminated">,
+  HelpText<"Check for arguments passed to C string functions which are not "
+           "null-terminated strings">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 def CStringNullArg : Checker<"NullArg">,
   HelpText<"Check for null pointers being passed as arguments to C string "
            "functions">,
@@ -480,11 +488,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringNotNullTerm : Checker<"NotNullTerminated">,
-  HelpText<"Check for arguments which are not null-terminating strings">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
@@ -598,13 +601,13 @@ def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   Documentation<HasDocumentation>;
 
-} // end "unix"
-
-let ParentPackage = UnixAlpha in {
-
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
   Documentation<HasDocumentation>;
+
+} // end "unix"
+
+let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
@@ -1751,6 +1754,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 } // end webkit
 
 let ParentPackage = WebKitAlpha in {
+
+def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
+  HelpText<"Check for memory unsafe casts from base type to derived type.">,
+  Documentation<HasDocumentation>;
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,

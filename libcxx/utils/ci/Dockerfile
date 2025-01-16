@@ -160,7 +160,7 @@ EOF
 RUN <<EOF
     # Install a recent CMake
     set -e
-    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+    wget https://github.com/Kitware/CMake/releases/download/v3.24.4/cmake-3.24.4-linux-x86_64.sh -O /tmp/install-cmake.sh
     sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
     rm /tmp/install-cmake.sh
 EOF

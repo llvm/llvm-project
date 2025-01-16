@@ -671,7 +671,7 @@ const StringInit *StringInit::get(RecordKeeper &RK, StringRef V,
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
   auto &InitMap = Fmt == SF_String ? RKImpl.StringInitStringPool
                                    : RKImpl.StringInitCodePool;
-  auto &Entry = *InitMap.insert(std::make_pair(V, nullptr)).first;
+  auto &Entry = *InitMap.try_emplace(V, nullptr).first;
   if (!Entry.second)
     Entry.second = new (RKImpl.Allocator) StringInit(RK, Entry.getKey(), Fmt);
   return Entry.second;
@@ -917,6 +917,13 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
+  case INITIALIZED:
+    if (isa<UnsetInit>(LHS))
+      return IntInit::get(RK, 0);
+    if (LHS->isConcrete())
+      return IntInit::get(RK, 1);
+    break;
+
   case NOT:
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK))))
@@ -1051,6 +1058,9 @@ std::string UnOpInit::getAsString() const {
     break;
   case TOUPPER:
     Result = "!toupper";
+    break;
+  case INITIALIZED:
+    Result = "!initialized";
     break;
   }
   return Result + "(" + LHS->getAsString() + ")";
@@ -1664,7 +1674,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
     else
       NewArg = ItemApply(LHS, Arg, RHS, CurRec);
 
-    NewArgs.push_back(std::make_pair(NewArg, ArgName));
+    NewArgs.emplace_back(NewArg, ArgName);
     if (Arg != NewArg)
       Change = true;
   }
@@ -2250,7 +2260,7 @@ const VarInit *VarInit::get(StringRef VN, const RecTy *T) {
 
 const VarInit *VarInit::get(const Init *VN, const RecTy *T) {
   detail::RecordKeeperImpl &RK = T->getRecordKeeper().getImpl();
-  VarInit *&I = RK.TheVarInitPool[std::make_pair(T, VN)];
+  VarInit *&I = RK.TheVarInitPool[{T, VN}];
   if (!I)
     I = new (RK.Allocator) VarInit(VN, T);
   return I;
@@ -2275,7 +2285,7 @@ const Init *VarInit::resolveReferences(Resolver &R) const {
 
 const VarBitInit *VarBitInit::get(const TypedInit *T, unsigned B) {
   detail::RecordKeeperImpl &RK = T->getRecordKeeper().getImpl();
-  VarBitInit *&I = RK.TheVarBitInitPool[std::make_pair(T, B)];
+  VarBitInit *&I = RK.TheVarBitInitPool[{T, B}];
   if (!I)
     I = new (RK.Allocator) VarBitInit(T, B);
   return I;
@@ -2451,7 +2461,7 @@ std::string VarDefInit::getAsString() const {
 
 const FieldInit *FieldInit::get(const Init *R, const StringInit *FN) {
   detail::RecordKeeperImpl &RK = R->getRecordKeeper().getImpl();
-  FieldInit *&I = RK.TheFieldInitPool[std::make_pair(R, FN)];
+  FieldInit *&I = RK.TheFieldInitPool[{R, FN}];
   if (!I)
     I = new (RK.Allocator) FieldInit(R, FN);
   return I;

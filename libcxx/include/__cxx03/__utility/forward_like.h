@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_FORWARD_LIKE_H
-#define _LIBCPP___UTILITY_FORWARD_LIKE_H
+#ifndef _LIBCPP___CXX03___UTILITY_FORWARD_LIKE_H
+#define _LIBCPP___CXX03___UTILITY_FORWARD_LIKE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -43,4 +43,4 @@ forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept -> _ForwardLike<_Tp, _Up
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_FORWARD_LIKE_H
+#endif // _LIBCPP___CXX03___UTILITY_FORWARD_LIKE_H

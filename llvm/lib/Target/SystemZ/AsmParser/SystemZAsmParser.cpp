@@ -1148,9 +1148,10 @@ ParseStatus SystemZAsmParser::parseAddress(OperandVector &Operands,
     if (HaveReg1) {
       if (parseAddressRegister(Reg1))
         return ParseStatus::Failure;
-      // If the are two registers, the first one is the index and the
-      // second is the base.
-      if (HaveReg2)
+      // If there are two registers, the first one is the index and the
+      // second is the base.  If there is only a single register, it is
+      // used as base with GAS and as index with HLASM.
+      if (HaveReg2 || isParsingHLASM())
         Index = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
       else
         Base = Reg1.Num == 0 ? 0 : Regs[Reg1.Num];
