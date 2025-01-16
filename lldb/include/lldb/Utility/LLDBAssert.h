@@ -29,8 +29,8 @@
 #endif
 
 namespace lldb_private {
-void lldb_assert(bool expression, const char *expr_text, const char *func,
-                 const char *file, unsigned int line);
+void _lldb_assert(bool expression, const char *expr_text, const char *func,
+                  const char *file, unsigned int line);
 
 typedef void (*LLDBAssertCallback)(llvm::StringRef message,
                                    llvm::StringRef backtrace,
