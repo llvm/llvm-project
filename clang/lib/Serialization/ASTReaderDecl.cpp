@@ -3173,7 +3173,6 @@ void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
       Attrs.push_back(A);
 }
 
-
 /// Reads one attribute from the current stream position, advancing Idx.
 /// For some attributes (where type depends on itself recursively), defer
 /// reading the attribute until the type has been read.
