@@ -8,7 +8,7 @@ define <16 x i8> @scalar_to_16xi8(i8 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <16 x i8> undef, i8 %val, i32 0
+  %ret = insertelement <16 x i8> poison, i8 %val, i32 0
   ret <16 x i8> %ret
 }
 
@@ -17,7 +17,7 @@ define <8 x i16> @scalar_to_8xi16(i16 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <8 x i16> undef, i16 %val, i32 0
+  %ret = insertelement <8 x i16> poison, i16 %val, i32 0
   ret <8 x i16> %ret
 }
 
@@ -26,7 +26,7 @@ define <4 x i32> @scalar_to_4xi32(i32 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <4 x i32> undef, i32 %val, i32 0
+  %ret = insertelement <4 x i32> poison, i32 %val, i32 0
   ret <4 x i32> %ret
 }
 
@@ -35,7 +35,7 @@ define <2 x i64> @scalar_to_2xi64(i64 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <2 x i64> undef, i64 %val, i32 0
+  %ret = insertelement <2 x i64> poison, i64 %val, i32 0
   ret <2 x i64> %ret
 }
 
@@ -45,7 +45,7 @@ define <4 x float> @scalar_to_4xf32(float %val) {
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <4 x float> undef, float %val, i32 0
+  %ret = insertelement <4 x float> poison, float %val, i32 0
   ret <4 x float> %ret
 }
 
@@ -55,6 +55,6 @@ define <2 x double> @scalar_to_2xf64(double %val) {
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
-  %ret = insertelement <2 x double> undef, double %val, i32 0
+  %ret = insertelement <2 x double> poison, double %val, i32 0
   ret <2 x double> %ret
 }
