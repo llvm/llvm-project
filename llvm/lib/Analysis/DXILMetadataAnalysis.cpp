@@ -15,9 +15,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <memory>
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
 
@@ -30,7 +28,6 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
   MMDAI.ShaderProfile = TT.getEnvironment();
-
   NamedMDNode *ValidatorVerNode = M.getNamedMetadata("dx.valver");
   if (ValidatorVerNode) {
     auto *ValVerMD = cast<MDNode>(ValidatorVerNode->getOperand(0));
