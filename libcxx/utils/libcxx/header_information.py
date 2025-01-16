@@ -207,6 +207,7 @@ lit_header_restrictions = {
     "experimental/iterator": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
+    "experimental/stacktrace": "// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
     "experimental/utility": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
