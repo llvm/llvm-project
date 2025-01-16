@@ -126,11 +126,11 @@ static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
   // first comment to be part of the trailing comment.
   const unsigned Column = SM.getPresumedColumnNumber(Loc);
   std::optional<Token> Tok =
-      Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments*/ true);
+      Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
   while (Tok && Tok->is(tok::comment) &&
          SM.getPresumedColumnNumber(Tok->getLocation()) > Column) {
     Loc = Tok->getEndLoc();
-    Tok = Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments*/ true);
+    Tok = Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
   }
   return Loc;
 }
