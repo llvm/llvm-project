@@ -48,7 +48,25 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AliasScopeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute id, AliasScopeDomainAttr domain,
+                       StringAttr description) {
+  (void)domain;
+  (void)description;
+  if (!llvm::isa<StringAttr, DistinctAttr>(id))
+    return emitError()
+           << "id of an alias scope must be a StringAttr or a DistrinctAttr";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -232,7 +250,7 @@ DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
   return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
-                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {}, {});
+                               {}, {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -288,12 +306,32 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context,
+                               llvm::ArrayRef<StringRef> features) {
+  return Base::getChecked(emitError, context,
+                          llvm::map_to_vector(features, [&](StringRef feature) {
+                            return StringAttr::get(context, feature);
+                          }));
+}
+
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
   return get(context, features);
+}
+
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context, StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  ArrayRef featuresRef(features);
+  return getChecked(emitError, context, featuresRef);
 }
 
 LogicalResult

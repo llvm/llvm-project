@@ -22,7 +22,6 @@
 #include <__memory/allocator.h>
 #include <__memory/allocator_destructor.h>
 #include <__memory/allocator_traits.h>
-#include <__memory/builtin_new_allocator.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/aligned_storage.h>
@@ -193,6 +192,13 @@ public:
   }
 };
 
+template <class _Tp>
+struct __deallocating_deleter {
+  _LIBCPP_HIDE_FROM_ABI void operator()(void* __p) const {
+    std::__libcpp_deallocate<_Tp>(static_cast<_Tp*>(__p), __element_count(1));
+  }
+};
+
 template <class _Fp, class _Rp, class... _ArgTypes>
 class __default_alloc_func<_Fp, _Rp(_ArgTypes...)> {
   _Fp __f_;
@@ -212,8 +218,9 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI __default_alloc_func* __clone() const {
-    __builtin_new_allocator::__holder_t __hold = __builtin_new_allocator::__allocate_type<__default_alloc_func>(1);
-    __default_alloc_func* __res                = ::new ((void*)__hold.get()) __default_alloc_func(__f_);
+    using _Self = __default_alloc_func;
+    unique_ptr<_Self, __deallocating_deleter<_Self>> __hold(std::__libcpp_allocate<_Self>(__element_count(1)));
+    _Self* __res = ::new ((void*)__hold.get()) _Self(__f_);
     (void)__hold.release();
     return __res;
   }
@@ -222,7 +229,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__default_alloc_func* __f) {
     __f->destroy();
-    __builtin_new_allocator::__deallocate_type<__default_alloc_func>(__f, 1);
+    std::__libcpp_deallocate<__default_alloc_func>(__f, __element_count(1));
   }
 };
 
@@ -576,7 +583,7 @@ private:
 // Used to choose between perfect forwarding or pass-by-value. Pass-by-value is
 // faster for types that can be passed in registers.
 template <typename _Tp>
-using __fast_forward = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
+using __fast_forward _LIBCPP_NODEBUG = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
 // __policy_invoker calls an instance of __alloc_func held in __policy_storage.
 
@@ -668,8 +675,8 @@ public:
       if (__use_small_storage<_Fun>()) {
         ::new ((void*)&__buf_.__small) _Fun(std::move(__f));
       } else {
-        __builtin_new_allocator::__holder_t __hold = __builtin_new_allocator::__allocate_type<_Fun>(1);
-        __buf_.__large                             = ::new ((void*)__hold.get()) _Fun(std::move(__f));
+        unique_ptr<_Fun, __deallocating_deleter<_Fun>> __hold(std::__libcpp_allocate<_Fun>(__element_count(1)));
+        __buf_.__large = ::new ((void*)__hold.get()) _Fun(std::move(__f));
         (void)__hold.release();
       }
     }
@@ -847,14 +854,14 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
   };
 
   template <class _Fp>
-  using _EnableIfLValueCallable = __enable_if_t<__callable<_Fp&>::value>;
+  using _EnableIfLValueCallable _LIBCPP_NODEBUG = __enable_if_t<__callable<_Fp&>::value>;
 
 public:
   typedef _Rp result_type;
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI function() _NOEXCEPT {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI function(const function&);
   _LIBCPP_HIDE_FROM_ABI function(function&&) _NOEXCEPT;
   template <class _Fp, class = _EnableIfLValueCallable<_Fp>>
