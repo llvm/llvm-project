@@ -19,7 +19,7 @@ target_compile_options(
     -Wno-ctad-maybe-unsupported
     # TODO: define this
     -DSTDERR_FILENO=2
-    -include ${CMAKE_CURRENT_SOURCE_DIR}/support.h
+    -DSNMALLOC_USE_PTHREAD_DESTRUCTORS
     # include_directories does not propagate, use options instead
     -isystem ${COMPILER_RESOURCE_DIR}/include
     -isystem ${LIBC_INCLUDE_DIR}
