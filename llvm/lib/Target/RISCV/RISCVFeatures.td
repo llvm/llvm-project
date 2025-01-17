@@ -1310,6 +1310,14 @@ def HasVendorXqciint
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
 
+def FeatureVendorXqcilo
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcilo
+    : Predicate<"Subtarget->hasVendorXqcilo()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcilo),
+                         "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
