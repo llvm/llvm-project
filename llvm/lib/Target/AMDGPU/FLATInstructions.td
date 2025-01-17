@@ -3816,8 +3816,13 @@ defm CLUSTER_LOAD_ASYNC_TO_LDS_B128   : VGLOBAL_Real_AllAddr_gfx13<0x6f>;
 defm GLOBAL_ATOMIC_ORDERED_ADD_B64    : VGLOBAL_Real_Atomics_gfx13<0x75>;
 defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
-defm GLOBAL_STORE_SGPR_B32            : VFLAT_Real_Base_gfx13<0x88>;
-defm GLOBAL_LOAD_SGPR_B32             : VFLAT_Real_Base_gfx13<0x89>;
+
+// TODO-GFX13: Hide under predicate for now.
+let AssemblerPredicate = HasSGPRVMEM in {
+  defm GLOBAL_STORE_SGPR_B32          : VFLAT_Real_Base_gfx13<0x88>;
+  defm GLOBAL_LOAD_SGPR_B32           : VFLAT_Real_Base_gfx13<0x89>;
+}
+
 defm GLOBAL_LOAD_TR4_B64              : VGLOBAL_Real_AllAddr_gfx13<0x8a>;
 defm GLOBAL_LOAD_TR6_B96              : VGLOBAL_Real_AllAddr_gfx13<0x8b>;
 defm GLOBAL_ATOMIC_ADD_SGPR_U32       : VFLAT_Real_Atomics_gfx13<0x8c>;
