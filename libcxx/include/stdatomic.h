@@ -231,11 +231,12 @@ using std::atomic_store_explicit _LIBCPP_USING_IF_EXISTS;
 using std::atomic_signal_fence _LIBCPP_USING_IF_EXISTS;
 using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
-#  else
+#  elif defined(_LIBCPP_COMPILER_CLANG_BASED)
 
 // Before C++23, we include the next <stdatomic.h> on the path to avoid hijacking
-// the header, since Clang and some platforms have been providing this header for
-// a long time and users rely on it.
+// the header. We do this because Clang has historically shipped a <stdatomic.h>
+// header that would be available in all Standard modes, and we don't want to
+// break that use case.
 #    if __has_include_next(<stdatomic.h>)
 #      include_next <stdatomic.h>
 #    endif
