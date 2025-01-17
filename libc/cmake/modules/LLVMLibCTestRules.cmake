@@ -34,6 +34,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       # Needed because all/most arguments become "unused" when compiling
       # "libc/test/src/__support/fake_heap.s"
       list(APPEND compile_options "-Wno-unused-command-line-argument")
+
+      list(APPEND compile_options "-Wno-missing-field-initializers")
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
