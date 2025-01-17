@@ -311,7 +311,10 @@ ABI configuration.
 ABI options
 -----------
 
-Vendors can use the following ABI options to enable additional hardening checks:
+Vendors can use some ABI options at CMake configuration time (when building libc++
+itself) to enable additional hardening checks. This is done by passing these
+macros as ``-DLIBCXX_ABI_DEFINES="_LIBCPP_ABI_FOO;_LIBCPP_ABI_BAR;etc"`` at
+CMake configuration time. The available options are:
 
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS`` -- changes the iterator type of select
   containers (see below) to a bounded iterator that keeps track of whether it's
@@ -340,6 +343,22 @@ Vendors can use the following ABI options to enable additional hardening checks:
   ``vector<bool>``.
 
   ABI impact: changes the iterator type of ``vector`` (except ``vector<bool>``).
+
+- ``_LIBCPP_ABI_BOUNDED_UNIQUE_PTR`` -- tracks the bounds of the array stored inside
+  a ``std::unique_ptr<T[]>``, allowing it to trap when accessed out-of-bounds. This
+  requires the ``std::unique_ptr`` to be created using an API like ``std::make_unique``
+  or ``std::make_unique_for_overwrite``, otherwise the bounds information is not available
+  to the library.
+
+  ABI impact: changes the layout of ``std::unique_ptr<T[]>``, and the representation
+              of a few library types that use ``std::unique_ptr`` internally, such as
+              the unordered containers.
+
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` -- changes the iterator type of ``std::array`` to a
+  bounded iterator that keeps track of whether it's within the bounds of the container and asserts it
+  on every dereference and when performing iterator arithmetic.
+
+  ABI impact: changes the iterator type of ``std::array``, its size and its layout.
 
 ABI tags
 --------
@@ -391,7 +410,7 @@ Hardened containers status
       - ✅
       - ❌
     * - ``forward_list``
-      - ❌
+      - ✅
       - ❌
     * - ``deque``
       - ✅
@@ -442,7 +461,7 @@ Hardened containers status
       - Partial
       - N/A
     * - ``bitset``
-      - ❌
+      - ✅
       - N/A
 
 Note: for ``vector`` and ``string``, the iterator does not check for

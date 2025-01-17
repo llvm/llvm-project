@@ -39,9 +39,14 @@ add_flang_library(FortranCommon
   Fortran-features.cpp
   default-kinds.cpp
   idioms.cpp
+  LangOptions.cpp
+  OpenMP-utils.cpp
   Version.cpp
   ${version_inc}
 
   LINK_COMPONENTS
   Support
+
+  MLIR_LIBS
+  MLIRIR
 )

@@ -224,6 +224,18 @@ private:
   Instruction *ExactFPMathInst = nullptr;
 };
 
+/// This holds details about a histogram operation -- a load -> update -> store
+/// sequence where each lane in a vector might be updating the same element as
+/// another lane.
+struct HistogramInfo {
+  LoadInst *Load;
+  Instruction *Update;
+  StoreInst *Store;
+
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
+      : Load(Load), Update(Update), Store(Store) {}
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -383,6 +395,11 @@ public:
 
   /// Returns the uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitingBlock() const {
+    if (!HasUncountableEarlyExit) {
+      assert(getUncountableExitingBlocks().empty() &&
+             "Expected no uncountable exiting blocks");
+      return nullptr;
+    }
     assert(getUncountableExitingBlocks().size() == 1 &&
            "Expected only a single uncountable exiting block");
     return getUncountableExitingBlocks()[0];
@@ -405,8 +422,26 @@ public:
   /// has a vectorized variant available.
   bool hasVectorCallVariants() const { return VecCallVariantsFound; }
 
+  /// Returns true if there is at least one function call in the loop which
+  /// returns a struct type and needs to be vectorized.
+  bool hasStructVectorCall() const { return StructVecCallFound; }
+
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+
+  /// Returns a HistogramInfo* for the given instruction if it was determined
+  /// to be part of a load -> update -> store sequence where multiple lanes
+  /// may be working on the same memory address.
+  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+    for (const HistogramInfo &HGram : Histograms)
+      if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
+  /// Returns a list of all known histogram operations in the loop.
+  bool hasHistograms() const { return !Histograms.empty(); }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -471,6 +506,11 @@ private:
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
   bool canVectorizeMemory();
+
+  /// If LAA cannot determine whether all dependences are safe, we may be able
+  /// to further analyse some IndirectUnsafe dependences and if they match a
+  /// certain pattern (like a histogram) then we may still be able to vectorize.
+  bool canVectorizeIndirectUnsafeDependences();
 
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
@@ -593,6 +633,11 @@ private:
   /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
 
+  /// Contains all identified histogram operations, which are sequences of
+  /// load -> update -> store instructions where multiple lanes in a vector
+  /// may work on the same memory location.
+  SmallVector<HistogramInfo, 1> Histograms;
+
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -602,6 +647,12 @@ private:
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
+
+  /// If we find a call (to be vectorized) that returns a struct type, record
+  /// that so we can bail out until this is supported.
+  /// TODO: Remove this flag once vectorizing calls with struct returns is
+  /// supported.
+  bool StructVecCallFound = false;
 
   /// Indicates whether this loop has an uncountable early exit, i.e. an
   /// uncountable exiting block that is not the latch.

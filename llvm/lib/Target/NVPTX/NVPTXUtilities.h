@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -84,6 +85,19 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 bool Isv2x16VT(EVT VT);
 
 namespace NVPTX {
+inline std::string getValidPTXIdentifier(StringRef Name) {
+  std::string ValidName;
+  ValidName.reserve(Name.size() + 4);
+  for (char C : Name)
+    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
+    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
+    if (isAlnum(C) || C == '_' || C == '$')
+      ValidName.push_back(C);
+    else
+      ValidName.append({'_', '$', '_'});
+
+  return ValidName;
+}
 
 inline std::string OrderingToString(Ordering Order) {
   switch (Order) {

@@ -46,7 +46,7 @@ module ExternalModule {
 // Symbol graph from the build without extension SGFs should be identical to main symbol graph with extension SGFs
 // RUN: diff %t/symbols/Module.symbols.json %t/ModuleNoExt.symbols.json
 
-// RUN: FileCheck %s --input-file %t/symbols/ExternalModule@Module.symbols.json --check-prefix EXT
+// RUN: FileCheck %s --input-file %t/symbols/Module@ExternalModule.symbols.json --check-prefix EXT
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(py)Property $ c:objc(cs)ExtInterface"
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(im)InstanceMethod $ c:objc(cs)ExtInterface"
 // EXT-DAG: "!testRelLabel": "memberOf $ c:objc(cs)ExtInterface(cm)ClassMethod $ c:objc(cs)ExtInterface"
@@ -55,3 +55,10 @@ module ExternalModule {
 // EXT-DAG: "!testLabel": "c:objc(cs)ExtInterface(cm)ClassMethod"
 // EXT-NOT: "!testLabel": "c:objc(cs)ExtInterface"
 // EXT-NOT: "!testLabel": "c:objc(cs)ModInterface"
+
+// Ensure that the 'module' metadata for the extension symbol graph should still reference the
+// declaring module
+
+// RUN: FileCheck %s --input-file %t/symbols/Module@ExternalModule.symbols.json --check-prefix META
+// META:       "module": {
+// META-NEXT:    "name": "Module",

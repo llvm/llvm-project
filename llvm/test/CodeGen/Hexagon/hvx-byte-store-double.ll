@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mattr=+hvxv60,+hvx-length128b < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mattr=+hvxv60,+hvx-length128b < %s | FileCheck %s
 
 ; Test that we generate code for the vector byte enable store intrinsics.
 

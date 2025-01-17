@@ -111,7 +111,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
       *Req.Limit *= 5;
   }
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(
-      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
+      Req.Limit.value_or(std::numeric_limits<size_t>::max()));
   FuzzyMatcher Filter(Req.Query);
 
   Index->fuzzyFind(Req, [HintPath, &Top, &Filter, AnyScope = Req.AnyScope,

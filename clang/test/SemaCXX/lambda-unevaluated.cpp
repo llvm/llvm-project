@@ -70,21 +70,23 @@ void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 namespace GH51416 {
 
 template <class T>
-struct A {
+struct A { // #defined-here-A
   void spam(decltype([] {}));
 };
 
 template <class T>
 void A<T>::spam(decltype([] {})) // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-A{{defined here}}
 {}
 
-struct B {
+struct B { // #defined-here-B
   template <class T>
   void spam(decltype([] {}));
 };
 
 template <class T>
 void B::spam(decltype([] {})) {} // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@#defined-here-B{{defined here}}
 
 } // namespace GH51416
 

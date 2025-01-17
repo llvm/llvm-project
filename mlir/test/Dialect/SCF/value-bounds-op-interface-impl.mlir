@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for(
@@ -102,6 +102,42 @@ func.func @scf_for_swapping_yield(%t1: tensor<?xf32>, %t2: tensor<?xf32>, %a: in
   // expected-error @below{{could not reify bound}}
   %reify1 = "test.reify_bound"(%r1) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
   "test.some_use"(%reify1) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_forall(
+//  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
+//       CHECK:   "test.some_use"(%[[a]], %[[b]])
+func.func @scf_forall(%a: index, %b: index, %c: index) {
+  scf.forall (%iv) = (%a) to (%b) step (%c) {
+    %0 = "test.reify_bound"(%iv) {type = "LB"} : (index) -> (index)
+    %1 = "test.reify_bound"(%iv) {type = "UB"} : (index) -> (index)
+    "test.some_use"(%0, %1) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_forall_tensor_result(
+//  CHECK-SAME:     %[[size:.*]]: index, %[[a:.*]]: index, %[[b:.*]]: index, %[[c:.*]]: index
+//       CHECK:   "test.some_use"(%[[size]])
+//       CHECK:   "test.some_use"(%[[size]])
+func.func @scf_forall_tensor_result(%size: index, %a: index, %b: index, %c: index) {
+  %cst = arith.constant 5.0 : f32
+  %empty = tensor.empty(%size) : tensor<?xf32>
+  %0 = scf.forall (%iv) = (%a) to (%b) step (%c) shared_outs(%arg = %empty) -> tensor<?xf32> {
+    %filled = linalg.fill ins(%cst : f32) outs(%arg : tensor<?xf32>) -> tensor<?xf32>
+    %1 = "test.reify_bound"(%arg) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+    "test.some_use"(%1) : (index) -> ()
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %filled into %arg[0][%size][1] : tensor<?xf32> into tensor<?xf32>
+    }
+  }
+  %2 = "test.reify_bound"(%0) {type = "EQ", dim = 0} : (tensor<?xf32>) -> (index)
+  "test.some_use"(%2) : (index) -> ()
   return
 }
 

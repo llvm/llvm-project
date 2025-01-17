@@ -343,30 +343,32 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   }
 }
 
-lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                                     bool &error) const {
-  error = false;
+llvm::Expected<lldb::addr_t>
+DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
 
     if (op == DW_OP_addr)
       return m_data.GetAddress(&offset);
+
     if (op == DW_OP_GNU_addr_index || op == DW_OP_addrx) {
-      uint64_t index = m_data.GetULEB128(&offset);
+      const uint64_t index = m_data.GetULEB128(&offset);
       if (dwarf_cu)
         return dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      error = true;
-      break;
+      return llvm::createStringError("cannot evaluate %s without a DWARF unit",
+                                     DW_OP_value_to_name(op));
     }
+
     const lldb::offset_t op_arg_size =
         GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
-    if (op_arg_size == LLDB_INVALID_OFFSET) {
-      error = true;
-      break;
-    }
+    if (op_arg_size == LLDB_INVALID_OFFSET)
+      return llvm::createStringError("cannot get opcode data size for %s",
+                                     DW_OP_value_to_name(op));
+
     offset += op_arg_size;
   }
+
   return LLDB_INVALID_ADDRESS;
 }
 
@@ -860,10 +862,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   // TODO: Implement a real typed stack, and store the genericness of the value
   // there.
   auto to_generic = [&](auto v) {
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
     bool is_signed = std::is_signed<decltype(v)>::value;
-    return Scalar(llvm::APSInt(
-        llvm::APInt(8 * opcodes.GetAddressByteSize(), v, is_signed),
-        !is_signed));
+    return Scalar(llvm::APSInt(llvm::APInt(8 * opcodes.GetAddressByteSize(), v,
+                                           is_signed, /*implicitTrunc=*/true),
+                               !is_signed));
   };
 
   // The default kind is a memory location. This is updated by any
@@ -1780,14 +1784,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (exe_ctx) {
         if (frame) {
           Scalar value;
-          Status fb_err;
-          if (frame->GetFrameBaseValue(value, &fb_err)) {
-            int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
-            value += fbreg_offset;
-            stack.push_back(value);
-            stack.back().SetValueType(Value::ValueType::LoadAddress);
-          } else
-            return fb_err.ToError();
+          if (llvm::Error err = frame->GetFrameBaseValue(value))
+            return err;
+          int64_t fbreg_offset = opcodes.GetSLEB128(&offset);
+          value += fbreg_offset;
+          stack.push_back(value);
+          stack.back().SetValueType(Value::ValueType::LoadAddress);
         } else {
           return llvm::createStringError(
               "invalid stack frame in context for DW_OP_fbreg opcode");
@@ -1853,12 +1855,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           const Value::ValueType curr_piece_source_value_type =
               curr_piece_source_value.GetValueType();
           Scalar &scalar = curr_piece_source_value.GetScalar();
-          const lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+          lldb::addr_t addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
           switch (curr_piece_source_value_type) {
           case Value::ValueType::Invalid:
             return llvm::createStringError("invalid value type");
-          case Value::ValueType::LoadAddress:
-          case Value::ValueType::FileAddress: {
+          case Value::ValueType::FileAddress:
+            if (target) {
+              curr_piece_source_value.ConvertToLoadAddress(module_sp.get(),
+                                                           target);
+              addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
+            } else {
+              return llvm::createStringError(
+                  "unable to convert file address 0x%" PRIx64
+                  " to load address "
+                  "for DW_OP_piece(%" PRIu64 "): "
+                  "no target available",
+                  addr, piece_byte_size);
+            }
+            [[fallthrough]];
+          case Value::ValueType::LoadAddress: {
             if (target) {
               if (curr_piece.ResizeData(piece_byte_size) == piece_byte_size) {
                 if (target->ReadMemory(addr, curr_piece.GetBuffer().GetBytes(),

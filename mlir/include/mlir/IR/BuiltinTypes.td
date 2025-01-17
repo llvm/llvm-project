@@ -79,8 +79,12 @@ def Builtin_Complex : Builtin_Type<"Complex", "complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name, string mnemonic>
-    : Builtin_Type<name, mnemonic, /*traits=*/[], "::mlir::FloatType"> {
+class Builtin_FloatType<string name, string mnemonic,
+                        list<string> declaredInterfaceMethods = []>
+    : Builtin_Type<name, mnemonic, /*traits=*/[
+        DeclareTypeInterfaceMethods<
+            FloatTypeInterface,
+            ["getFloatSemantics"] # declaredInterfaceMethods>]> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -297,16 +301,41 @@ def Builtin_Float6E3M2FN : Builtin_FloatType<"Float6E3M2FN", "f6E3M2FN"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E8M0FNUType
+
+def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
+  let summary = "8-bit floating point with 8-bit exponent, no mantissa or sign";
+  let description = [{
+    An 8-bit floating point type with no sign bit, 8 bits exponent and no
+    mantissa. This is not a standard type as defined by IEEE-754; it is intended
+    to be used for representing scaling factors, so it cannot represent zeros
+    and negative numbers. The values it can represent are powers of two in the
+    range [-127,127] and NaN.
+
+      * bit encoding: S0E8M0
+      * exponent bias: 127
+      * infinities: Not supported
+      * NaNs: Supported with all bits set to 1
+      * denormals: Not supported
+
+    Open Compute Project (OCP) microscaling formats (MX) specification:
+    https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 
-def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16"> {
+def Builtin_BFloat16 : Builtin_FloatType<"BFloat16", "bf16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "bfloat16 floating-point type";
 }
 
 //===----------------------------------------------------------------------===//
 // Float16Type
 
-def Builtin_Float16 : Builtin_FloatType<"Float16", "f16"> {
+def Builtin_Float16 : Builtin_FloatType<"Float16", "f16",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "16-bit floating-point type";
 }
 
@@ -320,7 +349,8 @@ def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32", "tf32"> {
 //===----------------------------------------------------------------------===//
 // Float32Type
 
-def Builtin_Float32 : Builtin_FloatType<"Float32", "f32"> {
+def Builtin_Float32 : Builtin_FloatType<"Float32", "f32",
+    /*declaredInterfaceMethods=*/["scaleElementBitwidth"]> {
   let summary = "32-bit floating-point type";
 }
 
@@ -1253,7 +1283,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
     }
 
     /// Get the number of scalable dimensions.
-    int64_t getNumScalableDims() const {
+    size_t getNumScalableDims() const {
       return llvm::count(getScalableDims(), true);
     }
 

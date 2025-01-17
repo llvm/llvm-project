@@ -15,19 +15,14 @@
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 
@@ -173,7 +168,7 @@ void UnrollState::unrollWidenInductionByUF(
   auto *ConstStep = ScalarStep->isLiveIn()
                         ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
                         : nullptr;
-  if (!ConstStep || ConstStep->getZExtValue() != 1) {
+  if (!ConstStep || ConstStep->getValue() != 1) {
     if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
       ScalarStep =
           Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
@@ -264,24 +259,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-    VPValue *Op0, *Op1;
-    if (match(VPI, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                       m_VPValue(Op0), m_VPValue(Op1)))) {
-      VPI->setOperand(1, getValueForPart(Op1, UF - 1));
-      addUniformForAllParts(VPI);
-      if (Plan.hasScalarVFOnly()) {
-        // Extracting from end with VF = 1 implies retrieving the scalar part UF
-        // - Op1.
-        unsigned Offset =
-            cast<ConstantInt>(Op1->getLiveInIRValue())->getZExtValue();
-        VPI->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
-      } else {
-        // Otherwise we extract from the last part.
-        remapOperands(VPI, UF - 1);
-      }
-      return;
-    }
-
     if (vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
@@ -320,12 +297,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
       auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
       if (Phi->isOrdered()) {
-        auto Ins = VPV2Parts.insert({Phi, {}});
+        auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
-          Ins.first->second.clear();
-          Ins.first->second.push_back(Red);
+          Parts.clear();
+          Parts.push_back(Red);
         }
-        Ins.first->second.push_back(Copy->getVPSingleValue());
+        Parts.push_back(Copy->getVPSingleValue());
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
@@ -334,12 +311,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -435,8 +412,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
 
   UnrollState Unroller(Plan, UF, Ctx);
 
-  Unroller.unrollBlock(Plan.getPreheader());
-
   // Iterate over all blocks in the plan starting from Entry, and unroll
   // recipes inside them. This includes the vector preheader and middle blocks,
   // which may set up or post-process per-part values.
@@ -465,12 +440,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
     }
     Unroller.remapOperands(&H, Part);
     Part++;
-  }
-
-  // Remap the operand of live-outs to the last part.
-  for (const auto &[_, LO] : Plan.getLiveOuts()) {
-    VPValue *In = Unroller.getValueForPart(LO->getOperand(0), UF - 1);
-    LO->setOperand(0, In);
   }
 
   VPlanTransforms::removeDeadRecipes(Plan);

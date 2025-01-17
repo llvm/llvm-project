@@ -10,10 +10,15 @@ config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_libs_dir = lit_config.substitute("@LLDB_LIBS_DIR@")
 config.lldb_tools_dir = lit_config.substitute("@LLDB_TOOLS_DIR@")
+config.lldb_platform_url = lit_config.substitute("@LLDB_TEST_PLATFORM_URL@")
+config.lldb_platform_working_dir = lit_config.substitute("@LLDB_TEST_PLATFORM_WORKING_DIR@")
 # Since it comes from the command line, it may have backslashes which
 # should not need to be escaped.
 config.lldb_lit_tools_dir = lit_config.substitute(r"@LLDB_LIT_TOOLS_DIR@")
-config.cmake_sysroot = lit_config.substitute("@CMAKE_SYSROOT@")
+config.cmake_sysroot = lit_config.substitute("@LLDB_TEST_SYSROOT@" or "@DEFAULT_SYSROOT@")
+config.has_libcxx = @LLDB_HAS_LIBCXX@
+config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
+config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@

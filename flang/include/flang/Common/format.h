@@ -10,7 +10,7 @@
 #define FORTRAN_COMMON_FORMAT_H_
 
 #include "enum-set.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
 #include <cstring>
 
 // Define a FormatValidator class template to validate a format expression
@@ -136,7 +136,7 @@ private:
 
   const CHAR *cursor_{}; // current location in format_
   const CHAR *laCursor_{}; // lookahead cursor
-  TokenKind previousTokenKind_{TokenKind::None};
+  Token previousToken_{};
   Token token_{}; // current token
   Token knrToken_{}; // k, n, or r UnsignedInteger token
   Token scaleFactorToken_{}; // most recent scale factor token P
@@ -193,7 +193,7 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   // At entry, cursor_ points before the start of the next token.
   // At exit, cursor_ points to last CHAR of token_.
 
-  previousTokenKind_ = token_.kind();
+  previousToken_ = token_;
   CHAR c{NextChar()};
   token_.set_kind(TokenKind::None);
   token_.set_offset(cursor_ - format_);
@@ -431,7 +431,7 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
     }
     SetLength();
     if (stmt_ == IoStmtKind::Read &&
-        previousTokenKind_ != TokenKind::DT) { // 13.3.2p6
+        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
       ReportError("String edit descriptor in READ format expression");
     } else if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
@@ -463,10 +463,13 @@ template <typename CHAR> void FormatValidator<CHAR>::check_r(bool allowed) {
 template <typename CHAR> bool FormatValidator<CHAR>::check_w() {
   if (token_.kind() == TokenKind::UnsignedInteger) {
     wValue_ = integerValue_;
-    if (wValue_ == 0 &&
-        (*argString_ == 'A' || *argString_ == 'L' ||
-            stmt_ == IoStmtKind::Read)) { // C1306, 13.7.2.1p6
-      ReportError("'%s' edit descriptor 'w' value must be positive");
+    if (wValue_ == 0) {
+      if (*argString_ == 'A' || stmt_ == IoStmtKind::Read) {
+        // C1306, 13.7.2.1p6
+        ReportError("'%s' edit descriptor 'w' value must be positive");
+      } else if (*argString_ == 'L') {
+        ReportWarning("'%s' edit descriptor 'w' value should be positive");
+      }
     }
     NextToken();
     return true;
@@ -887,8 +890,10 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
       // Possible first token of the next format item; token not yet processed.
       if (commaRequired) {
         const char *s{"Expected ',' or ')' in format expression"}; // C1302
-        if (previousTokenKind_ == TokenKind::UnsignedInteger &&
+        if (previousToken_.kind() == TokenKind::UnsignedInteger &&
+            previousToken_.length() > 1 &&
             itemsWithLeadingInts_.test(token_.kind())) {
+          // F10.32F10.3 is ambiguous, F10.3F10.3 is not
           ReportError(s);
         } else {
           ReportWarning(s);

@@ -16,7 +16,7 @@
 unsigned _BitInt(1) GlobSize1 = 0;
 // CHECK: @GlobSize1 = {{.*}}global i8 0
 
-// CHECK64: @__const.foo.A = private unnamed_addr constant { i32, [4 x i8], <{ i8, [23 x i8] }> } { i32 1, [4 x i8] undef, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
+// CHECK64: @__const.foo.A = private unnamed_addr constant { i32, [4 x i8], <{ i8, [23 x i8] }> } { i32 1, [4 x i8] zeroinitializer, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
 // @BigGlob = global [40 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
 // CHECK64: @f.p = internal global <{ i8, i8, [22 x i8] }> <{ i8 16, i8 39, [22 x i8] zeroinitializer }>, align 8
 
@@ -91,8 +91,8 @@ int foo(int a) {
   // CHECK64: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 2
   // WIN32: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 2
   // LIN32: %B2 = getelementptr inbounds nuw %struct.S1, ptr %B, i32 0, i32 1
-  // CHECK: %0 = load i32, ptr %a.addr, align 4
-  // CHECK: %conv = sext i32 %0 to i129
+  // CHECK: %[[V1:.+]] = load i32, ptr %a.addr, align 4
+  // CHECK: %conv = sext i32 %[[V1]] to i129
   // CHECK64: storedv = sext i129 %conv to i192
   // WIN32: storedv = sext i129 %conv to i192
   // LIN32: storedv = sext i129 %conv to i160
@@ -102,12 +102,12 @@ int foo(int a) {
   // CHECK64: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 2
   // WIN32: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 2
   // LIN32: %B3 = getelementptr inbounds nuw %struct.S1, ptr %A, i32 0, i32 1
-  // CHECK64: %1 = load i192, ptr %B3, align 8
-  // WIN32: %1 = load i192, ptr %B3, align 8
-  // LIN32: %1 = load i160, ptr %B3, align 4
-  // CHECK64: %loadedv = trunc i192 %1 to i129
-  // WIN32: %loadedv = trunc i192 %1 to i129
-  // LIN32: %loadedv = trunc i160 %1 to i129
+  // CHECK64: %[[V2:.+]] = load i192, ptr %B3, align 8
+  // WIN32: %[[V2:.+]] = load i192, ptr %B3, align 8
+  // LIN32: %[[V2:.+]] = load i160, ptr %B3, align 4
+  // CHECK64: %loadedv = trunc i192 %[[V2]] to i129
+  // WIN32: %loadedv = trunc i192 %[[V2]] to i129
+  // LIN32: %loadedv = trunc i160 %[[V2]] to i129
   // CHECK: %conv4 = trunc i129 %loadedv to i32
   struct S1 A = {1, 170};
   struct S1 B = {1, a};

@@ -131,7 +131,7 @@ subroutine test_array_comp(t1, t2)
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_ptr_comp(
-! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>{{.*}}, %[[VAL_1]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>{{.*}}) {
+! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>{{.*}}, %[[VAL_1]]: !fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>{{.*}}) {
 subroutine test_ptr_comp(t1, t2)
   type t
      complex, pointer :: ptr(:)
@@ -139,16 +139,16 @@ subroutine test_ptr_comp(t1, t2)
   end type t
   type(t) :: t1, t2
 
-  ! CHECK:  %[[VAL_2:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_6:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
-  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_2:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  ! CHECK:  %[[VAL_6:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_9]] to %[[VAL_8]] : !fir.ref<i32>
   t1 = t2
@@ -170,7 +170,7 @@ subroutine test_box_assign(t1, t2)
   ! CHECK: fir.store %[[t1Load]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Load]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   t1 = t2
 end subroutine
 
@@ -190,7 +190,7 @@ subroutine test_alloc_comp(t1, t2)
   ! CHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   t1 = t2
 end subroutine
 
@@ -230,7 +230,7 @@ end subroutine
 !    ! cHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>
 !    ! cHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
 !    ! cHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>) -> !fir.box<none>
-!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 !    t1 = t2
 !  end subroutine
 !end module

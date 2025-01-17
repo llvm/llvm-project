@@ -22,7 +22,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -679,8 +678,8 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
   // kernel, values like allocas and shared memory are not accessible. We
   // implicitly check for this situation to avoid costly lookups.
   if (GoBackwardsCB && &ToFn != FromI.getFunction() &&
-      !GoBackwardsCB(*FromI.getFunction()) && ToFn.hasFnAttribute("kernel") &&
-      FromI.getFunction()->hasFnAttribute("kernel")) {
+      !GoBackwardsCB(*FromI.getFunction()) && A.getInfoCache().isKernel(ToFn) &&
+      A.getInfoCache().isKernel(*FromI.getFunction())) {
     LLVM_DEBUG(dbgs() << "[AA] assume kernel cannot be reached from within the "
                          "module; success\n";);
     return false;
@@ -3192,6 +3191,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
   // initialize the cache eagerly which would look the same to the users.
   Function &F = const_cast<Function &>(CF);
 
+  FI.IsKernel = F.hasFnAttribute("kernel");
+
   // Walk all instructions to find interesting instructions that might be
   // queried by abstract attributes during their initialization or update.
   // This has to happen before we create attributes.
@@ -3292,6 +3293,12 @@ const ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;
+}
+
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,

@@ -14,11 +14,11 @@ struct S s[]; // expected-warning {{tentative array definition}} expected-note {
 void f1(void) {
   ++s[3].a;
   ++s[7073650413200313099].b;
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
   // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
   // addr64-warning@-3 {{array index 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
   ++s[7073650].c;
-  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
 }
 
 long long ll[]; // expected-warning {{tentative array definition}} expected-note {{declared here}} addr16-note {{declared here}} addr32-note {{declared here}}
@@ -37,21 +37,21 @@ void f2(void) {
 void f3(struct S p[]) { // expected-note {{declared here}} addr16-note {{declared here}}
   ++p[3].a;
   ++p[7073650413200313099].b;
-  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
   // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
   // addr64-warning@-3 {{array index 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
   ++p[7073650].c;
-  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{array index 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
 }
 
 void f4(struct S *p) { // expected-note {{declared here}} addr16-note {{declared here}}
   p += 3;
   p += 7073650413200313099;
-  // addr16-warning@-1 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
   // addr32-warning@-2 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 192-bit (24-byte) elements (max possible 178956970 elements)}}
   // addr64-warning@-3 {{the pointer incremented by 7073650413200313099 refers past the last possible element for an array in 64-bit address space containing 256-bit (32-byte) elements (max possible 576460752303423488 elements)}}
   p += 7073650;
-  // addr16-warning@-1 {{the pointer incremented by 7073650 refers past the last possible element for an array in 16-bit address space containing 160-bit (20-byte) elements (max possible 3276 elements)}}
+  // addr16-warning@-1 {{the pointer incremented by 7073650 refers past the last possible element for an array in 16-bit address space containing 152-bit (19-byte) elements (max possible 3449 elements)}}
 }
 
 struct BQ {
@@ -63,7 +63,7 @@ struct BQ bq[]; // expected-warning {{tentative array definition}} addr16-note {
 void f5(void) {
   ++bq[0].bigblock[0].a;
   ++bq[1].bigblock[0].a;
-  // addr16-warning@-1 {{array index 1 refers past the last possible element for an array in 16-bit address space containing 524160-bit (65520-byte) elements (max possible 1 element)}}
+  // addr16-warning@-1 {{array index 1 refers past the last possible element for an array in 16-bit address space containing 497952-bit (62244-byte) elements (max possible 1 element)}}
 }
 
 void f6(void) {

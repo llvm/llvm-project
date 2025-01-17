@@ -83,13 +83,13 @@ define void @elts_from_consecutive_loads(ptr %arg, ptr %arg12, ptr %arg13, float
 ; ALL-LABEL: elts_from_consecutive_loads:
 ; ALL:       # %bb.0: # %bb
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    .p2align 4, 0x90
+; ALL-NEXT:    .p2align 4
 ; ALL-NEXT:  .LBB3_1: # %bb16
 ; ALL-NEXT:    # =>This Loop Header: Depth=1
 ; ALL-NEXT:    # Child Loop BB3_2 Depth 2
 ; ALL-NEXT:    testb $1, %cl
 ; ALL-NEXT:    je .LBB3_1
-; ALL-NEXT:    .p2align 4, 0x90
+; ALL-NEXT:    .p2align 4
 ; ALL-NEXT:  .LBB3_2: # %bb17
 ; ALL-NEXT:    # Parent Loop BB3_1 Depth=1
 ; ALL-NEXT:    # => This Inner Loop Header: Depth=2

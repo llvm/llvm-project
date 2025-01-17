@@ -3423,6 +3423,7 @@ TEST(APIntTest, ZeroWidth) {
   EXPECT_EQ(0U, ZW.getBitWidth());
   EXPECT_EQ(0U, APInt(0, ArrayRef<uint64_t>({0, 1, 2})).getBitWidth());
   EXPECT_EQ(0U, APInt(0, "0", 10).getBitWidth());
+  EXPECT_EQ(0U, APInt::getAllOnes(0).getBitWidth());
 
   // Default constructor is single bit wide.
   EXPECT_EQ(1U, APInt().getBitWidth());

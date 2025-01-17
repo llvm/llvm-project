@@ -18,6 +18,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -46,7 +47,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iterator>
 
 #define DEBUG_TYPE "aarch64-call-lowering"
 
@@ -165,7 +165,7 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    markPhysRegUsed(PhysReg);
+    markRegUsed(PhysReg);
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
@@ -207,16 +207,16 @@ struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
+  virtual void markRegUsed(Register Reg) = 0;
 };
 
 struct FormalArgHandler : public IncomingArgHandler {
   FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
       : IncomingArgHandler(MIRBuilder, MRI) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {
-    MIRBuilder.getMRI()->addLiveIn(PhysReg);
-    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  void markRegUsed(Register Reg) override {
+    MIRBuilder.getMRI()->addLiveIn(Reg.asMCReg());
+    MIRBuilder.getMBB().addLiveIn(Reg.asMCReg());
   }
 };
 
@@ -225,8 +225,8 @@ struct CallReturnHandler : public IncomingArgHandler {
                     MachineInstrBuilder MIB)
       : IncomingArgHandler(MIRBuilder, MRI), MIB(MIB) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {
-    MIB.addDef(PhysReg, RegState::Implicit);
+  void markRegUsed(Register Reg) override {
+    MIB.addDef(Reg, RegState::Implicit);
   }
 
   MachineInstrBuilder MIB;
@@ -239,7 +239,7 @@ struct ReturnedArgCallReturnHandler : public CallReturnHandler {
                                MachineInstrBuilder MIB)
       : CallReturnHandler(MIRBuilder, MRI, MIB) {}
 
-  void markPhysRegUsed(MCRegister PhysReg) override {}
+  void markRegUsed(Register Reg) override {}
 };
 
 struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
@@ -393,8 +393,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       // i1 is a special case because SDAG i1 true is naturally zero extended
       // when widened using ANYEXT. We need to do it explicitly here.
       auto &Flags = CurArgInfo.Flags[0];
-      if (MRI.getType(CurVReg).getSizeInBits() == 1 && !Flags.isSExt() &&
-          !Flags.isZExt()) {
+      if (MRI.getType(CurVReg).getSizeInBits() == TypeSize::getFixed(1) &&
+          !Flags.isSExt() && !Flags.isZExt()) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {

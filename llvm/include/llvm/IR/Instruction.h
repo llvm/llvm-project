@@ -278,6 +278,7 @@ public:
   bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
+  bool isFPDivRem() const { return isFPDivRem(getOpcode()); }
   bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
@@ -302,6 +303,10 @@ public:
 
   static inline bool isIntDivRem(unsigned Opcode) {
     return Opcode == UDiv || Opcode == SDiv || Opcode == URem || Opcode == SRem;
+  }
+
+  static inline bool isFPDivRem(unsigned Opcode) {
+    return Opcode == FDiv || Opcode == FRem;
   }
 
   /// Determine if the Opcode is one of the shift instructions.
@@ -361,6 +366,10 @@ public:
 
   /// Return true if this instruction has any metadata attached to it.
   bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+
+  // Return true if this instruction contains loop metadata other than
+  // a debug location
+  bool hasNonDebugLocLoopMetadata() const;
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
@@ -881,16 +890,20 @@ public:
   /// This is like isIdenticalTo, except that it ignores the
   /// SubclassOptionalData flags, which may specify conditions under which the
   /// instruction's result is undefined.
-  bool isIdenticalToWhenDefined(const Instruction *I) const LLVM_READONLY;
+  bool
+  isIdenticalToWhenDefined(const Instruction *I,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// When checking for operation equivalence (using isSameOperationAs) it is
   /// sometimes useful to ignore certain attributes.
   enum OperationEquivalenceFlags {
     /// Check for equivalence ignoring load/store alignment.
-    CompareIgnoringAlignment = 1<<0,
+    CompareIgnoringAlignment = 1 << 0,
     /// Check for equivalence treating a type and a vector of that type
     /// as equivalent.
-    CompareUsingScalarTypes = 1<<1
+    CompareUsingScalarTypes = 1 << 1,
+    /// Check for equivalence with intersected callbase attrs.
+    CompareUsingIntersectedAttrs = 1 << 2,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -911,8 +924,8 @@ public:
   /// @returns true if the specific instruction has the same opcde specific
   /// characteristics as the current one. Determine if one instruction has the
   /// same state as another.
-  bool hasSameSpecialState(const Instruction *I2,
-                           bool IgnoreAlignment = false) const LLVM_READONLY;
+  bool hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their

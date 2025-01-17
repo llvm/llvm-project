@@ -17,6 +17,7 @@
 
 #include "ASTSignals.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Protocol.h"
 #include "Quality.h"
 #include "index/Index.h"
@@ -51,6 +52,11 @@ struct CodeCompleteOptions {
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
+
+  /// Force sema to load decls from preamble even if an index is provided.
+  /// This is helpful for cases the index can't provide symbols, e.g. with
+  /// experimental c++20 modules
+  bool ForceLoadPreamble = false;
 
   /// Combine overloads into a single completion item where possible.
   /// If none, the implementation may choose an appropriate behavior.
@@ -96,16 +102,16 @@ struct CodeCompleteOptions {
   /// '->' on member access etc.
   bool IncludeFixIts = false;
 
-  /// Whether to generate snippets for function arguments on code-completion.
-  /// Needs snippets to be enabled as well.
-  bool EnableFunctionArgSnippets = true;
-
   /// Whether to include index symbols that are not defined in the scopes
   /// visible from the code completion point. This applies in contexts without
   /// explicit scope qualifiers.
   ///
   /// Such completions can insert scope qualifiers.
   bool AllScopes = false;
+
+  /// The way argument list on calls '()' and generics '<>' are handled.
+  Config::ArgumentListsPolicy ArgumentLists =
+      Config::ArgumentListsPolicy::FullPlaceholders;
 
   /// Whether to use the clang parser, or fallback to text-based completion
   /// (using identifiers in the current file and symbol indexes).

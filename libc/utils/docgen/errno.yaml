@@ -1,0 +1,14 @@
+macros:
+  EDOM:
+    c-definition: '7.5'
+    in-latest-posix: ''
+  EILSEQ:
+    c-definition: '7.5'
+    in-latest-posix: ''
+  ERANGE:
+    c-definition: '7.5'
+    in-latest-posix: ''
+  errno:
+    c-definition: '7.5'
+    in-latest-posix: ''
+

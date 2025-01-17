@@ -27,6 +27,33 @@ unsigned clang_isVirtualBase(CXCursor C) {
   return B->isVirtual();
 }
 
+unsigned clang_visitCXXBaseClasses(CXType PT, CXFieldVisitor visitor,
+                                   CXClientData client_data) {
+  CXCursor PC = clang_getTypeDeclaration(PT);
+  if (clang_isInvalid(PC.kind))
+    return false;
+  const CXXRecordDecl *RD =
+      dyn_cast_if_present<CXXRecordDecl>(cxcursor::getCursorDecl(PC));
+  if (!RD || RD->isInvalidDecl())
+    return false;
+  RD = RD->getDefinition();
+  if (!RD || RD->isInvalidDecl())
+    return false;
+
+  for (auto &Base : RD->bases()) {
+    // Callback to the client.
+    switch (
+        visitor(cxcursor::MakeCursorCXXBaseSpecifier(&Base, getCursorTU(PC)),
+                client_data)) {
+    case CXVisit_Break:
+      return true;
+    case CXVisit_Continue:
+      break;
+    }
+  }
+  return true;
+}
+
 enum CX_CXXAccessSpecifier clang_getCXXAccessSpecifier(CXCursor C) {
   AccessSpecifier spec = AS_none;
 
@@ -101,11 +128,11 @@ CXCursor clang_getSpecializedCursorTemplate(CXCursor C) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *> Result
         = ClassSpec->getSpecializedTemplateOrPartial();
-      if (Result.is<ClassTemplateDecl *>())
-        Template = Result.get<ClassTemplateDecl *>();
+      if (isa<ClassTemplateDecl *>(Result))
+        Template = cast<ClassTemplateDecl *>(Result);
       else
-        Template = Result.get<ClassTemplatePartialSpecializationDecl *>();
-      
+        Template = cast<ClassTemplatePartialSpecializationDecl *>(Result);
+
     } else 
       Template = CXXRecord->getInstantiatedFromMemberClass();
   } else if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(D)) {

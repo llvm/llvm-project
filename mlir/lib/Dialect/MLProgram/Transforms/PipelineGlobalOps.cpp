@@ -148,8 +148,9 @@ void MLProgramPipelineGlobals::processBlock(
     if (auto store = mlir::dyn_cast<GlobalStoreOp>(op)) {
       auto ref = store.getGlobal();
       symbolStore.insert(ref);
-      if (previousStores.contains(ref)) {
-        toDelete.push_back(previousStores.find(ref)->getSecond());
+      auto it = previousStores.find(ref);
+      if (it != previousStores.end()) {
+        toDelete.push_back(it->getSecond());
       }
 
       previousLoads[ref] = store.getValue();

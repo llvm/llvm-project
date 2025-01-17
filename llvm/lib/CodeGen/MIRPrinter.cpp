@@ -113,7 +113,8 @@ public:
 
   void print(const MachineFunction &MF);
 
-  void convert(yaml::MachineFunction &MF, const MachineRegisterInfo &RegInfo,
+  void convert(yaml::MachineFunction &YamlMF, const MachineFunction &MF,
+               const MachineRegisterInfo &RegInfo,
                const TargetRegisterInfo *TRI);
   void convert(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                const MachineFrameInfo &MFI);
@@ -132,6 +133,9 @@ public:
   void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    MachineModuleSlotTracker &MST);
+  void convertCalledGlobals(yaml::MachineFunction &YMF,
+                            const MachineFunction &MF,
+                            MachineModuleSlotTracker &MST);
 
 private:
   void initRegisterMaskIds(const MachineFunction &MF);
@@ -207,6 +211,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.HasEHCatchret = MF.hasEHCatchret();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
+  YamlMF.HasFakeUses = MF.hasFakeUses();
   YamlMF.IsOutlined = MF.isOutlined();
   YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 
@@ -230,7 +235,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.NoVRegs = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::NoVRegs);
 
-  convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
+  convert(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker MST(MMI, &MF);
   MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
@@ -266,6 +271,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
   // Convert machine metadata collected during the print of the machine
   // function.
   convertMachineMetadataNodes(YamlMF, MF, MST);
+
+  convertCalledGlobals(YamlMF, MF, MST);
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
@@ -315,10 +322,21 @@ printStackObjectDbgInfo(const MachineFunction::VariableDbgInfo &DebugVar,
   }
 }
 
-void MIRPrinter::convert(yaml::MachineFunction &MF,
+static void printRegFlags(Register Reg,
+                          std::vector<yaml::FlowStringValue> &RegisterFlags,
+                          const MachineFunction &MF,
+                          const TargetRegisterInfo *TRI) {
+  auto FlagValues = TRI->getVRegFlagsOfReg(Reg, MF);
+  for (auto &Flag : FlagValues) {
+    RegisterFlags.push_back(yaml::FlowStringValue(Flag.str()));
+  }
+}
+
+void MIRPrinter::convert(yaml::MachineFunction &YamlMF,
+                         const MachineFunction &MF,
                          const MachineRegisterInfo &RegInfo,
                          const TargetRegisterInfo *TRI) {
-  MF.TracksRegLiveness = RegInfo.tracksLiveness();
+  YamlMF.TracksRegLiveness = RegInfo.tracksLiveness();
 
   // Print the virtual register definitions.
   for (unsigned I = 0, E = RegInfo.getNumVirtRegs(); I < E; ++I) {
@@ -331,7 +349,8 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     Register PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
       printRegMIR(PreferredReg, VReg.PreferredRegister, TRI);
-    MF.VirtualRegisters.push_back(VReg);
+    printRegFlags(Reg, VReg.RegisterFlags, MF, TRI);
+    YamlMF.VirtualRegisters.push_back(std::move(VReg));
   }
 
   // Print the live ins.
@@ -340,7 +359,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     printRegMIR(LI.first, LiveIn.Register, TRI);
     if (LI.second)
       printRegMIR(LI.second, LiveIn.VirtualRegister, TRI);
-    MF.LiveIns.push_back(LiveIn);
+    YamlMF.LiveIns.push_back(std::move(LiveIn));
   }
 
   // Prints the callee saved registers.
@@ -350,9 +369,9 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
     for (const MCPhysReg *I = CalleeSavedRegs; *I; ++I) {
       yaml::FlowStringValue Reg;
       printRegMIR(*I, Reg, TRI);
-      CalleeSavedRegisters.push_back(Reg);
+      CalleeSavedRegisters.push_back(std::move(Reg));
     }
-    MF.CalleeSavedRegisters = CalleeSavedRegisters;
+    YamlMF.CalleeSavedRegisters = std::move(CalleeSavedRegisters);
   }
 }
 
@@ -541,7 +560,7 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   for (auto CSInfo : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
-    yaml::CallSiteInfo::MachineInstrLoc CallLocation;
+    yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
     MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
@@ -580,6 +599,29 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
     YMF.MachineMetadataNodes.push_back(NS);
   }
+}
+
+void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
+                                      const MachineFunction &MF,
+                                      MachineModuleSlotTracker &MST) {
+  for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
+    yaml::MachineInstrLoc CallSite;
+    CallSite.BlockNum = CallInst->getParent()->getNumber();
+    CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
+                                    CallInst->getIterator());
+
+    yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
+                              CG.TargetFlags};
+    YMF.CalledGlobals.push_back(YamlCG);
+  }
+
+  // Sort by position of call instructions.
+  llvm::sort(YMF.CalledGlobals.begin(), YMF.CalledGlobals.end(),
+             [](yaml::CalledGlobal A, yaml::CalledGlobal B) {
+               if (A.CallSite.BlockNum == B.CallSite.BlockNum)
+                 return A.CallSite.Offset < B.CallSite.Offset;
+               return A.CallSite.BlockNum < B.CallSite.BlockNum;
+             });
 }
 
 void MIRPrinter::convert(yaml::MachineFunction &MF,
@@ -823,6 +865,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "disjoint ";
   if (MI.getFlag(MachineInstr::NoUSWrap))
     OS << "nusw ";
+  if (MI.getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

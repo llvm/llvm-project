@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t recv(int sockfd, const void *buf, size_t len, int flags);
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
 

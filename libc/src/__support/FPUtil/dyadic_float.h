@@ -357,7 +357,7 @@ template <size_t Bits> struct DyadicFloat {
     return as<T, /*ShouldSignalExceptions=*/false>();
   }
 
-  LIBC_INLINE explicit constexpr operator MantissaType() const {
+  LIBC_INLINE constexpr MantissaType as_mantissa_type() const {
     if (mantissa.is_zero())
       return 0;
 

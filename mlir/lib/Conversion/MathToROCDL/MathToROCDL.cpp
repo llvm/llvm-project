@@ -36,7 +36,7 @@ using namespace mlir;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 template <typename OpTy>
-static void populateOpPatterns(LLVMTypeConverter &converter,
+static void populateOpPatterns(const LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
                                StringRef f64Func, StringRef f16Func,
                                StringRef f32ApproxFunc = "") {
@@ -45,8 +45,8 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
                                            f32ApproxFunc, f16Func);
 }
 
-void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateMathToROCDLConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // Handled by mathToLLVM: math::AbsIOp
   // Handled by mathToLLVM: math::AbsFOp
   // Handled by mathToLLVM: math::CopySignOp
@@ -57,7 +57,6 @@ void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
   // Handled by mathToLLVM: math::FmaOp
   // Handled by mathToLLVM: math::LogOp (32-bit only)
   // FIXME: math::IPowIOp
-  // FIXME: math::FPowIOp
   // Handled by mathToLLVM: math::RoundEvenOp
   // Handled by mathToLLVM: math::RoundOp
   // Handled by mathToLLVM: math::SqrtOp
@@ -114,6 +113,8 @@ void mlir::populateMathToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                   "__ocml_tan_f64", "__ocml_tan_f16");
   populateOpPatterns<math::ErfOp>(converter, patterns, "__ocml_erf_f32",
                                   "__ocml_erf_f64", "__ocml_erf_f16");
+  populateOpPatterns<math::FPowIOp>(converter, patterns, "__ocml_pown_f32",
+                                    "__ocml_pown_f64", "__ocml_pown_f16");
   // Single arith pattern that needs a ROCDL call, probably not
   // worth creating a separate pass for it.
   populateOpPatterns<arith::RemFOp>(converter, patterns, "__ocml_fmod_f32",

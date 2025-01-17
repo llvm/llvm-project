@@ -298,12 +298,10 @@ DataInitializationCompiler<DSV>::ConvertElement(
   if (context.IsEnabled(common::LanguageFeature::LogicalIntegerAssignment)) {
     if (MaybeExpr converted{evaluate::DataConstantConversionExtension(
             exprAnalyzer_.GetFoldingContext(), type, expr)}) {
-      if (context.ShouldWarn(
-              common::LanguageFeature::LogicalIntegerAssignment)) {
-        context.Say(
-            "nonstandard usage: initialization of %s with %s"_port_en_US,
-            type.AsFortran(), expr.GetType().value().AsFortran());
-      }
+      context.Warn(common::LanguageFeature::LogicalIntegerAssignment,
+          exprAnalyzer_.GetFoldingContext().messages().at(),
+          "nonstandard usage: initialization of %s with %s"_port_en_US,
+          type.AsFortran(), expr.GetType().value().AsFortran());
       return {std::make_pair(std::move(*converted), false)};
     }
   }
@@ -434,16 +432,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // value non-pointer initialization
       if (IsBOZLiteral(*expr) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
-        if (exprAnalyzer_.context().ShouldWarn(
-                common::LanguageFeature::DataStmtExtensions)) {
-          exprAnalyzer_.Say(
-              "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
-              DescribeElement(), designatorType->AsFortran());
-        }
-      } else if (converted->second &&
-          exprAnalyzer_.context().ShouldWarn(
-              common::LanguageFeature::DataStmtExtensions)) {
-        exprAnalyzer_.context().Say(
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
+            "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_port_en_US,
+            DescribeElement(), designatorType->AsFortran());
+      } else if (converted->second) {
+        exprAnalyzer_.Warn(common::LanguageFeature::DataStmtExtensions,
             "DATA statement value initializes '%s' of type '%s' with CHARACTER"_port_en_US,
             DescribeElement(), designatorType->AsFortran());
       }
@@ -462,12 +455,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
       } else if (status == evaluate::InitialImage::LengthMismatch) {
-        if (exprAnalyzer_.context().ShouldWarn(
-                common::UsageWarning::DataLength)) {
-          exprAnalyzer_.Say(
-              "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
-              folded.AsFortran(), DescribeElement());
-        }
+        exprAnalyzer_.Warn(common::UsageWarning::DataLength,
+            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+            folded.AsFortran(), DescribeElement());
         return true;
       } else if (status == evaluate::InitialImage::TooManyElems) {
         exprAnalyzer_.Say("DATA statement has too many elements"_err_en_US);

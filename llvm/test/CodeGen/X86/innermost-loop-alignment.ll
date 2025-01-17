@@ -25,12 +25,12 @@ define void @test(i32 %n, i32 %m) {
 ; DEFAULT-NEXT:    xorl %esi, %esi
 ; DEFAULT-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; DEFAULT-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; DEFAULT-NEXT:    .p2align 4, 0x90
+; DEFAULT-NEXT:    .p2align 4
 ; DEFAULT-NEXT:  .LBB0_1: # %outer
 ; DEFAULT-NEXT:    # =>This Loop Header: Depth=1
 ; DEFAULT-NEXT:    # Child Loop BB0_2 Depth 2
 ; DEFAULT-NEXT:    movl %edi, %ebp
-; DEFAULT-NEXT:    .p2align 4, 0x90
+; DEFAULT-NEXT:    .p2align 4
 ; DEFAULT-NEXT:  .LBB0_2: # %inner
 ; DEFAULT-NEXT:    # Parent Loop BB0_1 Depth=1
 ; DEFAULT-NEXT:    # => This Inner Loop Header: Depth=2
@@ -74,12 +74,12 @@ define void @test(i32 %n, i32 %m) {
 ; ALIGN32-NEXT:    xorl %esi, %esi
 ; ALIGN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; ALIGN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; ALIGN32-NEXT:    .p2align 4, 0x90
+; ALIGN32-NEXT:    .p2align 4
 ; ALIGN32-NEXT:  .LBB0_1: # %outer
 ; ALIGN32-NEXT:    # =>This Loop Header: Depth=1
 ; ALIGN32-NEXT:    # Child Loop BB0_2 Depth 2
 ; ALIGN32-NEXT:    movl %edi, %ebp
-; ALIGN32-NEXT:    .p2align 5, 0x90
+; ALIGN32-NEXT:    .p2align 5
 ; ALIGN32-NEXT:  .LBB0_2: # %inner
 ; ALIGN32-NEXT:    # Parent Loop BB0_1 Depth=1
 ; ALIGN32-NEXT:    # => This Inner Loop Header: Depth=2
@@ -123,12 +123,12 @@ define void @test(i32 %n, i32 %m) {
 ; ALIGN64-NEXT:    xorl %esi, %esi
 ; ALIGN64-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; ALIGN64-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; ALIGN64-NEXT:    .p2align 5, 0x90
+; ALIGN64-NEXT:    .p2align 5
 ; ALIGN64-NEXT:  .LBB0_1: # %outer
 ; ALIGN64-NEXT:    # =>This Loop Header: Depth=1
 ; ALIGN64-NEXT:    # Child Loop BB0_2 Depth 2
 ; ALIGN64-NEXT:    movl %edi, %ebp
-; ALIGN64-NEXT:    .p2align 6, 0x90
+; ALIGN64-NEXT:    .p2align 6
 ; ALIGN64-NEXT:  .LBB0_2: # %inner
 ; ALIGN64-NEXT:    # Parent Loop BB0_1 Depth=1
 ; ALIGN64-NEXT:    # => This Inner Loop Header: Depth=2

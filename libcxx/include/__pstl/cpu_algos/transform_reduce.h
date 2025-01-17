@@ -20,8 +20,6 @@
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
-#include <cstddef>
-#include <new>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

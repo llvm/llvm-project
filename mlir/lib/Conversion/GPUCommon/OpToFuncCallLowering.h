@@ -42,9 +42,9 @@ namespace mlir {
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(LLVMTypeConverter &lowering, StringRef f32Func,
-                                StringRef f64Func, StringRef f32ApproxFunc,
-                                StringRef f16Func)
+  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                StringRef f32Func, StringRef f64Func,
+                                StringRef f32ApproxFunc, StringRef f16Func)
       : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func) {}
 
@@ -57,9 +57,18 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
-                                  SourceOp>::value,
-                  "expected op with same operand and result types");
+    if constexpr (!std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
+                                   SourceOp>::value) {
+      assert(op->getNumOperands() > 0 &&
+             "expected op to take at least one operand");
+      assert(op->getResultTypes().front() == op->getOperand(0).getType() &&
+             "expected op with same operand and result types");
+    }
+
+    if (!op->template getParentOfType<FunctionOpInterface>()) {
+      return rewriter.notifyMatchFailure(
+          op, "expected op to be within a function region");
+    }
 
     SmallVector<Value, 1> castedOperands;
     for (Value operand : adaptor.getOperands())

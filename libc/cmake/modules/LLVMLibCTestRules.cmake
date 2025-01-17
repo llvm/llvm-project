@@ -1,3 +1,80 @@
+function(_get_common_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+
+  set(compile_options
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
+      ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+      ${compile_flags})
+
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
+    list(APPEND compile_options "-fpie")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      list(APPEND compile_options "-DLIBC_FULL_BUILD")
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+      list(APPEND compile_options "-fno-exceptions")
+      list(APPEND compile_options "-fno-unwind-tables")
+      list(APPEND compile_options "-fno-asynchronous-unwind-tables")
+      if(NOT c_test)
+        list(APPEND compile_options "-fno-rtti")
+      endif()
+    endif()
+
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      list(APPEND compile_options "-ffixed-point")
+    endif()
+
+    # list(APPEND compile_options "-Wall")
+    # list(APPEND compile_options "-Wextra")
+    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
+    if(NOT LIBC_WNO_ERROR)
+      # list(APPEND compile_options "-Werror")
+    endif()
+    # list(APPEND compile_options "-Wconversion")
+    # list(APPEND compile_options "-Wno-sign-conversion")
+    # list(APPEND compile_options "-Wimplicit-fallthrough")
+    # list(APPEND compile_options "-Wwrite-strings")
+    # list(APPEND compile_options "-Wextra-semi")
+    # Silence this warning because _Complex is a part of C99.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      if(NOT c_test)
+        list(APPEND compile_options "-fext-numeric-literals")
+      endif()
+    else()
+      list(APPEND compile_options "-Wno-c99-extensions")
+      list(APPEND compile_options "-Wno-gnu-imaginary-constant")
+    endif()
+    list(APPEND compile_options "-Wno-pedantic")
+    # if(NOT CMAKE_COMPILER_IS_GNUCXX)
+    #   list(APPEND compile_options "-Wnewline-eof")
+    #   list(APPEND compile_options "-Wnonportable-system-include-path")
+    #   list(APPEND compile_options "-Wstrict-prototypes")
+    #   list(APPEND compile_options "-Wthread-safety")
+    #   list(APPEND compile_options "-Wglobal-constructors")
+    # endif()
+  endif()
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
+function(_get_hermetic_test_compile_options output_var)
+  _get_common_test_compile_options(compile_options "" "")
+
+  # The GPU build requires overriding the default CMake triple and architecture.
+  if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+    list(APPEND compile_options
+         -Wno-multi-gpu -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+         -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    list(APPEND compile_options
+         "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
+         -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
+         -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
+  endif()
+
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
 # This is a helper function and not a build rule. It is to be used by the
 # various test rules to generate the full list of object files
 # recursively produced by "add_entrypoint_object" and "add_object_library"
@@ -68,6 +145,10 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         endif()
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
+          # TODO: Remove this once we stop suffixing the target with ".__internal__"
+          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
+            string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
+          endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
       elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
@@ -95,7 +176,6 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   set(${skipped_entrypoints_list} ${skipped_list} PARENT_SCOPE)
 
 endfunction(get_object_files_for_test)
-
 
 # Rule to add a libc unittest.
 # Usage
@@ -398,7 +478,7 @@ function(add_integration_test test_name)
   if(NOT INTEGRATION_TEST_SRCS)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
   endif()
-  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
     message(FATAL_ERROR "The 'crt1' target for the integration test is missing.")
   endif()
 
@@ -412,12 +492,12 @@ function(add_integration_test test_name)
       libc.test.IntegrationTest.test
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -472,14 +552,14 @@ function(add_integration_test test_name)
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
-      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
-      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      "-Wl,--suppress-stack-size-warning"
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
+      "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
       "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
@@ -579,13 +659,13 @@ function(add_libc_hermetic test_name)
       libc.startup.${LIBC_TARGET_OS}.crt1
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.bcmp
-      libc.src.string.bzero
+      libc.src.__support.StringUtil.error_to_string
       libc.src.string.memcmp
       libc.src.string.memcpy
       libc.src.string.memmove
       libc.src.string.memset
-      libc.src.__support.StringUtil.error_to_string
+      libc.src.strings.bcmp
+      libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -762,3 +842,33 @@ function(add_libc_test test_name)
     endif()
   endif()
 endfunction(add_libc_test)
+
+# Tests all implementations that can run on the target CPU.
+function(add_libc_multi_impl_test name suite)
+  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
+  foreach(fq_config_name IN LISTS fq_implementations)
+    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
+    cpu_supports(can_run "${required_cpu_features}")
+    if(can_run)
+      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
+      math(EXPR name_loc "${last_dot_loc} + 1")
+      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
+      add_libc_test(
+        ${target_name}_test
+        SUITE
+          ${suite}
+        COMPILE_OPTIONS
+          ${LIBC_COMPILE_OPTIONS_NATIVE}
+        LINK_LIBRARIES
+          LibcMemoryHelpers
+        ${ARGN}
+        DEPENDS
+          ${fq_config_name}
+          libc.src.__support.macros.sanitizer
+      )
+      get_fq_target_name(${fq_config_name}_test fq_target_name)
+    else()
+      message(STATUS "Skipping test for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
+    endif()
+  endforeach()
+endfunction()

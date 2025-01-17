@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
-# RUN: llvm-mc %s -triple riscv64 -mattr=+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple riscv64 -mattr=+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+f < %s \
 # RUN:     | llvm-objdump --mattr=+f -M no-aliases -d -r - \
@@ -164,3 +164,56 @@ target:
 # CHECK-ASM: encoding: [0x13,0x00,0x00,0x00]
 # CHECK-OBJ: addi zero, zero, 0x0
 .insn 0x4, 0x13
+
+# CHECK-ASM: .insn 0x6, 31
+# CHECK-ASM: encoding: [0x1f,0x00,0x00,0x00,0x00,0x00]
+# CHECK-OBJ: <unknown>
+.insn 6, 0x1f
+
+# CHECK-ASM: .insn 0x8, 63
+# CHECK-ASM: encoding: [0x3f,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+# CHECK-OBJ: <unknown>
+.insn 8, 0x3f
+
+# CHECK-ASM: .insn 0x6, 281474976710623
+# CHECK-ASM: encoding: [0xdf,0xff,0xff,0xff,0xff,0xff]
+# CHECK-OBJ: <unknown>
+.insn 0x6, 0xffffffffffdf
+
+# CHECK-ASM: .insn 0x8, -65
+# CHECK-ASM: encoding: [0xbf,0xff,0xff,0xff,0xff,0xff,0xff,0xff]
+# CHECK-OBJ: <unknown>
+.insn 0x8, 0xffffffffffffffbf
+
+# CHECK-ASM: .insn 0x4, 3971
+# CHECK-ASM: encoding: [0x83,0x0f,0x00,0x00]
+# CHECK-OBJ: lb t6, 0x0(zero)
+.insn 0x2 + 0x2, 0x3 | (31 << 7)
+
+# CHECK-ASM: .insn 0x8, -576460752303423297
+# CHECK-ASM: encoding: [0xbf,0x00,0x00,0x00,0x00,0x00,0x00,0xf8]
+# CHECK-OBJ: <unknown>
+.insn 0x4 * 0x2, 0xbf | (31 << 59)
+
+odd_lengths:
+# CHECK-ASM-LABEL: odd_lengths:
+# CHECK-OBJ-LABEL: <odd_lengths>:
+
+## These deliberately disagree with the lengths objdump expects them to have, so
+## keep them at the end so that the disassembled instruction stream is not out
+## of sync with the encoded instruction stream. We don't check for `<unknown>`
+## as we could get any number of those, so instead check for the encoding
+## halfwords. These might be split into odd 16-bit chunks, so each chunk is on
+## one line.
+
+# CHECK-ASM: .insn 0x4, 65503
+# CHECK-ASM: encoding: [0xdf,0xff,0x00,0x00]
+# CHECK-OBJ: ffdf
+# CHECK-OBJ: 0000
+.insn 0xffdf
+
+# CHECK-ASM: .insn 0x4, 65471
+# CHECK-ASM: encoding: [0xbf,0xff,0x00,0x00]
+# CHECK-OBJ: ffbf
+# CHECK-OBJ: 0000
+.insn 0xffbf

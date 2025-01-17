@@ -330,7 +330,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
   for (Operation *op : mappings.direct[opHandle])
     dropMappingEntry(mappings.reverse, op, opHandle);
   mappings.direct.erase(opHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(opHandle);
@@ -342,7 +342,7 @@ void transform::TransformState::forgetMapping(Value opHandle,
     for (Value resultHandle : resultHandles) {
       Mappings &localMappings = getMapping(resultHandle);
       dropMappingEntry(localMappings.values, resultHandle, opResult);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(resultHandle);
@@ -358,7 +358,7 @@ void transform::TransformState::forgetValueMapping(
   for (Value payloadValue : mappings.reverseValues[valueHandle])
     dropMappingEntry(mappings.reverseValues, payloadValue, valueHandle);
   mappings.values.erase(valueHandle);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   // Payload IR is removed from the mapping. This invalidates the respective
   // iterators.
   mappings.incrementTimestamp(valueHandle);
@@ -372,7 +372,7 @@ void transform::TransformState::forgetValueMapping(
       dropMappingEntry(localMappings.direct, opHandle, payloadOp);
       dropMappingEntry(localMappings.reverse, payloadOp, opHandle);
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       localMappings.incrementTimestamp(opHandle);
@@ -452,7 +452,7 @@ transform::TransformState::replacePayloadValue(Value value, Value replacement) {
     // between the handles and the IR objects
     if (!replacement) {
       dropMappingEntry(mappings.values, handle, value);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Payload IR is removed from the mapping. This invalidates the respective
       // iterators.
       mappings.incrementTimestamp(handle);
@@ -804,7 +804,7 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
     Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     if (llvm::find(mappings.direct[handle], nullptr) !=
         mappings.direct[handle].end())
       // Payload IR is removed from the mapping. This invalidates the respective
@@ -1475,19 +1475,19 @@ transform::detail::checkApplyToOne(Operation *transformOp,
     if (ptr.isNull())
       continue;
     if (llvm::isa<TransformHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Operation *>()) {
+        !isa<Operation *>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Operation * for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformParamTypeInterface>(res.getType()) &&
-        !ptr.is<Attribute>()) {
+        !isa<Attribute>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce an Attribute for result #"
                         << res.getResultNumber();
     }
     if (llvm::isa<TransformValueHandleTypeInterface>(res.getType()) &&
-        !ptr.is<Value>()) {
+        !isa<Value>(ptr)) {
       return emitDiag() << "application of " << transformOpName
                         << " expected to produce a Value for result #"
                         << res.getResultNumber();
@@ -1499,7 +1499,7 @@ transform::detail::checkApplyToOne(Operation *transformOp,
 template <typename T>
 static SmallVector<T> castVector(ArrayRef<transform::MappedValue> range) {
   return llvm::to_vector(llvm::map_range(
-      range, [](transform::MappedValue value) { return value.get<T>(); }));
+      range, [](transform::MappedValue value) { return cast<T>(value); }));
 }
 
 void transform::detail::setApplyToOneResults(

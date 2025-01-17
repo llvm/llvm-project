@@ -88,7 +88,7 @@ int GCNMinRegScheduler::getReadySuccessors(const SUnit *SU) const {
   for (auto SDep : SU->Succs) {
     bool wouldBeScheduled = true;
     for (auto PDep : SDep.getSUnit()->Preds) {
-      auto PSU = PDep.getSUnit();
+      auto *PSU = PDep.getSUnit();
       assert(!PSU->isBoundaryNode());
       if (PSU != SU && !isScheduled(PSU)) {
         wouldBeScheduled = false;
@@ -143,7 +143,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     LLVM_DEBUG(dbgs() << "\nSelecting min non-ready producing candidate among "
                       << Num << '\n');
     Num = findMax(Num, [=](const Candidate &C) {
-      auto SU = C.SU;
+      const auto *SU = C.SU;
       int Res = getNotReadySuccessors(SU);
       LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would left non-ready "
                         << Res << " successors, metric = " << -Res << '\n');
@@ -154,7 +154,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
     LLVM_DEBUG(dbgs() << "\nSelecting most producing candidate among " << Num
                       << '\n');
     Num = findMax(Num, [=](const Candidate &C) {
-      auto SU = C.SU;
+      const auto *SU = C.SU;
       auto Res = getReadySuccessors(SU);
       LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ") would make ready " << Res
                         << " successors, metric = " << Res << '\n');
@@ -181,7 +181,7 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
         S.getKind() != SDep::Data)
       continue;
     for (const auto &P : S.getSUnit()->Preds) {
-      auto PSU = P.getSUnit();
+      auto *PSU = P.getSUnit();
       assert(!PSU->isBoundaryNode());
       if (PSU != SchedSU && !isScheduled(PSU)) {
         Set.insert(PSU);
@@ -190,7 +190,7 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
   }
   SmallVector<const SUnit*, 32> Worklist(Set.begin(), Set.end());
   while (!Worklist.empty()) {
-    auto SU = Worklist.pop_back_val();
+    const auto *SU = Worklist.pop_back_val();
     assert(!SU->isBoundaryNode());
     for (const auto &P : SU->Preds) {
       if (!P.getSUnit()->isBoundaryNode() && !isScheduled(P.getSUnit()) &&
@@ -212,7 +212,7 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
 
 void GCNMinRegScheduler::releaseSuccessors(const SUnit* SU, int Priority) {
   for (const auto &S : SU->Succs) {
-    auto SuccSU = S.getSUnit();
+    auto *SuccSU = S.getSUnit();
     if (S.isWeak())
       continue;
     assert(SuccSU->isBoundaryNode() || getNumPreds(SuccSU) > 0);
@@ -246,10 +246,10 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
                << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
                dbgs() << '\n';);
 
-    auto C = pickCandidate();
+    auto *C = pickCandidate();
     assert(C);
     RQ.remove(*C);
-    auto SU = C->SU;
+    const auto *SU = C->SU;
     LLVM_DEBUG(dbgs() << "Selected "; DAG.dumpNode(*SU));
 
     releaseSuccessors(SU, StepNo);

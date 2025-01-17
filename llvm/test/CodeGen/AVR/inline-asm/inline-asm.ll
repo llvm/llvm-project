@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=movw -no-integrated-as | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=movw -no-integrated-as | FileCheck %s
 ; XFAIL: *
 
 ; CHECK-LABEL: no_operands:

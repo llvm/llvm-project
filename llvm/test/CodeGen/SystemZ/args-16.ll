@@ -8,5 +8,7 @@ define i16 @callee_MissingRetAttr() {
   ret i16 -1
 }
 
-; CHECK: Narrow integer argument must have a valid extension type.
+; CHECK: ERROR: Missing extension attribute of returned value from function:
+; CHECK: i16 @callee_MissingRetAttr()
+; CHECK: UNREACHABLE executed
 

@@ -10,6 +10,8 @@
 // This is useful so we can use them  in places that require an expression, such as
 // in a constructor initializer list.
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__assert>
 #include <cassert>
 

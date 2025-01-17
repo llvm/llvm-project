@@ -407,9 +407,11 @@ void MachineRegisterInfo::replaceRegWith(Register FromReg, Register ToReg) {
 MachineInstr *MachineRegisterInfo::getVRegDef(Register Reg) const {
   // Since we are in SSA form, we can use the first definition.
   def_instr_iterator I = def_instr_begin(Reg);
-  assert((I.atEnd() || std::next(I) == def_instr_end()) &&
-         "getVRegDef assumes a single definition or no definition");
-  return !I.atEnd() ? &*I : nullptr;
+  if (I == def_instr_end())
+    return nullptr;
+  assert(std::next(I) == def_instr_end() &&
+         "getVRegDef assumes at most one definition");
+  return &*I;
 }
 
 /// getUniqueVRegDef - Return the unique machine instr that defines the
@@ -635,7 +637,13 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
   if (IsUpdatedCSRsInitialized)
     return UpdatedCSRs.data();
 
-  return getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+  const MCPhysReg *Regs = getTargetRegisterInfo()->getCalleeSavedRegs(MF);
+
+  for (unsigned I = 0; Regs[I]; ++I)
+    if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
+      MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
+
+  return Regs;
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {

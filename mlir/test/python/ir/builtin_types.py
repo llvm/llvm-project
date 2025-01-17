@@ -133,6 +133,8 @@ def testFloatTypeSubclasses():
     # CHECK: True
     print(isinstance(Type.parse("f8E5M2FNUZ", ctx), FloatType))
     # CHECK: True
+    print(isinstance(Type.parse("f8E8M0FNU", ctx), FloatType))
+    # CHECK: True
     print(isinstance(Type.parse("f16", ctx), FloatType))
     # CHECK: True
     print(isinstance(Type.parse("bf16", ctx), FloatType))
@@ -259,6 +261,8 @@ def testFloatType():
         print("float:", Float8E4M3FNUZType.get())
         # CHECK: float: f8E4M3B11FNUZ
         print("float:", Float8E4M3B11FNUZType.get())
+        # CHECK: float: f8E8M0FNU
+        print("float:", Float8E8M0FNUType.get())
         # CHECK: float: bf16
         print("float:", BF16Type.get())
         # CHECK: float: f16
@@ -631,9 +635,11 @@ def testTypeIDs():
             (Float8E4M3FNUZType, Float8E4M3FNUZType.get()),
             (Float8E4M3B11FNUZType, Float8E4M3B11FNUZType.get()),
             (Float8E5M2FNUZType, Float8E5M2FNUZType.get()),
+            (Float8E8M0FNUType, Float8E8M0FNUType.get()),
             (BF16Type, BF16Type.get()),
             (F16Type, F16Type.get()),
             (F32Type, F32Type.get()),
+            (FloatTF32Type, FloatTF32Type.get()),
             (F64Type, F64Type.get()),
             (NoneType, NoneType.get()),
             (ComplexType, ComplexType.get(f32)),
@@ -659,9 +665,11 @@ def testTypeIDs():
         # CHECK: Float8E4M3FNUZType(f8E4M3FNUZ)
         # CHECK: Float8E4M3B11FNUZType(f8E4M3B11FNUZ)
         # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
+        # CHECK: Float8E8M0FNUType(f8E8M0FNU)
         # CHECK: BF16Type(bf16)
         # CHECK: F16Type(f16)
         # CHECK: F32Type(f32)
+        # CHECK: FloatTF32Type(tf32)
         # CHECK: F64Type(f64)
         # CHECK: NoneType(none)
         # CHECK: ComplexType(complex<f32>)
@@ -728,6 +736,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: F32Type
         # CHECK: F32Type(f32)
         print_downcasted(F32Type.get())
+        # CHECK: FloatTF32Type
+        # CHECK: FloatTF32Type(tf32)
+        print_downcasted(FloatTF32Type.get())
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())
@@ -761,6 +772,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: Float8E5M2FNUZType
         # CHECK: Float8E5M2FNUZType(f8E5M2FNUZ)
         print_downcasted(Float8E5M2FNUZType.get())
+        # CHECK: Float8E8M0FNUType
+        # CHECK: Float8E8M0FNUType(f8E8M0FNU)
+        print_downcasted(Float8E8M0FNUType.get())
         # CHECK: BF16Type
         # CHECK: BF16Type(bf16)
         print_downcasted(BF16Type.get())

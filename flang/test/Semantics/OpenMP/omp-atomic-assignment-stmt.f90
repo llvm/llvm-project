@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! Semantic checks for various assignments related to atomic constructs
 
 program sample
@@ -14,6 +14,7 @@ program sample
         integer :: m
     endtype
     type(sample_type) :: z
+    character :: l, r
     !$omp atomic read
         v = x
 
@@ -148,4 +149,14 @@ program sample
         y(1) = y(1) + 1
         x = y(2)
     !$omp end atomic
+
+    !$omp atomic read
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
+        l = r
+
+    !$omp atomic write
+    !ERROR: Expected scalar variable on the LHS of atomic assignment statement
+    !ERROR: Expected scalar expression on the RHS of atomic assignment statement
+        l = r
 end program

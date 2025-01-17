@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling
-; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,bulk-memory
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -wasm-enable-eh -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling,-bulk-memory,-bulk-memory-opt -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
 
 target triple = "wasm32-unknown-unknown"
 
@@ -205,15 +205,63 @@ unreachable:                                      ; preds = %rethrow5
   unreachable
 }
 
-; Nested loop within a catch clause
-; void loop_within_catch() {
+; Nested try-catches within a try
+; void nested_try() {
 ;   try {
-;     foo();
-;   } catch (...) {
-;     for (int i = 0; i < 50; i++)
+;     try {
 ;       foo();
+;     } catch (...) {
+;     }
+;   } catch (...) {
 ;   }
 ; }
+
+; CHECK-LABEL: nested_try:
+; CHECK:   try
+; CHECK:     try
+; CHECK:       call  foo
+; CHECK:     catch
+; CHECK:       call  $drop=, __cxa_begin_catch
+; CHECK:       call  __cxa_end_catch
+; CHECK:     end_try
+; CHECK:     catch
+; CHECK:     call  $drop=, __cxa_begin_catch
+; CHECK:     call  __cxa_end_catch
+; CHECK:   end_try
+define void @nested_try() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  invoke void @foo()
+          to label %try.cont7 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch2
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
+          to label %invoke.cont1 unwind label %catch.dispatch2
+
+catch.dispatch2:                                  ; preds = %catch.start, %catch.dispatch
+  %5 = catchswitch within none [label %catch.start3] unwind to caller
+
+catch.start3:                                     ; preds = %catch.dispatch2
+  %6 = catchpad within %5 [ptr null]
+  %7 = call ptr @llvm.wasm.get.exception(token %6)
+  %8 = call i32 @llvm.wasm.get.ehselector(token %6)
+  %9 = call ptr @__cxa_begin_catch(ptr %7) [ "funclet"(token %6) ]
+  call void @__cxa_end_catch() [ "funclet"(token %6) ]
+  catchret from %6 to label %try.cont7
+
+try.cont7:                                        ; preds = %entry, %invoke.cont1, %catch.start3
+  ret void
+
+invoke.cont1:                                     ; preds = %catch.start
+  catchret from %1 to label %try.cont7
+}
+
 
 ; CHECK-LABEL: loop_within_catch:
 ; CHECK: try
@@ -386,7 +434,7 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; If 'call foo' throws a foreign exception, it will not be caught by C1, and
 ; should be rethrown to the caller. But after control flow linearization, it
 ; will instead unwind to C0, an incorrect next EH pad. We wrap the whole
-; try-catch with try-delegate that rethrows an exception to the caller to fix
+; try-catch with try-delegate that rethrows the exception to the caller to fix
 ; this.
 
 ; NOSORT-LABEL: unwind_mismatches_0:
@@ -407,7 +455,6 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; NOSORT: catch   {{.*}}          # catch[[C0]]:
 ; NOSORT: end_try
 ; NOSORT: return
-
 define void @unwind_mismatches_0() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
@@ -442,7 +489,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; 'call bar' and 'call baz''s original unwind destination was the caller, but
 ; after control flow linearization, their unwind destination incorrectly becomes
 ; 'C0'. We fix this by wrapping the calls with a nested try-delegate that
-; rethrows exceptions to the caller.
+; rethrows the exception to the caller.
 
 ; And the return value of 'baz' should NOT be stackified because the BB is split
 ; during fixing unwind mismatches.
@@ -462,7 +509,6 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT: catch   {{.*}}                      # catch[[C0:[0-9]+]]:
 ; NOSORT:   return
 ; NOSORT: end_try
-
 define void @unwind_mismatches_1() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
@@ -489,7 +535,7 @@ try.cont:                                         ; preds = %catch.start0
 
 ; The same as unwind_mismatches_0, but we have one more call 'call @foo' in bb1
 ; which unwinds to the caller. IN this case bb1 has two call unwind mismatches:
-  ; 'call @foo' unwinds to the caller and 'call @bar' unwinds to catch C0.
+; 'call @foo' unwinds to the caller and 'call @bar' unwinds to catch C0.
 
 ; NOSORT-LABEL: unwind_mismatches_2:
 ; NOSORT: try
@@ -514,7 +560,6 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT: catch   {{.*}}        # catch[[C0]]:
 ; NOSORT: end_try
 ; NOSORT: return
-
 define void @unwind_mismatches_2() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
@@ -570,7 +615,6 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT: catch   {{.*}}                      # catch[[C0:[0-9]+]]:
 ; NOSORT:   return
 ; NOSORT: end_try
-
 define i32 @unwind_mismatches_3() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
@@ -591,46 +635,6 @@ catch.start0:                                     ; preds = %catch.dispatch0
 
 try.cont:                                         ; preds = %catch.start0
   ret i32 0
-}
-
-; Tests the case when TEE stackifies a register in RegStackify but it gets
-; unstackified in fixCallUnwindMismatches in CFGStackify.
-
-; NOSORT-LOCALS-LABEL: unstackify_when_fixing_unwind_mismatch:
-define void @unstackify_when_fixing_unwind_mismatch(i32 %x) personality ptr @__gxx_wasm_personality_v0 {
-bb0:
-  invoke void @foo()
-          to label %bb1 unwind label %catch.dispatch0
-
-bb1:                                              ; preds = %bb0
-  %t = add i32 %x, 4
-  ; This %addr is used in multiple places, so tee is introduced in RegStackify,
-  ; which stackifies the use of %addr in store instruction. A tee has two dest
-  ; registers, the first of which is stackified and the second is not.
-  ; But when we introduce a nested try-delegate in fixCallUnwindMismatches in
-  ; CFGStackify, it is possible that we end up unstackifying the first dest
-  ; register. In that case, we convert that tee into a copy.
-  %addr = inttoptr i32 %t to ptr
-  %load = load i32, ptr %addr
-  %call = call i32 @baz()
-  %add = add i32 %load, %call
-  store i32 %add, ptr %addr
-  ret void
-; NOSORT-LOCALS:       i32.add
-; NOSORT-LOCALS-NOT:   local.tee
-; NOSORT-LOCALS-NEXT:  local.set
-
-catch.dispatch0:                                  ; preds = %bb0
-  %0 = catchswitch within none [label %catch.start0] unwind to caller
-
-catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [ptr null]
-  %2 = call ptr @llvm.wasm.get.exception(token %1)
-  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  catchret from %1 to label %try.cont
-
-try.cont:                                         ; preds = %catch.start0
-  ret void
 }
 
 ; We have two call unwind unwind mismatches:
@@ -668,7 +672,6 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT:   call  __cxa_end_catch
 ; NOSORT: end_try
 ; NOSORT: return
-
 define void @unwind_mismatches_4() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
@@ -701,6 +704,135 @@ catch.start1:                                     ; preds = %catch.dispatch1
   catchret from %6 to label %try.cont
 
 try.cont:                                         ; preds = %catch.start1, %catch.start0, %bb1
+  ret void
+}
+
+; This crashed when updating EHPadStack within fixCallUniwindMismatch had a bug.
+; This should not crash and try-delegate has to be created around 'call @baz',
+; because the initial TRY placement for 'call @quux' was done before 'call @baz'
+; because 'call @baz''s return value is stackified.
+
+; CHECK-LABEL: unwind_mismatches_5:
+; CHECK: try
+; --- try-delegate starts (call unwind mismatch)
+; CHECK:   try
+; CHECK:     call $[[RET:[0-9]+]]=, baz
+; CHECK:   delegate  1
+; --- try-delegate ends (call unwind mismatch)
+; CHECK:    call  quux, $[[RET]]
+; CHECK: catch_all
+; CHECK: end_try
+define void @unwind_mismatches_5() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  %call = call i32 @baz()
+  invoke void @quux(i32 %call)
+          to label %invoke.cont unwind label %ehcleanup
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  cleanupret from %0 unwind to caller
+
+invoke.cont:                                      ; preds = %entry
+  unreachable
+}
+
+; The structure is similar to unwind_mismatches_0, where the call to 'bar''s
+; original unwind destination is catch.dispatch1 but after placing markers it
+; unwinds to catch.dispatch0, which we fix. This additionally has a loop before
+; the real unwind destination (catch.dispatch1).
+
+; NOSORT-LABEL: unwind_mismatches_with_loop:
+; NOSORT: try
+; NOSORT:   try
+; NOSORT:     try
+; NOSORT:       call  foo
+; NOSORT:       try
+; NOSORT:         call  bar
+; NOSORT:       delegate    3                  # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
+; NOSORT:     catch  $drop=, __cpp_exception
+; NOSORT:     end_try
+; NOSORT:   delegate    2                      # label/catch{{[0-9]+}}: to caller
+; NOSORT:   loop
+; NOSORT:     call  foo
+; NOSORT:   end_loop
+; NOSORT: catch  $drop=, __cpp_exception       # catch[[C0]]:
+; NOSORT:   return
+; NOSORT: end_try
+define void @unwind_mismatches_with_loop() personality ptr @__gxx_wasm_personality_v0 {
+bb0:
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  invoke void @bar()
+          to label %bb2 unwind label %catch.dispatch1
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %bb2
+
+bb2:
+  invoke void @foo()
+          to label %bb3 unwind label %catch.dispatch1
+
+bb3:                                             ; preds = %bb14
+  br label %bb2
+
+catch.dispatch1:                                  ; preds = %bb1
+  %4 = catchswitch within none [label %catch.start1] unwind to caller
+
+catch.start1:                                     ; preds = %catch.dispatch1
+  %5 = catchpad within %4 [ptr null]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
+  %7 = call i32 @llvm.wasm.get.ehselector(token %5)
+  catchret from %5 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start1, %catch.start0, %bb1
+  ret void
+}
+
+; Tests the case when TEE stackifies a register in RegStackify but it gets
+; unstackified in fixCallUnwindMismatches in CFGStackify.
+
+; NOSORT-LOCALS-LABEL: unstackify_when_fixing_unwind_mismatch:
+define void @unstackify_when_fixing_unwind_mismatch(i32 %x) personality ptr @__gxx_wasm_personality_v0 {
+bb0:
+  invoke void @foo()
+          to label %bb1 unwind label %catch.dispatch0
+
+bb1:                                              ; preds = %bb0
+  %t = add i32 %x, 4
+  ; This %addr is used in multiple places, so tee is introduced in RegStackify,
+  ; which stackifies the use of %addr in store instruction. A tee has two dest
+  ; registers, the first of which is stackified and the second is not.
+  ; But when we introduce a nested try-delegate in fixCallUnwindMismatches in
+  ; CFGStackify, we end up unstackifying the first dest register. In that case,
+  ; we convert that tee into a copy.
+  %addr = inttoptr i32 %t to ptr
+  %load = load i32, ptr %addr
+  %call = call i32 @baz()
+  %add = add i32 %load, %call
+  store i32 %add, ptr %addr
+  ret void
+; NOSORT-LOCALS:       i32.add
+; NOSORT-LOCALS-NOT:   local.tee
+; NOSORT-LOCALS-NEXT:  local.set
+
+catch.dispatch0:                                  ; preds = %bb0
+  %0 = catchswitch within none [label %catch.start0] unwind to caller
+
+catch.start0:                                     ; preds = %catch.dispatch0
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %catch.start0
   ret void
 }
 
@@ -1004,11 +1136,13 @@ invoke.cont2:                                     ; preds = %catch.start
 ; to the exception, but does not belong to the loop (because it does not have a
 ; path back to the loop header), and is placed after the loop latch block
 ; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
-; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
+; correctly not right after 'invoke.cont' part but after 'ehcleanup' part.
 ; NOSORT-LABEL: loop_contains_exception:
 ; NOSORT: loop
-; NOSORT: try
-; NOSORT: end_try
+; NOSORT:   try
+; NOSORT:     try
+; NOSORT:     end_try
+; NOSORT:   end_try
 ; NOSORT: end_loop
 define void @loop_contains_exception(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
@@ -1092,33 +1226,6 @@ ehcleanup:                                        ; preds = %if.then
   %0 = cleanuppad within none []
   %call3 = call ptr @_ZN6ObjectD2Ev(ptr %t) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
-}
-
-; This crashed when updating EHPadStack within fixCallUniwindMismatch had a bug.
-; This should not crash and try-delegate has to be created around 'call @baz',
-; because the initial TRY placement for 'call @quux' was done before 'call @baz'
-; because 'call @baz''s return value is stackified.
-
-; CHECK-LABEL: unwind_mismatches_5:
-; CHECK: try
-; CHECK:   try
-; CHECK:     call $[[RET:[0-9]+]]=, baz
-; CHECK:   delegate  1
-; CHECK:    call  quux, $[[RET]]
-; CHECK: catch_all
-; CHECK: end_try
-define void @unwind_mismatches_5() personality ptr @__gxx_wasm_personality_v0 {
-entry:
-  %call = call i32 @baz()
-  invoke void @quux(i32 %call)
-          to label %invoke.cont unwind label %ehcleanup
-
-ehcleanup:                                        ; preds = %entry
-  %0 = cleanuppad within none []
-  cleanupret from %0 unwind to caller
-
-invoke.cont:                                      ; preds = %entry
-  unreachable
 }
 
 ; This tests if invalidated branch destinations after fixing catch unwind
@@ -1629,8 +1736,8 @@ unreachable:                                      ; preds = %rethrow, %entry
 }
 
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 23 wasm-cfg-stackify    - Number of call unwind mismatches found
-; NOSORT:  4 wasm-cfg-stackify    - Number of catch unwind mismatches found
+; NOSORT: 24 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()

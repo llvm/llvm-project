@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-math-to-rocdl -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-math-to-rocdl -allow-unregistered-dialect -split-input-file | FileCheck %s
 
 module @test_module {
   // CHECK: llvm.func @__ocml_fmod_f16(f16, f16) -> f16
@@ -480,4 +480,36 @@ module @test_module {
     // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to bf16
     func.return %resultf16, %resultf32, %resultf64, %resultbf16 : f16, f32, f64, bf16
   }
+}
+
+// -----
+
+module @test_module {
+  // CHECK: llvm.func @__ocml_pown_f16(f16, i32) -> f16
+  // CHECK: llvm.func @__ocml_pown_f32(f32, i32) -> f32
+  // CHECK: llvm.func @__ocml_pown_f64(f64, i32) -> f64
+  // CHECK-LABEL: func @math_fpowi
+  func.func @math_fpowi(%arg0: f16, %arg1: f32, %arg2: f64, %arg3: i32) -> (f16, f32, f64) {
+    // CHECK: llvm.call @__ocml_pown_f16(%{{.*}}) : (f16, i32) -> f16
+    %0 = math.fpowi %arg0, %arg3 : f16, i32
+    // CHECK: llvm.call @__ocml_pown_f32(%{{.*}}) : (f32, i32) -> f32
+    %1 = math.fpowi %arg1, %arg3 : f32, i32
+    // CHECK: llvm.call @__ocml_pown_f64(%{{.*}}) : (f64, i32) -> f64
+    %2 = math.fpowi %arg2, %arg3 : f64, i32
+    return %0, %1, %2 : f16, f32, f64
+  }
+}
+
+// -----
+
+// Math operation not inside function
+// Ensure it not crash
+
+module {
+  "test.some_op_with_region"() ({
+  ^bb0(%arg0: f64):
+    // CHECK: math.atan
+    %0 = math.atan %arg0 : f64
+    "test.possible_terminator"() : () -> ()
+  }) : () -> ()
 }

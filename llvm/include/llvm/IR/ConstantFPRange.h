@@ -50,7 +50,6 @@ class [[nodiscard]] ConstantFPRange {
 
   void makeEmpty();
   void makeFull();
-  bool isNaNOnly() const;
 
   /// Initialize a full or empty set for the specified semantics.
   explicit ConstantFPRange(const fltSemantics &Sem, bool IsFullSet);
@@ -77,6 +76,9 @@ public:
 
   /// Helper for (-inf, inf) to represent all finite values.
   static ConstantFPRange getFinite(const fltSemantics &Sem);
+
+  /// Helper for [-inf, inf] to represent all non-NaN values.
+  static ConstantFPRange getNonNaN(const fltSemantics &Sem);
 
   /// Create a range which doesn't contain NaNs.
   static ConstantFPRange getNonNaN(APFloat LowerVal, APFloat UpperVal) {
@@ -118,13 +120,13 @@ public:
 
   /// Produce the exact range such that all values in the returned range satisfy
   /// the given predicate with any value contained within Other. Formally, this
-  /// returns the exact answer when the superset of 'union over all y in Other
-  /// is exactly same as the subset of intersection over all y in Other.
-  /// { x : fcmp op x y is true}'.
+  /// returns { x : fcmp op x Other is true }.
   ///
   /// Example: Pred = olt and Other = float 3 returns [-inf, 3)
-  static ConstantFPRange makeExactFCmpRegion(FCmpInst::Predicate Pred,
-                                             const APFloat &Other);
+  /// If the exact answer is not representable as a ConstantFPRange, returns
+  /// std::nullopt.
+  static std::optional<ConstantFPRange>
+  makeExactFCmpRegion(FCmpInst::Predicate Pred, const APFloat &Other);
 
   /// Does the predicate \p Pred hold between ranges this and \p Other?
   /// NOTE: false does not mean that inverse predicate holds!
@@ -139,6 +141,7 @@ public:
   bool containsNaN() const { return MayBeQNaN || MayBeSNaN; }
   bool containsQNaN() const { return MayBeQNaN; }
   bool containsSNaN() const { return MayBeSNaN; }
+  bool isNaNOnly() const;
 
   /// Get the semantics of this ConstantFPRange.
   const fltSemantics &getSemantics() const { return Lower.getSemantics(); }
@@ -157,10 +160,15 @@ public:
   bool contains(const ConstantFPRange &CR) const;
 
   /// If this set contains a single element, return it, otherwise return null.
-  const APFloat *getSingleElement() const;
+  /// If \p ExcludesNaN is true, return the non-NaN single element.
+  const APFloat *getSingleElement(bool ExcludesNaN = false) const;
 
   /// Return true if this set contains exactly one member.
-  bool isSingleElement() const { return getSingleElement() != nullptr; }
+  /// If \p ExcludesNaN is true, return true if this set contains exactly one
+  /// non-NaN member.
+  bool isSingleElement(bool ExcludesNaN = false) const {
+    return getSingleElement(ExcludesNaN) != nullptr;
+  }
 
   /// Return true if the sign bit of all values in this range is 1.
   /// Return false if the sign bit of all values in this range is 0.
@@ -185,7 +193,7 @@ public:
   /// another range.
   ConstantFPRange intersectWith(const ConstantFPRange &CR) const;
 
-  /// Return the range that results from the union of this range
+  /// Return the smallest range that results from the union of this range
   /// with another range.  The resultant range is guaranteed to include the
   /// elements of both sets, but may contain more.
   ConstantFPRange unionWith(const ConstantFPRange &CR) const;

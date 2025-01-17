@@ -9,6 +9,8 @@
 #ifndef LLDB_UTILITY_STATUS_H
 #define LLDB_UTILITY_STATUS_H
 
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,8 +28,6 @@ class raw_ostream;
 
 namespace lldb_private {
 
-const char *ExpressionResultAsCString(lldb::ExpressionResults result);
-
 /// Going a bit against the spirit of llvm::Error,
 /// lldb_private::Status need to store errors long-term and sometimes
 /// copy them. This base class defines an interface for this
@@ -38,6 +38,8 @@ public:
   using llvm::ErrorInfo<CloneableError, llvm::ErrorInfoBase>::ErrorInfo;
   CloneableError() : ErrorInfo() {}
   virtual std::unique_ptr<CloneableError> Clone() const = 0;
+  virtual lldb::ErrorType GetErrorType() const = 0;
+  virtual StructuredData::ObjectSP GetAsStructuredData() const = 0;
   static char ID;
 };
 
@@ -48,6 +50,8 @@ public:
   using llvm::ErrorInfo<CloneableECError, CloneableError>::ErrorInfo;
   std::error_code convertToErrorCode() const override { return EC; }
   void log(llvm::raw_ostream &OS) const override { OS << EC.message(); }
+  lldb::ErrorType GetErrorType() const override;
+  virtual StructuredData::ObjectSP GetAsStructuredData() const override;
   static char ID;
 
 protected:
@@ -63,6 +67,7 @@ public:
   MachKernelError(std::error_code ec) : ErrorInfo(ec) {}
   std::string message() const override;
   std::unique_ptr<CloneableError> Clone() const override;
+  lldb::ErrorType GetErrorType() const override;
   static char ID;
 };
 
@@ -72,21 +77,8 @@ public:
   Win32Error(std::error_code ec, const llvm::Twine &msg = {}) : ErrorInfo(ec) {}
   std::string message() const override;
   std::unique_ptr<CloneableError> Clone() const override;
+  lldb::ErrorType GetErrorType() const override;
   static char ID;
-};
-
-class ExpressionError
-    : public llvm::ErrorInfo<ExpressionError, CloneableECError> {
-public:
-  using llvm::ErrorInfo<ExpressionError, CloneableECError>::ErrorInfo;
-  ExpressionError(std::error_code ec, std::string msg = {})
-      : ErrorInfo(ec), m_string(msg) {}
-  std::unique_ptr<CloneableError> Clone() const override;
-  std::string message() const override { return m_string; }
-  static char ID;
-
-protected:
-  std::string m_string;
 };
 
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.
@@ -160,9 +152,6 @@ public:
     return Status(llvm::formatv(format, std::forward<Args>(args)...));
   }
 
-  static Status FromExpressionError(lldb::ExpressionResults result,
-                                    std::string msg);
-
   /// Set the current error to errno.
   ///
   /// Update the error value to be \c errno and update the type to be \c
@@ -175,8 +164,11 @@ public:
   /// Avoid using this in new code. Migrate APIs to llvm::Expected instead.
   static Status FromError(llvm::Error error);
 
-  /// FIXME: Replace this with a takeError() method.
+  /// FIXME: Replace all uses with takeError() instead.
   llvm::Error ToError() const;
+
+  llvm::Error takeError() { return std::move(m_error); }
+
   /// Don't call this function in new code. Instead, redesign the API
   /// to use llvm::Expected instead of Status.
   Status Clone() const { return Status(ToError()); }
@@ -193,6 +185,9 @@ public:
   ///     is valid and is able to be converted to a string value,
   ///     NULL otherwise.
   const char *AsCString(const char *default_error_str = "unknown error") const;
+
+  /// Get the error in machine-readable form.
+  StructuredData::ObjectSP GetAsStructuredData() const;
 
   /// Clear the object state.
   ///
