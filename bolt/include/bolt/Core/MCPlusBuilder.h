@@ -610,6 +610,11 @@ public:
 
   virtual bool isLeave(const MCInst &Inst) const { return false; }
 
+  virtual bool hasUseOrDefofSPOrFP(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isADRP(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
