@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
 
       if (opts::AggregateOnly && !RI.getBinaryContext().isAArch64() &&
           opts::ArmSPE) {
-        errs() << "BOLT-ERROR: -spe is available only on AArch64.\n";
+        errs() << ToolName << ": -spe is available only on AArch64.\n";
         exit(1);
       }
 
