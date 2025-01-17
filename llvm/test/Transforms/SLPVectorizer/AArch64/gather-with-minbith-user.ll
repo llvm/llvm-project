@@ -5,7 +5,11 @@ define void @h() {
 ; CHECK-LABEL: define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef>, <4 x i1> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef>, <4 x i1> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i1> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i1> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    store <8 x i16> [[TMP3]], ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
