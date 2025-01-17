@@ -1359,19 +1359,19 @@ defm VMINPBF16 : avx10_fp_binopne_int_pbf16<0x5D, "vmin", SchedWriteFCmpSizes, 0
 defm VMAXPBF16 : avx10_fp_binopne_int_pbf16<0x5F, "vmax", SchedWriteFCmpSizes, 0>;
 }
 
-// VCOMSBF16
+// VCOMISBF16
 let Uses = []<Register>, mayRaiseFPException = 0,
   Defs = [EFLAGS], Predicates = [HasAVX10_2] in {
   //TODO: Replace null_frag with X86fcmp to support lowering `fcmp oeq bfloat *`
   //which may require extend supports on BFR16X, loadbf16, ...
-  defm VCOMSBF16Z : sse12_ord_cmp<0x2F, FR16X, null_frag, bf16, f16mem, loadf16,
-                                  "comsbf16", SSEPackedSingle>, T_MAP5, PD, EVEX,
-                                  VEX_LIG, EVEX_CD8<16, CD8VT1>;
+  defm VCOMISBF16Z : sse12_ord_cmp<0x2F, FR16X, null_frag, bf16, f16mem, loadf16,
+                                   "comisbf16", SSEPackedSingle>, T_MAP5, PD, EVEX,
+                                   VEX_LIG, EVEX_CD8<16, CD8VT1>;
 
   let isCodeGenOnly = 1 in {
-    defm VCOMSBF16Z : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v8bf16, f16mem,
-                                        sse_load_bf16, "comsbf16", SSEPackedSingle>,
-                                        T_MAP5, PD, EVEX, VEX_LIG, EVEX_CD8<16, CD8VT1>;
+    defm VCOMISBF16Z : sse12_ord_cmp_int<0x2F, VR128X, X86comi, v8bf16, f16mem,
+                                         sse_load_bf16, "comisbf16", SSEPackedSingle>,
+                                         T_MAP5, PD, EVEX, VEX_LIG, EVEX_CD8<16, CD8VT1>;
   }
 }
 

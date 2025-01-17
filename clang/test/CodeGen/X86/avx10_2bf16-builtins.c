@@ -648,40 +648,40 @@ __m128bh test_mm_maskz_min_pbh(__mmask16 __U, __m128bh __A, __m128bh __B) {
   return _mm_maskz_min_pbh(__U, __A, __B);
 }
 
-int test_mm_comeqsbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comeqsbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16eq(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comeqsbh(__A, __B);
+int test_mm_comieq_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comieq_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16eq(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comieq_sbh(__A, __B);
 }
 
-int test_mm_comltsbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comltsbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16lt(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comltsbh(__A, __B);
+int test_mm_comilt_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comilt_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16lt(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comilt_sbh(__A, __B);
 }
 
-int test_mm_comlesbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comlesbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16le(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comlesbh(__A, __B);
+int test_mm_comile_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comile_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16le(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comile_sbh(__A, __B);
 }
 
-int test_mm_comgtsbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comgtsbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16gt(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comgtsbh(__A, __B);
+int test_mm_comigt_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comigt_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16gt(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comigt_sbh(__A, __B);
 }
 
-int test_mm_comgesbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comgesbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16ge(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comgesbh(__A, __B);
+int test_mm_comige_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comige_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16ge(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comige_sbh(__A, __B);
 }
 
-int test_mm_comneqsbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: test_mm_comneqsbh
-  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomsbf16neq(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
-  return _mm_comneqsbh(__A, __B);
+int test_mm_comineq_sbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: test_mm_comineq_sbh
+  // CHECK: %{{.}} = call i32 @llvm.x86.avx10.vcomisbf16neq(<8 x bfloat> %{{.}}, <8 x bfloat> %{{.}})
+  return _mm_comineq_sbh(__A, __B);
 }
 
 __mmask16 test_mm256_cmp_pbh_mask_eq_oq(__m256bh a, __m256bh b) {

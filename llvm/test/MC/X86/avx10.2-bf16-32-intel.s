@@ -204,33 +204,33 @@
 // CHECK: encoding: [0x62,0xf3,0x67,0x3f,0xc2,0x6a,0x80,0x7b]
           vcmppbf16 k5 {k7}, ymm3, word ptr [edx - 256]{1to16}, 123
 
-// CHECK: vcomsbf16 xmm2, xmm3
+// CHECK: vcomisbf16 xmm2, xmm3
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xd3]
-          vcomsbf16 xmm2, xmm3
+          vcomisbf16 xmm2, xmm3
 
-// CHECK: vcomsbf16 xmm2, word ptr [esp + 8*esi + 268435456]
+// CHECK: vcomisbf16 xmm2, word ptr [esp + 8*esi + 268435456]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x94,0xf4,0x00,0x00,0x00,0x10]
-          vcomsbf16 xmm2, word ptr [esp + 8*esi + 268435456]
+          vcomisbf16 xmm2, word ptr [esp + 8*esi + 268435456]
 
-// CHECK: vcomsbf16 xmm2, word ptr [edi + 4*eax + 291]
+// CHECK: vcomisbf16 xmm2, word ptr [edi + 4*eax + 291]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x94,0x87,0x23,0x01,0x00,0x00]
-          vcomsbf16 xmm2, word ptr [edi + 4*eax + 291]
+          vcomisbf16 xmm2, word ptr [edi + 4*eax + 291]
 
-// CHECK: vcomsbf16 xmm2, word ptr [eax]
+// CHECK: vcomisbf16 xmm2, word ptr [eax]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x10]
-          vcomsbf16 xmm2, word ptr [eax]
+          vcomisbf16 xmm2, word ptr [eax]
 
-// CHECK: vcomsbf16 xmm2, word ptr [2*ebp - 64]
+// CHECK: vcomisbf16 xmm2, word ptr [2*ebp - 64]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x14,0x6d,0xc0,0xff,0xff,0xff]
-          vcomsbf16 xmm2, word ptr [2*ebp - 64]
+          vcomisbf16 xmm2, word ptr [2*ebp - 64]
 
-// CHECK: vcomsbf16 xmm2, word ptr [ecx + 254]
+// CHECK: vcomisbf16 xmm2, word ptr [ecx + 254]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x51,0x7f]
-          vcomsbf16 xmm2, word ptr [ecx + 254]
+          vcomisbf16 xmm2, word ptr [ecx + 254]
 
-// CHECK: vcomsbf16 xmm2, word ptr [edx - 256]
+// CHECK: vcomisbf16 xmm2, word ptr [edx - 256]
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x52,0x80]
-          vcomsbf16 xmm2, word ptr [edx - 256]
+          vcomisbf16 xmm2, word ptr [edx - 256]
 
 // CHECK: vdivnepbf16 ymm2, ymm3, ymm4
 // CHECK: encoding: [0x62,0xf5,0x65,0x28,0x5e,0xd4]

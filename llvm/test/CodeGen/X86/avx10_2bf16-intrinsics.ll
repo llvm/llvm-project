@@ -118,23 +118,23 @@ define <8 x bfloat> @test_int_x86_avx10_maskz_max_nepbf16_128(<8 x bfloat> %x1, 
   ret <8 x bfloat> %res1
 }
 
-declare i32 @llvm.x86.avx10.vcomsbf16eq(<8 x bfloat>, <8 x bfloat>)
-declare i32 @llvm.x86.avx10.vcomsbf16lt(<8 x bfloat>, <8 x bfloat>)
-declare i32 @llvm.x86.avx10.vcomsbf16le(<8 x bfloat>, <8 x bfloat>)
-declare i32 @llvm.x86.avx10.vcomsbf16gt(<8 x bfloat>, <8 x bfloat>)
-declare i32 @llvm.x86.avx10.vcomsbf16ge(<8 x bfloat>, <8 x bfloat>)
-declare i32 @llvm.x86.avx10.vcomsbf16neq(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16eq(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16lt(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16le(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16gt(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16ge(<8 x bfloat>, <8 x bfloat>)
+declare i32 @llvm.x86.avx10.vcomisbf16neq(<8 x bfloat>, <8 x bfloat>)
 
 define i32 @test_x86_avx10_com_nesbf16_eq(<8 x bfloat> %a0, <8 x bfloat> %a1) {
 ; CHECK-LABEL: test_x86_avx10_com_nesbf16_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcomsbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
+; CHECK-NEXT:    vcomisbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
 ; CHECK-NEXT:    setnp %al # encoding: [0x0f,0x9b,0xc0]
 ; CHECK-NEXT:    sete %cl # encoding: [0x0f,0x94,0xc1]
 ; CHECK-NEXT:    andb %al, %cl # encoding: [0x20,0xc1]
 ; CHECK-NEXT:    movzbl %cl, %eax # encoding: [0x0f,0xb6,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call i32 @llvm.x86.avx10.vcomsbf16eq(<8 x bfloat> %a0, <8 x bfloat> %a1)
+  %res = call i32 @llvm.x86.avx10.vcomisbf16eq(<8 x bfloat> %a0, <8 x bfloat> %a1)
   ret i32 %res
 }
 
@@ -142,10 +142,10 @@ define i32 @test_x86_avx10_com_nesbf16_lt(<8 x bfloat> %a0, <8 x bfloat> %a1) {
 ; CHECK-LABEL: test_x86_avx10_com_nesbf16_lt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    vcomsbf16 %xmm0, %xmm1 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc8]
+; CHECK-NEXT:    vcomisbf16 %xmm0, %xmm1 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc8]
 ; CHECK-NEXT:    seta %al # encoding: [0x0f,0x97,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call i32 @llvm.x86.avx10.vcomsbf16lt(<8 x bfloat> %a0, <8 x bfloat> %a1)
+  %res = call i32 @llvm.x86.avx10.vcomisbf16lt(<8 x bfloat> %a0, <8 x bfloat> %a1)
   ret i32 %res
 }
 
@@ -153,10 +153,10 @@ define i32 @test_x86_avx10_com_nesbf16_le(<8 x bfloat> %a0, <8 x bfloat> %a1) {
 ; CHECK-LABEL: test_x86_avx10_com_nesbf16_le:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    vcomsbf16 %xmm0, %xmm1 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc8]
+; CHECK-NEXT:    vcomisbf16 %xmm0, %xmm1 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc8]
 ; CHECK-NEXT:    setae %al # encoding: [0x0f,0x93,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call i32 @llvm.x86.avx10.vcomsbf16le(<8 x bfloat> %a0, <8 x bfloat> %a1)
+  %res = call i32 @llvm.x86.avx10.vcomisbf16le(<8 x bfloat> %a0, <8 x bfloat> %a1)
   ret i32 %res
 }
 
@@ -164,23 +164,23 @@ define i32 @test_x86_avx10_com_nesbf16_gt(<8 x bfloat> %a0, <8 x bfloat> %a1) {
 ; CHECK-LABEL: test_x86_avx10_com_nesbf16_gt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    vcomsbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
+; CHECK-NEXT:    vcomisbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
 ; CHECK-NEXT:    setae %al # encoding: [0x0f,0x93,0xc0]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call i32 @llvm.x86.avx10.vcomsbf16ge(<8 x bfloat> %a0, <8 x bfloat> %a1)
+  %res = call i32 @llvm.x86.avx10.vcomisbf16ge(<8 x bfloat> %a0, <8 x bfloat> %a1)
   ret i32 %res
 }
 
 define i32 @test_x86_avx10_com_nesbf16_neq(<8 x bfloat> %a0, <8 x bfloat> %a1) {
 ; CHECK-LABEL: test_x86_avx10_com_nesbf16_neq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcomsbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
+; CHECK-NEXT:    vcomisbf16 %xmm1, %xmm0 # encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xc1]
 ; CHECK-NEXT:    setp %al # encoding: [0x0f,0x9a,0xc0]
 ; CHECK-NEXT:    setne %cl # encoding: [0x0f,0x95,0xc1]
 ; CHECK-NEXT:    orb %al, %cl # encoding: [0x08,0xc1]
 ; CHECK-NEXT:    movzbl %cl, %eax # encoding: [0x0f,0xb6,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call i32 @llvm.x86.avx10.vcomsbf16neq(<8 x bfloat> %a0, <8 x bfloat> %a1)
+  %res = call i32 @llvm.x86.avx10.vcomisbf16neq(<8 x bfloat> %a0, <8 x bfloat> %a1)
   ret i32 %res
 }
 

@@ -5376,12 +5376,12 @@ let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vcomsbf16eq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16lt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16neq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16ge : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16gt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16le : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16eq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16lt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16neq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16ge : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16gt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vcomisbf16le : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {

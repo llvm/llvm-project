@@ -204,33 +204,33 @@
 // CHECK: encoding: [0x62,0xf3,0x67,0x3f,0xc2,0x6a,0x80,0x7b]
           vcmppbf16  $123, -256(%edx){1to16}, %ymm3, %k5 {%k7}
 
-// CHECK: vcomsbf16 %xmm3, %xmm2
+// CHECK: vcomisbf16 %xmm3, %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0xd3]
-          vcomsbf16 %xmm3, %xmm2
+          vcomisbf16 %xmm3, %xmm2
 
-// CHECK: vcomsbf16  268435456(%esp,%esi,8), %xmm2
+// CHECK: vcomisbf16  268435456(%esp,%esi,8), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x94,0xf4,0x00,0x00,0x00,0x10]
-          vcomsbf16  268435456(%esp,%esi,8), %xmm2
+          vcomisbf16  268435456(%esp,%esi,8), %xmm2
 
-// CHECK: vcomsbf16  291(%edi,%eax,4), %xmm2
+// CHECK: vcomisbf16  291(%edi,%eax,4), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x94,0x87,0x23,0x01,0x00,0x00]
-          vcomsbf16  291(%edi,%eax,4), %xmm2
+          vcomisbf16  291(%edi,%eax,4), %xmm2
 
-// CHECK: vcomsbf16  (%eax), %xmm2
+// CHECK: vcomisbf16  (%eax), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x10]
-          vcomsbf16  (%eax), %xmm2
+          vcomisbf16  (%eax), %xmm2
 
-// CHECK: vcomsbf16  -64(,%ebp,2), %xmm2
+// CHECK: vcomisbf16  -64(,%ebp,2), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x14,0x6d,0xc0,0xff,0xff,0xff]
-          vcomsbf16  -64(,%ebp,2), %xmm2
+          vcomisbf16  -64(,%ebp,2), %xmm2
 
-// CHECK: vcomsbf16  254(%ecx), %xmm2
+// CHECK: vcomisbf16  254(%ecx), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x51,0x7f]
-          vcomsbf16  254(%ecx), %xmm2
+          vcomisbf16  254(%ecx), %xmm2
 
-// CHECK: vcomsbf16  -256(%edx), %xmm2
+// CHECK: vcomisbf16  -256(%edx), %xmm2
 // CHECK: encoding: [0x62,0xf5,0x7d,0x08,0x2f,0x52,0x80]
-          vcomsbf16  -256(%edx), %xmm2
+          vcomisbf16  -256(%edx), %xmm2
 
 // CHECK: vdivnepbf16 %ymm4, %ymm3, %ymm2
 // CHECK: encoding: [0x62,0xf5,0x65,0x28,0x5e,0xd4]
