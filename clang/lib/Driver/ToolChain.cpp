@@ -855,7 +855,8 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return {};
   };
 
-  if (auto Path = getPathForTriple(getTriple()))
+  const llvm::Triple &T = getTriple();
+  if (auto Path = getPathForTriple(T))
     return *Path;
 
   if (T.isOSzOS() &&
@@ -888,14 +889,14 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   //
   // M profile Arm is bare metal and we know they will not be using the per
   // target runtime directory layout.
-  if (getTriple().getArch() == Triple::arm && !getTriple().isArmMClass()) {
-    llvm::Triple ArmTriple = getTriple();
+  if (T.getArch() == Triple::arm && !T.isArmMClass()) {
+    llvm::Triple ArmTriple = T;
     ArmTriple.setArch(Triple::arm);
     if (auto Path = getPathForTriple(ArmTriple))
       return *Path;
   }
 
-  if (getTriple().isAndroid())
+  if (T.isAndroid())
     return getFallbackAndroidTargetPath(BaseDir);
 
   return {};
