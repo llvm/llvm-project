@@ -165,9 +165,6 @@
 /* Define to 1 if you have the `setenv' function. */
 #cmakedefine HAVE_SETENV ${HAVE_SETENV}
 
-/* Define to 1 if you have the `setrlimit' function. */
-#cmakedefine HAVE_SETRLIMIT ${HAVE_SETRLIMIT}
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
 
@@ -179,9 +176,6 @@
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
-
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#cmakedefine HAVE_SYS_RESOURCE_H ${HAVE_SYS_RESOURCE_H}
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
