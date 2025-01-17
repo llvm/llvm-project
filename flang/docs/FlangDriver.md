@@ -119,7 +119,7 @@ Internally, a `clangDriver` based compiler driver works by creating actions
 that correspond to various compilation phases, e.g. `PreprocessJobClass`,
 `CompileJobClass`, `BackendJobClass` or `LinkJobClass` from the
 `clang::driver::Action::ActionClass` enum. There are also other, more
-specialised actions, e.g. `MigrateJobClass` or `InputClass`, that do not map
+specialised actions, e.g. `InputClass`, that do not map
 directly to common compilation steps. The actions to run are determined from
 the supplied compiler flags, e.g.
 
