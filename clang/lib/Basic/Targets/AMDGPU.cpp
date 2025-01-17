@@ -83,6 +83,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
     llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
+    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_constant
 
 };
 } // namespace targets

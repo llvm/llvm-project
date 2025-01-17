@@ -2,6 +2,11 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+// CHECK: @a = external addrspace(2) global float, align 4
+// CHECK: @b = external addrspace(2) global double, align 8
+// CHECK: @c = external addrspace(2) global float, align 4
+// CHECK: @d = external addrspace(2) global double, align 8
+
 // CHECK: @[[CB:.+]] = external constant { float, double }
 cbuffer A : register(b0, space2) {
   float a;
@@ -15,10 +20,10 @@ tbuffer A : register(t2, space1) {
 }
 
 float foo() {
-// CHECK: load float, ptr @[[CB]], align 4
-// CHECK: load double, ptr getelementptr ({ float, double }, ptr @[[CB]], i32 0, i32 1), align 8
-// CHECK: load float, ptr @[[TB]], align 4
-// CHECK: load double, ptr getelementptr ({ float, double }, ptr @[[TB]], i32 0, i32 1), align 8
+// CHECK: load float, ptr addrspace(2) @a, align 4
+// CHECK: load double, ptr addrspace(2) @b, align 8
+// CHECK: load float, ptr addrspace(2) @c, align 4
+// CHECK: load double, ptr addrspace(2) @d, align 8
   return a + b + c*d;
 }
 
