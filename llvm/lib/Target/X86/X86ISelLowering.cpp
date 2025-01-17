@@ -9478,8 +9478,7 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
     if ((NonZeros & (1 << i)) == 0)
       continue;
 
-    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec,
-                      Op.getOperand(i),
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, Op.getOperand(i),
                       DAG.getVectorIdxConstant(i * NumSubElems, dl));
   }
 
@@ -9547,9 +9546,9 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
     MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
     ArrayRef<SDUse> Ops = Op->ops();
     SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(0, NumOperands/2));
+                             Ops.slice(0, NumOperands / 2));
     SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, dl, HalfVT,
-                             Ops.slice(NumOperands/2));
+                             Ops.slice(NumOperands / 2));
     return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
   }
 
@@ -9558,11 +9557,11 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
   if (ResVT.getVectorNumElements() >= 16)
     return Op; // The operation is legal with KUNPCK
 
-  SDValue Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT,
-                            DAG.getUNDEF(ResVT), Op.getOperand(0),
-                            DAG.getVectorIdxConstant(0, dl));
+  SDValue Vec =
+      DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, DAG.getUNDEF(ResVT),
+                  Op.getOperand(0), DAG.getVectorIdxConstant(0, dl));
   return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, Vec, Op.getOperand(1),
-                     DAG.getVectorIdxConstant(NumElems/2, dl));
+                     DAG.getVectorIdxConstant(NumElems / 2, dl));
 }
 
 static SDValue LowerCONCAT_VECTORS(SDValue Op,
@@ -17677,22 +17676,22 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if ((int)Zeroable.countl_one() >= (NumElts - SubvecElts)) {
     assert(Src >= 0 && "Expected a source!");
     MVT ExtractVT = MVT::getVectorVT(MVT::i1, SubvecElts);
-    SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT,
-                                  Src == 0 ? V1 : V2,
-                                  DAG.getVectorIdxConstant(0, DL));
+    SDValue Extract =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT, Src == 0 ? V1 : V2,
+                    DAG.getVectorIdxConstant(0, DL));
     return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
-                       DAG.getConstant(0, DL, VT),
-                       Extract, DAG.getVectorIdxConstant(0, DL));
+                       DAG.getConstant(0, DL, VT), Extract,
+                       DAG.getVectorIdxConstant(0, DL));
   }
 
   // Try a simple shift right with undef elements. Later we'll try with zeros.
-  if (SDValue Shift = lower1BitShuffleAsKSHIFTR(DL, Mask, VT, V1, V2, Subtarget,
-                                                DAG))
+  if (SDValue Shift =
+          lower1BitShuffleAsKSHIFTR(DL, Mask, VT, V1, V2, Subtarget, DAG))
     return Shift;
 
   // Try to match KSHIFTs.
   unsigned Offset = 0;
-  for (SDValue V : { V1, V2 }) {
+  for (SDValue V : {V1, V2}) {
     unsigned Opcode;
     int ShiftAmt = match1BitShuffleAsKSHIFT(Opcode, Mask, Offset, Zeroable);
     if (ShiftAmt >= 0) {
@@ -17702,8 +17701,9 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       if (Opcode == X86ISD::KSHIFTR && WideVT != VT) {
         int WideElts = WideVT.getVectorNumElements();
         // Shift left to put the original vector in the MSBs of the new size.
-        Res = DAG.getNode(X86ISD::KSHIFTL, DL, WideVT, Res,
-                          DAG.getTargetConstant(WideElts - NumElts, DL, MVT::i8));
+        Res =
+            DAG.getNode(X86ISD::KSHIFTL, DL, WideVT, Res,
+                        DAG.getTargetConstant(WideElts - NumElts, DL, MVT::i8));
         // Increase the shift amount to account for the left shift.
         ShiftAmt += WideElts - NumElts;
       }
@@ -24637,8 +24637,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
         SDValue VSel = DAG.getSelect(DL, VecVT, VCmp, VOp1, VOp2);
 
-        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
-                           VSel, DAG.getVectorIdxConstant(0, DL));
+        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VSel,
+                           DAG.getVectorIdxConstant(0, DL));
       }
       SDValue AndN = DAG.getNode(X86ISD::FANDN, DL, VT, Cmp, Op2);
       SDValue And = DAG.getNode(X86ISD::FAND, DL, VT, Cmp, Op1);
@@ -24859,8 +24859,8 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op, const SDLoc &dl,
   if (!ExtVT.is512BitVector() && !Subtarget.hasVLX()) {
     NumElts *= 512 / ExtVT.getSizeInBits();
     InVT = MVT::getVectorVT(MVT::i1, NumElts);
-    In = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, InVT, DAG.getUNDEF(InVT),
-                     In, DAG.getVectorIdxConstant(0, dl));
+    In = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, InVT, DAG.getUNDEF(InVT), In,
+                     DAG.getVectorIdxConstant(0, dl));
     WideVT = MVT::getVectorVT(ExtVT.getVectorElementType(), NumElts);
   }
 
@@ -26488,8 +26488,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // Need to fill with zeros to ensure the bitcast will produce zeroes
       // for the upper bits. An EXTRACT_ELEMENT here wouldn't guarantee that.
       SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
-                                DAG.getConstant(0, dl, MVT::v16i1),
-                                FCmp, DAG.getVectorIdxConstant(0, dl));
+                                DAG.getConstant(0, dl, MVT::v16i1), FCmp,
+                                DAG.getVectorIdxConstant(0, dl));
       return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32,
                          DAG.getBitcast(MVT::i16, Ins));
     }
@@ -50120,11 +50120,12 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
             // OnesOrZeroesF is all ones or all zeroes, we don't need all the
             // bits, but can do this little dance to extract the lowest 32 bits
             // and work with those going forward.
-            SDValue Vector64 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64,
-                                           OnesOrZeroesF);
+            SDValue Vector64 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                                           MVT::v2f64, OnesOrZeroesF);
             SDValue Vector32 = DAG.getBitcast(MVT::v4f32, Vector64);
-            OnesOrZeroesF = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32,
-                                        Vector32, DAG.getVectorIdxConstant(0, DL));
+            OnesOrZeroesF =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Vector32,
+                            DAG.getVectorIdxConstant(0, DL));
             IntVT = MVT::i32;
           }
 
