@@ -68,9 +68,11 @@ add_entrypoint_object(
     time_utils.h
   DEPENDS
     .time_utils
+    .time_constants
+    libc.hdr.types.time_t
+    libc.include.time
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -79,12 +81,11 @@ add_entrypoint_object(
     ctime_r.cpp
   HDRS
     ctime_r.h
-    time_utils.h
   DEPENDS
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
     .time_utils
-    .timezone
+    .time_constants
     libc.hdr.types.time_t
     libc.include.time
     libc.src.stdio.fopen
@@ -97,10 +98,9 @@ add_entrypoint_object(
   HDRS
     localtime.h
   DEPENDS
+    .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
-    .time_utils
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -110,10 +110,9 @@ add_entrypoint_object(
   HDRS
     localtime_r.h
   DEPENDS
+    .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
-    .time_utils
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -123,10 +122,9 @@ add_entrypoint_object(
   HDRS
     localtime_s.h
   DEPENDS
+    .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
-    .time_utils
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -137,7 +135,6 @@ add_entrypoint_object(
     difftime.h
   DEPENDS
     libc.include.time
-    libc.src.stdio.fopen
 )
 
 add_entrypoint_object(
@@ -149,7 +146,6 @@ add_entrypoint_object(
   DEPENDS
     .time_utils
     libc.include.time
-    libc.src.stdio.fopen
     libc.src.time.clock_gettime
 )
 
@@ -175,7 +171,6 @@ add_entrypoint_object(
     .time_utils
     libc.include.time
     libc.src.errno.errno
-    libc.src.stdio.fopen
 )
 
 add_subdirectory(strftime_core) #TODO: Move to top

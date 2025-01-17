@@ -20,7 +20,8 @@ LLVM_LIBC_FUNCTION(char *, ctime, (const time_t *t_ptr)) {
 
   static char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
   return time_utils::asctime(time_utils::localtime_internal(t_ptr, &tm_out),
-                             buffer, TimeConstants::ASCTIME_MAX_BYTES);
+                             buffer,
+                             TimeConstants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -26,6 +26,8 @@
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
 #include "src/errno/libc_errno.h"
+#include "src/time/time_constants.h"
+
 #ifdef LIBC_TARGET_OS_IS_LINUX
 #include "src/time/linux/localtime_utils.h"
 #include "src/time/linux/timezone.h"
