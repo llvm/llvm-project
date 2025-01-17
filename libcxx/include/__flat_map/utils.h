@@ -27,8 +27,13 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// It is easier to be-friend to have a struct with static functions
+// These utilities are defined in a class instead of a namespace so that this class can be befriended more easily.
 struct __flat_map_utils {
+  // Emplace a {key: value} into a flat_{multi}map, at the exact position that
+  // __it_key and __it_mapped point to, assuming that the key is not already present in the map.
+  // When an exception is thrown during the emplacement, the function will try its best to
+  // roll back the changes it made to the map. If it cannot roll back the changes, it will
+  // clear the map.
   template <class _Map, class _IterK, class _IterM, class _KeyArg, class... _MArgs>
   _LIBCPP_HIDE_FROM_ABI static typename _Map::iterator __emplace_exact_pos(
       _Map& __map, _IterK&& __it_key, _IterM&& __it_mapped, _KeyArg&& __key, _MArgs&&... __mapped_args) {
@@ -74,6 +79,7 @@ struct __flat_map_utils {
     return typename _Map::iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
+  // TODO: We could optimize this, see
   // https://github.com/llvm/llvm-project/issues/108624
   template <class _Map, class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI static typename _Map::size_type

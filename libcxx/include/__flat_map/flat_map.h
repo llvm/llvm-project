@@ -1040,7 +1040,7 @@ private:
   friend __flat_map_utils;
 
   containers __containers_;
-  [[no_unique_address]] key_compare __compare_;
+  _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
   struct __key_equiv {
     _LIBCPP_HIDE_FROM_ABI __key_equiv(key_compare __c) : __comp_(__c) {}

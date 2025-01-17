@@ -18,7 +18,7 @@
 #include <__algorithm/ranges_is_sorted.h>
 #include <__algorithm/ranges_lower_bound.h>
 #include <__algorithm/ranges_partition_point.h>
-#include <__algorithm/ranges_stable_sort.h>
+#include <__algorithm/ranges_sort.h>
 #include <__algorithm/ranges_unique.h>
 #include <__algorithm/ranges_upper_bound.h>
 #include <__algorithm/remove_if.h>
@@ -758,7 +758,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __sort() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
-    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
+    ranges::sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
   }
 
   template <class _Self, class _KeyIter>
@@ -780,7 +780,7 @@ private:
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {
-        ranges::stable_sort(__zv.begin() + __append_start_offset, __end, __compare_key);
+        ranges::sort(__zv.begin() + __append_start_offset, __end, __compare_key);
       } else {
         _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
             __is_sorted(__containers_.keys | ranges::views::drop(__append_start_offset)),
@@ -850,7 +850,7 @@ private:
   friend __flat_map_utils;
 
   containers __containers_;
-  [[no_unique_address]] key_compare __compare_;
+  _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
 
   struct __key_equiv {
     _LIBCPP_HIDE_FROM_ABI __key_equiv(key_compare __c) : __comp_(__c) {}
