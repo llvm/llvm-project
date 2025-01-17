@@ -508,6 +508,11 @@ genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
 
+/// A shortcut for loadTrivialScalar(getElementAt()),
+/// which designates and loads an element of an array.
+Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
+                     Entity entity, mlir::ValueRange oneBasedIndices);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

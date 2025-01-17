@@ -25,11 +25,9 @@ class FileSystem;
 } // namespace llvm
 
 namespace clang {
+class CompilerInstance;
 class DiagnosticsEngine;
-class HeaderSearchOptions;
 class CodeGenOptions;
-class TargetOptions;
-class LangOptions;
 class BackendConsumer;
 
 enum BackendAction {
@@ -41,10 +39,8 @@ enum BackendAction {
   Backend_EmitObj       ///< Emit native object files
 };
 
-void EmitBackendOutput(DiagnosticsEngine &Diags, const HeaderSearchOptions &,
-                       const CodeGenOptions &CGOpts, const TargetOptions &TOpts,
-                       const LangOptions &LOpts, StringRef TDesc,
-                       llvm::Module *M, BackendAction Action,
+void emitBackendOutput(CompilerInstance &CI, StringRef TDesc, llvm::Module *M,
+                       BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        BackendConsumer *BC = nullptr);

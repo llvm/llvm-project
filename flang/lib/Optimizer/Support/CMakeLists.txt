@@ -16,6 +16,11 @@ add_flang_library(FIRSupport
 
   LINK_LIBS
   FIRDialect
+
+  LINK_COMPONENTS
+  TargetParser
+
+  MLIR_LIBS
   ${dialect_libs}
   ${extension_libs}
   MLIRBuiltinToLLVMIRTranslation
@@ -24,7 +29,4 @@ add_flang_library(FIRSupport
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   MLIRTargetLLVMIRImport
-
-  LINK_COMPONENTS
-  TargetParser
 )

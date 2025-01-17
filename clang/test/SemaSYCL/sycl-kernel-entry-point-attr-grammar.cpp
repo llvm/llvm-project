@@ -120,18 +120,3 @@ template<typename> concept C = true;
 // expected-error@+1 {{expected a type}}
 [[clang::sycl_kernel_entry_point(C<int>)]] void bad11();
 #endif
-
-struct B12; // #B12-decl
-// FIXME: C++23 [temp.expl.spec]p12 states:
-// FIXME:   ... Similarly, attributes appearing in the declaration of a template
-// FIXME:   have no effect on an explicit specialization of that template.
-// FIXME: Clang currently instantiates and propagates attributes from a function
-// FIXME: template to its explicit specializations resulting in the following
-// FIXME: spurious error.
-// expected-error@+4 {{incomplete type 'B12' named in nested name specifier}}
-// expected-note@+5 {{in instantiation of function template specialization 'bad12<B12>' requested here}}
-// expected-note@#B12-decl {{forward declaration of 'B12'}}
-template<typename T>
-[[clang::sycl_kernel_entry_point(typename T::not_found)]] void bad12() {}
-template<>
-void bad12<B12>() {}

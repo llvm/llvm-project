@@ -386,13 +386,19 @@ public:
 // Used for LTO.
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                       StringRef archiveName, uint64_t offsetInArchive,
-                       bool lazy);
+  explicit BitcodeFile(SymbolTable &symtab, MemoryBufferRef mb,
+                       std::unique_ptr<llvm::lto::InputFile> &obj, bool lazy);
   ~BitcodeFile();
+
+  static BitcodeFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                             StringRef archiveName, uint64_t offsetInArchive,
+                             bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
-  MachineTypes getMachineType() const override;
+  MachineTypes getMachineType() const override {
+    return getMachineType(obj.get());
+  }
+  static MachineTypes getMachineType(const llvm::lto::InputFile *obj);
   void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
 

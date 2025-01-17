@@ -377,7 +377,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
             for (uint32_t i = 0; i < num_sections; ++i) {
               SectionSP section_sp(section_list->GetSectionAtIndex(i));
               if (section_sp) {
-                target.GetSectionLoadList().SetSectionUnloaded(section_sp);
+                target.SetSectionUnloaded(section_sp);
               }
             }
           }
