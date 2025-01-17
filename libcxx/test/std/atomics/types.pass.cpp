@@ -80,9 +80,11 @@ void test() {
 #if TEST_STD_VER >= 17
   static_assert((std::is_same_v<typename A::value_type, T>), "");
 #endif
-  constexpr bool IntegralOrFloating =
-      (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value;
-  constexpr bool Pointer = std::is_pointer<T>::value;
+  enum {
+    IntegralOrFloating =
+        (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value
+  };
+  enum { Pointer = std::is_pointer<T>::value };
   test_atomic<A, IntegralOrFloating, Pointer>();
 }
 
