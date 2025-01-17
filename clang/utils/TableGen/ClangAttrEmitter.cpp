@@ -1518,7 +1518,8 @@ createArgument(const Record &Arg, StringRef Attr,
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
-    for (const auto &[Base, _] : reverse(Search->getSuperClasses())) {
+    std::vector<const Record *> SCs = Search->getSuperClasses();
+    for (const Record *Base : reverse(SCs)) {
       if ((Ptr = createArgument(Arg, Attr, Base)))
         break;
     }
@@ -1848,17 +1849,17 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   auto *LAPK = Attr->getValueAsDef(LateParsedStr);
 
   // Typecheck the `LateParsed` field.
-  SmallVector<const Record *, 1> SuperClasses;
-  LAPK->getDirectSuperClasses(SuperClasses);
+  ArrayRef<std::pair<const Record *, SMRange>> SuperClasses =
+      LAPK->getDirectSuperClasses();
   if (SuperClasses.size() != 1)
     PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) +
                               "`should only have one super class");
 
-  if (SuperClasses[0]->getName() != LateAttrParseKindStr)
+  if (SuperClasses[0].first->getName() != LateAttrParseKindStr)
     PrintFatalError(
         Attr, "Field `" + Twine(LateParsedStr) + "`should only have type `" +
                   Twine(LateAttrParseKindStr) + "` but found type `" +
-                  SuperClasses[0]->getName() + "`");
+                  SuperClasses[0].first->getName() + "`");
 
   // Get Kind and verify the enum name matches the name in `Attr.td`.
   unsigned Kind = LAPK->getValueAsInt(KindFieldStr);
@@ -2457,8 +2458,8 @@ static void emitStringSwitchCases(std::map<StringRef, FSIVecTy> &Map,
 }
 
 static bool isTypeArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         Arg->getSuperClasses().back().first->getName() == "TypeArgument";
+  return !Arg->getDirectSuperClasses().empty() &&
+         Arg->getDirectSuperClasses().back().first->getName() == "TypeArgument";
 }
 
 /// Emits the first-argument-is-type property for attributes.
@@ -2499,8 +2500,9 @@ static void emitClangAttrArgContextList(const RecordKeeper &Records,
 }
 
 static bool isIdentifierArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("IdentifierArgument", true)
              .Case("EnumArgument", true)
              .Case("VariadicEnumArgument", true)
@@ -2508,33 +2510,35 @@ static bool isIdentifierArgument(const Record *Arg) {
 }
 
 static bool isVariadicIdentifierArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicIdentifierArgument", true)
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
 
 static bool isVariadicExprArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicExprArgument", true)
              .Default(false);
 }
 
 static bool isStringLiteralArgument(const Record *Arg) {
-  if (Arg->getSuperClasses().empty())
+  if (Arg->getDirectSuperClasses().empty())
     return false;
-  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  StringRef ArgKind = Arg->getDirectSuperClasses().back().first->getName();
   if (ArgKind == "EnumArgument")
     return Arg->getValueAsBit("IsString");
   return ArgKind == "StringArgument";
 }
 
 static bool isVariadicStringLiteralArgument(const Record *Arg) {
-  if (Arg->getSuperClasses().empty())
+  if (Arg->getDirectSuperClasses().empty())
     return false;
-  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  StringRef ArgKind = Arg->getDirectSuperClasses().back().first->getName();
   if (ArgKind == "VariadicEnumArgument")
     return Arg->getValueAsBit("IsString");
   return ArgKind == "VariadicStringArgument";
@@ -2623,8 +2627,9 @@ static void emitClangAttrStrictIdentifierArgList(const RecordKeeper &Records,
 }
 
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
@@ -2710,11 +2715,11 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
-    ArrayRef<std::pair<const Record *, SMRange>> Supers = R.getSuperClasses();
+    std::vector<const Record *> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    for (const auto &[R, _] : reverse(Supers)) {
+    for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
@@ -3411,10 +3416,11 @@ namespace {
     AttrClass *findSuperClass(const Record *R) const {
       // TableGen flattens the superclass list, so we just need to walk it
       // in reverse.
-      auto SuperClasses = R->getSuperClasses();
-      for (signed i = 0, e = SuperClasses.size(); i != e; ++i) {
-        auto SuperClass = findClassByRecord(SuperClasses[e - i - 1].first);
-        if (SuperClass) return SuperClass;
+      std::vector<const Record *> SuperClasses = R->getSuperClasses();
+      for (const Record *R : reverse(SuperClasses)) {
+        AttrClass *SuperClass = findClassByRecord(R);
+        if (SuperClass)
+          return SuperClass;
       }
       return nullptr;
     }
@@ -4614,8 +4620,9 @@ static void GenerateHandleDeclAttribute(const Record &Attr, raw_ostream &OS) {
 }
 
 static bool isParamExpr(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+  return !Arg->getDirectSuperClasses().empty() &&
+         StringSwitch<bool>(
+             Arg->getDirectSuperClasses().back().first->getName())
              .Case("ExprArgument", true)
              .Case("VariadicExprArgument", true)
              .Default(false);
@@ -4738,7 +4745,7 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       if (Arg->getValueAsBitOrUnset("Fake", UnusedUnset))
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
-      for (const auto &[Class, _] : Arg->getSuperClasses()) {
+      for (const Record *Class : Arg->getSuperClasses()) {
         if (Class->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
