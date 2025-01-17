@@ -3118,7 +3118,7 @@ void UnwrappedLineParser::parseNamespaceOrExportBlock(unsigned AddLevels) {
   if (ManageWhitesmithsBraces)
     ++Line->Level;
 
-  // Munch the semicolon after a namespace. This is more common than one would
+  // Munch the semicolon after the block. This is more common than one would
   // think. Putting the semicolon into its own line is very ugly.
   parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/true,
              /*KeepBraces=*/true, /*IfKind=*/nullptr, ManageWhitesmithsBraces);
@@ -3167,7 +3167,8 @@ void UnwrappedLineParser::parseNamespace() {
 }
 
 void UnwrappedLineParser::parseCXXExportBlock() {
-  parseNamespaceOrExportBlock(Style.ExportBlockIndentation ? 1 : 0);
+  parseNamespaceOrExportBlock(/*AddLevels=*/Style.ExportBlockIndentation ? 1
+                                                                         : 0);
 }
 
 void UnwrappedLineParser::parseNew() {

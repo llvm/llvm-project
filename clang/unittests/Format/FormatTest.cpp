@@ -9095,6 +9095,96 @@ TEST_F(FormatTest, ExportBlockIndentation) {
                Style);
 }
 
+TEST_F(FormatTest, ShortExportBlocks) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.ExportBlockIndentation = false;
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  verifyFormat("export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "}",
+               "export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+}
+
 TEST_F(FormatTest, FormatsBuilderPattern) {
   verifyFormat("return llvm::StringSwitch<Reference::Kind>(name)\n"
                "    .StartsWith(\".eh_frame_hdr\", ORDER_EH_FRAMEHDR)\n"
@@ -26675,7 +26765,10 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
                "  int foo;\n"
                "};",
                Style);
-  verifyFormat("export { int foo; };", Style);
+  verifyFormat("export {\n"
+               "  int foo;\n"
+               "};",
+               Style);
   verifyFormat("export export char const *hello() { return \"hello\"; }");
 
   verifyFormat("import bar;", Style);
