@@ -180,7 +180,7 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; GCN-NEXT:  .LBB2_3: ; %bb.2
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_add_i32 s32, s34, 0x400
+; GCN-NEXT:    s_add_i32 s32, s33, 0x400
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s34, s8
