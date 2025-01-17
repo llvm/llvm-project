@@ -1907,8 +1907,8 @@ void CGDebugInfo::CollectRecordNestedType(
   if (isa<InjectedClassNameType>(Ty))
     return;
   SourceLocation Loc = TD->getLocation();
-  llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
-  elements.push_back(nestedType);
+  if (llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc)))
+    elements.push_back(nestedType);
 }
 
 void CGDebugInfo::CollectRecordFields(

@@ -2066,7 +2066,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = CharUnits::One();
     else {
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
-        return false;
+        return this->emitInvalid(E);
 
       if (Kind == UETT_SizeOf)
         Size = ASTCtx.getTypeSizeInChars(ArgType);
@@ -4247,6 +4247,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
@@ -6209,8 +6210,20 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return revisit(VD);
 
         if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
-            typeShouldBeVisited(VD->getType()))
+            typeShouldBeVisited(VD->getType())) {
+          if (const Expr *Init = VD->getAnyInitializer();
+              Init && !Init->isValueDependent()) {
+            // Whether or not the evaluation is successul doesn't really matter
+            // here -- we will create a global variable in any case, and that
+            // will have the state of initializer evaluation attached.
+            APValue V;
+            SmallVector<PartialDiagnosticAt> Notes;
+            (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
+                                              true);
+            return this->visitDeclRef(D, E);
+          }
           return revisit(VD);
+        }
 
         // FIXME: The evaluateValue() check here is a little ridiculous, since
         // it will ultimately call into Context::evaluateAsInitializer(). In

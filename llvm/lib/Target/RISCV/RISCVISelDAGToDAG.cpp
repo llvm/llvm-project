@@ -3791,16 +3791,6 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
-static bool hasPassthru(const MCInstrDesc &MCID) {
-  switch (RISCV::getRVVMCOpcode(MCID.getOpcode())) {
-  case RISCV::VCPOP_M:
-  case RISCV::VFIRST_M:
-    return false;
-  }
-  // None of the stores has passthru.
-  return !MCID.mayStore();
-}
-
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3819,20 +3809,22 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool UseTUPseudo = RISCVII::hasVecPolicyOp(MCID.TSFlags);
-#ifndef NDEBUG
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
+
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  const bool MaskedHasPassthru = RISCVII::isFirstDefTiedToFirstUse(MaskedMCID);
+
   assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
          RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
          "Masked and unmasked pseudos are inconsistent");
-  const bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
-  assert(UseTUPseudo == HasTiedDest && "Unexpected pseudo structure");
-#endif
+  assert(RISCVII::hasVecPolicyOp(MCID.TSFlags) == HasPassthru &&
+         "Unexpected pseudo structure");
+  assert(!(HasPassthru && !MaskedHasPassthru) &&
+         "Unmasked pseudo has passthru but masked pseudo doesn't?");
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo and has the passthru
-  // operand.
-  bool ShouldSkip = !UseTUPseudo && hasPassthru(MCID);
+  // Skip the passthru operand at index 0 if the unmasked don't have one.
+  bool ShouldSkip = !HasPassthru && MaskedHasPassthru;
   for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);

@@ -175,6 +175,15 @@ llvm::Triple::ArchType LinkerDriver::getArch() {
   return getMachineArchType(ctx.config.machine);
 }
 
+std::vector<Chunk *> LinkerDriver::getChunks() const {
+  std::vector<Chunk *> res;
+  for (ObjFile *file : ctx.objFileInstances) {
+    ArrayRef<Chunk *> v = file->getChunks();
+    res.insert(res.end(), v.begin(), v.end());
+  }
+  return res;
+}
+
 static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   if (mt == IMAGE_FILE_MACHINE_UNKNOWN)
     return true;
@@ -209,7 +218,7 @@ void LinkerDriver::addFile(InputFile *file) {
                  << " linked in after "
                     "doing LTO compilation.";
       }
-      ctx.bitcodeFileInstances.push_back(f);
+      f->symtab.bitcodeFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<ImportFile>(file)) {
       ctx.importFileInstances.push_back(f);
     }
@@ -276,7 +285,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
-    addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
+    addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
@@ -365,8 +374,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   if (magic == file_magic::coff_object) {
     obj = ObjFile::create(ctx, mb);
   } else if (magic == file_magic::bitcode) {
-    obj =
-        make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
+    obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
+                              /*lazy=*/false);
   } else if (magic == file_magic::coff_cl_gl_object) {
     Err(ctx) << mb.getBufferIdentifier()
              << ": is not a native COFF file. Recompile without /GL?";
@@ -491,8 +500,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_entry:
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      ctx.config.entry =
-          file->symtab.addGCRoot(file->symtab.mangle(arg->getValue()), true);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
+      });
       break;
     case OPT_failifmismatch:
       checkFailIfMismatch(arg->getValue(), file);
@@ -1092,7 +1102,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
 
   // Get a list of all comdat sections for error checking.
   DenseSet<StringRef> set;
-  for (Chunk *c : ctx.symtab.getChunks())
+  for (Chunk *c : ctx.driver.getChunks())
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         set.insert(sec->sym->getName());
@@ -1394,8 +1404,9 @@ void LinkerDriver::createECExportThunks() {
     }
   }
 
-  if (ctx.config.entry)
-    maybeCreateECExportThunk(ctx.config.entry->getName(), ctx.config.entry);
+  if (ctx.symtabEC->entry)
+    maybeCreateECExportThunk(ctx.symtabEC->entry->getName(),
+                             ctx.symtabEC->entry);
   for (Export &e : ctx.config.exports) {
     if (!e.data)
       maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
@@ -2357,33 +2368,32 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /entry and /dll
-  {
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
       if (!arg->getValue()[0])
         Fatal(ctx) << "missing entry point symbol name";
-      config->entry =
-          ctx.symtab.addGCRoot(ctx.symtab.mangle(arg->getValue()), true);
-    } else if (!config->entry && !config->noEntry) {
+      symtab.entry = symtab.addGCRoot(symtab.mangle(arg->getValue()), true);
+    } else if (!symtab.entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
         StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                                 : "_DllMainCRTStartup";
-        config->entry = ctx.symtab.addGCRoot(s, true);
+        symtab.entry = symtab.addGCRoot(s, true);
       } else if (config->driverWdm) {
         // /driver:wdm implies /entry:_NtProcessStartup
-        config->entry =
-            ctx.symtab.addGCRoot(ctx.symtab.mangle("_NtProcessStartup"), true);
+        symtab.entry =
+            symtab.addGCRoot(symtab.mangle("_NtProcessStartup"), true);
       } else {
         // Windows specific -- If entry point name is not given, we need to
         // infer that from user-defined entry name.
-        StringRef s = ctx.symtab.findDefaultEntry();
+        StringRef s = symtab.findDefaultEntry();
         if (s.empty())
           Fatal(ctx) << "entry point must be defined";
-        config->entry = ctx.symtab.addGCRoot(s, true);
+        symtab.entry = symtab.addGCRoot(s, true);
         Log(ctx) << "Entry name inferred: " << s;
       }
     }
-  }
+  });
 
   // Handle /delayload
   {
@@ -2522,10 +2532,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("Add unresolved symbols");
     do {
-      // Windows specific -- if entry point is not found,
-      // search for its mangled names.
-      if (config->entry)
-        ctx.symtab.mangleMaybe(config->entry);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        // Windows specific -- if entry point is not found,
+        // search for its mangled names.
+        if (symtab.entry)
+          symtab.mangleMaybe(symtab.entry);
+      });
 
       // Windows specific -- Make sure we resolve all dllexported symbols.
       for (Export &e : config->exports) {
@@ -2559,19 +2571,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         }
       }
 
-      // If any inputs are bitcode files, the LTO code generator may create
-      // references to library functions that are not explicit in the bitcode
-      // file's symbol table. If any of those library functions are defined in a
-      // bitcode file in an archive member, we need to arrange to use LTO to
-      // compile those archive members by adding them to the link beforehand.
-      if (!ctx.bitcodeFileInstances.empty()) {
-        llvm::Triple TT(
-            ctx.bitcodeFileInstances.front()->obj->getTargetTriple());
-        for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
-          ctx.symtab.addLibcall(s);
-      }
-
       ctx.forEachSymtab([&](SymbolTable &symtab) {
+        // If any inputs are bitcode files, the LTO code generator may create
+        // references to library functions that are not explicit in the bitcode
+        // file's symbol table. If any of those library functions are defined in
+        // a bitcode file in an archive member, we need to arrange to use LTO to
+        // compile those archive members by adding them to the link beforehand.
+        if (!symtab.bitcodeFileInstances.empty()) {
+          llvm::Triple TT(
+              symtab.bitcodeFileInstances.front()->obj->getTargetTriple());
+          for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
+            symtab.addLibcall(s);
+        }
+
         // Windows specific -- if __load_config_used can be resolved, resolve
         // it.
         if (symtab.findUnderscore("_load_config_used"))
@@ -2627,8 +2639,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If we are going to do codegen for link-time optimization, check for
   // unresolvable symbols first, so we don't spend time generating code that
   // will fail to link anyway.
-  if (!ctx.bitcodeFileInstances.empty() && !config->forceUnresolved)
-    ctx.symtab.reportUnresolvable();
+  if (!config->forceUnresolved)
+    ctx.forEachSymtab([](SymbolTable &symtab) {
+      if (!symtab.bitcodeFileInstances.empty())
+        symtab.reportUnresolvable();
+    });
   if (errorCount())
     return;
 
@@ -2643,7 +2658,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
   ltoCompilationDone = true;
-  ctx.symtab.compileBitcodeFiles();
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
   if (Defined *d =
           dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))

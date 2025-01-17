@@ -746,6 +746,26 @@ std::optional<Symbol *> ObjFile::createDefined(
   if (sectionNumber == llvm::COFF::IMAGE_SYM_DEBUG)
     return nullptr;
 
+  if (sym.isEmptySectionDeclaration()) {
+    // As there is no coff_section in the object file for these, make a
+    // new virtual one, with everything zeroed out (i.e. an empty section),
+    // with only the name and characteristics set.
+    StringRef name = getName();
+    auto *hdr = make<coff_section>();
+    memset(hdr, 0, sizeof(*hdr));
+    strncpy(hdr->Name, name.data(),
+            std::min(name.size(), (size_t)COFF::NameSize));
+    // We have no idea what characteristics should be assumed here; pick
+    // a default. This matches what is used for .idata sections in the regular
+    // object files in import libraries.
+    hdr->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
+                           IMAGE_SCN_MEM_WRITE | IMAGE_SCN_ALIGN_4BYTES;
+    auto *sc = make<SectionChunk>(this, hdr);
+    chunks.push_back(sc);
+    return make<DefinedRegular>(this, /*name=*/"", /*isCOMDAT=*/false,
+                                /*isExternal=*/false, sym.getGeneric(), sc);
+  }
+
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))
     Fatal(ctx) << toString(this) << ": " << getName()
                << " should not refer to special section "
@@ -1209,10 +1229,15 @@ void ImportFile::parse() {
   }
 }
 
-BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                         StringRef archiveName, uint64_t offsetInArchive,
-                         bool lazy)
-    : InputFile(ctx.symtab, BitcodeKind, mb, lazy) {
+BitcodeFile::BitcodeFile(SymbolTable &symtab, MemoryBufferRef mb,
+                         std::unique_ptr<lto::InputFile> &o, bool lazy)
+    : InputFile(symtab, BitcodeKind, mb, lazy) {
+  obj.swap(o);
+}
+
+BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                                 StringRef archiveName,
+                                 uint64_t offsetInArchive, bool lazy) {
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.config.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier(),
@@ -1232,7 +1257,9 @@ BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                sys::path::filename(path) +
                                                utostr(offsetInArchive)));
 
-  obj = check(lto::InputFile::create(mbref));
+  std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(mbref));
+  return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj,
+                           lazy);
 }
 
 BitcodeFile::~BitcodeFile() = default;
@@ -1309,7 +1336,7 @@ void BitcodeFile::parseLazy() {
     }
 }
 
-MachineTypes BitcodeFile::getMachineType() const {
+MachineTypes BitcodeFile::getMachineType(const llvm::lto::InputFile *obj) {
   Triple t(obj->getTargetTriple());
   switch (t.getArch()) {
   case Triple::x86_64:

@@ -528,6 +528,7 @@ private:
     uint64_t LexicalOffset;
     uint64_t VisibleOffset;
     uint64_t ModuleLocalOffset;
+    uint64_t TULocalOffset;
   };
 
   using DelayedNamespaceOffsetMapTy =
@@ -640,6 +641,9 @@ private:
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::ModuleLocalLookupTable>
       ModuleLocalLookups;
+  llvm::DenseMap<const DeclContext *,
+                 serialization::reader::DeclContextLookupTable>
+      TULocalLookups;
 
   using SpecLookupTableTy =
       llvm::DenseMap<const Decl *,
@@ -670,6 +674,7 @@ private:
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates>
       PendingModuleLocalVisibleUpdates;
+  llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> TULocalUpdates;
 
   using SpecializationsUpdate = SmallVector<UpdateData, 1>;
   using SpecializationsUpdateMap =
@@ -704,11 +709,17 @@ private:
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, DeclContext *DC);
 
+  enum class VisibleDeclContextStorageKind {
+    GenerallyVisible,
+    ModuleLocalVisible,
+    TULocalVisible,
+  };
+
   /// Read the record that describes the visible contents of a DC.
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, GlobalDeclID ID,
-                                     bool IsModuleLocal);
+                                     VisibleDeclContextStorageKind VisibleKind);
 
   bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
                            uint64_t Offset, Decl *D, bool IsPartial);
@@ -1148,6 +1159,10 @@ private:
   unsigned NumModuleLocalVisibleDeclContexts = 0,
            TotalModuleLocalVisibleDeclContexts = 0;
 
+  /// Number of TU Local decl contexts read/total
+  unsigned NumTULocalVisibleDeclContexts = 0,
+           TotalTULocalVisibleDeclContexts = 0;
+
   /// Total size of modules, in bits, currently loaded
   uint64_t TotalModulesSizeInBits = 0;
 
@@ -1220,6 +1235,24 @@ private:
   /// The DeclContexts for these Decls will be set once recursive loading has
   /// been completed.
   std::deque<PendingDeclContextInfo> PendingDeclContextInfos;
+
+  /// Deserialization of some attributes must be deferred since they refer
+  /// to themselves in their type (e.g., preferred_name attribute refers to the
+  /// typedef that refers back to the template specialization of the template
+  /// that the attribute is attached to).
+  /// More attributes that store TypeSourceInfo might be potentially affected,
+  /// see https://github.com/llvm/llvm-project/issues/56490 for details.
+  struct DeferredAttribute {
+    // Index of the deferred attribute in the Record of the TargetedDecl.
+    uint64_t RecordIdx;
+    // Decl to attach a deferred attribute to.
+    Decl *TargetedDecl;
+  };
+
+  /// The collection of Decls that have been loaded but some of their attributes
+  /// have been deferred, paired with the index inside the record pointing
+  /// at the skipped attribute.
+  SmallVector<DeferredAttribute> PendingDeferredAttributes;
 
   template <typename DeclTy>
   using DuplicateObjCDecls = std::pair<DeclTy *, DeclTy *>;
@@ -1463,6 +1496,9 @@ public:
   const serialization::reader::ModuleLocalLookupTable *
   getModuleLocalLookupTables(DeclContext *Primary) const;
 
+  const serialization::reader::DeclContextLookupTable *
+  getTULocalLookupTables(DeclContext *Primary) const;
+
   /// Get the loaded specializations lookup tables for \p D,
   /// if any.
   serialization::reader::LazySpecializationInfoLookupTable *
@@ -1570,6 +1606,7 @@ private:
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
   void loadObjCCategories(GlobalDeclID ID, ObjCInterfaceDecl *D,
                           unsigned PreviousGeneration = 0);
+  void loadDeferredAttribute(const DeferredAttribute &DA);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
   uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);
@@ -2139,7 +2176,7 @@ public:
   /// lookup table as unmaterialized references.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
                                       DeclarationName Name,
-                                      Module *NamedModule) override;
+                                      const DeclContext *OriginalDC) override;
 
   /// Read all of the declarations lexically stored in a
   /// declaration context.

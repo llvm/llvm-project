@@ -414,7 +414,8 @@ public:
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
   void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset);
+                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
+                        uint64_t &TULocalOffset);
 
   template <typename T>
   RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -612,7 +613,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
 
   if (HasAttrs) {
     AttrVec Attrs;
-    Record.readAttributes(Attrs);
+    Record.readAttributes(Attrs, D);
     // Avoid calling setAttrs() directly because it uses Decl::getASTContext()
     // internally which is unsafe during derialization.
     D->setAttrsImpl(Attrs, Reader.getContext());
@@ -1859,7 +1860,9 @@ void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
   uint64_t LexicalOffset = 0;
   uint64_t VisibleOffset = 0;
   uint64_t ModuleLocalOffset = 0;
-  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset);
+  uint64_t TULocalOffset = 0;
+  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset,
+                   TULocalOffset);
   D->IsCBuffer = Record.readBool();
   D->KwLoc = readSourceLocation();
   D->LBraceLoc = readSourceLocation();
@@ -2770,10 +2773,12 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
 
 void ASTDeclReader::VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
                                      uint64_t &VisibleOffset,
-                                     uint64_t &ModuleLocalOffset) {
+                                     uint64_t &ModuleLocalOffset,
+                                     uint64_t &TULocalOffset) {
   LexicalOffset = ReadLocalOffset();
   VisibleOffset = ReadLocalOffset();
   ModuleLocalOffset = ReadLocalOffset();
+  TULocalOffset = ReadLocalOffset();
 }
 
 template <typename T>
@@ -3093,6 +3098,8 @@ public:
     return Reader.readInt();
   }
 
+  uint64_t peekInts(unsigned N) { return Reader.peekInts(N); }
+
   bool readBool() { return Reader.readBool(); }
 
   SourceRange readSourceRange() {
@@ -3123,17 +3130,28 @@ public:
     return Reader.readVersionTuple();
   }
 
+  void skipInt() { Reader.skipInts(1); }
+
+  void skipInts(unsigned N) { Reader.skipInts(N); }
+
+  unsigned getCurrentIdx() { return Reader.getIdx(); }
+
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
   template <typename T> T *readDeclAs() { return Reader.readDeclAs<T>(); }
 };
 }
 
+/// Reads one attribute from the current stream position, advancing Idx.
 Attr *ASTRecordReader::readAttr() {
   AttrReader Record(*this);
   auto V = Record.readInt();
   if (!V)
     return nullptr;
+
+  // Read and ignore the skip count, since attribute deserialization is not
+  // deferred on this pass.
+  Record.skipInt();
 
   Attr *New = nullptr;
   // Kind is stored as a 1-based integer because 0 is used to indicate a null
@@ -3164,11 +3182,26 @@ Attr *ASTRecordReader::readAttr() {
   return New;
 }
 
-/// Reads attributes from the current stream position.
-void ASTRecordReader::readAttributes(AttrVec &Attrs) {
+/// Reads attributes from the current stream position, advancing Idx.
+/// For some attributes (where type depends on itself recursively), defer
+/// reading the attribute until the type has been read.
+void ASTRecordReader::readAttributes(AttrVec &Attrs, Decl *D) {
   for (unsigned I = 0, E = readInt(); I != E; ++I)
-    if (auto *A = readAttr())
+    if (auto *A = readOrDeferAttrFor(D))
       Attrs.push_back(A);
+}
+
+/// Reads one attribute from the current stream position, advancing Idx.
+/// For some attributes (where type depends on itself recursively), defer
+/// reading the attribute until the type has been read.
+Attr *ASTRecordReader::readOrDeferAttrFor(Decl *D) {
+  AttrReader Record(*this);
+  unsigned SkipCount = Record.peekInts(1);
+  if (!SkipCount)
+    return readAttr();
+  Reader->PendingDeferredAttributes.push_back({Record.getCurrentIdx(), D});
+  Record.skipInts(SkipCount);
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3875,6 +3908,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
   case DECL_CONTEXT_MODULE_LOCAL_VISIBLE:
+  case DECL_CONTEXT_TU_LOCAL_VISIBLE:
   case DECL_SPECIALIZATIONS:
   case DECL_PARTIAL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
@@ -4185,9 +4219,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     uint64_t LexicalOffset = 0;
     uint64_t VisibleOffset = 0;
     uint64_t ModuleLocalOffset = 0;
+    uint64_t TULocalOffset = 0;
 
-    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset,
-                            ModuleLocalOffset);
+    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset, ModuleLocalOffset,
+                            TULocalOffset);
 
     // Get the lexical and visible block for the delayed namespace.
     // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
@@ -4199,18 +4234,24 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
         LexicalOffset = Iter->second.LexicalOffset;
         VisibleOffset = Iter->second.VisibleOffset;
         ModuleLocalOffset = Iter->second.ModuleLocalOffset;
+        TULocalOffset = Iter->second.TULocalOffset;
       }
 
     if (LexicalOffset &&
         ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, LexicalOffset, DC))
       return nullptr;
-    if (VisibleOffset &&
-        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, VisibleOffset, ID,
-                                      /*IsModuleLocal=*/false))
+    if (VisibleOffset && ReadVisibleDeclContextStorage(
+                             *Loc.F, DeclsCursor, VisibleOffset, ID,
+                             VisibleDeclContextStorageKind::GenerallyVisible))
       return nullptr;
     if (ModuleLocalOffset &&
-        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, ModuleLocalOffset,
-                                      ID, /*IsModuleLocal=*/true))
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, ModuleLocalOffset, ID,
+            VisibleDeclContextStorageKind::ModuleLocalVisible))
+      return nullptr;
+    if (TULocalOffset && ReadVisibleDeclContextStorage(
+                             *Loc.F, DeclsCursor, TULocalOffset, ID,
+                             VisibleDeclContextStorageKind::TULocalVisible))
       return nullptr;
   }
   assert(Record.getIdx() == Record.size());
@@ -4376,6 +4417,18 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     DC->setHasExternalVisibleStorage(true);
   }
 
+  if (auto I = TULocalUpdates.find(ID); I != TULocalUpdates.end()) {
+    auto Updates = std::move(I->second);
+    TULocalUpdates.erase(I);
+
+    auto *DC = cast<DeclContext>(D)->getPrimaryContext();
+    for (const auto &Update : Updates)
+      TULocalLookups[DC].Table.add(
+          Update.Mod, Update.Data,
+          reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
+    DC->setHasExternalVisibleStorage(true);
+  }
+
   // Load any pending related decls.
   if (D->isCanonicalDecl()) {
     if (auto IT = RelatedDeclsMap.find(ID); IT != RelatedDeclsMap.end()) {
@@ -4457,6 +4510,49 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
     MostRecent = D;
   }
   ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
+}
+
+void ASTReader::loadDeferredAttribute(const DeferredAttribute &DA) {
+  Decl *D = DA.TargetedDecl;
+  ModuleFile *M = getOwningModuleFile(D);
+
+  unsigned LocalDeclIndex = D->getGlobalID().getLocalDeclIndex();
+  const DeclOffset &DOffs = M->DeclOffsets[LocalDeclIndex];
+  RecordLocation Loc(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
+
+  llvm::BitstreamCursor &Cursor = Loc.F->DeclsCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  if (llvm::Error Err = Cursor.JumpToBit(Loc.Offset)) {
+    Error(std::move(Err));
+  }
+
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    llvm::report_fatal_error(
+        Twine("ASTReader::loadPreferredNameAttribute failed reading code: ") +
+        toString(MaybeCode.takeError()));
+  }
+  unsigned Code = MaybeCode.get();
+
+  ASTRecordReader Record(*this, *Loc.F);
+  Expected<unsigned> MaybeRecCode = Record.readRecord(Cursor, Code);
+  if (!MaybeRecCode) {
+    llvm::report_fatal_error(
+        Twine(
+            "ASTReader::loadPreferredNameAttribute failed reading rec code: ") +
+        toString(MaybeCode.takeError()));
+  }
+  unsigned RecCode = MaybeRecCode.get();
+  if (RecCode < DECL_TYPEDEF || RecCode > DECL_LAST) {
+    llvm::report_fatal_error(
+        Twine("ASTReader::loadPreferredNameAttribute failed reading rec code: "
+              "expected valid DeclCode") +
+        toString(MaybeCode.takeError()));
+  }
+
+  Record.skipInts(DA.RecordIdx);
+  Attr *A = Record.readAttr();
+  getContext().getDeclAttrs(D).push_back(A);
 }
 
 namespace {
