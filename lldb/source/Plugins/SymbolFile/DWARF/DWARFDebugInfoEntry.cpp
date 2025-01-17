@@ -289,8 +289,10 @@ static bool GetAttributes(DWARFUnit const *cu,
                           llvm::SmallVector<DWARFDIE> &worklist,
                           llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
                           DWARFAttributes &attributes) {
-  assert(!worklist.empty());
-  assert(cu);
+  assert(!worklist.empty() && "Need at least one DIE to visit.");
+  assert(cu && "Need a valid CU to extract attributes.");
+  assert(seen.size() >= 1 &&
+         "Need to have seen at least the currently visited entry.");
 
   DWARFDIE current = worklist.pop_back_val();
 
