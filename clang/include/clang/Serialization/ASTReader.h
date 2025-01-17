@@ -2133,7 +2133,8 @@ public:
   /// The current implementation of this method just loads the entire
   /// lookup table as unmaterialized references.
   bool FindExternalVisibleDeclsByName(const DeclContext *DC,
-                                      DeclarationName Name) override;
+                                      DeclarationName Name,
+                                      const DeclContext *OriginalDC) override;
 
   /// Read all of the declarations lexically stored in a
   /// declaration context.

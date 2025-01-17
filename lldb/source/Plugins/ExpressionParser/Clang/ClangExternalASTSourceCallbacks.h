@@ -40,8 +40,10 @@ public:
       llvm::function_ref<bool(clang::Decl::Kind)> IsKindWeWant,
       llvm::SmallVectorImpl<clang::Decl *> &Result) override;
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
-                                      clang::DeclarationName Name) override;
+  bool
+  FindExternalVisibleDeclsByName(const clang::DeclContext *DC,
+                                 clang::DeclarationName Name,
+                                 const clang::DeclContext *OriginalDC) override;
 
   bool FindExternalVisibleMethodsByName(const clang::DeclContext *DC,
                                         clang::DeclarationName Name) override {
