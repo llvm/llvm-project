@@ -275,8 +275,6 @@ void DependencyFileGenerator::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<DepCollectorPPCallbacks>(*this, PP));
   PP.getHeaderSearchInfo().getModuleMap().addModuleMapCallbacks(
       std::make_unique<DFGMMCallback>(*this, SkipUnusedModuleMaps));
-
-  DependencyCollector::attachToPreprocessor(PP);  
 }
 
 bool DependencyFileGenerator::sawDependency(StringRef Filename, bool FromModule,
