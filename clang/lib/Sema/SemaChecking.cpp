@@ -8454,6 +8454,26 @@ static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   llvm_unreachable("unknown MathCheck");
 }
 
+static bool IsInfinityFunction(const FunctionDecl *FDecl) {
+  if (FDecl->getName() != "infinity") {
+    return false;
+  }
+
+  if (const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl)) {
+    const CXXRecordDecl *RDecl = MDecl->getParent();
+    if (RDecl->getName() != "numeric_limits") {
+      return false;
+    }
+
+    if (const NamespaceDecl *NSDecl =
+            dyn_cast<NamespaceDecl>(RDecl->getDeclContext())) {
+      return NSDecl->isStdNamespace();
+    }
+  }
+
+  return false;
+}
+
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
@@ -8469,7 +8489,7 @@ void Sema::CheckInfNaNFunction(const CallExpr *Call,
     bool IsInfOrIsFinite =
         IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
     bool IsInfinityOrIsSpecialInf =
-        HasIdentifier && ((FDecl->getName() == "infinity") ||
+        HasIdentifier && (IsInfinityFunction(FDecl) ||
                           IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf));
     if ((IsInfOrIsFinite || IsInfinityOrIsSpecialInf) && FPO.getNoHonorInfs())
       Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
