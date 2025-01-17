@@ -44,6 +44,7 @@ static_library("Sema") {
     "DeclSpec.cpp",
     "DelayedDiagnostic.cpp",
     "HLSLExternalSemaSource.cpp",
+    "HeuristicResolver.cpp",
     "IdentifierResolver.cpp",
     "JumpDiagnostics.cpp",
     "MultiplexExternalSemaSource.cpp",
