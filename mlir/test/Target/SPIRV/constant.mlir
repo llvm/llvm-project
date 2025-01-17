@@ -198,6 +198,17 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
+  // CHECK-LABEL: @matrix_const
+  spirv.func @matrix_const() -> () "None" {
+    // CHECK: %[[VAR:.*]] = spirv.Variable : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
+    %0 = spirv.Variable : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
+    // CHECK: %[[CST:.*]] = spirv.Constant [dense<[1.000000e+00, 0.000000e+00, 0.000000e+00]> : vector<3xf32>, dense<[0.000000e+00, 1.000000e+00, 0.000000e+00]> : vector<3xf32>, dense<[0.000000e+00, 0.000000e+00, 1.000000e+00]> : vector<3xf32>] : !spirv.matrix<3 x vector<3xf32>>
+    %1 = spirv.Constant [dense<[1., 0., 0.]> : vector<3xf32>, dense<[0., 1., 0.]> : vector<3xf32>, dense<[0., 0., 1.]> : vector<3xf32>] : !spirv.matrix<3 x vector<3xf32>>
+    // CHECK: spirv.Store "Function" %[[VAR]], %[[CST]] : !spirv.matrix<3 x vector<3xf32>>
+    spirv.Store "Function" %0, %1 : !spirv.matrix<3 x vector<3xf32>>
+    spirv.Return
+  }
+
   // CHECK-LABEL: @ui64_array_const
   spirv.func @ui64_array_const() -> (!spirv.array<3xui64>) "None" {
     // CHECK: spirv.Constant [5, 6, 7] : !spirv.array<3 x i64>
