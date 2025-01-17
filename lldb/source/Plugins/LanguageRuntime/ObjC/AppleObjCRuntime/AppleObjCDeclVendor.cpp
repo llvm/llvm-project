@@ -31,8 +31,9 @@ public:
       : m_decl_vendor(decl_vendor) {}
 
   // FIXME: unused when 'TypeSystemClang::UseRedeclCompletion == true'
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *decl_ctx,
-                                      clang::DeclarationName name) override {
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *decl_ctx, clang::DeclarationName name,
+      const clang::DeclContext *original_dc) override {
 
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
