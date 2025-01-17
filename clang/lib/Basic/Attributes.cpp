@@ -76,7 +76,7 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
                         const TargetInfo &Target, const LangOptions &LangOpts) {
   return hasAttribute(Syntax, Scope, Attr, Target, LangOpts,
-                      /*CheckPlugins*/ true);
+                      /*CheckPlugins=*/true);
 }
 
 const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
