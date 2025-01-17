@@ -21,13 +21,13 @@
 namespace llvm {
 
 struct Align;
+struct MachineJumpTableEntry;
 class Constant;
 class DataLayout;
 class Function;
 class GlobalObject;
 class GlobalValue;
 class MachineBasicBlock;
-class MachineJumpTableEntry;
 class MachineModuleInfo;
 class Mangler;
 class MCContext;
