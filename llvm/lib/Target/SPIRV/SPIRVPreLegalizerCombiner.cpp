@@ -221,7 +221,7 @@ bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
-  CInfo.EnableFullDCE = true;
+  CInfo.EnableFullDCE = false;
   SPIRVPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, /*CSEInfo*/ nullptr,
                                      RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
