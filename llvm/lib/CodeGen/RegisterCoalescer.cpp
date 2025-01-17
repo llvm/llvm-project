@@ -1434,6 +1434,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   // CopyMI may have implicit operands, save them so that we can transfer them
   // over to the newly materialized instruction after CopyMI is removed.
+  LaneBitmask NewMIImplicitOpsMask;
   SmallVector<MachineOperand, 4> ImplicitOps;
   ImplicitOps.reserve(CopyMI->getNumOperands() -
                       CopyMI->getDesc().getNumOperands());
@@ -1447,6 +1448,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
               (MO.getSubReg() == 0 && MO.getReg() == DstOperand.getReg())) &&
              "unexpected implicit virtual register def");
       ImplicitOps.push_back(MO);
+      if (MO.isDef() && MO.getReg().isVirtual() &&
+          MRI->shouldTrackSubRegLiveness(DstReg))
+        NewMIImplicitOpsMask |= MRI->getMaxLaneMaskForVReg(MO.getReg());
     }
   }
 
@@ -1489,14 +1493,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
 
-        // We're only expecting another def of the main output, so the range
-        // should get updated with the regular output range.
-        //
-        // FIXME: The range updating below probably needs updating to look at
-        // the super register if subranges are tracked.
-        assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
-               "subrange update for implicit-def of super register may not be "
-               "properly handled");
+        // If lanemasks need to be tracked, compile the lanemask of the NewMI
+        // implicit def operands to avoid subranges for the super-regs from
+        // being removed by code later on in this function.
+        if (MRI->shouldTrackSubRegLiveness(DstReg))
+          NewMIImplicitOpsMask |= MRI->getMaxLaneMaskForVReg(MO.getReg());
       }
     }
   }
@@ -1596,7 +1597,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
           CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
       VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
-        if ((SR.LaneMask & DstMask).none()) {
+        if ((SR.LaneMask & DstMask).none() &&
+            (SR.LaneMask & NewMIImplicitOpsMask).none()) {
           LLVM_DEBUG(dbgs()
                      << "Removing undefined SubRange "
                      << PrintLaneMask(SR.LaneMask) << " : " << SR << "\n");
@@ -1881,6 +1883,14 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
     }
   }
 
+  // If DstInt already has a subrange for the unused lanes, then we shouldn't
+  // create duplicate subranges when we update the interval for unused lanes.
+  LaneBitmask DefinedLanes;
+  if (DstInt && MRI->shouldTrackSubRegLiveness(DstReg)) {
+    for (LiveInterval::SubRange &SR : DstInt->subranges())
+      DefinedLanes |= SR.LaneMask;
+  }
+
   SmallPtrSet<MachineInstr*, 8> Visited;
   for (MachineRegisterInfo::reg_instr_iterator
        I = MRI->reg_instr_begin(SrcReg), E = MRI->reg_instr_end();
@@ -1915,9 +1925,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       // versa.
       if (SubIdx && MO.isDef()) {
         MO.setIsUndef(!Reads);
-
-        if (!Reads)
-          FullDef = false;
+        FullDef = false;
       }
 
       // A subreg use of a partially undef (super) register may be a complete
@@ -1960,12 +1968,25 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       // have been relying on those bits, so we need to ensure their liveness is
       // captured with a def of other lanes.
 
-      // FIXME: Need to add new subrange if tracking subranges. We could also
-      // skip adding this if we knew the other lanes are dead, and only for
-      // other lanes.
+      if (DstInt && MRI->shouldTrackSubRegLiveness(DstReg)) {
+        assert(DstInt->hasSubRanges() &&
+               "SUBREG_TO_REG should have resulted in subrange");
+        LaneBitmask DstMask = MRI->getMaxLaneMaskForVReg(DstInt->reg());
+        LaneBitmask UsedLanes = TRI->getSubRegIndexLaneMask(SubIdx);
+        LaneBitmask UnusedLanes = DstMask & ~UsedLanes & ~DefinedLanes;
+        if ((UnusedLanes).any()) {
+          BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
+          DstInt->createSubRangeFrom(Allocator, UnusedLanes, *DstInt);
+          DefinedLanes |= UnusedLanes;
+        }
+      } else if (DstIsPhys) {
+        // Ensure we have a computed liverange for all regunits,
+        // as this is required by the scheduler/regpressure tracker,
+        // see: https://github.com/llvm/llvm-project/issues/76416
+        for (MCRegUnit Unit : TRI->regunits(DstReg))
+          LIS->getRegUnit(Unit);
+      }
 
-      assert(!MRI->shouldTrackSubRegLiveness(DstReg) &&
-             "this should update subranges");
       MachineInstrBuilder MIB(*MF, UseMI);
       MIB.addReg(DstReg, RegState::ImplicitDefine);
     }
