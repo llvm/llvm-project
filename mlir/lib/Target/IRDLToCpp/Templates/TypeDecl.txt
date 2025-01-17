@@ -6,6 +6,7 @@
 
 {4}: Namespace open 
 {5}: Namespace close 
+{6}: Namespace path
 */
 
 R"(
@@ -24,5 +25,5 @@ public:
 
 {5}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::irdl::{1})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({6}::{1})
 )"

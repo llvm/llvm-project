@@ -3,6 +3,7 @@
 
 {1}: Open namespace 
 {2}: Close namespace
+{3}: Namespace path
 */
 
 
@@ -18,5 +19,5 @@ public:
 
 {2}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::irdl::{0})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({3}::{0})
 )"

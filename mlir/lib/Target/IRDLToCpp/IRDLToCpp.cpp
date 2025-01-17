@@ -67,7 +67,7 @@ struct UsefulStrings {
 
   StringRef namespaceOpen;
   StringRef namespaceClose;
-  StringRef namespacePathString;
+  StringRef namespacePath;
 };
 
 static std::string capitalize(StringRef str) {
@@ -87,7 +87,7 @@ static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
   output << llvm::formatv(
       typeDeclTemplateText, typeName, typeCppName, usefulStrings.dialectName,
       usefulStrings.dialectBaseTypeName, usefulStrings.namespaceOpen,
-      usefulStrings.namespaceClose);
+      usefulStrings.namespaceClose, usefulStrings.namespacePath);
 
   return success();
 }
@@ -100,9 +100,30 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   std::string opCppShortName = capitalize(opName);
   std::string opCppName = llvm::formatv("{0}Op", opCppShortName);
 
+  auto &&block = op.getBody().getBlocks().front();
+
+  const unsigned operandCount = ([&block]() -> unsigned {
+    auto operands = block.getOps<irdl::OperandsOp>();
+    if (operands.empty())
+      return 0;
+
+    // at most 1, guaranteed by verifiers
+    auto &&operand = *operands.begin();
+    return operand.getNumOperands();
+  })();
+
+  const unsigned resultCount = ([&block]() -> unsigned {
+    auto resultsOps = block.getOps<irdl::ResultsOp>();
+
+    // exactly 1 resultOp, guaranteed by verifiers
+    auto &&resultsOp = *resultsOps.begin();
+    return resultsOp.getNumOperands();
+  })();
+
   output << llvm::formatv(
       opDeclTemplateText, opName, opCppName, usefulStrings.dialectName,
-      usefulStrings.namespaceOpen, usefulStrings.namespaceClose);
+      operandCount, resultCount, usefulStrings.namespaceOpen,
+      usefulStrings.namespaceClose, usefulStrings.namespacePath);
 
   return success();
 }
@@ -116,19 +137,24 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   output << llvm::formatv(
       dialectDeclTemplateText, usefulStrings.namespaceOpen,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
-      usefulStrings.namespacePathString, usefulStrings.dialectName);
+      usefulStrings.namespacePath, usefulStrings.dialectName);
 
   output << llvm::formatv(
       typeHeaderDeclTemplateText, usefulStrings.dialectBaseTypeName,
-      usefulStrings.namespaceOpen, usefulStrings.namespaceClose);
+      usefulStrings.namespaceOpen, usefulStrings.namespaceClose,
+      usefulStrings.namespacePath);
 
   auto &&region = dialect->getRegion(0);
   auto &&block = region.getBlocks().front();
   for (auto &&op : block) {
-    if (auto typeop = llvm::dyn_cast_or_null<irdl::TypeOp>(op))
-      generateTypeInclude(typeop, output, usefulStrings);
-    if (auto operationOp = llvm::dyn_cast_or_null<irdl::OperationOp>(op))
-      generateOperationInclude(operationOp, output, usefulStrings);
+    if (auto typeop = llvm::dyn_cast_or_null<irdl::TypeOp>(op)) {
+      if (failed(generateTypeInclude(typeop, output, usefulStrings)))
+        return failure();
+    }
+    if (auto operationOp = llvm::dyn_cast_or_null<irdl::OperationOp>(op)) {
+      if (failed(generateOperationInclude(operationOp, output, usefulStrings)))
+        return failure();
+    }
   }
 
   output << "#endif // " << declarationMacroFlag << "\n";
@@ -144,7 +170,7 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   output << llvm::formatv(dialectDefTemplateText, usefulStrings.namespaceOpen,
                           usefulStrings.namespaceClose,
                           usefulStrings.dialectCppName,
-                          usefulStrings.namespacePathString);
+                          usefulStrings.namespacePath);
 
   output << usefulStrings.namespaceOpen;
   output << llvm::formatv(typeHeaderDefTemplateText,
@@ -176,10 +202,10 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                                                 dialectName};
   std::string namespaceOpen;
   std::string namespaceClose;
-  std::string namespacePathString;
+  std::string namespacePath;
   llvm::raw_string_ostream namespaceOpenStream(namespaceOpen);
   llvm::raw_string_ostream namespaceCloseStream(namespaceClose);
-  llvm::raw_string_ostream namespacePathStream(namespacePathString);
+  llvm::raw_string_ostream namespacePathStream(namespacePath);
   for (auto &pathElement : namespaceAbsolutePath) {
     namespaceOpenStream << "namespace " << pathElement << " {\n";
     namespaceCloseStream << "} // namespace " << pathElement << "\n";
@@ -200,7 +226,7 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
   usefulStrings.dialectCppShortName = cppShortName;
   usefulStrings.namespaceOpen = namespaceOpen;
   usefulStrings.namespaceClose = namespaceClose;
-  usefulStrings.namespacePathString = namespacePathString;
+  usefulStrings.namespacePath = namespacePath;
 
   output << headerTemplateText;
 
