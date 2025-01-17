@@ -12,19 +12,19 @@ jobs:
     runs-on: self-hosted
     container:
       image: docker-virtual.mkmartifactory.amd.com/amd/base_docker_images/ubuntu-20.04:compiler-buildbot-trigger-v1
+    env:  
+      PR_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
+      PR_URL: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
+      PR_TITLE: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref != '' && github.event.pull_request.base.ref || '' }}
+      
     steps:
 
       - name: Trigger Buildbot Build
         run: |          
-          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:'${{ env.PR_TITLE }}'  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}         env:
-        env:  
-          PR_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
-          PR_URL: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
-          PR_TITLE: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
-          BASE_BRANCH: ${{ github.event.pull_request.base.ref != '' && github.event.pull_request.base.ref || '' }}
-          
-         
+          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:'${{ env.PR_TITLE }}'  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}  
+  
       - name: Poll Buildbot build status
         run: |
           python3 -c "
