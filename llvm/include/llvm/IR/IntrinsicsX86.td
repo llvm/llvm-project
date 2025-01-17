@@ -7346,22 +7346,22 @@ def int_x86_avx10_mask_vminmaxss_round : ClangBuiltin<"__builtin_ia32_vminmaxss_
 
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "x86" in {
-def int_x86_avx10_vcvtnebf162ibs128 : ClangBuiltin<"__builtin_ia32_vcvtnebf162ibs128">,
+def int_x86_avx10_vcvtbf162ibs128 : ClangBuiltin<"__builtin_ia32_vcvtbf162ibs128">,
          DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8bf16_ty],
                    [IntrNoMem]>;
-def int_x86_avx10_vcvtnebf162ibs256 : ClangBuiltin<"__builtin_ia32_vcvtnebf162ibs256">,
+def int_x86_avx10_vcvtbf162ibs256 : ClangBuiltin<"__builtin_ia32_vcvtbf162ibs256">,
         DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvtnebf162ibs512 : ClangBuiltin<"__builtin_ia32_vcvtnebf162ibs512">,
+def int_x86_avx10_vcvtbf162ibs512 : ClangBuiltin<"__builtin_ia32_vcvtbf162ibs512">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvtnebf162iubs128 : ClangBuiltin<"__builtin_ia32_vcvtnebf162iubs128">,
+def int_x86_avx10_vcvtbf162iubs128 : ClangBuiltin<"__builtin_ia32_vcvtbf162iubs128">,
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8bf16_ty],
                    [IntrNoMem]>;
-def int_x86_avx10_vcvtnebf162iubs256 : ClangBuiltin<"__builtin_ia32_vcvtnebf162iubs256">,
+def int_x86_avx10_vcvtbf162iubs256 : ClangBuiltin<"__builtin_ia32_vcvtbf162iubs256">,
         DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvtnebf162iubs512 : ClangBuiltin<"__builtin_ia32_vcvtnebf162iubs512">,
+def int_x86_avx10_vcvtbf162iubs512 : ClangBuiltin<"__builtin_ia32_vcvtbf162iubs512">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32bf16_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvtph2ibs128 : ClangBuiltin<"__builtin_ia32_vcvtph2ibs128_mask">,
@@ -7400,22 +7400,22 @@ def int_x86_avx10_mask_vcvtps2iubs256 : ClangBuiltin<"__builtin_ia32_vcvtps2iubs
 def int_x86_avx10_mask_vcvtps2iubs512 : ClangBuiltin<"__builtin_ia32_vcvtps2iubs512_mask">,
         DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16f32_ty, llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-def int_x86_avx10_vcvttnebf162ibs128 : ClangBuiltin<"__builtin_ia32_vcvttnebf162ibs128">,
+def int_x86_avx10_vcvttbf162ibs128 : ClangBuiltin<"__builtin_ia32_vcvttbf162ibs128">,
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvttnebf162ibs256 : ClangBuiltin<"__builtin_ia32_vcvttnebf162ibs256">,
+def int_x86_avx10_vcvttbf162ibs256 : ClangBuiltin<"__builtin_ia32_vcvttbf162ibs256">,
         DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvttnebf162ibs512 : ClangBuiltin<"__builtin_ia32_vcvttnebf162ibs512">,
+def int_x86_avx10_vcvttbf162ibs512 : ClangBuiltin<"__builtin_ia32_vcvttbf162ibs512">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvttnebf162iubs128 : ClangBuiltin<"__builtin_ia32_vcvttnebf162iubs128">,
+def int_x86_avx10_vcvttbf162iubs128 : ClangBuiltin<"__builtin_ia32_vcvttbf162iubs128">,
         DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_v8bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvttnebf162iubs256 : ClangBuiltin<"__builtin_ia32_vcvttnebf162iubs256">,
+def int_x86_avx10_vcvttbf162iubs256 : ClangBuiltin<"__builtin_ia32_vcvttbf162iubs256">,
         DefaultAttrsIntrinsic<[llvm_v16i16_ty], [llvm_v16bf16_ty],
                   [IntrNoMem]>;
-def int_x86_avx10_vcvttnebf162iubs512 : ClangBuiltin<"__builtin_ia32_vcvttnebf162iubs512">,
+def int_x86_avx10_vcvttbf162iubs512 : ClangBuiltin<"__builtin_ia32_vcvttbf162iubs512">,
         DefaultAttrsIntrinsic<[llvm_v32i16_ty], [llvm_v32bf16_ty],
                   [IntrNoMem]>;
 def int_x86_avx10_mask_vcvttph2ibs128 : ClangBuiltin<"__builtin_ia32_vcvttph2ibs128_mask">,
