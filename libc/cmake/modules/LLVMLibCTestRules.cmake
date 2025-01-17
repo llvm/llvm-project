@@ -35,6 +35,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       # "libc/test/src/__support/fake_heap.s"
       list(APPEND compile_options "-Wno-unused-command-line-argument")
 
+      # Needed because of:
+      # https://github.com/llvm/llvm-project/blob/0d7c8c0e294d23fcfc9a396dafebe1465c471035/libc/include/llvm-libc-macros/pthread-macros.h#L29
       list(APPEND compile_options "-Wno-missing-field-initializers")
     endif()
     list(APPEND compile_options "-Wconversion")
