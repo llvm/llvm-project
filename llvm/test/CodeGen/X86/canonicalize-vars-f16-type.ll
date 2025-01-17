@@ -133,11 +133,7 @@ define half @complex_canonicalize_fmul_half(half %a, half %b) nounwind {
 ;
 ; AVX512-LABEL: complex_canonicalize_fmul_half:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vpextrw $0, %xmm1, %eax
-; AVX512-NEXT:    vpextrw $0, %xmm0, %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
