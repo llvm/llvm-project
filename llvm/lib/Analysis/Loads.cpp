@@ -25,7 +25,7 @@
 
 using namespace llvm;
 
-extern cl::opt<unsigned> UseDerefAtPointSemantics;
+extern cl::opt<bool> UseDerefAtPointSemantics;
 
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
