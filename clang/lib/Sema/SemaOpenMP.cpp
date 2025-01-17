@@ -14214,9 +14214,8 @@ static void collectLoopStmts(Stmt *AStmt, MutableArrayRef<Stmt *> LoopStmts) {
 
 /// Build and return a DeclRefExpr for the floor induction variable using the
 /// SemaRef and the provided parameters.
-static Expr *MakeFloorIVRef(Sema &SemaRef,
-                            SmallVector<VarDecl *, 4> FloorIndVars, int I,
-                            QualType IVTy, DeclRefExpr *OrigCntVar) {
+static Expr *makeFloorIVRef(Sema &SemaRef, ArrayRef<VarDecl *> FloorIndVars,
+                            int I, QualType IVTy, DeclRefExpr *OrigCntVar) {
   return buildDeclRefExpr(SemaRef, FloorIndVars[I], IVTy,
                           OrigCntVar->getExprLoc());
 }
@@ -14358,7 +14357,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Stmt *LoopStmt = LoopStmts[I];
 
     // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define a lamda that
+    // node object must appear at most once, hence we define a lambda that
     // creates a new AST node at every use.
     auto MakeTileIVRef = [&SemaRef = this->SemaRef, &TileIndVars, I, IVTy,
                           OrigCntVar]() {
@@ -14371,7 +14370,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
         TileIndVars[I],
         SemaRef
             .DefaultLvalueConversion(
-                MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
+                makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
             .get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = TileIndVars[I];
@@ -14385,7 +14384,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
     ExprResult EndOfTile = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimTileSize(I));
     if (!EndOfTile.isUsable())
       return StmtError();
@@ -14462,7 +14461,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // For cond-expression: .floor.iv < NumIterations
     ExprResult CondExpr = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
@@ -14470,7 +14469,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // For incr-statement: .floor.iv += DimTileSize
     ExprResult IncrStmt = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimTileSize(I));
     if (!IncrStmt.isUsable())
       return StmtError();
@@ -14633,7 +14632,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
         StripeIndVars[I],
         SemaRef
             .DefaultLvalueConversion(
-                MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
+                makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar))
             .get(),
         /*DirectInit=*/false);
     Decl *CounterDecl = StripeIndVars[I];
@@ -14647,7 +14646,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     //   .stripe.iv < min(.floor.iv + DimStripeSize, NumIterations)
     ExprResult EndOfStripe = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimStripeSize(I));
     if (!EndOfStripe.isUsable())
       return StmtError();
@@ -14724,7 +14723,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     // For cond-expression: .floor.iv < NumIterations
     ExprResult CondExpr = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
@@ -14732,7 +14731,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     // For incr-statement: .floor.iv += DimStripeSize
     ExprResult IncrStmt = SemaRef.BuildBinOp(
         CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-        MakeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
+        makeFloorIVRef(SemaRef, FloorIndVars, I, IVTy, OrigCntVar),
         MakeDimStripeSize(I));
     if (!IncrStmt.isUsable())
       return StmtError();
