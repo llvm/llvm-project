@@ -1721,7 +1721,7 @@ public:
 
   /// Append all superclasses in post-order to \p Classes.
   void getSuperClasses(std::vector<const Record *> &Classes) const {
-    for (const auto &[SC, R] : DirectSuperClasses) {
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
       SC->getSuperClasses(Classes);
       Classes.push_back(SC);
     }
@@ -1810,7 +1810,7 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const auto &[SC, _] : DirectSuperClasses) {
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
       if (SC == R || SC->isSubClassOf(R))
         return true;
     }
@@ -1818,7 +1818,7 @@ public:
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &[SC, _] : DirectSuperClasses) {
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
       if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
