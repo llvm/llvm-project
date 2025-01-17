@@ -234,8 +234,8 @@ end subroutine
 ! CHECK-NEXT:    call void @free(
 ! CHECK-NEXT:    br label %omp.reduction.cleanup43
 
-! CHECK:       omp.par.region29:                                 ; preds = %omp.par.region28
-! CHECK-NEXT:    call {} @_FortranAStopStatement
+! CHECK:       omp.par.region28:                                 ; preds = %omp.par.region27
+! CHECK-NEXT:    call void @_FortranAStopStatement
 
 ! CHECK:       omp.reduction.neutral24:                          ; preds = %omp.reduction.neutral23
 !                [source length was zero: finish initializing array]

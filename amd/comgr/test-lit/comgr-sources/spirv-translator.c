@@ -13,7 +13,6 @@ int main(int argc, char *argv[]) {
   amd_comgr_data_t DataSpirv;
   amd_comgr_data_set_t DataSetSpirv, DataSetBc;
   amd_comgr_action_info_t DataAction;
-  amd_comgr_status_t Status;
   size_t Count;
 
   if (argc != 4) {
