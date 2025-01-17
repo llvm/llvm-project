@@ -2094,7 +2094,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   const ActualArgument *arrayArg{nullptr};
   const char *arrayArgName{nullptr};
   const ActualArgument *knownArg{nullptr};
-  std::optional<int> shapeArgSize;
+  std::optional<std::int64_t> shapeArgSize;
   int elementalRank{0};
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
@@ -2133,14 +2133,20 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           if (auto shape{GetShape(context, *arg)}) {
             if (auto constShape{AsConstantShape(context, *shape)}) {
               shapeArgSize = constShape->At(ConstantSubscripts{1}).ToInt64();
-              CHECK(*shapeArgSize >= 0);
-              argOk = true;
+              CHECK(shapeArgSize.value() >= 0);
+              argOk = *shapeArgSize <= common::maxRank;
             }
           }
         }
         if (!argOk) {
-          messages.Say(arg->sourceLocation(),
-              "'shape=' argument must be a vector of known size"_err_en_US);
+          if (shapeArgSize.value_or(0) > common::maxRank) {
+            messages.Say(arg->sourceLocation(),
+                "'shape=' argument must be a vector of at most %d elements (has %jd)"_err_en_US,
+                common::maxRank, std::intmax_t{*shapeArgSize});
+          } else {
+            messages.Say(arg->sourceLocation(),
+                "'shape=' argument must be a vector of known size"_err_en_US);
+          }
           return std::nullopt;
         }
         break;
