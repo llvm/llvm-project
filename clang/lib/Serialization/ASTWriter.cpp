@@ -37,6 +37,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
@@ -1154,6 +1155,8 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DIAGNOSTIC_OPTIONS);
   RECORD(HEADER_SEARCH_PATHS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
+  RECORD(HEADER_SEARCH_ENTRY_USAGE);
+  RECORD(VFS_USAGE);
 
 #undef RECORD
 #undef BLOCK
@@ -4181,6 +4184,25 @@ public:
   }
 };
 
+static bool isModuleLocalDecl(NamedDecl *D) {
+  // For decls not in a file context, they should have the same visibility
+  // with their parent.
+  if (auto *Parent = dyn_cast<NamedDecl>(D->getNonTransparentDeclContext());
+      Parent && !D->getNonTransparentDeclContext()->isFileContext())
+    return isModuleLocalDecl(Parent);
+
+  // Deduction Guide are special here. Since their logical parent context are
+  // not their actual parent.
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    if (auto *CDGD = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
+      return isModuleLocalDecl(CDGD->getDeducedTemplate());
+
+  if (D->getFormalLinkage() == Linkage::Module)
+    return true;
+
+  return false;
+}
+
 // Trait used for the on-disk hash table used in the method pool.
 class ASTDeclContextNameLookupTrait : public ASTDeclContextNameLookupTraitBase {
 public:
@@ -4216,7 +4238,7 @@ public:
 
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
-      if (D->getFormalLinkage() == Linkage::Module) {
+      if (isModuleLocalDecl(D)) {
         if (std::optional<unsigned> PrimaryModuleHash =
                 getPrimaryModuleHash(D->getOwningModule())) {
           auto Key = std::make_pair(D->getDeclName(), *PrimaryModuleHash);
@@ -5046,15 +5068,14 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 
 void ASTRecordWriter::AddAttr(const Attr *A) {
   auto &Record = *this;
-  // FIXME: Clang can't handle the serialization/deserialization of
-  // preferred_name properly now. See
-  // https://github.com/llvm/llvm-project/issues/56490 for example.
-  if (!A || (isa<PreferredNameAttr>(A) &&
-             Writer->isWritingStdCXXNamedModules()))
+  if (!A)
     return Record.push_back(0);
 
   Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
 
+  auto SkipIdx = Record.size();
+  // Add placeholder for the size of deferred attribute.
+  Record.push_back(0);
   Record.AddIdentifierRef(A->getAttrName());
   Record.AddIdentifierRef(A->getScopeName());
   Record.AddSourceRange(A->getRange());
@@ -5065,6 +5086,12 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   Record.push_back(A->isRegularKeywordAttribute());
 
 #include "clang/Serialization/AttrPCHWrite.inc"
+
+  if (A->shouldDeferDeserialization()) {
+    // Record the actual size of deferred attribute (+ 1 to count the attribute
+    // kind).
+    Record[SkipIdx] = Record.size() - SkipIdx + 1;
+  }
 }
 
 /// Emit the list of attributes to the specified record.

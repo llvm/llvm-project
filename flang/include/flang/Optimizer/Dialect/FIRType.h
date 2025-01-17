@@ -439,7 +439,7 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
-/// i32 -> none
+/// i32 -> ()
 /// !fir.array<2xf32> -> !fir.array<2xnone>
 /// !fir.heap<!fir.array<2xf32>> -> !fir.heap<!fir.array<2xnone>>
 inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {

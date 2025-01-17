@@ -8437,7 +8437,7 @@ void ASTReader::FindFileRegionDecls(FileID File,
 
 bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
                                                DeclarationName Name,
-                                               Module *NamedModule) {
+                                               const DeclContext *OriginalDC) {
   assert(DC->hasExternalVisibleStorage() && DC == DC->getPrimaryContext() &&
          "DeclContext has no visible decls in storage");
   if (!Name)
@@ -8460,7 +8460,9 @@ bool ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
     }
   }
 
-  if (NamedModule) {
+  if (auto *NamedModule =
+          OriginalDC ? cast<Decl>(OriginalDC)->getTopLevelOwningNamedModule()
+                     : nullptr) {
     if (auto It = ModuleLocalLookups.find(DC); It != ModuleLocalLookups.end()) {
       ++NumModuleLocalVisibleDeclContexts;
       for (GlobalDeclID ID : It->second.Table.find({Name, NamedModule})) {
@@ -10177,6 +10179,11 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
+
+    // Load the delayed preferred name attributes.
+    for (unsigned I = 0; I != PendingDeferredAttributes.size(); ++I)
+      loadDeferredAttribute(PendingDeferredAttributes[I]);
+    PendingDeferredAttributes.clear();
 
     // For each decl chain that we wanted to complete while deserializing, mark
     // it as "still needs to be completed".
