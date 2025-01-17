@@ -18,6 +18,7 @@
 #include "GCNSubtarget.h"
 
 #include <limits>
+#include <set>
 
 using namespace llvm;
 
@@ -83,7 +84,124 @@ class NextUseResult {
   Timer *T1;
   Timer *T2;
 
-  using VRegDistances = DenseMap<VRegMaskPair, unsigned>;
+  class VRegDistances {
+
+    using Record = std::pair<LaneBitmask, unsigned>;
+    struct CompareByDist {
+      bool operator()(const Record &LHS, const Record &RHS) {
+        return LHS.second > RHS.second;
+      };
+    };
+
+    using SortedRecords = std::set<Record, CompareByDist>;
+
+    DenseMap<unsigned, SortedRecords> NextUseMap;
+
+  public:
+    auto begin() { return NextUseMap.begin(); }
+    auto end() { return NextUseMap.end(); }
+
+    size_t size() { return NextUseMap.size(); }
+    std::pair<bool, SortedRecords> get(unsigned Key) {
+      if (NextUseMap.contains(Key))
+        return {true, NextUseMap.find(Key)->second};
+      return {false, SortedRecords()};
+    }
+
+    SortedRecords operator[] (unsigned Key) {
+      return NextUseMap[Key];
+    }
+
+    SmallVector<unsigned> keys() {
+      SmallVector<unsigned> Keys;
+      for (auto P : NextUseMap)
+        Keys.push_back(P.first);
+      return std::move(Keys);
+    }
+
+    bool contains(unsigned Key) {
+      return NextUseMap.contains(Key);
+    }
+
+    bool insert(VRegMaskPair VMP, unsigned Dist) {
+      SortedRecords &Dists = NextUseMap[VMP.VReg];
+      return Dists.insert({VMP.LaneMask, Dist}).second;
+    }
+
+    bool clear(VRegMaskPair VMP) {
+      if (NextUseMap.contains(VMP.VReg)) {
+        auto &Dists = NextUseMap[VMP.VReg];
+        remove_if(Dists,
+                  [&](Record R) { return (R.first &= ~VMP.LaneMask).none(); });
+      }
+    }
+
+    bool operator == (VRegDistances Other) {
+      
+      if (Other.size() != size())
+        return false;
+
+      for (auto P : NextUseMap) {
+        unsigned Key = P.getFirst();
+        
+        std::pair<bool, SortedRecords> OtherDists = Other.get(P.getFirst());
+        if (!OtherDists.first)
+          return false;
+        SortedRecords &Dists = P.getSecond();
+
+        if (Dists.size() != OtherDists.second.size())
+          return false;
+
+        for (auto R : OtherDists.second) {
+          SortedRecords::iterator I = Dists.find(R);
+          if (I == Dists.end())
+            return false;
+          if (R.second != I->second)
+            return false;
+        }
+      }
+
+      return true;
+    }
+
+    bool operator != (VRegDistances Other) {
+      return !operator == (Other);
+    }
+
+    void merge(VRegDistances Other, unsigned Weight = 0) {
+      for (auto P : Other) {
+        unsigned Key = P.getFirst();
+        auto Dists = P.getSecond();
+        if (NextUseMap.contains(Key)) {
+          auto &MineDists = NextUseMap[Key];
+          // Merge it!
+          for (auto D : Dists) {
+            auto It = MineDists.find(D);
+            if (It == MineDists.end()) {
+              // Not found! We have a subreg use to merge in.
+              for (auto D1 : MineDists) {
+                if (D1.first == D.first && D1.second > D.second + Weight) {
+                  // We have a closer use of the same reg and mask.
+                  // Erase and insert new to keep it properly sorted.
+                  MineDists.erase(D1);
+                  MineDists.insert({D.first, D.second + Weight});
+                  break;
+                }
+              }
+              // Just add a new one.
+              MineDists.insert(*It);
+            }
+          }
+        } else {
+          // Just add it!
+          if (Weight)
+            for (auto D : Dists)
+              D.second += Weight;
+          NextUseMap[Key] = Dists;
+        }
+      }
+    }
+  };
   class NextUseInfo {
     // FIXME: need to elaborate proper class interface!
     public:
@@ -114,18 +232,6 @@ private:
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
-  bool diff(const VRegDistances &LHS, const VRegDistances &RHS) {
-    for (auto P : LHS) {
-      if (!RHS.contains(P.getFirst()) ||
-          RHS.lookup(P.getFirst()) != P.getSecond())
-        return true;
-    }
-    for (auto P : RHS) {
-      if (!LHS.contains(P.getFirst()))
-        return true;
-    }
-    return false;
-  }
 
   void printVregDistances(const VRegDistances &D,
                           raw_ostream &O = dbgs()) const {

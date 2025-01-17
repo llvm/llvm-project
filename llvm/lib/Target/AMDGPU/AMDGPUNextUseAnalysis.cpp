@@ -76,7 +76,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
             if (Succ->getNumber() == SuccNum)
               Weight = Infinity;
           }
-          mergeDistances(Curr, SuccDist, Weight);
+          Curr.merge(SuccDist, Weight);
         }
       }
 
@@ -85,29 +85,18 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
         
         for (auto &P : Curr) {
-          P.second++;
+          for (auto D : P.second)
+            D.second++;
         }
 
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
             VRegMaskPair P(MO, *TRI);
             if(MO.isUse()) {
-              Curr[P] = 0;
+              Curr.insert(P, 0);
               UsedInBlock[MBB->getNumber()].insert(P);
             } else if (MO.isDef()) {
-
-              SmallVector<VRegMaskPair> ToKill;
-              for (auto X : Curr) {
-                if (X.first.VReg == P.VReg) {
-                  X.first.LaneMask &= ~P.LaneMask;
-                  if (X.first.LaneMask.none())
-                    ToKill.push_back(X.first);
-                }
-              }
-
-              for (auto D : ToKill) {
-                Curr.erase(D);
-              }
+              Curr.clear(P);
             }
           }
         }
@@ -117,7 +106,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
       UpwardNextUses[MBBNum] = std::move(Curr);
 
-      bool Changed4MBB = diff(Prev, UpwardNextUses[MBBNum]);
+      bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);
 
       Changed |= Changed4MBB;
     }
@@ -135,6 +124,10 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
     if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP)) {
+      // FIXME: This is not correct. The nearest use is the use of ANY
+      // subregister of a register. Hence, if we have an exact match of a
+      // register and a mask, it might happen that we miss another use that is
+      // closer but has a narrower mask (i.e. a subregister use)!
       Dist = Dists[VMP];
     } else {
       for (auto P : Dists) {
