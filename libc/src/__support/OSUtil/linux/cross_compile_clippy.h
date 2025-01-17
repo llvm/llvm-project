@@ -27,7 +27,7 @@
 
 // This is bad because the syscall numbers frequently (but not always) differ
 // between architectures.  What frequently happens as a result are crashes in
-// startup."
+// startup.
 #error "Host kernel headers cannot be used to cross compile"
 
 #endif
