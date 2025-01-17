@@ -53,8 +53,6 @@ public:
 
   ~SBProgress();
 
-  const SBProgress &operator=(const lldb::SBProgress &rhs);
-
   void Increment(uint64_t amount, const char *description = nullptr);
 
 protected:

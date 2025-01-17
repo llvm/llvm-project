@@ -19,7 +19,7 @@ class SBProgressTestCase(TestBase):
         self.assertTrue(listener.PeekAtNextEvent(event))
         stream = lldb.SBStream()
         event.GetDescription(stream)
-        self.assertTrue(expected_string in stream.GetData())
+        self.assertIn(expected_string, stream.GetData())
 
     def test_without_external_bit_set(self):
         """Test SBProgress events are not listened to on the internal progress bit."""
