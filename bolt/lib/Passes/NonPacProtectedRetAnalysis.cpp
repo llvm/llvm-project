@@ -281,7 +281,12 @@ protected:
 
     State Next = Cur;
     BitVector Written = BitVector(NumRegs, false);
-    BC.MIB->getWrittenRegs(Point, Written);
+    // Assume a call can clobber all registers, as functions may not respect
+    // the AAPCS ABI rules...
+    if (BC.MIB->isCall(Point))
+      Written.set();
+    else
+      BC.MIB->getWrittenRegs(Point, Written);
     Next.NonAutClobRegs |= Written;
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:

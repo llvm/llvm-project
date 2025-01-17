@@ -184,6 +184,41 @@ f_nonx30_ret_ok:
         .size f_nonx30_ret_ok, .-f_nonx30_ret_ok
 
 
+        .globl  f_callclobbered_x30
+        .type   f_callclobbered_x30,@function
+f_callclobbered_x30:
+        bl      g
+// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_callclobbered_x30, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
+// CHECK-NEXT:    1. {{[0-9a-f]+}}: bl      g@PLT
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g@PLT
+// CHECK-NEXT: {{[0-9a-f]+}}:   ret
+        ret
+        .size f_callclobbered_x30, .-f_callclobbered_x30
+
+        .globl  f_callclobbered_calleesaved
+        .type   f_callclobbered_calleesaved,@function
+f_callclobbered_calleesaved:
+        bl      g
+// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_callclobbered_calleesaved, basic block .LBB{{[0-9]+}}, at address
+// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       ret x19
+// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
+// CHECK-NEXT:    1. {{[0-9a-f]+}}: bl      g@PLT
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT: {{[0-9a-f]+}}:   bl      g@PLT
+// CHECK-NEXT: {{[0-9a-f]+}}:   ret x19
+        // x19, according to the Arm ABI (AAPCS) is a callee-saved register.
+        // Therefore, if function g respects the AAPCS, it should not write
+        // anything to x19. However, we can't know whether function g actually
+        // does respect the AAPCS rules, so the scanner should assume x19 can
+        // get overwritten, and report a gadget if the code does not properly
+        // deal with that.
+        ret x19
+        .size f_callclobbered_calleesaved, .-f_callclobbered_calleesaved
+
+
 /// Now do a basic sanity check on every different Authentication instruction:
 
         .globl  f_autiasp
@@ -877,4 +912,3 @@ f_autib171615:
         ret
         .size f_autib171615, .-f_autib171615
 
-// TODO: add test to see if registers clobbered by a call are picked up.
