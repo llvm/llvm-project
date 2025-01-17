@@ -45053,7 +45053,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       N0 = DAG.getBitcast(MVT::i8, N0);
       return DAG.getNode(ISD::TRUNCATE, dl, VT, N0);
     }
-  } else {
+  } else if (DCI.isAfterLegalizeDAG()) {
     // If we're bitcasting from iX to vXi1, see if the integer originally
     // began as a vXi1 and whether we can remove the bitcast entirely.
     if (VT.isVector() && VT.getScalarType() == MVT::i1 &&
