@@ -37,79 +37,6 @@ static llvm::cl::opt<bool> forceMatmulAsElemental(
 
 namespace {
 
-// Helper class to generate operations related to computing
-// product of values.
-class ProductFactory {
-public:
-  ProductFactory(mlir::Location loc, fir::FirOpBuilder &builder)
-      : loc(loc), builder(builder) {}
-
-  // Generate an update of the inner product value:
-  //   acc += v1 * v2, OR
-  //   acc += CONJ(v1) * v2, OR
-  //   acc ||= v1 && v2
-  //
-  // CONJ parameter specifies whether the first complex product argument
-  // needs to be conjugated.
-  template <bool CONJ = false>
-  mlir::Value genAccumulateProduct(mlir::Value acc, mlir::Value v1,
-                                   mlir::Value v2) {
-    mlir::Type resultType = acc.getType();
-    acc = castToProductType(acc, resultType);
-    v1 = castToProductType(v1, resultType);
-    v2 = castToProductType(v2, resultType);
-    mlir::Value result;
-    if (mlir::isa<mlir::FloatType>(resultType)) {
-      result = builder.create<mlir::arith::AddFOp>(
-          loc, acc, builder.create<mlir::arith::MulFOp>(loc, v1, v2));
-    } else if (mlir::isa<mlir::ComplexType>(resultType)) {
-      if constexpr (CONJ)
-        result = fir::IntrinsicLibrary{builder, loc}.genConjg(resultType, v1);
-      else
-        result = v1;
-
-      result = builder.create<fir::AddcOp>(
-          loc, acc, builder.create<fir::MulcOp>(loc, result, v2));
-    } else if (mlir::isa<mlir::IntegerType>(resultType)) {
-      result = builder.create<mlir::arith::AddIOp>(
-          loc, acc, builder.create<mlir::arith::MulIOp>(loc, v1, v2));
-    } else if (mlir::isa<fir::LogicalType>(resultType)) {
-      result = builder.create<mlir::arith::OrIOp>(
-          loc, acc, builder.create<mlir::arith::AndIOp>(loc, v1, v2));
-    } else {
-      llvm_unreachable("unsupported type");
-    }
-
-    return builder.createConvert(loc, resultType, result);
-  }
-
-private:
-  mlir::Location loc;
-  fir::FirOpBuilder &builder;
-
-  mlir::Value castToProductType(mlir::Value value, mlir::Type type) {
-    if (mlir::isa<fir::LogicalType>(type))
-      return builder.createConvert(loc, builder.getIntegerType(1), value);
-
-    // TODO: the multiplications/additions by/of zero resulting from
-    // complex * real are optimized by LLVM under -fno-signed-zeros
-    // -fno-honor-nans.
-    // We can make them disappear by default if we:
-    //   * either expand the complex multiplication into real
-    //     operations, OR
-    //   * set nnan nsz fast-math flags to the complex operations.
-    if (fir::isa_complex(type) && !fir::isa_complex(value.getType())) {
-      mlir::Value zeroCmplx = fir::factory::createZeroValue(builder, loc, type);
-      fir::factory::Complex helper(builder, loc);
-      mlir::Type partType = helper.getComplexPartType(type);
-      return helper.insertComplexPart(zeroCmplx,
-                                      castToProductType(value, partType),
-                                      /*isImagPart=*/false);
-    }
-    return builder.createConvert(loc, type, value);
-  }
-};
-
 class TransposeAsElementalConversion
     : public mlir::OpRewritePattern<hlfir::TransposeOp> {
 public:
@@ -163,8 +90,11 @@ private:
   static mlir::Value genResultShape(mlir::Location loc,
                                     fir::FirOpBuilder &builder,
                                     hlfir::Entity array) {
-    llvm::SmallVector<mlir::Value, 2> inExtents =
-        hlfir::genExtentsVector(loc, builder, array);
+    mlir::Value inShape = hlfir::genShape(loc, builder, array);
+    llvm::SmallVector<mlir::Value> inExtents =
+        hlfir::getExplicitExtentsFromShape(inShape, builder);
+    if (inShape.getUses().empty())
+      inShape.getDefiningOp()->erase();
 
     // transpose indices
     assert(inExtents.size() == 2 && "checked in TransposeOp::validate");
@@ -207,7 +137,7 @@ public:
     mlir::Value resultShape, dimExtent;
     llvm::SmallVector<mlir::Value> arrayExtents;
     if (isTotalReduction)
-      arrayExtents = hlfir::genExtentsVector(loc, builder, array);
+      arrayExtents = genArrayExtents(loc, builder, array);
     else
       std::tie(resultShape, dimExtent) =
           genResultShapeForPartialReduction(loc, builder, array, dimVal);
@@ -233,8 +163,7 @@ public:
       // If DIM is not present, do total reduction.
 
       // Initial value for the reduction.
-      mlir::Value reductionInitValue =
-          fir::factory::createZeroValue(builder, loc, elementType);
+      mlir::Value reductionInitValue = genInitValue(loc, builder, elementType);
 
       // The reduction loop may be unordered if FastMathFlags::reassoc
       // transformations are allowed. The integer reduction is always
@@ -335,6 +264,17 @@ public:
   }
 
 private:
+  static llvm::SmallVector<mlir::Value>
+  genArrayExtents(mlir::Location loc, fir::FirOpBuilder &builder,
+                  hlfir::Entity array) {
+    mlir::Value inShape = hlfir::genShape(loc, builder, array);
+    llvm::SmallVector<mlir::Value> inExtents =
+        hlfir::getExplicitExtentsFromShape(inShape, builder);
+    if (inShape.getUses().empty())
+      inShape.getDefiningOp()->erase();
+    return inExtents;
+  }
+
   // Return fir.shape specifying the shape of the result
   // of a SUM reduction with DIM=dimVal. The second return value
   // is the extent of the DIM dimension.
@@ -343,7 +283,7 @@ private:
                                     fir::FirOpBuilder &builder,
                                     hlfir::Entity array, int64_t dimVal) {
     llvm::SmallVector<mlir::Value> inExtents =
-        hlfir::genExtentsVector(loc, builder, array);
+        genArrayExtents(loc, builder, array);
     assert(dimVal > 0 && dimVal <= static_cast<int64_t>(inExtents.size()) &&
            "DIM must be present and a positive constant not exceeding "
            "the array's rank");
@@ -351,6 +291,26 @@ private:
     mlir::Value dimExtent = inExtents[dimVal - 1];
     inExtents.erase(inExtents.begin() + dimVal - 1);
     return {builder.create<fir::ShapeOp>(loc, inExtents), dimExtent};
+  }
+
+  // Generate the initial value for a SUM reduction with the given
+  // data type.
+  static mlir::Value genInitValue(mlir::Location loc,
+                                  fir::FirOpBuilder &builder,
+                                  mlir::Type elementType) {
+    if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
+      const llvm::fltSemantics &sem = ty.getFloatSemantics();
+      return builder.createRealConstant(loc, elementType,
+                                        llvm::APFloat::getZero(sem));
+    } else if (auto ty = mlir::dyn_cast<mlir::ComplexType>(elementType)) {
+      mlir::Value initValue = genInitValue(loc, builder, ty.getElementType());
+      return fir::factory::Complex{builder, loc}.createComplex(ty, initValue,
+                                                               initValue);
+    } else if (mlir::isa<mlir::IntegerType>(elementType)) {
+      return builder.createIntegerConstant(loc, elementType, 0);
+    }
+
+    llvm_unreachable("unsupported SUM reduction type");
   }
 
   // Generate scalar addition of the two values (of the same data type).
@@ -610,10 +570,16 @@ private:
   static std::tuple<mlir::Value, mlir::Value>
   genResultShape(mlir::Location loc, fir::FirOpBuilder &builder,
                  hlfir::Entity input1, hlfir::Entity input2) {
-    llvm::SmallVector<mlir::Value, 2> input1Extents =
-        hlfir::genExtentsVector(loc, builder, input1);
-    llvm::SmallVector<mlir::Value, 2> input2Extents =
-        hlfir::genExtentsVector(loc, builder, input2);
+    mlir::Value input1Shape = hlfir::genShape(loc, builder, input1);
+    llvm::SmallVector<mlir::Value> input1Extents =
+        hlfir::getExplicitExtentsFromShape(input1Shape, builder);
+    if (input1Shape.getUses().empty())
+      input1Shape.getDefiningOp()->erase();
+    mlir::Value input2Shape = hlfir::genShape(loc, builder, input2);
+    llvm::SmallVector<mlir::Value> input2Extents =
+        hlfir::getExplicitExtentsFromShape(input2Shape, builder);
+    if (input2Shape.getUses().empty())
+      input2Shape.getDefiningOp()->erase();
 
     llvm::SmallVector<mlir::Value, 2> newExtents;
     mlir::Value innerProduct1Extent, innerProduct2Extent;
@@ -659,6 +625,60 @@ private:
                                            {innerProduct2Extent});
     return {builder.create<fir::ShapeOp>(loc, newExtents),
             innerProductExtent[0]};
+  }
+
+  static mlir::Value castToProductType(mlir::Location loc,
+                                       fir::FirOpBuilder &builder,
+                                       mlir::Value value, mlir::Type type) {
+    if (mlir::isa<fir::LogicalType>(type))
+      return builder.createConvert(loc, builder.getIntegerType(1), value);
+
+    // TODO: the multiplications/additions by/of zero resulting from
+    // complex * real are optimized by LLVM under -fno-signed-zeros
+    // -fno-honor-nans.
+    // We can make them disappear by default if we:
+    //   * either expand the complex multiplication into real
+    //     operations, OR
+    //   * set nnan nsz fast-math flags to the complex operations.
+    if (fir::isa_complex(type) && !fir::isa_complex(value.getType())) {
+      mlir::Value zeroCmplx = fir::factory::createZeroValue(builder, loc, type);
+      fir::factory::Complex helper(builder, loc);
+      mlir::Type partType = helper.getComplexPartType(type);
+      return helper.insertComplexPart(
+          zeroCmplx, castToProductType(loc, builder, value, partType),
+          /*isImagPart=*/false);
+    }
+    return builder.createConvert(loc, type, value);
+  }
+
+  // Generate an update of the inner product value:
+  //   acc += v1 * v2, OR
+  //   acc ||= v1 && v2
+  static mlir::Value genAccumulateProduct(mlir::Location loc,
+                                          fir::FirOpBuilder &builder,
+                                          mlir::Type resultType,
+                                          mlir::Value acc, mlir::Value v1,
+                                          mlir::Value v2) {
+    acc = castToProductType(loc, builder, acc, resultType);
+    v1 = castToProductType(loc, builder, v1, resultType);
+    v2 = castToProductType(loc, builder, v2, resultType);
+    mlir::Value result;
+    if (mlir::isa<mlir::FloatType>(resultType))
+      result = builder.create<mlir::arith::AddFOp>(
+          loc, acc, builder.create<mlir::arith::MulFOp>(loc, v1, v2));
+    else if (mlir::isa<mlir::ComplexType>(resultType))
+      result = builder.create<fir::AddcOp>(
+          loc, acc, builder.create<fir::MulcOp>(loc, v1, v2));
+    else if (mlir::isa<mlir::IntegerType>(resultType))
+      result = builder.create<mlir::arith::AddIOp>(
+          loc, acc, builder.create<mlir::arith::MulIOp>(loc, v1, v2));
+    else if (mlir::isa<fir::LogicalType>(resultType))
+      result = builder.create<mlir::arith::OrIOp>(
+          loc, acc, builder.create<mlir::arith::AndIOp>(loc, v1, v2));
+    else
+      llvm_unreachable("unsupported type");
+
+    return builder.createConvert(loc, resultType, result);
   }
 
   static mlir::LogicalResult
@@ -728,9 +748,9 @@ private:
             hlfir::loadElementAt(loc, builder, lhs, {I, K});
         hlfir::Entity rhsElementValue =
             hlfir::loadElementAt(loc, builder, rhs, {K, J});
-        mlir::Value productValue =
-            ProductFactory{loc, builder}.genAccumulateProduct(
-                resultElementValue, lhsElementValue, rhsElementValue);
+        mlir::Value productValue = genAccumulateProduct(
+            loc, builder, resultElementType, resultElementValue,
+            lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
         return {};
       };
@@ -765,9 +785,9 @@ private:
             hlfir::loadElementAt(loc, builder, lhs, {J, K});
         hlfir::Entity rhsElementValue =
             hlfir::loadElementAt(loc, builder, rhs, {K});
-        mlir::Value productValue =
-            ProductFactory{loc, builder}.genAccumulateProduct(
-                resultElementValue, lhsElementValue, rhsElementValue);
+        mlir::Value productValue = genAccumulateProduct(
+            loc, builder, resultElementType, resultElementValue,
+            lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
         return {};
       };
@@ -797,9 +817,9 @@ private:
             hlfir::loadElementAt(loc, builder, lhs, {K});
         hlfir::Entity rhsElementValue =
             hlfir::loadElementAt(loc, builder, rhs, {K, J});
-        mlir::Value productValue =
-            ProductFactory{loc, builder}.genAccumulateProduct(
-                resultElementValue, lhsElementValue, rhsElementValue);
+        mlir::Value productValue = genAccumulateProduct(
+            loc, builder, resultElementType, resultElementValue,
+            lhsElementValue, rhsElementValue);
         builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
         return {};
       };
@@ -865,9 +885,9 @@ private:
             hlfir::loadElementAt(loc, builder, lhs, lhsIndices);
         hlfir::Entity rhsElementValue =
             hlfir::loadElementAt(loc, builder, rhs, rhsIndices);
-        mlir::Value productValue =
-            ProductFactory{loc, builder}.genAccumulateProduct(
-                reductionArgs[0], lhsElementValue, rhsElementValue);
+        mlir::Value productValue = genAccumulateProduct(
+            loc, builder, resultElementType, reductionArgs[0], lhsElementValue,
+            rhsElementValue);
         return {productValue};
       };
       llvm::SmallVector<mlir::Value, 1> innerProductValue =
@@ -881,73 +901,6 @@ private:
         /*isUnordered=*/true, /*polymorphicMold=*/nullptr, resultType);
 
     return elementalOp;
-  }
-};
-
-class DotProductConversion
-    : public mlir::OpRewritePattern<hlfir::DotProductOp> {
-public:
-  using mlir::OpRewritePattern<hlfir::DotProductOp>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::DotProductOp product,
-                  mlir::PatternRewriter &rewriter) const override {
-    hlfir::Entity op = hlfir::Entity{product};
-    if (!op.isScalar())
-      return rewriter.notifyMatchFailure(product, "produces non-scalar result");
-
-    mlir::Location loc = product.getLoc();
-    fir::FirOpBuilder builder{rewriter, product.getOperation()};
-    hlfir::Entity lhs = hlfir::Entity{product.getLhs()};
-    hlfir::Entity rhs = hlfir::Entity{product.getRhs()};
-    mlir::Type resultElementType = product.getType();
-    bool isUnordered = mlir::isa<mlir::IntegerType>(resultElementType) ||
-                       mlir::isa<fir::LogicalType>(resultElementType) ||
-                       static_cast<bool>(builder.getFastMathFlags() &
-                                         mlir::arith::FastMathFlags::reassoc);
-
-    mlir::Value extent = genProductExtent(loc, builder, lhs, rhs);
-
-    auto genBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                       mlir::ValueRange oneBasedIndices,
-                       mlir::ValueRange reductionArgs)
-        -> llvm::SmallVector<mlir::Value, 1> {
-      hlfir::Entity lhsElementValue =
-          hlfir::loadElementAt(loc, builder, lhs, oneBasedIndices);
-      hlfir::Entity rhsElementValue =
-          hlfir::loadElementAt(loc, builder, rhs, oneBasedIndices);
-      mlir::Value productValue =
-          ProductFactory{loc, builder}.genAccumulateProduct</*CONJ=*/true>(
-              reductionArgs[0], lhsElementValue, rhsElementValue);
-      return {productValue};
-    };
-
-    mlir::Value initValue =
-        fir::factory::createZeroValue(builder, loc, resultElementType);
-
-    llvm::SmallVector<mlir::Value, 1> result = hlfir::genLoopNestWithReductions(
-        loc, builder, {extent},
-        /*reductionInits=*/{initValue}, genBody, isUnordered);
-
-    rewriter.replaceOp(product, result[0]);
-    return mlir::success();
-  }
-
-private:
-  static mlir::Value genProductExtent(mlir::Location loc,
-                                      fir::FirOpBuilder &builder,
-                                      hlfir::Entity input1,
-                                      hlfir::Entity input2) {
-    llvm::SmallVector<mlir::Value, 1> input1Extents =
-        hlfir::genExtentsVector(loc, builder, input1);
-    llvm::SmallVector<mlir::Value, 1> input2Extents =
-        hlfir::genExtentsVector(loc, builder, input2);
-
-    assert(input1Extents.size() == 1 && input2Extents.size() == 1 &&
-           "hlfir.dot_product arguments must be vectors");
-    llvm::SmallVector<mlir::Value, 1> extent =
-        fir::factory::deduceOptimalExtents(input1Extents, input2Extents);
-    return extent[0];
   }
 };
 
@@ -985,8 +938,6 @@ public:
     // for the time being.
     if (forceMatmulAsElemental || this->allowNewSideEffects)
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
-
-    patterns.insert<DotProductConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
