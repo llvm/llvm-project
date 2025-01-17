@@ -1694,14 +1694,16 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
   case SPIRV::OpImageWrite: {
     Register ImageReg = MI.getOperand(0).getReg();
-    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(ImageReg);
+    SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
+        ImageReg, const_cast<MachineFunction *>(MI.getMF()));
     if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;

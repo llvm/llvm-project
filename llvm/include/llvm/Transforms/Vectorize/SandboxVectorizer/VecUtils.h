@@ -134,15 +134,13 @@ public:
     return ScalarTy;
   }
   /// \Returns the first integer power of 2 that is <= Num.
-  static unsigned getFloorPowerOf2(unsigned Num) {
-    if (Num == 0)
-      return Num;
-    unsigned Mask = Num;
-    Mask >>= 1;
-    for (unsigned ShiftBy = 1; ShiftBy < sizeof(Num) * 8; ShiftBy <<= 1)
-      Mask |= Mask >> ShiftBy;
-    return Num & ~Mask;
-  }
+  static unsigned getFloorPowerOf2(unsigned Num);
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
+#endif // NDEBUG
 };
 
 } // namespace llvm::sandboxir
