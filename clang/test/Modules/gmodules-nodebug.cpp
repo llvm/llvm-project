@@ -1,3 +1,5 @@
+// REQUIRES: asserts
+
 // RUN: %clang_cc1 -std=c++23 -x c++-header -emit-pch -fmodule-format=obj \
 // RUN:   -o %t.pch %s \
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-pch.ll
