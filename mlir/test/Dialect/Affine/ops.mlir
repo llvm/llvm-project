@@ -331,7 +331,7 @@ module attributes {gpu.container_module} {
 
 // CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0] -> (s0 mod 32)>
 
-// CHECK-LABEL: @affine_thread_id
+// CHECK-LABEL: gpu.func @affine_thread_id
 
 module {
   gpu.module @gpu {
@@ -360,4 +360,52 @@ module {
 // CHECK: %[[VAL_5:.*]] = gpu.thread_id  x
 // CHECK: %[[VAL_6:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_5]]]
 // CHECK: %[[VAL_7:.*]] = arith.constant 128 : index
-// CHECK: affine.for %[[VAL_8:.*]] = %[[VAL_6]] to %[[VAL_7]] step 8 {
+// CHECK: affine.for %{{.*}} = %[[VAL_6]] to %[[VAL_7]] step 8 {
+
+// -----
+
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK-LABEL: func @arith_add_vaild_symbol_upper_bound
+
+func.func @arith_add_vaild_symbol_upper_bound(%arg : index) {
+  affine.for %n0 = 0 to 7 {
+    %dim = arith.addi %arg, %arg : index
+    affine.for %n1 = 0 to #map(%dim)[%arg] {
+    }
+  }
+  return
+}
+
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: affine.for %[[VAL_1:.*]] = 0 to 7 {
+// CHECK:   %[[VAL_2:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : index
+// CHECK:   affine.for %[[VAL_3:.*]] = 0 to #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] {
+// CHECK:   }
+// CHECK: }
+
+// -----
+
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// CHECK-LABEL: func @arith_add_vaild_symbol_lower_bound
+
+func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
+  affine.for %n0 = 0 to 7 {
+    %dim = arith.addi %arg, %arg : index
+    affine.for %n1 = #map(%dim)[%arg] to 7 {
+    }
+  }
+  return
+}
+
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: affine.for %[[VAL_1:.*]] = 0 to 7 {
+// CHECK:   %[[VAL_2:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : index
+// CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
+// CHECK:   }
+// CHECK: }

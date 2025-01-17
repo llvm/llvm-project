@@ -410,8 +410,8 @@ bool mlir::affine::isValidSymbol(Value value) {
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
-/// *) It is a result of a `Pure` operation that its operands are the valid
-/// *) symbolic identifiers.
+/// *) It is a result of a `Pure` operation whose operands are valid symbolic
+/// *) identifiers.
 /// *) It is a result of the dim op on a memref whose corresponding size is
 ///    a valid symbol.
 /// *) It is defined at the top level of 'region' or is its argument.
@@ -444,14 +444,11 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
   if (matchPattern(defOp, m_Constant(&operandCst)))
     return true;
 
-  // `Pure` operation that its operands are the valid symbolic identifiers.
-  if (isPure(defOp)) {
-    bool operandVaildSymbol =
-        llvm::all_of(defOp->getOperands(), [&](Value operand) {
-          return affine::isValidSymbol(operand, region);
-        });
-    if (operandVaildSymbol)
-      return true;
+  // `Pure` operation that whose operands are valid symbolic identifiers.
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidSymbol(operand, region);
+      })) {
+    return true;
   }
 
   // Dim op results could be valid symbols at any level.
