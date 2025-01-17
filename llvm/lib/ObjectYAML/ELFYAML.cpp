@@ -1601,7 +1601,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     TypeStr = getStringValue(IO, "Type");
     if (TypeStr.starts_with("SHT_") || isInteger(TypeStr)) {
       IO.mapRequired("Type", Type);
-      if (static_cast<Input&>(IO).error())
+      if (IO.error())
         Type = ELF::SHT_NULL;
     }
    }
