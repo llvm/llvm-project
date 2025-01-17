@@ -64,15 +64,9 @@ bool matchLengthToDistance(MachineInstr &MI, MachineRegisterInfo &MRI) {
     return false;
 
   // First operand of MI is `G_INTRINSIC` so start at operand 2.
-  Register SubAssignTypeReg = MI.getOperand(2).getReg();
-  MachineInstr *Sub1AssignTypeInst = MRI.getVRegDef(SubAssignTypeReg);
-  if (!Sub1AssignTypeInst ||
-      Sub1AssignTypeInst->getDesc().getOpcode() != SPIRV::ASSIGN_TYPE)
-    return false;
-
-  Register SubReg1 = Sub1AssignTypeInst->getOperand(1).getReg();
-  MachineInstr *SubInstr1 = MRI.getVRegDef(SubReg1);
-  if (!SubInstr1 || SubInstr1->getOpcode() != TargetOpcode::G_FSUB)
+  Register SubReg = MI.getOperand(2).getReg();
+  MachineInstr *SubInstr = MRI.getVRegDef(SubReg);
+  if (!SubInstr || SubInstr->getOpcode() != TargetOpcode::G_FSUB)
     return false;
 
   return true;
@@ -81,9 +75,7 @@ void applySPIRVDistance(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) {
 
   // Extract the operands for X and Y from the match criteria.
-  Register SubAssignTypeReg = MI.getOperand(2).getReg();
-  MachineInstr *Sub1AssignTypeInst = MRI.getVRegDef(SubAssignTypeReg);
-  Register SubDestReg = Sub1AssignTypeInst->getOperand(1).getReg();
+  Register SubDestReg = MI.getOperand(2).getReg();
   MachineInstr *SubInstr = MRI.getVRegDef(SubDestReg);
   Register SubOperand1 = SubInstr->getOperand(1).getReg();
   Register SubOperand2 = SubInstr->getOperand(2).getReg();
@@ -105,14 +97,14 @@ void applySPIRVDistance(MachineInstr &MI, MachineRegisterInfo &MRI,
       .addUse(SubOperand2);                    // Operand Y
 
   auto RemoveAllUses = [&](Register Reg) {
-    for (auto &UseMI : MRI.use_instructions(Reg)) {
-      UseMI.eraseFromParent();
-    }
-  };
+    SmallVector<MachineInstr *, 4> UsesToErase;
+    for (auto &UseMI : MRI.use_instructions(Reg))
+      UsesToErase.push_back(&UseMI);
 
-  RemoveAllUses(
-      SubAssignTypeReg);       // remove all uses of FSUB ASSIGN_TYPE register
-  MI.eraseFromParent();        // remove spv_length intrinsic
+    // calling eraseFromParent to early invalidates the iterator.
+    for (auto *MIToErase : UsesToErase)
+      MIToErase->eraseFromParent();
+  };
   RemoveAllUses(SubDestReg);   // remove all uses of FSUB Result
   SubInstr->eraseFromParent(); // remove FSUB instruction
 }
@@ -131,7 +123,7 @@ public:
       const SPIRVSubtarget &STI, MachineDominatorTree *MDT,
       const LegalizerInfo *LI);
 
-  static const char *getName() { return "SPIRV00PreLegalizerCombiner"; }
+  static const char *getName() { return "SPIRVPreLegalizerCombiner"; }
 
   bool tryCombineAll(MachineInstr &I) const override;
 

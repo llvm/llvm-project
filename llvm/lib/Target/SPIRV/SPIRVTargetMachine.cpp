@@ -218,8 +218,8 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
-  addPass(createSPIRVPreLegalizerPass());
   addPass(createSPIRVPreLegalizerCombiner());
+  addPass(createSPIRVPreLegalizerPass());
 }
 
 // Use the default legalizer.
