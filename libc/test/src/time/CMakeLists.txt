@@ -233,7 +233,7 @@ add_libc_unittest(
     libc.src.time.time
 )
 
-add_libc_unittest(
+add_libc_test(
   timespec_get_test
   SUITE
     libc_time_unittests
@@ -244,7 +244,7 @@ add_libc_unittest(
     libc.hdr.types.struct_timespec
 )
 
-add_libc_unittest(
+add_libc_test(
   clock_test
   SUITE
     libc_time_unittests
