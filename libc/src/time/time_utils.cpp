@@ -134,7 +134,7 @@ ErrorOr<File *> acquire_file(char *filename) {
   return LIBC_NAMESPACE::openfile(filename, "rb");
 }
 
-/*char *get_env_var(const char *input) {
+char *get_env_var(const char *input) {
   for (char **env = environ; *env != NULL; ++env) {
     char *env_var = *env;
 
@@ -149,7 +149,7 @@ ErrorOr<File *> acquire_file(char *filename) {
   }
 
   return NULL;
-}*/
+}
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
 // number of days since Jan 1 1970. The remainder will be used to calculate the
