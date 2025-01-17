@@ -377,7 +377,12 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       break;
 
     case DW_AT_object_pointer:
-      object_pointer = form_value.Reference();
+      // GetAttributes follows DW_AT_specification.
+      // DW_TAG_subprogram definitions and declarations may both
+      // have a DW_AT_object_pointer. Don't overwrite the one
+      // we parsed for the definition with the one from the declaration.
+      if (!object_pointer.IsValid())
+        object_pointer = form_value.Reference();
       break;
 
     case DW_AT_signature:
