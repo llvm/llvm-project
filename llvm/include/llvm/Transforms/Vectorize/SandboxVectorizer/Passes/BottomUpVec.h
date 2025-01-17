@@ -28,7 +28,7 @@ class BottomUpVec final : public FunctionPass {
   std::unique_ptr<LegalityAnalysis> Legality;
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
-  InstrMaps IMaps;
+  std::unique_ptr<InstrMaps> IMaps;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
