@@ -89,22 +89,18 @@ class NextUseResult {
 
     using Record = std::pair<LaneBitmask, unsigned>;
     struct CompareByDist {
-      bool operator()(const Record &LHS, const Record &RHS) const {
-        return LHS.second < RHS.second;
+      bool operator()(const Record &LHS, const Record &RHS) {
+        return LHS.second > RHS.second;
       };
     };
 
-public:
     using SortedRecords = std::set<Record, CompareByDist>;
-  private:
+
     DenseMap<unsigned, SortedRecords> NextUseMap;
 
   public:
     auto begin() { return NextUseMap.begin(); }
     auto end() { return NextUseMap.end(); }
-
-    auto begin() const { return NextUseMap.begin(); }
-    auto end() const { return NextUseMap.end(); }
 
     size_t size() { return NextUseMap.size(); }
     std::pair<bool, SortedRecords> get(unsigned Key) {
@@ -133,10 +129,10 @@ public:
       return Dists.insert({VMP.LaneMask, Dist}).second;
     }
 
-    void clear(VRegMaskPair VMP) {
+    bool clear(VRegMaskPair VMP) {
       if (NextUseMap.contains(VMP.VReg)) {
         auto &Dists = NextUseMap[VMP.VReg];
-        std::erase_if(Dists,
+        remove_if(Dists,
                   [&](Record R) { return (R.first &= ~VMP.LaneMask).none(); });
       }
     }
@@ -147,7 +143,8 @@ public:
         return false;
 
       for (auto P : NextUseMap) {
-
+        unsigned Key = P.getFirst();
+        
         std::pair<bool, SortedRecords> OtherDists = Other.get(P.getFirst());
         if (!OtherDists.first)
           return false;

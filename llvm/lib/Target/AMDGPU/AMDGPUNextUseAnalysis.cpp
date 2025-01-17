@@ -136,8 +136,22 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   if (NextUseMap.contains(MBBNum) &&
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
-    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
-      getFromSortedRecords(Dists[VMP.VReg], VMP.LaneMask, Dist);
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP)) {
+      // FIXME: This is not correct. The nearest use is the use of ANY
+      // subregister of a register. Hence, if we have an exact match of a
+      // register and a mask, it might happen that we miss another use that is
+      // closer but has a narrower mask (i.e. a subregister use)!
+      Dist = Dists[VMP];
+    } else {
+      for (auto P : Dists) {
+        if (P.first.VReg == VMP.VReg) {
+          LaneBitmask UseMask = P.first.LaneMask;
+          LaneBitmask Mask = VMP.LaneMask;
+          if ((UseMask & Mask) == UseMask)
+            if (P.second < Dist)
+              Dist = P.second;
+        } 
+      }
     }
   }
 
