@@ -1,0 +1,89 @@
+# This workflow is for pre-commit testing of the LLVM-libc project.
+name: LLVM-libc Pre-commit Fullbuild Tests
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-fullbuild-tests.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - c_compiler: clang
+            cpp_compiler: clang++
+          # TODO: add back gcc build when it is fixed
+          # - c_compiler: gcc
+          #   cpp_compiler: g++
+    steps:
+    - uses: actions/checkout@v4
+    
+    # Libc's build is relatively small comparing with other components of LLVM.
+    # A fresh fullbuild takes about 190MiB of uncompressed disk space, which can
+    # be compressed into ~40MiB. Limiting the cache size to 1G should be enough.
+    # Prefer sccache as it is more modern.
+    # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
+    # frequent small object writes.
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        max-size: 1G
+        key: libc_fullbuild_${{ matrix.c_compiler }}
+        variant: sccache
+    
+    # Notice:
+    # - MPFR is required by some of the mathlib tests.
+    # - Debian has a multilib setup, so we need to symlink the asm directory.
+    #   For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
+    - name: Prepare dependencies (Ubuntu)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
+        sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
+    
+    # Configure libc fullbuild with scudo.
+    # Use MinSizeRel to reduce the size of the build.
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=MinSizeRel
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
+        -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
+        -DLLVM_LIBC_FULL_BUILD=ON
+        -DLLVM_LIBC_INCLUDE_SCUDO=ON
+        -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
+        -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+        -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF
+        -G Ninja
+        -S ${{ github.workspace }}/runtimes
+
+    - name: Build
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel
+        --target install
+
+    - name: Test
+      run: >
+        cmake 
+        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --parallel
+        --target check-libc

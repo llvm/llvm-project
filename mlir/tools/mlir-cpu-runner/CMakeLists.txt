@@ -11,12 +11,10 @@ add_mlir_tool(mlir-cpu-runner
   EXPORT_SYMBOLS
   )
 llvm_update_compile_flags(mlir-cpu-runner)
-target_link_libraries(mlir-cpu-runner PRIVATE
+mlir_target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRAnalysis
   MLIRBuiltinToLLVMIRTranslation
-  MLIRExecutionEngine
   MLIRIR
-  MLIRJitRunner
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRToLLVMIRTranslationRegistration
@@ -24,3 +22,18 @@ target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRTargetLLVMIRExport
   MLIRSupport
   )
+target_link_libraries(mlir-cpu-runner PRIVATE
+  MLIRExecutionEngine
+  MLIRJitRunner
+  )
+
+# Preventing re-export of symbols causes link errors with ASan and UBSan libs.
+if (NOT LLVM_USE_SANITIZER)
+  target_link_options(mlir-cpu-runner
+    PRIVATE
+      # On Linux, disable re-export of any static linked libraries that came
+      # through. This prevents our LLVM build from interfering with the version
+      # of LLVM included in certain graphics drivers.
+      $<$<PLATFORM_ID:Linux>:LINKER:--exclude-libs,ALL>
+  )
+endif()

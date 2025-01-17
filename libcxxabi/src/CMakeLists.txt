@@ -75,6 +75,12 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
+if (FUCHSIA)
+    # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html
+    add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
+endif()
+
 if (NOT LIBCXXABI_USE_COMPILER_RT)
   add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
 endif()
@@ -184,6 +190,10 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
+
 add_library(cxxabi_shared SHARED)
 set_target_properties(cxxabi_shared
   PROPERTIES
@@ -274,6 +284,10 @@ set_target_properties(cxxabi_static_objects
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
 target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)

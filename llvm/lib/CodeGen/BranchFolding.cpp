@@ -165,10 +165,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   // Avoid matching if this pointer gets reused.
   TriedMerging.erase(MBB);
 
-  // Update call site info.
+  // Update call info.
   for (const MachineInstr &MI : *MBB)
-    if (MI.shouldUpdateCallSiteInfo())
-      MF->eraseCallSiteInfo(&MI);
+    if (MI.shouldUpdateAdditionalCallInfo())
+      MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
   MF->erase(MBB);
@@ -891,19 +891,21 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
                                       unsigned MinCommonTailLength) {
   bool MadeChange = false;
 
-  LLVM_DEBUG(
-      dbgs() << "\nTryTailMergeBlocks: ";
-      for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i) dbgs()
-      << printMBBReference(*MergePotentials[i].getBlock())
-      << (i == e - 1 ? "" : ", ");
-      dbgs() << "\n"; if (SuccBB) {
-        dbgs() << "  with successor " << printMBBReference(*SuccBB) << '\n';
-        if (PredBB)
-          dbgs() << "  which has fall-through from "
-                 << printMBBReference(*PredBB) << "\n";
-      } dbgs() << "Looking for common tails of at least "
-               << MinCommonTailLength << " instruction"
-               << (MinCommonTailLength == 1 ? "" : "s") << '\n';);
+  LLVM_DEBUG({
+    dbgs() << "\nTryTailMergeBlocks: ";
+    for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i)
+      dbgs() << printMBBReference(*MergePotentials[i].getBlock())
+             << (i == e - 1 ? "" : ", ");
+    dbgs() << "\n";
+    if (SuccBB) {
+      dbgs() << "  with successor " << printMBBReference(*SuccBB) << '\n';
+      if (PredBB)
+        dbgs() << "  which has fall-through from " << printMBBReference(*PredBB)
+               << "\n";
+    }
+    dbgs() << "Looking for common tails of at least " << MinCommonTailLength
+           << " instruction" << (MinCommonTailLength == 1 ? "" : "s") << '\n';
+  });
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.

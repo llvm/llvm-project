@@ -690,10 +690,17 @@ defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 
 // Cooperative Matrix builtin records:
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 0, OpCooperativeMatrixLoadKHR>;
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixStoreKHR>;
-defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixMulAddKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 4, OpCooperativeMatrixLoadKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 5, OpCooperativeMatrixStoreKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 4, OpCooperativeMatrixMulAddKHR>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLengthKHR", OpenCL_std, CoopMatr, 1, 1, OpCooperativeMatrixLengthKHR>;
+
+// Cooperative Matrix Intel builtin records:
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixPrefetchINTEL", OpenCL_std, CoopMatr, 5, 7, OpCooperativeMatrixPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadCheckedINTEL", OpenCL_std, CoopMatr, 6, 8, OpCooperativeMatrixLoadCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreCheckedINTEL", OpenCL_std, CoopMatr, 7, 9, OpCooperativeMatrixStoreCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixConstructCheckedINTEL", OpenCL_std, CoopMatr, 5, 5, OpCooperativeMatrixConstructCheckedINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", OpenCL_std, CoopMatr, 2, 2, OpCooperativeMatrixGetElementCoordINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -1156,14 +1163,19 @@ class IntelSubgroupsBuiltin<string name, Op operation> {
   string Name = name;
   Op Opcode = operation;
   bit IsBlock = !or(!eq(operation, OpSubgroupBlockReadINTEL),
-                    !eq(operation, OpSubgroupBlockWriteINTEL));
-  bit IsWrite = !eq(operation, OpSubgroupBlockWriteINTEL);
+                    !eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsWrite = !or(!eq(operation, OpSubgroupBlockWriteINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
+  bit IsMedia = !or(!eq(operation, OpSubgroupImageMediaBlockReadINTEL),
+                    !eq(operation, OpSubgroupImageMediaBlockWriteINTEL));
 }
 
 // Table gathering all the Intel sub group builtins.
 def IntelSubgroupsBuiltins : GenericTable {
   let FilterClass = "IntelSubgroupsBuiltin";
-  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite"];
+  let Fields = ["Name", "Opcode", "IsBlock", "IsWrite", "IsMedia"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1185,23 +1197,30 @@ defm : DemangledIntelSubgroupsBuiltin<"shuffle_down", 3, 3, OpSubgroupShuffleDow
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_up", 3, 3, OpSubgroupShuffleUpINTEL>;
 defm : DemangledIntelSubgroupsBuiltin<"shuffle_xor", 2, 2, OpSubgroupShuffleXorINTEL>;
 foreach i = ["", "2", "4", "8"] in {
-  // cl_intel_subgroups
+  // cl_intel_subgroups, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write", i), 2, 3, OpSubgroupBlockWriteINTEL>;
-  // cl_intel_subgroups_short
+  // cl_intel_subgroups_short, cl_intel_subgroup_local_block_io
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_ui",  i), 1, 2, OpSubgroupBlockReadINTEL>;
   defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_ui", i), 2, 3, OpSubgroupBlockWriteINTEL>;
+  // cl_intel_media_block_io
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_ui",  i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
+  defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_ui", i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
 }
-// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long
+// cl_intel_subgroups_char, cl_intel_subgroups_short, cl_intel_subgroups_long, cl_intel_media_block_io, cl_intel_subgroup_local_block_io
 foreach i = ["", "2", "4", "8", "16"] in {
   foreach j = ["c", "s", "l"] in {
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_read_u", j,  i), 1, 2, OpSubgroupBlockReadINTEL>;
     defm : DemangledIntelSubgroupsBuiltin<!strconcat("block_write_u", j, i), 2, 3, OpSubgroupBlockWriteINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_read_u", j, i), 4, 4, OpSubgroupImageMediaBlockReadINTEL>;
+    defm : DemangledIntelSubgroupsBuiltin<!strconcat("media_block_write_u", j, i), 5, 5, OpSubgroupImageMediaBlockWriteINTEL>;
   }
 }
 // OpSubgroupImageBlockReadINTEL and OpSubgroupImageBlockWriteINTEL are to be resolved later on (in code)
 
-// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups extension.
+// Multiclass used to define builtin wrappers for the SPV_INTEL_subgroups and the SPV_INTEL_media_block_io extensions.
 multiclass DemangledIntelSubgroupsBuiltinWrapper<string name, bits<8> numArgs, Op operation> {
   def : DemangledBuiltin<!strconcat("__spirv_", name), OpenCL_std, IntelSubgroups, numArgs, numArgs>;
   def : IntelSubgroupsBuiltin<!strconcat("__spirv_", name), operation>;
@@ -1215,6 +1234,8 @@ defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockReadINTEL", 1, OpSubg
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupBlockWriteINTEL", 2, OpSubgroupBlockWriteINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockReadINTEL", 2, OpSubgroupImageBlockReadINTEL>;
 defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageBlockWriteINTEL", 3, OpSubgroupImageBlockWriteINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockReadINTEL", 4, OpSubgroupImageMediaBlockReadINTEL>;
+defm : DemangledIntelSubgroupsBuiltinWrapper<"SubgroupImageMediaBlockWriteINTEL", 5, OpSubgroupImageMediaBlockWriteINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a builtin for group operations within uniform control flow.

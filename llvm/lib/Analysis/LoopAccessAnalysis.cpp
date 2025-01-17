@@ -1566,10 +1566,10 @@ std::optional<int> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,
   unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
 
   APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
-  const Value *PtrA1 =
-      PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
-  const Value *PtrB1 =
-      PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
+  const Value *PtrA1 = PtrA->stripAndAccumulateConstantOffsets(
+      DL, OffsetA, /*AllowNonInbounds=*/true);
+  const Value *PtrB1 = PtrB->stripAndAccumulateConstantOffsets(
+      DL, OffsetB, /*AllowNonInbounds=*/true);
 
   int Val;
   if (PtrA1 == PtrB1) {
@@ -1921,6 +1921,7 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (StrideAPtr && *StrideAPtr < 0) {
     std::swap(Src, Sink);
     std::swap(AInst, BInst);
+    std::swap(ATy, BTy);
     std::swap(StrideAPtr, StrideBPtr);
   }
 
@@ -1978,13 +1979,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
                     << " Sink induction step: " << StrideBPtrInt << "\n");
   // At least Src or Sink are loop invariant and the other is strided or
   // invariant. We can generate a runtime check to disambiguate the accesses.
-  if (StrideAPtrInt == 0 || StrideBPtrInt == 0)
+  if (!StrideAPtrInt || !StrideBPtrInt)
     return MemoryDepChecker::Dependence::Unknown;
 
   // Both Src and Sink have a constant stride, check if they are in the same
   // direction.
-  if ((StrideAPtrInt > 0 && StrideBPtrInt < 0) ||
-      (StrideAPtrInt < 0 && StrideBPtrInt > 0)) {
+  if ((StrideAPtrInt > 0) != (StrideBPtrInt > 0)) {
     LLVM_DEBUG(
         dbgs() << "Pointer access with strides in different directions\n");
     return MemoryDepChecker::Dependence::Unknown;
@@ -1995,8 +1995,23 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
     TypeByteSize = 0;
-  return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtrInt),
-                                      std::abs(StrideBPtrInt), TypeByteSize,
+
+  StrideAPtrInt = std::abs(StrideAPtrInt);
+  StrideBPtrInt = std::abs(StrideBPtrInt);
+
+  uint64_t MaxStride = std::max(StrideAPtrInt, StrideBPtrInt);
+
+  std::optional<uint64_t> CommonStride;
+  if (StrideAPtrInt == StrideBPtrInt)
+    CommonStride = StrideAPtrInt;
+
+  // TODO: Historically, we don't retry with runtime checks unless the
+  // (unscaled) strides are the same. Fix this once the condition for runtime
+  // checks in isDependent is fixed.
+  bool ShouldRetryWithRuntimeCheck = CommonStride.has_value();
+
+  return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
+                                      ShouldRetryWithRuntimeCheck, TypeByteSize,
                                       AIsWrite, BIsWrite);
 }
 
@@ -2012,23 +2027,21 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
-  auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
+  auto &[Dist, MaxStride, CommonStride, ShouldRetryWithRuntimeCheck,
+         TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
-  std::optional<uint64_t> CommonStride =
-      StrideA == StrideB ? std::make_optional(StrideA) : std::nullopt;
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    // TODO: Relax requirement that there is a common stride to retry with
-    // non-constant distance dependencies.
-    FoundNonConstantDistanceDependence |= CommonStride.has_value();
+    // TODO: Relax requirement that there is a common unscaled stride to retry
+    // with non-constant distance dependencies.
+    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getDataLayout();
-  uint64_t MaxStride = std::max(StrideA, StrideB);
 
   // If the distance between the acecsses is larger than their maximum absolute
   // stride multiplied by the symbolic maximum backedge taken count (which is an
@@ -2040,19 +2053,16 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                          *Dist, MaxStride, TypeByteSize))
     return Dependence::NoDep;
 
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
+  const SCEVConstant *ConstDist = dyn_cast<SCEVConstant>(Dist);
 
   // Attempt to prove strided accesses independent.
-  if (C) {
-    const APInt &Val = C->getAPInt();
-    int64_t Distance = Val.getSExtValue();
+  if (ConstDist) {
+    uint64_t Distance = ConstDist->getAPInt().abs().getZExtValue();
 
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
-    if (std::abs(Distance) > 0 && CommonStride && *CommonStride > 1 &&
-        HasSameSize &&
-        areStridedAccessesIndependent(std::abs(Distance), *CommonStride,
-                                      TypeByteSize)) {
+    if (Distance > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
+        areStridedAccessesIndependent(Distance, *CommonStride, TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2085,17 +2095,17 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // forward dependency will allow vectorization using any width.
 
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
-      if (!C) {
+      if (!ConstDist) {
         // TODO: FoundNonConstantDistanceDependence is used as a necessary
         // condition to consider retrying with runtime checks. Historically, we
         // did not set it when strides were different but there is no inherent
         // reason to.
-        FoundNonConstantDistanceDependence |= CommonStride.has_value();
+        FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
-          couldPreventStoreLoadForward(C->getAPInt().abs().getZExtValue(),
-                                       TypeByteSize)) {
+          couldPreventStoreLoadForward(
+              ConstDist->getAPInt().abs().getZExtValue(), TypeByteSize)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2109,11 +2119,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
   // Below we only handle strictly positive distances.
   if (MinDistance <= 0) {
-    FoundNonConstantDistanceDependence |= CommonStride.has_value();
+    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
     return Dependence::Unknown;
   }
 
-  if (!isa<SCEVConstant>(Dist)) {
+  if (!ConstDist) {
     // Previously this case would be treated as Unknown, possibly setting
     // FoundNonConstantDistanceDependence to force re-trying with runtime
     // checks. Until the TODO below is addressed, set it here to preserve
@@ -2122,7 +2132,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // condition to consider retrying with runtime checks. Historically, we
     // did not set it when strides were different but there is no inherent
     // reason to.
-    FoundNonConstantDistanceDependence |= CommonStride.has_value();
+    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
   }
 
   if (!HasSameSize) {
@@ -2175,7 +2185,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   uint64_t MinDistanceNeeded =
       TypeByteSize * *CommonStride * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
-    if (!isa<SCEVConstant>(Dist)) {
+    if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
       // dependence distance and the distance may be larger at runtime (and safe
       // for vectorization). Classify it as Unknown, so we re-try with runtime
@@ -2216,8 +2226,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   uint64_t MinDepDistBytesOld = MinDepDistBytes;
-  if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-      isa<SCEVConstant>(Dist) &&
+  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
       couldPreventStoreLoadForward(MinDistance, TypeByteSize)) {
     // Sanity check that we didn't update MinDepDistBytes when calling
     // couldPreventStoreLoadForward
@@ -2235,7 +2244,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                     << " with max VF = " << MaxVF << '\n');
 
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-  if (!isa<SCEVConstant>(Dist) && MaxVFInBits < MaxTargetVectorWidthInBits) {
+  if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
     // vectorization). Classify it as Unknown, so we re-try with runtime checks.

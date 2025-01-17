@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -547,12 +548,6 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-/// Returns true if MI is an instruction we are unable to reason about
-/// (like a call or something with unmodeled side effects).
-static inline bool isGlobalMemoryObject(MachineInstr *MI) {
-  return MI->isCall() || MI->hasUnmodeledSideEffects() ||
-         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
-}
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
@@ -899,8 +894,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // isLoadFromStackSLot are not usable after stack slots are lowered to
     // actual addresses).
 
+    const TargetInstrInfo *TII = ST.getInstrInfo();
     // This is a barrier event that acts as a pivotal node in the DAG.
-    if (isGlobalMemoryObject(&MI)) {
+    if (TII->isGlobalMemoryObject(&MI)) {
 
       // Become the barrier chain.
       if (BarrierChain)
@@ -908,7 +904,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       BarrierChain = SU;
 
       LLVM_DEBUG(dbgs() << "Global memory object and new barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
 
       // Add dependencies against everything below it and clear maps.
       addBarrierChain(Stores);
@@ -929,7 +925,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       FPExceptions.insert(SU, UnknownValue);
 
       if (FPExceptions.size() >= HugeRegion) {
-        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n";);
+        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n");
         Value2SUsMap empty;
         reduceHugeMemNodeMaps(FPExceptions, empty, getReductionSize());
       }
@@ -1012,12 +1008,11 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 
     // Reduce maps if they grow huge.
     if (Stores.size() + Loads.size() >= HugeRegion) {
-      LLVM_DEBUG(dbgs() << "Reducing Stores and Loads maps.\n";);
+      LLVM_DEBUG(dbgs() << "Reducing Stores and Loads maps.\n");
       reduceHugeMemNodeMaps(Stores, Loads, getReductionSize());
     }
     if (NonAliasStores.size() + NonAliasLoads.size() >= HugeRegion) {
-      LLVM_DEBUG(
-          dbgs() << "Reducing NonAliasStores and NonAliasLoads maps.\n";);
+      LLVM_DEBUG(dbgs() << "Reducing NonAliasStores and NonAliasLoads maps.\n");
       reduceHugeMemNodeMaps(NonAliasStores, NonAliasLoads, getReductionSize());
     }
   }
@@ -1090,11 +1085,11 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
       BarrierChain->addPredBarrier(newBarrierChain);
       BarrierChain = newBarrierChain;
       LLVM_DEBUG(dbgs() << "Inserting new barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
     }
     else
       LLVM_DEBUG(dbgs() << "Keeping old barrier chain: SU("
-                        << BarrierChain->NodeNum << ").\n";);
+                        << BarrierChain->NodeNum << ").\n");
   }
   else
     BarrierChain = newBarrierChain;

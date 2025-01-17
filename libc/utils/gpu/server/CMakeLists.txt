@@ -23,8 +23,10 @@ target_compile_definitions(llvmlibc_rpc_server PUBLIC
                            LIBC_NAMESPACE=${LIBC_NAMESPACE})
 
 # Install the server and associated header.
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc_rpc_server.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+install(FILES ${LIBC_SOURCE_DIR}/shared/rpc.h
+              ${LIBC_SOURCE_DIR}/shared/rpc_util.h
+              ${LIBC_SOURCE_DIR}/shared/rpc_opcodes.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/shared
         COMPONENT libc-headers)
 install(TARGETS llvmlibc_rpc_server
         ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}"

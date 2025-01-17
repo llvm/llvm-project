@@ -107,7 +107,7 @@ public:
 
   bool isPositionIndependent() const;
 
-  bool isRegisterReservedByUser(Register R) const {
+  bool isRegisterReservedByUser(Register R) const override {
     assert(R < M68k::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[R];
   }

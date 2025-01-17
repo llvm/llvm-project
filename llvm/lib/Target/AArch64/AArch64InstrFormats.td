@@ -145,8 +145,12 @@ def gi_extract_high_v4i32 :
 
 def extract_high_v8f16 :
     ComplexPattern<v4f16, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
+def extract_high_v8bf16 :
+    ComplexPattern<v4bf16, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 def extract_high_v4f32 :
     ComplexPattern<v2f32, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
+def extract_high_v2f64 :
+    ComplexPattern<v1f64, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 
 def gi_extract_high_v8f16 :
   GIComplexOperandMatcher<v4s16, "selectExtractHigh">,
@@ -527,6 +531,18 @@ def UImmS4XForm : SDNodeXForm<imm, [{
 }]>;
 def UImmS8XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() / 8, SDLoc(N), MVT::i64);
+}]>;
+
+def UImmM2XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 2, SDLoc(N), MVT::i32);
+}]>;
+
+def UImmM4XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 4, SDLoc(N), MVT::i32);
+}]>;
+
+def UImmM8XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() * 8, SDLoc(N), MVT::i32);
 }]>;
 
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
@@ -1098,6 +1114,13 @@ def timm32_0_1 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm0_1Operand;
 }
 
+// extq_timm32_0_1m8 - True if the 32-bit immediate is in the range [0,1], scale this immediate
+// by a factor of 8 after a match is made.
+def extq_timm32_0_1m8 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 2;}], UImmM8XForm> {
+  let ParserMatchClass = Imm0_15Operand;
+}
+
 // timm32_1_1 - True if the 32-bit immediate is in the range [1,1]
 def timm32_1_1 : Operand<i32>, TImmLeaf<i32, [{
     return ((uint32_t)Imm) == 1;
@@ -1140,11 +1163,25 @@ def timm32_0_3 : Operand<i32>, TImmLeaf<i32, [{
   let ParserMatchClass = Imm0_3Operand;
 }
 
+// extq_timm32_0_3m4 - True if the 32-bit immediate is in the range [0,3], scale this immediate
+// by a factor of 4 after a match is made.
+def extq_timm32_0_3m4 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 4;}], UImmM4XForm> {
+  let ParserMatchClass = Imm0_15Operand;
+}
+
 // timm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
 def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
+}
+
+// extq_timm32_0_7m2 - True if the 32-bit immediate is in the range [0,7], scale this immediate
+// by a factor of 2 after a match is made.
+def extq_timm32_0_7m2 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 8;}], UImmM2XForm> {
+  let ParserMatchClass = Imm0_15Operand;
 }
 
 // timm32_1_7 predicate - True if the 32-bit immediate is in the range [1,7]
@@ -1767,7 +1804,9 @@ class TMSystemException<bits<3> op1, string asm, list<dag> pattern>
 }
 
 class APASI : SimpleSystemI<0, (ins GPR64:$Xt), "apas", "\t$Xt">, Sched<[]> {
+  bits<5> Xt;
   let Inst{20-5} = 0b0111001110000000;
+  let Inst{4-0} = Xt;
   let DecoderNamespace = "APAS";
 }
 
@@ -2731,6 +2770,8 @@ class MulHi<bits<3> opc, string asm, SDNode OpNode>
   let Inst{23-21} = opc;
   let Inst{20-16} = Rm;
   let Inst{15}    = 0;
+  let Inst{14-10} = 0b11111;
+  let Unpredictable{14-10} = 0b11111;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 
@@ -4883,6 +4924,8 @@ class LoadExclusivePair<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   bits<5> Rt;
   bits<5> Rt2;
   bits<5> Rn;
+  let Inst{20-16} = 0b11111;
+  let Unpredictable{20-16} = 0b11111;
   let Inst{14-10} = Rt2;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rt;
@@ -4898,6 +4941,7 @@ class BaseLoadStoreExclusiveLSUI<bits<2> sz, bit L, bit o0,
   let Inst{31-30} = sz;
   let Inst{29-23} = 0b0010010;
   let Inst{22}    = L;
+  let Inst{21}    = 0b0;
   let Inst{15}    = o0;
 }
 
@@ -4984,6 +5028,7 @@ class BaseStoreUnprivilegedLSUI<bits<2> sz, dag oops, dag iops, string asm>
    let Inst{9-5} = Rn;
    let Inst{4-0} = Rt;
    let PostEncoderMethod = "fixLoadStoreExclusive<1,0>";
+   let mayStore = 1;
 }
 
 multiclass StoreUnprivilegedLSUI<bits<2> sz, RegisterClass regtype, string asm> {
@@ -8491,28 +8536,28 @@ multiclass SIMDTableLookup<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 multiclass SIMDTableLookupTied<bit op, string asm> {
@@ -8535,28 +8580,28 @@ multiclass SIMDTableLookupTied<bit op, string asm> {
 
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8One"),
-                         V64, VecListOne128>;
+                         V64, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Two"),
-                         V64, VecListTwo128>;
+                         V64, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Three"),
-                         V64, VecListThree128>;
+                         V64, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".8b",
                          !cast<Instruction>(NAME#"v8i8Four"),
-                         V64, VecListFour128>;
+                         V64, VecListFourConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8One"),
-                         V128, VecListOne128>;
+                         V128, VecListOneConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Two"),
-                         V128, VecListTwo128>;
+                         V128, VecListTwoConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Three"),
-                         V128, VecListThree128>;
+                         V128, VecListThreeConsecutive128>;
   def : SIMDTableLookupAlias<asm # ".16b",
                          !cast<Instruction>(NAME#"v16i8Four"),
-                         V128, VecListFour128>;
+                         V128, VecListFourConsecutive128>;
 }
 
 //----------------------------------------------------------------------------
@@ -12488,6 +12533,7 @@ class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
                        (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
   bits<5> Rs;
   let Inst{20-16} = Rs;
+  let mayStore = 1;
 }
 
 class MOPSMemoryCopyMoveBase<bit isMove, bits<2> opcode, bits<2> op1,

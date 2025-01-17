@@ -1,0 +1,83 @@
+header: signal.h
+header_template: signal.h.def
+macros: []
+types:
+  - type_name: pid_t
+  - type_name: stack_t
+  - type_name: siginfo_t
+  - type_name: struct_sigaction
+  - type_name: sigset_t
+  - type_name: union_sigval
+  - type_name: sig_atomic_t
+enums: []
+objects: []
+functions:
+  - name: kill
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: pid_t
+      - type: int
+  - name: raise
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: int
+  - name: sigaction
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct sigaction *__restrict
+      - type: struct sigaction *__restrict
+  - name: sigaddset
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: sigset_t *
+      - type: int
+  - name: sigaltstack
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const stack_t *__restrict
+      - type: stack_t *__restrict
+  - name: sigdelset
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: sigset_t *
+      - type: int
+  - name: sigemptyset
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: sigset_t *
+  - name: sigfillset
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: sigset_t *
+  - name: signal
+    standards:
+      - stdc
+    return_type: __sighandler_t
+    arguments:
+      - type: int
+      - type: __sighandler_t
+  - name: sigprocmask
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+      - type: const sigset_t *__restrict
+      - type: sigset_t *__restrict

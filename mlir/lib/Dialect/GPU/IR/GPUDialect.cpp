@@ -29,6 +29,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -217,6 +218,10 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
+      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
+      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -2075,7 +2080,8 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
-    if (!memrefType || !memrefType.isDynamicDim(index.value()))
+    if (!memrefType || index.value() >= memrefType.getRank() ||
+        !memrefType.isDynamicDim(index.value()))
       return failure();
 
     auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
@@ -2113,8 +2119,8 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 namespace {
-LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
-                          StringAttr &object) {
+ParseResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                        StringAttr &object) {
   std::optional<CompilationTarget> formatResult;
   StringRef enumKeyword;
   auto loc = odsParser.getCurrentLocation();
@@ -2482,28 +2488,32 @@ KernelMetadataAttr KernelTableAttr::lookup(StringAttr key) const {
 //===----------------------------------------------------------------------===//
 
 TargetOptions::TargetOptions(
-    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, getSymbolTableCallback,
-                    initialLlvmIRCallback, linkedLlvmIRCallback,
-                    optimizedLlvmIRCallback, isaCallback) {}
+    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
+                    cmdOptions, elfSection, compilationTarget,
+                    getSymbolTableCallback, initialLlvmIRCallback,
+                    linkedLlvmIRCallback, optimizedLlvmIRCallback,
+                    isaCallback) {}
 
 TargetOptions::TargetOptions(
-    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
-    StringRef cmdOptions, CompilationTarget compilationTarget,
+    TypeID typeID, StringRef toolkitPath, ArrayRef<Attribute> librariesToLink,
+    StringRef cmdOptions, StringRef elfSection,
+    CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
     function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
     function_ref<void(StringRef)> isaCallback)
-    : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
-      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+    : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
+      cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
+      compilationTarget(compilationTarget),
       getSymbolTableCallback(getSymbolTableCallback),
       initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
@@ -2514,9 +2524,13 @@ TypeID TargetOptions::getTypeID() const { return typeID; }
 
 StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 
-ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
+ArrayRef<Attribute> TargetOptions::getLibrariesToLink() const {
+  return librariesToLink;
+}
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+StringRef TargetOptions::getELFSection() const { return elfSection; }
 
 SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;

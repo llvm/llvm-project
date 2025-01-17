@@ -234,7 +234,7 @@ void Prescanner::Statement() {
             directiveSentinel_ = newLineClass.sentinel;
             disableSourceContinuation_ = false;
           } else {
-            disableSourceContinuation_ =
+            disableSourceContinuation_ = !replaced->empty() &&
                 newLineClass.kind != LineClassification::Kind::Source;
           }
         }
@@ -708,9 +708,10 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, *at_);
       QuotedCharacterLiteral(tokens, start);
     } else if (IsLetter(*at_) && !preventHollerith_ &&
-        parenthesisNesting_ > 0) {
+        parenthesisNesting_ > 0 &&
+        !preprocessor_.IsNameDefined(CharBlock{at_, 1})) {
       // Handles FORMAT(3I9HHOLLERITH) by skipping over the first I so that
-      // we don't misrecognize I9HOLLERITH as an identifier in the next case.
+      // we don't misrecognize I9HHOLLERITH as an identifier in the next case.
       EmitCharAndAdvance(tokens, *at_);
     }
     preventHollerith_ = false;
@@ -1289,14 +1290,18 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     return nullptr;
   }
   p = SkipWhiteSpace(p);
-  if (InCompilerDirective()) {
-    if (*p++ != '!') {
-      return nullptr;
-    }
-    for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
-      if (*s != ToLowerCaseLetter(*p)) {
-        return nullptr;
+  if (*p == '!') {
+    ++p;
+    if (InCompilerDirective()) {
+      for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
+        if (*s != ToLowerCaseLetter(*p)) {
+          return nullptr;
+        }
       }
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP) && *p == '$') {
+      ++p;
+    } else {
+      return nullptr;
     }
     p = SkipWhiteSpace(p);
     if (*p == '&') {

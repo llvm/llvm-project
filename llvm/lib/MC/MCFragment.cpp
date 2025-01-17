@@ -150,14 +150,10 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     }
     OS << "] (" << Contents.size() << " bytes)";
 
-    if (DF->fixup_begin() != DF->fixup_end()) {
+    if (DF->getFixups().size()) {
       OS << ",\n       ";
       OS << " Fixups:[";
-      for (MCDataFragment::const_fixup_iterator it = DF->fixup_begin(),
-             ie = DF->fixup_end(); it != ie; ++it) {
-        if (it != DF->fixup_begin()) OS << ",\n                ";
-        OS << *it;
-      }
+      interleave(DF->getFixups(), OS, ",\n                ");
       OS << "]";
     }
     break;

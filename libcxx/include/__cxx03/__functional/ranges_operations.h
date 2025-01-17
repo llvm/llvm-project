@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
-#define _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H
+#define _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H
 
 #include <__cxx03/__concepts/equality_comparable.h>
 #include <__cxx03/__concepts/totally_ordered.h>
@@ -106,4 +106,4 @@ inline const bool __desugars_to_v<__less_tag, ranges::less, _Tp, _Up> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_RANGES_OPERATIONS_H

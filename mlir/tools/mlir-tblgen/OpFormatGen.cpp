@@ -113,13 +113,16 @@ struct AttributeLikeVariable : public VariableElement {
     return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
   }
 
-  /// Returns true if the variable is a UnitAttr or a UnitProperty.
+  /// Returns true if the variable is a UnitAttr or a UnitProp.
   bool isUnit() const {
     if (const auto *attr = dyn_cast<AttributeVariable>(this))
       return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
-      return prop->getVar()->prop.getBaseProperty().getPropertyDefName() ==
-             "UnitProperty";
+      StringRef baseDefName =
+          prop->getVar()->prop.getBaseProperty().getPropertyDefName();
+      // Note: remove the `UnitProperty` case once the deprecation period is
+      // over.
+      return baseDefName == "UnitProp" || baseDefName == "UnitProperty";
     }
     llvm_unreachable("Type that wasn't listed in classof()");
   }
@@ -1309,7 +1312,7 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 

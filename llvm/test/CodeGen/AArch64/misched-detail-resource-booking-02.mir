@@ -1,6 +1,6 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  \
 # RUN:  -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s \
-# RUN:  -misched-bottomup=true -sched-print-cycles=true \
+# RUN:  -misched-prera-direction=bottomup -sched-print-cycles=true \
 # RUN:  -misched-dump-reserved-cycles=true -misched-detail-resource-booking=true\
 # RUN:  -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-width=4 \
 # RUN:  2>&1 | FileCheck %s
@@ -466,6 +466,9 @@ body:             |
 # CHECK-NEXT: W0 [0B,16r:0) 0@0B-phi
 # CHECK-NEXT: W1 [0B,32r:0) 0@0B-phi
 # CHECK-NEXT: W2 [0B,48r:0) 0@0B-phi
+# CHECK-NEXT: W0_HI [0B,16r:0) 0@0B-phi
+# CHECK-NEXT: W1_HI [0B,32r:0) 0@0B-phi
+# CHECK-NEXT: W2_HI [0B,48r:0) 0@0B-phi
 # CHECK-NEXT: RegMasks:
 # CHECK-NEXT: ********** MACHINEINSTRS **********
 # CHECK-NEXT: # Machine code for function f: IsSSA, NoPHIs, TracksLiveness, NoVRegs

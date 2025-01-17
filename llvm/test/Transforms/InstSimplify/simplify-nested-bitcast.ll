@@ -25,7 +25,7 @@ entry:
 }
 
 ; CHECK-LABEL: define void @f1
-; CHECK: %1 = load ptr, ptr addrspace(4) getelementptr inbounds (i8, ptr addrspace(4) addrspacecast (ptr addrspace(1) @__aaa_struct_ptr to ptr addrspace(4)), i64 16), align 8
+; CHECK: %1 = load ptr, ptr addrspace(4) getelementptr inbounds nuw (i8, ptr addrspace(4) addrspacecast (ptr addrspace(1) @__aaa_struct_ptr to ptr addrspace(4)), i64 16), align 8
 
 ; Function Attrs: alwaysinline nounwind
 define void @f1(ptr addrspace(1)) #1 {
