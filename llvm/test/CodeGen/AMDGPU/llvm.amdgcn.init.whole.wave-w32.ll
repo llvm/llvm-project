@@ -1233,9 +1233,9 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; DAGISEL10-NEXT:    s_mov_b32 exec_lo, s2
 ; DAGISEL10-NEXT:    s_setpc_b64 s[4:5]
 entry:
-  %0 = call i32 @llvm.amdgcn.dead()
-  %1 = call i1 @llvm.amdgcn.init.whole.wave()
-  br i1 %1, label %shader, label %tail.block
+  %imp.def = call i32 @llvm.amdgcn.dead()
+  %initial.exec = call i1 @llvm.amdgcn.init.whole.wave()
+  br i1 %initial.exec, label %shader, label %tail.block
 
 shader:                                           ; preds = %entry
   %use.another.vgpr = load i32, ptr %callee ; smth that won't be moved past the inline asm
@@ -1246,7 +1246,7 @@ shader:                                           ; preds = %entry
 
 tail.block:                                       ; preds = %.exit27, %.exit49, %244, %243, %entry
   %active.vgpr.arg = phi i32 [ %active.vgpr, %entry ], [ %active.vgpr.new, %shader ]
-  %inactive.vgpr.arg = phi i32 [ %inactive.vgpr, %entry ], [ %0, %shader ]
+  %inactive.vgpr.arg = phi i32 [ %inactive.vgpr, %entry ], [ %imp.def, %shader ]
   %vgprs.0 = insertvalue { i32, i32 } poison, i32 %active.vgpr.arg, 0
   %vgprs = insertvalue { i32, i32 } %vgprs.0, i32 %inactive.vgpr.arg, 1
   call void (ptr, i32, i32, { i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.i32.sl_i32i32(ptr inreg %callee, i32 inreg %exec, i32 inreg %sgpr, { i32, i32} %vgprs, i32 0)
