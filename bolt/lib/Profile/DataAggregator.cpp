@@ -183,10 +183,8 @@ void DataAggregator::start() {
       Name += " with itrace";
       PerfScriptArgs += " --itrace=" + opts::ITraceAggregation;
     }
-    launchPerfProcess(Name,
-                      MainEventsPPI,
-                      PerfScriptArgs.c_str(),
-                      /*Wait = */false);
+    launchPerfProcess(Name, MainEventsPPI, PerfScriptArgs.c_str(),
+                      /*Wait = */ false);
   }
 
   // Note: we launch script for mem events regardless of the option, as the
