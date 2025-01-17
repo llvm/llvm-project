@@ -57,6 +57,7 @@ if (SPHINX_FOUND)
       sys/resource
       sys/time
       sys/wait
+      termios
       threads
       uchar
       wchar

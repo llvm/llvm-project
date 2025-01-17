@@ -30,6 +30,7 @@ Implementation Status
    sys/resource
    sys/time
    sys/wait
+   termios
    threads
    time
    uchar
