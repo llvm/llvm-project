@@ -700,6 +700,7 @@ cc_library(
     includes = ["include"],
     textual_hdrs = [
         # keep sorted
+        "include/clang/Basic/AllDiagnosticKinds.inc",
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
         "include/clang/Basic/AttrSubMatchRulesList.inc",
