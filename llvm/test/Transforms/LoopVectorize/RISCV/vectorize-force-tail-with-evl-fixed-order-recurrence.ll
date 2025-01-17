@@ -12,8 +12,8 @@
 ; RUN: -mtriple=riscv64 -mattr=+v,+f -S < %s| FileCheck %s --check-prefix=NO-VP
 
 ; FIXME: Fixed-order recurrence is not supported yet with EVL tail folding.
-; The llvm.splice may occur unexpected behavior if the evl of the second-to-last
-; iteration is not VF*UF.
+; The llvm.splice may occurs unexpected behavior if the evl of the
+; second-to-last iteration is not VF*UF.
 
 define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-LABEL: define void @first_order_recurrence(
