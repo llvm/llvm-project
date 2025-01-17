@@ -825,9 +825,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          Custom);
     }
 
-    // true 16 currently unsupported
-    if (!Subtarget->hasTrue16BitInsts() || (!Subtarget->useRealTrue16Insts() ||
-                                            !Subtarget->useRealTrue16Insts())) {
+    // Avoid true 16 instruction
+    if (!Subtarget->hasTrue16BitInsts() || !Subtarget->useRealTrue16Insts()) {
       // MVT::v2i16 for src type check in foldToSaturated
       // MVT::v2i8 for dst type check in CustomLowerNode
       setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
