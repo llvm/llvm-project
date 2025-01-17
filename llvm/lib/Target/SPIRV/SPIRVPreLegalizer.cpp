@@ -43,7 +43,6 @@ public:
 
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

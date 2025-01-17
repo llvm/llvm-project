@@ -187,8 +187,6 @@ void SPIRVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelKnownBitsAnalysis>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<GISelCSEAnalysisWrapperPass>();
-  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -205,11 +203,6 @@ bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
-
-  // Enable CSE.
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
 
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   const auto *LI = ST.getLegalizerInfo();
@@ -229,8 +222,8 @@ bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
-  SPIRVPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, CSEInfo, RuleConfig,
-                                     ST, MDT, LI);
+  SPIRVPreLegalizerCombinerImpl Impl(MF, CInfo, &TPC, *KB, /*CSEInfo*/ nullptr,
+                                     RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -240,7 +233,6 @@ INITIALIZE_PASS_BEGIN(SPIRVPreLegalizerCombiner, DEBUG_TYPE,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
-INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(SPIRVPreLegalizerCombiner, DEBUG_TYPE,
                     "Combine SPIRV machine instrs before legalization", false,
                     false)
