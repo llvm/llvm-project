@@ -46,7 +46,7 @@ func.func private @pack(%A: tensor<7x16xi32>) {
   %A_cast = tensor.cast %A_pack : tensor<?x16x?x1xi32> to tensor<*xi32>
 
   // Print the results
-  // CHECK: Unranked Memref base@ = 0{{.*}} rank = 4 offset = 0 sizes = [1, 16, 8, 1] strides = [128, 8, 1, 1] data =
+  // CHECK: Unranked Memref base@ = 0x{{.*}} rank = 4 offset = 0 sizes = [1, 16, 8, 1] strides = [128, 8, 1, 1] data =
   // Tile 1: (8 x 1)
   // CHECK-NEXT:  1
   // CHECK-NEXT:  2

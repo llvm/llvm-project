@@ -66,6 +66,7 @@ function(add_header target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      HEADER_NAME ${dest_leaf_filename}
       HEADER_FILE_PATH ${dest_file}
       DEPS "${fq_deps_list}"
   )
@@ -113,6 +114,7 @@ function(add_gen_header target_name)
     COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
             --output ${out_file}
             --depfile ${dep_file}
+            --write-if-changed
             ${entry_points}
             ${yaml_file}
     DEPENDS ${yaml_file} ${fq_data_files}
@@ -163,6 +165,7 @@ function(add_gen_header target_name)
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      HEADER_NAME ${ADD_GEN_HDR_GEN_HDR}
       HEADER_FILE_PATH ${out_file}
       DECLS_FILE_PATH "${decl_out_file}"
       DEPS "${fq_deps_list}"
