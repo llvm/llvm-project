@@ -42,8 +42,7 @@ define <2 x i64> @scalar_to_2xi64(i64 %val) {
 define <4 x float> @scalar_to_4xf32(float %val) {
 ; CHECK-LABEL: scalar_to_4xf32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; CHECK-NEXT:    ret
   %ret = insertelement <4 x float> poison, float %val, i32 0
   ret <4 x float> %ret
@@ -52,8 +51,7 @@ define <4 x float> @scalar_to_4xf32(float %val) {
 define <2 x double> @scalar_to_2xf64(double %val) {
 ; CHECK-LABEL: scalar_to_2xf64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; CHECK-NEXT:    ret
   %ret = insertelement <2 x double> poison, double %val, i32 0
   ret <2 x double> %ret
