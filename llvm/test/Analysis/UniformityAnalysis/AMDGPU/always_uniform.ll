@@ -103,15 +103,6 @@ define void @workgroup_id_z(ptr addrspace(1) inreg %out) {
   ret void
 }
 
-; CHECK-LABEL: for function 'global_sreg':
-; CHECK: DIVERGENT: i32 %divergent
-; CHECK-NOT: DIVERGENT
-define void @global_sreg(i32 %divergent) {
-  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 95, i32 %divergent)
-  %b = call i32 @llvm.amdgcn.s.swap.to.global.i32(i16 95, i32 %divergent, i32 %divergent)
-  ret void
-}
-
 ; CHECK-LABEL: for function 's_getpc':
 ; CHECK: ALL VALUES UNIFORM
 define void @s_getpc(ptr addrspace(1) inreg %out) {
@@ -208,8 +199,6 @@ declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
-declare i32 @llvm.amdgcn.s.mov.from.global.i32(i16, i32)
-declare i32 @llvm.amdgcn.s.swap.to.global.i32(i16, i32, i32)
 declare i32 @llvm.amdgcn.cluster.workgroup.id.x()
 declare i32 @llvm.amdgcn.cluster.workgroup.id.y()
 declare i32 @llvm.amdgcn.cluster.workgroup.id.z()

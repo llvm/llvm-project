@@ -1054,12 +1054,6 @@ def DepCtr : CustomOperand<i32>;
 
 def SDelayALU : CustomOperand<i32>;
 
-// Global register references are represented as immediate operands but printed
-// and parsed like registers.
-def GlobalSReg32 : CustomOperand<i16>;
-
-def GlobalSReg64 : CustomOperand<i16>;
-
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
 
@@ -2062,6 +2056,18 @@ class getSrc0ModVOP3DPP <ValueType VT, ValueType DstVT, bit IsFake16 = 1> {
                 IntT16VRegInputMods<IsFake16>,
                 IntVRegInputMods));
   Operand ret = !if(!and(!not(IsFake16), !eq(DstVT.Size, 16)), T16Dst, Normal);
+}
+
+// GFX11 only supports VGPR src1, but the restriction is done in AsmParser
+// and GCNDPPCombine.
+class getSrcModVOP3DPP<ValueType VT, bit IsFake16 = 1> {
+  Operand ret =
+      !if (VT.isFP,
+           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
+                FPT16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
+           !if (!eq(VT.Value, i16.Value),
+                IntT16VCSrcInputMods<IsFake16>,
+                Int32VCSrcInputMods));
 }
 
 // Return type of input modifiers operand for specified input operand for VGPR
