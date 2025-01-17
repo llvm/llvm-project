@@ -427,9 +427,11 @@ class LegalizeLaunchFuncOpPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
   LegalizeLaunchFuncOpPattern(const LLVMTypeConverter &typeConverter,
-                              bool kernelBarePtrCallConv)
+                              bool kernelBarePtrCallConv,
+                              bool typeCheckKernelArgs)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
+        kernelBarePtrCallConv(kernelBarePtrCallConv),
+        typeCheckKernelArgs(typeCheckKernelArgs) {}
 
 private:
   LogicalResult
@@ -437,6 +439,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   bool kernelBarePtrCallConv;
+  bool typeCheckKernelArgs;
 };
 
 /// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
@@ -563,8 +566,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns,
-                                      kernelBarePtrCallConv);
+  populateGpuToLLVMConversionPatterns(
+      converter, patterns, kernelBarePtrCallConv, typeCheckKernelArgs);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -966,6 +969,28 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   // stream must be created to pass to subsequent operations.
   else if (launchOp.getAsyncToken())
     stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
+
+  if (typeCheckKernelArgs) {
+    // The current non-bare-pointer ABI is a bad fit for `mgpuLaunchKernel`,
+    // which takes an untyped list of arguments. The type check here prevents
+    // accidentally violating the assumption made in vulkan-runtime-wrappers.cpp
+    // and creating a unchecked runtime ABI mismatch.
+    // TODO(https://github.com/llvm/llvm-project/issues/73457): Change the ABI
+    // here to remove the need for this type check.
+    for (Value arg : launchOp.getKernelOperands()) {
+      if (auto memrefTy = dyn_cast<MemRefType>(arg.getType())) {
+        if (memrefTy.getRank() != 1 ||
+            memrefTy.getElementTypeBitWidth() != 32) {
+          return rewriter.notifyMatchFailure(
+              launchOp, "Operand to launch op is not a rank-1 memref with "
+                        "32-bit element type.");
+        }
+      } else {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref.");
+      }
+    }
+  }
   // Lower the kernel operands to match kernel parameters.
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
@@ -1737,7 +1762,8 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
-                                               bool kernelBarePtrCallConv) {
+                                               bool kernelBarePtrCallConv,
+                                               bool typeCheckKernelArgs) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -1774,7 +1800,8 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMCopyOpToGpuRuntimeCallPattern,
                ConvertSpMatGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
-  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv);
+  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv,
+                                            typeCheckKernelArgs);
 }
 
 //===----------------------------------------------------------------------===//

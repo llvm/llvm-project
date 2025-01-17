@@ -16,6 +16,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -192,6 +193,97 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
   return success();
 }
 
+template <typename Op>
+static LogicalResult checkVarAndVarType(Op op) {
+  if (!op.getVar())
+    return op.emitError("must have var operand");
+
+  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
+      mlir::isa<mlir::acc::MappableType>(op.getVar().getType())) {
+    // TODO: If a type implements both interfaces (mappable and pointer-like),
+    // it is unclear which semantics to apply without additional info which
+    // would need captured in the data operation. For now restrict this case
+    // unless a compelling reason to support disambiguating between the two.
+    return op.emitError("var must be mappable or pointer-like (not both)");
+  }
+
+  if (!mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
+      !mlir::isa<mlir::acc::MappableType>(op.getVar().getType()))
+    return op.emitError("var must be mappable or pointer-like");
+
+  if (mlir::isa<mlir::acc::MappableType>(op.getVar().getType()) &&
+      op.getVarType() != op.getVar().getType())
+    return op.emitError("varType must match when var is mappable");
+
+  return success();
+}
+
+template <typename Op>
+static LogicalResult checkVarAndAccVar(Op op) {
+  if (op.getVar().getType() != op.getAccVar().getType())
+    return op.emitError("input and output types must match");
+
+  return success();
+}
+
+static ParseResult parseVar(mlir::OpAsmParser &parser,
+                            OpAsmParser::UnresolvedOperand &var) {
+  // Either `var` or `varPtr` keyword is required.
+  if (failed(parser.parseOptionalKeyword("varPtr"))) {
+    if (failed(parser.parseKeyword("var")))
+      return failure();
+  }
+  if (failed(parser.parseLParen()))
+    return failure();
+  if (failed(parser.parseOperand(var)))
+    return failure();
+
+  return success();
+}
+
+static void printVar(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                     mlir::Value var) {
+  if (mlir::isa<mlir::acc::PointerLikeType>(var.getType()))
+    p << "varPtr(";
+  else
+    p << "var(";
+  p.printOperand(var);
+}
+
+static ParseResult parseAccVar(mlir::OpAsmParser &parser,
+                               OpAsmParser::UnresolvedOperand &var,
+                               mlir::Type &accVarType) {
+  // Either `accVar` or `accPtr` keyword is required.
+  if (failed(parser.parseOptionalKeyword("accPtr"))) {
+    if (failed(parser.parseKeyword("accVar")))
+      return failure();
+  }
+  if (failed(parser.parseLParen()))
+    return failure();
+  if (failed(parser.parseOperand(var)))
+    return failure();
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseType(accVarType)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printAccVar(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                        mlir::Value accVar, mlir::Type accVarType) {
+  if (mlir::isa<mlir::acc::PointerLikeType>(accVar.getType()))
+    p << "accPtr(";
+  else
+    p << "accVar(";
+  p.printOperand(accVar);
+  p << " : ";
+  p.printType(accVarType);
+  p << ")";
+}
+
 static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
                                    mlir::Type &varPtrType,
                                    mlir::TypeAttr &varTypeAttr) {
@@ -211,8 +303,11 @@ static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
       return failure();
   } else {
     // Set `varType` from the element type of the type of `varPtr`.
-    varTypeAttr = mlir::TypeAttr::get(
-        mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
+    if (mlir::isa<mlir::acc::PointerLikeType>(varPtrType))
+      varTypeAttr = mlir::TypeAttr::get(
+          mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
+    else
+      varTypeAttr = mlir::TypeAttr::get(varPtrType);
   }
 
   return success();
@@ -226,8 +321,11 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
   // Print the `varType` only if it differs from the element type of
   // `varPtr`'s type.
   mlir::Type varType = varTypeAttr.getValue();
-  if (mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType() !=
-      varType) {
+  mlir::Type typeToCheckAgainst =
+      mlir::isa<mlir::acc::PointerLikeType>(varPtrType)
+          ? mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType()
+          : varPtrType;
+  if (typeToCheckAgainst != varType) {
     p << " varType(";
     p.printType(varType);
     p << ")";
@@ -252,6 +350,8 @@ LogicalResult acc::PrivateOp::verify() {
   if (getDataClause() != acc::DataClause::acc_private)
     return emitError(
         "data clause associated with private operation must match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
   return success();
 }
 
@@ -262,6 +362,8 @@ LogicalResult acc::FirstprivateOp::verify() {
   if (getDataClause() != acc::DataClause::acc_firstprivate)
     return emitError("data clause associated with firstprivate operation must "
                      "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
   return success();
 }
 
@@ -272,6 +374,8 @@ LogicalResult acc::ReductionOp::verify() {
   if (getDataClause() != acc::DataClause::acc_reduction)
     return emitError("data clause associated with reduction operation must "
                      "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
   return success();
 }
 
@@ -282,6 +386,10 @@ LogicalResult acc::DevicePtrOp::verify() {
   if (getDataClause() != acc::DataClause::acc_deviceptr)
     return emitError("data clause associated with deviceptr operation must "
                      "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -292,6 +400,10 @@ LogicalResult acc::PresentOp::verify() {
   if (getDataClause() != acc::DataClause::acc_present)
     return emitError(
         "data clause associated with present operation must match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -307,6 +419,10 @@ LogicalResult acc::CopyinOp::verify() {
     return emitError(
         "data clause associated with copyin operation must match its intent"
         " or specify original clause this operation was decomposed from");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -326,6 +442,10 @@ LogicalResult acc::CreateOp::verify() {
     return emitError(
         "data clause associated with create operation must match its intent"
         " or specify original clause this operation was decomposed from");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -342,6 +462,10 @@ LogicalResult acc::NoCreateOp::verify() {
   if (getDataClause() != acc::DataClause::acc_no_create)
     return emitError("data clause associated with no_create operation must "
                      "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -352,6 +476,10 @@ LogicalResult acc::AttachOp::verify() {
   if (getDataClause() != acc::DataClause::acc_attach)
     return emitError(
         "data clause associated with attach operation must match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -363,6 +491,10 @@ LogicalResult acc::DeclareDeviceResidentOp::verify() {
   if (getDataClause() != acc::DataClause::acc_declare_device_resident)
     return emitError("data clause associated with device_resident operation "
                      "must match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -374,6 +506,10 @@ LogicalResult acc::DeclareLinkOp::verify() {
   if (getDataClause() != acc::DataClause::acc_declare_link)
     return emitError(
         "data clause associated with link operation must match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -389,8 +525,12 @@ LogicalResult acc::CopyoutOp::verify() {
     return emitError(
         "data clause associated with copyout operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getVarPtr() || !getAccPtr())
+  if (!getVar() || !getAccVar())
     return emitError("must have both host and device pointers");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -414,7 +554,7 @@ LogicalResult acc::DeleteOp::verify() {
     return emitError(
         "data clause associated with delete operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getAccPtr())
+  if (!getAccVar())
     return emitError("must have device pointer");
   return success();
 }
@@ -429,7 +569,7 @@ LogicalResult acc::DetachOp::verify() {
     return emitError(
         "data clause associated with detach operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getAccPtr())
+  if (!getAccVar())
     return emitError("must have device pointer");
   return success();
 }
@@ -444,8 +584,12 @@ LogicalResult acc::UpdateHostOp::verify() {
     return emitError(
         "data clause associated with host operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  if (!getVarPtr() || !getAccPtr())
+  if (!getVar() || !getAccVar())
     return emitError("must have both host and device pointers");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -458,6 +602,10 @@ LogicalResult acc::UpdateDeviceOp::verify() {
     return emitError(
         "data clause associated with device operation must match its intent"
         " or specify original clause this operation was decomposed from");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -470,6 +618,10 @@ LogicalResult acc::UseDeviceOp::verify() {
     return emitError(
         "data clause associated with use_device operation must match its intent"
         " or specify original clause this operation was decomposed from");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -483,6 +635,10 @@ LogicalResult acc::CacheOp::verify() {
     return emitError(
         "data clause associated with cache operation must match its intent"
         " or specify original clause this operation was decomposed from");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkVarAndAccVar(*this)))
+    return failure();
   return success();
 }
 
@@ -502,7 +658,7 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
 }
 
 static bool isComputeOperation(Operation *op) {
-  return isa<acc::ParallelOp, acc::LoopOp>(op);
+  return isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(op);
 }
 
 namespace {
@@ -2917,20 +3073,56 @@ LogicalResult acc::WaitOp::verify() {
 // acc dialect utilities
 //===----------------------------------------------------------------------===//
 
-mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
-  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+mlir::TypedValue<mlir::acc::PointerLikeType>
+mlir::acc::getVarPtr(mlir::Operation *accDataClauseOp) {
+  auto varPtr{llvm::TypeSwitch<mlir::Operation *,
+                               mlir::TypedValue<mlir::acc::PointerLikeType>>(
+                  accDataClauseOp)
                   .Case<ACC_DATA_ENTRY_OPS>(
                       [&](auto entry) { return entry.getVarPtr(); })
                   .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
                       [&](auto exit) { return exit.getVarPtr(); })
-                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
+                  .Default([&](mlir::Operation *) {
+                    return mlir::TypedValue<mlir::acc::PointerLikeType>();
+                  })};
   return varPtr;
 }
 
-mlir::Value mlir::acc::getAccPtr(mlir::Operation *accDataClauseOp) {
-  auto accPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+mlir::Value mlir::acc::getVar(mlir::Operation *accDataClauseOp) {
+  auto varPtr{
+      llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+          .Case<ACC_DATA_ENTRY_OPS>([&](auto entry) { return entry.getVar(); })
+          .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  return varPtr;
+}
+
+mlir::Type mlir::acc::getVarType(mlir::Operation *accDataClauseOp) {
+  auto varType{llvm::TypeSwitch<mlir::Operation *, mlir::Type>(accDataClauseOp)
+                   .Case<ACC_DATA_ENTRY_OPS>(
+                       [&](auto entry) { return entry.getVarType(); })
+                   .Case<mlir::acc::CopyoutOp, mlir::acc::UpdateHostOp>(
+                       [&](auto exit) { return exit.getVarType(); })
+                   .Default([&](mlir::Operation *) { return mlir::Type(); })};
+  return varType;
+}
+
+mlir::TypedValue<mlir::acc::PointerLikeType>
+mlir::acc::getAccPtr(mlir::Operation *accDataClauseOp) {
+  auto accPtr{llvm::TypeSwitch<mlir::Operation *,
+                               mlir::TypedValue<mlir::acc::PointerLikeType>>(
+                  accDataClauseOp)
                   .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
                       [&](auto dataClause) { return dataClause.getAccPtr(); })
+                  .Default([&](mlir::Operation *) {
+                    return mlir::TypedValue<mlir::acc::PointerLikeType>();
+                  })};
+  return accPtr;
+}
+
+mlir::Value mlir::acc::getAccVar(mlir::Operation *accDataClauseOp) {
+  auto accPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataClauseOp)
+                  .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+                      [&](auto dataClause) { return dataClause.getAccVar(); })
                   .Default([&](mlir::Operation *) { return mlir::Value(); })};
   return accPtr;
 }
