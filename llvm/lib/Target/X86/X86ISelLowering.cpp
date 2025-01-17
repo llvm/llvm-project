@@ -37800,14 +37800,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTILESTORED:
       Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
       break;
-#undef GET_EGPR_IF_ENABLED
     case X86::PTILELOADDRS:
-      Opc = X86::TILELOADDRS;
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRS);
       break;
     case X86::PTILELOADDRST1:
-      Opc = X86::TILELOADDRST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRST1);
       break;
     }
+#undef GET_EGPR_IF_ENABLED
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     unsigned CurOp = 0;
@@ -37838,34 +37838,36 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PT2RPNTLVWZ1RST1: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget.hasEGPR() ? OPC##_EVEX : OPC)
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PT2RPNTLVWZ0:
-      Opc = X86::T2RPNTLVWZ0;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0);
       break;
     case X86::PT2RPNTLVWZ0T1:
-      Opc = X86::T2RPNTLVWZ0T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0T1);
       break;
     case X86::PT2RPNTLVWZ1:
-      Opc = X86::T2RPNTLVWZ1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1);
       break;
     case X86::PT2RPNTLVWZ1T1:
-      Opc = X86::T2RPNTLVWZ1T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1T1);
       break;
     case X86::PT2RPNTLVWZ0RS:
-      Opc = X86::T2RPNTLVWZ0RS;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RS);
       break;
     case X86::PT2RPNTLVWZ0RST1:
-      Opc = X86::T2RPNTLVWZ0RST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RST1);
       break;
     case X86::PT2RPNTLVWZ1RS:
-      Opc = X86::T2RPNTLVWZ1RS;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RS);
       break;
     case X86::PT2RPNTLVWZ1RST1:
-      Opc = X86::T2RPNTLVWZ1RST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RST1);
       break;
     }
+#undef GET_EGPR_IF_ENABLED
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
     MIB.addReg(TMMImmToTMMPair(MI.getOperand(0).getImm()), RegState::Define);
 
