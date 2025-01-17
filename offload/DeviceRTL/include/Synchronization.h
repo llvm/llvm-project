@@ -72,7 +72,7 @@ V add_system(Ty *Address, V Val, atomic::OrderingTy Ordering) {
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 V load(Ty *Address, atomic::OrderingTy Ordering) {
-  return add(Address, Ty(0), Ordering);
+  return __scoped_atomic_load_n(Address, Ordering, __MEMORY_SCOPE_DEVICE);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
