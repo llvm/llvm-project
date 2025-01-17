@@ -2373,8 +2373,9 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
     return false;
 
   unsigned Size = VT.getSizeInBits();
-  assert((Size == 32 || Size == 64) &&
-         "i32 or i64 is expected after legalization.");
+
+  if (Size != 32 && Size != 64)
+    return false;
 
   // Exit early if we demand all bits.
   if (DemandedBits.popcount() == Size)

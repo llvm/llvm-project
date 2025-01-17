@@ -51,7 +51,6 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
-class Module;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -146,20 +145,20 @@ public:
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
   /// or SetNoExternalVisibleDeclsForName.
-  /// \param DC the context for lookup.
-  /// \param Name the name of the declarations to find.
-  /// \param NamedModule find declarations visible to the given module
-  /// \c NamedModule . This may be different from owning module of \c DC since
-  /// there are declarations (e.g., namespace declaration) can appear in
-  /// multiple modules.
+  /// \param DC The context for lookup in. \c DC should be a primary context.
+  /// \param Name The name to look for.
+  /// \param OriginalDC The original context for lookup.  \c OriginalDC can
+  /// provide more information than \c DC. e.g., The same namespace can appear
+  /// in multiple module units. So we need the \c OriginalDC to tell us what
+  /// the module the lookup come from.
   ///
-  /// \return \c true if any declarations might have been found, and \c false
-  /// if we definitely have no declarations with this name.
+  /// \return \c true if any declarations might have been found, \c false if
+  /// we definitely have no declarations with tbis name.
   ///
   /// The default implementation of this method is a no-op returning \c false.
   virtual bool FindExternalVisibleDeclsByName(const DeclContext *DC,
                                               DeclarationName Name,
-                                              Module *NamedModule);
+                                              const DeclContext *OriginalDC);
 
   /// Load all the external specializations for the Decl \param D if \param
   /// OnlyPartial is false. Otherwise, load all the external **partial**

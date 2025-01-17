@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -23,6 +24,7 @@
 using namespace llvm;
 
 static cl::SubCommand FromYAML("fromYAML", "Convert from yaml");
+static cl::SubCommand ToYAML("toYAML", "Convert to yaml");
 
 static cl::opt<std::string> InputFilename(
     "input", cl::value_desc("input"), cl::init("-"),
@@ -35,15 +37,16 @@ static cl::opt<std::string> InputFilename(
         "'Contexts', optional. An array containing arrays of contexts. The "
         "context array at a position 'i' is the set of callees at that "
         "callsite index. Use an empty array to indicate no callees."),
-    cl::sub(FromYAML));
+    cl::sub(FromYAML), cl::sub(ToYAML));
 
 static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::init("-"),
                                            cl::desc("Output file"),
-                                           cl::sub(FromYAML));
+                                           cl::sub(FromYAML), cl::sub(ToYAML));
 
+namespace {
 // Save the bitstream profile from the JSON representation.
-Error convertFromYAML() {
+Error convertFromYaml() {
   auto BufOrError =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (!BufOrError)
@@ -61,11 +64,30 @@ Error convertFromYAML() {
   return llvm::createCtxProfFromYAML(BufOrError.get()->getBuffer(), Out);
 }
 
+Error convertToYaml() {
+  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFilename);
+  if (!BufOrError)
+    return createFileError(InputFilename, BufOrError.getError());
+
+  std::error_code EC;
+  raw_fd_ostream Out(OutputFilename, EC);
+  if (EC)
+    return createStringError(EC, "failed to open output");
+  PGOCtxProfileReader Reader(BufOrError.get()->getBuffer());
+  auto Prof = Reader.loadContexts();
+  if (!Prof)
+    return Prof.takeError();
+  llvm::convertCtxProfToYaml(Out, *Prof);
+  Out << "\n";
+  return Error::success();
+}
+} // namespace
+
 int main(int argc, const char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM Contextual Profile Utils\n");
   ExitOnError ExitOnErr("llvm-ctxprof-util: ");
-  if (FromYAML) {
-    if (auto E = convertFromYAML()) {
+  auto HandleErr = [&](Error E) -> int {
+    if (E) {
       handleAllErrors(std::move(E), [&](const ErrorInfoBase &E) {
         E.log(errs());
         errs() << "\n";
@@ -73,7 +95,14 @@ int main(int argc, const char **argv) {
       return 1;
     }
     return 0;
-  }
+  };
+
+  if (FromYAML)
+    return HandleErr(convertFromYaml());
+
+  if (ToYAML)
+    return HandleErr(convertToYaml());
+
   cl::PrintHelpMessage();
   return 1;
 }
