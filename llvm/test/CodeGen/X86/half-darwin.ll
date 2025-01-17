@@ -82,7 +82,7 @@ define float @extendhfsf(ptr %ptr) nounwind {
 ;
 ; CHECK-FP16-LABEL: extendhfsf:
 ; CHECK-FP16:       ## %bb.0:
-; CHECK-FP16-NEXT:    vmovsh (%rdi), %xmm0
+; CHECK-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-FP16-NEXT:    retq
 
@@ -174,7 +174,7 @@ define float @strict_extendhfsf(ptr %ptr) nounwind strictfp {
 ;
 ; CHECK-FP16-LABEL: strict_extendhfsf:
 ; CHECK-FP16:       ## %bb.0:
-; CHECK-FP16-NEXT:    vmovsh (%rdi), %xmm0
+; CHECK-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-FP16-NEXT:    retq
 
