@@ -163,6 +163,15 @@ The following are current known cases of false positives:
 1. Not handling "no-return" functions. See issue
    [#115154](https://github.com/llvm/llvm-project/issues/115154) for details and
    pointers to open PRs to fix this.
+2. Not recognizing that a move of a properly authenticated value between registers,
+   results in the destination register having a properly authenticated value.
+   For example, the scanner currently produces a false negative for the following
+   code sequence:
+   ```
+   autiasp
+   mov     x16, x30
+   ret
+   ```
 
 The folowing are current known cases of false negatives:
 

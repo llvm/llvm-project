@@ -154,6 +154,35 @@ f_nonx30_ret:
         ret     x16
         .size f_nonx30_ret, .-f_nonx30_ret
 
+        .globl  f_nonx30_ret_ok
+        .type   f_nonx30_ret_ok,@function
+f_nonx30_ret_ok:
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        bl      g
+        add     x0, x0, #3
+        ldp     x29, x30, [sp], #16
+        // FIXME: Should the scanner understand that an authenticated register (below x30,
+        //        after the autiasp instruction), is OK to be moved to another register
+        //        and then that register being used to return?
+        //        This respects that pac-ret hardening intent, but the scanner currently
+        //        will produce a false positive for this.
+        //        Is it worthwhile to make the scanner more complex for this case?
+        //        So far, scanning many millions of instructions across a linux distro,
+        //        I haven't encountered such an example.
+        //        The ".if 0" block below tests this case and currently fails.
+.if 0
+        autiasp
+        mov     x16, x30
+.else
+        mov     x16, x30
+        autia   x16, sp
+.endif
+// CHECK-NOT: function f_nonx30_ret_ok
+        ret     x16
+        .size f_nonx30_ret_ok, .-f_nonx30_ret_ok
+
 
 /// Now do a basic sanity check on every different Authentication instruction:
 
