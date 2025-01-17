@@ -20,8 +20,6 @@ namespace llvm {
 
 class X86MatchJumptablePass : public MachineFunctionPass {
 private:
-  void insertIdentifyingMarker(MachineInstr* MI, MachineFunction &MF, unsigned JTIndex);
-  void recordJumpLocation(MachineInstr* MI, MachineFunction &MF, unsigned JTIndex);
   MachineInstr* traceIndirectJumps(MachineFunction &MF, unsigned JTIndex, 
                                   MachineJumpTableInfo *JumpTableInfo);
   bool isJumpTableRelated(MachineInstr &MI, const MachineJumpTableEntry &JTEntry, 
