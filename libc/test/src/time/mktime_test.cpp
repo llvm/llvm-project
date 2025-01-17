@@ -9,7 +9,6 @@
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/time/mktime.h"
 #include "src/time/time_constants.h"
-#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"

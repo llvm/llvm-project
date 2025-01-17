@@ -84,6 +84,7 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    .time_utils.h
     libc.src.stdio.fopen
 )
 
