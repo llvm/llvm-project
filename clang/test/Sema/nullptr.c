@@ -111,3 +111,5 @@ void test_f1() {
 // __nullptr keyword in C
 void foo(void *);
 void bar() { foo(__nullptr); }
+static_assert(nullptr == __nullptr);
+static_assert(_Generic(typeof(__nullptr), nullptr_t: true, default: false));
