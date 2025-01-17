@@ -59,8 +59,7 @@ define float @test2(ptr nocapture %src) nounwind {
 ;
 ; F16C-LABEL: test2:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
@@ -119,8 +118,7 @@ define double @test4(ptr nocapture %src) nounwind {
 ;
 ; F16C-LABEL: test4:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    retq

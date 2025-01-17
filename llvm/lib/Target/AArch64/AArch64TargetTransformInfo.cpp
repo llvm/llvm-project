@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
@@ -246,6 +247,19 @@ static bool hasPossibleIncompatibleOps(const Function *F) {
     }
   }
   return false;
+}
+
+uint64_t AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  StringRef AttributeStr =
+      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+  StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
+  SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, ",");
+  return AArch64::getFMVPriority(Features);
+}
+
+bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
+  return F.hasFnAttribute("fmv-features");
 }
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
