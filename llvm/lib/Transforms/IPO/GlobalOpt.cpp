@@ -2785,7 +2785,7 @@ static bool OptimizeNonTrivialIFuncs(
       } else {
         // We can't reason much about non-FMV callers. Just pick the highest
         // priority callee if it matches, otherwise bail.
-        //if (I > 0 || !implies(CallerBits, CalleeBits))
+        // if (I > 0 || !implies(CallerBits, CalleeBits))
         //
         // FIXME: This is causing a regression in the llvm test suite,
         // specifically a 'predres' version is unexpectedly trapping on
@@ -2794,7 +2794,7 @@ static bool OptimizeNonTrivialIFuncs(
         // command line option, or target attribute to deduce whether a
         // feature is available. However, there is no guarantee that in
         // reality the host supports those implied features.
-          continue;
+        continue;
       }
       auto &Calls = CallSites[Caller];
       for (CallBase *CS : Calls)
