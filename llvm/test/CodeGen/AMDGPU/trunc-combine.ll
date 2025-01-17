@@ -184,6 +184,7 @@ define <2 x i16> @vector_trunc_high_bits_undef_lshr_rhs_alignbit_regression(i32 
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshr_b32_e32 v0, 16, v0
+; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: vector_trunc_high_bits_undef_lshr_rhs_alignbit_regression:
