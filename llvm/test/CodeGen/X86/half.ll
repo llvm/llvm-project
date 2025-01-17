@@ -146,8 +146,7 @@ define void @test_trunc32(float %in, ptr %addr) #0 {
 ; BWON-F16C-LABEL: test_trunc32:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rdi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_trunc32:
@@ -265,8 +264,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rsi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_sitofp_i64:
@@ -398,8 +396,7 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:  .LBB10_3:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rsi)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: test_uitofp_i64:
@@ -1075,8 +1072,7 @@ define void @main.158() #0 {
 ; BWON-F16C-NEXT:    vmovss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
 ; BWON-F16C-NEXT:  .LBB20_2: # %entry
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; BWON-F16C-NEXT:    vmovd %xmm0, %eax
-; BWON-F16C-NEXT:    movw %ax, (%rax)
+; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: main.158:
