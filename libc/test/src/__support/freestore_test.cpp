@@ -28,7 +28,7 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   ASSERT_TRUE(maybeBlock.has_value());
   // On platforms with high alignment the smallest legal block may be large
   // enough for a node.
-  if (too_small->outer_size() > sizeof(Block) + sizeof(FreeList::Node))
+  if (too_small->inner_size() >= sizeof(Block) + sizeof(FreeList::Node))
     return;
   Block *remainder = *maybeBlock;
 
