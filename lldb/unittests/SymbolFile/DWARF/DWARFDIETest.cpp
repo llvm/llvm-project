@@ -520,6 +520,13 @@ DWARF:
 TEST_P(GetAttributesTestFixture, TestGetAttributes_Cycle) {
   // Tests that GetAttributes can deal with cycles in
   // specifications/abstract origins.
+  //
+  // Contrived example:
+  //
+  // func1 -> func3
+  //   ^       |
+  //   |       v
+  //   +------func2
 
   const char *yamldata = R"(
 --- !ELF
@@ -578,12 +585,45 @@ DWARF:
   ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
   DWARFDIE cu_die(unit, cu_entry);
 
-  auto func = cu_die.GetFirstChild();
-  ASSERT_TRUE(func.IsValid());
-  ASSERT_EQ(func.Tag(), DW_TAG_subprogram);
+  auto func1 = cu_die.GetFirstChild();
+  ASSERT_TRUE(func1.IsValid());
+  ASSERT_EQ(func1.Tag(), DW_TAG_subprogram);
 
-  auto attrs = func.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
+  auto func2 = func1.GetSibling();
+  ASSERT_TRUE(func2.IsValid());
+  ASSERT_EQ(func2.Tag(), DW_TAG_subprogram);
+
+  auto func3 = func2.GetSibling();
+  ASSERT_TRUE(func3.IsValid());
+  ASSERT_EQ(func3.Tag(), DW_TAG_subprogram);
+
+  auto attrs = func1.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
   EXPECT_EQ(attrs.Size(), 3U);
+
+  // Confirm that the specifications do form a cycle.
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(0, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func3);
+  }
+
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(1, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func2);
+  }
+
+  {
+    DWARFFormValue form_value;
+    auto success = attrs.ExtractFormValueAtIndex(2, form_value);
+    ASSERT_TRUE(success);
+
+    EXPECT_EQ(form_value.Reference(), func1);
+  }
 }
 
 TEST_P(GetAttributesTestFixture,
