@@ -176,7 +176,6 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   llvm::opt::ArgStringList TrArgs{
       "--spirv-max-version=1.6",
       "--spirv-ext=+all",
-      "--spirv-allow-extra-diexpressions",
       "--spirv-allow-unknown-intrinsics",
       "--spirv-lower-const-expr",
       "--spirv-preserve-auxdata",

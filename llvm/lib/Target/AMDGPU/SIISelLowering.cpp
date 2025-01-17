@@ -784,8 +784,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
 
     setOperationAction(ISD::VECTOR_SHUFFLE,
-                       {MVT::v4f16, MVT::v4i16, MVT::v8f16, MVT::v8i16,
-                        MVT::v16f16, MVT::v16i16, MVT::v32f16, MVT::v32i16},
+                       {MVT::v4f16, MVT::v4i16, MVT::v4bf16, MVT::v8f16,
+                        MVT::v8i16, MVT::v8bf16, MVT::v16f16, MVT::v16i16,
+                        MVT::v16bf16, MVT::v32f16, MVT::v32i16, MVT::v32bf16},
                        Custom);
 
     for (MVT VT : {MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16})
@@ -1201,6 +1202,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   Info.flags = MachineMemOperand::MONone;
   if (CI.hasMetadata(LLVMContext::MD_invariant_load))
     Info.flags |= MachineMemOperand::MOInvariant;
+  if (CI.hasMetadata(LLVMContext::MD_nontemporal))
+    Info.flags |= MachineMemOperand::MONonTemporal;
+  Info.flags |= getTargetMMOFlags(CI);
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -1485,7 +1489,7 @@ void SITargetLowering::CollectTargetIntrinsicOperands(
   }
 }
 
-bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
+bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
                                             SmallVectorImpl<Value *> &Ops,
                                             Type *&AccessTy) const {
   Value *Ptr = nullptr;
@@ -1946,6 +1950,13 @@ bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
 
   // TODO: Add more cases that are cheap.
   return Index == 0;
+}
+
+bool SITargetLowering::isExtractVecEltCheap(EVT VT, unsigned Index) const {
+  // TODO: This should be more aggressive, particular for 16-bit element
+  // vectors. However there are some mixed improvements and regressions.
+  EVT EltTy = VT.getVectorElementType();
+  return EltTy.getSizeInBits() % 32 == 0;
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
@@ -5731,6 +5742,35 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
+// Refer to comments added to the MIR variant of isFMAFasterThanFMulAndFAdd for
+// specific details.
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
+                                                  Type *Ty) const {
+  switch (Ty->getScalarSizeInBits()) {
+  case 16: {
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    return Subtarget->has16BitInsts() &&
+           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
+  }
+  case 32: {
+    if (!Subtarget->hasMadMacF32Insts())
+      return Subtarget->hasFastFMAF32();
+
+    SIModeRegisterDefaults Mode = SIModeRegisterDefaults(F, *Subtarget);
+    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
+      return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
+
+    return Subtarget->hasFastFMAF32() && Subtarget->hasDLInsts();
+  }
+  case 64:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
 bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
@@ -7428,7 +7468,8 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       DAG.getNode(ISD::AND, SL, IntVT, DAG.getNOT(SL, BFM, IntVT), BCVec);
 
   // 4. Get (2) and (3) ORed into the target vector.
-  SDValue BFI = DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS);
+  SDValue BFI =
+      DAG.getNode(ISD::OR, SL, IntVT, LHS, RHS, SDNodeFlags::Disjoint);
 
   return DAG.getNode(ISD::BITCAST, SL, VecVT, BFI);
 }
@@ -7545,9 +7586,8 @@ SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   SDLoc SL(Op);
   EVT ResultVT = Op.getValueType();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
-
-  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
-  EVT EltVT = PackVT.getVectorElementType();
+  MVT EltVT = ResultVT.getVectorElementType().getSimpleVT();
+  MVT PackVT = MVT::getVectorVT(EltVT, 2);
   int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
 
   // vector_shuffle <0,1,6,7> lhs, rhs
@@ -7637,7 +7677,8 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
     Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Lo);
     Lo = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Lo);
 
-    SDValue Or = DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi);
+    SDValue Or =
+        DAG.getNode(ISD::OR, SL, MVT::i32, Lo, ShlHi, SDNodeFlags::Disjoint);
     return DAG.getNode(ISD::BITCAST, SL, VT, Or);
   }
 
@@ -10076,8 +10117,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
-  case Intrinsic::amdgcn_s_barrier_join:
-  case Intrinsic::amdgcn_s_wakeup_barrier: {
+  case Intrinsic::amdgcn_s_barrier_join: {
     // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
@@ -10086,32 +10126,16 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     if (isa<ConstantSDNode>(BarOp)) {
       uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
-      switch (IntrinsicID) {
-      default:
-        return SDValue();
-      case Intrinsic::amdgcn_s_barrier_join:
-        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
-        break;
-      case Intrinsic::amdgcn_s_wakeup_barrier:
-        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
-        break;
-      }
+      Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+
       // extract the BarrierID from bits 4-9 of the immediate
       unsigned BarID = (BarVal >> 4) & 0x3F;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
-      switch (IntrinsicID) {
-      default:
-        return SDValue();
-      case Intrinsic::amdgcn_s_barrier_join:
-        Opc = AMDGPU::S_BARRIER_JOIN_M0;
-        break;
-      case Intrinsic::amdgcn_s_wakeup_barrier:
-        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
-        break;
-      }
+      Opc = AMDGPU::S_BARRIER_JOIN_M0;
+
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,
@@ -13860,6 +13884,37 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Mad);
 }
 
+// Fold
+//     y = lshr i64 x, 32
+//     res = add (mul i64 y, Const), x   where "Const" is a 64-bit constant
+//     with Const.hi == -1
+// To
+//     res = mad_u64_u32 y.lo ,Const.lo, x.lo
+static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
+                                 SDValue MulLHS, SDValue MulRHS,
+                                 SDValue AddRHS) {
+  if (MulRHS.getOpcode() == ISD::SRL)
+    std::swap(MulLHS, MulRHS);
+
+  if (MulLHS.getValueType() != MVT::i64 || MulLHS.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  ConstantSDNode *ShiftVal = dyn_cast<ConstantSDNode>(MulLHS.getOperand(1));
+  if (!ShiftVal || ShiftVal->getAsZExtVal() != 32 ||
+      MulLHS.getOperand(0) != AddRHS)
+    return SDValue();
+
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(MulRHS.getNode());
+  if (!Const || Hi_32(Const->getZExtValue()) != uint32_t(-1))
+    return SDValue();
+
+  SDValue ConstMul =
+      DAG.getConstant(Lo_32(Const->getZExtValue()), SL, MVT::i32);
+  return getMad64_32(DAG, SL, MVT::i64,
+                     DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
+                     DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
+}
+
 // Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
 // multiplies, if any.
 //
@@ -13917,6 +13972,9 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   SDValue MulLHS = LHS.getOperand(0);
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
+
+  if (SDValue FoldedMAD = tryFoldMADwithSRL(DAG, SL, MulLHS, MulRHS, AddRHS))
+    return FoldedMAD;
 
   // Always check whether operands are small unsigned values, since that
   // knowledge is useful in more cases. Check for small signed values only if
@@ -13983,6 +14041,43 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   if (VT != MVT::i64)
     Accum = DAG.getNode(ISD::TRUNCATE, SL, VT, Accum);
   return Accum;
+}
+
+SDValue
+SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  SDValue RHS = N->getOperand(1);
+  auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  if (!CRHS)
+    return SDValue();
+
+  // TODO: Worth using computeKnownBits? Maybe expensive since it's so
+  // common.
+  uint64_t Val = CRHS->getZExtValue();
+  if (countr_zero(Val) >= 32) {
+    SelectionDAG &DAG = DCI.DAG;
+    SDLoc SL(N);
+    SDValue LHS = N->getOperand(0);
+
+    // Avoid carry machinery if we know the low half of the add does not
+    // contribute to the final result.
+    //
+    // add i64:x, K if computeTrailingZeros(K) >= 32
+    //  => build_pair (add x.hi, K.hi), x.lo
+
+    // Breaking the 64-bit add here with this strange constant is unlikely
+    // to interfere with addressing mode patterns.
+
+    SDValue Hi = getHiHalf64(LHS, DAG);
+    SDValue ConstHi32 = DAG.getConstant(Hi_32(Val), SL, MVT::i32);
+    SDValue AddHi =
+        DAG.getNode(N->getOpcode(), SL, MVT::i32, Hi, ConstHi32, N->getFlags());
+
+    SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+    return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, Lo, AddHi);
+  }
+
+  return SDValue();
 }
 
 // Collect the ultimate src of each of the mul node's operands, and confirm
@@ -14261,6 +14356,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     return V;
   }
 
+  if (VT == MVT::i64) {
+    if (SDValue Folded = foldAddSub64WithZeroLowBitsTo32(N, DCI))
+      return Folded;
+  }
+
   if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
@@ -14445,6 +14545,11 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
+
+  if (VT == MVT::i64) {
+    if (SDValue Folded = foldAddSub64WithZeroLowBitsTo32(N, DCI))
+      return Folded;
+  }
 
   if (VT != MVT::i32)
     return SDValue();
@@ -16943,6 +17048,33 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
+}
+
+/// Check if it is profitable to hoist instruction in then/else to if.
+bool SITargetLowering::isProfitableToHoist(Instruction *I) const {
+  if (!I->hasOneUse())
+    return true;
+
+  Instruction *User = I->user_back();
+  // TODO: Add more patterns that are not profitable to hoist and
+  // handle modifiers such as fabs and fneg
+  switch (I->getOpcode()) {
+  case Instruction::FMul: {
+    if (User->getOpcode() != Instruction::FSub &&
+        User->getOpcode() != Instruction::FAdd)
+      return true;
+
+    const TargetOptions &Options = getTargetMachine().Options;
+
+    return ((!I->hasAllowContract() || !User->hasAllowContract()) &&
+            Options.AllowFPOpFusion != FPOpFusion::Fast &&
+            !Options.UnsafeFPMath) ||
+           !isFMAFasterThanFMulAndFAdd(*I->getFunction(), User->getType());
+  }
+  default:
+    return true;
+  }
+  return true;
 }
 
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(

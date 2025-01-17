@@ -34,7 +34,7 @@ using __remove_cvref_t _LIBCPP_NODEBUG = __remove_cvref(_Tp);
 #endif // __has_builtin(__remove_cvref)
 
 template <class _Tp, class _Up>
-using __is_same_uncvref = _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> >;
+using __is_same_uncvref _LIBCPP_NODEBUG = _IsSame<__remove_cvref_t<_Tp>, __remove_cvref_t<_Up> >;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

@@ -281,28 +281,33 @@ bool InstCombinerImpl::shouldChangeType(Type *From, Type *To) const {
 // Return true, if No Signed Wrap should be maintained for I.
 // The No Signed Wrap flag can be kept if the operation "B (I.getOpcode) C",
 // where both B and C should be ConstantInts, results in a constant that does
-// not overflow. This function only handles the Add and Sub opcodes. For
+// not overflow. This function only handles the Add/Sub/Mul opcodes. For
 // all other opcodes, the function conservatively returns false.
 static bool maintainNoSignedWrap(BinaryOperator &I, Value *B, Value *C) {
   auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I);
   if (!OBO || !OBO->hasNoSignedWrap())
     return false;
 
-  // We reason about Add and Sub Only.
-  Instruction::BinaryOps Opcode = I.getOpcode();
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
-    return false;
-
   const APInt *BVal, *CVal;
   if (!match(B, m_APInt(BVal)) || !match(C, m_APInt(CVal)))
     return false;
 
+  // We reason about Add/Sub/Mul Only.
   bool Overflow = false;
-  if (Opcode == Instruction::Add)
+  switch (I.getOpcode()) {
+  case Instruction::Add:
     (void)BVal->sadd_ov(*CVal, Overflow);
-  else
+    break;
+  case Instruction::Sub:
     (void)BVal->ssub_ov(*CVal, Overflow);
-
+    break;
+  case Instruction::Mul:
+    (void)BVal->smul_ov(*CVal, Overflow);
+    break;
+  default:
+    // Conservatively return false for other opcodes.
+    return false;
+  }
   return !Overflow;
 }
 
@@ -939,12 +944,11 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
                m_OneUse(m_Shift(m_Value(Y), m_Value(Shift)))))
       return nullptr;
     if (!match(I.getOperand(1 - ShOpnum),
-               m_BinOp(m_Value(ShiftedX), m_Value(Mask))))
+               m_c_BinOp(m_CombineAnd(
+                             m_OneUse(m_Shift(m_Value(X), m_Specific(Shift))),
+                             m_Value(ShiftedX)),
+                         m_Value(Mask))))
       return nullptr;
-
-    if (!match(ShiftedX, m_OneUse(m_Shift(m_Value(X), m_Specific(Shift)))))
-      return nullptr;
-
     // Make sure we are matching instruction shifts and not ConstantExpr
     auto *IY = dyn_cast<Instruction>(I.getOperand(ShOpnum));
     auto *IX = dyn_cast<Instruction>(ShiftedX);
@@ -1822,12 +1826,29 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       continue;
     }
 
-    // If the only use of phi is comparing it with a constant then we can
-    // put this comparison in the incoming BB directly after a ucmp/scmp call
-    // because we know that it will simplify to a single icmp.
-    const APInt *Ignored;
-    if (isa<CmpIntrinsic>(InVal) && InVal->hasOneUser() &&
-        match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored)))) {
+    // Handle some cases that can't be fully simplified, but where we know that
+    // the two instructions will fold into one.
+    auto WillFold = [&]() {
+      if (!InVal->hasOneUser())
+        return false;
+
+      // icmp of ucmp/scmp with constant will fold to icmp.
+      const APInt *Ignored;
+      if (isa<CmpIntrinsic>(InVal) &&
+          match(&I, m_ICmp(m_Specific(PN), m_APInt(Ignored))))
+        return true;
+
+      // icmp eq zext(bool), 0 will fold to !bool.
+      if (isa<ZExtInst>(InVal) &&
+          cast<ZExtInst>(InVal)->getSrcTy()->isIntOrIntVectorTy(1) &&
+          match(&I,
+                m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(PN), m_Zero())))
+        return true;
+
+      return false;
+    };
+
+    if (WillFold()) {
       OpsToMoveUseToIncomingBB.push_back(i);
       NewPhiValues.push_back(nullptr);
       continue;

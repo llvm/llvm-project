@@ -126,7 +126,8 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
     assert(sb);
     mlir::Value addr = sb.getAddr();
     assert(addr);
-    return hlfir::mayHaveAllocatableComponent(addr.getType());
+    return !fir::isPointerType(addr.getType()) &&
+           hlfir::mayHaveAllocatableComponent(addr.getType());
   };
 
   if (needInitClone()) {
@@ -144,7 +145,7 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *lastPrivIP) {
   if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
-    converter.copyHostAssociateVar(*sym, lastPrivIP);
+    converter.copyHostAssociateVar(*sym, lastPrivIP, /*hostIsSource=*/false);
 }
 
 void DataSharingProcessor::collectOmpObjectListSymbol(

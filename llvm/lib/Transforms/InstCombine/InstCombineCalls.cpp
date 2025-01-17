@@ -588,6 +588,19 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
   }
 
+  // cttz(Pow2) -> Log2(Pow2)
+  // ctlz(Pow2) -> BitWidth - 1 - Log2(Pow2)
+  if (auto *R = IC.tryGetLog2(Op0, match(Op1, m_One()))) {
+    if (IsTZ)
+      return IC.replaceInstUsesWith(II, R);
+    BinaryOperator *BO = BinaryOperator::CreateSub(
+        ConstantInt::get(R->getType(), R->getType()->getScalarSizeInBits() - 1),
+        R);
+    BO->setHasNoSignedWrap();
+    BO->setHasNoUnsignedWrap();
+    return BO;
+  }
+
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.
@@ -2229,6 +2242,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BitOp;
     }
 
+    // fshl(X, 0, Y) --> shl(X, and(Y, BitWidth - 1)) if bitwidth is a
+    // power-of-2
+    if (IID == Intrinsic::fshl && isPowerOf2_32(BitWidth) &&
+        match(Op1, m_ZeroInt())) {
+      Value *Op2 = II->getArgOperand(2);
+      Value *And = Builder.CreateAnd(Op2, ConstantInt::get(Ty, BitWidth - 1));
+      return BinaryOperator::CreateShl(Op0, And);
+    }
+
     // Left or right might be masked.
     if (SimplifyDemandedInstructionBits(*II))
       return &CI;
@@ -2500,13 +2522,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         default:
           llvm_unreachable("unexpected intrinsic ID");
         }
-        Value *V = Builder.CreateBinaryIntrinsic(
-            IID, X, ConstantFP::get(Arg0->getType(), Res), II);
         // TODO: Conservatively intersecting FMF. If Res == C2, the transform
         //       was a simplification (so Arg0 and its original flags could
         //       propagate?)
-        if (auto *CI = dyn_cast<CallInst>(V))
-          CI->andIRFlags(M);
+        Value *V = Builder.CreateBinaryIntrinsic(
+            IID, X, ConstantFP::get(Arg0->getType(), Res),
+            FMFSource::intersect(II, M));
         return replaceInstUsesWith(*II, V);
       }
     }
@@ -2601,13 +2622,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::fmuladd: {
     // Try to simplify the underlying FMul.
-    if (Value *V = simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
-                                    II->getFastMathFlags(),
-                                    SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, II->getArgOperand(2));
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+    if (Value *V =
+            simplifyFMulInst(II->getArgOperand(0), II->getArgOperand(1),
+                             II->getFastMathFlags(), SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, II->getArgOperand(2),
+                                           II->getFastMathFlags());
 
     [[fallthrough]];
   }
@@ -2634,11 +2653,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
     if (Value *V = simplifyFMAFMul(Src0, Src1, II->getFastMathFlags(),
-                                   SQ.getWithInstruction(II))) {
-      auto *FAdd = BinaryOperator::CreateFAdd(V, Src2);
-      FAdd->copyFastMathFlags(II);
-      return FAdd;
-    }
+                                   SQ.getWithInstruction(II)))
+      return BinaryOperator::CreateFAddFMF(V, Src2, II->getFastMathFlags());
 
     // fma x, y, 0 -> fmul x, y
     // This is always valid for -0.0, but requires nsz for +0.0 as
@@ -2674,9 +2690,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign Mag, (copysign ?, X) --> copysign Mag, X
     Value *X;
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X)))) {
-      Value *CopySign = Builder.CreateCopySign(
-          Mag, X,
-          II->getFastMathFlags() & cast<Instruction>(Sign)->getFastMathFlags());
+      Value *CopySign =
+          Builder.CreateCopySign(Mag, X, FMFSource::intersect(II, Sign));
       return replaceInstUsesWith(*II, CopySign);
     }
 
@@ -2733,8 +2748,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
       CallInst *AbsSign =
-          Builder.CreateCall(II->getCalledFunction(), {Magnitude});
-      AbsSign->copyFastMathFlags(II);
+          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -2841,16 +2855,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *NewLdexp = nullptr;
       Value *Select = nullptr;
       if (match(SelectRHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectLHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectLHS, II);
         Select = Builder.CreateSelect(SelectCond, NewLdexp, Src);
       } else if (match(SelectLHS, m_ZeroInt())) {
-        NewLdexp = Builder.CreateLdexp(Src, SelectRHS);
+        NewLdexp = Builder.CreateLdexp(Src, SelectRHS, II);
         Select = Builder.CreateSelect(SelectCond, Src, NewLdexp);
       }
 
       if (NewLdexp) {
         Select->takeName(II);
-        cast<Instruction>(NewLdexp)->copyFastMathFlags(II);
         return replaceInstUsesWith(*II, Select);
       }
     }
@@ -3232,12 +3245,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // call void @llvm.assume(i1 %D)
     // into
     // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
-    uint64_t AlignMask;
+    uint64_t AlignMask = 1;
     if (EnableKnowledgeRetention &&
-        match(IIOperand,
-              m_SpecificICmp(ICmpInst::ICMP_EQ,
-                             m_And(m_Value(A), m_ConstantInt(AlignMask)),
-                             m_Zero()))) {
+        (match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
+         match(IIOperand,
+               m_SpecificICmp(ICmpInst::ICMP_EQ,
+                              m_And(m_Value(A), m_ConstantInt(AlignMask)),
+                              m_Zero())))) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));

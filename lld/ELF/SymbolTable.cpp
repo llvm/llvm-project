@@ -318,7 +318,7 @@ void SymbolTable::scanVersionScript() {
     // script with `global: *` are used.
     //
     // '--retain-symbol-file' adds a "*" pattern to
-    // 'config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
+    // 'versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
     // 'readConfigs()' in 'Driver.cpp'. Note that it is not '.localPatterns',
     // and may seem counterintuitive, but still works as expected. Here we can
     // exploit that and skip analyzing the pattern added for this option.

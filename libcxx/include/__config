@@ -629,10 +629,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #  endif // _LIBCPP_CXX03_LANG
 
-#  if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || defined(__NetBSD__)
-#    define _LIBCPP_LOCALE__L_EXTENSIONS 1
-#  endif
-
 #  ifdef __FreeBSD__
 #    define _DECLARE_C99_LDBL_MATH 1
 #  endif

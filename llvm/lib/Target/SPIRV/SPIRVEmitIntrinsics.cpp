@@ -264,7 +264,14 @@ bool expectIgnoredInIRTranslation(const Instruction *I) {
   const auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
     return false;
-  return II->getIntrinsicID() == Intrinsic::invariant_start;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::invariant_start:
+  case Intrinsic::spv_resource_handlefrombinding:
+  case Intrinsic::spv_resource_getpointer:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool allowEmitFakeUse(const Value *Arg) {
@@ -737,7 +744,13 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
         {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
-    if (Function *CalledF = CI->getCalledFunction()) {
+
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+      auto *ImageType = cast<TargetExtType>(II->getOperand(0)->getType());
+      assert(ImageType->getTargetExtName() == "spirv.Image");
+      Ty = ImageType->getTypeParameter(0);
+    } else if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
       if (DemangledName.length() > 0)
@@ -1841,20 +1854,20 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
   // Skip special artifical variable llvm.global.annotations.
   if (GV.getName() == "llvm.global.annotations")
     return;
-  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+  Constant *Init = nullptr;
+  if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
     // Result is ignored, because TypedPointerType is not supported
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
-    Constant *Init = GV.getInitializer();
+    Init = GV.getInitializer();
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if ((!GV.hasInitializer() || isa<UndefValue>(GV.getInitializer())) &&
-      GV.getNumUses() == 0)
+  if (!Init && GV.getNumUses() == 0)
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 

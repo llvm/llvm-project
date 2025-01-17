@@ -160,8 +160,7 @@ generateModuleMap(std::vector<std::unique_ptr<lto::InputFile>> &Modules) {
 
 static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index,
                           bool ClearDSOLocalOnDeclarations) {
-  if (renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations))
-    report_fatal_error("renameModuleForThinLTO failed");
+  renameModuleForThinLTO(TheModule, Index, ClearDSOLocalOnDeclarations);
 }
 
 namespace {
