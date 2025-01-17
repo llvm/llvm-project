@@ -585,26 +585,26 @@ let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
                                    [(set VR512: $dst,
                                      (int_x86_tcvtrowd2ps_internal GR16:$src1, GR16:$src2,
                                       TILE:$src3, GR32:$src4))]>;
-    def PTCVTROWPS2PBF16HrriV : PseudoI<(outs VR512:$dst),
-                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
-                                        [(set VR512: $dst,
-                                          (int_x86_tcvtrowps2pbf16h_internal GR16:$src1, GR16:$src2,
-                                           TILE:$src3, imm:$src4))]>;
-    def PTCVTROWPS2PBF16HrreV : PseudoI<(outs VR512:$dst),
-                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
-                                        [(set VR512: $dst,
-                                          (int_x86_tcvtrowps2pbf16h_internal GR16:$src1, GR16:$src2,
-                                           TILE:$src3, GR32:$src4))]>;
-    def PTCVTROWPS2PBF16LrriV : PseudoI<(outs VR512:$dst),
-                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
-                                        [(set VR512: $dst,
-                                          (int_x86_tcvtrowps2pbf16l_internal GR16:$src1, GR16:$src2,
-                                           TILE:$src3, imm:$src4))]>;
-    def PTCVTROWPS2PBF16LrreV : PseudoI<(outs VR512:$dst),
-                                        (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
-                                        [(set VR512: $dst,
-                                          (int_x86_tcvtrowps2pbf16l_internal GR16:$src1, GR16:$src2,
-                                           TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2BF16HrriV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                       [(set VR512: $dst,
+                                         (int_x86_tcvtrowps2bf16h_internal GR16:$src1, GR16:$src2,
+                                          TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2BF16HrreV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                       [(set VR512: $dst,
+                                         (int_x86_tcvtrowps2bf16h_internal GR16:$src1, GR16:$src2,
+                                          TILE:$src3, GR32:$src4))]>;
+    def PTCVTROWPS2BF16LrriV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
+                                       [(set VR512: $dst,
+                                         (int_x86_tcvtrowps2bf16l_internal GR16:$src1, GR16:$src2,
+                                          TILE:$src3, imm:$src4))]>;
+    def PTCVTROWPS2BF16LrreV : PseudoI<(outs VR512:$dst),
+                                       (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
+                                       [(set VR512: $dst,
+                                         (int_x86_tcvtrowps2bf16l_internal GR16:$src1, GR16:$src2,
+                                          TILE:$src3, GR32:$src4))]>;
     def PTCVTROWPS2PHHrriV : PseudoI<(outs VR512:$dst),
                                      (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u8imm:$src4),
                                      [(set VR512: $dst,
@@ -654,8 +654,8 @@ multiclass AMXAVX512_BASE<bits<8> Opcode1, bits<8> Opcode2, string Opstr,
 
 defm TCVTROWPS2PHH : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2phh", PS, PS>;
 defm TCVTROWPS2PHL : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2phl", PD, XD>;
-defm TCVTROWPS2PBF16H : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2pbf16h", XD, XD>;
-defm TCVTROWPS2PBF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2pbf16l", XS, XS>;
+defm TCVTROWPS2BF16H : AMXAVX512_BASE<0x6d, 0x07, "tcvtrowps2bf16h", XD, XD>;
+defm TCVTROWPS2BF16L : AMXAVX512_BASE<0x6d, 0x77, "tcvtrowps2bf16l", XS, XS>;
 
 multiclass m_tilemovrow {
   let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
