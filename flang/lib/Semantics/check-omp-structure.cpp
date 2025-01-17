@@ -1708,7 +1708,6 @@ void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   isPredefinedAllocator = true;
-  SymbolSourceMap symbols;
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
