@@ -179,7 +179,7 @@ define half @add_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 define half @sub_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: sub_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovsh (%rdi), %xmm2
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm2 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubsh %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
@@ -216,7 +216,7 @@ define half @mul_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 define half @div_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: div_sh:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovsh (%rdi), %xmm2
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm2 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vdivsh %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
