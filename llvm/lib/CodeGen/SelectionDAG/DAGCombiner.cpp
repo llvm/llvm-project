@@ -27526,22 +27526,26 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
+    // All but one element should have an undef input, which will fold to a
+    // constant or undef. Avoid splatting which would over-define potentially
+    // undefined elements.
+
+    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
+    //   build_vec ..undef, (bo X, Y), undef...
+    SmallVector<SDValue, 16> EltsX, EltsY, EltsResult;
+    DAG.ExtractVectorElements(Src0, EltsX);
+    DAG.ExtractVectorElements(Src1, EltsY);
+
+    for (auto [X, Y] : zip(EltsX, EltsY))
+      EltsResult.push_back(DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags()));
+    return DAG.getBuildVector(VT, DL, EltsResult);
+  }
+
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
   SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
   SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
   SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
-
-  // If all lanes but 1 are undefined, no need to splat the scalar result.
-  // TODO: Keep track of undefs and use that info in the general case.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode() &&
-      count_if(N0->ops(), [](SDValue V) { return !V.isUndef(); }) == 1 &&
-      count_if(N1->ops(), [](SDValue V) { return !V.isUndef(); }) == 1) {
-    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
-    // build_vec ..undef, (bo X, Y), undef...
-    SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), DAG.getUNDEF(EltVT));
-    Ops[Index0] = ScalarBO;
-    return DAG.getBuildVector(VT, DL, Ops);
-  }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   return DAG.getSplat(VT, DL, ScalarBO);
