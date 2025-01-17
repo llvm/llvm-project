@@ -1305,7 +1305,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   // Record initial state is block information.
   BI.InitialState = State;
 
-  for (unsigned Idx = 0; ; ++Idx) {
+  for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
     char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
