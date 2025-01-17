@@ -99,6 +99,7 @@ add_entrypoint_object(
     .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
+    libc.hdr.types.time_t
 )
 
 add_entrypoint_object(
@@ -111,6 +112,7 @@ add_entrypoint_object(
     .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
+    libc.hdr.types.time_t
 )
 
 add_entrypoint_object(
@@ -123,6 +125,7 @@ add_entrypoint_object(
     .time_utils
     .${LIBC_TARGET_OS}.localtime_utils
     .${LIBC_TARGET_OS}.timezone
+    libc.hdr.types.time_t
 )
 
 add_entrypoint_object(
