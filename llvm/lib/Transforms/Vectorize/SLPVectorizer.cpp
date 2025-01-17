@@ -4995,6 +4995,23 @@ static Value *createInsertVector(
   return Vec;
 }
 
+/// Correctly creates extract_subvector, checking that the index is multiple of
+/// the subvectors length. Otherwise, generates shuffle using \p Generator or
+/// using default shuffle.
+static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
+                                  unsigned SubVecVF, unsigned Index) {
+  if (Index % SubVecVF == 0) {
+    VectorType *SubVecTy =
+        getWidenedType(Vec->getType()->getScalarType(), SubVecVF);
+    return Builder.CreateExtractVector(SubVecTy, Vec, Builder.getInt64(Index));
+  }
+  // Create shuffle, extract_subvector requires that index is multiple of
+  // the subvector length.
+  SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
+  std::iota(Mask.begin(), Mask.end(), Index);
+  return Builder.CreateShuffleVector(Vec, Mask);
+}
+
 BoUpSLP::LoadsState
 BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                            SmallVectorImpl<unsigned> &Order,
@@ -16550,10 +16567,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             // When REVEC is enabled, we need to extract a vector.
             // Note: The element size of Scalar may be different from the
             // element size of Vec.
-            Ex = Builder.CreateExtractVector(
-                FixedVectorType::get(Vec->getType()->getScalarType(),
-                                     VecTyNumElements),
-                Vec, Builder.getInt64(ExternalUse.Lane * VecTyNumElements));
+            Ex = createExtractVector(Builder, Vec, VecTyNumElements,
+                                     ExternalUse.Lane * VecTyNumElements);
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
@@ -20080,6 +20095,7 @@ public:
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         while (NumParts > NumRegs) {
+          assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp = getWidenedType(ScalarTy, ReduxWidth);
           NumParts = TTI.getNumberOfParts(Tp);
