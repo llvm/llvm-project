@@ -503,14 +503,14 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     auto *NextTok = Tokens->getNextNonComment();
 
     if (!Line->InMacroBody && !Style.isTableGen()) {
-      // Skip PPDirective lines and comments.
+      // Skip PPDirective (except #define) lines and comments.
       while (NextTok->is(tok::hash)) {
         NextTok = Tokens->getNextToken();
-        if (NextTok->is(tok::pp_not_keyword))
+        if (NextTok->is(tok::pp_not_keyword) || NextTok->is(tok::pp_define))
           break;
         do {
           NextTok = Tokens->getNextToken();
-        } while (!NextTok->HasUnescapedNewline && NextTok->isNot(tok::eof));
+        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
 
         while (NextTok->is(tok::comment))
           NextTok = Tokens->getNextToken();
