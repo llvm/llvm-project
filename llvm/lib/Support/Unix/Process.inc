@@ -36,9 +36,6 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#ifdef HAVE_TERMIOS_H
-#include <termios.h>
-#endif
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only generic UNIX code that

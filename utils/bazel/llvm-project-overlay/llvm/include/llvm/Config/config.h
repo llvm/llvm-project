@@ -195,9 +195,6 @@
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */
 
-/* Define to 1 if you have the <termios.h> header file. */
-#define HAVE_TERMIOS_H 1
-
 /* Define to 1 if you have the <unistd.h> header file. */
 /* HAVE_UNISTD_H defined in Bazel */
 
