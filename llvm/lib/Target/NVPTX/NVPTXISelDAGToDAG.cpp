@@ -3115,11 +3115,8 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
   size_t NumArgs = IsCacheHint ? 3 : 2; // src, size, cache_hint
 
   SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
+  SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
   Ops.push_back(N->getOperand(0)); // Chain operand
-  //if (IsCacheHint) {
-  //  Ops.push_back(N->getOperand(2));
-  //}
   
   unsigned Opcode;
   if (IsCacheHint)

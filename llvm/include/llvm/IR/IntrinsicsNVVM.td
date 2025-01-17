@@ -5036,7 +5036,7 @@ def int_nvvm_cp_async_bulk_shared_cta_to_global
 // Intrinsics for Bulk Copy Prefetch L2
 def int_nvvm_cp_async_bulk_prefetch_L2
   : DefaultAttrsIntrinsic<[],
-      [llvm_global_ptr_ty, // src_smem_ptr
+      [llvm_global_ptr_ty, // src_gmem_ptr
        llvm_i32_ty,        // copy_size
        llvm_i64_ty,        // cache_hint
        llvm_i1_ty],        // Flag for cache_hint

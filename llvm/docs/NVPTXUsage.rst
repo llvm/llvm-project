@@ -575,12 +575,8 @@ prefetched in terms of bytes and it must be a multiple of 16.
 
 * The last argument to these intrinsics is boolean flag indicating
   support for cache_hint. These flag argument must be compile-time
-  constant. The backend looks through this flag and lowers the
-  intrinsic appropriately.
-
-* The Nth argument (denoted by ``i1 %flag_ch``) when set, indicates
-  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+  constant. When set, indicates a valid cache_hint (``i64 %ch``) 
+  and generates the ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
