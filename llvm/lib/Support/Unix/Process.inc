@@ -19,9 +19,7 @@
 #include <optional>
 #include <fcntl.h>
 #include <sys/time.h>
-#ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
-#endif
 #include <sys/stat.h>
 #include <signal.h>
 #if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
@@ -128,7 +126,6 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 // their operation. To prevent the disk from filling up, this function
 // does what's necessary to prevent their generation.
 void Process::PreventCoreFiles() {
-#if HAVE_SETRLIMIT
   struct rlimit rlim;
   getrlimit(RLIMIT_CORE, &rlim);
 #ifdef __linux__
@@ -151,7 +148,6 @@ void Process::PreventCoreFiles() {
   rlim.rlim_cur = 0;
 #endif
   setrlimit(RLIMIT_CORE, &rlim);
-#endif
 
 #if defined(HAVE_MACH_MACH_H) && !defined(__GNU__)
   // Disable crash reporting on Mac OS X 10.0-10.4
