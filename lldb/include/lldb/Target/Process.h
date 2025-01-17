@@ -1089,6 +1089,13 @@ public:
   ///     Returns an error object.
   virtual Status WillResume() { return Status(); }
 
+  /// Reports whether this process supports reverse execution.
+  ///
+  /// \return
+  ///     Returns true if the process supports reverse execution (at least
+  /// under some circumstances).
+  virtual bool SupportsReverseDirection() { return false; }
+
   /// Resumes all of a process's threads as configured using the Thread run
   /// control functions.
   ///

@@ -1182,6 +1182,11 @@ Status ProcessGDBRemote::WillResume() {
   return Status();
 }
 
+bool ProcessGDBRemote::SupportsReverseDirection() {
+  return m_gdb_comm.GetReverseStepSupported() ||
+         m_gdb_comm.GetReverseContinueSupported();
+}
+
 Status ProcessGDBRemote::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
