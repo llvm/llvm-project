@@ -1,26 +1,5 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: -strict-whitespace %s
 
-s_mov_from_global_b32 s1, m0
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
-
-s_mov_from_global_b32 s1, ttmp5
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
-
-s_mov_from_global_b64 s[2:3], null
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
-
-s_mov_to_global_b32 s[4:5], s10
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 32-bit register
-
-s_mov_to_global_b64 s5, s[10:11]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 64-bit register
-
-s_mov_to_global_b64 s[5:6], s[10:11]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
-
-s_mov_to_global_b64 exec, s[10:11]
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
-
 v_cubesc_f32_e64_dpp v5, v1, v2, 12345678 row_shr:4 row_mask:0xf bank_mask:0xf
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
