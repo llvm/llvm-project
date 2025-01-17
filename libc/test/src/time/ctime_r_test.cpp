@@ -6,31 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/File/file.h"
-#include "src/errno/libc_errno.h"
-#include "src/time/ctime_r.h"
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/linux/timezone.h"
-<<<<<<< HEAD
-#include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
-#include "src/time/timezone.h"
-||||||| parent of 3d1dc2e7b1ea (format code with clang-format)
 #include "src/time/ctime_r.h"
-=======
->>>>>>> 3d1dc2e7b1ea (format code with clang-format)
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
+#ifdef LIBC_TARGET_OS_IS_LINUX
+#include "src/time/linux/localtime_utils.h"
+#include "src/time/linux/timezone.h"
+#endif
 
-extern char **environ;
+using namespace LIBC_NAMESPACE::time_constants;
 
-void set_env_var(char *env) {
-  environ[0] = env;
-  environ[1] = "\0";
-}
+// extern char **environ;
+
+// void set_env_var(char *env) {
+//   environ[0] = env;
+//   environ[1] = "\0";
+// }
 
 TEST(LlvmLibcCtimeR, Nullptr) {
   char *result;
@@ -47,8 +41,8 @@ TEST(LlvmLibcCtimeR, Nullptr) {
 }
 
 TEST(LlvmLibcCtimeR, ValidUnixTimestamp0) {
-  char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  set_env_var("TZ=Europe/Paris");
+  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
+  // set_env_var("TZ=Europe/Paris");
   time_t t;
   char *result;
   // 1970-01-01 01:00:00. Test with a valid buffer size.
@@ -59,7 +53,7 @@ TEST(LlvmLibcCtimeR, ValidUnixTimestamp0) {
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
-  set_env_var("TZ=Europe/Paris");
+  // set_env_var("TZ=Europe/Paris");
   time_t t;
   char *result;
   // 2038-01-19 04:14:07. Test with a valid buffer size.

@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
-#include "src/__support/File/file.h"
-#include "src/stdio/fseek.h"
 
 #include <stdint.h>
 
@@ -107,6 +106,8 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   return seconds;
 }
 
+extern char **environ;
+
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
                                      int64_t *remainingDays) {
@@ -133,7 +134,7 @@ ErrorOr<File *> acquire_file(char *filename) {
   return LIBC_NAMESPACE::openfile(filename, "rb");
 }
 
-char *get_env_var(const char *input) {
+/*char *get_env_var(const char *input) {
   for (char **env = environ; *env != NULL; ++env) {
     char *env_var = *env;
 
@@ -148,7 +149,7 @@ char *get_env_var(const char *input) {
   }
 
   return NULL;
-}
+}*/
 
 // First, divide "total_seconds" by the number of seconds in a day to get the
 // number of days since Jan 1 1970. The remainder will be used to calculate the
@@ -268,22 +269,13 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   tm->tm_sec =
       static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
-  tm->tm_isdst = 0;
-      static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
+  // tm->tm_isdst = 0;
+  //     static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
 
-  set_dst(tm);
-  if (tm->tm_isdst > 0 && offset != 0) {
+  if (tm->tm_isdst > 0) {
     tm->tm_hour += 1;
   }
 
-  if (offset != 0) {
-    tm->tm_hour += offset;
-  }
-  tm->tm_hour += offset;
-  tm->tm_isdst = dst;
-  if (local) {
-      tm->tm_hour += offset;
-      tm->tm_isdst = dst;
   return 0;
 }
 
