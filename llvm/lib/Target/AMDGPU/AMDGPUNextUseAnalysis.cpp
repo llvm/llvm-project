@@ -76,7 +76,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
             if (Succ->getNumber() == SuccNum)
               Weight = Infinity;
           }
-          mergeDistances(Curr, SuccDist, Weight);
+          Curr.merge(SuccDist, Weight);
         }
       }
 
@@ -85,29 +85,18 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
         
         for (auto &P : Curr) {
-          P.second++;
+          for (auto D : P.second)
+            D.second++;
         }
 
         for (auto &MO : MI.operands()) {
           if (MO.isReg() && MO.getReg().isVirtual()) {
             VRegMaskPair P(MO, *TRI);
             if(MO.isUse()) {
-              Curr[P] = 0;
+              Curr.insert(P, 0);
               UsedInBlock[MBB->getNumber()].insert(P);
             } else if (MO.isDef()) {
-
-              SmallVector<VRegMaskPair> ToKill;
-              for (auto X : Curr) {
-                if (X.first.VReg == P.VReg) {
-                  X.first.LaneMask &= ~P.LaneMask;
-                  if (X.first.LaneMask.none())
-                    ToKill.push_back(X.first);
-                }
-              }
-
-              for (auto D : ToKill) {
-                Curr.erase(D);
-              }
+              Curr.clear(P);
             }
           }
         }
@@ -117,13 +106,26 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
       UpwardNextUses[MBBNum] = std::move(Curr);
 
-      bool Changed4MBB = diff(Prev, UpwardNextUses[MBBNum]);
+      bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);
 
       Changed |= Changed4MBB;
     }
   }
   T1->stopTimer();
   TG->print(llvm::errs());
+}
+
+void NextUseResult::getFromSortedRecords(
+    const VRegDistances::SortedRecords Dists, LaneBitmask Mask, unsigned &D) {
+  for (auto P : Dists) {
+    // Records are sorted in distance increasing order. So, the first record
+    // is for the closest use.
+    LaneBitmask UseMask = P.first;
+    if ((UseMask & Mask) == UseMask) {
+      D = P.second;
+      break;
+    }
+  }
 }
 
 unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
@@ -134,18 +136,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   if (NextUseMap.contains(MBBNum) &&
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
-    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP)) {
-      Dist = Dists[VMP];
-    } else {
-      for (auto P : Dists) {
-        if (P.first.VReg == VMP.VReg) {
-          LaneBitmask UseMask = P.first.LaneMask;
-          LaneBitmask Mask = VMP.LaneMask;
-          if ((UseMask & Mask) == UseMask)
-            if (P.second < Dist)
-              Dist = P.second;
-        } 
-      }
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
+      getFromSortedRecords(Dists[VMP.VReg], VMP.LaneMask, Dist);
     }
   }
 
@@ -157,19 +149,9 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
   unsigned Dist = Infinity;
   unsigned MBBNum = MBB.getNumber();
   if (NextUseMap.contains(MBBNum)) {
-    if (NextUseMap[MBBNum].Bottom.contains(VMP))
-      Dist = NextUseMap[MBBNum].Bottom[VMP];
-    else {
-      VRegDistances Dists = NextUseMap[MBBNum].Bottom;
-      for (auto P : Dists) {
-        if (P.first.VReg == VMP.VReg) {
-          LaneBitmask UseMask = P.first.LaneMask;
-          LaneBitmask Mask = VMP.LaneMask;
-          if ((UseMask & Mask) == UseMask)
-            if (P.second < Dist)
-              Dist = P.second;
-        }
-      }
+    if (NextUseMap[MBBNum].Bottom.contains(VMP.VReg)) {
+      getFromSortedRecords(NextUseMap[MBBNum].Bottom[VMP.VReg], VMP.LaneMask,
+                           Dist);
     }
   }
   return Dist;
