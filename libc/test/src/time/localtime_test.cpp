@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/struct_tm.h"
 #include "src/time/localtime.h"
 #include "test/UnitTest/Test.h"
 
@@ -17,7 +18,7 @@ void set_env_var(char *env) {
 }
 
 TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
-  /*set_env_var("TZ=Europe/Paris");
+  set_env_var("TZ=Europe/Paris");
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
   const time_t t_ptr = 0;
@@ -31,5 +32,5 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
   ASSERT_EQ(4, result->tm_wday);
   ASSERT_EQ(0, result->tm_yday);
   ASSERT_EQ(0, result->tm_isdst);
-#endif*/
+#endif
 }
