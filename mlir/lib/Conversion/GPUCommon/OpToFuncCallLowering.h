@@ -16,37 +16,11 @@
 
 namespace mlir {
 
-/// Rewriting that replace SourceOp with a CallOp to `f32Func` or `f64Func` or
-/// `f32ApproxFunc` or `f16Func` depending on the element type and the
-/// fastMathFlag of that Op. The function declaration is added in case it was
-/// not added before.
-///
-/// If the input values are of bf16 type (or f16 type if f16Func is empty), the
-/// value is first casted to f32, the function called and then the result casted
-/// back.
-///
-/// Example with NVVM:
-///   %exp_f32 = math.exp %arg_f32 : f32
-///
-/// will be transformed into
-///   llvm.call @__nv_expf(%arg_f32) : (f32) -> f32
-///
-/// If the fastMathFlag attribute of SourceOp is `afn` or `fast`, this Op lowers
-/// to the approximate calculation function.
-///
-/// Also example with NVVM:
-///   %exp_f32 = math.exp %arg_f32 fastmath<afn> : f32
-///
-/// will be transformed into
-///   llvm.call @__nv_fast_expf(%arg_f32) : (f32) -> f32
-template <typename SourceOp>
-struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
+template <typename SourceOp, typename DerivedTy>
+struct OpToFuncCallLoweringBase : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
-                                StringRef f32Func, StringRef f64Func,
-                                StringRef f32ApproxFunc, StringRef f16Func)
-      : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
-        f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func) {}
+  explicit OpToFuncCallLoweringBase(const LLVMTypeConverter &lowering)
+      : ConvertOpToLLVMPattern<SourceOp>(lowering) {}
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -72,13 +46,15 @@ public:
 
     SmallVector<Value, 1> castedOperands;
     for (Value operand : adaptor.getOperands())
-      castedOperands.push_back(maybeCast(operand, rewriter));
+      castedOperands.push_back(
+          ((const DerivedTy *)this)->maybeCast(operand, rewriter));
 
     Type resultType = castedOperands.front().getType();
     Type funcType = getFunctionType(resultType, castedOperands);
     StringRef funcName =
-        getFunctionName(cast<LLVM::LLVMFunctionType>(funcType).getReturnType(),
-                        op.getFastmath());
+        ((const DerivedTy *)this)
+            ->getFunctionName(
+                cast<LLVM::LLVMFunctionType>(funcType).getReturnType(), op);
     if (funcName.empty())
       return failure();
 
@@ -99,37 +75,9 @@ public:
   }
 
 private:
-  Value maybeCast(Value operand, PatternRewriter &rewriter) const {
-    Type type = operand.getType();
-    if (!isa<Float16Type, BFloat16Type>(type))
-      return operand;
-
-    // if there's a f16 function, no need to cast f16 values
-    if (!f16Func.empty() && isa<Float16Type>(type))
-      return operand;
-
-    return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
-  }
-
   Type getFunctionType(Type resultType, ValueRange operands) const {
     SmallVector<Type> operandTypes(operands.getTypes());
     return LLVM::LLVMFunctionType::get(resultType, operandTypes);
-  }
-
-  StringRef getFunctionName(Type type, arith::FastMathFlags flag) const {
-    if (isa<Float16Type>(type))
-      return f16Func;
-    if (isa<Float32Type>(type)) {
-      if (((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag) &&
-          !f32ApproxFunc.empty())
-        return f32ApproxFunc;
-      else
-        return f32Func;
-    }
-    if (isa<Float64Type>(type))
-      return f64Func;
-    return "";
   }
 
   LLVM::LLVMFuncOp appendOrGetFuncOp(StringRef funcName, Type funcType,
@@ -144,11 +92,151 @@ private:
     mlir::OpBuilder b(op->getParentOfType<FunctionOpInterface>());
     return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
   }
+};
+
+/// Rewriting that replaces SourceOp with a CallOp to `f32Func` or `f64Func` or
+/// `f32ApproxFunc` or `f16Func` depending on the element type and the
+/// fastMathFlag of that Op. The function declaration is added in case it was
+/// not added before.
+///
+/// If the input values are of bf16 type (or f16 type if f16Func is empty), the
+/// value is first casted to f32, the function called and then the result casted
+/// back.
+///
+/// Example with NVVM:
+///   %exp_f32 = math.exp %arg_f32 : f32
+///
+/// will be transformed into
+///   llvm.call @__nv_expf(%arg_f32) : (f32) -> f32
+///
+/// If the fastMathFlag attribute of SourceOp is `afn` or `fast`, this Op lowers
+/// to the approximate calculation function.
+///
+/// Also example with NVVM:
+///   %exp_f32 = math.exp %arg_f32 fastmath<afn> : f32
+///
+/// will be transformed into
+///   llvm.call @__nv_fast_expf(%arg_f32) : (f32) -> f32
+template <typename SourceOp>
+struct OpToFuncCallLowering
+    : public OpToFuncCallLoweringBase<SourceOp,
+                                      OpToFuncCallLowering<SourceOp>> {
+public:
+  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                StringRef f32Func, StringRef f64Func,
+                                StringRef f32ApproxFunc, StringRef f16Func)
+      : OpToFuncCallLoweringBase<SourceOp, OpToFuncCallLowering<SourceOp>>(
+            lowering),
+        f32Func(f32Func), f64Func(f64Func), f32ApproxFunc(f32ApproxFunc),
+        f16Func(f16Func) {}
+
+  Value maybeCast(Value operand, PatternRewriter &rewriter) const {
+    Type type = operand.getType();
+    if (!isa<Float16Type, BFloat16Type>(type))
+      return operand;
+
+    // if there's a f16 function, no need to cast f16 values
+    if (!f16Func.empty() && isa<Float16Type>(type))
+      return operand;
+
+    return rewriter.create<LLVM::FPExtOp>(
+        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+  }
+
+  StringRef getFunctionName(Type type, SourceOp op) const {
+    arith::FastMathFlags flag = op.getFastmath();
+    if (isa<Float16Type>(type))
+      return f16Func;
+    if (isa<Float32Type>(type)) {
+      if (((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag) &&
+          !f32ApproxFunc.empty())
+        return f32ApproxFunc;
+      else
+        return f32Func;
+    }
+    if (isa<Float64Type>(type))
+      return f64Func;
+    return "";
+  }
 
   const std::string f32Func;
   const std::string f64Func;
   const std::string f32ApproxFunc;
   const std::string f16Func;
+};
+
+/// Rewriting that replace SourceOp with a CallOp to `i32Func`
+/// The function declaration is added in case it was not added before.
+/// This assumes that all types integral.
+///
+/// Example with NVVM:
+///   %abs_i32 = math.iabs %arg_i32 : i32
+///
+/// will be transformed into
+///   llvm.call @__nv_abs(%arg_i32) : (i32) -> i32
+///
+template <typename SourceOp>
+struct IntOpToFuncCallLowering
+    : public OpToFuncCallLoweringBase<SourceOp,
+                                      IntOpToFuncCallLowering<SourceOp>> {
+public:
+  explicit IntOpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                   StringRef i32Func)
+      : OpToFuncCallLoweringBase<SourceOp, IntOpToFuncCallLowering<SourceOp>>(
+            lowering),
+        i32Func(i32Func) {}
+
+  Value maybeCast(Value operand, PatternRewriter &rewriter) const {
+    return operand;
+  }
+
+  StringRef getFunctionName(Type type, SourceOp op) const {
+    IntegerType itype = dyn_cast<IntegerType>(type);
+    if (!itype || itype.getWidth() != 32)
+      return "";
+    return i32Func;
+  }
+
+  const std::string i32Func;
+};
+
+/// Rewriting that replaces SourceOp with a CallOp to `f32Func` or `f64Func`,
+/// depending on the type of the result. This assumes that the first argument is
+/// a floating type and the second argument is an integer type.
+///
+/// Example with NVVM:
+///   %result32 = math.fpowi %arg_f32, %arg_i32 : f32, i32
+///
+/// will be transformed into
+///   llvm.call @__nv_powf(%arg_f32, %arg_i32) : (f32, i32) -> f32
+///
+template <typename SourceOp>
+struct FloatIntOpToFuncCallLowering
+    : public OpToFuncCallLoweringBase<SourceOp,
+                                      FloatIntOpToFuncCallLowering<SourceOp>> {
+public:
+  explicit FloatIntOpToFuncCallLowering(const LLVMTypeConverter &lowering,
+                                        StringRef f32Func, StringRef f64Func)
+      : OpToFuncCallLoweringBase<SourceOp,
+                                 FloatIntOpToFuncCallLowering<SourceOp>>(
+            lowering),
+        f32Func(f32Func), f64Func(f64Func) {}
+
+  Value maybeCast(Value operand, PatternRewriter &rewriter) const {
+    return operand;
+  }
+
+  StringRef getFunctionName(Type type, SourceOp op) const {
+    if (isa<Float32Type>(type)) {
+      return f32Func;
+    }
+    if (isa<Float64Type>(type))
+      return f64Func;
+    return "";
+  }
+
+  const std::string f32Func;
+  const std::string f64Func;
 };
 
 } // namespace mlir
