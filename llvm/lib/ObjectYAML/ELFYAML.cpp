@@ -1604,7 +1604,7 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       if (IO.error())
         Type = ELF::SHT_NULL;
     }
-   }
+  }
 
   if (TypeStr == "Fill") {
     assert(!IO.outputting()); // We don't dump fills currently.
