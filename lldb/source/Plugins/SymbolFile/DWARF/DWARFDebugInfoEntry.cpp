@@ -319,7 +319,7 @@ static bool GetAttributes(DWARFUnit const *cu,
     switch (attr) {
     case DW_AT_sibling:
     case DW_AT_declaration:
-      if (seen.size() > 1 && !is_first_die) {
+      if (!is_first_die) {
         // This attribute doesn't make sense when combined with the DIE that
         // references this DIE. We know a DIE is referencing this DIE because
         // we've visited more than one DIE already.
