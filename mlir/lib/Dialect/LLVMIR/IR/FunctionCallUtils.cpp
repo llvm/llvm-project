@@ -48,7 +48,8 @@ static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(Operation *moduleOp,
                                               StringRef name,
                                               ArrayRef<Type> paramTypes,
-                                              Type resultType, bool isVarArg, bool isReserved) {
+                                              Type resultType, bool isVarArg,
+                                              bool isReserved) {
   assert(moduleOp->hasTrait<OpTrait::SymbolTable>() &&
          "expected SymbolTable operation");
   auto func = llvm::dyn_cast_or_null<LLVM::LLVMFuncOp>(
@@ -58,14 +59,16 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(Operation *moduleOp,
   if (func) {
     if (funcT != func.getFunctionType()) {
       if (isReserved) {
-        func.emitError("redefinition of reserved function '" + name + "' of different type ")
-        .append(func.getFunctionType())
-        .append(" is prohibited");
+        func.emitError("redefinition of reserved function '" + name +
+                       "' of different type ")
+            .append(func.getFunctionType())
+            .append(" is prohibited");
         exit(0);
       } else {
-        func.emitError("redefinition of function '" + name + "' of different type ")
-        .append(funcT)
-        .append(" is prohibited");
+        func.emitError("redefinition of function '" + name +
+                       "' of different type ")
+            .append(funcT)
+            .append(" is prohibited");
         exit(0);
       }
     }
@@ -78,39 +81,41 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFn(Operation *moduleOp,
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintI64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintI64,
-                          IntegerType::get(moduleOp->getContext(), 64),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+  return lookupOrCreateFn(
+      moduleOp, kPrintI64, IntegerType::get(moduleOp->getContext(), 64),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintU64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintU64,
-                          IntegerType::get(moduleOp->getContext(), 64),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+  return lookupOrCreateFn(
+      moduleOp, kPrintU64, IntegerType::get(moduleOp->getContext(), 64),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF16Fn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintF16,
                           IntegerType::get(moduleOp->getContext(), 16), // bits!
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintBF16Fn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintBF16,
                           IntegerType::get(moduleOp->getContext(), 16), // bits!
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF32Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintF32,
-                          Float32Type::get(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+  return lookupOrCreateFn(
+      moduleOp, kPrintF32, Float32Type::get(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintF64Fn(Operation *moduleOp) {
-  return lookupOrCreateFn(moduleOp, kPrintF64,
-                          Float64Type::get(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+  return lookupOrCreateFn(
+      moduleOp, kPrintF64, Float64Type::get(moduleOp->getContext()),
+      LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
 }
 
 static LLVM::LLVMPointerType getCharPtr(MLIRContext *context) {
@@ -126,39 +131,46 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStringFn(
     Operation *moduleOp, std::optional<StringRef> runtimeFunctionName) {
   return lookupOrCreateFn(moduleOp, runtimeFunctionName.value_or(kPrintString),
                           getCharPtr(moduleOp->getContext()),
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintOpenFn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintOpen, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintCloseFn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintClose, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintCommaFn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintComma, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintNewlineFn(Operation *moduleOp) {
   return lookupOrCreateFn(moduleOp, kPrintNewline, {},
-                          LLVM::LLVMVoidType::get(moduleOp->getContext()), false, true);
+                          LLVM::LLVMVoidType::get(moduleOp->getContext()),
+                          false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateMallocFn(Operation *moduleOp,
                                                     Type indexType) {
   return LLVM::lookupOrCreateFn(moduleOp, kMalloc, indexType,
-                                getVoidPtr(moduleOp->getContext()), false, true);
+                                getVoidPtr(moduleOp->getContext()), false,
+                                true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateAlignedAllocFn(Operation *moduleOp,
                                                           Type indexType) {
   return LLVM::lookupOrCreateFn(moduleOp, kAlignedAlloc, {indexType, indexType},
-                                getVoidPtr(moduleOp->getContext()), false, true);
+                                getVoidPtr(moduleOp->getContext()), false,
+                                true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(Operation *moduleOp) {
@@ -170,15 +182,16 @@ LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateFreeFn(Operation *moduleOp) {
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericAllocFn(Operation *moduleOp,
                                                           Type indexType) {
   return LLVM::lookupOrCreateFn(moduleOp, kGenericAlloc, indexType,
-                                getVoidPtr(moduleOp->getContext()), false, true);
+                                getVoidPtr(moduleOp->getContext()), false,
+                                true);
 }
 
 LLVM::LLVMFuncOp
 mlir::LLVM::lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp,
                                                 Type indexType) {
-  return LLVM::lookupOrCreateFn(moduleOp, kGenericAlignedAlloc,
-                                {indexType, indexType},
-                                getVoidPtr(moduleOp->getContext()), false, true);
+  return LLVM::lookupOrCreateFn(
+      moduleOp, kGenericAlignedAlloc, {indexType, indexType},
+      getVoidPtr(moduleOp->getContext()), false, true);
 }
 
 LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreateGenericFreeFn(Operation *moduleOp) {
