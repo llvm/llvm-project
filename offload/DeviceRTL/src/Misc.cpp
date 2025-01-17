@@ -39,15 +39,7 @@ double getWTick() {
 }
 
 double getWTime() {
-  uint64_t NumTicks = 0;
-  if constexpr (__has_builtin(__builtin_amdgcn_s_sendmsg_rtnl))
-    NumTicks = __builtin_amdgcn_s_sendmsg_rtnl(0x83);
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memrealtime))
-    NumTicks = __builtin_amdgcn_s_memrealtime();
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memtime))
-    NumTicks = __builtin_amdgcn_s_memtime();
-
-  return static_cast<double>(NumTicks) * getWTick();
+  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
 }
 
 #pragma omp end declare variant
@@ -115,8 +107,12 @@ void *indirectCallLookup(void *HstPtr) {
 /// The openmp client instance used to communicate with the server.
 /// FIXME: This is marked as 'retain' so that it is not removed via
 /// `-mlink-builtin-bitcode`
+#ifdef __NVPTX__
 [[gnu::visibility("protected"), gnu::weak,
   gnu::retain]] rpc::Client Client asm("__llvm_rpc_client");
+#else
+[[gnu::visibility("protected"), gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
+#endif
 
 } // namespace impl
 } // namespace ompx

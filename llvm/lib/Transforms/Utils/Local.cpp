@@ -1279,10 +1279,10 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // |    for.body <---- (md2)
   // |_______|  |______|
   if (Instruction *TI = BB->getTerminator())
-    if (TI->hasMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata())
       for (BasicBlock *Pred : predecessors(BB))
         if (Instruction *PredTI = Pred->getTerminator())
-          if (PredTI->hasMetadata(LLVMContext::MD_loop))
+          if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
   if (BBKillable)
@@ -1345,12 +1345,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
-  // If the unconditional branch we replaced contains llvm.loop metadata, we
-  // add the metadata to the branch instructions in the predecessors.
+  // If the unconditional branch we replaced contains non-debug llvm.loop
+  // metadata, we add the metadata to the branch instructions in the
+  // predecessors.
   if (Instruction *TI = BB->getTerminator())
-    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
+    if (TI->hasNonDebugLocLoopMetadata()) {
+      MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
       for (BasicBlock *Pred : predecessors(BB))
         Pred->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopMD);
+    }
 
   if (BBKillable) {
     // Everything that jumped to BB now goes to Succ.
@@ -3305,16 +3308,18 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   return Changed;
 }
 
-void llvm::combineMetadata(Instruction *K, const Instruction *J,
-                           ArrayRef<unsigned> KnownIDs, bool DoesKMove) {
+/// If AAOnly is set, only intersect alias analysis metadata and preserve other
+/// known metadata. Unknown metadata is always dropped.
+static void combineMetadata(Instruction *K, const Instruction *J,
+                            bool DoesKMove, bool AAOnly = false) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  K->dropUnknownNonDebugMetadata(KnownIDs);
   K->getAllMetadataOtherThanDebugLoc(Metadata);
   for (const auto &MD : Metadata) {
     unsigned Kind = MD.first;
     MDNode *JMD = J->getMetadata(Kind);
     MDNode *KMD = MD.second;
 
+    // TODO: Assert that this switch is exhaustive for fixed MD kinds.
     switch (Kind) {
       default:
         K->setMetadata(Kind, nullptr); // Remove unknown metadata
@@ -3322,7 +3327,8 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_dbg:
         llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
       case LLVMContext::MD_DIAssignID:
-        K->mergeDIAssignID(J);
+        if (!AAOnly)
+          K->mergeDIAssignID(J);
         break;
       case LLVMContext::MD_tbaa:
         if (DoesKMove)
@@ -3343,11 +3349,12 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
                          intersectAccessGroups(K, J));
         break;
       case LLVMContext::MD_range:
-        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
       case LLVMContext::MD_fpmath:
-        K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
+        if (!AAOnly)
+          K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
         break;
       case LLVMContext::MD_invariant_load:
         // If K moves, only set the !invariant.load if it is present in both
@@ -3356,7 +3363,7 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
-        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_invariant_group:
@@ -3366,30 +3373,39 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         // Combine MMRAs
         break;
       case LLVMContext::MD_align:
-        if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
               Kind, MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
-        if (DoesKMove)
+        if (!AAOnly && DoesKMove)
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        break;
+      case LLVMContext::MD_memprof:
+        if (!AAOnly)
+          K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
+        break;
+      case LLVMContext::MD_callsite:
+        if (!AAOnly)
+          K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
         break;
       case LLVMContext::MD_noundef:
         // If K does move, keep noundef if it is present in both instructions.
-        if (DoesKMove)
+        if (!AAOnly && DoesKMove)
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nontemporal:
         // Preserve !nontemporal if it is present on both instructions.
-        K->setMetadata(Kind, JMD);
+        if (!AAOnly)
+          K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_prof:
-        if (DoesKMove)
+        if (!AAOnly && DoesKMove)
           K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
       case LLVMContext::MD_noalias_addrspace:
@@ -3421,26 +3437,12 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
-                                 bool KDominatesJ) {
-  unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
-                         LLVMContext::MD_alias_scope,
-                         LLVMContext::MD_noalias,
-                         LLVMContext::MD_range,
-                         LLVMContext::MD_fpmath,
-                         LLVMContext::MD_invariant_load,
-                         LLVMContext::MD_nonnull,
-                         LLVMContext::MD_invariant_group,
-                         LLVMContext::MD_align,
-                         LLVMContext::MD_dereferenceable,
-                         LLVMContext::MD_dereferenceable_or_null,
-                         LLVMContext::MD_access_group,
-                         LLVMContext::MD_preserve_access_index,
-                         LLVMContext::MD_prof,
-                         LLVMContext::MD_nontemporal,
-                         LLVMContext::MD_noundef,
-                         LLVMContext::MD_mmra,
-                         LLVMContext::MD_noalias_addrspace};
-  combineMetadata(K, J, KnownIDs, KDominatesJ);
+                                 bool DoesKMove) {
+  combineMetadata(K, J, DoesKMove);
+}
+
+void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
+  combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
 }
 
 void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {

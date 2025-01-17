@@ -7,19 +7,13 @@ declare <16 x i8> @llvm.bitreverse.v16i8(<16 x i8>)
 define <16 x i8> @test_bitreverse_v16i8(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vslli.b $vr1, $vr0, 4
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 4
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vandi.b $vr1, $vr0, 51
-; CHECK-NEXT:    vslli.b $vr1, $vr1, 2
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 2
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 51
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vandi.b $vr1, $vr0, 85
-; CHECK-NEXT:    vslli.b $vr1, $vr1, 1
-; CHECK-NEXT:    vsrli.b $vr0, $vr0, 1
-; CHECK-NEXT:    vandi.b $vr0, $vr0, 85
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
+; CHECK-NEXT:    bitrev.8b $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
   %b = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> %a)
   ret <16 x i8> %b
@@ -30,25 +24,13 @@ declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
 define <8 x i16> @test_bitreverse_v8i16(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 177
-; CHECK-NEXT:    vsrli.h $vr1, $vr0, 4
-; CHECK-NEXT:    vrepli.b $vr2, 15
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 4
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
-; CHECK-NEXT:    vsrli.h $vr1, $vr0, 2
-; CHECK-NEXT:    vrepli.b $vr2, 51
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
-; CHECK-NEXT:    vsrli.h $vr1, $vr0, 1
-; CHECK-NEXT:    vrepli.b $vr2, 85
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 1
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr1, 27
 ; CHECK-NEXT:    ret
   %b = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %b
@@ -59,25 +41,13 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 define <4 x i32> @test_bitreverse_v4i32(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 27
-; CHECK-NEXT:    vsrli.w $vr1, $vr0, 4
-; CHECK-NEXT:    vrepli.b $vr2, 15
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 4
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
-; CHECK-NEXT:    vsrli.w $vr1, $vr0, 2
-; CHECK-NEXT:    vrepli.b $vr2, 51
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
-; CHECK-NEXT:    vsrli.w $vr1, $vr0, 1
-; CHECK-NEXT:    vrepli.b $vr2, 85
-; CHECK-NEXT:    vand.v $vr1, $vr1, $vr2
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr2
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 1
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 0
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 0
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
+; CHECK-NEXT:    bitrev.d $a0, $a0
+; CHECK-NEXT:    vinsgr2vr.d $vr1, $a0, 1
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr1, 177
 ; CHECK-NEXT:    ret
   %b = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %b

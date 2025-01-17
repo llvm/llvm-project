@@ -2430,8 +2430,8 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   } else
     return false;
 
-  auto MatchICmpAgainstInvariant = [&](Value *C, ICmpInst::Predicate &P,
-                                       Value *&LHS, Value *&RHS) {
+  auto MatchICmpAgainstInvariant = [&](Value *C, CmpPredicate &P, Value *&LHS,
+                                       Value *&RHS) {
     if (!match(C, m_OneUse(m_ICmp(P, m_Value(LHS), m_Value(RHS)))))
       return false;
     if (!LHS->getType()->isIntegerTy())
@@ -2448,20 +2448,22 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
       P = ICmpInst::getInversePredicate(P);
     return true;
   };
-  ICmpInst::Predicate P1, P2;
+  CmpPredicate P1, P2;
   Value *LHS1, *LHS2, *RHS1, *RHS2;
   if (!MatchICmpAgainstInvariant(Cond1, P1, LHS1, RHS1) ||
       !MatchICmpAgainstInvariant(Cond2, P2, LHS2, RHS2))
     return false;
-  if (P1 != P2 || LHS1 != LHS2)
+  auto MatchingPred = CmpPredicate::getMatching(P1, P2);
+  if (!MatchingPred || LHS1 != LHS2)
     return false;
 
   // Everything is fine, we can do the transform.
-  bool UseMin = ICmpInst::isLT(P1) || ICmpInst::isLE(P1);
+  bool UseMin = ICmpInst::isLT(*MatchingPred) || ICmpInst::isLE(*MatchingPred);
   assert(
-      (UseMin || ICmpInst::isGT(P1) || ICmpInst::isGE(P1)) &&
+      (UseMin || ICmpInst::isGT(*MatchingPred) ||
+       ICmpInst::isGE(*MatchingPred)) &&
       "Relational predicate is either less (or equal) or greater (or equal)!");
-  Intrinsic::ID id = ICmpInst::isSigned(P1)
+  Intrinsic::ID id = ICmpInst::isSigned(*MatchingPred)
                          ? (UseMin ? Intrinsic::smin : Intrinsic::smax)
                          : (UseMin ? Intrinsic::umin : Intrinsic::umax);
   auto *Preheader = L.getLoopPreheader();
@@ -2474,11 +2476,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (isa<SelectInst>(I))
     RHS2 = Builder.CreateFreeze(RHS2, RHS2->getName() + ".fr");
   Value *NewRHS = Builder.CreateBinaryIntrinsic(
-      id, RHS1, RHS2, nullptr, StringRef("invariant.") +
-                                   (ICmpInst::isSigned(P1) ? "s" : "u") +
-                                   (UseMin ? "min" : "max"));
+      id, RHS1, RHS2, nullptr,
+      StringRef("invariant.") +
+          (ICmpInst::isSigned(*MatchingPred) ? "s" : "u") +
+          (UseMin ? "min" : "max"));
   Builder.SetInsertPoint(&I);
-  ICmpInst::Predicate P = P1;
+  ICmpInst::Predicate P = *MatchingPred;
   if (Inverse)
     P = ICmpInst::getInversePredicate(P);
   Value *NewCond = Builder.CreateICmp(P, LHS1, NewRHS);
@@ -2678,7 +2681,7 @@ static bool hoistAddSub(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                         DominatorTree *DT) {
   using namespace PatternMatch;
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *LHS, *RHS;
   if (!match(&I, m_ICmp(Pred, m_Value(LHS), m_Value(RHS))))
     return false;

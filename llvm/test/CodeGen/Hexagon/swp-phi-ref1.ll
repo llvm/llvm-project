@@ -1,4 +1,4 @@
-; RUN: llc  -march=hexagon -mno-pairing -mno-compound < %s
+; RUN: llc -mtriple=hexagon -mno-pairing -mno-compound < %s
 ; REQUIRES: asserts
 
 ; Test that the SWP doesn't assert when generating new phis. In this example, a

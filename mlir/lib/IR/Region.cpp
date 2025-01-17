@@ -271,7 +271,7 @@ RegionRange::OwnerT RegionRange::offset_base(const OwnerT &owner,
     return region + index;
   if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region + index;
-  return &owner.get<Region *>()[index];
+  return &cast<Region *>(owner)[index];
 }
 /// See `llvm::detail::indexed_accessor_range_base` for details.
 Region *RegionRange::dereference_iterator(const OwnerT &owner,
@@ -280,5 +280,5 @@ Region *RegionRange::dereference_iterator(const OwnerT &owner,
     return region[index].get();
   if (auto **region = llvm::dyn_cast_if_present<Region **>(owner))
     return region[index];
-  return &owner.get<Region *>()[index];
+  return &cast<Region *>(owner)[index];
 }

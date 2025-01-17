@@ -363,6 +363,11 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
     Instruction *T = BB.getTerminator();
     if (!isa<ReturnInst>(T))
       continue;
+
+    // If there is a musttail call, that's the de-facto terminator.
+    if (CallInst *CI = BB.getTerminatingMustTailCall())
+      T = CI;
+
     Builder.SetInsertPoint(T);
     unlinkExceptionRegistration(Builder);
   }

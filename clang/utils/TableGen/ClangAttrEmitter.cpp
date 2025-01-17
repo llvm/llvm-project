@@ -3043,6 +3043,10 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
+      if (R.getValueAsBit("DeferDeserialization")) {
+        OS << ", "
+           << "/*DeferDeserialization=*/true";
+      }
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3183,7 +3187,6 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
   OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n";
-  OS << "#include \"clang/Support/Compiler.h\"\n\n";
 
   emitAttributes(Records, OS, true);
 

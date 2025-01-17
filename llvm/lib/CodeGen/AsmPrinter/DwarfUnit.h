@@ -268,7 +268,9 @@ public:
   void constructContainingTypeDIEs();
 
   /// Construct function argument DIEs.
-  void constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
+  ///
+  /// \returns DIE of the object pointer if one exists. Nullptr otherwise.
+  DIE *constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
@@ -315,6 +317,11 @@ public:
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
 
+  /// If this is a named finished type then include it in the list of types for
+  /// the accelerator tables.
+  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
+                               const DIE &TyDIE);
+
 protected:
   ~DwarfUnit();
 
@@ -356,11 +363,6 @@ private:
   void setIndexTyDie(DIE *D) { IndexTyDie = D; }
 
   virtual void finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) = 0;
-
-  /// If this is a named finished type then include it in the list of types for
-  /// the accelerator tables.
-  void updateAcceleratorTables(const DIScope *Context, const DIType *Ty,
-                               const DIE &TyDIE);
 
   virtual bool isDwoUnit() const = 0;
   const MCSymbol *getCrossSectionRelativeBaseAddress() const override;

@@ -18,12 +18,12 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-Descriptor *RTDEF(CUFAllocDesciptor)(
+Descriptor *RTDEF(CUFAllocDescriptor)(
     std::size_t sizeInBytes, const char *sourceFile, int sourceLine) {
   return reinterpret_cast<Descriptor *>(CUFAllocManaged(sizeInBytes));
 }
 
-void RTDEF(CUFFreeDesciptor)(
+void RTDEF(CUFFreeDescriptor)(
     Descriptor *desc, const char *sourceFile, int sourceLine) {
   CUFFreeManaged(reinterpret_cast<void *>(desc));
 }
@@ -44,6 +44,13 @@ void RTDEF(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,
   std::size_t count{src->SizeInBytes()};
   CUDA_REPORT_IF_ERROR(cudaMemcpy(
       (void *)dst, (const void *)src, count, cudaMemcpyHostToDevice));
+}
+
+void RTDEF(CUFSyncGlobalDescriptor)(
+    void *hostPtr, const char *sourceFile, int sourceLine) {
+  void *devAddr{RTNAME(CUFGetDeviceAddress)(hostPtr, sourceFile, sourceLine)};
+  RTNAME(CUFDescriptorSync)
+  ((Descriptor *)devAddr, (Descriptor *)hostPtr, sourceFile, sourceLine);
 }
 
 RT_EXT_API_GROUP_END

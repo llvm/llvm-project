@@ -580,10 +580,30 @@ void arith::MulUIExtendedOp::getCanonicalizationPatterns(
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
+/// Fold `(a * b) / b -> a`
+static Value foldDivMul(Value lhs, Value rhs,
+                        arith::IntegerOverflowFlags ovfFlags) {
+  auto mul = lhs.getDefiningOp<mlir::arith::MulIOp>();
+  if (!mul || !bitEnumContainsAll(mul.getOverflowFlags(), ovfFlags))
+    return {};
+
+  if (mul.getLhs() == rhs)
+    return mul.getRhs();
+
+  if (mul.getRhs() == rhs)
+    return mul.getLhs();
+
+  return {};
+}
+
 OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   // divui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // (a * b) / b -> a
+  if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
+    return val;
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -620,6 +640,10 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   // divsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // (a * b) / b -> a
+  if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
+    return val;
 
   // Don't fold if it would overflow or if it requires a division by zero.
   bool overflowOrDiv0 = false;
@@ -956,7 +980,7 @@ void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::NegFOp::fold(FoldAdaptor adaptor) {
-  // negf(negf(x)) -> x
+  /// negf(negf(x)) -> x
   if (auto op = this->getOperand().getDefiningOp<arith::NegFOp>())
     return op.getOperand();
   return constFoldUnaryOp<FloatAttr>(adaptor.getOperands(),
@@ -984,14 +1008,6 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
-    return getLhs();
-
-  // Simplifies subf(x, rhs) to x if the following conditions are met:
-  // 1. `rhs` is a denormal floating-point value.
-  // 2. The denormal mode for the operation is set to positive zero.
-  bool isPositiveZeroMode =
-      getDenormalModeAttr().getValue() == DenormalMode::positive_zero;
-  if (isPositiveZeroMode && matchPattern(adaptor.getRhs(), m_isDenormalFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(

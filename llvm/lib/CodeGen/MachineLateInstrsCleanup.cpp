@@ -189,7 +189,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
               })) {
         MBBDefs[Reg] = DefMI;
         LLVM_DEBUG(dbgs() << "Reusable instruction from pred(s): in "
-                          << printMBBReference(*MBB) << ":  " << *DefMI;);
+                          << printMBBReference(*MBB) << ":  " << *DefMI);
       }
   }
 
@@ -212,7 +212,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     // Check for an earlier identical and reusable instruction.
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
-                        << printMBBReference(*MBB) << ":  " << MI;);
+                        << printMBBReference(*MBB) << ":  " << MI);
       removeRedundantDef(&MI);
       Changed = true;
       continue;
@@ -232,7 +232,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     // Record this MI for potential later reuse.
     if (IsCandidate) {
       LLVM_DEBUG(dbgs() << "Found interesting instruction in "
-                        << printMBBReference(*MBB) << ":  " << MI;);
+                        << printMBBReference(*MBB) << ":  " << MI);
       MBBDefs[DefedReg] = &MI;
       assert(!MBBKills.count(DefedReg) && "Should already have been removed.");
     }

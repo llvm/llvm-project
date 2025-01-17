@@ -1,0 +1,41 @@
+digraph VPlan {
+graph [labelloc=t, fontsize=30; label=""]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N1 [label =
+    "vector.ph"
+  ]
+  N1 -> N2 [ label="" lhead=cluster_N3]
+  subgraph cluster_N3 {
+    fontname=Courier
+    label="\<x1\> vector loop"
+    N2 [label =
+      "vector.body"
+    ]
+  }
+  N2 -> N4 [ label="" ltail=cluster_N3]
+  N4 [label =
+    "middle.split"
+  ]
+  N4 -> N5 [ label=""]
+  N4 -> N6 [ label=""]
+  N5 [label =
+    "early.exit"
+  ]
+  N6 [label =
+    "middle.block"
+  ]
+  N6 -> N9 [ label=""]
+  N6 -> N7 [ label=""]
+  N7 [label =
+    "scalar.ph"
+  ]
+  N7 -> N8 [ label=""]
+  N8 [label =
+    "loop.header"
+  ]
+  N9 [label =
+    "latch.exit"
+  ]
+}

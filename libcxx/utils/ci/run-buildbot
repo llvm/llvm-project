@@ -281,6 +281,12 @@ check-generated-output)
 #
 # Various Standard modes
 #
+frozen-cxx03-headers)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03-frozen.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-cxx03)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"

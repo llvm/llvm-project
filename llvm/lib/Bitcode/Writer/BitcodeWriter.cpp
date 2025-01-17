@@ -494,6 +494,9 @@ public:
     // are currently saved in the index in terms of GUID.
     forEachSummary([&](GVInfo I, bool IsAliasee) {
       GUIDToValueIdMap[I.first] = ++GlobalValueId;
+      // If this is invoked for an aliasee, we want to record the above mapping,
+      // but not the information needed for its summary entry (if the aliasee is
+      // to be imported, we will invoke this separately with IsAliasee=false).
       if (IsAliasee)
         return;
       auto *FS = dyn_cast<FunctionSummary>(I.second);
@@ -851,6 +854,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
+  case Attribute::SanitizeType:
+    return bitc::ATTR_KIND_SANITIZE_TYPE;
   case Attribute::SanitizeMemory:
     return bitc::ATTR_KIND_SANITIZE_MEMORY;
   case Attribute::SanitizeNumericalStability:
@@ -905,6 +910,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_INITIALIZES;
   case Attribute::NoExt:
     return bitc::ATTR_KIND_NO_EXT;
+  case Attribute::Captures:
+    return bitc::ATTR_KIND_CAPTURES;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -4843,6 +4850,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // radix tree array are identified based on this order.
   MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
   forEachSummary([&](GVInfo I, bool IsAliasee) {
+    // Don't collect this when invoked for an aliasee, as it is not needed for
+    // the alias summary. If the aliasee is to be imported, we will invoke this
+    // separately with IsAliasee=false.
+    if (IsAliasee)
+      return;
     GlobalValueSummary *S = I.second;
     assert(S);
     auto *FS = dyn_cast<FunctionSummary>(S);

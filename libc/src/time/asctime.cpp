@@ -9,15 +9,15 @@
 #include "src/time/asctime.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-using LIBC_NAMESPACE::time_utils::TimeConstants;
-
 LLVM_LIBC_FUNCTION(char *, asctime, (const struct tm *timeptr)) {
-  static char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  return time_utils::asctime(timeptr, buffer, TimeConstants::ASCTIME_MAX_BYTES);
+  static char buffer[time_constants::ASCTIME_BUFFER_SIZE];
+  return time_utils::asctime(timeptr, buffer,
+                             time_constants::ASCTIME_MAX_BYTES);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

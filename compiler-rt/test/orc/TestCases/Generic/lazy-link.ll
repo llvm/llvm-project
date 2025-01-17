@@ -11,7 +11,7 @@
 ; RUN:     -lazy %t/x.o | FileCheck %s
 ;
 ; UNSUPPORTED: system-windows
-; REQUIRES: target={{(arm|aarch)64.*}}
+; REQUIRES: target={{(arm|aarch|x86_)64.*}}
 ;
 ; CHECK: Linking {{.*}}main.o
 ; CHECK-DAG: Linking <indirect stubs graph #1>
