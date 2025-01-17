@@ -856,7 +856,7 @@ def ProcessorFeatures {
                                    FeatureSSBS, FeatureLS64, FeatureCLRBHB,
                                    FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
                                    FeatureSVE2SHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
-                                   FeatureMEC, FeatureFP8DOT2];
+                                   FeatureMEC, FeatureFP8DOT2, FeatureSPE_EEF];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
@@ -923,7 +923,8 @@ def ProcessorFeatures {
                                     FeatureComplxNum, FeatureCRC, FeatureJS,
                                     FeatureLSE, FeaturePAuth, FeatureFPAC,
                                     FeatureRAS, FeatureRCPC, FeatureRDM,
-                                    FeatureDotProd, FeatureMatMulInt8];
+                                    FeatureDotProd, FeatureMatMulInt8,
+                                    FeatureSPE_EEF];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeaturePerfMon, FeatureNEON, FeatureFPARMv8];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,
@@ -1046,7 +1047,7 @@ def ProcessorFeatures {
                                      FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
                                      FeatureCCIDX,
-                                     FeatureRDM];
+                                     FeatureRDM, FeatureSPE_EEF];
 
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureRandGen,
