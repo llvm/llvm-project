@@ -712,6 +712,7 @@ cc_library(
         "include/clang/Basic/DiagnosticFrontendKinds.inc",
         "include/clang/Basic/DiagnosticGroups.inc",
         "include/clang/Basic/DiagnosticIndexName.inc",
+        "include/clang/Basic/DiagnosticInstallAPIKinds.inc",
         "include/clang/Basic/DiagnosticLexKinds.inc",
         "include/clang/Basic/DiagnosticParseKinds.inc",
         "include/clang/Basic/DiagnosticRefactoringKinds.inc",
@@ -1953,12 +1954,7 @@ cc_library(
         ],
         exclude = ["lib/Interpreter/Wasm.cpp"],
     ),
-    hdrs = glob(
-        [
-            "include/clang/Interpreter/*.h",
-        ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
-    ),
+    hdrs = glob(["include/clang/Interpreter/*.h"]),
     includes = ["include"],
     deps = [
         ":analysis",
@@ -2148,7 +2144,6 @@ cc_library(
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",
     ] + glob([
-        "include/clang/Frontend/*.h",
         "lib/Serialization/*.cpp",
         "lib/Serialization/*.h",
     ]),
@@ -2160,15 +2155,11 @@ cc_library(
         "include/clang/Serialization/*.def",
     ]),
     deps = [
-        ":apinotes",
         ":ast",
         ":basic",
-        ":driver",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
-        ":static_analyzer_core_options",
-        ":support",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",
@@ -2761,6 +2752,30 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
     ],
+)
+
+proto_library(
+    name = "cxx-proto",
+    srcs = ["tools/clang-fuzzer/cxx_proto.proto"],
+)
+
+cc_proto_library(
+    name = "cxx_cc_proto",
+    deps = [":cxx-proto"],
+)
+
+cc_library(
+    name = "proto-to-cxx-lib",
+    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.cpp"],
+    hdrs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.h"],
+    includes = ["tools/clang-fuzzer"],
+    deps = [":cxx_cc_proto"],
+)
+
+cc_binary(
+    name = "clang-proto-to-cxx",
+    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx_main.cpp"],
+    deps = [":proto-to-cxx-lib"],
 )
 
 cc_library(

@@ -14,6 +14,8 @@ add_flang_library(FIRTestOpenACCInterfaces
   FIRDialect
   FIROpenACCSupport
   FIRSupport
+
+  MLIR_LIBS
   MLIRIR
   MLIROpenACCDialect
   MLIRPass

@@ -8,7 +8,7 @@
 
 ; The only pass criterion is that spirv-val considers output valid.
 
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.5-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.5-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.5 %}
 
 %"nd_item" = type { i8 }
 %struct.AssertHappened = type { i32, [257 x i8], [257 x i8], [129 x i8], i32, i64, i64, i64, i64, i64, i64 }
