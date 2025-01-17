@@ -3,55 +3,27 @@ name: Trigger gfx13 Buildbot Build
 on:
   workflow_dispatch:
   pull_request:
-    branches: [amd-gfx13]
-    types: [opened, reopened, synchronize]
+    branches: [amd-default]
+    types: [opened, reopened, synchronize, ready_for_review]
 
-jobs:
+jobs:  
   trigger-build:
+    if: github.event.pull_request.draft == false
     runs-on: self-hosted
     container:
       image: docker-virtual.mkmartifactory.amd.com/amd/base_docker_images/ubuntu-20.04:compiler-buildbot-trigger-v1
     steps:
-      - name: Get PR and Repository Details
-        if: github.event_name == 'pull_request'
-        run: |
-         python3 -c "
-         import json
-         import os
 
-         with open(os.environ['GITHUB_EVENT_PATH']) as f:
-           event = json.load(f)
-           pr_number = event['number']
-           pr_title = event['pull_request']['title']
-           pr_body = event['pull_request']['body']
-           pr_sha = event['pull_request']['head']['sha']
-           pr_url = event['pull_request']['html_url']
-           base_branch = event['pull_request']['base']['ref']
-           repo_owner = event['repository']['owner']['login']
-           repo_name = event['repository']['name']
-           repo_url = event['repository']['html_url']
-
-           with open(os.environ['GITHUB_ENV'], 'a') as env_file:
-            env_file.write(f'PR_NUMBER={pr_number}\n')
-            env_file.write(f'PR_TITLE={pr_title}\n')
-            env_file.write(f'PR_SHA={pr_sha}\n')
-            env_file.write(f'PR_URL={pr_url}\n')
-            env_file.write(f'BASE_BRANCH={base_branch}\n')
-            env_file.write(f'REPO_OWNER={repo_owner}\n')
-            env_file.write(f'REPO_NAME={repo_name}\n')
-            env_file.write(f'REPO_URL={repo_url}\n')"
-      - name: Print PR Information
-        run: |
-          echo "PR_NUMBER=$PR_NUMBER" 
-          echo "PR_SHA=$PR_SHA"
-          echo "PR_URL=$PR_URL"
-          echo "BASE_BRANCH=$BASE_BRANCH"
-          echo "REPO_NAME=$REPO_NAME"
-          echo "REPO_URL=$REPO_URL"
-          
       - name: Trigger Buildbot Build
         run: |          
-          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:"${{ env.PR_TITLE }}"  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }} -p REPO_URL:${{ env.REPO_URL }}
+          buildbot sendchange -W 'username'  -a username:password --master=10.217.78.121:9999 --branch=${{ env.BASE_BRANCH }} --revision=${{ env.PR_SHA }} -p PR_NUMBER:${{ env.PR_NUMBER }} -p PR_TITLE:'${{ env.PR_TITLE }}'  -p PR_URL:${{ env.PR_URL }}  -p SHA:${{ env.PR_SHA }}         env:
+        env:  
+          PR_SHA: ${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 0 }}
+          PR_URL: ${{ github.event.pull_request.html_url != '' && github.event.pull_request.html_url || '' }}
+          PR_TITLE: ${{ github.event.pull_request.title != '' && github.event.pull_request.title || '' }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref != '' && github.event.pull_request.base.ref || '' }}
+          
          
       - name: Poll Buildbot build status
         run: |
