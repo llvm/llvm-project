@@ -46,6 +46,9 @@ Improvements and New Features
 - The ``std::ranges::{copy, copy_n, copy_backward}`` algorithms have been optimized for ``std::vector<bool>::iterator``\s,
   resulting in a performance improvement of up to 2000x.
 
+- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
+  in chunks into a buffer.
+
 - Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals

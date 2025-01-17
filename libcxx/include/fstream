@@ -226,6 +226,8 @@ _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) no
 
 template <class _CharT, class _Traits>
 class _LIBCPP_TEMPLATE_VIS basic_filebuf : public basic_streambuf<_CharT, _Traits> {
+  using __base _LIBCPP_NODEBUG = basic_streambuf<_CharT, _Traits>;
+
 public:
   typedef _CharT char_type;
   typedef _Traits traits_type;
@@ -297,6 +299,16 @@ protected:
   pos_type seekpos(pos_type __sp, ios_base::openmode __wch = ios_base::in | ios_base::out) override;
   int sync() override;
   void imbue(const locale& __loc) override;
+
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsputn(const char_type* __str, streamsize __len) override {
+    if (__always_noconv_ && __len >= (this->epptr() - this->pbase())) {
+      if (traits_type::eq_int_type(overflow(), traits_type::eof()))
+        return 0;
+
+      return std::fwrite(__str, sizeof(char_type), __len, __file_);
+    }
+    return __base::xsputn(__str, __len);
+  }
 
 private:
   char* __extbuf_;
