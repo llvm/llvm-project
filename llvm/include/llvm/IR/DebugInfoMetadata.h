@@ -3307,13 +3307,6 @@ private:
         ->getElements();
   }
 
-  DIExpression *getPoisoned() const {
-    std::optional<FragmentInfo> Frag = getFragmentInfo();
-    if (!Frag)
-      return DIExpression::get(getContext(), PoisonedExpr);
-    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits);
-  }
-
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
       : MDNode(C, DIExpressionKind, Storage, {}),
         Elements(std::in_place_type<OldElements>, Elements.begin(),
@@ -3341,6 +3334,13 @@ private:
   }
 
 public:
+  DIExpression *getPoisoned() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return DIExpression::get(getContext(), PoisonedExpr);
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits);
+  }
+
   DEFINE_MDNODE_GET(DIExpression, (std::nullopt_t Elements), (Elements))
   DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
   // The bool parameter is ignored, and only present to disambiguate the

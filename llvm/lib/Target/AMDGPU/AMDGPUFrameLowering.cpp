@@ -101,7 +101,13 @@ DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
     if (auto *Arg = std::get_if<DIOp::Arg>(&*I)) {
       if (Arg->getIndex() != ArgIndex)
         continue;
+
       Type *ResultType = Arg->getResultType();
+      // Weird case: we expect a pointer but on optimized builds it may not be
+      // the case.
+      if (!ResultType->isPointerTy())
+        return Expr->getPoisoned();
+
       unsigned PointerSizeInBits =
           DL.getPointerSizeInBits(ResultType->getPointerAddressSpace());
       auto *IntTy = IntegerType::get(Context, PointerSizeInBits);
