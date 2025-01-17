@@ -170,7 +170,7 @@ subroutine test_box_assign(t1, t2)
   ! CHECK: fir.store %[[t1Load]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Load]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_box_assignTt{i:i32}>>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   t1 = t2
 end subroutine
 
@@ -190,7 +190,7 @@ subroutine test_alloc_comp(t1, t2)
   ! CHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>
   ! CHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QFtest_alloc_compTt{{.*}}>>) -> !fir.box<none>
-  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   t1 = t2
 end subroutine
 
@@ -230,7 +230,7 @@ end subroutine
 !    ! cHECK: fir.store %[[t1Box]] to %[[tmpBox]] : !fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>
 !    ! cHECK: %[[lhs:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>>) -> !fir.ref<!fir.box<none>>
 !    ! cHECK: %[[rhs:.*]] = fir.convert %[[t2Box]] : (!fir.box<!fir.type<_QMcomponent_with_user_def_assignTt{{.*}}>>) -> !fir.box<none>
-!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+!    ! cHECK: fir.call @_FortranAAssign(%[[lhs]], %[[rhs]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 !    t1 = t2
 !  end subroutine
 !end module

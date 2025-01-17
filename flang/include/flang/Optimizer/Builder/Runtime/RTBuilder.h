@@ -674,6 +674,8 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
+      if (mlir::isa<mlir::NoneType>(retTy))
+        return mlir::FunctionType::get(ctxt, argTys, {});
       return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }

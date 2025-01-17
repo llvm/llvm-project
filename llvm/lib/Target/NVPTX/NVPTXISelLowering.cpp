@@ -94,6 +94,13 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+/// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
+/// does NOT use lg2.approx for log2, so this is disabled by default.
+static cl::opt<bool> UseApproxLog2F32(
+    "nvptx-approx-log2f32",
+    cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
+    cl::init(false));
+
 static cl::opt<bool> ForceMinByValParamAlign(
     "nvptx-force-min-byval-param-align", cl::Hidden,
     cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
@@ -529,40 +536,16 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
+    case ISD::FEXP2:
+      IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
+      break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
   };
 
   auto setBF16OperationAction = [&](unsigned Op, MVT VT, LegalizeAction Action,
                                     LegalizeAction NoBF16Action) {
-    bool IsOpSupported = STI.hasBF16Math();
-    switch (Op) {
-    // Several BF16 instructions are available on sm_90 only.
-    case ISD::FADD:
-    case ISD::FMUL:
-    case ISD::FSUB:
-    case ISD::SELECT:
-    case ISD::SELECT_CC:
-    case ISD::SETCC:
-    case ISD::FEXP2:
-    case ISD::FCEIL:
-    case ISD::FFLOOR:
-    case ISD::FNEARBYINT:
-    case ISD::FRINT:
-    case ISD::FROUNDEVEN:
-    case ISD::FTRUNC:
-      IsOpSupported = STI.getSmVersion() >= 90 && STI.getPTXVersion() >= 78;
-      break;
-    // Several BF16 instructions are available on sm_80 only.
-    case ISD::FMINNUM:
-    case ISD::FMAXNUM:
-    case ISD::FMAXNUM_IEEE:
-    case ISD::FMINNUM_IEEE:
-    case ISD::FMAXIMUM:
-    case ISD::FMINIMUM:
-      IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
-      break;
-    }
+    bool IsOpSupported = STI.hasNativeBF16Support(Op);
     setOperationAction(
         Op, VT, IsOpSupported ? Action : NoBF16Action);
   };
@@ -862,6 +845,15 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
+  // On SM80, we select add/mul/sub as fma to avoid promotion to float
+  for (const auto &Op : {ISD::FADD, ISD::FMUL, ISD::FSUB}) {
+    for (const auto &VT : {MVT::bf16, MVT::v2bf16}) {
+      if (!STI.hasNativeBF16Support(Op) && STI.hasNativeBF16Support(ISD::FMA)) {
+        setOperationAction(Op, VT, Custom);
+      }
+    }
+  }
+
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
   const bool IsFP16FP16x2NegAvailable = STI.getSmVersion() >= 53 &&
                                         STI.getPTXVersion() >= 60 &&
@@ -977,7 +969,26 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::CopyToReg, MVT::i128, Custom);
   setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
 
-  // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
+  // FEXP2 support:
+  // - f32
+  // - f16/f16x2 (sm_70+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  setOperationAction(ISD::FEXP2, MVT::f32, Legal);
+  setFP16OperationAction(ISD::FEXP2, MVT::f16, Legal, Promote);
+  setFP16OperationAction(ISD::FEXP2, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FEXP2, MVT::bf16, Legal, Promote);
+  setBF16OperationAction(ISD::FEXP2, MVT::v2bf16, Legal, Expand);
+
+  // FLOG2 supports f32 only
+  // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
+  if (UseApproxLog2F32) {
+    setOperationAction(ISD::FLOG2, MVT::f32, Legal);
+    setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
+    setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
+    setOperationAction(ISD::FLOG2, {MVT::v2f16, MVT::v2bf16}, Expand);
+  }
+
   // No FPOW or FREM in PTX.
 
   // Now deduce the information based on the above mentioned
@@ -2498,6 +2509,27 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
   return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
 }
 
+static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = MVT::f32;
+  if (VT.isVector()) {
+    NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
+  }
+  SDLoc DL(N);
+  SDValue Tmp0 = DAG.getFPExtendOrRound(N->getOperand(0), DL, NVT);
+  SDValue Tmp1 = DAG.getFPExtendOrRound(N->getOperand(1), DL, NVT);
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, NVT, Tmp0, Tmp1, N->getFlags());
+  return DAG.getFPExtendOrRound(Res, DL, VT);
+}
+
+SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  if (useF32FTZ(DAG.getMachineFunction())) {
+    return PromoteBinOpToF32(Op.getNode(), DAG);
+  }
+  return Op;
+}
+
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
                                             SelectionDAG &DAG) const {
   assert(STI.getSmVersion() < 90 || STI.getPTXVersion() < 78);
@@ -2689,6 +2721,12 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSTACKSAVE(Op, DAG);
   case ISD::CopyToReg:
     return LowerCopyToReg_128(Op, DAG);
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+    // Used only for bf16 on SM80, where we select fma for non-ftz operation
+    return PromoteBinOpIfF32FTZ(Op, DAG);
+
   default:
     llvm_unreachable("Custom lowering not defined for operation");
   }
