@@ -48,7 +48,7 @@ TEST(APIntTest, PowOneTo16) {
 TEST(APIntTest, PowerTwoTo10) {
   APInt Two(32, 2);
   APInt TwoTo20 = APIntOps::pow(Two, 10);
-  APInt V_1024 = APInt::getZero(32) + 1024;
+  APInt V_1024(32, 1024);
   EXPECT_EQ(TwoTo20, V_1024);
 }
 
