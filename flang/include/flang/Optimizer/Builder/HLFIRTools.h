@@ -513,12 +513,6 @@ genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
 Entity loadElementAt(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity, mlir::ValueRange oneBasedIndices);
 
-/// Return a vector of extents for the given entity.
-/// The function creates new operations, but tries to clean-up
-/// after itself.
-llvm::SmallVector<mlir::Value>
-genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
-
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
