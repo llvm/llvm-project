@@ -174,9 +174,6 @@
 /* Define to 1 if you have the `sigaltstack' function. */
 #define HAVE_SIGALTSTACK 1
 
-/* Define to 1 if you have the <signal.h> header file. */
-#define HAVE_SIGNAL_H 1
-
 /* Define to 1 if you have the `strerror_r' function. */
 /* HAVE_STRERROR_R defined in Bazel */
 
@@ -191,9 +188,6 @@
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #define HAVE_SYS_RESOURCE_H 1
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#define HAVE_SYS_TIME_H 1
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 /* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
