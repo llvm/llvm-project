@@ -9,13 +9,13 @@
 
 // Test that -l options are passed to llvm-link for --offload=spirv64
 // RUN: %clang -### --target=x86_64-linux-gnu --offload=spirv64 \
-// RUN:   --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
+// RUN:   --no-offload-new-driver --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
 // RUN:   -L%t -lSDL \
 // RUN: 2>&1 | FileCheck -check-prefix=SDL-LINK %s
 
 // Test that .a files are properly unbundled and passed to llvm-link  
 // RUN: %clang -### --target=x86_64-linux-gnu --offload=spirv64 \
-// RUN:   --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
+// RUN:   --no-offload-new-driver --hip-path=%S/Inputs/hipspv -nohipwrapperinc %s \
 // RUN:   %t/libSDL.a \
 // RUN: 2>&1 | FileCheck -check-prefix=SDL-ARCHIVE %s
 
