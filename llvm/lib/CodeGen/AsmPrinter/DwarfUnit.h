@@ -346,9 +346,8 @@ private:
   void constructTypeDIE(DIE &Buffer, const DIStringType *BTy);
   void constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy);
   void constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy);
-  void constructSubrangeDIE(DIE &Buffer, const DISubrange *SR, DIE *IndexTy);
-  void constructGenericSubrangeDIE(DIE &Buffer, const DIGenericSubrange *SR,
-                                   DIE *IndexTy);
+  void constructSubrangeDIE(DIE &Buffer, const DISubrange *SR);
+  void constructGenericSubrangeDIE(DIE &Buffer, const DIGenericSubrange *SR);
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);

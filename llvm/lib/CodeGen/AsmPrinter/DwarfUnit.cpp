@@ -1421,10 +1421,14 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
     addFlag(SPDie, dwarf::DW_AT_deleted);
 }
 
-void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
-                                     DIE *IndexTy) {
+void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR) {
   DIE &DW_Subrange = createAndAddDIE(dwarf::DW_TAG_subrange_type, Buffer);
-  addDIEEntry(DW_Subrange, dwarf::DW_AT_type, *IndexTy);
+
+  // Get an anonymous type for index type.
+  // FIXME: This type should be passed down from the front end
+  // as different languages may have different sizes for indexes.
+  DIE *IdxTy = getIndexTyDie();
+  addDIEEntry(DW_Subrange, dwarf::DW_AT_type, *IdxTy);
 
   // The LowerBound value defines the lower bounds which is typically zero for
   // C/C++. The Count value is the number of elements.  Values are 64 bit. If
@@ -1463,11 +1467,14 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
 }
 
 void DwarfUnit::constructGenericSubrangeDIE(DIE &Buffer,
-                                            const DIGenericSubrange *GSR,
-                                            DIE *IndexTy) {
+                                            const DIGenericSubrange *GSR) {
   DIE &DwGenericSubrange =
       createAndAddDIE(dwarf::DW_TAG_generic_subrange, Buffer);
-  addDIEEntry(DwGenericSubrange, dwarf::DW_AT_type, *IndexTy);
+  // Get an anonymous type for index type.
+  // FIXME: This type should be passed down from the front end
+  // as different languages may have different sizes for indexes.
+  DIE *IdxTy = getIndexTyDie();
+  addDIEEntry(DwGenericSubrange, dwarf::DW_AT_type, *IdxTy);
 
   int64_t DefaultLowerBound = getDefaultLowerBound();
 
@@ -1600,18 +1607,13 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
-  // Get an anonymous type for index type.
-  // FIXME: This type should be passed down from the front end
-  // as different languages may have different sizes for indexes.
-  DIE *IdxTy = getIndexTyDie();
-
   // Add subranges to array type.
   DINodeArray Elements = CTy->getElements();
   for (DINode *E : Elements) {
     if (auto *Element = dyn_cast_or_null<DISubrange>(E))
-      constructSubrangeDIE(Buffer, Element, IdxTy);
+      constructSubrangeDIE(Buffer, Element);
     else if (auto *Element = dyn_cast_or_null<DIGenericSubrange>(E))
-      constructGenericSubrangeDIE(Buffer, Element, IdxTy);
+      constructGenericSubrangeDIE(Buffer, Element);
   }
 }
 
