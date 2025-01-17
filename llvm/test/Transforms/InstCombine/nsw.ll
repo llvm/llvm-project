@@ -420,7 +420,7 @@ define i8 @neg_nsw_mul_missing_nsw_on_mul(i8 %a1, i8 %a2, i8 %b) {
 
 define i16 @mul_nsw_reassoc_prop(i16 %x) {
 ; CHECK-LABEL: @mul_nsw_reassoc_prop(
-; CHECK-NEXT:    [[B:%.*]] = mul i16 [[X:%.*]], 6
+; CHECK-NEXT:    [[B:%.*]] = mul nsw i16 [[X:%.*]], 6
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
   %a = mul nsw i16 %x, 3
@@ -432,7 +432,7 @@ define i16 @mul_nsw_reassoc_prop(i16 %x) {
 
 define i16 @mul_nsw_reassoc_prop_neg(i16 %x) {
 ; CHECK-LABEL: @mul_nsw_reassoc_prop_neg(
-; CHECK-NEXT:    [[B:%.*]] = mul i16 [[X:%.*]], -2201
+; CHECK-NEXT:    [[B:%.*]] = mul nsw i16 [[X:%.*]], -2201
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
   %a = mul nsw i16 %x, -71
