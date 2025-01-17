@@ -32,9 +32,7 @@
 #if HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #include <fcntl.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
