@@ -13,7 +13,6 @@
 #include "src/__support/CPP/limits.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/linux/timezone.h"
-#include <time.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace localtime_utils {
