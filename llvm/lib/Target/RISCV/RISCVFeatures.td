@@ -1228,6 +1228,21 @@ def HasVendorXCVbi
     : Predicate<"Subtarget->hasVendorXCVbi()">,
       AssemblerPredicate<(all_of FeatureVendorXCVbi),
                          "'XCVbi' (CORE-V Immediate Branching)">;
+// MIPS Extensions
+
+def FeatureVendorXMIPSCMove
+    : RISCVExtension<1, 0, "MIPS conditional move instruction(s) (ccmov)">;
+def HasVendorXMIPSCMove
+    : Predicate<"Subtarget->hasVendorXMIPSCMove()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSCMove),
+                         "'Xmipscmove' ('mips.ccmov' instruction)">;
+def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def FeatureVendorXMIPSLSP
+    : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
+def HasVendorXMIPSLSP
+    : Predicate<"Subtarget->hasVendorXMIPSCMove()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
+                         "'Xmipslsp' (load and store pair instructions)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1456,18 +1471,3 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureVendorMIPSCMove : SubtargetFeature<"xmipscmove", "HasVendorMIPSCMove",
-                                       "true", "Using CCMov",
-                                       [Feature64Bit]>;
-def HasVendorMIPSCMove
-    : Predicate<"Subtarget->useCCMovInsn()">,
-      AssemblerPredicate<(all_of FeatureVendorMIPSCMove),
-                         "'Xmipscmove' ('mips.ccmov' instruction)">;
-def FeatureVendorMIPSLoadStorePairs
-    : SubtargetFeature<"xmipslsp", "HasMIPSLSP", "true",
-                       "Optimize for hardware load-store bonding">;
-def HasVendorMIPSLoadStorePairs
-    : Predicate<"Subtarget->useLoadStorePairs()">,
-      AssemblerPredicate<(all_of FeatureVendorMIPSLoadStorePairs),
-                         "'Xmipslsp' (load and store pair instructions)">;

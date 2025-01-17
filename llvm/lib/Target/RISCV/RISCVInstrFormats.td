@@ -566,7 +566,8 @@ class SDPFormat<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = 0b101;
   let Inst{11-10} = imm7{4-3};
-  let Inst{9-0} = 0b0000001011;
+  let Inst{9-7} = 0b000;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
 // Store word pair format.
@@ -583,7 +584,8 @@ class SWPFormat<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = 0b101;
   let Inst{11-9} = imm7{4-2};
-  let Inst{8-0} = 0b010001011;
+  let Inst{8-7} = 0b01;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
 }
 
 //===----------------------------------------------------------------------===//
