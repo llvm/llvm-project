@@ -24,17 +24,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace internal {
-// Types of corrupted blocks, and functions to crash with an error message
-// corresponding to each type.
-enum class BlockStatus {
-  VALID,
-  MISALIGNED,
-  PREV_MISMATCHED,
-  NEXT_MISMATCHED,
-};
-} // namespace internal
-
 /// Returns the value rounded down to the nearest multiple of alignment.
 LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
   // Note this shouldn't overflow since the result will always be <= value.
@@ -109,9 +98,6 @@ class Block {
   static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
 
 public:
-  static constexpr size_t ALIGNMENT = cpp::max(alignof(max_align_t), size_t{4});
-  static const size_t BLOCK_OVERHEAD;
-
   // No copy or move.
   Block(const Block &other) = delete;
   Block &operator=(const Block &other) = delete;
@@ -130,11 +116,11 @@ public:
   ///           pointer will return a non-null pointer.
   LIBC_INLINE static Block *from_usable_space(void *usable_space) {
     auto *bytes = reinterpret_cast<cpp::byte *>(usable_space);
-    return reinterpret_cast<Block *>(bytes - BLOCK_OVERHEAD);
+    return reinterpret_cast<Block *>(bytes - sizeof(Block));
   }
   LIBC_INLINE static const Block *from_usable_space(const void *usable_space) {
     const auto *bytes = reinterpret_cast<const cpp::byte *>(usable_space);
-    return reinterpret_cast<const Block *>(bytes - BLOCK_OVERHEAD);
+    return reinterpret_cast<const Block *>(bytes - sizeof(Block));
   }
 
   /// @returns The total size of the block in bytes, including the header.
@@ -142,7 +128,7 @@ public:
 
   LIBC_INLINE static size_t outer_size(size_t inner_size) {
     // The usable region includes the prev_ field of the next block.
-    return inner_size - sizeof(prev_) + BLOCK_OVERHEAD;
+    return inner_size - sizeof(prev_) + sizeof(Block);
   }
 
   /// @returns The number of usable bytes inside the block were it to be
@@ -170,20 +156,20 @@ public:
   /// @returns The number of usable bytes inside a block with the given outer
   /// size if it remains free.
   LIBC_INLINE static size_t inner_size_free(size_t outer_size) {
-    return outer_size - BLOCK_OVERHEAD;
+    return outer_size - sizeof(Block);
   }
 
   /// @returns A pointer to the usable space inside this block.
   ///
   /// Aligned to some multiple of max_align_t.
   LIBC_INLINE cpp::byte *usable_space() {
-    auto *s = reinterpret_cast<cpp::byte *>(this) + BLOCK_OVERHEAD;
+    auto *s = reinterpret_cast<cpp::byte *>(this) + sizeof(Block);
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
                 "usable space must be aligned to a multiple of max_align_t");
     return s;
   }
   LIBC_INLINE const cpp::byte *usable_space() const {
-    const auto *s = reinterpret_cast<const cpp::byte *>(this) + BLOCK_OVERHEAD;
+    const auto *s = reinterpret_cast<const cpp::byte *>(this) + sizeof(Block);
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % alignof(max_align_t) == 0 &&
                 "usable space must be aligned to a multiple of max_align_t");
     return s;
@@ -246,7 +232,8 @@ public:
   LIBC_INLINE void mark_last() { next_ |= LAST_MASK; }
 
   LIBC_INLINE Block(size_t outer_size) : next_(outer_size) {
-    LIBC_ASSERT(outer_size % ALIGNMENT == 0 && "block sizes must be aligned");
+    LIBC_ASSERT(outer_size % alignof(max_align_t) == 0 &&
+                "block sizes must be aligned");
     LIBC_ASSERT(is_usable_space_aligned(alignof(max_align_t)) &&
                 "usable space must be aligned to a multiple of max_align_t");
   }
@@ -360,10 +347,14 @@ private:
   ///   previous block is free.
   /// * If the `last` flag is set, the block is the sentinel last block. It is
   ///   summarily considered used and has no next block.
+
+public:
+  /// Only for testing.
+  static constexpr size_t PREV_FIELD_SIZE = sizeof(prev_);
 };
 
-inline constexpr size_t Block::BLOCK_OVERHEAD =
-    align_up(sizeof(Block), ALIGNMENT);
+static_assert(alignof(max_align_t) >= 4,
+              "at least 2 bits must be available in block sizes for flags");
 
 LIBC_INLINE
 optional<Block *> Block::init(ByteSpan region) {

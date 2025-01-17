@@ -1447,9 +1447,11 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
-    bool EVLIsLegal = UserIC <= 1 &&
-                      TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-                      !EnableVPlanNativePath;
+    bool EVLIsLegal =
+        UserIC <= 1 && TTI.hasActiveVectorLength(0, nullptr, Align()) &&
+        !EnableVPlanNativePath &&
+        // FIXME: remove this once fixed-ordered recurrence is supported.
+        Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
