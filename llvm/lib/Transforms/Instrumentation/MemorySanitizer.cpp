@@ -3021,33 +3021,40 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// We special-case intrinsics where this approach fails. See llvm.bswap
   /// handling as an example of that.
-  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+  bool handleUnknownIntrinsicUnlogged(IntrinsicInst &I) {
     unsigned NumArgOperands = I.arg_size();
+    if (NumArgOperands == 0)
+      return false;
 
-    bool success = false;
-    if (NumArgOperands == 0) {
-      // No-op
-    } else if (NumArgOperands == 2 &&
-               I.getArgOperand(0)->getType()->isPointerTy() &&
-               I.getArgOperand(1)->getType()->isVectorTy() &&
-               I.getType()->isVoidTy() && !I.onlyReadsMemory()) {
+    if (NumArgOperands == 2 && I.getArgOperand(0)->getType()->isPointerTy() &&
+        I.getArgOperand(1)->getType()->isVectorTy() &&
+        I.getType()->isVoidTy() && !I.onlyReadsMemory()) {
       // This looks like a vector store.
-      success = handleVectorStoreIntrinsic(I);
-    } else if (NumArgOperands == 1 &&
-               I.getArgOperand(0)->getType()->isPointerTy() &&
-               I.getType()->isVectorTy() && I.onlyReadsMemory()) {
-      // This looks like a vector load.
-      success = handleVectorLoadIntrinsic(I);
-    } else if (I.doesNotAccessMemory())
-      success = maybeHandleSimpleNomemIntrinsic(I);
+      return handleVectorStoreIntrinsic(I);
+    }
 
-    if (success && ClDumpStrictIntrinsics)
+    if (NumArgOperands == 1 && I.getArgOperand(0)->getType()->isPointerTy() &&
+        I.getType()->isVectorTy() && I.onlyReadsMemory()) {
+      // This looks like a vector load.
+      return handleVectorLoadIntrinsic(I);
+    }
+
+    if (I.doesNotAccessMemory())
+      if (maybeHandleSimpleNomemIntrinsic(I))
+        return true;
+
+    // FIXME: detect and handle SSE maskstore/maskload
+    return false;
+  }
+
+  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+    bool success = handleUnknownIntrinsicUnlogged(I);
+    if (ClDumpStrictIntrinsics)
       dumpInst(I);
 
     LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
                       << "\n");
 
-    // FIXME: detect and handle SSE maskstore/maskload
     return success;
   }
 
