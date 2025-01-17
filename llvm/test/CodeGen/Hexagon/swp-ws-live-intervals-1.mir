@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # 
 # RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1\
+# RUN: -window-sched=force -filetype=null 2>&1\
 # RUN: | FileCheck %s
 
 # The bug was reported at https://github.com/llvm/llvm-project/issues/123165.

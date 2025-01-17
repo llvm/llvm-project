@@ -270,7 +270,7 @@ void WindowScheduler::backupMBB() {
     OriMIs.push_back(&MI);
   // Remove MIs and the corresponding live intervals.
   for (auto &MI : make_early_inc_range(*MBB)) {
-    Context->LIS->getSlotIndexes()->removeMachineInstrFromMaps(MI, true);
+    Context->LIS->RemoveMachineInstrFromMaps(MI);
     MBB->remove(&MI);
   }
 }
@@ -278,7 +278,7 @@ void WindowScheduler::backupMBB() {
 void WindowScheduler::restoreMBB() {
   // Erase MIs and the corresponding live intervals.
   for (auto &MI : make_early_inc_range(*MBB)) {
-    Context->LIS->getSlotIndexes()->removeMachineInstrFromMaps(MI, true);
+    Context->LIS->RemoveMachineInstrFromMaps(MI);
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
@@ -654,7 +654,7 @@ void WindowScheduler::updateLiveIntervals() {
         UsedRegs.push_back(Reg);
     }
     // Remove the residual slot index of newly cloned MI.
-    Context->LIS->getSlotIndexes()->removeMachineInstrFromMaps(MI, true);
+    Context->LIS->RemoveMachineInstrFromMaps(MI);
   }
   Context->LIS->repairIntervalsInRange(MBB, MBB->begin(), MBB->end(), UsedRegs);
 }
