@@ -282,6 +282,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 }
 
 /// Helper for the public \ref DWARFDebugInfoEntry::GetAttributes API.
+/// Adds all attributes of the DIE at the top of the \c worklist to the
+/// \c attributes list. Specifcations and abstract origins are added
+/// to the \c worklist if the referenced DIE has not been seen before.
 static bool GetAttributes(DWARFUnit const *cu,
                           llvm::SmallVector<DWARFDIE> &worklist,
                           llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,

@@ -53,9 +53,9 @@ public:
 
   using Recurse = DWARFBaseDIE::Recurse;
 
-  /// Get all attribute values for a given DIE, including following any
-  /// specification or abstract origin attributes and including those in the
-  /// results.
+  /// Get all attribute values for a given DIE, optionally following any
+  /// specifications and abstract origins and including their attributes
+  /// in the result too.
   ///
   /// When following specifications/abstract origins, the attributes
   /// on the referring DIE are guaranteed to be visited before the attributes of
