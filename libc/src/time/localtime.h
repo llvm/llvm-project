@@ -11,7 +11,6 @@
 
 #include "hdr/types/time_t.h"
 #include "src/__support/macros/config.h"
-#include <time.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

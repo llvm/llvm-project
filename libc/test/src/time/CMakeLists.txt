@@ -12,11 +12,11 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    libc.src.time.asctime
     .time_utils
-    .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
-    libc.src.time.asctime
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -33,6 +33,8 @@ add_libc_unittest(
   DEPENDS
     .time_utils
     libc.src.time.asctime_r
+    libc.hdr.types.struct_tm
+    libc.src.time.time_constants
 )
 
 add_libc_unittest(
@@ -47,8 +49,12 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    libc.include.time
+    libc.hdr.types.time_t
     .time_utils
     libc.src.time.ctime
+    libc.src.time.time_constants
+    libc.hdr.types.struct_tm
 )
 
 add_libc_unittest(
