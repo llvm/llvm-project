@@ -169,14 +169,15 @@ std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
 
   for (StringRef EnumName : make_first_range(TargetNodesByName)) {
     SmallString<64> DebugName;
-    (TargetSDNodeNamespace + "::" + EnumName).toVector(DebugName);
+    raw_svector_ostream SS(DebugName);
+    SS << TargetSDNodeNamespace << "::" << EnumName;
     NameOffsets.push_back(NameTable.GetOrAddStringOffset(DebugName));
   }
 
   NameTable.EmitStringLiteralDef(
       OS, "static const char " + Target.getName() + "SDNodeNames[]",
       /*Indent=*/"");
-  OS << "\n";
+  OS << '\n';
 
   return NameOffsets;
 }
