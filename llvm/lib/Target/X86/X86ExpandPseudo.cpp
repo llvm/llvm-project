@@ -563,10 +563,10 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::PTILELOADDRST1V:
   case X86::PTCVTROWD2PSrreV:
   case X86::PTCVTROWD2PSrriV:
-  case X86::PTCVTROWPS2PBF16HrreV:
-  case X86::PTCVTROWPS2PBF16HrriV:
-  case X86::PTCVTROWPS2PBF16LrreV:
-  case X86::PTCVTROWPS2PBF16LrriV:
+  case X86::PTCVTROWPS2BF16HrreV:
+  case X86::PTCVTROWPS2BF16HrriV:
+  case X86::PTCVTROWPS2BF16LrreV:
+  case X86::PTCVTROWPS2BF16LrriV:
   case X86::PTCVTROWPS2PHHrreV:
   case X86::PTCVTROWPS2PHHrriV:
   case X86::PTCVTROWPS2PHLrreV:
@@ -595,17 +595,17 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTCVTROWD2PSrriV:
       Opc = X86::TCVTROWD2PSrri;
       break;
-    case X86::PTCVTROWPS2PBF16HrreV:
-      Opc = X86::TCVTROWPS2PBF16Hrre;
+    case X86::PTCVTROWPS2BF16HrreV:
+      Opc = X86::TCVTROWPS2BF16Hrre;
       break;
-    case X86::PTCVTROWPS2PBF16HrriV:
-      Opc = X86::TCVTROWPS2PBF16Hrri;
+    case X86::PTCVTROWPS2BF16HrriV:
+      Opc = X86::TCVTROWPS2BF16Hrri;
       break;
-    case X86::PTCVTROWPS2PBF16LrreV:
-      Opc = X86::TCVTROWPS2PBF16Lrre;
+    case X86::PTCVTROWPS2BF16LrreV:
+      Opc = X86::TCVTROWPS2BF16Lrre;
       break;
-    case X86::PTCVTROWPS2PBF16LrriV:
-      Opc = X86::TCVTROWPS2PBF16Lrri;
+    case X86::PTCVTROWPS2BF16LrriV:
+      Opc = X86::TCVTROWPS2BF16Lrri;
       break;
     case X86::PTCVTROWPS2PHHrreV:
       Opc = X86::TCVTROWPS2PHHrre;
