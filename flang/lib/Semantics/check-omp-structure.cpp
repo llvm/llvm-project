@@ -1708,10 +1708,33 @@ void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   isPredefinedAllocator = true;
+  SymbolSourceMap symbols;
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
   const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(objectList, currSymbols);
+  for (auto &[symbol, source] : currSymbols) {
+    if (IsPointer(*symbol)) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not have POINTER "
+          "attribute"_err_en_US,
+          source.ToString());
+    }
+    if (IsDummy(*symbol)) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not be a dummy "
+          "argument"_err_en_US,
+          source.ToString());
+    }
+    if (symbol->has<AssocEntityDetails>()) {
+      context_.Say(source,
+          "List item '%s' in ALLOCATE directive must not be an associate "
+          "name"_err_en_US,
+          source.ToString());
+    }
+  }
   for (const auto &clause : clauseList.v) {
     CheckAlignValue(clause);
   }
