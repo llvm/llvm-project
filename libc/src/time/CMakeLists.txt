@@ -174,6 +174,7 @@ add_entrypoint_object(
     .time_utils
     libc.include.time
     libc.src.errno.errno
+    libc.src.stdio.fopen
 )
 
 add_subdirectory(strftime_core) #TODO: Move to top
