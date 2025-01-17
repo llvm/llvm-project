@@ -2418,12 +2418,13 @@ public:
       assert(!VL.empty() && "Bad VL");
       assert((empty() || VL.size() == getNumLanes()) &&
              "Expected same number of lanes");
+      assert(S.valid() && "InstructionsState is invalid.");
       // IntrinsicInst::isCommutative returns true if swapping the first "two"
       // arguments to the intrinsic produces the same result.
       constexpr unsigned IntrinsicNumOperands = 2;
-      unsigned NumOperands = S.getMainOp()->getNumOperands();
-      ArgSize = isa<IntrinsicInst>(S.getMainOp()) ? IntrinsicNumOperands
-                                                  : NumOperands;
+      Instruction *MainOp = S.getMainOp();
+      unsigned NumOperands = MainOp->getNumOperands();
+      ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
       for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
@@ -2442,20 +2443,20 @@ public:
           // operations or alternating sequences (e.g., +, -), we can safely
           // tell the inverse operations by checking commutativity.
           if (isa<PoisonValue>(VL[Lane])) {
-            if (auto *EI = dyn_cast<ExtractElementInst>(S.getMainOp())) {
+            if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
               if (OpIdx == 0) {
                 OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
                 continue;
               }
-            } else if (auto *EV = dyn_cast<ExtractValueInst>(S.getMainOp())) {
+            } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
               if (OpIdx == 0) {
                 OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
                 continue;
               }
             }
             OpsVec[OpIdx][Lane] = {
-                PoisonValue::get(S.getMainOp()->getOperand(OpIdx)->getType()),
-                true, false};
+                PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
+                false};
             continue;
           }
           bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
