@@ -39,7 +39,11 @@
 #define _Thread_local thread_local
 
 #undef __NOEXCEPT
+#if __cplusplus >= 201103L
 #define __NOEXCEPT noexcept
+#else
+#define __NOEXCEPT throw()
+#endif
 
 #else // not __cplusplus
 
