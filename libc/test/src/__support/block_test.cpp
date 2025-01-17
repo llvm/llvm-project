@@ -22,7 +22,7 @@ using LIBC_NAMESPACE::cpp::span;
 
 TEST(LlvmLibcBlockTest, CanCreateSingleAlignedBlock) {
   constexpr size_t kN = 1024;
-  alignas(Block::ALIGNMENT) array<byte, kN> bytes;
+  alignas(max_align_t) array<byte, kN> bytes;
 
   auto result = Block::init(bytes);
   ASSERT_TRUE(result.has_value());
@@ -52,7 +52,7 @@ TEST(LlvmLibcBlockTest, CanCreateUnalignedSingleBlock) {
   constexpr size_t kN = 1024;
 
   // Force alignment, so we can un-force it below
-  alignas(Block::ALIGNMENT) array<byte, kN> bytes;
+  alignas(max_align_t) array<byte, kN> bytes;
   span<byte> aligned(bytes);
 
   auto result = Block::init(aligned.subspan(1));
@@ -90,8 +90,7 @@ TEST(LlvmLibcBlockTest, CanSplitBlock) {
   auto *block2 = *result;
 
   EXPECT_EQ(block1->inner_size(), kSplitN);
-  EXPECT_EQ(block1->outer_size(),
-            kSplitN - prev_field_size + Block::BLOCK_OVERHEAD);
+  EXPECT_EQ(block1->outer_size(), kSplitN - prev_field_size + sizeof(Block));
 
   EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
