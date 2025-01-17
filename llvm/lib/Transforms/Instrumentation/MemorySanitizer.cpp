@@ -3048,14 +3048,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
-    bool success = handleUnknownIntrinsicUnlogged(I);
-    if (ClDumpStrictIntrinsics)
-      dumpInst(I);
+    if (handleUnknownIntrinsicUnlogged(I)) {
+      if (ClDumpStrictIntrinsics)
+        dumpInst(I);
 
-    LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
-                      << "\n");
-
-    return success;
+      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+                        << "\n");
+      return true;
+    } else
+      return false;
   }
 
   void handleInvariantGroup(IntrinsicInst &I) {
