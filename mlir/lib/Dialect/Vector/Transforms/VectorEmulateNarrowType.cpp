@@ -48,6 +48,10 @@ using namespace mlir;
 using VectorValue = TypedValue<VectorType>;
 using MemRefValue = TypedValue<MemRefType>;
 
+//===----------------------------------------------------------------------===//
+// Utils
+//===----------------------------------------------------------------------===//
+
 /// Returns a compressed mask for the emulated vector. For example, when
 /// emulating an eight-element `i8` vector with `i32` (i.e. when the source
 /// elements span two dest elements), this method compresses `vector<8xi1>`
@@ -407,6 +411,7 @@ namespace {
 // ConvertVectorStore
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -632,6 +637,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 // ConvertVectorMaskedStore
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorMaskedStore final
     : OpConversionPattern<vector::MaskedStoreOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -745,6 +751,7 @@ struct ConvertVectorMaskedStore final
 // ConvertVectorLoad
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -802,7 +809,8 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     // compile time as they must be constants.
 
     auto origElements = op.getVectorType().getNumElements();
-    bool isAlignedEmulation = origElements % emulatedPerContainerElem == 0;
+    // Note, per-element-alignment was already verified above.
+    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -818,9 +826,8 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isAlignedEmulation
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isFullyAligned ? 0
+                       : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     // Always load enough elements which can cover the original elements.
     int64_t maxintraDataOffset =
@@ -834,10 +841,10 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     if (!foldedIntraVectorOffset) {
       auto resultVector = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
-      result = dynamicallyExtractSubVector(rewriter, loc, result, resultVector,
-                                           linearizedInfo.intraDataOffset,
-                                           origElements);
-    } else if (!isAlignedEmulation) {
+      result = dynamicallyExtractSubVector(
+          rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
+          linearizedInfo.intraDataOffset, origElements);
+    } else if (!isFullyAligned) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -850,6 +857,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 // ConvertVectorMaskedLoad
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorMaskedLoad final
     : OpConversionPattern<vector::MaskedLoadOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -1016,6 +1024,7 @@ struct ConvertVectorMaskedLoad final
 // ConvertVectorTransferRead
 //===----------------------------------------------------------------------===//
 
+// TODO: Document-me
 struct ConvertVectorTransferRead final
     : OpConversionPattern<vector::TransferReadOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -1046,7 +1055,8 @@ struct ConvertVectorTransferRead final
 
     auto origElements = op.getVectorType().getNumElements();
 
-    bool isAlignedEmulation = origElements % emulatedPerContainerElem == 0;
+    // Note, per-element-alignment was already verified above.
+    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, containerElemTy,
                                                       adaptor.getPadding());
@@ -1065,9 +1075,8 @@ struct ConvertVectorTransferRead final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isAlignedEmulation
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isFullyAligned ? 0
+                       : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     int64_t maxIntraDataOffset =
         foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
@@ -1091,7 +1100,7 @@ struct ConvertVectorTransferRead final
       result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
                                            linearizedInfo.intraDataOffset,
                                            origElements);
-    } else if (!isAlignedEmulation) {
+    } else if (!isFullyAligned) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -1774,33 +1783,34 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 /// LLVM to scramble with peephole optimizations. Templated to choose between
 /// signed and unsigned conversions.
 ///
-/// For example (signed):
+/// EXAMPLE 1 (signed):
 ///    arith.extsi %in : vector<8xi4> to vector<8xi32>
-///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
-///        %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
+/// is rewriten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.shli %0, 4 : vector<4xi8>
+///    %2 = arith.shrsi %1, 4 : vector<4xi8>
+///    %3 = arith.shrsi %0, 4 : vector<4xi8>
+///    %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
+///    %5 = arith.extsi %4 : vector<8xi8> to vector<8xi32>
 ///
+/// EXAMPLE 2 (fp):
 ///    arith.sitofp %in : vector<8xi4> to vector<8xf32>
-///      is rewriten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.shli %0, 4 : vector<4xi8>
-///        %2 = arith.shrsi %1, 4 : vector<4xi8>
-///        %3 = arith.shrsi %0, 4 : vector<4xi8>
-///        %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
-///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
+/// is rewriten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.shli %0, 4 : vector<4xi8>
+///    %2 = arith.shrsi %1, 4 : vector<4xi8>
+///    %3 = arith.shrsi %0, 4 : vector<4xi8>
+///    %4 = vector.interleave %2, %3 : vector<4xi8> -> vector<8xi8>
+///    %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
 ///
-/// Example (unsigned):
+/// EXAMPLE 3 (unsigned):
 ///    arith.extui %in : vector<8xi4> to vector<8xi32>
-///      is rewritten as
-///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
-///        %1 = arith.andi %0, 15 : vector<4xi8>
-///        %2 = arith.shrui %0, 4 : vector<4xi8>
-///        %3 = vector.interleave %1, %2 : vector<4xi8> -> vector<8xi8>
-///        %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
+///  is rewritten as:
+///    %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///    %1 = arith.andi %0, 15 : vector<4xi8>
+///    %2 = arith.shrui %0, 4 : vector<4xi8>
+///    %3 = vector.interleave %1, %2 : vector<4xi8> -> vector<8xi8>
+///    %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
 ///
 template <typename ConversionOpType, bool isSigned>
 struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
@@ -1810,8 +1820,8 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
                                 PatternRewriter &rewriter) const override {
     // Verify the preconditions.
     Value srcValue = conversionOp.getIn();
-    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
-    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
+    VectorType srcVecType = dyn_cast<VectorType>(srcValue.getType());
+    VectorType dstVecType = dyn_cast<VectorType>(conversionOp.getType());
 
     if (failed(
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
@@ -1851,15 +1861,16 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 /// For example:
 ///    arith.trunci %in : vector<8xi32> to vector<8xi4>
-///      is rewriten as
 ///
-///        %cst = arith.constant dense<15> : vector<4xi8>
-///        %cst_0 = arith.constant dense<4> : vector<4xi8>
-///        %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
-///        %2 = arith.andi %0, %cst : vector<4xi8>
-///        %3 = arith.shli %1, %cst_0 : vector<4xi8>
-///        %4 = arith.ori %2, %3 : vector<4xi8>
-///        %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
+/// is rewriten as:
+///
+///   %cst = arith.constant dense<15> : vector<4xi8>
+///   %cst_0 = arith.constant dense<4> : vector<4xi8>
+///   %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
+///   %2 = arith.andi %0, %cst : vector<4xi8>
+///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
+///   %4 = arith.ori %2, %3 : vector<4xi8>
+///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
@@ -1903,10 +1914,11 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
 
 /// Rewrite a sub-byte vector transpose into a sequence of instructions that
 /// perform the transpose on wider (byte) element types.
-/// For example:
+///
+/// EXAMPLE:
 ///   %0 = vector.transpose %a, [1, 0] : vector<8x16xi4> to vector<16x8xi4>
 ///
-///   is rewritten as:
+/// is rewritten as:
 ///
 ///   %0 = arith.extsi %arg0 : vector<8x16xi4> to vector<8x16xi8>
 ///   %1 = vector.transpose %0, [1, 0] : vector<8x16xi8> to vector<16x8xi8>
@@ -1954,6 +1966,7 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 // Public Interface Definition
 //===----------------------------------------------------------------------===//
 
+// The emulated type is inferred from the converted memref type.
 void vector::populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
@@ -1966,22 +1979,26 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
 
 void vector::populateVectorNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
+  // TODO: Document what the emulated type is.
   patterns.add<RewriteBitCastOfTruncI, RewriteExtOfBitCast<arith::ExtUIOp>,
                RewriteExtOfBitCast<arith::ExtSIOp>>(patterns.getContext(),
                                                     benefit);
 
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.
+  // The emulated type is always i8.
   patterns.add<RewriteAlignedSubByteIntExt<arith::ExtSIOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntExt<arith::SIToFPOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
+  // The emulated type is always i8.
   patterns
       .add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>,
            RewriteAlignedSubByteIntExt<arith::UIToFPOp, /*isSigned=*/false>>(
           patterns.getContext(), benefit.getBenefit() + 1);
 }
 
+// The emulated type is always i8.
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<RewriteVectorTranspose>(patterns.getContext(), benefit);
