@@ -89,6 +89,17 @@ class X86MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  virtual bool hasUseOrDefofSPOrFP(const MCInst &Inst) const override {
+    bool IsLoad, IsStore, IsStoreFromReg, IsSimple, IsIndexed;
+    MCPhysReg Reg;
+    int32_t SrcImm;
+    uint16_t StackPtrReg;
+    int64_t StackOffset;
+    uint8_t Size;
+    return isStackAccess(Inst, IsLoad, IsStore, IsStoreFromReg, Reg, SrcImm,
+                         StackPtrReg, StackOffset, Size, IsSimple, IsIndexed);
+  }
+
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
                          bool CreateNewSymbols) const override {

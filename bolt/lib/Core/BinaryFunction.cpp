@@ -1961,6 +1961,59 @@ bool BinaryFunction::postProcessIndirectBranches(
       bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
         return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
       });
+      if (BC.isAArch64()) {
+        // Any adr instruction of aarch64 will generate a new entry,
+        // Adr instruction cannt afford to do any optimizations
+        if (!IsEpilogue && !isMultiEntry()) {
+          BinaryBasicBlock::iterator LastDefCFAOffsetInstIter = BB.end();
+          // find the last OpDefCfaOffset 0 instruction.
+          for (BinaryBasicBlock::iterator Iter = BB.begin(); Iter != BB.end();
+               ++Iter) {
+            if (&*Iter == &Instr) {
+              break;
+            }
+            if (BC.MIB->isCFI(*Iter)) {
+              const MCCFIInstruction *CFIInst =
+                  BB.getParent()->getCFIFor(*Iter);
+              if ((CFIInst->getOperation() ==
+                   MCCFIInstruction::OpDefCfaOffset) &&
+                  (CFIInst->getOffset() == 0)) {
+                LastDefCFAOffsetInstIter = Iter;
+                break;
+              }
+            }
+          }
+          if (LastDefCFAOffsetInstIter != BB.end()) {
+            IsEpilogue = true;
+            // make sure there is no instruction manipulating sp between the two
+            // instructions
+            BinaryBasicBlock::iterator Iter = LastDefCFAOffsetInstIter;
+            while (&*Iter != &Instr) {
+              if (BC.MIB->hasUseOrDefofSPOrFP(*Iter)) {
+                IsEpilogue = false;
+                break;
+              }
+              ++Iter;
+            }
+          }
+        }
+
+        if (!IsEpilogue) {
+          IsEpilogue = true;
+          BinaryFunction *Func = BB.getFunction();
+          for (const BinaryBasicBlock &BinaryBB : *Func) {
+            for (const MCInst &Inst : BinaryBB) {
+              if (BC.MIB->hasUseOrDefofSPOrFP(Inst)) {
+                IsEpilogue = false;
+                break;
+              }
+            }
+            if (!IsEpilogue) {
+              break;
+            }
+          }
+        }
+      }
       if (IsEpilogue) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
