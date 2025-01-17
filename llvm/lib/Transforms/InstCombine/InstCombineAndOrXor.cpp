@@ -1683,12 +1683,9 @@ static Instruction *reassociateFCmps(BinaryOperator &BO,
 
   // and (fcmp ord X, 0), (and (fcmp ord Y, 0), Z) --> and (fcmp ord X, Y), Z
   // or  (fcmp uno X, 0), (or  (fcmp uno Y, 0), Z) --> or  (fcmp uno X, Y), Z
-  Value *NewFCmp = Builder.CreateFCmp(NanPred, X, Y);
-  if (auto *NewFCmpInst = dyn_cast<FCmpInst>(NewFCmp)) {
-    // Intersect FMF from the 2 source fcmps.
-    NewFCmpInst->copyIRFlags(Op0);
-    NewFCmpInst->andIRFlags(BO10);
-  }
+  // Intersect FMF from the 2 source fcmps.
+  Value *NewFCmp =
+      Builder.CreateFCmpFMF(NanPred, X, Y, FMFSource::intersect(Op0, BO10));
   return BinaryOperator::Create(Opcode, NewFCmp, BO11);
 }
 

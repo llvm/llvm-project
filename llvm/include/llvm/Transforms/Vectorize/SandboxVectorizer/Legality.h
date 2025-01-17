@@ -23,10 +23,12 @@ namespace llvm::sandboxir {
 
 class LegalityAnalysis;
 class Value;
+class InstrMaps;
 
 enum class LegalityResultID {
-  Pack,  ///> Collect scalar values.
-  Widen, ///> Vectorize by combining scalars to a vector.
+  Pack,         ///> Collect scalar values.
+  Widen,        ///> Vectorize by combining scalars to a vector.
+  DiamondReuse, ///> Don't generate new code, reuse existing vector.
 };
 
 /// The reason for vectorizing or not vectorizing.
@@ -50,6 +52,8 @@ struct ToStr {
       return "Pack";
     case LegalityResultID::Widen:
       return "Widen";
+    case LegalityResultID::DiamondReuse:
+      return "DiamondReuse";
     }
     llvm_unreachable("Unknown LegalityResultID enum");
   }
@@ -137,6 +141,19 @@ public:
   }
 };
 
+class DiamondReuse final : public LegalityResult {
+  friend class LegalityAnalysis;
+  Value *Vec;
+  DiamondReuse(Value *Vec)
+      : LegalityResult(LegalityResultID::DiamondReuse), Vec(Vec) {}
+
+public:
+  static bool classof(const LegalityResult *From) {
+    return From->getSubclassID() == LegalityResultID::DiamondReuse;
+  }
+  Value *getVector() const { return Vec; }
+};
+
 class Pack final : public LegalityResultWithReason {
   Pack(ResultReason Reason)
       : LegalityResultWithReason(LegalityResultID::Pack, Reason) {}
@@ -145,6 +162,59 @@ class Pack final : public LegalityResultWithReason {
 public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::Pack;
+  }
+};
+
+/// Describes how to collect the values needed by each lane.
+class CollectDescr {
+public:
+  /// Describes how to get a value element. If the value is a vector then it
+  /// also provides the index to extract it from.
+  class ExtractElementDescr {
+    Value *V;
+    /// The index in `V` that the value can be extracted from.
+    /// This is nullopt if we need to use `V` as a whole.
+    std::optional<int> ExtractIdx;
+
+  public:
+    ExtractElementDescr(Value *V, int ExtractIdx)
+        : V(V), ExtractIdx(ExtractIdx) {}
+    ExtractElementDescr(Value *V) : V(V), ExtractIdx(std::nullopt) {}
+    Value *getValue() const { return V; }
+    bool needsExtract() const { return ExtractIdx.has_value(); }
+    int getExtractIdx() const { return *ExtractIdx; }
+  };
+
+  using DescrVecT = SmallVector<ExtractElementDescr, 4>;
+  DescrVecT Descrs;
+
+public:
+  CollectDescr(SmallVectorImpl<ExtractElementDescr> &&Descrs)
+      : Descrs(std::move(Descrs)) {}
+  /// If all elements come from a single vector input, then return that vector
+  /// and whether we need a shuffle to get them in order.
+  std::optional<std::pair<Value *, bool>> getSingleInput() const {
+    const auto &Descr0 = *Descrs.begin();
+    Value *V0 = Descr0.getValue();
+    if (!Descr0.needsExtract())
+      return std::nullopt;
+    bool NeedsShuffle = Descr0.getExtractIdx() != 0;
+    int Lane = 1;
+    for (const auto &Descr : drop_begin(Descrs)) {
+      if (!Descr.needsExtract())
+        return std::nullopt;
+      if (Descr.getValue() != V0)
+        return std::nullopt;
+      if (Descr.getExtractIdx() != Lane++)
+        NeedsShuffle = true;
+    }
+    return std::make_pair(V0, NeedsShuffle);
+  }
+  bool hasVectorInputs() const {
+    return any_of(Descrs, [](const auto &D) { return D.needsExtract(); });
+  }
+  const SmallVector<ExtractElementDescr, 4> &getDescrs() const {
+    return Descrs;
   }
 };
 
@@ -160,11 +230,17 @@ class LegalityAnalysis {
 
   ScalarEvolution &SE;
   const DataLayout &DL;
+  InstrMaps &IMaps;
+
+  /// Finds how we can collect the values in \p Bndl from the vectorized or
+  /// non-vectorized code. It returns a map of the value we should extract from
+  /// and the corresponding shuffle mask we need to use.
+  CollectDescr getHowToCollectValues(ArrayRef<Value *> Bndl) const;
 
 public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
-                   Context &Ctx)
-      : Sched(AA, Ctx), SE(SE), DL(DL) {}
+                   Context &Ctx, InstrMaps &IMaps)
+      : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT... Args) {
@@ -177,7 +253,7 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
-  void clear() { Sched.clear(); }
+  void clear();
 };
 
 } // namespace llvm::sandboxir
