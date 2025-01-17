@@ -3626,7 +3626,9 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
   const SCEV *DstSCEV = SE->getSCEV(DstPtr);
   LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
   LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
-  if (SE->getPointerBase(SrcSCEV) != SE->getPointerBase(DstSCEV)) {
+  const SCEV *SrcBase = SE->getPointerBase(SrcSCEV);
+  const SCEV *DstBase = SE->getPointerBase(DstSCEV);
+  if (SrcBase != DstBase) {
     // If two pointers have different bases, trying to analyze indexes won't
     // work; we can't compare them to each other. This can happen, for example,
     // if one is produced by an LCSSA PHI node.
@@ -3635,6 +3637,100 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
     // returns a SCEVCouldNotCompute.
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
     return std::make_unique<Dependence>(Src, Dst);
+  }
+
+  auto EltSize = SrcLoc.Size.toRaw();
+  assert(EltSize == DstLoc.Size.toRaw() && "Array element size differ");
+
+  // Check that memory access offsets in V are multiples of array EltSize.
+  std::function<bool(const SCEV *, const SCEV *&)> checkOffsets =
+      [&](const SCEV *V, const SCEV *&Param) -> bool {
+    if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
+      if (!checkOffsets(AddRec->getStart(), Param))
+        return false;
+      return checkOffsets(AddRec->getStepRecurrence(*SE), Param);
+    }
+    if (auto *Cst = dyn_cast<SCEVConstant>(V)) {
+      APInt C = Cst->getAPInt();
+      return C.srem(EltSize) == 0;
+    }
+
+    auto checkParamsMultipleOfSize = [&](const SCEV *V,
+                                         const SCEV *&Param) -> bool {
+      if (EltSize == 1)
+        return true;
+      if (!Param) {
+        Param = V;
+        return true;
+      }
+      if (Param == V)
+        return true;
+
+      // Check whether "(Param - V) % Size == 0".
+      const SCEV *Diff = SE->getMinusSCEV(Param, V);
+      if (const SCEVConstant *Cst = dyn_cast<SCEVConstant>(Diff)) {
+        APInt Val = Cst->getAPInt();
+        if (Val.isZero())
+          return true;
+        auto Rem =
+            Val.srem(APInt(Val.getBitWidth(), EltSize, /*isSigned=*/true));
+        if (Rem.isZero())
+          return true;
+        LLVM_DEBUG(dbgs() << "SCEV with different offsets: " << *Param << " - "
+                          << *V << " = " << *Diff << " % " << EltSize << " = "
+                          << Rem << " != 0\n");
+        return false;
+      }
+      // Check if the symbolic difference is a multiple of Size.
+      const SCEV *Val = SE->getConstant(
+          APInt(Diff->getType()->getScalarSizeInBits(), EltSize));
+
+      // Check by using the remainder computation.
+      const SCEV *Remainder = SE->getURemExpr(Diff, Val);
+      if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Remainder))
+        if (C->getValue()->isZero())
+          return true;
+
+      // Check by using the division computation.
+      const SCEV *Q = SE->getUDivExpr(Diff, Val);
+      const SCEV *Product = SE->getMulExpr(Q, Val);
+      if (Diff == Product)
+        return true;
+      LLVM_DEBUG(dbgs() << "SCEV with different offsets:\n"
+                        << *Param << " - " << *V << " = " << *Diff << "\n"
+                        << "Remainder = " << *Remainder << "\n"
+                        << "Q = " << *Q << " Product = " << *Product << "\n");
+      return false;
+    };
+    // Expressions like "n".
+    if (isa<SCEVUnknown>(V))
+      return checkParamsMultipleOfSize(V, Param);
+    // Expressions like "n + 1".
+    if (isa<SCEVAddExpr>(V))
+      return !SCEVExprContains(V, [](const SCEV *S) {
+        return isa<SCEVUnknown>(S);
+      }) || checkParamsMultipleOfSize(V, Param);
+
+    if (isa<SCEVMulExpr>(V))
+      return !SCEVExprContains(V, [](const SCEV *S) {
+        return isa<SCEVUnknown>(S);
+      }) || checkParamsMultipleOfSize(V, Param);
+
+    LLVM_DEBUG(dbgs() << "SCEV node not handled yet: " << *V << "\n");
+    return false;
+  };
+
+  // Check that memory access offsets are multiples of element sizes.
+  const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
+  const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
+  const SCEV *Param = nullptr;
+
+  if (Src != Dst) {
+    // Check that memory access offsets are multiples of element sizes.
+    if (!checkOffsets(SrcEv, Param) || !checkOffsets(DstEv, Param)) {
+      LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
+      return std::make_unique<Dependence>(Src, Dst);
+    }
   }
 
   // establish loop nesting levels
