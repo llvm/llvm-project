@@ -308,7 +308,8 @@ void Driver::setDriverMode(StringRef Value) {
 }
 
 InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
-                                     bool UseDriverMode, bool &ContainsError) {
+                                     bool UseDriverMode,
+                                     bool &ContainsError) const {
   llvm::PrettyStackTraceString CrashInfo("Command line argument parsing");
   ContainsError = false;
 
@@ -1674,12 +1675,30 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   std::unique_ptr<llvm::opt::InputArgList> UArgs =
       std::make_unique<InputArgList>(std::move(Args));
 
+  // Owned by the host.
+  const ToolChain &TC =
+      getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
+
+  {
+    SmallVector<std::string> MultilibMacroDefinesStr =
+        TC.getMultilibMacroDefinesStr(*UArgs);
+    SmallVector<const char *> MLMacroDefinesChar(
+        llvm::map_range(MultilibMacroDefinesStr, [&UArgs](const auto &S) {
+          return UArgs->MakeArgString(Twine("-D") + Twine(S));
+        }));
+    bool MLContainsError;
+    auto MultilibMacroDefineList =
+        std::make_unique<InputArgList>(ParseArgStrings(
+            MLMacroDefinesChar, /*UseDriverMode=*/false, MLContainsError));
+    if (!MLContainsError) {
+      for (auto *Opt : *MultilibMacroDefineList) {
+        appendOneArg(*UArgs, Opt);
+      }
+    }
+  }
+
   // Perform the default argument translations.
   DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
-
-  // Owned by the host.
-  const ToolChain &TC = getToolChain(
-      *UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
