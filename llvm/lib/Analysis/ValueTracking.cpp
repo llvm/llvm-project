@@ -6192,9 +6192,9 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   if (isa<UndefValue>(V))
     return UndefInt8;
 
-  // Return Undef for zero-sized type.
+  // Return poison for zero-sized type.
   if (DL.getTypeStoreSize(V->getType()).isZero())
-    return UndefInt8;
+    return PoisonValue::get(Type::getInt8Ty(Ctx));
 
   Constant *C = dyn_cast<Constant>(V);
   if (!C) {
@@ -6886,7 +6886,7 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
       return FirstObject;
   } while (!Worklist.empty());
 
-  return Object;
+  return Object ? Object : FirstObject;
 }
 
 /// This is the function that does the work of looking through basic
@@ -9384,19 +9384,6 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
   }
 }
 
-/// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
-/// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
-/// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondMatchingOperands(CmpPredicate LPred,
-                                                         CmpPredicate RPred) {
-  if (ICmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
-    return true;
-  if (ICmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
-    return false;
-
-  return std::nullopt;
-}
-
 /// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
 /// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
@@ -9489,27 +9476,28 @@ isImpliedCondICmps(const ICmpInst *LHS, CmpPredicate RPred, const Value *R0,
 
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
-    return isImpliedCondMatchingOperands(LPred, RPred);
+    return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
 
   // It only really makes sense in the context of signed comparison for "X - Y
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is false
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SGE)) &&
+  CmpInst::Predicate SignedLPred = LPred.getPreferredSignedPredicate();
+  if ((SignedLPred == ICmpInst::ICMP_SGT ||
+       SignedLPred == ICmpInst::ICMP_SGE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonPositive()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == false)
+        ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == false)
       return false;
   }
 
   // Take SLT as an example:  L0:x < L1:y and C <= 0
   //                      ==> R0:(x -nsw y) < R1:(-C) is true
-  if ((CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLT) ||
-       CmpPredicate::getMatching(LPred, ICmpInst::ICMP_SLE)) &&
+  if ((SignedLPred == ICmpInst::ICMP_SLT ||
+       SignedLPred == ICmpInst::ICMP_SLE) &&
       match(R0, m_NSWSub(m_Specific(L0), m_Specific(L1)))) {
     if (match(R1, m_NonNegative()) &&
-        isImpliedCondMatchingOperands(LPred, RPred) == true)
+        ICmpInst::isImpliedByMatchingCmp(LPred, RPred) == true)
       return true;
   }
 

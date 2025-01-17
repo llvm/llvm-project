@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -191,6 +192,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     }
     break;
   }
+  case ISD::FADD:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    if (tryBF16ArithToFMA(N))
+      return;
+    break;
   default:
     break;
   }
@@ -2450,6 +2457,62 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
   return true;
 }
 
+// Select bf16/bf16v2 FADD, FSUB, FMUL as fma on targets with only fma
+bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
+  EVT VT = SDValue(N, 0).getValueType();
+  if (VT.getScalarType() != MVT::bf16)
+    return false;
+
+  const NVPTXSubtarget *STI = TM.getSubtargetImpl();
+  if (STI->hasNativeBF16Support(N->getOpcode()))
+    return false;
+
+  const bool IsVec = VT.isVector();
+  assert(!IsVec || VT.getVectorNumElements() == 2);
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SmallVector<SDValue, 3> Operands;
+  auto GetConstant = [&](float Value) -> SDValue {
+    // BF16 immediates must be legalized to integer register values
+    APFloat APF(Value);
+    bool LosesInfo;
+    APF.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    assert(!LosesInfo);
+    if (IsVec) {
+      auto API = APF.bitcastToAPInt();
+      API = API.concat(API);
+      auto Const = CurDAG->getTargetConstant(API, DL, MVT::i32);
+      return SDValue(CurDAG->getMachineNode(NVPTX::IMOV32ri, DL, VT, Const), 0);
+    }
+    auto Const = CurDAG->getTargetConstantFP(APF, DL, VT);
+    return SDValue(CurDAG->getMachineNode(NVPTX::BFMOV16ri, DL, VT, Const), 0);
+  };
+
+  switch (N->getOpcode()) {
+  case ISD::FADD:
+    // add(a, b) -> fma(a, 1.0, b)
+    Operands = {N0, GetConstant(1.0), N1};
+    break;
+  case ISD::FSUB:
+    // sub(a, b) -> fma(b, -1.0, a)
+    Operands = {N1, GetConstant(-1.0), N0};
+    break;
+  case ISD::FMUL:
+    // mul(a, b) -> fma(a, b, -0.0)
+    // NOTE: The identity is -0, not 0, because -0 + 0 == 0 for floats
+    Operands = {N0, N1, GetConstant(-0.0)};
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  };
+
+  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
+  ReplaceNode(N, FMA);
+  return true;
+}
+
 static inline bool isAddLike(const SDValue V) {
   return V.getOpcode() == ISD::ADD ||
          (V->getOpcode() == ISD::OR && V->getFlags().hasDisjoint());
@@ -2482,15 +2545,25 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
 bool NVPTXDAGToDAGISel::SelectADDRsi_imp(SDNode *OpNode, SDValue Addr,
                                          SDValue &Base, SDValue &Offset,
                                          MVT VT) {
-  if (isAddLike(Addr)) {
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
-      SDValue base = Addr.getOperand(0);
-      if (SelectDirectAddr(base, Base)) {
-        Offset =
-            CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(OpNode), VT);
-        return true;
+  std::function<std::optional<uint64_t>(SDValue, uint64_t)>
+      FindRootAddressAndTotalOffset =
+          [&](SDValue Addr,
+              uint64_t AccumulatedOffset) -> std::optional<uint64_t> {
+    if (isAddLike(Addr)) {
+      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1))) {
+        SDValue PossibleBaseAddr = Addr.getOperand(0);
+        AccumulatedOffset += CN->getZExtValue();
+        if (SelectDirectAddr(PossibleBaseAddr, Base))
+          return AccumulatedOffset;
+        return FindRootAddressAndTotalOffset(PossibleBaseAddr,
+                                             AccumulatedOffset);
       }
     }
+    return std::nullopt;
+  };
+  if (auto AccumulatedOffset = FindRootAddressAndTotalOffset(Addr, 0)) {
+    Offset = CurDAG->getTargetConstant(*AccumulatedOffset, SDLoc(OpNode), VT);
+    return true;
   }
   return false;
 }
