@@ -1939,8 +1939,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
 
     for (auto &op : *block) {
       if (auto varOp = dyn_cast<spirv::VariableOp>(op)) {
-        if (varOp.getStorageClass() == spirv::StorageClass::Function) { // This prevents %1 variable duplication in composite4anti
-          // For function-scoped variables, ensure proper mapping but maintain their original location
+        if (varOp.getStorageClass() == spirv::StorageClass::Function) {
           mapper.map(&op, &op);
           continue;
         }
@@ -2016,7 +2015,6 @@ LogicalResult ControlFlowStructurizer::structurize() {
   for (auto *block : constructBlocks) {
     block->walk([&](spirv::VariableOp varOp) {
       if (varOp.getStorageClass() == spirv::StorageClass::Function) {
-        // Move function variables to the entry block to preserve their lifetime
         varOp->moveBefore(&body.front().front());
       }
     });
