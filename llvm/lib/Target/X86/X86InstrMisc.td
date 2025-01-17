@@ -1733,7 +1733,7 @@ def CLDEMOTE : I<0x1C, MRM0m, (outs), (ins i8mem:$src), "cldemote\t$src",
 //
 
 let SchedRW = [WriteLoad] in {
-let Predicates = [HasMOVRS, NoEGPR] in {
+let Predicates = [HasMOVRS, NoEGPR, In64BitMode] in {
 def MOVRS8rm     : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),
                    "movrs{b}\t{$src, $dst|$dst, $src}",
                    [(set GR8:$dst, (int_x86_movrsqi addr:$src))]>, T8;
@@ -1746,8 +1746,25 @@ def MOVRS32rm    : I<0x8B, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
 def MOVRS64rm    : RI<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                    "movrs{q}\t{$src, $dst|$dst, $src}",
                    [(set GR64:$dst, (int_x86_movrsdi addr:$src))]>, T8;
+}
+
+let Predicates = [HasMOVRS] in
 def PREFETCHRST2 : I<0x18, MRM4m, (outs), (ins i8mem:$src),
                    "prefetchrst2\t$src",
                    [(int_x86_prefetchrs addr:$src)]>, TB;
+
+let Predicates = [HasMOVRS, HasEGPR, In64BitMode] in {
+def MOVRS8rm_EVEX  : I<0x8A, MRMSrcMem, (outs GR8 :$dst), (ins i8mem :$src),
+                   "movrs{b}\t{$src, $dst|$dst, $src}",
+                   [(set GR8:$dst, (int_x86_movrsqi addr:$src))]>, EVEX, NoCD8, T_MAP4;
+def MOVRS16rm_EVEX : I<0x8B, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
+                   "movrs{w}\t{$src, $dst|$dst, $src}",
+                   [(set GR16:$dst, (int_x86_movrshi addr:$src))]>, EVEX, NoCD8, PD, T_MAP4;
+def MOVRS32rm_EVEX : I<0x8B, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
+                   "movrs{l}\t{$src, $dst|$dst, $src}",
+                   [(set GR32:$dst, (int_x86_movrssi addr:$src))]>, EVEX, NoCD8, T_MAP4;
+def MOVRS64rm_EVEX : I<0x8B, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
+                   "movrs{q}\t{$src, $dst|$dst, $src}",
+                   [(set GR64:$dst, (int_x86_movrsdi addr:$src))]>, EVEX, NoCD8, T_MAP4, REX_W;
 }
 }

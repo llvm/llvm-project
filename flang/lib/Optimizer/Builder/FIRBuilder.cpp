@@ -105,17 +105,17 @@ mlir::Type fir::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy, unsigned rank) {
 mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   switch (kindMap.getRealTypeID(kind)) {
   case llvm::Type::TypeID::HalfTyID:
-    return mlir::FloatType::getF16(getContext());
+    return mlir::Float16Type::get(getContext());
   case llvm::Type::TypeID::BFloatTyID:
-    return mlir::FloatType::getBF16(getContext());
+    return mlir::BFloat16Type::get(getContext());
   case llvm::Type::TypeID::FloatTyID:
-    return mlir::FloatType::getF32(getContext());
+    return mlir::Float32Type::get(getContext());
   case llvm::Type::TypeID::DoubleTyID:
-    return mlir::FloatType::getF64(getContext());
+    return mlir::Float64Type::get(getContext());
   case llvm::Type::TypeID::X86_FP80TyID:
-    return mlir::FloatType::getF80(getContext());
+    return mlir::Float80Type::get(getContext());
   case llvm::Type::TypeID::FP128TyID:
-    return mlir::FloatType::getF128(getContext());
+    return mlir::Float128Type::get(getContext());
   default:
     fir::emitFatalError(mlir::UnknownLoc::get(getContext()),
                         "unsupported type !fir.real<kind>");
@@ -1739,4 +1739,18 @@ uint64_t fir::factory::getAllocaAddressSpace(mlir::DataLayout *dataLayout) {
     if (mlir::Attribute addrSpace = dataLayout->getAllocaMemorySpace())
       return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
   return 0;
+}
+
+llvm::SmallVector<mlir::Value>
+fir::factory::deduceOptimalExtents(mlir::ValueRange extents1,
+                                   mlir::ValueRange extents2) {
+  llvm::SmallVector<mlir::Value> extents;
+  extents.reserve(extents1.size());
+  for (auto [extent1, extent2] : llvm::zip(extents1, extents2)) {
+    if (!fir::getIntIfConstant(extent1) && fir::getIntIfConstant(extent2))
+      extents.push_back(extent2);
+    else
+      extents.push_back(extent1);
+  }
+  return extents;
 }

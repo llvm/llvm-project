@@ -2726,11 +2726,8 @@ public:
                    bool Deserialize = false) const;
 
 private:
-  /// Lookup all external visible declarations and the external declarations
-  /// within the same module specified by \c NamedModule. We can't
-  /// get it from \c this since the same declaration may be declared in
-  /// multiple modules. e.g., namespace.
-  lookup_result lookupImpl(DeclarationName Name, Module *NamedModule) const;
+  lookup_result lookupImpl(DeclarationName Name,
+                           const DeclContext *OriginalLookupDC) const;
 
   /// Whether this declaration context has had externally visible
   /// storage added since the last lookup. In this case, \c LookupPtr's

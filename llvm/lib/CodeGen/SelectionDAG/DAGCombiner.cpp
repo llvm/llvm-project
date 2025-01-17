@@ -23807,6 +23807,13 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   SmallVector<SDValue, 8> VecIn;
   VecIn.push_back(SDValue());
 
+  // If we have a single extract_element with a constant index, track the index
+  // value.
+  unsigned OneConstExtractIndex = ~0u;
+
+  // Count the number of extract_vector_elt sources (i.e. non-constant or undef)
+  unsigned NumExtracts = 0;
+
   for (unsigned i = 0; i != NumElems; ++i) {
     SDValue Op = N->getOperand(i);
 
@@ -23824,22 +23831,27 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
 
     // Not an undef or zero. If the input is something other than an
     // EXTRACT_VECTOR_ELT with an in-range constant index, bail out.
-    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-        !isa<ConstantSDNode>(Op.getOperand(1)))
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return SDValue();
-    SDValue ExtractedFromVec = Op.getOperand(0);
 
+    SDValue ExtractedFromVec = Op.getOperand(0);
     if (ExtractedFromVec.getValueType().isScalableVector())
       return SDValue();
+    auto *ExtractIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!ExtractIdx)
+      return SDValue();
 
-    const APInt &ExtractIdx = Op.getConstantOperandAPInt(1);
-    if (ExtractIdx.uge(ExtractedFromVec.getValueType().getVectorNumElements()))
+    if (ExtractIdx->getAsAPIntVal().uge(
+            ExtractedFromVec.getValueType().getVectorNumElements()))
       return SDValue();
 
     // All inputs must have the same element type as the output.
     if (VT.getVectorElementType() !=
         ExtractedFromVec.getValueType().getVectorElementType())
       return SDValue();
+
+    OneConstExtractIndex = ExtractIdx->getZExtValue();
+    ++NumExtracts;
 
     // Have we seen this input vector before?
     // The vectors are expected to be tiny (usually 1 or 2 elements), so using
@@ -23863,6 +23875,20 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // VecIn accordingly.
   bool DidSplitVec = false;
   if (VecIn.size() == 2) {
+    // If we only found a single constant indexed extract_vector_elt feeding the
+    // build_vector, do not produce a more complicated shuffle if the extract is
+    // cheap with other constant/undef elements. Skip broadcast patterns with
+    // multiple uses in the build_vector.
+
+    // TODO: This should be more aggressive about skipping the shuffle
+    // formation, particularly if VecIn[1].hasOneUse(), and regardless of the
+    // index.
+    if (NumExtracts == 1 &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
+        TLI.isTypeLegal(VT.getVectorElementType()) &&
+        TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
+      return SDValue();
+
     unsigned MaxIndex = 0;
     unsigned NearestPow2 = 0;
     SDValue Vec = VecIn.back();
@@ -27526,22 +27552,26 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
+    // All but one element should have an undef input, which will fold to a
+    // constant or undef. Avoid splatting which would over-define potentially
+    // undefined elements.
+
+    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
+    //   build_vec ..undef, (bo X, Y), undef...
+    SmallVector<SDValue, 16> EltsX, EltsY, EltsResult;
+    DAG.ExtractVectorElements(Src0, EltsX);
+    DAG.ExtractVectorElements(Src1, EltsY);
+
+    for (auto [X, Y] : zip(EltsX, EltsY))
+      EltsResult.push_back(DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags()));
+    return DAG.getBuildVector(VT, DL, EltsResult);
+  }
+
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
   SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
   SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
   SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
-
-  // If all lanes but 1 are undefined, no need to splat the scalar result.
-  // TODO: Keep track of undefs and use that info in the general case.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode() &&
-      count_if(N0->ops(), [](SDValue V) { return !V.isUndef(); }) == 1 &&
-      count_if(N1->ops(), [](SDValue V) { return !V.isUndef(); }) == 1) {
-    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
-    // build_vec ..undef, (bo X, Y), undef...
-    SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), DAG.getUNDEF(EltVT));
-    Ops[Index0] = ScalarBO;
-    return DAG.getBuildVector(VT, DL, Ops);
-  }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   return DAG.getSplat(VT, DL, ScalarBO);
