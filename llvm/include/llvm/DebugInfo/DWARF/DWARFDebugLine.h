@@ -209,6 +209,9 @@ public:
     unsigned LastRowIndex;
     bool Empty;
 
+    /// The offset into the line table where this sequence begins
+    uint64_t Offset = 0;
+
     void reset();
 
     static bool orderByHighPC(const Sequence &LHS, const Sequence &RHS) {
@@ -243,8 +246,20 @@ public:
     uint32_t lookupAddress(object::SectionedAddress Address,
                            bool *IsApproximateLine = nullptr) const;
 
+    /// Fills the Result argument with the indices of the rows that correspond
+    /// to the address range specified by \p Address and \p Size.
+    ///
+    /// \param Address - The starting address of the range.
+    /// \param Size - The size of the address range.
+    /// \param Result - The vector to fill with row indices.
+    /// \param Die - if provided, the function will check for a
+    /// DW_AT_LLVM_stmt_sequence attribute. If present, only rows from the
+    /// sequence starting at the matching offset will be added to the result.
+    ///
+    /// Returns true if any rows were found.
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
-                            std::vector<uint32_t> &Result) const;
+                            std::vector<uint32_t> &Result,
+                            const DWARFDie *Die = nullptr) const;
 
     bool hasFileAtIndex(uint64_t FileIndex) const {
       return Prologue.hasFileAtIndex(FileIndex);
@@ -305,8 +320,20 @@ public:
     uint32_t lookupAddressImpl(object::SectionedAddress Address,
                                bool *IsApproximateLine = nullptr) const;
 
-    bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
-                                std::vector<uint32_t> &Result) const;
+    /// Fills the Result argument with the indices of the rows that correspond
+    /// to the address range specified by \p Address and \p Size.
+    ///
+    /// \param Address - The starting address of the range.
+    /// \param Size - The size of the address range.
+    /// \param Result - The vector to fill with row indices.
+    /// \param StmtSequenceOffset - if provided, only rows from the sequence
+    /// starting at the matching offset will be added to the result.
+    ///
+    /// Returns true if any rows were found.
+    bool
+    lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
+                           std::vector<uint32_t> &Result,
+                           std::optional<uint64_t> StmtSequenceOffset) const;
   };
 
   const LineTable *getLineTable(uint64_t Offset) const;
@@ -377,7 +404,15 @@ private:
                  function_ref<void(Error)> ErrorHandler);
 
     void resetRowAndSequence();
-    void appendRowToMatrix();
+
+    /// Append the current Row to the LineTable's matrix of rows and update the
+    /// current Sequence information.
+    ///
+    /// \param LineTableOffset - the offset into the line table where the
+    /// current sequence of rows begins. This offset is stored in the Sequence
+    /// to allow filtering rows based on their originating sequence when a
+    /// DW_AT_LLVM_stmt_sequence attribute is present.
+    void appendRowToMatrix(uint64_t LineTableOffset);
 
     struct AddrOpIndexDelta {
       uint64_t AddrOffset;
