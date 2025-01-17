@@ -18,6 +18,7 @@
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
@@ -26,6 +27,8 @@ class BottomUpVec final : public FunctionPass {
   bool Change = false;
   std::unique_ptr<LegalityAnalysis> Legality;
   DenseSet<Instruction *> DeadInstrCandidates;
+  /// Maps scalars to vectors.
+  InstrMaps IMaps;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.

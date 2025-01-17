@@ -3,6 +3,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-defs -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component})
+
+  clang_tablegen(Diagnostic${component}Enums.inc
+    -gen-clang-diags-enums -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Enums)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)

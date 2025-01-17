@@ -43,10 +43,7 @@ cc_binary(
 
 gentbl(
     name = "diagnostic_defs_gen",
-    tbl_outs = [(
-        "-gen-clang-diags-defs -clang-component=%s" % c,
-        "include/clang/Basic/Diagnostic%sKinds.inc" % c,
-    ) for c in [
+    tbl_outs = [out for c in [
         "AST",
         "Analysis",
         "Comment",
@@ -60,6 +57,15 @@ gentbl(
         "Refactoring",
         "Sema",
         "Serialization",
+    ] for out in [
+        (
+            "-gen-clang-diags-defs -clang-component=%s" % c,
+            "include/clang/Basic/Diagnostic%sKinds.inc" % c,
+        ),
+        (
+            "-gen-clang-diags-enums -clang-component=%s" % c,
+            "include/clang/Basic/Diagnostic%sEnums.inc" % c,
+        ),
     ]] + [
         (
             "-gen-clang-diag-groups",
@@ -664,19 +670,6 @@ py_binary(
     main = "utils/bundle_resources.py",
 )
 
-# A hacky library to expose some internal headers of the `basic` library to its
-# own implementation source files using a stripped include prefix rather than
-# file-relative-inclusion. This is inherently non-modular as these headers will
-# be repeated in the sources below for file-relative-inclusion.
-cc_library(
-    name = "basic_internal_headers",
-    hdrs = glob([
-        "lib/Basic/*.h",
-    ]),
-    features = ["-header_modules"],
-    strip_include_prefix = "lib/Basic",
-)
-
 cc_library(
     name = "basic",
     srcs = [
@@ -694,10 +687,12 @@ cc_library(
     copts = [
         "-DHAVE_VCS_VERSION_INC",
         "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Basic",
     ],
     includes = ["include"],
     textual_hdrs = [
         # keep sorted
+        "include/clang/Basic/AllDiagnosticKinds.inc",
         "include/clang/Basic/AttrHasAttributeImpl.inc",
         "include/clang/Basic/AttrList.inc",
         "include/clang/Basic/AttrSubMatchRulesList.inc",
@@ -710,6 +705,7 @@ cc_library(
         "include/clang/Basic/DiagnosticFrontendKinds.inc",
         "include/clang/Basic/DiagnosticGroups.inc",
         "include/clang/Basic/DiagnosticIndexName.inc",
+        "include/clang/Basic/DiagnosticInstallAPIKinds.inc",
         "include/clang/Basic/DiagnosticLexKinds.inc",
         "include/clang/Basic/DiagnosticParseKinds.inc",
         "include/clang/Basic/DiagnosticRefactoringKinds.inc",
@@ -727,6 +723,7 @@ cc_library(
     ] + glob([
         "include/clang/Basic/*.def",
     ]),
+    toolchains = [":workspace_root"],
     deps = [
         ":basic_arm_cde_gen",
         ":basic_arm_fp16_inc_gen",
@@ -746,7 +743,6 @@ cc_library(
         ":basic_builtins_spirv_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
-        ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtins_gen",
@@ -1452,7 +1448,6 @@ cc_library(
     hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
-        ":codegen",
         ":driver",
         ":frontend",
         ":lex",
@@ -1514,13 +1509,7 @@ cc_library(
             "lib/Format/*.h",
         ],
     ),
-    hdrs = [
-        "lib/Format/FormatTokenLexer.h",
-        "lib/Format/FormatTokenSource.h",
-        "lib/Format/Macros.h",
-        "lib/Format/QualifierAlignmentFixer.h",
-        "lib/Format/UnwrappedLineParser.h",
-    ] + glob([
+    hdrs = glob([
         "include/clang/Format/*.h",
     ]),
     includes = ["include"],
@@ -1950,14 +1939,12 @@ cc_library(
             "lib/Interpreter/*.cpp",
             "lib/Interpreter/*.h",
         ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
-    ),
-    hdrs = glob(
-        [
-            "include/clang/Interpreter/*.h",
+        exclude = [
+            "lib/Interpreter/Wasm.cpp",
+            "lib/Interpreter/Wasm.h",
         ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
     ),
+    hdrs = glob(["include/clang/Interpreter/*.h"]),
     includes = ["include"],
     deps = [
         ":analysis",
@@ -2024,7 +2011,6 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
         "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:Coroutines",
         "//llvm:Coverage",
@@ -2147,7 +2133,6 @@ cc_library(
         "include/clang/Serialization/AttrPCHRead.inc",
         "include/clang/Serialization/AttrPCHWrite.inc",
     ] + glob([
-        "include/clang/Frontend/*.h",
         "lib/Serialization/*.cpp",
         "lib/Serialization/*.h",
     ]),
@@ -2159,14 +2144,11 @@ cc_library(
         "include/clang/Serialization/*.def",
     ]),
     deps = [
-        ":apinotes",
         ":ast",
         ":basic",
-        ":driver",
         ":lex",
         ":sema",
         ":serialization_attr_gen",
-        ":static_analyzer_core_options",
         ":type_nodes_gen",
         "//llvm:BitReader",
         "//llvm:BitWriter",
@@ -2759,6 +2741,30 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
     ],
+)
+
+proto_library(
+    name = "cxx-proto",
+    srcs = ["tools/clang-fuzzer/cxx_proto.proto"],
+)
+
+cc_proto_library(
+    name = "cxx_cc_proto",
+    deps = [":cxx-proto"],
+)
+
+cc_library(
+    name = "proto-to-cxx-lib",
+    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.cpp"],
+    hdrs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.h"],
+    includes = ["tools/clang-fuzzer"],
+    deps = [":cxx_cc_proto"],
+)
+
+cc_binary(
+    name = "clang-proto-to-cxx",
+    srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx_main.cpp"],
+    deps = [":proto-to-cxx-lib"],
 )
 
 cc_library(
