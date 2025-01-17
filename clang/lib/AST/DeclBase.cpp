@@ -130,6 +130,14 @@ void Decl::setOwningModuleID(unsigned ID) {
   *IDAddress |= (uint64_t)ID << 48;
 }
 
+Module *Decl::getTopLevelOwningNamedModule() const {
+  if (getOwningModule() &&
+      getOwningModule()->getTopLevelModule()->isNamedModule())
+    return getOwningModule()->getTopLevelModule();
+
+  return nullptr;
+}
+
 Module *Decl::getOwningModuleSlow() const {
   assert(isFromASTFile() && "Not from AST file?");
   return getASTContext().getExternalSource()->getModule(getOwningModuleID());
