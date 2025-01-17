@@ -59,5 +59,5 @@ add_header_library(
   HDRS
     cross_compile_clippy.h
   DEPENDS
-  libc.src.__support.macros.properties.architectures
+    libc.src.__support.macros.properties.architectures
 )
