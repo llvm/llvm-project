@@ -368,17 +368,12 @@ DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
   llvm::SmallSet<DWARFDebugInfoEntry const *, 3> seen;
   seen.insert(this);
 
-  while (!worklist.empty()) {
+  do {
     if (!::GetAttributes(cu, worklist, seen, attributes)) {
       attributes.Clear();
       break;
     }
-
-    // We visited the current DIE already and were asked not to check the
-    // rest of the worklist. So bail out.
-    if (recurse == Recurse::no)
-      break;
-  }
+  } while (!worklist.empty() && recurse == Recurse::yes);
 
   return attributes;
 }
