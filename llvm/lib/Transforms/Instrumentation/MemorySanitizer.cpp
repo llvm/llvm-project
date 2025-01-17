@@ -318,6 +318,13 @@ static cl::opt<bool> ClDumpStrictInstructions(
     cl::desc("print out instructions with default strict semantics"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClDumpStrictIntrinsics(
+    "msan-dump-strict-intrinsics",
+    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print intrinsics that "
+             "could not be handled exactly nor heuristically."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClInstrumentationWithCallThreshold(
     "msan-instrumentation-with-call-threshold",
     cl::desc(
@@ -3016,28 +3023,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// handling as an example of that.
   bool handleUnknownIntrinsic(IntrinsicInst &I) {
     unsigned NumArgOperands = I.arg_size();
-    if (NumArgOperands == 0)
-      return false;
 
-    if (NumArgOperands == 2 && I.getArgOperand(0)->getType()->isPointerTy() &&
+    bool success = false;
+    if (NumArgOperands == 0) {
+      // No-op
+    } else if (NumArgOperands == 2 && I.getArgOperand(0)->getType()->isPointerTy() &&
         I.getArgOperand(1)->getType()->isVectorTy() &&
         I.getType()->isVoidTy() && !I.onlyReadsMemory()) {
       // This looks like a vector store.
-      return handleVectorStoreIntrinsic(I);
-    }
-
-    if (NumArgOperands == 1 && I.getArgOperand(0)->getType()->isPointerTy() &&
+      success = handleVectorStoreIntrinsic(I);
+    } else if (NumArgOperands == 1 && I.getArgOperand(0)->getType()->isPointerTy() &&
         I.getType()->isVectorTy() && I.onlyReadsMemory()) {
       // This looks like a vector load.
-      return handleVectorLoadIntrinsic(I);
-    }
+      success = handleVectorLoadIntrinsic(I);
+    } else if (I.doesNotAccessMemory())
+      success = maybeHandleSimpleNomemIntrinsic(I);
 
-    if (I.doesNotAccessMemory())
-      if (maybeHandleSimpleNomemIntrinsic(I))
-        return true;
+    if (success && ClDumpStrictIntrinsics)
+      dumpInst(I);
+
+    LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I << "\n");
 
     // FIXME: detect and handle SSE maskstore/maskload
-    return false;
+    return success;
   }
 
   void handleInvariantGroup(IntrinsicInst &I) {
@@ -4033,6 +4041,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+#if 0
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow:
     case Intrinsic::usub_with_overflow:
@@ -4445,6 +4454,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
+#endif
 
     default:
       if (!handleUnknownIntrinsic(I))
