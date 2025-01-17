@@ -877,10 +877,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
     // Reasons for putting both {MVT::v2i16, MVT::v2i8}
     // 1. In foldToSaturated during DAG combine
-    //    a. isOperationLegalOrCustom(Opc, SrcVT) 
+    //    a. isOperationLegalOrCustom(Opc, SrcVT)
     //       will check getOperationAction(Op, SrcVT) == Custom
-    //    b. isTypeDesirableForOp checks regclass for v2i8 
-    //       (hooked now checking DstVT == v2i8) 
+    //    b. isTypeDesirableForOp checks regclass for v2i8
+    //       (hooked now checking DstVT == v2i8)
     // 2. In CustomLowerNode during legalizing, checks
     //    getOperationAction(Op, DstVT) == Custom
     setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
@@ -15298,13 +15298,13 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     // which causes selection fail.
     //
     // One of the stuation is (i16 (bitcast (v2i8 (trunc (v2i16 (smed ...)))))
-    // The pattern will experience the following steps to 
+    // The pattern will experience the following steps to
     // create (i16 (bitcast i16)):
     //
     // 1. During DAG combine: (i16 (bitcast (v2i8 (truncssat_u ...)))
     // 2. During legalizing: (i16 (bitcast (i16 (sat_pk_cast ...)))
     SDValue Src = N->getOperand(0);
-    if (N->getValueType(0) == Src.getValueType()) 
+    if (N->getValueType(0) == Src.getValueType())
       return Src;
   }
   default: {
