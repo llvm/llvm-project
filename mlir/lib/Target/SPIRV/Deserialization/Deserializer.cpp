@@ -1937,8 +1937,16 @@ LogicalResult ControlFlowStructurizer::structurize() {
                  << "[cf] block " << block << " is a function entry block\n");
     }
 
-    for (auto &op : *block)
+    for (auto &op : *block) {
+      if (auto varOp = dyn_cast<spirv::VariableOp>(op)) {
+        if (varOp.getStorageClass() == spirv::StorageClass::Function) { // This prevents %1 variable duplication in composite4anti
+          // For function-scoped variables, ensure proper mapping but maintain their original location
+          mapper.map(&op, &op);
+          continue;
+        }
+      }
       newBlock->push_back(op.clone(mapper));
+    }
   }
 
   // Go through all ops and remap the operands.
@@ -2006,6 +2014,12 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // the SelectionOp/LoopOp's region, there is no escape for it:
   // SelectionOp/LooOp does not support yield values right now.
   for (auto *block : constructBlocks) {
+    block->walk([&](spirv::VariableOp varOp) {
+      if (varOp.getStorageClass() == spirv::StorageClass::Function) {
+        // Move function variables to the entry block to preserve their lifetime
+        varOp->moveBefore(&body.front().front());
+      }
+    });
     for (Operation &op : *block)
       if (!op.use_empty())
         return op.emitOpError(
@@ -2068,6 +2082,12 @@ LogicalResult ControlFlowStructurizer::structurize() {
       LLVM_DEBUG(logger.startLine() << "[cf] erasing block " << block << "\n");
       block->erase();
     }
+  }
+
+  if (auto selectionOp = llvm::dyn_cast<spirv::SelectionOp>(op)) {
+    selectionOp.walk([&](spirv::VariableOp varOp) {
+      varOp->moveBefore(&op->getParentRegion()->front().front());
+    });
   }
 
   LLVM_DEBUG(logger.startLine()
