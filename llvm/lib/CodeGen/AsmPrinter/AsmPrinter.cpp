@@ -2880,8 +2880,10 @@ void AsmPrinter::emitJumpTableInfo() {
   if (!TM.Options.EnableStaticDataPartitioning) {
     for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI)
       JumpTableIndices.push_back(JTI);
-    emitJumpTables(JumpTableIndices, TLOF.getSectionForJumpTable(F, TM),
-                   JTInDiffSection, *MJTI);
+    emitJumpTableImpl(
+        *MJTI,
+        llvm::make_range(JumpTableIndices.begin(), JumpTableIndices.end()),
+        JTInDiffSection);
     return;
   }
 
@@ -2891,46 +2893,55 @@ void AsmPrinter::emitJumpTableInfo() {
   //
   // Iterate all jump tables, put hot jump table indices towards the beginning
   // of the vector, and cold jump table indices towards the end. Meanwhile
-  // retain the relative orders of original jump tables within a hot or unlikely
-  // section by reversing the cold jump table indices.
-  int NextHotJumpTableIndex = 0, NextColdJumpTableIndex = JT.size() - 1;
+  // retain the relative orders of original jump tables.
+  int NumHotJumpTables = 0, NextColdJumpTableIndex = JT.size() - 1;
   JumpTableIndices.resize(JT.size());
   for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
     if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
       JumpTableIndices[NextColdJumpTableIndex--] = JTI;
     } else {
-      JumpTableIndices[NextHotJumpTableIndex++] = JTI;
+      JumpTableIndices[NumHotJumpTables++] = JTI;
     }
   }
 
-  if (NextHotJumpTableIndex != 0) {
-    emitJumpTables(
-        ArrayRef<unsigned>(JumpTableIndices).take_front(NextHotJumpTableIndex),
-        TLOF.getSectionForJumpTable(F, TM, &JT[0]), JTInDiffSection, *MJTI);
-  }
+  emitJumpTableImpl(
+      *MJTI,
+      llvm::make_range(JumpTableIndices.begin(),
+                       JumpTableIndices.begin() + NumHotJumpTables),
 
-  if (NextHotJumpTableIndex < (int)JT.size()) {
-    // Reverse the order of cold jump tables indices.
-    for (int L = NextHotJumpTableIndex, R = JT.size() - 1; L < R; ++L, --R)
-      std::swap(JumpTableIndices[L], JumpTableIndices[R]);
-  
-    emitJumpTables(
-        ArrayRef<unsigned>(JumpTableIndices)
-            .take_back(JT.size() - NextHotJumpTableIndex),
-        TLOF.getSectionForJumpTable(
-          F, TM, &JT[JumpTableIndices[NextHotJumpTableIndex]]),
-        JTInDiffSection, *MJTI);
-  }
+      JTInDiffSection);
+
+  const int NumColdJumpTables = JT.size() - NumHotJumpTables;
+  assert(NumColdJumpTables >= 0 && "Invalid number of cold jump tables.");
+
+  // Reverse iterating cold jump table indices to emit in the original order.
+  emitJumpTableImpl(
+      *MJTI,
+      llvm::make_range(JumpTableIndices.rbegin(),
+                       JumpTableIndices.rbegin() + NumColdJumpTables),
+      JTInDiffSection);
 
   return;
 }
 
-void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
-                                MCSection *JumpTableSection,
-                                bool JTInDiffSection,
-                                const MachineJumpTableInfo &MJTI) {
+template <typename Iterator>
+void AsmPrinter::emitJumpTableImpl(
+    const MachineJumpTableInfo &MJTI,
+    const llvm::iterator_range<Iterator> &JumpTableIndices,
+    bool JTInDiffSection) {
   if (JumpTableIndices.empty())
     return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  const Function &F = MF->getFunction();
+  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
+  MCSection *JumpTableSection = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    JumpTableSection =
+        TLOF.getSectionForJumpTable(F, TM, &JT[*JumpTableIndices.begin()]);
+  } else {
+    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  }
 
   const DataLayout &DL = MF->getDataLayout();
   if (JTInDiffSection) {
@@ -2944,10 +2955,8 @@ void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
   if (!JTInDiffSection)
     OutStreamer->emitDataRegion(MCDR_DataRegionJT32);
 
-  const auto &JT = MJTI.getJumpTables();
-  for (unsigned Index = 0, e = JumpTableIndices.size(); Index != e; ++Index) {
-    ArrayRef<MachineBasicBlock *> JTBBs =
-        JT[JumpTableIndices[Index]].MBBs;
+  for (const unsigned JumpTableIndex : JumpTableIndices) {
+    ArrayRef<MachineBasicBlock *> JTBBs = JT[JumpTableIndex].MBBs;
 
     // If this jump table was deleted, ignore it.
     if (JTBBs.empty())
@@ -2959,8 +2968,8 @@ void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
         MAI->doesSetDirectiveSuppressReloc()) {
       SmallPtrSet<const MachineBasicBlock *, 16> EmittedSets;
       const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-      const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(
-          MF, JumpTableIndices[Index], OutContext);
+      const MCExpr *Base =
+          TLI->getPICJumpTableRelocBaseExpr(MF, JumpTableIndex, OutContext);
       for (const MachineBasicBlock *MBB : JTBBs) {
         if (!EmittedSets.insert(MBB).second)
           continue;
@@ -2969,7 +2978,7 @@ void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
         const MCExpr *LHS =
             MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
         OutStreamer->emitAssignment(
-            GetJTSetSymbol(JumpTableIndices[Index], MBB->getNumber()),
+            GetJTSetSymbol(JumpTableIndex, MBB->getNumber()),
             MCBinaryExpr::createSub(LHS, Base, OutContext));
       }
     }
@@ -2982,15 +2991,15 @@ void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
       // FIXME: This doesn't have to have any specific name, just any randomly
       // named and numbered local label started with 'l' would work.  Simplify
       // GetJTISymbol.
-      OutStreamer->emitLabel(GetJTISymbol(JumpTableIndices[Index], true));
+      OutStreamer->emitLabel(GetJTISymbol(JumpTableIndex, true));
 
-    MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndices[Index]);
+    MCSymbol *JTISymbol = GetJTISymbol(JumpTableIndex);
     OutStreamer->emitLabel(JTISymbol);
 
     // Defer MCAssembler based constant folding due to a performance issue. The
     // label differences will be evaluated at write time.
     for (const MachineBasicBlock *MBB : JTBBs)
-      emitJumpTableEntry(MJTI, MBB, JumpTableIndices[Index]);
+      emitJumpTableEntry(MJTI, MBB, JumpTableIndex);
   }
 
   if (EmitJumpTableSizesSection)
