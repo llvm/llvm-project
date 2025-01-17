@@ -307,6 +307,7 @@ C++2c Feature Support
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
+- Implemented `P2582R1: Wording for class template argument deduction from inherited constructors <https://wg21.link/P2582R1>`_.
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
@@ -315,7 +316,6 @@ C++23 Feature Support
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

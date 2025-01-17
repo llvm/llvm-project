@@ -455,7 +455,14 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Class template argument deduction from inherited constructors</td>
       <td><a href="https://wg21.link/P2582R1">P2582R1</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 20 (Partial)</summary>
+          Inheriting constructors with a dependent using-declarator such as
+          <code>using Derived::Base::Base;</code> will not currently generate
+          implicit deduction guides.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Portable assumptions</td>
