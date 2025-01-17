@@ -56,38 +56,35 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
   llvm_unreachable("");
 }
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const NonPacProtectedRetGadget &NPPRG) {
-  OS << "pac-ret<Ret:" << NPPRG.RetInst << ", ";
-  OS << "gadget<";
-  OS << "Overwriting:[";
-  for (auto Ref : NPPRG.OverwritingRetRegInst)
-    OS << Ref << " ";
-  OS << "]>";
-  OS << ">";
-  return OS;
-}
-
 raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag) {
   OS << "diag<'" << Diag.Text << "'>";
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const NonPacProtectedRetGenDiag &Diag) {
+namespace NonPacProtectedRetAnalysis {
+
+raw_ostream &operator<<(raw_ostream &OS, const Gadget &G) {
+  OS << "pac-ret<Ret:" << G.RetInst << ", ";
+  OS << "gadget<Overwriting:[";
+  for (auto Ref : G.OverwritingRetRegInst)
+    OS << Ref << " ";
+  OS << "]>>";
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const GenDiag &Diag) {
   OS << "pac-ret<Ret:" << Diag.RetInst << ", " << Diag.Diag << ">";
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const NonPacProtectedRetAnnotation &Diag) {
+raw_ostream &operator<<(raw_ostream &OS, const Annotation &Diag) {
   OS << "pac-ret<Ret:" << Diag.RetInst << ">";
   return OS;
 }
 
-void NonPacProtectedRetAnnotation::print(raw_ostream &OS) const { OS << *this; }
-void NonPacProtectedRetGadget::print(raw_ostream &OS) const { OS << *this; }
-void NonPacProtectedRetGenDiag::print(raw_ostream &OS) const { OS << *this; }
+void Annotation::print(raw_ostream &OS) const { OS << *this; }
+void Gadget::print(raw_ostream &OS) const { OS << *this; }
+void GenDiag::print(raw_ostream &OS) const { OS << *this; }
 
 // The security property that is checked is:
 // When a register is used as the address to jump to in a return instruction,
@@ -340,9 +337,9 @@ public:
   }
 };
 
-FunctionAnalysisResult NonPacProtectedRetAnalysis::computeDfState(
-    PacRetAnalysis &PRA, BinaryFunction &BF,
-    MCPlusBuilder::AllocatorIdTy AllocatorId) {
+FunctionAnalysisResult
+Analysis::computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
+                         MCPlusBuilder::AllocatorIdTy AllocatorId) {
   PRA.run();
   LLVM_DEBUG({
     dbgs() << " After PacRetAnalysis:\n";
@@ -359,11 +356,10 @@ FunctionAnalysisResult NonPacProtectedRetAnalysis::computeDfState(
       if (BC.MIB->isReturn(Inst)) {
         ErrorOr<MCPhysReg> MaybeRetReg = BC.MIB->getRegUsedAsRetDest(Inst);
         if (MaybeRetReg.getError()) {
-          Result.Diagnostics.push_back(
-              std::make_shared<NonPacProtectedRetGenDiag>(
-                  MCInstInBBReference(&BB, I),
-                  "Warning: pac-ret analysis could not analyze this return "
-                  "instruction"));
+          Result.Diagnostics.push_back(std::make_shared<GenDiag>(
+              MCInstInBBReference(&BB, I),
+              "Warning: pac-ret analysis could not analyze this return "
+              "instruction"));
           continue;
         }
         MCPhysReg RetReg = *MaybeRetReg;
@@ -392,10 +388,9 @@ FunctionAnalysisResult NonPacProtectedRetAnalysis::computeDfState(
         });
         if (DirtyRawRegs.any()) {
           // This return instruction needs to be reported
-          Result.Diagnostics.push_back(
-              std::make_shared<NonPacProtectedRetGadget>(
-                  MCInstInBBReference(&BB, I),
-                  PRA.getLastClobberingInsts(Inst, BF, DirtyRawRegs)));
+          Result.Diagnostics.push_back(std::make_shared<Gadget>(
+              MCInstInBBReference(&BB, I),
+              PRA.getLastClobberingInsts(Inst, BF, DirtyRawRegs)));
           for (MCPhysReg RetRegWithGadget : DirtyRawRegs.set_bits())
             Result.RegistersAffected.insert(RetRegWithGadget);
         }
@@ -405,8 +400,8 @@ FunctionAnalysisResult NonPacProtectedRetAnalysis::computeDfState(
   return Result;
 }
 
-void NonPacProtectedRetAnalysis::runOnFunction(
-    BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId) {
+void Analysis::runOnFunction(BinaryFunction &BF,
+                             MCPlusBuilder::AllocatorIdTy AllocatorId) {
   LLVM_DEBUG({
     dbgs() << "Analyzing in function " << BF.getPrintName() << ", AllocatorId "
            << AllocatorId << "\n";
@@ -465,8 +460,7 @@ static void reportFoundGadgetInSingleBBSingleOverwInst(
   }
 }
 
-void NonPacProtectedRetGadget::generateReport(raw_ostream &OS,
-                                              const BinaryContext &BC) const {
+void Gadget::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
   BinaryFunction *BF = RetInst.getFunction();
   BinaryBasicBlock *BB = RetInst.getBasicBlock();
 
@@ -503,8 +497,7 @@ void NonPacProtectedRetGadget::generateReport(raw_ostream &OS,
   }
 }
 
-void NonPacProtectedRetGenDiag::generateReport(raw_ostream &OS,
-                                               const BinaryContext &BC) const {
+void GenDiag::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
   BinaryFunction *BF = RetInst.getFunction();
   BinaryBasicBlock *BB = RetInst.getBasicBlock();
 
@@ -517,7 +510,7 @@ void NonPacProtectedRetGenDiag::generateReport(raw_ostream &OS,
   BC.printInstruction(OS, RetInst, RetInst.getAddress(), BF);
 }
 
-Error NonPacProtectedRetAnalysis::runOnFunctions(BinaryContext &BC) {
+Error Analysis::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId) {
         runOnFunction(BF, AllocatorId);
@@ -533,12 +526,13 @@ Error NonPacProtectedRetAnalysis::runOnFunctions(BinaryContext &BC) {
 
   for (BinaryFunction *BF : BC.getAllBinaryFunctions())
     if (AnalysisResults.count(BF) > 0) {
-      for (const std::shared_ptr<NonPacProtectedRetAnnotation> &A :
+      for (const std::shared_ptr<Annotation> &A :
            AnalysisResults[BF].Diagnostics)
         A->generateReport(outs(), BC);
     }
   return Error::success();
 }
 
+} // namespace NonPacProtectedRetAnalysis
 } // namespace bolt
 } // namespace llvm

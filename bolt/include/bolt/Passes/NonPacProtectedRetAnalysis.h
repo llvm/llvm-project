@@ -182,66 +182,65 @@ struct GeneralDiagnostic {
   }
 };
 
-struct NonPacProtectedRetAnnotation {
+raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag);
+
+namespace NonPacProtectedRetAnalysis {
+struct Annotation {
   MCInstReference RetInst;
-  NonPacProtectedRetAnnotation(MCInstReference RetInst) : RetInst(RetInst) {}
-  virtual bool operator==(const NonPacProtectedRetAnnotation &RHS) const {
+  Annotation(MCInstReference RetInst) : RetInst(RetInst) {}
+  virtual bool operator==(const Annotation &RHS) const {
     return RetInst == RHS.RetInst;
   }
-  NonPacProtectedRetAnnotation &
-  operator=(const NonPacProtectedRetAnnotation &Other) {
+  Annotation &operator=(const Annotation &Other) {
     if (this == &Other)
       return *this;
     RetInst = Other.RetInst;
     return *this;
   }
-  virtual ~NonPacProtectedRetAnnotation() {}
+  virtual ~Annotation() {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
   virtual void print(raw_ostream &OS) const;
 };
 
-struct NonPacProtectedRetGadget : public NonPacProtectedRetAnnotation {
+struct Gadget : public Annotation {
   std::vector<MCInstReference> OverwritingRetRegInst;
-  virtual bool operator==(const NonPacProtectedRetGadget &RHS) const {
-    return NonPacProtectedRetAnnotation::operator==(RHS) &&
+  virtual bool operator==(const Gadget &RHS) const {
+    return Annotation::operator==(RHS) &&
            OverwritingRetRegInst == RHS.OverwritingRetRegInst;
   }
-  NonPacProtectedRetGadget(
-      MCInstReference RetInst,
-      const std::vector<MCInstReference> &OverwritingRetRegInst)
-      : NonPacProtectedRetAnnotation(RetInst),
-        OverwritingRetRegInst(OverwritingRetRegInst) {}
+  Gadget(MCInstReference RetInst,
+         const std::vector<MCInstReference> &OverwritingRetRegInst)
+      : Annotation(RetInst), OverwritingRetRegInst(OverwritingRetRegInst) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
   virtual void print(raw_ostream &OS) const override;
 };
 
-struct NonPacProtectedRetGenDiag : public NonPacProtectedRetAnnotation {
+struct GenDiag : public Annotation {
   GeneralDiagnostic Diag;
-  virtual bool operator==(const NonPacProtectedRetGenDiag &RHS) const {
-    return NonPacProtectedRetAnnotation::operator==(RHS) && Diag == RHS.Diag;
+  virtual bool operator==(const GenDiag &RHS) const {
+    return Annotation::operator==(RHS) && Diag == RHS.Diag;
   }
-  NonPacProtectedRetGenDiag(MCInstReference RetInst, const std::string &Text)
-      : NonPacProtectedRetAnnotation(RetInst), Diag(Text) {}
+  GenDiag(MCInstReference RetInst, const std::string &Text)
+      : Annotation(RetInst), Diag(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
   virtual void print(raw_ostream &OS) const override;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const NonPacProtectedRetGadget &NPPRG);
-raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag);
-raw_ostream &operator<<(raw_ostream &OS, const NonPacProtectedRetGenDiag &Diag);
-raw_ostream &operator<<(raw_ostream &OS, const NonPacProtectedRetAnnotation &A);
+raw_ostream &operator<<(raw_ostream &OS, const Gadget &G);
+raw_ostream &operator<<(raw_ostream &OS, const GenDiag &Diag);
+raw_ostream &operator<<(raw_ostream &OS, const Annotation &A);
 
 class PacRetAnalysis;
 
 struct FunctionAnalysisResult {
   SmallSet<MCPhysReg, 1> RegistersAffected;
-  std::vector<std::shared_ptr<NonPacProtectedRetAnnotation>> Diagnostics;
+  std::vector<std::shared_ptr<Annotation>> Diagnostics;
 };
 
-class NonPacProtectedRetAnalysis : public BinaryFunctionPass {
+class Analysis : public BinaryFunctionPass {
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
   FunctionAnalysisResult
@@ -252,7 +251,7 @@ class NonPacProtectedRetAnalysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  explicit NonPacProtectedRetAnalysis() : BinaryFunctionPass(false) {}
+  explicit Analysis() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "non-pac-protected-rets"; }
 
@@ -260,6 +259,7 @@ public:
   Error runOnFunctions(BinaryContext &BC) override;
 };
 
+} // namespace NonPacProtectedRetAnalysis
 } // namespace bolt
 } // namespace llvm
 
