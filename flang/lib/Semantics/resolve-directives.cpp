@@ -2119,6 +2119,7 @@ static bool IsPrivatizable(const Symbol *sym) {
           *sym) && /* OpenMP 5.2, 5.1.1: Assumed-size arrays are shared*/
       !sym->owner().IsDerivedType() &&
       sym->owner().kind() != Scope::Kind::ImpliedDos &&
+      sym->owner().kind() != Scope::Kind::Forall &&
       !sym->detailsIf<semantics::AssocEntityDetails>() &&
       !sym->detailsIf<semantics::NamelistDetails>() &&
       (!misc ||
