@@ -170,7 +170,7 @@ enum : unsigned {
   WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
-const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
