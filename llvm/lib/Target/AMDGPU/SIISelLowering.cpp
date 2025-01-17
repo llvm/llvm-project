@@ -876,12 +876,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // special dealing for v_sat_pk instruction
   if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
     // In foldToSaturated during DAG combine
-    // 1. isOperationLegalOrCustom(Opc, SrcVT) getOperationAction(Op, SrcVT) == Custom
-    // 2. isTypeDesirableForOp checks regclass for v2i8 (hooked now checking DstVT == v2i8)
-    // In CustomLowerNode during legalizing, checks getOperationAction(Op, DstVT) == Custom
+    // 1. isOperationLegalOrCustom(Opc, SrcVT) getOperationAction(Op, SrcVT) ==
+    // Custom
+    // 2. isTypeDesirableForOp checks regclass for v2i8 (hooked now checking
+    // DstVT == v2i8) In CustomLowerNode during legalizing, checks
+    // getOperationAction(Op, DstVT) == Custom
     setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
   }
-  
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::bf16, MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::i128,
@@ -1991,8 +1993,8 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.
   if (VT == MVT::i1 && Op == ISD::SETCC)
     return false;
-  
-  // Avoiding legality check for reg type of v2i8 
+
+  // Avoiding legality check for reg type of v2i8
   // (do not need to addRegisterClass for v2i8)
   // VT is result type, ensure the result type is v2i8
   if (VT == MVT::v2i8 && Op == ISD::TRUNCATE_SSAT_U)
@@ -6632,7 +6634,8 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::TRUNCATE_SSAT_U: {
     SDLoc SL(N);
-    SDValue Op = DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, N->getOperand(0));
+    SDValue Op =
+        DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, N->getOperand(0));
     Results.push_back(Op);
     break;
   }
@@ -10062,9 +10065,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
             ? 1
             : 0,
-        DL, MVT::i8));                                           // swz
-    Ops.push_back(M0Val.getValue(0));                            // Chain
-    Ops.push_back(M0Val.getValue(1));                            // Glue
+        DL, MVT::i8));                // swz
+    Ops.push_back(M0Val.getValue(0)); // Chain
+    Ops.push_back(M0Val.getValue(1)); // Glue
 
     auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
