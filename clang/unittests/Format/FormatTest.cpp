@@ -22301,16 +22301,16 @@ TEST_F(FormatTest, HandlesUTF8BOM) {
 #if !defined(_MSC_VER)
 
 TEST_F(FormatTest, CountsUTF8CharactersProperly) {
-  verifyFormat("\"Однажды в студёную зимнюю пору...\"",
+  verifyFormat("\"Однажды в ѝтудёную зимнюю пору...\"",
                getLLVMStyleWithColumns(35));
-  verifyFormat("\"一 二 三 四 五 六 七 八 九 十\"",
+  verifyFormat("\"一 二 三 四 五 六 七 八 九 坝\"",
                getLLVMStyleWithColumns(31));
-  verifyFormat("// Однажды в студёную зимнюю пору...",
+  verifyFormat("// Однажды в ѝтудёную зимнюю пору...",
                getLLVMStyleWithColumns(36));
-  verifyFormat("// 一 二 三 四 五 六 七 八 九 十", getLLVMStyleWithColumns(32));
-  verifyFormat("/* Однажды в студёную зимнюю пору... */",
+  verifyFormat("// 一 二 三 四 五 六 七 八 九 坝", getLLVMStyleWithColumns(32));
+  verifyFormat("/* Однажды в ѝтудёную зимнюю пору... */",
                getLLVMStyleWithColumns(39));
-  verifyFormat("/* 一 二 三 四 五 六 七 八 九 十 */",
+  verifyFormat("/* 一 二 三 四 五 六 七 八 九 坝 */",
                getLLVMStyleWithColumns(35));
 }
 
@@ -22329,18 +22329,18 @@ TEST_F(FormatTest, SplitsUTF8Strings) {
             format("\"aaaaaaaÄ\xc2\x8d\";", getLLVMStyleWithColumns(10)));
   // FIXME: unstable test case
   EXPECT_EQ("\"Однажды, в \"\n"
-            "\"студёную \"\n"
+            "\"ѝтудёную \"\n"
             "\"зимнюю \"\n"
             "\"пору,\"",
-            format("\"Однажды, в студёную зимнюю пору,\"",
+            format("\"Однажды, в ѝтудёную зимнюю пору,\"",
                    getLLVMStyleWithColumns(13)));
   // FIXME: unstable test case
   EXPECT_EQ(
       "\"一 二 三 \"\n"
       "\"四 五六 \"\n"
       "\"七 八 九 \"\n"
-      "\"十\"",
-      format("\"一 二 三 四 五六 七 八 九 十\"", getLLVMStyleWithColumns(11)));
+      "\"坝\"",
+      format("\"一 二 三 四 五六 七 八 九 坝\"", getLLVMStyleWithColumns(11)));
   // FIXME: unstable test case
   EXPECT_EQ("\"一\t\"\n"
             "\"二 \t\"\n"
@@ -22348,8 +22348,8 @@ TEST_F(FormatTest, SplitsUTF8Strings) {
             "\"五\t\"\n"
             "\"六 \t\"\n"
             "\"七 \"\n"
-            "\"八九十\tqq\"",
-            format("\"一\t二 \t三 四 五\t六 \t七 八九十\tqq\"",
+            "\"八九坝\tqq\"",
+            format("\"一\t二 \t三 四 五\t六 \t七 八九坝\tqq\"",
                    getLLVMStyleWithColumns(11)));
 
   // UTF8 character in an escape sequence.
@@ -22362,44 +22362,44 @@ TEST_F(FormatTest, SplitsUTF8Strings) {
 TEST_F(FormatTest, HandlesDoubleWidthCharsInMultiLineStrings) {
   verifyFormat("const char *sssss =\n"
                "    \"一二三四五六七八\\\n"
-               " 九 十\";",
+               " 九 坝\";",
                "const char *sssss = \"一二三四五六七八\\\n"
-               " 九 十\";",
+               " 九 坝\";",
                getLLVMStyleWithColumns(30));
 }
 
 TEST_F(FormatTest, SplitsUTF8LineComments) {
   verifyFormat("// aaaaÄ\xc2\x8d", getLLVMStyleWithColumns(10));
-  verifyFormat("// Я из лесу\n"
+  verifyFormat("// Я из леѝу\n"
                "// вышел; был\n"
-               "// сильный\n"
+               "// ѝильный\n"
                "// мороз.",
-               "// Я из лесу вышел; был сильный мороз.",
+               "// Я из леѝу вышел; был ѝильный мороз.",
                getLLVMStyleWithColumns(13));
   verifyFormat("// 一二三\n"
                "// 四五六七\n"
                "// 八  九\n"
-               "// 十",
-               "// 一二三 四五六七 八  九 十", getLLVMStyleWithColumns(9));
+               "// 坝",
+               "// 一二三 四五六七 八  九 坝", getLLVMStyleWithColumns(9));
 }
 
 TEST_F(FormatTest, SplitsUTF8BlockComments) {
-  verifyFormat("/* Гляжу,\n"
-               " * поднимается\n"
+  verifyFormat("/* Глѝжу,\n"
+               " * поднимаетѝѝ\n"
                " * медленно в\n"
                " * гору\n"
                " * Лошадка,\n"
-               " * везущая\n"
-               " * хворосту\n"
+               " * везущаѝ\n"
+               " * хвороѝту\n"
                " * воз. */",
-               "/* Гляжу, поднимается медленно в гору\n"
-               " * Лошадка, везущая хворосту воз. */",
+               "/* Глѝжу, поднимаетѝѝ медленно в гору\n"
+               " * Лошадка, везущаѝ хвороѝту воз. */",
                getLLVMStyleWithColumns(13));
   verifyFormat("/* 一二三\n"
                " * 四五六七\n"
                " * 八  九\n"
-               " * 十  */",
-               "/* 一二三 四五六七 八  九 十  */", getLLVMStyleWithColumns(9));
+               " * 坝  */",
+               "/* 一二三 四五六七 八  九 坝  */", getLLVMStyleWithColumns(9));
   verifyFormat("/* 𝓣𝓮𝓼𝓽 𝔣𝔬𝔲𝔯\n"
                " * 𝕓𝕪𝕥𝕖\n"
                " * 𝖀𝕿𝕱-𝟠 */",
@@ -27908,9 +27908,9 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
 
 TEST_F(FormatTest, AlignUTFCommentsAndStringLiterals) {
   verifyFormat(
-      "int rus;      // А теперь комментарии, например, на русском, 2-байта\n"
-      "int long_rus; // Верхний коммент еще не превысил границу в 80, однако\n"
-      "              // уже отодвинут. Перенос, при этом, отрабатывает верно");
+      "int rus;      // Н теперь комментарии, например, на руѝѝком, 2-байта\n"
+      "int long_rus; // Верхний коммент еще не превыѝил границу в 80, однако\n"
+      "              // уже отодвинут. Переноѝ, при ѝтом, отрабатывает верно");
 
   auto Style = getLLVMStyle();
   Style.ColumnLimit = 15;
@@ -27940,7 +27940,7 @@ TEST_F(FormatTest, AlignUTFCommentsAndStringLiterals) {
   verifyFormat("Languages languages = {\n"
                "    Language{{'e', 'n'}, U\"Test English\" },\n"
                "    Language{{'l', 'v'}, U\"Test Latviešu\"},\n"
-               "    Language{{'r', 'u'}, U\"Test Русский\" },\n"
+               "    Language{{'r', 'u'}, U\"Test Руѝѝкий\" },\n"
                "};",
                Style);
 }
@@ -27985,6 +27985,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
 
   verifyFormat("const int result =\n"
                "    operand1 + operand2 - (operand3 + operand4);",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >> longOperand_1 >> longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28065,6 +28070,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28088,6 +28100,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[1] << 8 |\n"
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28164,6 +28183,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28189,15 +28215,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[3] << 24;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
-  // Check operator >> special case
+  // Check operator>> special case.
   verifyFormat("std::cin\n"
-               "    >> longOperand1\n"
-               "    >> longOperand2\n"
-               "    >> longOperand3\n"
-               "    >> longOperand4\n"
-               "    >> longOperand5\n"
-               "    >> longOperand6;",
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
                Style);
 }
 
