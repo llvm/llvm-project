@@ -1952,6 +1952,13 @@ bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return Index == 0;
 }
 
+bool SITargetLowering::isExtractVecEltCheap(EVT VT, unsigned Index) const {
+  // TODO: This should be more aggressive, particular for 16-bit element
+  // vectors. However there are some mixed improvements and regressions.
+  EVT EltTy = VT.getVectorElementType();
+  return EltTy.getSizeInBits() % 32 == 0;
+}
+
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   if (Subtarget->has16BitInsts() && VT == MVT::i16) {
     switch (Op) {
