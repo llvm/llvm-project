@@ -242,16 +242,15 @@ void BM_insert_begin_input_iter_with_reserve_almost_no_realloc(benchmark::State&
 
   const int overflow = size / 10; // 10% of elements won't fit in the vector when we insert
   Container c;
-  c.reserve(size);
-  std::generate_n(std::back_inserter(c), overflow, gen);
-
   for (auto _ : st) {
+    st.PauseTiming();
+    c = Container();
+    c.reserve(size);
+    std::generate_n(std::back_inserter(c), overflow, gen);
+    st.ResumeTiming();
+
     c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
-
-    st.PauseTiming();
-    c.erase(c.begin() + overflow, c.end()); // avoid growing indefinitely
-    st.ResumeTiming();
   }
 }
 
@@ -270,16 +269,15 @@ void BM_insert_begin_input_iter_with_reserve_near_full(benchmark::State& st, Gen
 
   const int overflow = 9 * (size / 10); // 90% of elements won't fit in the vector when we insert
   Container c;
-  c.reserve(size);
-  std::generate_n(std::back_inserter(c), overflow, gen);
-
   for (auto _ : st) {
+    st.PauseTiming();
+    c = Container();
+    c.reserve(size);
+    std::generate_n(std::back_inserter(c), overflow, gen);
+    st.ResumeTiming();
+
     c.insert(c.begin(), cpp17_input_iterator(first), cpp17_input_iterator(last));
     DoNotOptimizeData(c);
-
-    st.PauseTiming();
-    c.erase(c.begin() + overflow, c.end()); // avoid growing indefinitely
-    st.ResumeTiming();
   }
 }
 
