@@ -30,7 +30,7 @@ namespace {
 class SDNodeInfoEmitter {
   const RecordKeeper &RK;
   const CodeGenTarget Target;
-  std::map<StringRef, SmallVector<SDNodeInfo, 2>> TargetNodesByName;
+  std::map<StringRef, SmallVector<SDNodeInfo, 2>> NodesByName;
 
 public:
   explicit SDNodeInfoEmitter(const RecordKeeper &RK);
@@ -106,15 +106,14 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
     if (NS != TargetSDNodeNamespace)
       continue;
 
-    TargetNodesByName[EnumName].push_back(std::move(Node));
+    NodesByName[EnumName].push_back(std::move(Node));
   }
 
   // Filter out nodes that have different "prototypes" and/or flags.
   // Don't look at type constraints though, we will simply skip emitting
   // the constraints if they differ.
-  decltype(TargetNodesByName)::iterator Next;
-  for (auto I = TargetNodesByName.begin(), E = TargetNodesByName.end(); I != E;
-       I = Next) {
+  decltype(NodesByName)::iterator Next;
+  for (auto I = NodesByName.begin(), E = NodesByName.end(); I != E; I = Next) {
     Next = std::next(I);
 
     if (haveCompatibleDescriptions(I->second))
@@ -124,7 +123,7 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
       for (const SDNodeInfo &N : I->second)
         warnOnSkippedNode(N, "incompatible description");
 
-    TargetNodesByName.erase(I);
+    NodesByName.erase(I);
   }
 }
 
@@ -133,14 +132,14 @@ void SDNodeInfoEmitter::emitEnum(raw_ostream &OS) const {
   OS << "#undef GET_SDNODE_ENUM\n\n";
   OS << "namespace llvm::" << TargetSDNodeNamespace << " {\n\n";
 
-  if (!TargetNodesByName.empty()) {
-    StringRef FirstName = TargetNodesByName.begin()->first;
-    StringRef LastName = TargetNodesByName.rbegin()->first;
+  if (!NodesByName.empty()) {
+    StringRef FirstName = NodesByName.begin()->first;
+    StringRef LastName = NodesByName.rbegin()->first;
 
     OS << "enum GenNodeType : unsigned {\n";
     OS << "  " << FirstName << " = ISD::BUILTIN_OP_END,\n";
 
-    for (StringRef EnumName : make_first_range(drop_begin(TargetNodesByName)))
+    for (StringRef EnumName : make_first_range(drop_begin(NodesByName)))
       OS << "  " << EnumName << ",\n";
 
     OS << "};\n\n";
@@ -159,9 +158,9 @@ std::vector<unsigned> SDNodeInfoEmitter::emitNodeNames(raw_ostream &OS) const {
   StringToOffsetTable NameTable;
 
   std::vector<unsigned> NameOffsets;
-  NameOffsets.reserve(TargetNodesByName.size());
+  NameOffsets.reserve(NodesByName.size());
 
-  for (StringRef EnumName : make_first_range(TargetNodesByName)) {
+  for (StringRef EnumName : make_first_range(NodesByName)) {
     SmallString<64> DebugName;
     raw_svector_ostream SS(DebugName);
     SS << TargetSDNodeNamespace << "::" << EnumName;
@@ -240,10 +239,10 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
       /*Terminator=*/std::nullopt);
 
   std::vector<std::pair<unsigned, unsigned>> ConstraintOffsetsAndCounts;
-  ConstraintOffsetsAndCounts.reserve(TargetNodesByName.size());
+  ConstraintOffsetsAndCounts.reserve(NodesByName.size());
 
   SmallVector<StringRef> SkippedNodes;
-  for (const auto &[EnumName, Nodes] : TargetNodesByName) {
+  for (const auto &[EnumName, Nodes] : NodesByName) {
     ArrayRef<SDTypeConstraint> Constraints = Nodes.front().getTypeConstraints();
 
     bool IsAmbiguous = any_of(drop_begin(Nodes), [&](const SDNodeInfo &Other) {
@@ -276,7 +275,7 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
   ConstraintTable.emit(OS, emitTypeConstraint);
   OS << "};\n\n";
 
-  for (const auto &[EnumName, Nodes] : TargetNodesByName) {
+  for (const auto &[EnumName, Nodes] : NodesByName) {
     ArrayRef<SDTypeConstraint> Constraints = Nodes.front().getTypeConstraints();
 
     if (Constraints.empty() || is_contained(SkippedNodes, EnumName)) {
@@ -337,7 +336,7 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   OS << "static const SDNodeDesc " << TargetName << "SDNodeDescs[] = {\n";
 
   for (const auto &[NameAndNodes, NameOffset, ConstraintOffsetAndCount] :
-       zip_equal(TargetNodesByName, NameOffsets, ConstraintOffsetsAndCounts))
+       zip_equal(NodesByName, NameOffsets, ConstraintOffsetsAndCounts))
     emitDesc(OS, NameAndNodes.first, NameAndNodes.second, NameOffset,
              ConstraintOffsetAndCount.first, ConstraintOffsetAndCount.second);
 
@@ -346,7 +345,7 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
   OS << formatv("static const SDNodeInfo {0}GenSDNodeInfo(\n"
                 "    /*NumOpcodes=*/{1}, {0}SDNodeDescs,\n"
                 "    {0}SDNodeNames, {0}SDTypeConstraints);\n\n",
-                TargetName, TargetNodesByName.size());
+                TargetName, NodesByName.size());
 
   OS << "} // namespace llvm\n\n";
   OS << "#endif // GET_SDNODE_DESC\n\n";
