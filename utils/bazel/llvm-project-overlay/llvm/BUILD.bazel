@@ -923,6 +923,8 @@ cc_library(
         ":BitstreamReader",
         ":BitstreamWriter",
         ":Support",
+        ":intrinsic_enums_gen",
+        ":attributes_gen"
     ],
 )
 
@@ -3324,6 +3326,29 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+    ] + select({
+        "@platforms//os:linux": [":maybe_pfm"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "CAS",
+    srcs = glob(
+        [
+            "lib/CAS/*.cpp",
+            "lib/CAS/*.h",
+        ],
+        allow_empty = True,
+    ),
+    hdrs = glob([
+        "include/llvm/CAS/*.h",
+    ]),
+    textual_hdrs = glob(["lib/CAS/*.def"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Support",
     ] + select({
         "@platforms//os:linux": [":maybe_pfm"],
         "//conditions:default": [],
