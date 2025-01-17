@@ -873,7 +873,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
   }
 
-  // special dealing for v_sat_pk instruction
+  // special case for v_sat_pk
   if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
     // Reasons for putting both {MVT::v2i16, MVT::v2i8}
     // 1. In foldToSaturated during DAG combine
