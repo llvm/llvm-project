@@ -1,5 +1,4 @@
 ## This test checks that indirect tail call is properly identified by BOLT on aarch64.
-
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
