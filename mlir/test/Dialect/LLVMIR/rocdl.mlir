@@ -242,6 +242,17 @@ llvm.func @rocdl.ds.read.tr(%ptr : !llvm.ptr<3>) -> vector<4xf16> {
   llvm.return %r3 : vector<4xf16>
 }
 
+llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  %offset = llvm.mlir.constant(0 : i32) : i32
+  %size = llvm.mlir.constant(10 : i32) : i32
+
+  //CHECK: rocdl.global.load.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
+  rocdl.global.load.lds %src, %dst, %size, %offset, %aux
+
+  llvm.return
+}
+
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
                                   %numRecords : i32,
