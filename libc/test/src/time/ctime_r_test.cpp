@@ -13,8 +13,11 @@
 #include "test/src/time/TmHelper.h"
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
+
 #include "src/time/linux/localtime_utils.h"
 #include "src/time/linux/timezone.h"
+#include <unistd.h>
+
 #endif
 
 using namespace LIBC_NAMESPACE::time_constants;

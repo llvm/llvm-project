@@ -70,6 +70,7 @@ add_libc_unittest(
     20
   DEPENDS
     libc.src.time.ctime_r
+    unistd.h
 )
 
 add_libc_unittest(
