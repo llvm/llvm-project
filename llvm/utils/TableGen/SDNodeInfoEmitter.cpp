@@ -30,8 +30,7 @@ namespace {
 class SDNodeInfoEmitter {
   const RecordKeeper &RK;
   const CodeGenTarget Target;
-  std::vector<SDNodeInfo> AllNodes;
-  std::map<StringRef, SmallVector<const SDNodeInfo *, 2>> TargetNodesByName;
+  std::map<StringRef, SmallVector<SDNodeInfo, 2>> TargetNodesByName;
 
 public:
   explicit SDNodeInfoEmitter(const RecordKeeper &RK);
@@ -51,16 +50,15 @@ private:
 
 } // namespace
 
-static bool haveCompatibleDescriptions(const SDNodeInfo *N1,
-                                       const SDNodeInfo *N2) {
+static bool haveCompatibleDescriptions(const SDNodeInfo &N1,
+                                       const SDNodeInfo &N2) {
   // Number of results/operands must match.
-  if (N1->getNumResults() != N2->getNumResults() ||
-      N1->getNumOperands() != N2->getNumOperands())
+  if (N1.getNumResults() != N2.getNumResults() ||
+      N1.getNumOperands() != N2.getNumOperands())
     return false;
 
   // Flags must match.
-  if (N1->isStrictFP() != N2->isStrictFP() ||
-      N1->getTSFlags() != N2->getTSFlags())
+  if (N1.isStrictFP() != N2.isStrictFP() || N1.getTSFlags() != N2.getTSFlags())
     return false;
 
   // We're only interested in a subset of node properties. Properties like
@@ -70,18 +68,18 @@ static bool haveCompatibleDescriptions(const SDNodeInfo *N1,
                                 (1 << SDNPInGlue) | (1 << SDNPOptInGlue) |
                                 (1 << SDNPMemOperand) | (1 << SDNPVariadic);
 
-  return (N1->getProperties() & PropMask) == (N2->getProperties() & PropMask);
+  return (N1.getProperties() & PropMask) == (N2.getProperties() & PropMask);
 }
 
-static bool haveCompatibleDescriptions(ArrayRef<const SDNodeInfo *> Nodes) {
-  const SDNodeInfo *N = Nodes.front();
-  return all_of(drop_begin(Nodes), [&](const SDNodeInfo *Other) {
+static bool haveCompatibleDescriptions(ArrayRef<SDNodeInfo> Nodes) {
+  const SDNodeInfo &N = Nodes.front();
+  return all_of(drop_begin(Nodes), [&](const SDNodeInfo &Other) {
     return haveCompatibleDescriptions(Other, N);
   });
 }
 
-static void warnOnSkippedNode(const SDNodeInfo *N, const Twine &Reason) {
-  PrintWarning(N->getRecord()->getLoc(), "skipped node: " + Reason);
+static void warnOnSkippedNode(const SDNodeInfo &N, const Twine &Reason) {
+  PrintWarning(N.getRecord()->getLoc(), "skipped node: " + Reason);
 }
 
 SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
@@ -92,27 +90,23 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
   if (!TargetSDNodeNamespace.getNumOccurrences())
     TargetSDNodeNamespace = Target.getName().str() + "ISD";
 
-  // Parse all SDNode records.
-  for (const Record *R : RK.getAllDerivedDefinitions("SDNode"))
-    AllNodes.emplace_back(R, HwModes);
-
   // Filter nodes by the target SDNode namespace and create a mapping
   // from an enum name to a list of nodes that have that name.
   // The mapping is usually 1:1, but in rare cases it can be 1:N.
-  for (const SDNodeInfo &Node : AllNodes) {
-    StringRef QualifiedEnumName = Node.getEnumName();
-    auto [NS, EnumName] = QualifiedEnumName.split("::");
+  for (const Record *R : RK.getAllDerivedDefinitions("SDNode")) {
+    SDNodeInfo Node(R, HwModes);
+    auto [NS, EnumName] = Node.getEnumName().split("::");
 
     if (NS.empty() || EnumName.empty()) {
       if (WarnOnSkippedNodes)
-        warnOnSkippedNode(&Node, "invalid enum name");
+        warnOnSkippedNode(Node, "invalid enum name");
       continue;
     }
 
     if (NS != TargetSDNodeNamespace)
       continue;
 
-    TargetNodesByName[EnumName].push_back(&Node);
+    TargetNodesByName[EnumName].push_back(std::move(Node));
   }
 
   // Filter out nodes that have different "prototypes" and/or flags.
@@ -127,7 +121,7 @@ SDNodeInfoEmitter::SDNodeInfoEmitter(const RecordKeeper &RK)
       continue;
 
     if (WarnOnSkippedNodes)
-      for (const SDNodeInfo *N : I->second)
+      for (const SDNodeInfo &N : I->second)
         warnOnSkippedNode(N, "incompatible description");
 
     TargetNodesByName.erase(I);
@@ -250,11 +244,10 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
 
   SmallVector<StringRef> SkippedNodes;
   for (const auto &[EnumName, Nodes] : TargetNodesByName) {
-    ArrayRef<SDTypeConstraint> Constraints =
-        Nodes.front()->getTypeConstraints();
+    ArrayRef<SDTypeConstraint> Constraints = Nodes.front().getTypeConstraints();
 
-    bool IsAmbiguous = any_of(drop_begin(Nodes), [&](const SDNodeInfo *Other) {
-      return ArrayRef(Other->getTypeConstraints()) != Constraints;
+    bool IsAmbiguous = any_of(drop_begin(Nodes), [&](const SDNodeInfo &Other) {
+      return ArrayRef(Other.getTypeConstraints()) != Constraints;
     });
 
     // If nodes with the same enum name have different constraints,
@@ -284,8 +277,7 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
   OS << "};\n\n";
 
   for (const auto &[EnumName, Nodes] : TargetNodesByName) {
-    ArrayRef<SDTypeConstraint> Constraints =
-        Nodes.front()->getTypeConstraints();
+    ArrayRef<SDTypeConstraint> Constraints = Nodes.front().getTypeConstraints();
 
     if (Constraints.empty() || is_contained(SkippedNodes, EnumName)) {
       ConstraintOffsetsAndCounts.emplace_back(/*Offset=*/0, /*Size=*/0);
@@ -302,14 +294,14 @@ SDNodeInfoEmitter::emitTypeConstraints(raw_ostream &OS) const {
 }
 
 static void emitDesc(raw_ostream &OS, StringRef EnumName,
-                     ArrayRef<const SDNodeInfo *> Nodes, unsigned NameOffset,
+                     ArrayRef<SDNodeInfo> Nodes, unsigned NameOffset,
                      unsigned ConstraintsOffset, unsigned ConstraintCount) {
   assert(haveCompatibleDescriptions(Nodes));
-  const SDNodeInfo *N = Nodes.front();
-  OS << "    {" << N->getNumResults() << ", " << N->getNumOperands() << ", 0";
+  const SDNodeInfo &N = Nodes.front();
+  OS << "    {" << N.getNumResults() << ", " << N.getNumOperands() << ", 0";
 
   // Emitted properties must be kept in sync with haveCompatibleDescriptions.
-  unsigned Properties = N->getProperties();
+  unsigned Properties = N.getProperties();
   if (Properties & (1 << SDNPHasChain))
     OS << "|1<<SDNPHasChain";
   if (Properties & (1 << SDNPOutGlue))
@@ -324,10 +316,10 @@ static void emitDesc(raw_ostream &OS, StringRef EnumName,
     OS << "|1<<SDNPMemOperand";
 
   OS << ", 0";
-  if (N->isStrictFP())
+  if (N.isStrictFP())
     OS << "|1<<SDNFIsStrictFP";
 
-  OS << formatv(", {}, {}, {}, {}}, // {}\n", N->getTSFlags(), NameOffset,
+  OS << formatv(", {}, {}, {}, {}}, // {}\n", N.getTSFlags(), NameOffset,
                 ConstraintsOffset, ConstraintCount, EnumName);
 }
 
