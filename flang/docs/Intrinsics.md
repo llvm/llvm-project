@@ -705,6 +705,7 @@ MALLOC, FREE
 
 ### Library subroutine 
 ```
+CALL BACKTRACE()
 CALL FDATE(TIME)
 CALL GETLOG(USRNAME)
 CALL GETENV(NAME [, VALUE, LENGTH, STATUS, TRIM_NAME, ERRMSG ])
@@ -769,7 +770,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SIGNAL, SLEEP, SYSTEM, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD |
 | Collective intrinsic subroutines | CO_REDUCE |
-| Library subroutines | FDATE, GETLOG, GETENV |
+| Library subroutines | BACKTRACE, FDATE, GETLOG, GETENV |
 
 
 ### Intrinsic Function Folding
@@ -1051,6 +1052,9 @@ end program rename_proc
 ### Non-standard Intrinsics: SECOND
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
+
+### Non-standard Intrinsics: LNBLNK
+This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 
 #### Usage and Info
 

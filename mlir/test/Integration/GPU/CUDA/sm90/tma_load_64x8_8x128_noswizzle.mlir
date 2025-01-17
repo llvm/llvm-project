@@ -80,8 +80,8 @@ module @mymod {
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c6144 : <memorySpace = #gpu.address_space<workgroup>>
         %11 = memref.load %7[%c0, %c0] : memref<64x8xf32, 3>
         %12 = memref.load %8[%c0, %c0] : memref<8x128xf32, 3>
-        gpu.printf "[GPU] TMA BEFORE lhs[45][7] %f\0A" %11 : f32
-        gpu.printf "[GPU] TMA BEFORE rhs[7][0] %f\0A" %12 : f32
+        gpu.printf "[GPU] TMA BEFORE lhs[45][7] %f\0A", %11 : f32
+        gpu.printf "[GPU] TMA BEFORE rhs[7][0] %f\0A", %12 : f32
         nvgpu.tma.async.load %3[%c0, %c0], %9[%c0] to %7 : <tensor = memref<64x8xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>> -> memref<64x8xf32, 3>
         nvgpu.tma.async.load %4[%c0, %c0], %9[%c0] to %8 : <tensor = memref<8x128xf32, 3>, swizzle = none, l2promo = none, oob = zero, interleave = none>, <memorySpace = #gpu.address_space<workgroup>> -> memref<8x128xf32, 3>
       } else {
@@ -92,8 +92,8 @@ module @mymod {
       scf.if %10 {
         %11 = memref.load %7[%c45, %c7] : memref<64x8xf32, 3>
         %12 = memref.load %8[%c7, %c0] : memref<8x128xf32, 3>
-        gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A" %11 : f32
-        gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A" %12 : f32
+        gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A", %11 : f32
+        gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A", %12 : f32
       }
       gpu.terminator
     }

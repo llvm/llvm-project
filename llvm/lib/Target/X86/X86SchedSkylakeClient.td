@@ -608,7 +608,7 @@ defm : SKLWriteResPair<WriteVarShuffle256, [SKLPort5], 3, [1], 1, 7>;  // 256-bi
 def : WriteRes<WriteMicrocoded, [SKLPort0156]> { let Latency = 100; } // def WriteMicrocoded : SchedWrite;
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [SKLPort23, SKLPort4]>;
+def : WriteRes<WriteFence,  [SKLPort23, SKLPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Load/store MXCSR.
 def : WriteRes<WriteLDMXCSR, [SKLPort0,SKLPort23,SKLPort0156]> { let Latency = 7; let NumMicroOps = 3; let ReleaseAtCycles = [1,1,1]; }
@@ -738,13 +738,6 @@ def SKLWriteResGroup20 : SchedWriteRes<[SKLPort6,SKLPort0156]> {
 }
 def: InstRW<[SKLWriteResGroup20], (instregex "CLFLUSH")>;
 
-def SKLWriteResGroup21 : SchedWriteRes<[SKLPort237,SKLPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[SKLWriteResGroup21], (instrs SFENCE)>;
-
 def SKLWriteResGroup23 : SchedWriteRes<[SKLPort06,SKLPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
@@ -833,13 +826,6 @@ def SKLWriteResGroup40 : SchedWriteRes<[SKLPort6,SKLPort0156]> {
   let ReleaseAtCycles = [1,2];
 }
 def: InstRW<[SKLWriteResGroup40], (instregex "CLD")>;
-
-def SKLWriteResGroup41 : SchedWriteRes<[SKLPort237,SKLPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [1,2];
-}
-def: InstRW<[SKLWriteResGroup41], (instrs MFENCE)>;
 
 def SKLWriteResGroup42 : SchedWriteRes<[SKLPort06,SKLPort0156]> {
   let Latency = 2;

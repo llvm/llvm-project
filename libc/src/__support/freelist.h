@@ -26,12 +26,12 @@ public:
   class Node {
   public:
     /// @returns The block containing this node.
-    LIBC_INLINE const Block<> *block() const {
-      return Block<>::from_usable_space(this);
+    LIBC_INLINE const Block *block() const {
+      return Block::from_usable_space(this);
     }
 
     /// @returns The block containing this node.
-    LIBC_INLINE Block<> *block() { return Block<>::from_usable_space(this); }
+    LIBC_INLINE Block *block() { return Block::from_usable_space(this); }
 
     /// @returns The inner size of blocks in the list containing this node.
     LIBC_INLINE size_t size() const { return block()->inner_size(); }
@@ -58,11 +58,11 @@ public:
   LIBC_INLINE Node *begin() { return begin_; }
 
   /// @returns The first block in the list.
-  LIBC_INLINE Block<> *front() { return begin_->block(); }
+  LIBC_INLINE Block *front() { return begin_->block(); }
 
   /// Push a block to the back of the list.
   /// The block must be large enough to contain a node.
-  LIBC_INLINE void push(Block<> *block) {
+  LIBC_INLINE void push(Block *block) {
     LIBC_ASSERT(!block->used() &&
                 "only free blocks can be placed on free lists");
     LIBC_ASSERT(block->inner_size_free() >= sizeof(FreeList) &&

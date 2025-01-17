@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_INVOKE_H
-#define _LIBCPP___TYPE_TRAITS_INVOKE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -267,4 +267,4 @@ using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_INVOKE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H

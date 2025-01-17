@@ -30,6 +30,10 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
+#if defined(__LLVM_LIBC__)
+#  define _LIBCPP_HAS_TIMESPEC_GET
+#endif
+
 #if defined(__APPLE__) || defined(__gnu_hurd__) || defined(__AMDGPU__) || defined(__NVPTX__) ||                        \
     (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0)
 #  define _LIBCPP_HAS_CLOCK_GETTIME
@@ -50,6 +54,12 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   GetSystemTimeAsFileTime(&time);
   detail::TimeSpec tp = detail::filetime_to_timespec(time);
   return time_point(__secs(tp.tv_sec) + chrono::duration_cast<duration>(__nsecs(tp.tv_nsec)));
+#elif defined(_LIBCPP_HAS_TIMESPEC_GET)
+  typedef chrono::duration<rep, nano> __nsecs;
+  struct timespec ts;
+  if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
+    __throw_system_error(errno, "timespec_get(TIME_UTC) failed");
+  return time_point(__secs(ts.tv_sec) + chrono::duration_cast<duration>(__nsecs(ts.tv_nsec)));
 #elif defined(_LIBCPP_HAS_CLOCK_GETTIME)
   typedef chrono::duration<rep, nano> __nsecs;
   struct timespec tp;

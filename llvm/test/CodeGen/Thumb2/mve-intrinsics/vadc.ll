@@ -108,7 +108,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vsbciq_s32(<4 x i32> %a, <4 x i32> %b, pt
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a, <4 x i32> %b, i32 0)
+  %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a, <4 x i32> %b, i32 536870912)
   %1 = extractvalue { <4 x i32>, i32 } %0, 1
   %2 = lshr i32 %1, 29
   %3 = and i32 %2, 1
@@ -121,6 +121,46 @@ define arm_aapcs_vfpcc <4 x i32> @test_vsbciq_u32(<4 x i32> %a, <4 x i32> %b, pt
 ; CHECK-LABEL: test_vsbciq_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vsbci.i32 q0, q0, q1
+; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
+; CHECK-NEXT:    ubfx r1, r1, #29, #1
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a, <4 x i32> %b, i32 536870912)
+  %1 = extractvalue { <4 x i32>, i32 } %0, 1
+  %2 = lshr i32 %1, 29
+  %3 = and i32 %2, 1
+  store i32 %3, ptr %carry_out, align 4
+  %4 = extractvalue { <4 x i32>, i32 } %0, 0
+  ret <4 x i32> %4
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vsbcq_s32_carry_in_zero(<4 x i32> %a, <4 x i32> %b, ptr nocapture %carry_out) {
+; CHECK-LABEL: test_vsbcq_s32_carry_in_zero:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmsr fpscr_nzcvqc, r1
+; CHECK-NEXT:    vsbc.i32 q0, q0, q1
+; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
+; CHECK-NEXT:    ubfx r1, r1, #29, #1
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.v4i32(<4 x i32> %a, <4 x i32> %b, i32 0)
+  %1 = extractvalue { <4 x i32>, i32 } %0, 1
+  %2 = lshr i32 %1, 29
+  %3 = and i32 %2, 1
+  store i32 %3, ptr %carry_out, align 4
+  %4 = extractvalue { <4 x i32>, i32 } %0, 0
+  ret <4 x i32> %4
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vsbcq_u32_carry_in_zero(<4 x i32> %a, <4 x i32> %b, ptr nocapture %carry_out) {
+; CHECK-LABEL: test_vsbcq_u32_carry_in_zero:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmsr fpscr_nzcvqc, r1
+; CHECK-NEXT:    vsbc.i32 q0, q0, q1
 ; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
 ; CHECK-NEXT:    ubfx r1, r1, #29, #1
 ; CHECK-NEXT:    str r1, [r0]
@@ -196,7 +236,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_vsbciq_m_s32(<4 x i32> %inactive, <4 x i3
 entry:
   %0 = zext i16 %p to i32
   %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
-  %2 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, i32 0, <4 x i1> %1)
+  %2 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, i32 536870912, <4 x i1> %1)
   %3 = extractvalue { <4 x i32>, i32 } %2, 1
   %4 = lshr i32 %3, 29
   %5 = and i32 %4, 1
@@ -211,6 +251,54 @@ define arm_aapcs_vfpcc <4 x i32> @test_vsbciq_m_u32(<4 x i32> %inactive, <4 x i3
 ; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vsbcit.i32 q0, q1, q2
+; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
+; CHECK-NEXT:    ubfx r1, r1, #29, #1
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, i32 536870912, <4 x i1> %1)
+  %3 = extractvalue { <4 x i32>, i32 } %2, 1
+  %4 = lshr i32 %3, 29
+  %5 = and i32 %4, 1
+  store i32 %5, ptr %carry_out, align 4
+  %6 = extractvalue { <4 x i32>, i32 } %2, 0
+  ret <4 x i32> %6
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vsbcq_m_s32_carry_in_zero(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, ptr nocapture %carry_out, i16 zeroext %p) {
+; CHECK-LABEL: test_vsbcq_m_s32_carry_in_zero:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmsr fpscr_nzcvqc, r2
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vsbct.i32 q0, q1, q2
+; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
+; CHECK-NEXT:    ubfx r1, r1, #29, #1
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vsbc.predicated.v4i32.v4i1(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, i32 0, <4 x i1> %1)
+  %3 = extractvalue { <4 x i32>, i32 } %2, 1
+  %4 = lshr i32 %3, 29
+  %5 = and i32 %4, 1
+  store i32 %5, ptr %carry_out, align 4
+  %6 = extractvalue { <4 x i32>, i32 } %2, 0
+  ret <4 x i32> %6
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vsbcq_m_u32_carry_in_zero(<4 x i32> %inactive, <4 x i32> %a, <4 x i32> %b, ptr nocapture %carry_out, i16 zeroext %p) {
+; CHECK-LABEL: test_vsbcq_m_u32_carry_in_zero:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmsr fpscr_nzcvqc, r2
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vsbct.i32 q0, q1, q2
 ; CHECK-NEXT:    vmrs r1, fpscr_nzcvqc
 ; CHECK-NEXT:    ubfx r1, r1, #29, #1
 ; CHECK-NEXT:    str r1, [r0]

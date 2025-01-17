@@ -11,12 +11,11 @@
 
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
-#include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/support.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
-#include <__functional/operations.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
@@ -144,7 +143,7 @@ struct __atomic_base // false
 
 template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
-  using __base = __atomic_base<_Tp, false>;
+  using __base _LIBCPP_NODEBUG = __atomic_base<_Tp, false>;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __atomic_base() _NOEXCEPT = default;
 
@@ -229,9 +228,9 @@ struct __atomic_waitable_traits<__atomic_base<_Tp, _IsIntegral> > {
 
 template <class _Tp>
 struct atomic : public __atomic_base<_Tp> {
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
+  using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
+  using value_type             = _Tp;
+  using difference_type        = value_type;
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI atomic() = default;
@@ -258,9 +257,9 @@ struct atomic : public __atomic_base<_Tp> {
 
 template <class _Tp>
 struct atomic<_Tp*> : public __atomic_base<_Tp*> {
-  using __base          = __atomic_base<_Tp*>;
-  using value_type      = _Tp*;
-  using difference_type = ptrdiff_t;
+  using __base _LIBCPP_NODEBUG = __atomic_base<_Tp*>;
+  using value_type             = _Tp*;
+  using difference_type        = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
@@ -376,7 +375,8 @@ private:
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
       return std::__cxx_atomic_fetch_add(__a, __builtin_operand, __order);
     };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{}, __builtin_op);
+    auto __plus = [](auto __a, auto __b) { return __a + __b; };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __plus, __builtin_op);
   }
 
   template <class _This>
@@ -384,13 +384,14 @@ private:
     auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
       return std::__cxx_atomic_fetch_sub(__a, __builtin_operand, __order);
     };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{}, __builtin_op);
+    auto __minus = [](auto __a, auto __b) { return __a - __b; };
+    return __rmw_op(std::forward<_This>(__self), __operand, __m, __minus, __builtin_op);
   }
 
 public:
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
+  using __base _LIBCPP_NODEBUG = __atomic_base<_Tp>;
+  using value_type             = _Tp;
+  using difference_type        = value_type;
 
   _LIBCPP_HIDE_FROM_ABI constexpr atomic() noexcept = default;
   _LIBCPP_HIDE_FROM_ABI constexpr atomic(_Tp __d) noexcept : __base(__d) {}

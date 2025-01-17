@@ -91,14 +91,14 @@ func.func @alloca_non_integer_alignment() {
 // -----
 
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 

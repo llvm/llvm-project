@@ -55,3 +55,17 @@ define void @mix_interleave4_interleave2(ptr %dst1, ptr %dst2, <vscale x 4 x i32
   store <vscale x 8 x i32> %interleaved, ptr %dst2, align 4
   ret void
 }
+
+; This case tests when the interleave is using same parameter twice,
+; the dead parameter will not get deleted twice.
+define void @duplicate_by_interleave(<vscale x 4 x i32> %A, <vscale x 4 x i32> %B, ptr writeonly %AB_duplicate) {
+; CHECK-LABEL: define void @duplicate_by_interleave
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], ptr writeonly [[AB_DUPLICATE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[B]], <vscale x 4 x i1> splat (i1 true), ptr [[AB_DUPLICATE]])
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %A, <vscale x 4 x i32> %B)
+  %duplicate_by_interleave = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %interleave, <vscale x 8 x i32> %interleave)
+  store <vscale x 16 x i32> %duplicate_by_interleave, ptr %AB_duplicate, align 4
+  ret void
+}

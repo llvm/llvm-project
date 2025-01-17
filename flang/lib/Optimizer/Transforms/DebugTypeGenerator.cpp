@@ -325,7 +325,7 @@ static bool canCacheThisType(mlir::LLVM::DICompositeTypeAttr comTy) {
 std::pair<std::uint64_t, unsigned short>
 DebugTypeGenerator::getFieldSizeAndAlign(mlir::Type fieldTy) {
   mlir::Type llvmTy;
-  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(fieldTy))
+  if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(fieldTy))
     llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
   else
     llvmTy = llvmTypeConverter.convertType(fieldTy);
@@ -371,7 +371,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
-    auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(fieldTy);
+    auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(fieldTy);
 
     // For members of the derived types, the information about the shift in
     // lower bounds is not part of the declOp but has to be extracted from the
@@ -622,10 +622,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
   // Arrays and character need different treatment because DWARF have special
   // constructs for them to get the location from the descriptor. Rest of
   // types are handled like pointer to underlying type.
-  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+  if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(elTy))
     return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp,
                                     genAllocated, genAssociated);
-  if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(elTy))
+  if (auto charTy = mlir::dyn_cast_if_present<fir::CharacterType>(elTy))
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/true);
 
@@ -638,7 +638,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
 
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
-      mlir::StringAttr::get(context, ""), elTyAttr, ptrSize,
+      mlir::StringAttr::get(context, ""), elTyAttr, /*sizeInBits=*/ptrSize * 8,
       /*alignInBits=*/0, /*offset=*/0,
       /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
 }
@@ -654,22 +654,22 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   } else if (mlir::isa<mlir::FloatType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "real"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
-  } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(Ty)) {
+  } else if (auto logTy = mlir::dyn_cast_if_present<fir::LogicalType>(Ty)) {
     return genBasicType(context,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
                         kindMapping.getLogicalBitsize(logTy.getFKind()),
                         llvm::dwarf::DW_ATE_boolean);
-  } else if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(Ty)) {
+  } else if (auto cplxTy = mlir::dyn_cast_if_present<mlir::ComplexType>(Ty)) {
     auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
     unsigned bitWidth = floatTy.getWidth();
     return genBasicType(context, mlir::StringAttr::get(context, "complex"),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
-  } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
+  } else if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, declOp);
-  } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
+  } else if (auto charTy = mlir::dyn_cast_if_present<fir::CharacterType>(Ty)) {
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
-  } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(Ty)) {
+  } else if (auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(Ty)) {
     return convertRecordType(recTy, fileAttr, scope, declOp);
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
@@ -678,22 +678,22 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertPointerLikeType(elTy, fileAttr, scope, declOp,
                                   /*genAllocated=*/false,
                                   /*genAssociated=*/false);
-  } else if (auto vecTy = mlir::dyn_cast_or_null<fir::VectorType>(Ty)) {
+  } else if (auto vecTy = mlir::dyn_cast_if_present<fir::VectorType>(Ty)) {
     return convertVectorType(vecTy, fileAttr, scope, declOp);
   } else if (mlir::isa<mlir::IndexType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         llvmTypeConverter.getIndexTypeBitwidth(),
                         llvm::dwarf::DW_ATE_signed);
-  } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(Ty)) {
+  } else if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(Ty)) {
     auto elTy = boxTy.getEleTy();
-    if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+    if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, declOp, false,
                                       false);
-    if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
+    if (auto heapTy = mlir::dyn_cast_if_present<fir::HeapType>(elTy))
       return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/true,
                                     /*genAssociated=*/false);
-    if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(elTy))
+    if (auto ptrTy = mlir::dyn_cast_if_present<fir::PointerType>(elTy))
       return convertPointerLikeType(ptrTy.getElementType(), fileAttr, scope,
                                     declOp, /*genAllocated=*/false,
                                     /*genAssociated=*/true);

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_MOVE_H
-#define _LIBCPP___UTILITY_MOVE_H
+#ifndef _LIBCPP___CXX03___UTILITY_MOVE_H
+#define _LIBCPP___CXX03___UTILITY_MOVE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -46,4 +46,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_MOVE_H
+#endif // _LIBCPP___CXX03___UTILITY_MOVE_H

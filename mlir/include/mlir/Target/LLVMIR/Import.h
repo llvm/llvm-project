@@ -39,10 +39,13 @@ class ModuleOp;
 /// be imported without elements. If set, the option avoids the recursive
 /// traversal of composite type debug information, which can be expensive for
 /// adversarial inputs.
+/// The `loadAllDialects` flag (default on) will load all dialects in the
+/// context.
 OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context, bool emitExpensiveWarnings = true,
-                        bool dropDICompositeTypeElements = false);
+                        bool dropDICompositeTypeElements = false,
+                        bool loadAllDialects = true);
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
 /// dialect.

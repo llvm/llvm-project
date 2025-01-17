@@ -808,6 +808,10 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
           "visibility must be dso_local!",
           &GV);
 
+  if (GV.isTagged()) {
+    Check(!GV.hasSection(), "tagged GlobalValue must not be in section.", &GV);
+  }
+
   forEachUser(&GV, GlobalValueVisited, [&](const Value *V) -> bool {
     if (const Instruction *I = dyn_cast<Instruction>(V)) {
       if (!I->getParent() || !I->getParent()->getParent())
@@ -2264,19 +2268,23 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   Check((Attrs.hasFnAttr("aarch64_new_za") + Attrs.hasFnAttr("aarch64_in_za") +
          Attrs.hasFnAttr("aarch64_inout_za") +
          Attrs.hasFnAttr("aarch64_out_za") +
-         Attrs.hasFnAttr("aarch64_preserves_za")) <= 1,
+         Attrs.hasFnAttr("aarch64_preserves_za") +
+         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
         "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
-        "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive",
+        "'aarch64_inout_za', 'aarch64_preserves_za' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
         V);
 
-  Check(
-      (Attrs.hasFnAttr("aarch64_new_zt0") + Attrs.hasFnAttr("aarch64_in_zt0") +
-       Attrs.hasFnAttr("aarch64_inout_zt0") +
-       Attrs.hasFnAttr("aarch64_out_zt0") +
-       Attrs.hasFnAttr("aarch64_preserves_zt0")) <= 1,
-      "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
-      "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive",
-      V);
+  Check((Attrs.hasFnAttr("aarch64_new_zt0") +
+         Attrs.hasFnAttr("aarch64_in_zt0") +
+         Attrs.hasFnAttr("aarch64_inout_zt0") +
+         Attrs.hasFnAttr("aarch64_out_zt0") +
+         Attrs.hasFnAttr("aarch64_preserves_zt0") +
+         Attrs.hasFnAttr("aarch64_za_state_agnostic")) <= 1,
+        "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
+        "'aarch64_inout_zt0', 'aarch64_preserves_zt0' and "
+        "'aarch64_za_state_agnostic' are mutually exclusive",
+        V);
 
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
@@ -6388,6 +6396,55 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         AMDGPU::isFlatGlobalAddrSpace(
             Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
+    break;
+  }
+  case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    Value *Src0 = Call.getArgOperand(0);
+    Value *Src1 = Call.getArgOperand(1);
+
+    uint64_t CBSZ = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
+    Check(CBSZ <= 4, "invalid value for cbsz format", Call,
+          Call.getArgOperand(3));
+    Check(BLGP <= 4, "invalid value for blgp format", Call,
+          Call.getArgOperand(4));
+
+    // AMDGPU::MFMAScaleFormats values
+    auto getFormatNumRegs = [](unsigned FormatVal) {
+      switch (FormatVal) {
+      case 0:
+      case 1:
+        return 8u;
+      case 2:
+      case 3:
+        return 6u;
+      case 4:
+        return 4u;
+      default:
+        llvm_unreachable("invalid format value");
+      }
+    };
+
+    auto isValidSrcASrcBVector = [](FixedVectorType *Ty) {
+      if (!Ty || !Ty->getElementType()->isIntegerTy(32))
+        return false;
+      unsigned NumElts = Ty->getNumElements();
+      return NumElts == 4 || NumElts == 6 || NumElts == 8;
+    };
+
+    auto *Src0Ty = dyn_cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = dyn_cast<FixedVectorType>(Src1->getType());
+    Check(isValidSrcASrcBVector(Src0Ty),
+          "operand 0 must be 4, 6 or 8 element i32 vector", &Call, Src0);
+    Check(isValidSrcASrcBVector(Src1Ty),
+          "operand 1 must be 4, 6 or 8 element i32 vector", &Call, Src1);
+
+    // Permit excess registers for the format.
+    Check(Src0Ty->getNumElements() >= getFormatNumRegs(CBSZ),
+          "invalid vector type for format", &Call, Src0, Call.getArgOperand(3));
+    Check(Src1Ty->getNumElements() >= getFormatNumRegs(BLGP),
+          "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:

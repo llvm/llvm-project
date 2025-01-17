@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
-#define _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
 
 #include <__cxx03/__algorithm/equal.h>
 #include <__cxx03/__algorithm/min.h>
@@ -273,4 +273,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_SUBTRACT_WITH_CARRY_ENGINE_H

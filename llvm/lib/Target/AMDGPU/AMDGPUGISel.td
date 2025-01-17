@@ -395,6 +395,9 @@ def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
+def gi_as_i1timm_zext : GICustomOperandRenderer<"renderZextBoolTImm">,
+  GISDNodeXFormEquiv<as_i1timm_zext>;
+
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 

@@ -530,7 +530,7 @@ private:
 
   struct ReleaseToOsInfo {
     uptr BytesInFreeListAtLastCheckpoint;
-    uptr RangesReleased;
+    uptr NumReleasesAttempted;
     uptr LastReleasedBytes;
     // The minimum size of pushed blocks to trigger page release.
     uptr TryReleaseThreshold;
@@ -1141,17 +1141,18 @@ private:
           BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
     }
     const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
-    Str->append(
-        "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-        "inuse: %6zu total: %6zu releases: %6zu last "
-        "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx (0x%zx)\n",
-        Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
-        Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
-        Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
-        Region->ReleaseInfo.RangesReleased,
-        Region->ReleaseInfo.LastReleasedBytes >> 10,
-        RegionPushedBytesDelta >> 10, Region->RegionBeg,
-        getRegionBaseByClassId(ClassId));
+    Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+                "inuse: %6zu total: %6zu releases attempted: %6zu last "
+                "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
+                "(0x%zx)\n",
+                Region->Exhausted ? "E" : " ", ClassId,
+                getSizeByClassId(ClassId), Region->MemMapInfo.MappedUser >> 10,
+                Region->FreeListInfo.PoppedBlocks,
+                Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
+                Region->ReleaseInfo.NumReleasesAttempted,
+                Region->ReleaseInfo.LastReleasedBytes >> 10,
+                RegionPushedBytesDelta >> 10, Region->RegionBeg,
+                getRegionBaseByClassId(ClassId));
   }
 
   void getRegionFragmentationInfo(RegionInfo *Region, uptr ClassId,
@@ -1296,6 +1297,10 @@ private:
         return 0;
     }
 
+    // The following steps contribute to the majority time spent in page
+    // releasing thus we increment the counter here.
+    ++Region->ReleaseInfo.NumReleasesAttempted;
+
     // Note that we have extracted the `GroupsToRelease` from region freelist.
     // It's safe to let pushBlocks()/popBlocks() access the remaining region
     // freelist. In the steps 3 and 4, we will temporarily release the FLLock
@@ -1322,7 +1327,7 @@ private:
                                             Context.getReleaseOffset());
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
-    if (Recorder.getReleasedRangesCount() > 0) {
+    if (Recorder.getReleasedBytes() > 0) {
       // This is the case that we didn't hit the release threshold but it has
       // been past a certain period of time. Thus we try to release some pages
       // and if it does release some additional pages, it's hint that we are
@@ -1342,7 +1347,6 @@ private:
       }
 
       Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
       Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
     }
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();

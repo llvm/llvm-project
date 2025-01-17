@@ -1059,6 +1059,17 @@ In this way, the user may only need to specify a root configuration file with
     -L <CFGDIR>/lib
     -T <CFGDIR>/ldscripts/link.ld
 
+Usually, config file options are placed before command-line options, regardless
+of the actual operation to be performed. The exception is being made for the
+options prefixed with the ``$`` character. These will be used only when linker
+is being invoked, and added after all of the command-line specified linker
+inputs. Here is some example of ``$``-prefixed options:
+
+::
+
+    $-Wl,-Bstatic $-lm
+    $-Wl,-Bshared
+
 Language and Target-Independent Features
 ========================================
 
@@ -1353,10 +1364,8 @@ Controlling Static Analyzer Diagnostics
 While not strictly part of the compiler, the diagnostics from Clang's
 `static analyzer <https://clang-analyzer.llvm.org>`_ can also be
 influenced by the user via changes to the source code. See the available
-`annotations <https://clang-analyzer.llvm.org/annotations.html>`_ and the
-analyzer's `FAQ
-page <https://clang-analyzer.llvm.org/faq.html#exclude_code>`_ for more
-information.
+`annotations <analyzer/user-docs/Annotations.html>`_ and the analyzer's
+`FAQ page <analyzer/user-docs/FAQ.html#exclude-code>`_ for more information.
 
 .. _usersmanual-precompiled-headers:
 
@@ -2660,7 +2669,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2679,7 +2688,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
@@ -3023,6 +3032,38 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   contention. ``atomic`` uses atomic increments which is accurate but has
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
+
+.. option:: -ftemporal-profile
+
+  Enables the temporal profiling extension for IRPGO to improve startup time by
+  reducing ``.text`` section page faults. To do this, we instrument function
+  timestamps to measure when each function is called for the first time and use
+  this data to generate a function order to improve startup.
+
+  The profile is generated as normal.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fprofile-generate -ftemporal-profile code.cc -o code
+    $ ./code
+    $ llvm-profdata merge -o code.profdata yyy/zzz
+
+  Using the resulting profile, we can generate a function order to pass to the
+  linker via ``--symbol-ordering-file`` for ELF or ``-order_file`` for Mach-O.
+
+  .. code-block:: console
+
+    $ llvm-profdata order code.profdata -o code.orderfile
+    $ clang++ -O2 -Wl,--symbol-ordering-file=code.orderfile code.cc -o code
+
+  Or the profile can be passed to LLD directly.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fuse-ld=lld -Wl,--irpgo-profile=code.profdata,--bp-startup-sort=function code.cc -o code
+
+  For more information, please read the RFC:
+  https://discourse.llvm.org/t/rfc-temporal-profiling-extension-for-irpgo/68068
 
 Fine Tuning Profile Collection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

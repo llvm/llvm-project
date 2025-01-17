@@ -112,6 +112,7 @@ public:
 
   void addConstant(const Relocation &r);
   void addEntry(const Symbol &sym);
+  void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
   bool addDynTlsEntry(const Symbol &sym);
   bool addTlsIndex();
@@ -131,14 +132,19 @@ protected:
   size_t numEntries = 0;
   uint32_t tlsIndexOff = -1;
   uint64_t size = 0;
+  struct AuthEntryInfo {
+    size_t offset;
+    bool isSymbolFunc;
+  };
+  SmallVector<AuthEntryInfo, 0> authEntries;
 };
 
 // .note.GNU-stack section.
 class GnuStackSection : public SyntheticSection {
 public:
   GnuStackSection(Ctx &ctx)
-      : SyntheticSection(ctx, 0, llvm::ELF::SHT_PROGBITS, 1,
-                         ".note.GNU-stack") {}
+      : SyntheticSection(ctx, ".note.GNU-stack", llvm::ELF::SHT_PROGBITS, 0,
+                         1) {}
   void writeTo(uint8_t *buf) override {}
   size_t getSize() const override { return 0; }
 };
@@ -177,7 +183,9 @@ public:
   bool isNeeded() const override { return size != 0; }
   size_t getSize() const override { return size; }
 
-  static bool classof(const SectionBase *s) { return s->bss; }
+  static bool classof(const SectionBase *s) {
+    return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
+  }
   uint64_t size;
 };
 
@@ -794,6 +802,15 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
+class RandomizePaddingSection final : public SyntheticSection {
+  uint64_t size;
+
+public:
+  RandomizePaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent);
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) override;
+};
+
 // Used by the merged DWARF32 .debug_names (a per-module index). If we
 // move to DWARF64, most of this data will need to be re-sized.
 class DebugNamesBaseSection : public SyntheticSection {
@@ -1084,7 +1101,7 @@ public:
 protected:
   MergeSyntheticSection(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags,
                         uint32_t addralign)
-      : SyntheticSection(ctx, flags, type, addralign, name) {}
+      : SyntheticSection(ctx, name, type, flags, addralign) {}
 };
 
 class MergeTailSection final : public MergeSyntheticSection {
@@ -1396,8 +1413,8 @@ public:
 class MemtagAndroidNote final : public SyntheticSection {
 public:
   MemtagAndroidNote(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                         /*alignment=*/4, ".note.android.memtag") {}
+      : SyntheticSection(ctx, ".note.android.memtag", llvm::ELF::SHT_NOTE,
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 };
@@ -1405,8 +1422,8 @@ public:
 class PackageMetadataNote final : public SyntheticSection {
 public:
   PackageMetadataNote(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
-                         /*alignment=*/4, ".note.package") {}
+      : SyntheticSection(ctx, ".note.package", llvm::ELF::SHT_NOTE,
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override;
 };
@@ -1414,9 +1431,9 @@ public:
 class MemtagGlobalDescriptors final : public SyntheticSection {
 public:
   MemtagGlobalDescriptors(Ctx &ctx)
-      : SyntheticSection(ctx, llvm::ELF::SHF_ALLOC,
+      : SyntheticSection(ctx, ".memtag.globals.dynamic",
                          llvm::ELF::SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC,
-                         /*alignment=*/4, ".memtag.globals.dynamic") {}
+                         llvm::ELF::SHF_ALLOC, /*addralign=*/4) {}
   void writeTo(uint8_t *buf) override;
   // The size of the section is non-computable until all addresses are
   // synthetized, because the section's contents contain a sorted

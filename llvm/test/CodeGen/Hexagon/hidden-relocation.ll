@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -relocation-model=pic < %s | FileCheck %s
 ;
 ; CHECK: r{{[0-9]+}} = add({{pc|PC}},##g2@PCREL)
 

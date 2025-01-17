@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H
-#define _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H
+#ifndef _LIBCPP___CXX03___COMPARE_COMMON_COMPARISON_CATEGORY_H
+#define _LIBCPP___CXX03___COMPARE_COMMON_COMPARISON_CATEGORY_H
 
 #include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
@@ -83,4 +83,4 @@ using common_comparison_category_t = typename common_comparison_category<_Ts...>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H
+#endif // _LIBCPP___CXX03___COMPARE_COMMON_COMPARISON_CATEGORY_H

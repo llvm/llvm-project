@@ -182,7 +182,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   // Create new VPBB.
   StringRef Name = isHeaderBB(BB, TheLoop) ? "vector.body" : BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
-  VPBasicBlock *VPBB = new VPBasicBlock(Name);
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock(Name);
   BB2VPBB[BB] = VPBB;
 
   // Get or create a region for the loop containing BB.
@@ -204,7 +204,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   if (LoopOfBB == TheLoop) {
     RegionOfVPBB = Plan.getVectorLoopRegion();
   } else {
-    RegionOfVPBB = new VPRegionBlock(Name.str(), false /*isReplicator*/);
+    RegionOfVPBB = Plan.createVPRegionBlock(Name.str(), false /*isReplicator*/);
     RegionOfVPBB->setParent(Loop2Region[LoopOfBB->getParentLoop()]);
   }
   RegionOfVPBB->setEntry(VPBB);
@@ -357,12 +357,10 @@ void PlainCFGBuilder::buildPlainCFG() {
   BB2VPBB[TheLoop->getHeader()] = VectorHeaderVPBB;
   VectorHeaderVPBB->clearSuccessors();
   VectorLatchVPBB->clearPredecessors();
-  if (TheLoop->getHeader() != TheLoop->getLoopLatch()) {
+  if (TheLoop->getHeader() != TheLoop->getLoopLatch())
     BB2VPBB[TheLoop->getLoopLatch()] = VectorLatchVPBB;
-  } else {
+  else
     TheRegion->setExiting(VectorHeaderVPBB);
-    delete VectorLatchVPBB;
-  }
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for

@@ -422,6 +422,13 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
         if (!TII->isSGPRSpill(MI))
           continue;
 
+        if (MI.getOperand(0).isUndef()) {
+          if (Indexes)
+            Indexes->removeMachineInstrFromMaps(MI);
+          MI.eraseFromParent();
+          continue;
+        }
+
         int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
 

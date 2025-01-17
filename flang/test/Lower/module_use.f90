@@ -1,5 +1,6 @@
-! RUN: bbc -emit-fir %S/module_definition.f90
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: rm -fr %t && mkdir -p %t
+! RUN: bbc -emit-fir -module %t %S/module_definition.f90
+! RUN: bbc -emit-fir -J %t %s -o - | FileCheck %s
 
 ! Test use of module data not defined in this file.
 ! The modules are defined in module_definition.f90

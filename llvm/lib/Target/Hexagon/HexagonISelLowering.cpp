@@ -1498,7 +1498,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // All operations default to "legal", except:
   // - indexed loads and stores (pre-/post-incremented),
   // - ANY_EXTEND_VECTOR_INREG, ATOMIC_CMP_SWAP_WITH_SUCCESS, CONCAT_VECTORS,
-  //   ConstantFP, DEBUGTRAP, FCEIL, FCOPYSIGN, FEXP, FEXP2, FFLOOR, FGETSIGN,
+  //   ConstantFP, FCEIL, FCOPYSIGN, FEXP, FEXP2, FFLOOR, FGETSIGN,
   //   FLOG, FLOG2, FLOG10, FMAXNUM, FMINNUM, FNEARBYINT, FRINT, FROUND, TRAP,
   //   FTRUNC, PREFETCH, SIGN_EXTEND_VECTOR_INREG, ZERO_EXTEND_VECTOR_INREG,
   // which default to "expand" for at least one type.
@@ -1507,6 +1507,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ConstantFP,           MVT::f32,   Legal);
   setOperationAction(ISD::ConstantFP,           MVT::f64,   Legal);
   setOperationAction(ISD::TRAP,                 MVT::Other, Legal);
+  setOperationAction(ISD::DEBUGTRAP,            MVT::Other, Legal);
   setOperationAction(ISD::ConstantPool,         MVT::i32,   Custom);
   setOperationAction(ISD::JumpTable,            MVT::i32,   Custom);
   setOperationAction(ISD::BUILD_PAIR,           MVT::i64,   Expand);
@@ -1859,13 +1860,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
   setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
   setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
-
-  setLibcallName(RTLIB::SINTTOFP_I128_F64, "__hexagon_floattidf");
-  setLibcallName(RTLIB::SINTTOFP_I128_F32, "__hexagon_floattisf");
-  setLibcallName(RTLIB::FPTOUINT_F32_I128, "__hexagon_fixunssfti");
-  setLibcallName(RTLIB::FPTOUINT_F64_I128, "__hexagon_fixunsdfti");
-  setLibcallName(RTLIB::FPTOSINT_F32_I128, "__hexagon_fixsfti");
-  setLibcallName(RTLIB::FPTOSINT_F64_I128, "__hexagon_fixdfti");
 
   // This is the only fast library function for sqrtd.
   if (FastMath)
@@ -3792,6 +3786,8 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
 bool HexagonTargetLowering::allowsMemoryAccess(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
     Align Alignment, MachineMemOperand::Flags Flags, unsigned *Fast) const {
+  if (!VT.isSimple())
+    return false;
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMemoryAccess(SVT, Flags, Fast);
@@ -3802,6 +3798,8 @@ bool HexagonTargetLowering::allowsMemoryAccess(
 bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
+  if (!VT.isSimple())
+    return false;
   MVT SVT = VT.getSimpleVT();
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMisalignedMemoryAccesses(SVT, Flags, Fast);

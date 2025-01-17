@@ -196,8 +196,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 
   if (const FieldDecl *FD = E->getSourceBitField())
     if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
-        !FD->getBitWidth()->isValueDependent() &&
-        FD->getBitWidthValue(FD->getASTContext()) == 1)
+        !FD->getBitWidth()->isValueDependent() && FD->getBitWidthValue() == 1)
       return true;
 
   return false;
@@ -775,7 +774,15 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     const FunctionDecl *Decl = FD;
     if (const FunctionDecl* Pattern = FD->getTemplateInstantiationPattern())
       Decl = Pattern;
-    const FunctionType *AFT = Decl->getType()->getAs<FunctionType>();
+
+    // Bail out if the type of the function has not been set yet.
+    // This can notably happen in the trailing return type of a lambda
+    // expression.
+    const Type *Ty = Decl->getType().getTypePtrOrNull();
+    if (!Ty)
+      return "";
+
+    const FunctionType *AFT = Ty->getAs<FunctionType>();
     const FunctionProtoType *FT = nullptr;
     if (FD->hasWrittenPrototype())
       FT = dyn_cast<FunctionProtoType>(AFT);
@@ -1618,9 +1625,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
 std::pair<const NamedDecl *, const Attr *>
 CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
   // If the callee is marked nodiscard, return that attribute
-  const Decl *D = getCalleeDecl();
-  if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
-    return {nullptr, A};
+  if (const Decl *D = getCalleeDecl())
+    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+      return {nullptr, A};
 
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
@@ -1639,11 +1646,19 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getBeginLoc();
 
+  if (const auto *Method =
+          dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
+      Method && Method->isExplicitObjectMemberFunction()) {
+    assert(getNumArgs() > 0 && getArg(0));
+    return getArg(0)->getBeginLoc();
+  }
+
   SourceLocation begin = getCallee()->getBeginLoc();
   if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
     begin = getArg(0)->getBeginLoc();
   return begin;
 }
+
 SourceLocation CallExpr::getEndLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getEndLoc();
@@ -2982,6 +2997,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   }
 }
 

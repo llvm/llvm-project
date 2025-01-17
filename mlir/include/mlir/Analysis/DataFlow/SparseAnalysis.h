@@ -37,7 +37,7 @@ public:
   AbstractSparseLattice(Value value) : AnalysisState(value) {}
 
   /// Return the value this lattice is located at.
-  Value getAnchor() const { return AnalysisState::getAnchor().get<Value>(); }
+  Value getAnchor() const { return cast<Value>(AnalysisState::getAnchor()); }
 
   /// Join the information contained in 'rhs' into this lattice. Returns
   /// if the value of the lattice changed.
@@ -87,7 +87,7 @@ public:
   using AbstractSparseLattice::AbstractSparseLattice;
 
   /// Return the value this lattice is located at.
-  Value getAnchor() const { return anchor.get<Value>(); }
+  Value getAnchor() const { return cast<Value>(anchor); }
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
