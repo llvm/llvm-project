@@ -21,24 +21,16 @@
 // https://github.com/hrw/syscalls-table is super helpful for trying to find
 // syscalls with unique numbers.
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
-static_assert(__NR_renameat == 38, MSG);
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-static_assert(__NR_renameat == 329, MSG);
-#elif defined(LIBC_TARGET_ARCH_IS_X86_32)
-static_assert(__NR_renameat == 302, MSG);
-#elif defined(LIBC_TARGET_ARCH_IS_X86_64)
-static_assert(__NR_renameat == 264, MSG);
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-static_assert(__NR_riscv_flush_icache == 259, MSG);
-static_assert(__NR_renameat2 == 276, MSG);
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-static_assert(__NR_riscv_flush_icache == 259, MSG);
-#ifdef __NR_iodestroy
+// As of Linux 6.12.10, 32b RISCV does not define __NR_iodestroy.
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) && (__NR_renameat) != 38) || \
+    (defined(LIBC_TARGET_ARCH_IS_ARM) && (__NR_renameat) != 329) || \
+    (defined(LIBC_TARGET_ARCH_IS_X86_32) && (__NR_renameat) != 302) || \
+    (defined(LIBC_TARGET_ARCH_IS_X86_64) && (__NR_renameat) != 264) || \
+    (defined(LIBC_TARGET_ARCH_IS_RISCV64) && \
+      (__NR_riscv_flush_icache) != 259 && (__NR_renameat2) != 276) || \
+    (defined(LIBC_TARGET_ARCH_IS_RISCV32) && \
+      (__NR_riscv_flush_icache) != 259 && !defined(__NR_iodestroy))
 #error MSG
-#endif
-#else
-#error "Missing cross compile check for new arch"
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_CROSS_COMPILE_CLIPPY_H
