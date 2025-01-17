@@ -314,7 +314,8 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
 }
 
 ALWAYS_INLINE
-static void __tysan_check_internal(void *addr, int size, tysan_type_descriptor *td, int flags,
+static void __tysan_check_internal(void *addr, int size,
+                                   tysan_type_descriptor *td, int flags,
                                    uptr pc, uptr bp, uptr sp) {
   bool IsRead = flags & 1;
   bool IsWrite = flags & 2;
