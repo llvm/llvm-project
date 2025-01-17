@@ -829,6 +829,17 @@ INTERCEPTOR(int, getnameinfo, const struct sockaddr *sa, socklen_t salen,
   return REAL(getnameinfo)(sa, salen, host, hostlen, serv, servlen, flags);
 }
 
+#if SANITIZER_INTERCEPT_GETSOCKNAME
+INTERCEPTOR(int, getsockname, int socket, struct sockaddr *sa,
+            socklen_t *salen) {
+  __rtsan_notify_intercepted_call("getsockname");
+  return REAL(getsockname)(socket, sa, salen);
+}
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKNAME INTERCEPT_FUNCTION(getsockname)
+#else
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKNAME
+#endif
+
 INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
             socklen_t address_len) {
   __rtsan_notify_intercepted_call("bind");
@@ -1189,6 +1200,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
   RTSAN_MAYBE_INTERCEPT_ACCEPT4;
+  RTSAN_MAYBE_INTERCEPT_GETSOCKNAME;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
