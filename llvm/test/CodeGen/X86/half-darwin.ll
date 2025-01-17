@@ -76,8 +76,7 @@ define float @extendhfsf(ptr %ptr) nounwind {
 ;
 ; CHECK-F16C-LABEL: extendhfsf:
 ; CHECK-F16C:       ## %bb.0:
-; CHECK-F16C-NEXT:    movzwl (%rdi), %eax
-; CHECK-F16C-NEXT:    vmovd %eax, %xmm0
+; CHECK-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    retq
 ;
