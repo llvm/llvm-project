@@ -88,8 +88,7 @@ class VPRecipeBuilder {
 
   /// The set of reduction exit instructions that will be scaled to
   /// a smaller VF via partial reductions, paired with the scaling factor.
-  DenseMap<const Instruction *, std::pair<PartialReductionChain, unsigned>>
-      ScaledReductionExitInstrs;
+  DenseMap<const Instruction *, unsigned> ScaledReductionExitInstrs;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -157,7 +156,7 @@ public:
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
         CM(CM), PSE(PSE), Builder(Builder) {}
 
-  std::optional<std::pair<PartialReductionChain, unsigned>>
+  std::optional<unsigned>
   getScaledReductionForInstr(const Instruction *ExitInst) {
     auto It = ScaledReductionExitInstrs.find(ExitInst);
     return It == ScaledReductionExitInstrs.end()
