@@ -391,24 +391,22 @@ public:
 
   /// Returns true if the loop has an uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
-  bool hasUncountableEarlyExit() const { return getUncountableEdges().size(); }
+  bool hasUncountableEarlyExit() const {
+    return getUncountableEdge().has_value();
+  }
 
   /// Returns the uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitingBlock() const {
     if (!hasUncountableEarlyExit())
       return nullptr;
-    assert(getUncountableEdges().size() == 1 &&
-           "Expected only a single uncountable exiting block");
-    return getUncountableEdges()[0].first;
+    return (*getUncountableEdge()).first;
   }
 
   /// Returns the destination of an uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitBlock() const {
     if (!hasUncountableEarlyExit())
       return nullptr;
-    assert(getUncountableEdges().size() == 1 &&
-           "Expected only a single uncountable exit block");
-    return getUncountableEdges()[0].second;
+    return (*getUncountableEdge()).second;
   }
 
   /// Returns true if vector representation of the instruction \p I
@@ -462,10 +460,10 @@ public:
     return CountableExitingBlocks;
   }
 
-  /// Returns all the loop edges that have an uncountable exit.
-  const SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> &
-  getUncountableEdges() const {
-    return UncountableEdges;
+  /// Returns the loop edge with an uncountable exit.
+  std::optional<std::pair<BasicBlock *, BasicBlock *>>
+  getUncountableEdge() const {
+    return UncountableEdge;
   }
 
 private:
@@ -653,9 +651,9 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of all the loop edges with uncountable exits, where each entry
-  /// is a pair of (Exiting, Exit) blocks.
-  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> UncountableEdges;
+  /// Keep track of the loop edge with an uncountable exit, comprising a pair
+  /// of (Exiting, Exit) blocks.
+  std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
 };
 
 } // namespace llvm
