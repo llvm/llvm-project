@@ -3607,18 +3607,15 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
-  for (int i = 0, n = Checked.size(); i < n; ++i) {
-    llvm::Value *Check = Checked[i].first;
+  for (auto &[Check, Ord] : Checked) {
     // -fsanitize-trap= overrides -fsanitize-recover=.
-    llvm::Value *&Cond =
-        CGM.getCodeGenOpts().SanitizeTrap.has(Checked[i].second)
-            ? TrapCond
-            : CGM.getCodeGenOpts().SanitizeRecover.has(Checked[i].second)
-                  ? RecoverableCond
-                  : FatalCond;
+    llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
+                         : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
+                             ? RecoverableCond
+                             : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
 
-    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
+    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Ord))
       NoMerge = true;
   }
 

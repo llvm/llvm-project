@@ -100,7 +100,7 @@ TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   FreeListHeap allocator(buf);
 
   bool went_null = false;
-  for (int i = 0; i < N; i++) {
+  for (size_t i = 0; i < N; i++) {
     if (!allocator.allocate(1)) {
       went_null = true;
       break;
@@ -246,7 +246,6 @@ TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 2048) {
 // still get aligned allocations even if the underlying buffer is not aligned to
 // the alignments we request.
 TEST(LlvmLibcFreeListHeap, AlignedAllocUnalignedBuffer) {
-  constexpr size_t BUFFER_SIZE = 4096;
   byte buf[4096] = {byte(0)};
 
   // Ensure the underlying buffer is poorly aligned.
