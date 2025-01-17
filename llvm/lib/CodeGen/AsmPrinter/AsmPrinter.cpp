@@ -3042,20 +3042,12 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
         MAI->doesSetDirectiveSuppressReloc()) {
       Value = MCSymbolRefExpr::create(JTsetsy,
                                       OutContext);
-      // errs() <<"JTSetsy1:" <<JTsetsy->getName() <<"\n";
-      errs() << "kind1:" <<Value->getKind() <<"\n";
-      Value->dump();
-      
       break;
     }
     Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
     const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
     const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF, UID, OutContext);
     Value = MCBinaryExpr::createSub(Value, Base, OutContext);
-      errs() <<"Base kind" <<(int)Base->getKind() <<"\n";
-      errs() << "Value kind" <<(int)Value->getKind() <<"\n";
-      Value->dump();
-      Base->dump();
     break;
   }
   }
