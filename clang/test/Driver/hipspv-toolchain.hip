@@ -41,7 +41,7 @@
 // RUN:   && chmod +x %t/versioned/llvm-spirv-%llvm-version-major
 // RUN: env "PATH=%t/versioned" %clang -### -target x86_64-linux-gnu \
 // RUN:   --offload=spirv64 --hip-path=%S/Inputs/hipspv -nohipwrapperinc \
-// RUN:   %s 2>&1 \
+// RUN:   --no-offload-new-driver %s 2>&1 \
 // RUN:   | FileCheck -DVERSION=%llvm-version-major \
 // RUN:   --check-prefix=VERSIONED %s
 
