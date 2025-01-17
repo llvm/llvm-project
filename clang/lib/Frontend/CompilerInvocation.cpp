@@ -3030,10 +3030,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_aux_target_feature))
     Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
 
-  if (Opts.ObjCMTAction != FrontendOptions::ObjCMT_None)
-    Diags.Report(diag::err_drv_argument_not_allowed_with)
-      << "ARC migration";
-
   InputKind DashX(Language::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
     StringRef XValue = A->getValue();

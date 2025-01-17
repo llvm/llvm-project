@@ -130,12 +130,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #else
   case RewriteObjC:            Action = "RewriteObjC"; break;
 #endif
-#if CLANG_ENABLE_ARCMT
-  case MigrateSource:
-    return std::make_unique<arcmt::MigrateSourceAction>();
-#else
-  case MigrateSource:          Action = "MigrateSource"; break;
-#endif
 #if CLANG_ENABLE_STATIC_ANALYZER
   case RunAnalysis:            return std::make_unique<ento::AnalysisAction>();
 #else
@@ -146,8 +140,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<PrintDependencyDirectivesSourceMinimizerAction>();
   }
 
-#if !CLANG_ENABLE_ARCMT || !CLANG_ENABLE_STATIC_ANALYZER \
-  || !CLANG_ENABLE_OBJC_REWRITER
+#if !CLANG_ENABLE_STATIC_ANALYZER || !CLANG_ENABLE_OBJC_REWRITER
   CI.getDiagnostics().Report(diag::err_fe_action_not_available) << Action;
   return 0;
 #else
