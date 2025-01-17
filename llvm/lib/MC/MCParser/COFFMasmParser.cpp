@@ -442,8 +442,7 @@ bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
 ///      label "endproc"
 bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   if (!getStreamer().getCurrentFragment()) {
-    return Error(getTok().getLoc(), "expected section directive before '" +
-                                        Directive + "' directive");
+    return Error(getTok().getLoc(), "expected section directive");
   }
 
   StringRef Label;
