@@ -30,12 +30,14 @@ namespace {
       EXPECT_EQ(&std::get<0>(Pair), std::get<1>(Pair));                        \
   } while (0)
 
-TEST(VPInstructionTest, insertBefore) {
+using VPInstructionTest = VPlanTestBase;
+
+TEST_F(VPInstructionTest, insertBefore) {
   VPInstruction *I1 = new VPInstruction(0, {});
   VPInstruction *I2 = new VPInstruction(1, {});
   VPInstruction *I3 = new VPInstruction(2, {});
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
 
   I2->insertBefore(I1);
@@ -45,12 +47,12 @@ TEST(VPInstructionTest, insertBefore) {
   CHECK_ITERATOR(VPBB1, I3, I2, I1);
 }
 
-TEST(VPInstructionTest, eraseFromParent) {
+TEST_F(VPInstructionTest, eraseFromParent) {
   VPInstruction *I1 = new VPInstruction(0, {});
   VPInstruction *I2 = new VPInstruction(1, {});
   VPInstruction *I3 = new VPInstruction(2, {});
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -65,12 +67,12 @@ TEST(VPInstructionTest, eraseFromParent) {
   EXPECT_TRUE(VPBB1.empty());
 }
 
-TEST(VPInstructionTest, moveAfter) {
+TEST_F(VPInstructionTest, moveAfter) {
   VPInstruction *I1 = new VPInstruction(0, {});
   VPInstruction *I2 = new VPInstruction(1, {});
   VPInstruction *I3 = new VPInstruction(2, {});
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -81,7 +83,7 @@ TEST(VPInstructionTest, moveAfter) {
 
   VPInstruction *I4 = new VPInstruction(4, {});
   VPInstruction *I5 = new VPInstruction(5, {});
-  VPBasicBlock VPBB2;
+  VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
@@ -92,12 +94,12 @@ TEST(VPInstructionTest, moveAfter) {
   EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
-TEST(VPInstructionTest, moveBefore) {
+TEST_F(VPInstructionTest, moveBefore) {
   VPInstruction *I1 = new VPInstruction(0, {});
   VPInstruction *I2 = new VPInstruction(1, {});
   VPInstruction *I3 = new VPInstruction(2, {});
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -108,7 +110,7 @@ TEST(VPInstructionTest, moveBefore) {
 
   VPInstruction *I4 = new VPInstruction(4, {});
   VPInstruction *I5 = new VPInstruction(5, {});
-  VPBasicBlock VPBB2;
+  VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
@@ -118,7 +120,7 @@ TEST(VPInstructionTest, moveBefore) {
   CHECK_ITERATOR(VPBB2, I3, I4, I5);
   EXPECT_EQ(I3->getParent(), I4->getParent());
 
-  VPBasicBlock VPBB3;
+  VPBasicBlock &VPBB3 = *getPlan().createVPBasicBlock("");
 
   I4->moveBefore(VPBB3, VPBB3.end());
 
@@ -128,7 +130,7 @@ TEST(VPInstructionTest, moveBefore) {
   EXPECT_EQ(&VPBB3, I4->getParent());
 }
 
-TEST(VPInstructionTest, setOperand) {
+TEST_F(VPInstructionTest, setOperand) {
   VPValue *VPV1 = new VPValue();
   VPValue *VPV2 = new VPValue();
   VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
@@ -174,7 +176,7 @@ TEST(VPInstructionTest, setOperand) {
   delete VPV4;
 }
 
-TEST(VPInstructionTest, replaceAllUsesWith) {
+TEST_F(VPInstructionTest, replaceAllUsesWith) {
   VPValue *VPV1 = new VPValue();
   VPValue *VPV2 = new VPValue();
   VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
@@ -220,7 +222,7 @@ TEST(VPInstructionTest, replaceAllUsesWith) {
   delete VPV3;
 }
 
-TEST(VPInstructionTest, releaseOperandsAtDeletion) {
+TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
   VPValue *VPV1 = new VPValue();
   VPValue *VPV2 = new VPValue();
   VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});

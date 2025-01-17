@@ -52,11 +52,13 @@
 using namespace clang;
 using namespace CodeGen;
 
+namespace clang {
 // TODO: Introduce frontend options to enabled per sanitizers, similar to
 // `fsanitize-trap`.
-static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
+} // namespace clang
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
@@ -3605,18 +3607,15 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
-  for (int i = 0, n = Checked.size(); i < n; ++i) {
-    llvm::Value *Check = Checked[i].first;
+  for (auto &[Check, Ord] : Checked) {
     // -fsanitize-trap= overrides -fsanitize-recover=.
-    llvm::Value *&Cond =
-        CGM.getCodeGenOpts().SanitizeTrap.has(Checked[i].second)
-            ? TrapCond
-            : CGM.getCodeGenOpts().SanitizeRecover.has(Checked[i].second)
-                  ? RecoverableCond
-                  : FatalCond;
+    llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
+                         : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
+                             ? RecoverableCond
+                             : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
 
-    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
+    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Ord))
       NoMerge = true;
   }
 

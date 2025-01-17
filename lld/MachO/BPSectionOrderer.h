@@ -19,7 +19,10 @@
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/xxhash.h"
 
 namespace lld::macho {
 
@@ -90,23 +93,24 @@ public:
                             &sectionToIdx) const override {
     constexpr unsigned windowSize = 4;
 
-    // Calculate content hashes
-    size_t dataSize = isec->data.size();
-    for (size_t i = 0; i < dataSize; i++) {
-      auto window = isec->data.drop_front(i).take_front(windowSize);
-      hashes.push_back(xxHash64(window));
-    }
+    // Calculate content hashes: k-mers and the last k-1 bytes.
+    ArrayRef<uint8_t> data = isec->data;
+    if (data.size() >= windowSize)
+      for (size_t i = 0; i <= data.size() - windowSize; ++i)
+        hashes.push_back(llvm::support::endian::read32le(data.data() + i));
+    for (uint8_t byte : data.take_back(windowSize - 1))
+      hashes.push_back(byte);
 
     // Calculate relocation hashes
     for (const auto &r : isec->relocs) {
-      if (r.length == 0 || r.referent.isNull() || r.offset >= isec->data.size())
+      if (r.length == 0 || r.referent.isNull() || r.offset >= data.size())
         continue;
 
       uint64_t relocHash = getRelocHash(r, sectionToIdx);
       uint32_t start = (r.offset < windowSize) ? 0 : r.offset - windowSize + 1;
       for (uint32_t i = start; i < r.offset + r.length; i++) {
-        auto window = isec->data.drop_front(i).take_front(windowSize);
-        hashes.push_back(xxHash64(window) + relocHash);
+        auto window = data.drop_front(i).take_front(windowSize);
+        hashes.push_back(xxh3_64bits(window) ^ relocHash);
       }
     }
 
@@ -124,19 +128,17 @@ private:
     std::optional<uint64_t> sectionIdx;
     if (auto it = sectionToIdx.find(isec); it != sectionToIdx.end())
       sectionIdx = it->second;
-    std::string kind;
+    uint64_t kind = -1, value = 0;
     if (isec)
-      kind = ("Section " + Twine(isec->kind())).str();
+      kind = uint64_t(isec->kind());
 
     if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
-      kind += (" Symbol " + Twine(sym->kind())).str();
-      if (auto *d = llvm::dyn_cast<Defined>(sym)) {
-        return BPSectionBase::getRelocHash(kind, sectionIdx.value_or(0),
-                                           d->value, reloc.addend);
-      }
+      kind = (kind << 8) | uint8_t(sym->kind());
+      if (auto *d = llvm::dyn_cast<Defined>(sym))
+        value = d->value;
     }
-    return BPSectionBase::getRelocHash(kind, sectionIdx.value_or(0), 0,
-                                       reloc.addend);
+    return llvm::stable_hash_combine(kind, sectionIdx.value_or(0), value,
+                                     reloc.addend);
   }
 };
 
