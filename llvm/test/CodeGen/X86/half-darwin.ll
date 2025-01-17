@@ -76,14 +76,13 @@ define float @extendhfsf(ptr %ptr) nounwind {
 ;
 ; CHECK-F16C-LABEL: extendhfsf:
 ; CHECK-F16C:       ## %bb.0:
-; CHECK-F16C-NEXT:    movzwl (%rdi), %eax
-; CHECK-F16C-NEXT:    vmovd %eax, %xmm0
+; CHECK-F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    retq
 ;
 ; CHECK-FP16-LABEL: extendhfsf:
 ; CHECK-FP16:       ## %bb.0:
-; CHECK-FP16-NEXT:    vmovsh (%rdi), %xmm0
+; CHECK-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-FP16-NEXT:    retq
 
@@ -175,7 +174,7 @@ define float @strict_extendhfsf(ptr %ptr) nounwind strictfp {
 ;
 ; CHECK-FP16-LABEL: strict_extendhfsf:
 ; CHECK-FP16:       ## %bb.0:
-; CHECK-FP16-NEXT:    vmovsh (%rdi), %xmm0
+; CHECK-FP16-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
 ; CHECK-FP16-NEXT:    retq
 
