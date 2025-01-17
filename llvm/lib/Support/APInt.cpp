@@ -3125,4 +3125,4 @@ APInt APIntOps::pow(const APInt &X, int64_t N) {
     Acc *= Base;
   }
   return Acc;
-};
+}
