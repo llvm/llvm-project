@@ -179,7 +179,8 @@ static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
 static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   if (Lang.CPlusPlus &&
-      AttributeCommonInfo::hasCXX11Attr(II, PP.getTargetInfo(), Lang)) {
+      hasAttribute(AttributeCommonInfo::AS_CXX11, /* Scope*/ nullptr, II,
+                   PP.getTargetInfo(), Lang, /*CheckPlugins*/ false) > 0) {
     AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
         AttributeCommonInfo::getCXX11AttrArgsInfo(II);
     if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)

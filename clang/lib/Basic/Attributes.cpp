@@ -33,7 +33,8 @@ static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
 
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
-                        const TargetInfo &Target, const LangOptions &LangOpts) {
+                        const TargetInfo &Target, const LangOptions &LangOpts,
+                        bool CheckPlugins) {
   StringRef Name = Attr->getName();
   // Normalize the attribute name, __foo__ becomes foo.
   if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
@@ -61,12 +62,21 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   if (res)
     return res;
 
-  // Check if any plugin provides this attribute.
-  for (auto &Ptr : getAttributePluginInstances())
-    if (Ptr->hasSpelling(Syntax, Name))
-      return 1;
+  if (CheckPlugins) {
+    // Check if any plugin provides this attribute.
+    for (auto &Ptr : getAttributePluginInstances())
+      if (Ptr->hasSpelling(Syntax, Name))
+        return 1;
+  }
 
   return 0;
+}
+
+int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
+                        const IdentifierInfo *Scope, const IdentifierInfo *Attr,
+                        const TargetInfo &Target, const LangOptions &LangOpts) {
+  return hasAttribute(Syntax, Scope, Attr, Target, LangOpts,
+                      /*CheckPlugins*/ true);
 }
 
 const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
@@ -160,15 +170,6 @@ AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
 #include "clang/Basic/CXX11AttributeInfo.inc"
       .Default(AttributeCommonInfo::AttrArgsInfo::None);
 #undef CXX11_ATTR_ARGS_INFO
-}
-
-bool AttributeCommonInfo::hasCXX11Attr(const IdentifierInfo *Name,
-                                       const TargetInfo &Target,
-                                       const LangOptions &LangOpts) {
-  StringRef AttrName =
-      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
-  return hasAttributeImpl(Syntax::AS_CXX11, AttrName, /*ScopeName*/ "", Target,
-                          LangOpts) > 0;
 }
 
 std::string AttributeCommonInfo::getNormalizedFullName() const {
