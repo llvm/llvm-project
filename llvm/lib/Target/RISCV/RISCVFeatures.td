@@ -1016,6 +1016,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
                                "'Smctr' (Control Transfer Records Machine Level) or "
                                "'Ssctr' (Control Transfer Records Supervisor Level)">;
 
+// Packed SIMD Extensions
 def FeatureStdExtP
     : RISCVExperimentalExtension<1, 0,
                                  "'Base P' (Packed SIMD)">;
