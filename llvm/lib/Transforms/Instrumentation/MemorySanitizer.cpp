@@ -318,6 +318,13 @@ static cl::opt<bool> ClDumpStrictInstructions(
     cl::desc("print out instructions with default strict semantics"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClDumpStrictIntrinsics(
+    "msan-dump-strict-intrinsics",
+    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print intrinsics that "
+             "could not be handled exactly nor heuristically."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClInstrumentationWithCallThreshold(
     "msan-instrumentation-with-call-threshold",
     cl::desc(
@@ -3014,7 +3021,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// We special-case intrinsics where this approach fails. See llvm.bswap
   /// handling as an example of that.
-  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+  bool handleUnknownIntrinsicUnlogged(IntrinsicInst &I) {
     unsigned NumArgOperands = I.arg_size();
     if (NumArgOperands == 0)
       return false;
@@ -3038,6 +3045,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // FIXME: detect and handle SSE maskstore/maskload
     return false;
+  }
+
+  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+    if (handleUnknownIntrinsicUnlogged(I)) {
+      if (ClDumpStrictIntrinsics)
+        dumpInst(I);
+
+      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+                        << "\n");
+      return true;
+    } else
+      return false;
   }
 
   void handleInvariantGroup(IntrinsicInst &I) {

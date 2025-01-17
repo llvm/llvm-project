@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
   SandboxVectorizer/Scheduler.cpp
   SandboxVectorizer/SeedCollector.cpp
+  SandboxVectorizer/VecUtils.cpp
   SLPVectorizer.cpp
   Vectorize.cpp
   VectorCombine.cpp

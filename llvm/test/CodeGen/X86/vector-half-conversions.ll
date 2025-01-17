@@ -814,15 +814,13 @@ define float @load_cvt_i16_to_f32(ptr %a0) nounwind {
 ;
 ; F16C-LABEL: load_cvt_i16_to_f32:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: load_cvt_i16_to_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movzwl (%rdi), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = load i16, ptr %a0
@@ -1830,16 +1828,14 @@ define double @load_cvt_i16_to_f64(ptr %a0) nounwind {
 ;
 ; F16C-LABEL: load_cvt_i16_to_f64:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    movzwl (%rdi), %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: load_cvt_i16_to_f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movzwl (%rdi), %eax
-; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
