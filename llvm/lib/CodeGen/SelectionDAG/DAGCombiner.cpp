@@ -22807,30 +22807,13 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
       Vec->getNumValues() != 1)
     return SDValue();
 
-  EVT ResVT = ExtElt->getValueType(0);
-  bool SetCCNeedsSignExt = false;
-  if (Opc == ISD::SETCC) {
-    EVT VecVT = Vec.getValueType();
-    if (ResVT != VecVT.getVectorElementType() || LegalTypes)
-      return SDValue();
-
-    if (ResVT != MVT::i1) {
-      bool VecRequiresSignExt = TLI.getBooleanContents(VecVT) ==
-                                TargetLowering::ZeroOrNegativeOneBooleanContent;
-      bool ScalarRequiresSignExt =
-          TLI.getBooleanContents(ResVT) ==
-          TargetLowering::ZeroOrNegativeOneBooleanContent;
-      if (VecRequiresSignExt && !ScalarRequiresSignExt)
-        SetCCNeedsSignExt = true;
-      else if (!VecRequiresSignExt && ScalarRequiresSignExt) {
-        // There are currently no targets with this behaviour.
-        return SDValue();
-      }
-    }
-  }
-
   // Targets may want to avoid this to prevent an expensive register transfer.
   if (!TLI.shouldScalarizeBinop(Vec))
+    return SDValue();
+
+  EVT ResVT = ExtElt->getValueType(0);
+  if (Opc == ISD::SETCC &&
+      (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
     return SDValue();
 
   // Extracting an element of a vector constant is constant-folded, so this
@@ -22853,11 +22836,18 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     Op1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT, Op1, Index);
     SDValue NewVal = DAG.getSetCC(
         DL, ResVT, Op0, Op1, cast<CondCodeSDNode>(Vec->getOperand(2))->get());
-    // We may need to sign-extend the result to match the same behaviour as the
-    // vector version of SETCC.
-    if (SetCCNeedsSignExt)
-      NewVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, ResVT, NewVal,
-                           DAG.getValueType(MVT::i1));
+    // We may need to sign- or zero-extend the result to match the same
+    // behaviour as the vector version of SETCC.
+    unsigned VecBoolContents = TLI.getBooleanContents(Vec.getValueType());
+    if (ResVT != MVT::i1 &&
+        VecBoolContents != TargetLowering::UndefinedBooleanContent &&
+        VecBoolContents != TLI.getBooleanContents(ResVT)) {
+      if (VecBoolContents == TargetLowering::ZeroOrNegativeOneBooleanContent)
+        NewVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, ResVT, NewVal,
+                             DAG.getValueType(MVT::i1));
+      else
+        NewVal = DAG.getZeroExtendInReg(NewVal, DL, MVT::i1);
+    }
     return NewVal;
   }
   Op0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT, Op0, Index);
