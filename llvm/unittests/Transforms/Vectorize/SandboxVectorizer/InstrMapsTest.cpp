@@ -78,7 +78,7 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   // Check callbacks: erase original instr.
   Add0->eraseFromParent();
   EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add0));
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
   EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
   // Check callbacks: erase vector instr.
   VAdd0->eraseFromParent();
