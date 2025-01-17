@@ -1047,7 +1047,7 @@ def ProcessorFeatures {
                                      FeatureCRC, FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
                                      FeatureCCIDX,
-                                     FeatureRDM, FeatureSPE_EEF];
+                                     FeatureRDM];
 
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureRandGen,
