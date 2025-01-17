@@ -10,7 +10,7 @@
 // We assume that:
 // * 6-issue out-of-order CPU with 192 ROB entries.
 // * Units:
-//   * IXU (Integer GenericOOOALU Unit): 4 units, only one can execute division.
+//   * IXU (Integer ALU Unit): 4 units, only one can execute division.
 //   * FXU (Floating-point Unit): 2 units.
 //   * LSU (Load/Store Unit): 2 units.
 //   * VXU (Vector Unit): 1 unit.
@@ -18,11 +18,11 @@
 //   * Integer instructions: 1 cycle.
 //   * Multiplication instructions: 4 cycles.
 //   * Multiplication/Division instructions: 7-13 cycles.
-//   * Floating-point instructions: 4-6 cycles.
+//   * Floating-point instructions: 2-6 cycles.
 //   * Vector instructions: 2-6 cycles.
 //   * Load/Store:
 //     * IXU: 4 cycles.
-//     * FXU: 6 cycles.
+//     * FXU: 4 cycles.
 //     * VXU: 6 cycles.
 // * Integer/floating-point/vector div/rem/sqrt/... are non-pipelined.
 //===----------------------------------------------------------------------===//
@@ -129,7 +129,7 @@ def : WriteRes<WriteAtomicSTD, [GenericOOOLSU]>;
 // Floating-point
 //===----------------------------------------------------------------------===//
 // Floating-point load
-let Latency = 6 in {
+let Latency = 4 in {
   def : WriteRes<WriteFLD32, [GenericOOOLSU]>;
   def : WriteRes<WriteFLD64, [GenericOOOLSU]>;
 }
@@ -139,12 +139,12 @@ def : WriteRes<WriteFST32, [GenericOOOLSU]>;
 def : WriteRes<WriteFST64, [GenericOOOLSU]>;
 
 // Arithmetic and logic
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFAdd32, [GenericOOOFPU]>;
   def : WriteRes<WriteFAdd64, [GenericOOOFPU]>;
 }
 
-let Latency = 5 in {
+let Latency = 4 in {
   def : WriteRes<WriteFMul32, [GenericOOOFPU]>;
   def : WriteRes<WriteFMul64, [GenericOOOFPU]>;
 }
@@ -177,29 +177,29 @@ let Latency = 17, ReleaseAtCycles = [17] in {
 }
 
 // Conversions
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtI32ToF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtI32ToF64, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtI64ToF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtI64ToF64, [GenericOOOFPU]>;
 }
 
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtF32ToI32, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF32ToI64, [GenericOOOFPU]>;
 }
 
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtF64ToI32, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF64ToI64, [GenericOOOFPU]>;
 }
 
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtF64ToF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF32ToF64, [GenericOOOFPU]>;
 }
 
-let Latency = 6 in {
+let Latency = 2 in {
   def : WriteRes<WriteFMovI32ToF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFMovI64ToF64, [GenericOOOFPU]>;
   def : WriteRes<WriteFMovF32ToI32, [GenericOOOFPU]>;
@@ -275,13 +275,13 @@ def : WriteRes<WriteXPERM, [GenericOOOALU]>;
 //===----------------------------------------------------------------------===//
 // Zfa extension
 //===----------------------------------------------------------------------===//
-let Latency = 3 in {
+let Latency = 2 in {
   def : WriteRes<WriteFRoundF16, [GenericOOOFPU]>;
   def : WriteRes<WriteFRoundF32, [GenericOOOFPU]>;
   def : WriteRes<WriteFRoundF64, [GenericOOOFPU]>;
 }
 
-let Latency = 5 in {
+let Latency = 2 in {
   def : WriteRes<WriteFLI16, [GenericOOOFPU]>;
   def : WriteRes<WriteFLI32, [GenericOOOFPU]>;
   def : WriteRes<WriteFLI64, [GenericOOOFPU]>;
@@ -292,25 +292,25 @@ let Latency = 5 in {
 //===----------------------------------------------------------------------===//
 // Zfhmin
 // Load/Store
-let Latency = 6 in
+let Latency = 4 in
 def : WriteRes<WriteFLD16, [GenericOOOLSU]>;
 def : WriteRes<WriteFST16, [GenericOOOLSU]>;
 
 // Conversions
-let Latency = 3 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtF16ToF64, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF64ToF16, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF32ToF16, [GenericOOOFPU]>;
   def : WriteRes<WriteFCvtF16ToF32, [GenericOOOFPU]>;
 }
 
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFMovI16ToF16, [GenericOOOFPU]>;
   def : WriteRes<WriteFMovF16ToI16, [GenericOOOFPU]>;
 }
 
 // Other than Zfhmin
-let Latency = 4 in {
+let Latency = 2 in {
   def : WriteRes<WriteFCvtI64ToF16, []>;
   def : WriteRes<WriteFCvtI32ToF16, []>;
   def : WriteRes<WriteFCvtF16ToI64, []>;
@@ -318,10 +318,10 @@ let Latency = 4 in {
 }
 
 // Arithmetic and logic
-let Latency = 4 in
+let Latency = 2 in
 def : WriteRes<WriteFAdd16, [GenericOOOFPU]>;
 
-let Latency = 5 in
+let Latency = 4 in
 def : WriteRes<WriteFMul16, [GenericOOOFPU]>;
 
 let Latency = 6 in
