@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 !
 ! OpenMP 5.2: 5.2 threadprivate directive restriction
 
