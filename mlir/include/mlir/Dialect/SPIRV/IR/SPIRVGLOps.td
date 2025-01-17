@@ -1033,7 +1033,7 @@ def SPIRV_GLFMixOp :
 
 def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
     Pure,
-    AllElementTypesMatch<["p0", "p1"]>,
+    AllTypesMatch<["p0", "p1"]>,
     TypesMatchWith<"result type must match operand element type",
                   "p0", "result",
                   "::mlir::getElementTypeOrSelf($_self)">
