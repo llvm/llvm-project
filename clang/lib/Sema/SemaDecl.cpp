@@ -13378,56 +13378,56 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
 }
 
 bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
-    const VarDecl *dcl) {
-  if (!dcl || !getLangOpts().CPlusPlus)
-    return false;
-
-  // If an object is defined in a source file, its definition can't get
-  // duplicated since it will never appear in more than one TU.
-  if (dcl->getASTContext().getSourceManager().isInMainFile(dcl->getLocation()))
+    const VarDecl *Dcl) {
+  if (!Dcl || !getLangOpts().CPlusPlus)
     return false;
 
   // We only need to warn if the definition is in a header file, so wait to
   // diagnose until we've seen the definition.
-  if (!dcl->isThisDeclarationADefinition())
+  if (!Dcl->isThisDeclarationADefinition())
+    return false;
+
+  // If an object is defined in a source file, its definition can't get
+  // duplicated since it will never appear in more than one TU.
+  if (Dcl->getASTContext().getSourceManager().isInMainFile(Dcl->getLocation()))
     return false;
 
   // If the variable we're looking at is a static local, then we actually care
   // about the properties of the function containing it.
-  const ValueDecl *target = dcl;
+  const ValueDecl *Target = Dcl;
   // VarDecls and FunctionDecls have different functions for checking
   // inline-ness, so we have to do it manually.
-  bool target_is_inline = dcl->isInline();
+  bool TargetIsInline = Dcl->isInline();
 
-  // Update the target and target_is_inline property if necessary
-  if (dcl->isStaticLocal()) {
-    const DeclContext *ctx = dcl->getDeclContext();
-    if (!ctx)
+  // Update the Target and TargetIsInline property if necessary
+  if (Dcl->isStaticLocal()) {
+    const DeclContext *Ctx = Dcl->getDeclContext();
+    if (!Ctx)
       return false;
 
-    const FunctionDecl *f_dcl =
-        dyn_cast_if_present<FunctionDecl>(ctx->getNonClosureAncestor());
-    if (!f_dcl)
+    const FunctionDecl *FunDcl =
+        dyn_cast_if_present<FunctionDecl>(Ctx->getNonClosureAncestor());
+    if (!FunDcl)
       return false;
 
-    target = f_dcl;
+    Target = FunDcl;
     // IsInlined() checks for the C++ inline property
-    target_is_inline = f_dcl->isInlined();
+    TargetIsInline = FunDcl->isInlined();
   }
 
   // Non-inline variables can only legally appear in one TU
   // FIXME: This also applies to templated variables, but that can rarely lead
   // to false positives so templates are disabled for now.
-  if (!target_is_inline)
+  if (!TargetIsInline)
     return false;
 
   // If the object isn't hidden, the dynamic linker will prevent duplication.
-  clang::LinkageInfo lnk = target->getLinkageAndVisibility();
-  if (lnk.getVisibility() != HiddenVisibility)
+  clang::LinkageInfo Lnk = Target->getLinkageAndVisibility();
+  if (Lnk.getVisibility() != HiddenVisibility)
     return false;
 
   // If the obj doesn't have external linkage, it's supposed to be duplicated.
-  if (!isExternalFormalLinkage(lnk.getLinkage()))
+  if (!isExternalFormalLinkage(Lnk.getLinkage()))
     return false;
 
   return true;
