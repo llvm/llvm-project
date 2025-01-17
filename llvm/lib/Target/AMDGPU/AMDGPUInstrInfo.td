@@ -332,6 +332,7 @@ def AMDGPUumed3 : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp,
   []
 >;
 
+// Special node to handle v_sat_pk to avoid v2i8
 def AMDGPUsat_pk_cast : SDNode<"AMDGPUISD::SAT_PK_CAST", SDTUnaryOp, []>;
 
 def AMDGPUfmed3_impl : SDNode<"AMDGPUISD::FMED3", SDTFPTernaryOp, []>;

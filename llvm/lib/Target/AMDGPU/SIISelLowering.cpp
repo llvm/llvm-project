@@ -824,6 +824,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          {MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32},
                          Custom);
     }
+
+    // true 16 currently unsupported
+    if (!Subtarget->hasTrue16BitInsts() || 
+      (!Subtarget->useRealTrue16Insts() || !Subtarget->useRealTrue16Insts())) {
+      // MVT::v2i16 for src type check in foldToSaturated
+      // MVT::v2i8 for dst type check in CustomLowerNode
+      setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
+    }
   }
 
   setOperationAction({ISD::FNEG, ISD::FABS}, MVT::v4f16, Custom);
@@ -871,19 +879,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     if (Subtarget->hasMinimum3Maximum3PKF16())
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
-  }
-
-  // special case for v_sat_pk
-  if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
-    // Reasons for putting both {MVT::v2i16, MVT::v2i8}
-    // 1. In foldToSaturated during DAG combine
-    //    a. isOperationLegalOrCustom(Opc, SrcVT)
-    //       will check getOperationAction(Op, SrcVT) == Custom
-    //    b. isTypeDesirableForOp checks regclass for v2i8
-    //       (hooked now checking DstVT == v2i8)
-    // 2. In CustomLowerNode during legalizing, checks
-    //    getOperationAction(Op, DstVT) == Custom
-    setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
@@ -6636,6 +6631,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     SDLoc SL(N);
     SDValue Op =
         DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, N->getOperand(0));
+    Op = DAG.getNode(ISD::BITCAST, SL, MVT::v2i8, Op);
     Results.push_back(Op);
     break;
   }
@@ -10065,9 +10061,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
             ? 1
             : 0,
-        DL, MVT::i8));                // swz
-    Ops.push_back(M0Val.getValue(0)); // Chain
-    Ops.push_back(M0Val.getValue(1)); // Glue
+        DL, MVT::i8));                                           // swz
+    Ops.push_back(M0Val.getValue(0));                            // Chain
+    Ops.push_back(M0Val.getValue(1));                            // Glue
 
     auto *M = cast<MemSDNode>(Op);
     MachineMemOperand *LoadMMO = M->getMemOperand();
@@ -15292,20 +15288,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
     [[fallthrough]];
-  }
-  case ISD::BITCAST: {
-    // If src.VT == dst.VT, there is no instruction can be select
-    // which causes selection fail.
-    //
-    // One of the stuation is (i16 (bitcast (v2i8 (trunc (v2i16 (smed ...)))))
-    // The pattern will experience the following steps to
-    // create (i16 (bitcast i16)):
-    //
-    // 1. During DAG combine: (i16 (bitcast (v2i8 (truncssat_u ...)))
-    // 2. During legalizing: (i16 (bitcast (i16 (sat_pk_cast ...)))
-    SDValue Src = N->getOperand(0);
-    if (N->getValueType(0) == Src.getValueType())
-      return Src;
   }
   default: {
     if (!DCI.isBeforeLegalize()) {
