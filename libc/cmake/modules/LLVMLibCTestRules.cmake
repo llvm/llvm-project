@@ -30,6 +30,10 @@ function(_get_common_test_compile_options output_var c_test flags)
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
     if(NOT LIBC_WNO_ERROR)
       list(APPEND compile_options "-Werror")
+
+      # Needed because all/most arguments become "unused" when compiling
+      # "libc/test/src/__support/fake_heap.s"
+      list(APPEND compile_options "-Wno-unused-command-line-argument")
     endif()
     list(APPEND compile_options "-Wconversion")
     list(APPEND compile_options "-Wno-sign-conversion")
