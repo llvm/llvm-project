@@ -102,9 +102,6 @@
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
 
-/* Define to 1 if you have the `getrlimit' function. */
-#define HAVE_GETRLIMIT 1
-
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
 

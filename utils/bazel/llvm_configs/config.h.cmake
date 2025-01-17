@@ -90,9 +90,6 @@
 /* Define to 1 if you have the `getpagesize' function. */
 #cmakedefine HAVE_GETPAGESIZE ${HAVE_GETPAGESIZE}
 
-/* Define to 1 if you have the `getrlimit' function. */
-#cmakedefine HAVE_GETRLIMIT ${HAVE_GETRLIMIT}
-
 /* Define to 1 if you have the `getrusage' function. */
 #cmakedefine HAVE_GETRUSAGE ${HAVE_GETRUSAGE}
 
