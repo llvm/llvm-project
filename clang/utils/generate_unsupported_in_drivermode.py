@@ -31,7 +31,8 @@ import math
 from pathlib import Path
 
 LLVM_TABLEGEN = "llvm-tblgen"
-LIT_TEST_PATH = "../test/Options/unsupported-driver-options-check.ll"
+LIT_TEST_PATH = "../test/Driver/unsupported_in_drivermode.c"
+LIT_TEST_PATH_FLANG = "../test/Driver/flang/unsupported_in_flang.f90"
 INCLUDE_PATH = "../../llvm/include"
 
 # Strings defined in Options.td for the various driver flavours. See "OptionVisibility"
@@ -45,48 +46,30 @@ VISIBILITY_FLANG = "FlangOption"
 
 # Strings used in the commands to be tested
 CLANG = "clang"
-CLANG_CL = "clang-cl"
-CLANG_DXC = "clang-dxc"
-FLANG = "flang-new"
+CLANG_CL = f"{CLANG} --driver-mode=cl"
+CLANG_DXC = f"{CLANG} --driver-mode=dxc"
+FLANG = f"{CLANG} --driver-mode=flang"
 CLANG_LIT = "%clang"
 CLANG_CL_LIT = "%clang_cl"
 CLANG_DXC_LIT = "%clang_dxc"
-FLANG_LIT = FLANG
-OPTION_NUM = "-###"
+FLANG_LIT = f"%{FLANG}"
+OPTION_HASH = "-###"
 OPTION_X = "-x"
+OPTION_WX = "/WX"
 OPTION_CPP = "c++"
 OPTION_C = "-c"
-
-# See clang/include/clang/Basic/DiagnosticDriverKinds.td for the *unknown_argument* strings
-# As per Driver::ParseArgStrings from Driver.cpp, all the driver modes use the
-# string "unknown argument" in their unsupported option error messages
-ERROR_MSG_CHECK = (
-    "{{(unknown argument|"
-    "argument unused|"
-    "unsupported|"
-    "unknown integrated tool)}}"
-)
-
-LIT_TEST_NOTE = (
-    "; NOTE: This lit test was automatically generated to validate "
-    "unintentionally exposed arguments to various driver flavours.\n"
-    "; NOTE: To make changes, see "
-    + Path(__file__).resolve().as_posix()
-    + " from which it was generated.\n"
-    "To output which unsupported options are not tested by this Lit"
-    " test, see that script\n\n"
-)
+OPTION_CC1 = "-cc1"
+OPTION_CC1AS = "-cc1as"
+OPTION_FC1 = "-fc1"
+OPTION_SLASH_C = "/c"
+SLASH_SLASH = "// "
+EXCLAMATION = "! "
 
 # A few options need to be explicitly skipped for a variety of reasons
 exceptions_sequence = [
-    # Incorrect usage of the driver options below cause unique output
+    # Invalid usage of the driver options below causes unique output
     "cc1",
     "cc1as",
-    # Incorrect usage of fexperimental-sanitize-metadata=* with the default
-    # driver automatically adds -cc1, which makes the commands supported
-    "fexperimental-sanitize-metadata=atomics",
-    "fexperimental-sanitize-metadata=covered",
-    "fexperimental-sanitize-metadata=uar",
     # TODO: The exceptions below are temporary
     "mno-strict-align",  # CC1
     "mstrict-align",  # CC1
@@ -98,11 +81,14 @@ exceptions_sequence = [
 class DriverController:
     """Controller for data specific to each driver
     shell_cmd_prefix: The beginning string of the command to be tested
+    lit_cmd_prefix: The beginning string of the Lit command
     visibility_str: The corresponding visibility string from OptionVisibility in Options.td
     shell_cmd_suffix: Strings near the end of the command to be tested
+    check_string: The string or regex to be sent to FileCheck
+    lit_cmd_end: String at the end of the Lit command
+
     supported_sequence: List of UnsupportedDriverOption objects for supported options
                         that are Kind KIND_JOINED*, as defined in Options.td
-    is_os_compatible: Boolean indicating whether this driver is available on the current OS
     """
 
     def __init__(
@@ -111,8 +97,7 @@ class DriverController:
         lit_cmd_prefix="",
         visibility_str="",
         shell_cmd_suffix="",
-        is_os_compatible=False,
-        check_string="unknown argument",
+        check_string="{{(unknown argument|n?N?o such file or directory)}}",
         lit_cmd_end=" - < /dev/null 2>&1 | FileCheck -check-prefix=",
     ):
         self.shell_cmd_prefix = shell_cmd_prefix
@@ -120,7 +105,6 @@ class DriverController:
         self.visibility_str = visibility_str
         self.shell_cmd_suffix = shell_cmd_suffix
         self.supported_sequence = []
-        self.is_os_compatible = is_os_compatible
         self.check_string = check_string
         self.lit_cmd_end = lit_cmd_end
 
@@ -128,20 +112,22 @@ class DriverController:
 class UnsupportedDriverOption:
     """Defines an unsupported driver-option combination
     driver: The driver string as defined by OptionVisibility in Options.td
-    option: The option string. See "Name" for a given option in Options.td
+    option: The option object from Options.td
+    option_name: Corresponding string for an option. See "Name" for a given option in Options.td
     prefix: String that precedes the option. Ex. "-"
     is_error: Boolean indicating whether the corresponding command generates an error
     """
 
-    def __init__(self, driver, option, prefix):
+    def __init__(self, driver, option, option_name, prefix):
         self.driver = driver
         self.option = option
+        self.option_name = option_name
         self.prefix = prefix
         self.is_error = True
 
     # For sorting
     def __len__(self):
-        return len(self.option)
+        return len(self.option_name)
 
 
 def print_usage():
@@ -169,23 +155,14 @@ def is_valid_file(path, expected_name):
         return False
 
 
-def find_executable(executable):
-    """Validate an executable"""
-    result = shutil.which(executable)
-    if result is None:
-        print(f"Unable to find {executable}")
-    else:
-        print(f"{executable} found: {result}")
-
-    return result
-
-
 def find_tablegen():
     """Validate the TableGen executable"""
-    result = find_executable(LLVM_TABLEGEN)
+    result = shutil.which(LLVM_TABLEGEN)
     if result is None:
+        print(f"Unable to find {LLVM_TABLEGEN}")
         sys.exit("\nExiting")
     else:
+        print(f"{LLVM_TABLEGEN} found: {result}")
         return result
 
 
@@ -217,7 +194,6 @@ tablegen_input_path = ""
 tablegen = None
 options_td = ""
 driver_sequence = []
-options_sequence = []
 unsupported_sequence = []
 # List of driver-option pairs that will be skipped due to
 # overlapping supported and unsupported option names. See later comments for detail
@@ -271,55 +247,56 @@ options_json = json.loads(options_json_str.stdout.decode("utf-8"))
 
 # Establish the controller objects for each driver
 driver_cc1as = DriverController(
-    f"{CLANG} -cc1as",
-    f"{CLANG_LIT} -cc1as",
+    f"{CLANG} {OPTION_CC1AS}",
+    f"{CLANG_LIT} {OPTION_CC1AS}",
     VISIBILITY_CC1AS,
     "",
-    None != find_executable(CLANG),
 )
 driver_cc1 = DriverController(
-    f"{CLANG} -cc1",
-    f"{CLANG_LIT} -cc1",
+    f"{CLANG} {OPTION_CC1}",
+    f"{CLANG_LIT} {OPTION_CC1}",
     VISIBILITY_CC1,
     " " + OPTION_X + " " + OPTION_CPP,
-    None != find_executable(CLANG),
 )
 driver_cl = DriverController(
     CLANG_CL,
     CLANG_CL_LIT,
     VISIBILITY_CL,
-    " " + OPTION_NUM + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
-    None != find_executable(CLANG_CL),
+    " " + OPTION_HASH + " " + OPTION_SLASH_C + " " + OPTION_WX,
+    "{{(unknown argument ignored in|no such file or directory)}}",
+    " | FileCheck -check-prefix=",
 )
 driver_dxc = DriverController(
     CLANG_DXC,
     CLANG_DXC_LIT,
     VISIBILITY_DXC,
-    " " + OPTION_NUM + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
-    None != find_executable(CLANG_DXC),
+    " " + OPTION_HASH,
+    "{{(unknown argument|no such file or directory)}}",
+    " | FileCheck -check-prefix=",
 )
 driver_default = DriverController(
     CLANG,
     CLANG_LIT,
     VISIBILITY_DEFAULT,
-    " " + OPTION_NUM + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
-    None != find_executable(CLANG),
-    "{{(unknown argument|unsupported option|argument unused)}}",
+    " " + OPTION_HASH + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
+    "{{(unknown argument|unsupported option|argument unused|no such file or directory)}}",
 )
 driver_fc1 = DriverController(
-    f"{FLANG} -fc1",
-    f"{FLANG_LIT} -fc1",
+    f"{FLANG} {OPTION_FC1}",
+    f"{FLANG_LIT} {OPTION_FC1}",
     VISIBILITY_FC1,
     "",
-    None != find_executable(FLANG),
+    "{{(unknown argument|no such file or directory|does not exist)}}",
 )
-driver_flang = DriverController(
-    FLANG,
-    FLANG_LIT,
-    VISIBILITY_FLANG,
-    " " + OPTION_NUM + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
-    None != find_executable(FLANG),
-)
+# As per flang.f90, "-fc1 is invoked when in --driver-mode=flang",
+# so no point including the below.
+# driver_flang = DriverController(
+#     FLANG,
+#     FLANG_LIT,
+#     VISIBILITY_FLANG,
+#     " " + OPTION_HASH + " " + OPTION_X + " " + OPTION_CPP + " " + OPTION_C,
+#     "{{unknown argument|unsupported option|argument unused during compilation|invalid argument|no such file or directory}}",
+# )
 
 driver_controller = [
     driver_cc1as,
@@ -328,7 +305,7 @@ driver_controller = [
     driver_dxc,
     driver_default,
     driver_fc1,
-    driver_flang,
+    # driver_flang,
 ]
 
 
@@ -341,43 +318,17 @@ def get_index(driver_vis):
             return index
 
 
-# Gather list of driver flavours
-for visibility in options_json["!instanceof"]["OptionVisibility"]:
-    driver_sequence.append(visibility)
-
-# Walk through the options list and find which drivers shouldn't be visible to each option
-for option in options_json["!instanceof"]["Option"]:
-    kind = options_json[option]["Kind"]["def"]
-    should_skip = False
-    tmp_vis_list = []
+def get_visibility(option, option_name, filtered_visibility):
+    """Get a list of drivers that a given option exposed to
+    Return true if this option should be skipped
+    """
     group_sequence = []
-    option_name = options_json[option]["Name"]
-
-    # There are a few conditions that make an option unsuitable to test in this script
-    # Options of kind KIND_INPUT & KIND_UNKNOWN don't apply to this test. For example,
-    # Option "INPUT" with name "<input>".
-    if (
-        option_name in exceptions_sequence
-        or options_json[option]["Name"] is None
-        or kind == "KIND_INPUT"
-        or kind == "KIND_UNKNOWN"
-    ):
-        untested_sequence.append(UnsupportedDriverOption("All", option, ""))
-        continue
-
-    # Get the correct option prefix
-    prefixes = options_json[option]["Prefixes"]
-    prefix = ""
-    if prefixes is not None and len(prefixes) > 0:
-        # Assuming the first prefix is the preferred prefix
-        prefix = prefixes[0]
-        if os.name != "nt" and prefix == "/":
-            continue
+    should_skip = False
 
     # Check for the option's explicit visibility
     for visibility in options_json[option]["Visibility"]:
         if visibility is not None:
-            tmp_vis_list.append(visibility["def"])
+            filtered_visibility.append(visibility["def"])
 
     # Check for the option's group's visibility
     find_groups(group_sequence, options_json, option)
@@ -390,25 +341,13 @@ for option in options_json["!instanceof"]["Option"]:
                 should_skip = True
                 break
             for visibility in options_json[group_name]["Visibility"]:
-                tmp_vis_list.append(visibility["def"])
+                filtered_visibility.append(visibility["def"])
     if should_skip:
-        untested_sequence.append(UnsupportedDriverOption("All", option, ""))
-        continue
+        untested_sequence.append(
+            UnsupportedDriverOption("All", option, option_name, "")
+        )
 
-    # KIND_JOINED* options that are supported need to be saved for checking
-    # which options cannot be validated with this script
-    is_option_kind_joined = kind == "KIND_JOINED" or kind == "KIND_JOINED_OR_SEPARATE"
-
-    # Append to the unsupported list, and the various supported lists
-    for driver in driver_sequence:
-        if driver not in tmp_vis_list:
-            unsupported_sequence.append(
-                UnsupportedDriverOption(driver, option_name, prefix)
-            )
-        elif is_option_kind_joined:
-            driver_controller[get_index(driver)].supported_sequence.append(
-                UnsupportedDriverOption(driver, option_name, prefix)
-            )
+    return should_skip
 
 
 def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
@@ -430,16 +369,16 @@ def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
         return middle
 
     if (
-        len(supported_sequence[middle].option)
+        len(supported_sequence[middle].option_name)
         <= len(search_option)
-        < len(supported_sequence[middle - 1].option)
+        < len(supported_sequence[middle - 1].option_name)
     ):
         return middle
-    elif len(supported_sequence[middle].option) <= len(search_option):
+    elif len(supported_sequence[middle].option_name) <= len(search_option):
         return find_supported_seq_cmp_start(
             supported_sequence, low, middle - 1, search_option
         )
-    elif len(supported_sequence[middle].option) > len(search_option):
+    elif len(supported_sequence[middle].option_name) > len(search_option):
         return find_supported_seq_cmp_start(
             supported_sequence, middle + 1, high, search_option
         )
@@ -448,73 +387,50 @@ def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
         return -1
 
 
-# Sort the supported lists for the next block
-for driver_ctrl in driver_controller:
-    driver_ctrl.supported_sequence.sort(key=len, reverse=True)
+def get_lit_test_note(test_visibility):
+    """Return the note to be included at the start of the Lit test file"""
+    test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
 
-# For a given driver, this script cannot generate tests for unsupported options
-# that have a prefix that is a supported option of Kind KIND_JOINED*.
-# These driver-option pairs are removed here.
-for unsupported_pair in unsupported_sequence:
-    supported_seq = driver_controller[
-        get_index(unsupported_pair.driver)
-    ].supported_sequence
-    start_index = find_supported_seq_cmp_start(
-        supported_seq, 0, len(supported_seq) - 1, unsupported_pair.option
+    return (
+        f"{test_prefix}NOTE: This lit test was automatically generated to validate "
+        "unintentionally exposed arguments to various driver flavours.\n"
+        f"{test_prefix}NOTE: To make changes, see "
+        + Path(__file__).resolve().as_posix()
+        + " from which it was generated.\n\n"
     )
-    start_index = 0 if start_index == -1 else start_index
 
-    for supported_pair in driver_controller[
-        get_index(unsupported_pair.driver)
-    ].supported_sequence[start_index:]:
-        if unsupported_pair.option.startswith(supported_pair.option):
-            skipped_sequence.append(unsupported_pair)
 
-for skip_pair in skipped_sequence:
-    unsupported_sequence.remove(skip_pair)
+def write_lit_test(test_path, test_visibility, unsupported_list):
+    """Write the lit tests to file"""
+    try:
+        with open(test_path, "w") as lit_file:
+            try:
+                lit_file.write(get_lit_test_note(test_visibility))
 
-# Preprocess each default driver command to determine if they result in an error status or a warning.
-# The other drivers currently output error for all unsupported commands, so preprocessing is unnecessary
-# This is necessary since the Lit tests require an explicit "; RUN: not" for errors
-for unsupported_pair in unsupported_sequence:
-    if (
-        driver_controller[get_index(unsupported_pair.driver)].is_os_compatible
-        and driver_controller[get_index(unsupported_pair.driver)].visibility_str
-        == VISIBILITY_DEFAULT
-    ):
-        # Run each command inside the script
-        cmd = [
-            f"{driver_controller[get_index(unsupported_pair.driver)].shell_cmd_prefix} \
-                 {unsupported_pair.prefix}{unsupported_pair.option} \
-                 {driver_controller[get_index(unsupported_pair.driver)].shell_cmd_suffix} -"
-        ]
-        cmd_out = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            shell=True,
-        )
-        unsupported_pair.is_error = True if cmd_out.returncode == 1 else False
+                for index, unsupported_pair in enumerate(unsupported_list):
+                    is_flang_pair = (
+                        unsupported_pair.driver == VISIBILITY_FLANG
+                        or unsupported_pair.driver == VISIBILITY_FC1
+                    )
+                    if (test_visibility == VISIBILITY_FLANG and not is_flang_pair) or (
+                        test_visibility == VISIBILITY_DEFAULT and is_flang_pair
+                    ):
+                        continue
 
-# Generate the Lit test
-try:
-    with open(LIT_TEST_PATH, "w") as lit_file:
-        try:
-            lit_file.write(LIT_TEST_NOTE)
+                    if unsupported_pair.is_error:
+                        lit_not = "not "
+                    else:
+                        lit_not = ""
 
-            for index, unsupported_pair in enumerate(unsupported_sequence):
-                if unsupported_pair.is_error:
-                    lit_not = "not "
-                else:
-                    lit_not = ""
+                    prefix_str = SLASH_SLASH
+                    if (
+                        unsupported_pair.driver == VISIBILITY_FLANG
+                        or unsupported_pair.driver == VISIBILITY_FC1
+                    ):
+                        prefix_str = EXCLAMATION
 
-                CMD_START = "; RUN: " + lit_not
+                    CMD_START = f"{prefix_str}RUN: " + lit_not
 
-                # if driver_controller[ get_index(unsupported_pair.driver) ].is_os_compatible:
-                if driver_controller[
-                    get_index(unsupported_pair.driver)
-                ].is_os_compatible:
                     lit_file.write(
                         CMD_START
                         + driver_controller[
@@ -522,7 +438,7 @@ try:
                         ].lit_cmd_prefix
                         + " "
                         + unsupported_pair.prefix
-                        + unsupported_pair.option
+                        + unsupported_pair.option_name
                         + driver_controller[
                             get_index(unsupported_pair.driver)
                         ].shell_cmd_suffix
@@ -532,21 +448,167 @@ try:
                         + unsupported_pair.driver
                         + " %s\n"
                     )
-            # CHECK statements. Instead of writing custom CHECK statements for each driver,
-            # create one statement per driver. Not all options return error messages include their option name
-            for driver in driver_controller:
-                lit_file.write(
-                    "; " + driver.visibility_str + ": " + driver.check_string + "\n"
-                )
-        except (IOError, OSError):
-            sys.exit("Error writing to " + "LIT_TEST_PATH. Exiting")
-except (FileNotFoundError, PermissionError, OSError):
-    sys.exit("Error opening " + "LIT_TEST_PATH" + ". Exiting")
-else:
-    lit_file.close()
+                # CHECK statements. Instead of writing custom CHECK statements for each driver,
+                # create one statement per driver. Not all options return error messages include their option name
+                for driver in driver_controller:
+                    is_flang_driver = (
+                        driver.visibility_str == VISIBILITY_FLANG
+                        or driver.visibility_str == VISIBILITY_FC1
+                    )
 
-# print("\nThese unsupported driver-option pairs were not tested:")
-# for untested_pair in untested_sequence:
-#     print(f"Driver: {untested_pair.driver}\tOption:{untested_pair.option}")
-# for skipped_pair in skipped_sequence:
-#     print(f"Driver: {skipped_pair.driver}\tOption:{skipped_pair.option}")
+                    if test_visibility == VISIBILITY_FLANG and not is_flang_driver:
+                        continue
+                    elif test_visibility == VISIBILITY_DEFAULT and is_flang_driver:
+                        continue
+
+                    check_prefix = EXCLAMATION if is_flang_driver else SLASH_SLASH
+
+                    lit_file.write(
+                        check_prefix
+                        + driver.visibility_str
+                        + ": "
+                        + driver.check_string
+                        + "\n"
+                    )
+            except (IOError, OSError):
+                sys.exit("Error writing to " + "LIT_TEST_PATH. Exiting")
+    except (FileNotFoundError, PermissionError, OSError):
+        sys.exit("Error opening " + "LIT_TEST_PATH" + ". Exiting")
+    else:
+        lit_file.close()
+
+
+# Gather list of driver flavours
+for visibility in options_json["!instanceof"]["OptionVisibility"]:
+    if visibility == VISIBILITY_FLANG:
+        continue
+    driver_sequence.append(visibility)
+
+# Walk through the options list and find which drivers shouldn't be visible to each option
+for option in options_json["!instanceof"]["Option"]:
+    kind = options_json[option]["Kind"]["def"]
+    should_skip = False
+    tmp_vis_list = []
+    group_sequence = []
+    option_name = options_json[option]["Name"]
+
+    # There are a few conditions that make an option unsuitable to test in this script
+    # Options of kind KIND_INPUT & KIND_UNKNOWN don't apply to this test. For example,
+    # Option "INPUT" with name "<input>".
+    if (
+        option_name in exceptions_sequence
+        or options_json[option]["Name"] is None
+        or kind == "KIND_INPUT"
+        or kind == "KIND_UNKNOWN"
+    ):
+        untested_sequence.append(
+            UnsupportedDriverOption("All", option, option_name, "")
+        )
+        continue
+
+    # Get the correct option prefix
+    prefixes = options_json[option]["Prefixes"]
+    prefix = ""
+    if prefixes is not None and len(prefixes) > 0:
+        # Assuming the first prefix is the preferred prefix
+        prefix = prefixes[0]
+
+    should_skip = get_visibility(option, option_name, tmp_vis_list)
+
+    if should_skip:
+        continue
+
+    # KIND_JOINED* options that are supported need to be saved for checking
+    # which options cannot be validated with this script
+    is_option_kind_joined = kind == "KIND_JOINED" or kind == "KIND_JOINED_OR_SEPARATE"
+
+    # Append to the unsupported list, and the various supported lists
+    for driver in driver_sequence:
+        if driver not in tmp_vis_list:
+            unsupported_sequence.append(
+                UnsupportedDriverOption(driver, option, option_name, prefix)
+            )
+        elif is_option_kind_joined:
+            driver_controller[get_index(driver)].supported_sequence.append(
+                UnsupportedDriverOption(driver, option, option_name, prefix)
+            )
+
+# Sort the supported lists for the next block
+for driver_ctrl in driver_controller:
+    driver_ctrl.supported_sequence.sort(key=len, reverse=True)
+
+# For a given driver, this script should not generate tests for unsupported options
+# that have a prefix that is a supported option / visible option of Kind KIND_JOINED*.
+# These driver-option pairs are removed here.
+for unsupported_pair in unsupported_sequence:
+    supported_seq = driver_controller[
+        get_index(unsupported_pair.driver)
+    ].supported_sequence
+
+    start_index = find_supported_seq_cmp_start(
+        supported_seq, 0, len(supported_seq) - 1, unsupported_pair.option_name
+    )
+    start_index = 0 if start_index == -1 else start_index
+
+    for supported_pair in driver_controller[
+        get_index(unsupported_pair.driver)
+    ].supported_sequence[start_index:]:
+        if (
+            unsupported_pair.option_name.startswith(supported_pair.option_name)
+            and unsupported_pair not in skipped_sequence
+        ):
+            skipped_sequence.append(unsupported_pair)
+
+for skip_pair in skipped_sequence:
+    unsupported_sequence.remove(skip_pair)
+skipped_sequence.clear()
+
+# Preprocess each default driver command to determine if they result in an error status or a warning.
+# The other drivers currently output error for all unsupported commands, so preprocessing is unnecessary
+# This is necessary since the Lit tests require an explicit "; RUN: not" for errors
+for unsupported_pair in unsupported_sequence:
+    if (
+        driver_controller[get_index(unsupported_pair.driver)].visibility_str
+        == VISIBILITY_DEFAULT
+    ):
+        # Run each command inside the script
+        cmd = [
+            f"{driver_controller[get_index(unsupported_pair.driver)].shell_cmd_prefix} \
+                 {unsupported_pair.prefix}{unsupported_pair.option_name} \
+                 {driver_controller[get_index(unsupported_pair.driver)].shell_cmd_suffix} -"
+        ]
+
+        tmp_file = "tmp_file.txt"
+        # Open a temporary file in binary mode since some stderr output may trigger decoding errors
+        with open(tmp_file, "wb+") as out_file:
+            cmd_out = subprocess.run(
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=out_file,
+                stderr=subprocess.STDOUT,
+                shell=True,
+            )
+
+            unsupported_pair.is_error = True if cmd_out.returncode == 1 else False
+
+            # Options corresponding to driver flavours may be added automatically, in which case,
+            # their visibility should be considered as well.
+            tmp_vis_list = []
+            get_visibility(
+                unsupported_pair.option, unsupported_pair.option_name, tmp_vis_list
+            )
+            out_file.seek(0)
+            out = out_file.read()
+            if b"-cc1" in out and VISIBILITY_CC1 in tmp_vis_list:
+                skipped_sequence.append(unsupported_pair)
+            elif b"-cc1as" in out and VISIBILITY_CC1AS in tmp_vis_list:
+                skipped_sequence.append(unsupported_pair)
+
+        os.remove(tmp_file)
+
+for skip_pair in skipped_sequence:
+    unsupported_sequence.remove(skip_pair)
+skipped_sequence.clear()
+
+write_lit_test(LIT_TEST_PATH, VISIBILITY_DEFAULT, unsupported_sequence)
+write_lit_test(LIT_TEST_PATH_FLANG, VISIBILITY_FLANG, unsupported_sequence)
