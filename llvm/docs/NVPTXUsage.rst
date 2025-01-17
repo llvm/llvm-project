@@ -575,7 +575,7 @@ prefetched in terms of bytes and it must be a multiple of 16.
 
 * The last argument to these intrinsics is boolean flag indicating
   support for cache_hint. These flag argument must be compile-time
-  constant. When set, indicates a valid cache_hint (``i64 %ch``) 
+  constant. When set, it indicates a valid cache_hint (``i64 %ch``)
   and generates the ``.L2::cache_hint`` variant of the PTX instruction.
 
 For more information, refer PTX ISA
