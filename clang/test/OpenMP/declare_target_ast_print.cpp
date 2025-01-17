@@ -61,6 +61,7 @@ void boo_cpp() {}
 // OMP51: #pragma omp declare target indirect
 // OMP51: void boo_cpp() {
 // OMP51: }
+// OMP51: #pragma omp end declare target
 
 constexpr bool f() {return false;}
 #pragma omp begin declare target indirect(f())
@@ -76,6 +77,7 @@ void xoo();
 // OMP51: #pragma omp declare target indirect(f())
 // OMP51: void xoo();
 // OMP51: #pragma omp end declare target
+
 }
 #endif // _OPENMP
 

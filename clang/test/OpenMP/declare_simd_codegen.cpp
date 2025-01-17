@@ -48,13 +48,13 @@ void h(int *hp, int *hp2, int *hq, int *lin) {
 
 class VV {
 public:
-#pragma omp declare simd uniform(this, a) linear(b : a)
+#pragma omp declare simd uniform(this, a) linear(val(b) : a)
   int add(int a, int b) __attribute__((cold)) { return a + b; }
 
-#pragma omp declare simd aligned(b : 4) aligned(a) linear(b : 4) linear(this, a)
+#pragma omp declare simd aligned(b : 4) aligned(a) linear(ref(b) : 4) linear(this, a)
   float taddpf(float *a, float *&b) { return *a + *b; }
 
-#pragma omp declare simd linear(c : 8)
+#pragma omp declare simd linear(uval(c) : 8)
 #pragma omp declare simd aligned(b : 8)
   int tadd(int (&b)[], int &c) { return x[b[0]] + b[0]; }
 
@@ -68,7 +68,7 @@ public:
 #pragma omp declare simd simdlen(X)
   int tadd(int a, int b) { return a + b; }
 
-#pragma omp declare simd aligned(a : X * 2) aligned(b) linear(b : X)
+#pragma omp declare simd aligned(a : X * 2) aligned(b) linear(ref(b) : X)
   float taddpf(float *a, T *&b) { return *a + *b; }
 
 #pragma omp declare simd
@@ -79,7 +79,7 @@ private:
   int x[X];
 };
 
-#pragma omp declare simd simdlen(N) aligned(b : N * 2) linear(c : N)
+#pragma omp declare simd simdlen(N) aligned(b : N * 2) linear(uval(c) : N)
 template <int N>
 void foo(int (&b)[N], float *&c) {}
 
@@ -148,20 +148,20 @@ double One(int &a, int *b, int c, int &d, int *e, int f) {
 }
 
 // linear(val(x)) cases
-#pragma omp declare simd simdlen(4) linear(a:2) linear(b:4) \
-                                    linear(c:8) linear(d,e,f)
+#pragma omp declare simd simdlen(4) linear(val(a):2) linear(val(b):4) \
+                                    linear(val(c):8) linear(val(d,e,f))
 double Two(int &a, int *b, int c, int &d, int *e, int f) {
   return a + *b + c;
 }
 
 // linear(uval(x) case
-#pragma omp declare simd simdlen(4) linear(a:2) linear(b)
+#pragma omp declare simd simdlen(4) linear(uval(a):2) linear(uval(b))
 double Three(int &a, int &b) {
   return a;
 }
 
 // linear(ref(x) case
-#pragma omp declare simd simdlen(4) linear(a:2) linear(b)
+#pragma omp declare simd simdlen(4) linear(ref(a):2) linear(ref(b))
 double Four(int& a, int &b) {
   return a;
 }
@@ -169,9 +169,9 @@ double Four(int& a, int &b) {
 // Test reference parameters with variable stride.
 #pragma omp declare simd simdlen(4) uniform(a)               \
                          linear(b:2) linear(c:a)             \
-                         linear(d:4) linear(e:a)   \
-                         linear(f:8) linear(g:a) \
-                         linear(h:16) linear(i:a)
+                         linear(val(d):4) linear(val(e):a)   \
+                         linear(uval(f):8) linear(uval(g):a) \
+                         linear(ref(h):16) linear(ref(i):a)
 double Five(int a, short &b, short &c, short &d, short &e, short &f, short &g,
             short &h, short &i) {
   return a + int(b);
@@ -179,7 +179,7 @@ double Five(int a, short &b, short &c, short &d, short &e, short &f, short &g,
 
 // Test negative strides
 #pragma omp declare simd simdlen(4) linear(a:-2) linear(b:-8) \
-                                    linear(c:-4) linear(d:-16) \
+                                    linear(uval(c):-4) linear(ref(d):-16) \
                                     linear(e:-1) linear(f:-1) linear(g:0)
 double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
  return a + int(*b) + c + *d + e + *f + g;
@@ -273,40 +273,40 @@ double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
 // CHECK-DAG: "_ZGVeM16uuls1__ZN2VV3addEii"
 // CHECK-DAG: "_ZGVeN16uuls1__ZN2VV3addEii"
 
-// CHECK-DAG: "_ZGVbM4l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVbN4l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcM8l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVcN8l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdM8l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVdN8l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeM16l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
-// CHECK-DAG: "_ZGVeN16l40l4a16L4a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbM4l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVbN4l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcM8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVcN8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdM8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVdN8l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeM16l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
+// CHECK-DAG: "_ZGVeN16l40l4a16R32a4__ZN2VV6taddpfEPfRS0_"
 
-// CHECK-DAG: "_ZGVbM4vvL8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVbM4vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVbN4vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVcM8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVcN8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVdM8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVdN8vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVeM16vvU8__ZN2VV4taddERA_iRi"
+// CHECK-DAG: "_ZGVeN16vvU8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVbM4vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVbN4vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVbN4vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVcM8vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVcM8vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVcN8vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVcN8vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVdM8vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVdM8vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVdN8vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVdN8vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVeM16vvL8__ZN2VV4taddERA_iRi"
 // CHECK-DAG: "_ZGVeM16vva8v__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVeN16vvL8__ZN2VV4taddERA_iRi"
-// CHECK-DAG: "_ZGVeN16vva8v__ZN2VV4taddERA_iRi" 
+// CHECK-DAG: "_ZGVeN16vva8v__ZN2VV4taddERA_iRi"
 
-// CHECK-DAG: "_ZGVbM4vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVbN4vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVcM8vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVcN8vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVdM8vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVdN8vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVeM16vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
-// CHECK-DAG: "_ZGVeN16vva32L16a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVbM4vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVbN4vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVcM8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVcN8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVdM8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVdN8vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVeM16vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
+// CHECK-DAG: "_ZGVeN16vva32R128a16__ZN3TVVILi16EfE6taddpfEPfRS1_"
 
 // CHECK-DAG: "_ZGVbM4uu__ZN3TVVILi16EfE4taddEi"
 // CHECK-DAG: "_ZGVbN4uu__ZN3TVVILi16EfE4taddEi"
@@ -325,14 +325,14 @@ double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
 // CHECK-DAG: "_ZGVeM16vv__ZN3TVVILi16EfE4taddEi"
 // CHECK-DAG: "_ZGVeN16vv__ZN3TVVILi16EfE4taddEi"
 
-// CHECK-DAG: "_ZGVbM64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVbN64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVcM64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVcN64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVdM64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVdN64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVeM64va128L64__Z3fooILi64EEvRAT__iRPf"
-// CHECK-DAG: "_ZGVeN64va128L64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVbM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVbN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVcM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVcN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVdM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVdN64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVeM64va128U64__Z3fooILi64EEvRAT__iRPf"
+// CHECK-DAG: "_ZGVeN64va128U64__Z3fooILi64EEvRAT__iRPf"
 
 // CHECK-DAG: "_ZGVbM4vl8__ZN1A6infuncILi8EiEET0_S1_"
 // CHECK-DAG: "_ZGVbN4vl8__ZN1A6infuncILi8EiEET0_S1_"
@@ -444,38 +444,14 @@ double Six(int a, float *b, int &c, int *&d, char e, char *f, short g) {
 // CHECK-DAG: "_ZGVbN4L2l16l8Ll4l__Z3OneRiPiiS_S0_i"
 // CHECK-DAG: "_ZGVbM4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
 // CHECK-DAG: "_ZGVbN4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVcM4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVcN4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVdM4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVdN4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVeM4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i"
-// CHECK-DAG: "_ZGVeN4L2l16l8Ll4l__Z3TwoRiPiiS_S0_i" 
-// CHECK-DAG: "_ZGVbM4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVbN4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVcM4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVcN4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVdM4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVdN4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVeM4L2L__Z5ThreeRiS_"
-// CHECK-DAG: "_ZGVeN4L2L__Z5ThreeRiS_
-
-// CHECK-DAG: "_ZGVbM4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVbN4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVcM4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVcN4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVdM4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVdN4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVeM4L2L__Z4FourRiS_"
-// CHECK-DAG: "_ZGVeN4L2L__Z4FourRiS_" 
-
-// CHECK-DAG: "_ZGVbM4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVbN4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVcM4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVcN4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVdM4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVdN4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVeM4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
-// CHECK-DAG: "_ZGVeN4ln2ln32Ln4Ln16ln1ln1l0__Z3SixiPfRiRPicPcs"
+// CHECK-DAG: "_ZGVbM4U2U__Z5ThreeRiS_"
+// CHECK-DAG: "_ZGVbN4U2U__Z5ThreeRiS_"
+// CHECK-DAG: "_ZGVbM4R8R4__Z4FourRiS_"
+// CHECK-DAG: "_ZGVbN4R8R4__Z4FourRiS_"
+// CHECK-DAG: "_ZGVbM4uL2Ls0L4Ls0U8Us0R32Rs0__Z4FiveiRsS_S_S_S_S_S_S_"
+// CHECK-DAG: "_ZGVbN4uL2Ls0L4Ls0U8Us0R32Rs0__Z4FiveiRsS_S_S_S_S_S_S_"
+// CHECK-DAG: "_ZGVbM4ln2ln32Un4Rn128ln1ln1l0__Z3SixiPfRiRPicPcs"
+// CHECK-DAG: "_ZGVbN4ln2ln32Un4Rn128ln1ln1l0__Z3SixiPfRiRPicPcs"
 
 // CHECK-NOT: "_ZGV{{.+}}__Z1fRA_i
 

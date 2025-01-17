@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -verify=omp50,expected -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 -DOMP50 %s
 // RUN: %clang_cc1 -verify=omp51-simd,expected -fopenmp-simd -ferror-limit 100 %s
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -ferror-limit 100 -DOMP52 %s
-// RUN: %clang_cc1 -verify=expected,omp60-simd -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 -DOMP52 %s
+// RUN: %clang_cc1 -verify=expected,omp60-simd -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 -DOMP60 %s
 
 int temp; // expected-note {{'temp' declared here}}
 
@@ -70,9 +70,13 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper(aa :vv)                                   // expected-error {{use of undeclared identifier 'aa'}} expected-error {{expected ')'}} expected-error {{call to undeclared function 'mapper'}} expected-note {{to match this '('}}
       {}
-#pragma omp target map(mapper(ab) :vv)                                  // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
+#ifndef OMP60
+#pragma omp target map(mapper(ab) :vv)                                  // expected-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
+#endif
       {}
-#pragma omp target map(mapper(ab) :arr[0:2])                            // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
+#ifndef OMP60
+#pragma omp target map(mapper(ab) :arr[0:2])                            // expected-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'struct vec' with name 'ab'}}
+#endif
       {}
 #ifndef OMP60
 #pragma omp target map(mapper(aa) :vv)                                  // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}}
