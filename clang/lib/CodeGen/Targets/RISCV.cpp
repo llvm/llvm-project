@@ -118,7 +118,7 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned ABIVLen;
   switch (FI.getExtInfo().getCC()) {
   default:
-    ABIVLen = 1;
+    ABIVLen = 0;
     break;
   case CallingConv::CC_RISCVVLSCall_32:
     ABIVLen = 32;
@@ -414,28 +414,34 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
   // Legal struct for VLS calling convention should fulfill following rules:
   // 1. Struct element should be either "homogeneous fixed-length vectors" or "a
   //    fixed-length vector array".
-  // 2. Number of struct elements or array elements should be power of 2.
+  // 2. Number of struct elements or array elements should be greater or equal
+  //    to 1 and less or equal to 8
   // 3. Total number of vector registers needed should not exceed 8.
   //
   // Examples: Assume ABI_VLEN = 128.
   // These are legal structs:
-  //   a. Structs with 1, 2, 4 or 8 "same" fixed-length vectors, e.g.
+  //   a. Structs with 1~8 "same" fixed-length vectors, e.g.
   //   struct {
   //     __attribute__((vector_size(16))) int a;
   //     __attribute__((vector_size(16))) int b;
   //   }
   //
-  //   b. Structs with "single" fixed-length vector array with lengh 1, 2, 4
-  //   or 8, e.g.
+  //   b. Structs with "single" fixed-length vector array with lengh 1~8, e.g.
   //   struct {
-  //     __attribute__((vector_size(16))) int a[2];
+  //     __attribute__((vector_size(16))) int a[3];
   //   }
   // These are illegal structs:
-  //   a. Structs with 3 fixed-length vectors, e.g.
+  //   a. Structs with 9 fixed-length vectors, e.g.
   //   struct {
   //     __attribute__((vector_size(16))) int a;
   //     __attribute__((vector_size(16))) int b;
   //     __attribute__((vector_size(16))) int c;
+  //     __attribute__((vector_size(16))) int d;
+  //     __attribute__((vector_size(16))) int e;
+  //     __attribute__((vector_size(16))) int f;
+  //     __attribute__((vector_size(16))) int g;
+  //     __attribute__((vector_size(16))) int h;
+  //     __attribute__((vector_size(16))) int i;
   //   }
   //
   //   b. Structs with "multiple" fixed-length vector array, e.g.
@@ -461,7 +467,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
 
   if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty))) {
     int NumElts = STy->getStructNumElements();
-    if (NumElts > 8 || !llvm::isPowerOf2_32(NumElts))
+    if (NumElts > 8)
       return false;
 
     auto *FirstEltTy = STy->getElementType(0);
@@ -517,7 +523,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
     // if legal.
     if (auto *ArrTy = dyn_cast<llvm::ArrayType>(FirstEltTy)) {
       int NumArrElt = ArrTy->getNumElements();
-      if (NumArrElt > 8 || !llvm::isPowerOf2_32(NumArrElt))
+      if (NumArrElt > 8)
         return false;
 
       auto *ArrEltTy = dyn_cast<llvm::FixedVectorType>(ArrTy->getElementType());
@@ -728,7 +734,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
         VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       return coerceVLSVector(Ty);
-    if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 1)
+    if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 0)
       // Generic vector without riscv_vls_cc should fall through and pass by
       // reference.
       return coerceVLSVector(Ty, ABIVLen);
