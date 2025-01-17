@@ -53,6 +53,10 @@ constexpr char typeDeclTemplateText[] =
 #include "Templates/TypeDecl.txt"
     ;
 
+constexpr char opDeclTemplateText[] =
+#include "Templates/OperationDecl.txt"
+    ;
+
 namespace {
 
 struct UsefulStrings {
@@ -66,12 +70,6 @@ struct UsefulStrings {
   StringRef namespacePathString;
 };
 
-struct TypeStrings {
-  StringRef typeName;
-  StringRef typeCppName;
-  StringRef typeCppShortName;
-};
-
 static std::string capitalize(StringRef str) {
   return llvm::formatv("{0}{1}", llvm::toUpper(str[0]),
                        str.slice(1, str.size()));
@@ -82,17 +80,29 @@ static std::string capitalize(StringRef str) {
 static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
                                          UsefulStrings &usefulStrings) {
 
-  std::string typeCppShortName = capitalize(type.getSymName());
+  StringRef typeName = type.getSymName();
+  std::string typeCppShortName = capitalize(typeName);
   std::string typeCppName = llvm::formatv("{0}Type", typeCppShortName);
 
-  TypeStrings typeStrings;
-  typeStrings.typeName = type.getSymName();
-  typeStrings.typeCppShortName = typeCppShortName;
-  typeStrings.typeCppName = typeCppName;
+  output << llvm::formatv(
+      typeDeclTemplateText, typeName, typeCppName, usefulStrings.dialectName,
+      usefulStrings.dialectBaseTypeName, usefulStrings.namespaceOpen,
+      usefulStrings.namespaceClose);
 
-  output << llvm::formatv(typeDeclTemplateText, usefulStrings.dialectName,
-                          usefulStrings.dialectBaseTypeName,
-                          typeStrings.typeName, typeStrings.typeCppName);
+  return success();
+}
+
+static LogicalResult generateOperationInclude(irdl::OperationOp op,
+                                              raw_ostream &output,
+                                              UsefulStrings &usefulStrings) {
+
+  StringRef opName = op.getSymName();
+  std::string opCppShortName = capitalize(opName);
+  std::string opCppName = llvm::formatv("{0}Op", opCppShortName);
+
+  output << llvm::formatv(
+      opDeclTemplateText, opName, opCppName, usefulStrings.dialectName,
+      usefulStrings.namespaceOpen, usefulStrings.namespaceClose);
 
   return success();
 }
@@ -108,7 +118,6 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
       usefulStrings.namespacePathString, usefulStrings.dialectName);
 
-  output << usefulStrings.namespaceOpen;
   output << llvm::formatv(typeHeaderDeclTemplateText,
                           usefulStrings.dialectBaseTypeName);
 
@@ -117,9 +126,9 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   for (auto &&op : block) {
     if (auto typeop = llvm::dyn_cast_or_null<irdl::TypeOp>(op))
       generateTypeInclude(typeop, output, usefulStrings);
+    if (auto operationOp = llvm::dyn_cast_or_null<irdl::OperationOp>(op))
+      generateOperationInclude(operationOp, output, usefulStrings);
   }
-
-  output << usefulStrings.namespaceClose;
 
   output << "#endif // " << declarationMacroFlag << "\n";
 

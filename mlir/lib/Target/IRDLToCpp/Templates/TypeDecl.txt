@@ -1,18 +1,26 @@
 /*
-{0}: Dialect Name
-{1}: Dialect BaseTypeName
-{2}: Type Name
-{3}: Type CppName
+{0}: Type Name
+{1}: Type CppName
+{2}: Dialect Name
+{3}: Dialect BaseTypeName
+
+{4}: Namespace open 
+{5}: Namespace close 
 */
 
 R"(
-class {3} : public ::mlir::Type::TypeBase<{3}, {1}, ::mlir::TypeStorage> {
+
+{4}
+
+class {1} : public ::mlir::Type::TypeBase<{1}, {3}, ::mlir::TypeStorage> {
 public:
   using Base::Base;
-  static constexpr ::llvm::StringLiteral name = "{0}.{2}";
-  static constexpr ::llvm::StringLiteral dialectName = "{0}";
+  static constexpr ::llvm::StringLiteral name = "{2}.{0}";
+  static constexpr ::llvm::StringLiteral dialectName = "{2}";
   static constexpr ::llvm::StringLiteral getMnemonic() {
-    return {"{2}"};
+    return {"{0}"};
   }
 };
+
+{5}
 )"

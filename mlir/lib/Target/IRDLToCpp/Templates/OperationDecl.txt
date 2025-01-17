@@ -1,9 +1,11 @@
-0: Name
-1: CppName
-2: DialectName
+/*
+0: Operation Name
+1: Operation CppName
+2: Dialect Name
 
 3: open namespace
 4: close namespace
+*/
 
 R"(
 {3}
@@ -23,7 +25,7 @@ public:
   {1}GenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize);
-  ::mlir::DictionaryAttr getAttributes() {
+  ::mlir::DictionaryAttr getAttributes() {{
     return odsAttrs;
   }
 
@@ -44,21 +46,21 @@ public:
   template <typename LateInst = {1}, typename = std::enable_if_t<std::is_same_v<LateInst, {1}>>>
   {1}GenericAdaptor(RangeT values, LateInst op) : Base(op), odsOperands(values) {}
 
-  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
+  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {{
     return Base::getODSOperandIndexAndLength(index, odsOperands.size());
   }
 
   RangeT getODSOperands(unsigned index) {
     auto valueRange = getODSOperandIndexAndLength(index);
-    return {std::next(odsOperands.begin(), valueRange.first),
+    return {{std::next(odsOperands.begin(), valueRange.first),
              std::next(odsOperands.begin(), valueRange.first + valueRange.second)};
   }
 
-  RangeT getArgs() {
+  RangeT getArgs() {{
     return getODSOperands(0);
   }
 
-  RangeT getOperands() {
+  RangeT getOperands() {{
     return odsOperands;
   }
 
@@ -93,26 +95,26 @@ public:
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index);
   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
     auto valueRange = getODSOperandIndexAndLength(index);
-    return {std::next(getOperation()->operand_begin(), valueRange.first),
+    return {{std::next(getOperation()->operand_begin(), valueRange.first),
              std::next(getOperation()->operand_begin(), valueRange.first + valueRange.second)};
   }
 
-  ::mlir::Operation::operand_range getArgs() {
+  ::mlir::Operation::operand_range getArgs() {{
     return getODSOperands(0);
   }
 
   ::mlir::MutableOperandRange getArgsMutable();
   std::pair<unsigned, unsigned> getODSResultIndexAndLength(unsigned index) {
-    return {index, 1};
+    return {{index, 1};
   }
 
   ::mlir::Operation::result_range getODSResults(unsigned index) {
     auto valueRange = getODSResultIndexAndLength(index);
-    return {std::next(getOperation()->result_begin(), valueRange.first),
+    return {{std::next(getOperation()->result_begin(), valueRange.first),
              std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
 
-  ::mlir::TypedValue<::mlir::irdl::AttributeType> getOutput() {
+  ::mlir::TypedValue<::mlir::irdl::AttributeType> getOutput() {{
     return ::llvm::cast<::mlir::TypedValue<::mlir::irdl::AttributeType>>(*getODSResults(0).begin());
   }
 
