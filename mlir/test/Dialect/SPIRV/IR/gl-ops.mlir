@@ -570,6 +570,14 @@ func.func @distance_invalid_type(%arg0 : i32, %arg1 : i32) {
 
 // -----
 
+func.func @distance_arg_mismatch(%arg0 : vector<3xf32>, %arg1 : vector<4xf32>) {
+  // expected-error @+1 {{'spirv.GL.Distance' op failed to verify that all of {p0, p1} have same type}}
+  %0 = spirv.GL.Distance %arg0, %arg1 : vector<3xf32>, vector<4xf32> -> f32
+  return
+}
+
+// -----
+
 func.func @distance_invalid_vector_size(%arg0 : vector<5xf32>, %arg1 : vector<5xf32>) {
   // expected-error @+1 {{'spirv.GL.Distance' op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16}}
   %0 = spirv.GL.Distance %arg0, %arg1 : vector<5xf32>, vector<5xf32> -> f32
