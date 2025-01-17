@@ -389,24 +389,21 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
-  /// Returns true if the loop has an uncountable early exit, i.e. an
+  /// Returns true if the loop has exactly one uncountable early exit, i.e. an
   /// uncountable exit that isn't the latch block.
   bool hasUncountableEarlyExit() const {
     return getUncountableEdge().has_value();
   }
 
-  /// Returns the uncountable early exiting block.
+  /// Returns the uncountable early exiting block, if there is exactly one.
   BasicBlock *getUncountableEarlyExitingBlock() const {
-    if (!hasUncountableEarlyExit())
-      return nullptr;
-    return (*getUncountableEdge()).first;
+    return hasUncountableEarlyExit() ? getUncountableEdge()->first : nullptr;
   }
 
-  /// Returns the destination of an uncountable early exiting block.
+  /// Returns the destination of the uncountable early exiting block, if there
+  /// is exactly one.
   BasicBlock *getUncountableEarlyExitBlock() const {
-    if (!hasUncountableEarlyExit())
-      return nullptr;
-    return (*getUncountableEdge()).second;
+    return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
   }
 
   /// Returns true if vector representation of the instruction \p I
@@ -460,7 +457,8 @@ public:
     return CountableExitingBlocks;
   }
 
-  /// Returns the loop edge with an uncountable exit.
+  /// Returns the loop edge with an uncountable exit, or std::nullopt if there
+  /// isn't a single such edge.
   std::optional<std::pair<BasicBlock *, BasicBlock *>>
   getUncountableEdge() const {
     return UncountableEdge;
@@ -652,7 +650,7 @@ private:
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
   /// Keep track of the loop edge with an uncountable exit, comprising a pair
-  /// of (Exiting, Exit) blocks.
+  /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
 };
 
