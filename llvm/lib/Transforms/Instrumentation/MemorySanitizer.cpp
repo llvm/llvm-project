@@ -3027,13 +3027,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     bool success = false;
     if (NumArgOperands == 0) {
       // No-op
-    } else if (NumArgOperands == 2 && I.getArgOperand(0)->getType()->isPointerTy() &&
-        I.getArgOperand(1)->getType()->isVectorTy() &&
-        I.getType()->isVoidTy() && !I.onlyReadsMemory()) {
+    } else if (NumArgOperands == 2 &&
+               I.getArgOperand(0)->getType()->isPointerTy() &&
+               I.getArgOperand(1)->getType()->isVectorTy() &&
+               I.getType()->isVoidTy() && !I.onlyReadsMemory()) {
       // This looks like a vector store.
       success = handleVectorStoreIntrinsic(I);
-    } else if (NumArgOperands == 1 && I.getArgOperand(0)->getType()->isPointerTy() &&
-        I.getType()->isVectorTy() && I.onlyReadsMemory()) {
+    } else if (NumArgOperands == 1 &&
+               I.getArgOperand(0)->getType()->isPointerTy() &&
+               I.getType()->isVectorTy() && I.onlyReadsMemory()) {
       // This looks like a vector load.
       success = handleVectorLoadIntrinsic(I);
     } else if (I.doesNotAccessMemory())
@@ -3042,7 +3044,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (success && ClDumpStrictIntrinsics)
       dumpInst(I);
 
-    LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I << "\n");
+    LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+                      << "\n");
 
     // FIXME: detect and handle SSE maskstore/maskload
     return success;
@@ -4041,7 +4044,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
-#if 0
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow:
     case Intrinsic::usub_with_overflow:
@@ -4454,7 +4456,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
-#endif
 
     default:
       if (!handleUnknownIntrinsic(I))
