@@ -12,12 +12,6 @@
 #include "src/__support/macros/properties/architectures.h"
 #include <sys/syscall.h>
 
-#define MSG                                                                    \
-  "Looks like you may be using the host kernel headers to cross "              \
-  "compile. This is bad because the syscall numbers frequently (but not "      \
-  "always) differ between architectures.  What frequently happens as a "       \
-  "result are crashes in startup."
-
 // https://github.com/hrw/syscalls-table is super helpful for trying to find
 // syscalls with unique numbers.
 
@@ -30,7 +24,12 @@
      (__NR_riscv_flush_icache) != 259 && (__NR_renameat2) != 276) ||           \
     (defined(LIBC_TARGET_ARCH_IS_RISCV32) &&                                   \
      (__NR_riscv_flush_icache) != 259 && !defined(__NR_iodestroy))
-#error MSG
+
+// This is bad because the syscall numbers frequently (but not always) differ
+// between architectures.  What frequently happens as a result are crashes in
+// startup."
+#error "Host kernel headers cannot be used to cross compile"
+
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_CROSS_COMPILE_CLIPPY_H
