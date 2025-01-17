@@ -2067,8 +2067,7 @@ convertFSqrtDivIntoFMul(CallInst *CI, Instruction *X,
   FMul->copyMetadata(*X);
   FMul->copyFastMathFlags(FastMathFlags::intersectRewrite(R1FMF, R2FMF) |
                           FastMathFlags::unionValue(R1FMF, R2FMF));
-  IC->replaceInstUsesWith(*X, FMul);
-  return IC->eraseInstFromFunction(*X);
+  return IC->replaceInstUsesWith(*X, FMul);
 }
 
 Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
