@@ -2,8 +2,10 @@
 
 ! OpenMP 5.2 5.1.1 Variables Referenced in a Construct
 ! FORALL indices have predetermined private DSA.
-! As lowering already makes them private, check that their symbols are not
-! modified.
+!
+! As FORALL indices are defined in the construct itself, and OpenMP
+! directives may not appear in it, they are already private.
+! Check that index symbols are not modified.
 
   !DEF: /MainProgram1/a ObjectEntity INTEGER(4)
   !DEF: /MainProgram1/b ObjectEntity INTEGER(4)
