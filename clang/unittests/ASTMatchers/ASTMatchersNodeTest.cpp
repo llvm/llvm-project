@@ -1926,6 +1926,21 @@ TEST_P(ASTMatchersTest, DependentNameType) {
       dependentNameType()));
 }
 
+TEST_P(ASTMatchersTest, DependentTemplateSpecializationType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      R"(
+        template<typename T> struct A;
+        template<typename T> struct declToImport {
+          typename A<T>::template B<T> a;
+        };
+      )",
+      dependentTemplateSpecializationType()));
+}
+
 TEST_P(ASTMatchersTest, RecordType) {
   EXPECT_TRUE(matches("struct S {}; struct S s;",
                       recordType(hasDeclaration(recordDecl(hasName("S"))))));

@@ -66,7 +66,7 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
-  Matrix.init(LIUAlloc, NumRegUnits);
+  Matrix.init(*LIUAlloc, NumRegUnits);
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();

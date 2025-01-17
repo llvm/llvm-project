@@ -754,7 +754,7 @@ Error RawMemProfReader::readNextRecord(
 
 Expected<std::unique_ptr<YAMLMemProfReader>>
 YAMLMemProfReader::create(const Twine &Path) {
-  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
   if (std::error_code EC = BufferOr.getError())
     return report(errorCodeToError(EC), Path.getSingleStringRef());
 
@@ -770,7 +770,7 @@ YAMLMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 }
 
 bool YAMLMemProfReader::hasFormat(const StringRef Path) {
-  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
+  auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
   if (!BufferOr)
     return false;
 

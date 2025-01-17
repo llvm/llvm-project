@@ -45,7 +45,7 @@ end
 ! CHECK-LABEL: func @_QPfct_body() -> i32
 ! CHECK:         cf.br ^bb1
 ! CHECK:       ^bb1
-! CHECK:         %{{.*}} = fir.call @_FortranAStopStatement
+! CHECK:         fir.call @_FortranAStopStatement
 ! CHECK:         fir.unreachable
 
 function fct_iarr1()
