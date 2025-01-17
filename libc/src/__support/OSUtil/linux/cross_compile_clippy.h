@@ -22,14 +22,14 @@
 // syscalls with unique numbers.
 
 // As of Linux 6.12.10, 32b RISCV does not define __NR_iodestroy.
-#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) && (__NR_renameat) != 38) || \
-    (defined(LIBC_TARGET_ARCH_IS_ARM) && (__NR_renameat) != 329) || \
-    (defined(LIBC_TARGET_ARCH_IS_X86_32) && (__NR_renameat) != 302) || \
-    (defined(LIBC_TARGET_ARCH_IS_X86_64) && (__NR_renameat) != 264) || \
-    (defined(LIBC_TARGET_ARCH_IS_RISCV64) && \
-      (__NR_riscv_flush_icache) != 259 && (__NR_renameat2) != 276) || \
-    (defined(LIBC_TARGET_ARCH_IS_RISCV32) && \
-      (__NR_riscv_flush_icache) != 259 && !defined(__NR_iodestroy))
+#if (defined(LIBC_TARGET_ARCH_IS_AARCH64) && (__NR_renameat) != 38) ||         \
+    (defined(LIBC_TARGET_ARCH_IS_ARM) && (__NR_renameat) != 329) ||            \
+    (defined(LIBC_TARGET_ARCH_IS_X86_32) && (__NR_renameat) != 302) ||         \
+    (defined(LIBC_TARGET_ARCH_IS_X86_64) && (__NR_renameat) != 264) ||         \
+    (defined(LIBC_TARGET_ARCH_IS_RISCV64) &&                                   \
+     (__NR_riscv_flush_icache) != 259 && (__NR_renameat2) != 276) ||           \
+    (defined(LIBC_TARGET_ARCH_IS_RISCV32) &&                                   \
+     (__NR_riscv_flush_icache) != 259 && !defined(__NR_iodestroy))
 #error MSG
 #endif
 
