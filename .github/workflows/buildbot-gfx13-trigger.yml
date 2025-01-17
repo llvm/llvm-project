@@ -3,7 +3,7 @@ name: Trigger gfx13 Buildbot Build
 on:
   workflow_dispatch:
   pull_request:
-    branches: [amd-default]
+    branches: [amd-gfx13]
     types: [opened, reopened, synchronize, ready_for_review]
 
 jobs:  
