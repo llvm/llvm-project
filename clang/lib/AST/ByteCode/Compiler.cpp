@@ -2066,7 +2066,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = CharUnits::One();
     else {
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
-        return false;
+        return this->emitInvalid(E);
 
       if (Kind == UETT_SizeOf)
         Size = ASTCtx.getTypeSizeInChars(ArgType);
