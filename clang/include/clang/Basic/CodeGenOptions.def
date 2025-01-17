@@ -413,9 +413,6 @@ CODEGENOPT(StrictReturn, 1, 1)
 /// Whether emit pseudo probes for sample pgo profile collection.
 CODEGENOPT(PseudoProbeForProfiling, 1, 0)
 
-/// Whether 3-component vector type is preserved.
-CODEGENOPT(PreserveVec3Type, 1, 0)
-
 CODEGENOPT(NoPLT, 1, 0)
 
 /// Whether to emit all vtables
