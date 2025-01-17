@@ -1849,17 +1849,16 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   auto *LAPK = Attr->getValueAsDef(LateParsedStr);
 
   // Typecheck the `LateParsed` field.
-  ArrayRef<std::pair<const Record *, SMRange>> SuperClasses =
-      LAPK->getDirectSuperClasses();
-  if (SuperClasses.size() != 1)
+  if (LAPK->getDirectSuperClasses().size() != 1)
     PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) +
                               "`should only have one super class");
 
-  if (SuperClasses[0].first->getName() != LateAttrParseKindStr)
+  const Record *SuperClass = LAPK->getDirectSuperClasses()[0].first;
+  if (SuperClass->getName() != LateAttrParseKindStr)
     PrintFatalError(
         Attr, "Field `" + Twine(LateParsedStr) + "`should only have type `" +
                   Twine(LateAttrParseKindStr) + "` but found type `" +
-                  SuperClasses[0].first->getName() + "`");
+                  SuperClass->getName() + "`");
 
   // Get Kind and verify the enum name matches the name in `Attr.td`.
   unsigned Kind = LAPK->getValueAsInt(KindFieldStr);
