@@ -349,22 +349,22 @@ let Predicates = [HasAMXTRANSPOSE, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     def T2RPNTLVWZ0 : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
                         (ins sibmem:$src), "t2rpntlvwz0\t{$src, $dst|$dst, $src}",
-                        []>, VEX, WIG, T8,PS;
+                        []>, VEX, T8, PS;
 
     def T2RPNTLVWZ0T1 : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
                           (ins sibmem:$src), "t2rpntlvwz0t1\t{$src, $dst|$dst, $src}",
-                          []>, VEX, T8,PS;
+                          []>, VEX, T8, PS;
 
     def T2RPNTLVWZ1 : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
                         (ins sibmem:$src), "t2rpntlvwz1\t{$src, $dst|$dst, $src}",
-                        []>, VEX, T8,PD;
+                        []>, VEX, T8, PD;
 
     def T2RPNTLVWZ1T1 : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
                           (ins sibmem:$src), "t2rpntlvwz1t1\t{$src, $dst|$dst, $src}",
-                          []>, VEX, T8,PD;
+                          []>, VEX, T8, PD;
 
     def TTRANSPOSED : I<0x5f, MRMSrcReg, (outs TILE:$dst), (ins TILE:$src),
-                        "ttransposed\t{$src, $dst|$dst, $src}", []>, VEX, T8,XS;
+                        "ttransposed\t{$src, $dst|$dst, $src}", []>, VEX, T8, XS;
     let isPseudo = true in {
       def PT2RPNTLVWZ0V : PseudoI<(outs TILEPair:$dst),
                                   (ins GR16:$src1, GR16:$src2, GR16:$src3, opaquemem:$src4),
@@ -553,6 +553,48 @@ let Predicates = [HasAMXMOVRS, In64BitMode], SchedRW = [WriteSystem] in {
     def PTILELOADDRST1 : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
   }
 } // HasAMXMOVRS, In64BitMode
+
+let Predicates = [HasAMXTRANSPOSE, HasEGPR, In64BitMode], SchedRW = [WriteSystem] in {
+  def T2RPNTLVWZ0_EVEX   : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                             (ins sibmem:$src), "t2rpntlvwz0\t{$src, $dst|$dst, $src}",
+                             []>, EVEX, NoCD8, T8, PS;
+
+  def T2RPNTLVWZ0T1_EVEX : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                             (ins sibmem:$src), "t2rpntlvwz0t1\t{$src, $dst|$dst, $src}",
+                             []>, EVEX, NoCD8, T8, PS;
+
+  def T2RPNTLVWZ1_EVEX   : I<0x6e, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                             (ins sibmem:$src), "t2rpntlvwz1\t{$src, $dst|$dst, $src}",
+                             []>, EVEX, NoCD8, T8, PD;
+
+  def T2RPNTLVWZ1T1_EVEX : I<0x6f, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                             (ins sibmem:$src), "t2rpntlvwz1t1\t{$src, $dst|$dst, $src}",
+                             []>, EVEX, NoCD8, T8, PD;
+} // HasAMXTRANSPOSE, HasEGPR, In64BitMode
+
+let Predicates = [HasAMXMOVRS, HasAMXTRANSPOSE, HasEGPR, In64BitMode], SchedRW = [WriteSystem] in {
+  def T2RPNTLVWZ0RS_EVEX   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1), "t2rpntlvwz0rs\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5;
+  def T2RPNTLVWZ0RST1_EVEX : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1), "t2rpntlvwz0rst1\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5;
+  def T2RPNTLVWZ1RS_EVEX   : I<0xf8, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1), "t2rpntlvwz1rs\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5, PD;
+  def T2RPNTLVWZ1RST1_EVEX : I<0xf9, MRMSrcMemFSIB, (outs TILEPair:$dst),
+                               (ins sibmem:$src1), "t2rpntlvwz1rst1\t{$src1, $dst|$dst, $src1}",
+                               []>, EVEX, NoCD8, T_MAP5, PD;
+} // HasAMXMOVRS, HasAMXTRANSPOSE, HasEGPR, In64BitMode
+
+let Predicates = [HasAMXMOVRS, HasEGPR, In64BitMode], SchedRW = [WriteSystem] in {
+  def TILELOADDRS_EVEX   : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                             (ins sibmem:$src1), "tileloaddrs\t{$src1, $dst|$dst, $src1}",
+                             []>, EVEX, NoCD8, T8, XD;
+  def TILELOADDRST1_EVEX : I<0x4a, MRMSrcMemFSIB, (outs TILE:$dst),
+                             (ins sibmem:$src1), "tileloaddrst1\t{$src1, $dst|$dst, $src1}",
+                             []>, EVEX, NoCD8, T8, PD;
+} // HasAMXMOVRS, HasEGPR, In64BitMode
 
 multiclass m_tcvtrowd2ps {
   let Predicates = [HasAMXAVX512, HasAVX10_2_512, In64BitMode] in {
