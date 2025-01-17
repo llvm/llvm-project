@@ -403,9 +403,6 @@ namespace {
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  ConvertVectorStore(MLIRContext *context, bool useAtomicWrites)
-      : OpConversionPattern<vector::StoreOp>(context) {}
-
   LogicalResult
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -416,10 +413,10 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
     auto valueToStore = cast<VectorValue>(op.getValueToStore());
     auto oldElementType = valueToStore.getType().getElementType();
-    auto newElementType = convertedType.getElementType();
+    auto newElementType =
+        cast<MemRefType>(adaptor.getBase().getType()).getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = newElementType.getIntOrFloatBitWidth();
 
@@ -464,21 +461,24 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
-      return failure("subbyte store emulation: dynamic front padding size is "
-                     "not yet implemented");
+      return rewriter.notifyMatchFailure(
+          op, "subbyte store emulation: dynamic front padding size is "
+              "not yet implemented");
     }
 
     auto memrefBase = cast<MemRefValue>(adaptor.getBase());
 
-    // Shortcut: conditions when subbyte emulated store at the front is not
-    // needed:
+    // Conditions when subbyte emulated store is not needed:
     // 1. The source vector size (in bits) is a multiple of byte size.
     // 2. The address of the store is aligned to the emulated width boundary.
     //
     // For example, to store a vector<4xi2> to <13xi2> at offset 4, does not
     // need unaligned emulation because the store address is aligned and the
     // source is a whole byte.
-    if (isAlignedEmulation && *foldedNumFrontPadElems == 0) {
+    bool emulationRequiresPartialStores =
+        !isAlignedEmulation || *foldedNumFrontPadElems != 0;
+    if (!emulationRequiresPartialStores) {
+      // Basic case: storing full bytes.
       auto numElements = origElements / numSrcElemsPerDest;
       auto bitCast = rewriter.create<vector::BitCastOp>(
           loc, VectorType::get(numElements, newElementType),
