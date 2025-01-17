@@ -161,7 +161,7 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
   auto *VecI = CreateVectorInstr(Bndl, Operands);
   if (VecI != nullptr) {
     Change = true;
-    IMaps.registerVector(Bndl, VecI);
+    IMaps->registerVector(Bndl, VecI);
   }
   return VecI;
 }
@@ -315,10 +315,10 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
 }
 
 bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
-  IMaps.clear();
+  IMaps = std::make_unique<InstrMaps>(F.getContext());
   Legality = std::make_unique<LegalityAnalysis>(
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
-      F.getContext(), IMaps);
+      F.getContext(), *IMaps);
   Change = false;
   const auto &DL = F.getParent()->getDataLayout();
   unsigned VecRegBits =
