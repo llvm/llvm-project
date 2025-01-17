@@ -1,12 +1,22 @@
 /*
 {0}: Dialect BaseTypeName
+
+{1}: Open namespace 
+{2}: Close namespace
 */
 
+
 R"(
+{1}
+
 class {0} : public ::mlir::Type {{
 public:
   using Type::Type;
 
   static bool classof(Type type);
 };
+
+{2}
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::irdl::{0})
 )"

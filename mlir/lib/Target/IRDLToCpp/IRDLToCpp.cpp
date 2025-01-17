@@ -118,8 +118,9 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
       usefulStrings.namespaceClose, usefulStrings.dialectCppName,
       usefulStrings.namespacePathString, usefulStrings.dialectName);
 
-  output << llvm::formatv(typeHeaderDeclTemplateText,
-                          usefulStrings.dialectBaseTypeName);
+  output << llvm::formatv(
+      typeHeaderDeclTemplateText, usefulStrings.dialectBaseTypeName,
+      usefulStrings.namespaceOpen, usefulStrings.namespaceClose);
 
   auto &&region = dialect->getRegion(0);
   auto &&block = region.getBlocks().front();

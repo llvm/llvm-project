@@ -23,4 +23,6 @@ public:
 };
 
 {5}
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(::mlir::irdl::{1})
 )"
