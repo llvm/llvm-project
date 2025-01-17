@@ -875,12 +875,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   // special dealing for v_sat_pk instruction
   if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
-    // In foldToSaturated during DAG combine
-    // 1. isOperationLegalOrCustom(Opc, SrcVT) getOperationAction(Op, SrcVT) ==
-    // Custom
-    // 2. isTypeDesirableForOp checks regclass for v2i8 (hooked now checking
-    // DstVT == v2i8) In CustomLowerNode during legalizing, checks
-    // getOperationAction(Op, DstVT) == Custom
+    // Reasons for putting both {MVT::v2i16, MVT::v2i8}
+    // 1. In foldToSaturated during DAG combine
+    //    a. isOperationLegalOrCustom(Opc, SrcVT) 
+    //       will check getOperationAction(Op, SrcVT) == Custom
+    //    b. isTypeDesirableForOp checks regclass for v2i8 
+    //       (hooked now checking DstVT == v2i8) 
+    // 2. In CustomLowerNode during legalizing, checks
+    //    getOperationAction(Op, DstVT) == Custom
     setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
   }
 
@@ -1994,9 +1996,7 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   if (VT == MVT::i1 && Op == ISD::SETCC)
     return false;
 
-  // Avoiding legality check for reg type of v2i8
-  // (do not need to addRegisterClass for v2i8)
-  // VT is result type, ensure the result type is v2i8
+  // v2i8 is illegal and only allowed in specific cases
   if (VT == MVT::v2i8 && Op == ISD::TRUNCATE_SSAT_U)
     return true;
 
@@ -15294,14 +15294,18 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   }
   case ISD::BITCAST: {
-    // This is possible beause for (i16 bitcase (v2i8 trunc ...))
-    // It may be replaced bu (i16 bitcase (v2i8 truncssat_u ...))
-    // And then (i16 bitcase (i16 AMDGPUsat_pk_cast ...))
-    // There is no instruction of casting to the same type
+    // If src.VT == dst.VT, there is no instruction can be select
+    // which causes selection fail.
+    //
+    // One of the stuation is (i16 (bitcast (v2i8 (trunc (v2i16 (smed ...)))))
+    // The pattern will experience the following steps to 
+    // create (i16 (bitcast i16)):
+    //
+    // 1. During DAG combine: (i16 (bitcast (v2i8 (truncssat_u ...)))
+    // 2. During legalizing: (i16 (bitcast (i16 (sat_pk_cast ...)))
     SDValue Src = N->getOperand(0);
-    if (N->getValueType(0) == Src.getValueType()) {
+    if (N->getValueType(0) == Src.getValueType()) 
       return Src;
-    }
   }
   default: {
     if (!DCI.isBeforeLegalize()) {
