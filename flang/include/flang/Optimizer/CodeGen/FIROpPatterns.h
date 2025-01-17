@@ -185,6 +185,9 @@ protected:
   unsigned
   getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
 
+  unsigned
+  getGlobalAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
+
   const fir::FIRToLLVMPassOptions &options;
 
   using ConvertToLLVMPattern::match;

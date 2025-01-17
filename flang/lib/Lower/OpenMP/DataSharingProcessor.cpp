@@ -12,8 +12,8 @@
 
 #include "DataSharingProcessor.h"
 
-#include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -49,19 +49,24 @@ DataSharingProcessor::DataSharingProcessor(
   });
 }
 
-void DataSharingProcessor::processStep1(
-    mlir::omp::PrivateClauseOps *clauseOps) {
+void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
   collectPreDeterminedSymbols();
-
-  privatize(clauseOps);
-
-  insertBarrier();
 }
 
-void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
+void DataSharingProcessor::processStep2(
+    mlir::omp::PrivateClauseOps *clauseOps) {
+  if (privatizationDone)
+    return;
+
+  privatize(clauseOps);
+  insertBarrier();
+  privatizationDone = true;
+}
+
+void DataSharingProcessor::processStep3(mlir::Operation *op, bool isLoop) {
   // 'sections' lastprivate is handled by genOMP()
   if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
@@ -439,8 +444,9 @@ void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps) {
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
         doPrivatize(&*mem, clauseOps);
-    } else
+    } else {
       doPrivatize(sym, clauseOps);
+    }
   }
 }
 
@@ -567,7 +573,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
     clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
     clauseOps->privateVars.push_back(hsb.getAddr());
   }
-
   symToPrivatizer[sym] = privatizerOp;
 }
 

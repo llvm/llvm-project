@@ -124,6 +124,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
+                   options::OPT_foffload_global_filtering,
+                   options::OPT_fno_offload_global_filtering,
                    options::OPT_funsigned, options::OPT_fno_unsigned});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
@@ -151,7 +153,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_flang_experimental_hlfir,
+                  {options::OPT_do_concurrent_parallel_EQ,
+                   options::OPT_flang_experimental_hlfir,
                    options::OPT_flang_deprecated_no_hlfir,
                    options::OPT_fno_ppc_native_vec_elem_order,
                    options::OPT_fppc_native_vec_elem_order,

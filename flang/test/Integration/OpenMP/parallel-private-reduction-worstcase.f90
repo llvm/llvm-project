@@ -72,36 +72,36 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.private.copy
 
 ! CHECK:       omp.private.copy:                                 ; preds = %omp.region.cont
-! CHECK-NEXT:    br label %omp.private.copy10
+! CHECK-NEXT:    br label %omp.private.copy11
 
-! CHECK:       omp.private.copy10:                               ; preds = %omp.private.copy
+! CHECK:       omp.private.copy11:                               ; preds = %omp.private.copy
 !                [begin firstprivate copy for first var]
 !                [read the length, is it non-zero?]
-! CHECK:         br i1 %{{.*}}, label %omp.private.copy11, label %omp.private.copy12
+! CHECK:         br i1 %{{.*}}, label %omp.private.copy12, label %omp.private.copy13
 
-! CHECK:       omp.private.copy12:                               ; preds = %omp.private.copy11, %omp.private.copy10
-! CHECK-NEXT:    br label %omp.region.cont9
+! CHECK:       omp.private.copy13:                               ; preds = %omp.private.copy12, %omp.private.copy11
+! CHECK-NEXT:    br label %omp.region.cont10
 
-! CHECK:       omp.region.cont9:                                 ; preds = %omp.private.copy12
+! CHECK:       omp.region.cont10:                                 ; preds = %omp.private.copy13
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.private.copy14
+! CHECK-NEXT:    br label %omp.private.copy15
 
-! CHECK:       omp.private.copy14:                               ; preds = %omp.region.cont9
+! CHECK:       omp.private.copy15:                               ; preds = %omp.region.cont10
 !                [begin firstprivate copy for second var]
 !                [read the length, is it non-zero?]
-! CHECK:         br i1 %{{.*}}, label %omp.private.copy15, label %omp.private.copy16
+! CHECK:         br i1 %{{.*}}, label %omp.private.copy16, label %omp.private.copy17
 
-! CHECK:       omp.private.copy16:                               ; preds = %omp.private.copy15, %omp.private.copy14
-! CHECK-NEXT:    br label %omp.region.cont13
+! CHECK:       omp.private.copy17:                               ; preds = %omp.private.copy16, %omp.private.copy15
+! CHECK-NEXT:    br label %omp.region.cont14
 
-! CHECK:       omp.region.cont13:                                ; preds = %omp.private.copy16
+! CHECK:       omp.region.cont14:                                ; preds = %omp.private.copy17
 ! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    br label %omp.region.after_alloca
 
 ! CHECK:       omp.region.after_alloca:
 ! CHECK-NEXT:    br label %omp.par.region
 
-! CHECK:       omp.par.region:                                   ; preds = %omp.region.after_alloca
+! CHECK:       omp.par.region:                                   ; preds = %omp.region.cont14
 ! CHECK-NEXT:    br label %omp.reduction.init
 
 ! CHECK:       omp.reduction.init:                               ; preds = %omp.par.region
@@ -111,44 +111,44 @@ end subroutine
 ! CHECK:       omp.reduction.neutral:                            ; preds = %omp.reduction.init
 !                [start of reduction initialization region]
 !                [null check:]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral18, label %omp.reduction.neutral19
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral19, label %omp.reduction.neutral20
 
-! CHECK:       omp.reduction.neutral19:                          ; preds = %omp.reduction.neutral
+! CHECK:       omp.reduction.neutral20:                          ; preds = %omp.reduction.neutral
 !                [malloc and assign the default value to the reduction variable]
-! CHECK:         br label %omp.reduction.neutral20
+! CHECK:         br label %omp.reduction.neutral21
 
-! CHECK:       omp.reduction.neutral20:                          ; preds = %omp.reduction.neutral18, %omp.reduction.neutral19
-! CHECK-NEXT:    br label %omp.region.cont17
+! CHECK:       omp.reduction.neutral21:                          ; preds = %omp.reduction.neutral19, %omp.reduction.neutral20
+! CHECK-NEXT:    br label %omp.region.cont18
 
-! CHECK:       omp.region.cont17:                                ; preds = %omp.reduction.neutral20
+! CHECK:       omp.region.cont18:                                ; preds = %omp.reduction.neutral21
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.reduction.neutral22
+! CHECK-NEXT:    br label %omp.reduction.neutral23
 
-! CHECK:       omp.reduction.neutral22:                          ; preds = %omp.region.cont17
+! CHECK:       omp.reduction.neutral23:                          ; preds = %omp.region.cont18
 !                [start of reduction initialization region]
 !                [null check:]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral23, label %omp.reduction.neutral24
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.neutral24, label %omp.reduction.neutral25
 
-! CHECK:       omp.reduction.neutral24:                          ; preds = %omp.reduction.neutral22
+! CHECK:       omp.reduction.neutral25:                          ; preds = %omp.reduction.neutral23
 !                [malloc and assign the default value to the reduction variable]
-! CHECK:         br label %omp.reduction.neutral25
+! CHECK:         br label %omp.reduction.neutral26
 
-! CHECK:       omp.reduction.neutral25:                          ; preds = %omp.reduction.neutral23, %omp.reduction.neutral24
-! CHECK-NEXT:    br label %omp.region.cont21
+! CHECK:       omp.reduction.neutral26:                          ; preds = %omp.reduction.neutral24, %omp.reduction.neutral25
+! CHECK-NEXT:    br label %omp.region.cont22
 
-! CHECK:       omp.region.cont21:                                ; preds = %omp.reduction.neutral25
+! CHECK:       omp.region.cont22:                                ; preds = %omp.reduction.neutral26
 ! CHECK-NEXT:    %{{.*}} = phi ptr
-! CHECK-NEXT:    br label %omp.par.region27
+! CHECK-NEXT:    br label %omp.par.region28
 
-! CHECK:       omp.par.region27:                                 ; preds = %omp.region.cont21
+! CHECK:       omp.par.region28:                                 ; preds = %omp.region.cont22
 !                [call SUM runtime function]
 !                [if (sum(a) == 1)]
-! CHECK:         br i1 %{{.*}}, label %omp.par.region28, label %omp.par.region29
+! CHECK:         br i1 %{{.*}}, label %omp.par.region29, label %omp.par.region30
 
-! CHECK:       omp.par.region29:                                 ; preds = %omp.par.region27
-! CHECK-NEXT:    br label %omp.region.cont26
+! CHECK:       omp.par.region30:                                 ; preds = %omp.par.region28
+! CHECK-NEXT:    br label %omp.region.cont27
 
-! CHECK:       omp.region.cont26:                                ; preds = %omp.par.region28, %omp.par.region29
+! CHECK:       omp.region.cont27:                                ; preds = %omp.par.region29, %omp.par.region30
 !                [omp parallel region done, call into the runtime to complete reduction]
 ! CHECK:         %[[VAL_233:.*]] = call i32 @__kmpc_reduce(
 ! CHECK:         switch i32 %[[VAL_233]], label %reduce.finalize [
@@ -156,16 +156,16 @@ end subroutine
 ! CHECK-NEXT:      i32 2, label %reduce.switch.atomic
 ! CHECK-NEXT:    ]
 
-! CHECK:       reduce.switch.atomic:                             ; preds = %omp.region.cont26
+! CHECK:       reduce.switch.atomic:                             ; preds = %omp.region.cont27
 ! CHECK-NEXT:    unreachable
 
-! CHECK:       reduce.switch.nonatomic:                          ; preds = %omp.region.cont26
+! CHECK:       reduce.switch.nonatomic:                          ; preds = %omp.region.cont27
 ! CHECK-NEXT:    %[[red_private_value_0:.*]] = load ptr, ptr %{{.*}}, align 8
 ! CHECK-NEXT:    br label %omp.reduction.nonatomic.body
 
 !              [various blocks implementing the reduction]
 
-! CHECK:       omp.region.cont35:                                ; preds =
+! CHECK:       omp.region.cont36:                                ; preds =
 ! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    call void @__kmpc_end_reduce(
 ! CHECK-NEXT:    br label %reduce.finalize
@@ -179,79 +179,79 @@ end subroutine
 
 ! CHECK:       omp.reduction.cleanup:                            ; preds = %omp.par.pre_finalize
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup41, label %omp.reduction.cleanup42
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup42, label %omp.reduction.cleanup43
 
-! CHECK:       omp.reduction.cleanup42:                          ; preds = %omp.reduction.cleanup41, %omp.reduction.cleanup
-! CHECK-NEXT:    br label %omp.region.cont40
+! CHECK:       omp.reduction.cleanup43:                          ; preds = %omp.reduction.cleanup42, %omp.reduction.cleanup
+! CHECK-NEXT:    br label %omp.region.cont41
 
-! CHECK:       omp.region.cont40:                                ; preds = %omp.reduction.cleanup42
+! CHECK:       omp.region.cont41:                                ; preds = %omp.reduction.cleanup43
 ! CHECK-NEXT:    %{{.*}} = load ptr, ptr
-! CHECK-NEXT:    br label %omp.reduction.cleanup44
+! CHECK-NEXT:    br label %omp.reduction.cleanup45
 
-! CHECK:       omp.reduction.cleanup44:                          ; preds = %omp.region.cont40
+! CHECK:       omp.reduction.cleanup45:                          ; preds = %omp.region.cont41
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup45, label %omp.reduction.cleanup46
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup46, label %omp.reduction.cleanup47
 
-! CHECK:       omp.reduction.cleanup46:                          ; preds = %omp.reduction.cleanup45, %omp.reduction.cleanup44
-! CHECK-NEXT:    br label %omp.region.cont43
+! CHECK:       omp.reduction.cleanup47:                          ; preds = %omp.reduction.cleanup46, %omp.reduction.cleanup45
+! CHECK-NEXT:    br label %omp.region.cont44
 
-! CHECK:       omp.region.cont43:                                ; preds = %omp.reduction.cleanup46
+! CHECK:       omp.region.cont44:                                ; preds = %omp.reduction.cleanup47
 ! CHECK-NEXT:    br label %omp.private.dealloc
 
-! CHECK:       omp.private.dealloc:                              ; preds = %omp.region.cont43
+! CHECK:       omp.private.dealloc:                              ; preds = %omp.region.cont44
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.private.dealloc48, label %omp.private.dealloc49
+! CHECK:         br i1 %{{.*}}, label %omp.private.dealloc49, label %omp.private.dealloc50
 
-! CHECK:       omp.private.dealloc49:                            ; preds = %omp.private.dealloc48, %omp.private.dealloc
-! CHECK-NEXT:    br label %omp.region.cont47
+! CHECK:       omp.private.dealloc50:                            ; preds = %omp.private.dealloc49, %omp.private.dealloc
+! CHECK-NEXT:    br label %omp.region.cont48
 
-! CHECK:       omp.region.cont47:                                ; preds = %omp.private.dealloc49
-! CHECK-NEXT:    br label %omp.private.dealloc51
+! CHECK:       omp.region.cont48:                                ; preds = %omp.private.dealloc50
+! CHECK-NEXT:    br label %omp.private.dealloc52
 
-! CHECK:       omp.private.dealloc51:                            ; preds = %omp.region.cont47
+! CHECK:       omp.private.dealloc52:                            ; preds = %omp.region.cont48
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.private.dealloc52, label %omp.private.dealloc53
+! CHECK:         br i1 %{{.*}}, label %omp.private.dealloc53, label %omp.private.dealloc54
 
-! CHECK:       omp.private.dealloc53:                            ; preds = %omp.private.dealloc52, %omp.private.dealloc51
-! CHECK-NEXT:    br label %omp.region.cont50
+! CHECK:       omp.private.dealloc54:                            ; preds = %omp.private.dealloc53, %omp.private.dealloc52
+! CHECK-NEXT:    br label %omp.region.cont51
 
-! CHECK:       omp.region.cont50:                                ; preds = %omp.private.dealloc53
+! CHECK:       omp.region.cont51:                                ; preds = %omp.private.dealloc54
 ! CHECK-NEXT:    br label %omp.par.outlined.exit.exitStub
 
-! CHECK:       omp.private.dealloc52:                            ; preds = %omp.private.dealloc51
+! CHECK:       omp.private.dealloc53:                            ; preds = %omp.private.dealloc52
 !                [dealloc memory]
-! CHECK:         br label %omp.private.dealloc53
+! CHECK:         br label %omp.private.dealloc54
 
-! CHECK:       omp.private.dealloc48:                            ; preds = %omp.private.dealloc
+! CHECK:       omp.private.dealloc49:                            ; preds = %omp.private.dealloc
 !                [dealloc memory]
-! CHECK:         br label %omp.private.dealloc49
+! CHECK:         br label %omp.private.dealloc50
 
-! CHECK:       omp.reduction.cleanup45:                          ; preds = %omp.reduction.cleanup44
+! CHECK:       omp.reduction.cleanup46:                          ; preds = %omp.reduction.cleanup45
 ! CHECK-NEXT:    call void @free(
-! CHECK-NEXT:    br label %omp.reduction.cleanup46
+! CHECK-NEXT:    br label %omp.reduction.cleanup47
 
-! CHECK:       omp.reduction.cleanup41:                          ; preds = %omp.reduction.cleanup
+! CHECK:       omp.reduction.cleanup42:                          ; preds = %omp.reduction.cleanup
 ! CHECK-NEXT:    call void @free(
-! CHECK-NEXT:    br label %omp.reduction.cleanup42
+! CHECK-NEXT:    br label %omp.reduction.cleanup43
 
 ! CHECK:       omp.par.region28:                                 ; preds = %omp.par.region27
 ! CHECK-NEXT:    call void @_FortranAStopStatement
 
-! CHECK:       omp.reduction.neutral23:                          ; preds = %omp.reduction.neutral22
+! CHECK:       omp.reduction.neutral24:                          ; preds = %omp.reduction.neutral23
 !                [source length was zero: finish initializing array]
-! CHECK:         br label %omp.reduction.neutral25
+! CHECK:         br label %omp.reduction.neutral26
 
-! CHECK:       omp.reduction.neutral18:                          ; preds = %omp.reduction.neutral
+! CHECK:       omp.reduction.neutral19:                          ; preds = %omp.reduction.neutral
 !                [source length was zero: finish initializing array]
-! CHECK:         br label %omp.reduction.neutral20
+! CHECK:         br label %omp.reduction.neutral21
 
-! CHECK:       omp.private.copy15:                               ; preds = %omp.private.copy14
+! CHECK:       omp.private.copy16:                               ; preds = %omp.private.copy15
 !                [source length was non-zero: call assign runtime]
-! CHECK:         br label %omp.private.copy16
+! CHECK:         br label %omp.private.copy17
 
-! CHECK:       omp.private.copy11:                               ; preds = %omp.private.copy10
+! CHECK:       omp.private.copy12:                               ; preds = %omp.private.copy11
 !                [source length was non-zero: call assign runtime]
-! CHECK:         br label %omp.private.copy12
+! CHECK:         br label %omp.private.copy13
 
 ! CHECK:       omp.private.alloc1:                               ; preds = %omp.private.alloc
 !                [var extent was non-zero: malloc a private array]
@@ -261,5 +261,5 @@ end subroutine
 !                [var extent was non-zero: malloc a private array]
 ! CHECK:         br label %omp.private.alloc8
 
-! CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %omp.region.cont50
+! CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %omp.region.cont51
 ! CHECK-NEXT:    ret void

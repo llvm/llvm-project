@@ -120,7 +120,7 @@ static RT_API_ATTRS bool EditBOZInput(
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
-  std::memset(n, 0, bytes);
+  Fortran::runtime::memset(n, 0, bytes);
   int increment{isHostLittleEndian ? -1 : 1};
   auto *data{reinterpret_cast<unsigned char *>(n) +
       (isHostLittleEndian ? significantBytes - 1 : bytes - significantBytes)};
@@ -292,9 +292,9 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
       auto l{value.low() << (8 * shft)};
-      std::memcpy(n, &l, kind);
+      Fortran::runtime::memcpy(n, &l, kind);
     } else {
-      std::memcpy(n, &value, kind); // a blank field means zero
+      Fortran::runtime::memcpy(n, &value, kind); // a blank field means zero
     }
     return true;
   } else {
@@ -1109,7 +1109,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         --skipChars;
       } else {
         char32_t buffer{0};
-        std::memcpy(&buffer, input, chunkBytes);
+        Fortran::runtime::memcpy(&buffer, input, chunkBytes);
         if ((sizeof *x == 1 && buffer > 0xff) ||
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
@@ -1136,7 +1136,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
         chunkBytes = std::min<std::size_t>(remainingChars, readyBytes);
         chunkBytes = std::min<std::size_t>(lengthChars, chunkBytes);
         chunkChars = chunkBytes;
-        std::memcpy(x, input, chunkBytes);
+        Fortran::runtime::memcpy(x, input, chunkBytes);
         x += chunkBytes;
         lengthChars -= chunkChars;
       }

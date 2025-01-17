@@ -1022,7 +1022,7 @@ func.func @omp_map_common_block_using_common_block_symbol() {
     %8 = fir.load %4 : !fir.ref<i32>
     %9 = arith.addi %8, %c20_i32 : i32
     fir.store %9 to %7 : !fir.ref<i32>
-    omp.terminator
+        omp.terminator
   }
   return
 }
@@ -1059,7 +1059,7 @@ func.func @omp_map_common_block_using_common_block_members() {
     %9 = fir.load %arg0 : !fir.ref<i32>
     %10 = arith.muli %9, %c10_i32 : i32
     fir.store %10 to %arg1 : !fir.ref<i32>
-    omp.terminator
+   omp.terminator
   }
   return
 }

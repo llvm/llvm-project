@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClauseProcessor.h"
-#include "Clauses.h"
 
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"

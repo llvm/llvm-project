@@ -10,20 +10,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Utils.h"
+#include <flang/Lower/OpenMP/Utils.h>
 
-#include "Clauses.h"
-
+#include <flang/Evaluate/fold.h>
 #include <flang/Lower/AbstractConverter.h>
+#include <flang/Lower/ConvertExprToHLFIR.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
+#include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
+#include <flang/Lower/StatementContext.h>
+#include <flang/Lower/SymbolMap.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
 #include <llvm/Support/CommandLine.h>
+#include <mlir/Analysis/TopologicalSortUtils.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <iterator>
 

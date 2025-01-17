@@ -596,8 +596,8 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
-    std::memcpy(to, p, oldBytes);
-    std::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    Fortran::runtime::memcpy(to, p, oldBytes);
+    Fortran::runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }
@@ -611,7 +611,7 @@ void RTDEF(CharacterConcatenateScalar1)(
   std::size_t oldLen{accumulator.ElementBytes()};
   accumulator.raw().elem_len += chars;
   RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
-  std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
+  Fortran::runtime::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
 }
 
@@ -677,7 +677,7 @@ void RTDEF(CharacterCompare)(
 std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
     std::size_t offset, const char *rhs, std::size_t rhsBytes) {
   if (auto n{std::min(lhsBytes - offset, rhsBytes)}) {
-    std::memcpy(lhs + offset, rhs, n);
+    Fortran::runtime::memcpy(lhs + offset, rhs, n);
     offset += n;
   }
   return offset;
@@ -685,7 +685,7 @@ std::size_t RTDEF(CharacterAppend1)(char *lhs, std::size_t lhsBytes,
 
 void RTDEF(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
   if (bytes > offset) {
-    std::memset(lhs + offset, ' ', bytes - offset);
+    Fortran::runtime::memset(lhs + offset, ' ', bytes - offset);
   }
 }
 
@@ -817,7 +817,7 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
   }
   const char *from{string.OffsetElement()};
   for (char *to{result.OffsetElement()}; ncopies-- > 0; to += origBytes) {
-    std::memcpy(to, from, origBytes);
+    Fortran::runtime::memcpy(to, from, origBytes);
   }
 }
 
@@ -847,7 +847,7 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
   RUNTIME_CHECK(terminator, result.Allocate() == CFI_SUCCESS);
-  std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
+  Fortran::runtime::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,

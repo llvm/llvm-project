@@ -110,7 +110,8 @@ public:
 
   /// First separator used between the initial two parts of a name.
   std::optional<StringRef> FirstSeparator;
-  /// Separator used between all of the rest consecutive parts of s name
+
+  /// Separator used between all of the rest consecutive parts of a name
   std::optional<StringRef> Separator;
 
   // Grid Value for the GPU target
@@ -726,13 +727,12 @@ public:
                       LoopBodyGenCallbackTy BodyGenCB, Value *TripCount,
                       const Twine &Name = "loop");
 
-  /// Generator for the control flow structure of an OpenMP canonical loop.
+  /// Calculate the trip count of a canonical loop.
   ///
-  /// Instead of a logical iteration space, this allows specifying user-defined
-  /// loop counter values using increment, upper- and lower bounds. To
-  /// disambiguate the terminology when counting downwards, instead of lower
-  /// bounds we use \p Start for the loop counter value in the first body
-  /// iteration.
+  /// This allows specifying user-defined loop counter values using increment,
+  /// upper- and lower bounds. To disambiguate the terminology when counting
+  /// downwards, instead of lower bounds we use \p Start for the loop counter
+  /// value in the first body iteration.
   ///
   /// Consider the following limitations:
   ///
@@ -756,7 +756,32 @@ public:
   ///
   ///      for (int i = 0; i < 42; i -= 1u)
   ///
-  //
+  /// \param Loc       The insert and source location description.
+  /// \param Start     Value of the loop counter for the first iterations.
+  /// \param Stop      Loop counter values past this will stop the loop.
+  /// \param Step      Loop counter increment after each iteration; negative
+  ///                  means counting down.
+  /// \param IsSigned  Whether Start, Stop and Step are signed integers.
+  /// \param InclusiveStop Whether \p Stop itself is a valid value for the loop
+  ///                      counter.
+  /// \param Name      Base name used to derive instruction names.
+  ///
+  /// \returns The value holding the calculated trip count.
+  Value *calculateCanonicalLoopTripCount(const LocationDescription &Loc,
+                                         Value *Start, Value *Stop, Value *Step,
+                                         bool IsSigned, bool InclusiveStop,
+                                         const Twine &Name = "loop");
+
+  /// Generator for the control flow structure of an OpenMP canonical loop.
+  ///
+  /// Instead of a logical iteration space, this allows specifying user-defined
+  /// loop counter values using increment, upper- and lower bounds. To
+  /// disambiguate the terminology when counting downwards, instead of lower
+  /// bounds we use \p Start for the loop counter value in the first body
+  ///
+  /// It calls \see calculateCanonicalLoopTripCount for trip count calculations,
+  /// so limitations of that method apply here as well.
+  ///
   /// \param Loc       The insert and source location description.
   /// \param BodyGenCB Callback that will generate the loop body code.
   /// \param Start     Value of the loop counter for the first iterations.
@@ -1879,8 +1904,6 @@ public:
   ///                           nowait.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
-  /// \param HasDistribute      Optional flag set if it is a
-  ///                           distribute reduction.
   /// \param GridValue          Optional GPU grid value.
   /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
@@ -1889,7 +1912,6 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
-      bool HasDistribute = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -1961,7 +1983,8 @@ public:
                                         InsertPointTy AllocaIP,
                                         ArrayRef<ReductionInfo> ReductionInfos,
                                         ArrayRef<bool> IsByRef,
-                                        bool IsNoWait = false);
+                                        bool IsNoWait = false,
+                                        bool IsTeamsReduction = false);
 
   ///}
 
@@ -2256,6 +2279,8 @@ public:
     int32_t MinTeams = 1;
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
+    int32_t ReductionDataSize = 0;
+    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -2286,7 +2311,7 @@ public:
     /// Arguments passed to the runtime library
     TargetDataRTArgs RTArgs;
     /// The number of iterations
-    Value *NumIterations = nullptr;
+    Value *TripCount = nullptr;
     /// The number of teams.
     ArrayRef<Value *> NumTeams;
     /// The number of threads.
@@ -2299,13 +2324,12 @@ public:
     // Constructors for TargetKernelArgs.
     TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
-                     Value *NumIterations, ArrayRef<Value *> NumTeams,
+                     Value *TripCount, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
                      bool HasNoWait)
-        : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
-          NumIterations(NumIterations), NumTeams(NumTeams),
-          NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
-          HasNoWait(HasNoWait) {}
+        : NumTargetItems(NumTargetItems), RTArgs(RTArgs), TripCount(TripCount),
+          NumTeams(NumTeams), NumThreads(NumThreads),
+          DynCGGroupMem(DynCGGroupMem), HasNoWait(HasNoWait) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -2669,6 +2693,14 @@ public:
               Value *NumTeamsLower = nullptr, Value *NumTeamsUpper = nullptr,
               Value *ThreadLimit = nullptr, Value *IfExpr = nullptr);
 
+  /// Generator for `#omp distribute`
+  ///
+  /// \param Loc The location where the teams construct was encountered.
+  /// \param AllocaIP The insertion points to be used for alloca instructions.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointOrErrorTy createDistribute(const LocationDescription &Loc,
+                                        InsertPointTy AllocaIP,
+                                        BodyGenCallbackTy BodyGenCB);
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
   /// copies.
@@ -2885,7 +2917,6 @@ public:
                                          Function *OutlinedFunction,
                                          StringRef EntryFnName,
                                          StringRef EntryFnIDName);
-
   /// Type of BodyGen to use for region codegen
   ///
   /// Priv: If device pointer privatization is required, emit the body of the

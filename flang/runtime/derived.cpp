@@ -73,7 +73,7 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
       std::size_t bytes{comp.SizeInBytes(instance)};
       for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
         char *ptr{instance.ElementComponent<char>(at, comp.offset())};
-        std::memcpy(ptr, init, bytes);
+        Fortran::runtime::memcpy(ptr, init, bytes);
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established

@@ -1391,24 +1391,18 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
 // -----
 
 func.func @omp_teams_num_teams1(%lb : i32) {
-  omp.target {
-    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
-    "omp.teams" (%lb) ({
-      omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
+  // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+  "omp.teams" (%lb) ({
     omp.terminator
-  }
+  }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
   return
 }
 
 // -----
 
 func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
-  omp.target {
-    // expected-error @below {{expected num_teams upper bound and lower bound to be the same type}}
-    omp.teams num_teams(%lb : i32 to %ub : i16) {
-      omp.terminator
-    }
+  // expected-error @below {{expected num_teams upper bound and lower bound to be the same type}}
+  omp.teams num_teams(%lb : i32 to %ub : i16) {
     omp.terminator
   }
   return

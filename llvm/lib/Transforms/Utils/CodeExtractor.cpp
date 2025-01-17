@@ -1821,7 +1821,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     ReloadOutputs.push_back(alloca);
   }
 
-  AllocaInst *Struct = nullptr;
+  Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", AllocaBlock->getFirstInsertionPt());
@@ -1829,10 +1829,10 @@ CallInst *CodeExtractor::emitReplacerCall(
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
       StructSpaceCast->insertAfter(Struct);
-      params.push_back(StructSpaceCast);
-    } else {
-      params.push_back(Struct);
+      Struct = StructSpaceCast;
     }
+
+    params.push_back(Struct);
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
