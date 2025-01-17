@@ -536,7 +536,7 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
-// Returns true if the record type is an HLSL resource class
+// Returns true if the type is an HLSL resource class
 static bool isResourceRecordType(const clang::Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
@@ -602,7 +602,8 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
   // for the resource
   const HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
   if (!RBA)
-    // FIXME: collect unbound resources for implicit binding resolution later on?
+    // FIXME: collect unbound resources for implicit binding resolution later
+    // on?
     return;
 
   if (!isResourceRecordType(VD->getType().getTypePtr()))

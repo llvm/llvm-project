@@ -32,4 +32,3 @@ RasterizerOrderedByteAddressBuffer Buffer2: register(u3, space4);
 // CHECK: call void @_init_resource_Buffer0()
 // CHECK: call void @_init_resource_Buffer1()
 // CHECK: call void @_init_resource_Buffer2()
-  
