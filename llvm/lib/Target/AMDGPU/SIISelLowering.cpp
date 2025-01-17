@@ -13884,6 +13884,37 @@ static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
   return DAG.getNode(ISD::TRUNCATE, SL, VT, Mad);
 }
 
+// Fold
+//     y = lshr i64 x, 32
+//     res = add (mul i64 y, Const), x   where "Const" is a 64-bit constant
+//     with Const.hi == -1
+// To
+//     res = mad_u64_u32 y.lo ,Const.lo, x.lo
+static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
+                                 SDValue MulLHS, SDValue MulRHS,
+                                 SDValue AddRHS) {
+  if (MulRHS.getOpcode() == ISD::SRL)
+    std::swap(MulLHS, MulRHS);
+
+  if (MulLHS.getValueType() != MVT::i64 || MulLHS.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  ConstantSDNode *ShiftVal = dyn_cast<ConstantSDNode>(MulLHS.getOperand(1));
+  if (!ShiftVal || ShiftVal->getAsZExtVal() != 32 ||
+      MulLHS.getOperand(0) != AddRHS)
+    return SDValue();
+
+  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(MulRHS.getNode());
+  if (!Const || Hi_32(Const->getZExtValue()) != uint32_t(-1))
+    return SDValue();
+
+  SDValue ConstMul =
+      DAG.getConstant(Lo_32(Const->getZExtValue()), SL, MVT::i32);
+  return getMad64_32(DAG, SL, MVT::i64,
+                     DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, MulLHS), ConstMul,
+                     DAG.getZeroExtendInReg(AddRHS, SL, MVT::i32), false);
+}
+
 // Fold (add (mul x, y), z) --> (mad_[iu]64_[iu]32 x, y, z) plus high
 // multiplies, if any.
 //
@@ -13941,6 +13972,9 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   SDValue MulLHS = LHS.getOperand(0);
   SDValue MulRHS = LHS.getOperand(1);
   SDValue AddRHS = RHS;
+
+  if (SDValue FoldedMAD = tryFoldMADwithSRL(DAG, SL, MulLHS, MulRHS, AddRHS))
+    return FoldedMAD;
 
   // Always check whether operands are small unsigned values, since that
   // knowledge is useful in more cases. Check for small signed values only if

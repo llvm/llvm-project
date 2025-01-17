@@ -14,6 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -155,6 +156,8 @@ public:
       callback(pair.second);
   }
 
+  std::vector<BitcodeFile *> bitcodeFileInstances;
+
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
   void initializeLoadConfig();
@@ -175,6 +178,11 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
+
+  void
+  reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
+                       const llvm::DenseMap<Symbol *, Symbol *> *localImports,
+                       bool needBitcodeFiles);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
