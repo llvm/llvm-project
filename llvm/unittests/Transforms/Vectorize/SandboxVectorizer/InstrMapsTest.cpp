@@ -64,13 +64,13 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   EXPECT_EQ(IMaps.getVectorForOrig(Add1), VAdd0);
   EXPECT_FALSE(IMaps.getOrigLane(VAdd0, VAdd0)); // Bad Orig value
   EXPECT_FALSE(IMaps.getOrigLane(Add0, Add0));   // Bad Vector value
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add0), 0);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add0), 0U);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
   // Check when the same vector maps to different original values (which is
   // common for vector constants).
   IMaps.registerVector({Add2, Add3}, VAdd0);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add2), 0);
-  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add3), 1);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add2), 0U);
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add3), 1U);
   // Check when we register for a second time.
 #ifndef NDEBUG
   EXPECT_DEATH(IMaps.registerVector({Add1, Add0}, VAdd0), ".*exists.*");
