@@ -4537,8 +4537,8 @@ struct OpenMPDeclarativeConstruct {
   CharBlock source;
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
       OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
-      OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
+      OpenMPThreadprivate, OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OpenMPDeclareTargetConstruct, OmpMetadirectiveDirective>
       u;
 };
 
