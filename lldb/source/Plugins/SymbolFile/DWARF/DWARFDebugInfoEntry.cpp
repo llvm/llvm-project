@@ -285,20 +285,20 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 /// Adds all attributes of the DIE at the top of the \c worklist to the
 /// \c attributes list. Specifcations and abstract origins are added
 /// to the \c worklist if the referenced DIE has not been seen before.
-static bool GetAttributes(DWARFUnit const *cu,
-                          llvm::SmallVector<DWARFDIE> &worklist,
+static bool GetAttributes(llvm::SmallVector<DWARFDIE> &worklist,
                           llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
                           DWARFAttributes &attributes) {
   assert(!worklist.empty() && "Need at least one DIE to visit.");
-  assert(cu && "Need a valid CU to extract attributes.");
   assert(seen.size() >= 1 &&
          "Need to have seen at least the currently visited entry.");
 
   DWARFDIE current = worklist.pop_back_val();
 
+  const auto *cu = current.GetCU();
+  assert(cu);
+
   const auto *entry = current.GetDIE();
-  if (!entry)
-    return false;
+  assert(entry);
 
   const auto *abbrevDecl =
       entry->GetAbbreviationDeclarationPtr(current.GetCU());
@@ -371,7 +371,7 @@ DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
   seen.insert(this);
 
   do {
-    if (!::GetAttributes(cu, worklist, seen, attributes)) {
+    if (!::GetAttributes(worklist, seen, attributes)) {
       attributes.Clear();
       break;
     }
