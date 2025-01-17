@@ -247,7 +247,7 @@ constexpr void test_pre_increment() {
 }
 
 constexpr void test_post_increment() {
-  { // `V` and `Pattern` are not empty. Test return type too.
+  { // `V` and `Pattern` are not empty. Return type should be `iterator`.
     using V       = std::array<std::array<int, 3>, 2>;
     using Pattern = std::array<int, 1>;
     using JWV     = std::ranges::join_with_view<std::ranges::owning_view<V>, std::ranges::owning_view<Pattern>>;
@@ -296,7 +296,7 @@ constexpr void test_post_increment() {
     }
   }
 
-  { // `Pattern` is empty, `V` is not. `ref-is-glvalue` is false.
+  { // `Pattern` is empty, `V` is not. Value of `ref-is-glvalue` is false (return type should be `void`).
     using Inner   = std::vector<int>;
     using V       = RvalueVector<Inner>;
     using Pattern = std::ranges::empty_view<int>;
@@ -315,7 +315,8 @@ constexpr void test_post_increment() {
     static_assert(std::is_void_v<decltype(it++)>);
   }
 
-  { // `V` has empty subrange in the middle, `Pattern` is not empty. OuterIter does not model forward iterator.
+  { // `V` has empty subrange in the middle, `Pattern` is not empty.
+    // OuterIter does not model forward iterator (return type should be `void`).
     using Inner   = std::vector<int>;
     using V       = BasicVectorView<Inner, ViewProperties{.common = false}, cpp20_input_iterator>;
     using Pattern = std::ranges::single_view<int>;
@@ -337,7 +338,8 @@ constexpr void test_post_increment() {
   }
 
 #if !defined(TEST_COMPILER_GCC) // GCC c++/101777
-  { // Only first element of `V` is not empty. `Pattern` is empty. InnerIter does not model forward iterator.
+  { // Only first element of `V` is not empty. `Pattern` is empty. InnerIter does not model forward
+    // iterator (return type should be `void`).
     using Inner   = BasicVectorView<char32_t, ViewProperties{.common = false}, cpp17_input_iterator>;
     using V       = std::array<Inner, 3>;
     using Pattern = std::ranges::empty_view<char32_t>;
