@@ -3374,6 +3374,21 @@ def : GCNPat <
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
 >;
 
+multiclass V_SAT_PK_Pat<Instruction inst> {
+  def : GCNPat<
+    (i16 (AMDGPUsat_pk_cast v2i16:$src)),
+    (inst VRegSrc_32:$src)
+  >;
+}
+
+let OtherPredicates = [NotHasTrue16BitInsts] in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
+} // End OtherPredicates = [NotHasTrue16BitInsts]
+
+let True16Predicate = UseFakeTrue16Insts in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_fake16_e64>;
+} // End True16Predicate = UseFakeTrue16Insts
+
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
 def : GCNPat <

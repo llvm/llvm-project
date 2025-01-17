@@ -873,6 +873,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::v2f16, Legal);
   }
 
+  // special dealing for v_sat_pk instruction
+  if (AMDGPU::isGFX9(STI) || AMDGPU::isGFX11(STI) || AMDGPU::isGFX12(STI)) {
+    // In foldToSaturated during DAG combine
+    // 1. isOperationLegalOrCustom(Opc, SrcVT) getOperationAction(Op, SrcVT) == Custom
+    // 2. isTypeDesirableForOp checks regclass for v2i8 (hooked now checking DstVT == v2i8)
+    // In CustomLowerNode during legalizing, checks getOperationAction(Op, DstVT) == Custom
+    setOperationAction(ISD::TRUNCATE_SSAT_U, {MVT::v2i16, MVT::v2i8}, Custom);
+  }
+  
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::bf16, MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::i128,
@@ -1982,6 +1991,12 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.
   if (VT == MVT::i1 && Op == ISD::SETCC)
     return false;
+  
+  // Avoiding legality check for reg type of v2i8 
+  // (do not need to addRegisterClass for v2i8)
+  // VT is result type, ensure the result type is v2i8
+  if (VT == MVT::v2i8 && Op == ISD::TRUNCATE_SSAT_U)
+    return true;
 
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
@@ -6613,6 +6628,12 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     if (N->getValueType(0) != MVT::f16)
       break;
     Results.push_back(lowerFSQRTF16(SDValue(N, 0), DAG));
+    break;
+  }
+  case ISD::TRUNCATE_SSAT_U: {
+    SDLoc SL(N);
+    SDValue Op = DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, N->getOperand(0));
+    Results.push_back(Op);
     break;
   }
   default:
@@ -15268,6 +15289,16 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue Widened = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widened;
     [[fallthrough]];
+  }
+  case ISD::BITCAST: {
+    // This is possible beause for (i16 bitcase (v2i8 trunc ...))
+    // It may be replaced bu (i16 bitcase (v2i8 truncssat_u ...))
+    // And then (i16 bitcase (i16 AMDGPUsat_pk_cast ...))
+    // There is no instruction of casting to the same type
+    SDValue Src = N->getOperand(0);
+    if (N->getValueType(0) == Src.getValueType()) {
+      return Src;
+    }
   }
   default: {
     if (!DCI.isBeforeLegalize()) {
