@@ -5254,17 +5254,17 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     unsigned ABIVLen = 128;
     if (Attrs.getNumArgs() &&
         !checkUInt32Argument(Attrs, Attrs.getArgAsExpr(0), ABIVLen)) {
-    Attrs.setInvalid();
+      Attrs.setInvalid();
       return true;
     }
     if (Attrs.getNumArgs() && (ABIVLen < 32 || ABIVLen > 65536)) {
-    Attrs.setInvalid();
+      Attrs.setInvalid();
       Diag(Attrs.getLoc(), diag::err_argument_invalid_range)
           << ABIVLen << 32 << 65536;
       return true;
     }
     if (!llvm::isPowerOf2_64(ABIVLen)) {
-    Attrs.setInvalid();
+      Attrs.setInvalid();
       Diag(Attrs.getLoc(), diag::err_argument_not_power_of_2);
       return true;
     }

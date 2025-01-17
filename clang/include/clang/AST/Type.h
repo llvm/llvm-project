@@ -4444,10 +4444,7 @@ public:
     enum { NoReturnMask = 0x40 };
     enum { ProducesResultMask = 0x80 };
     enum { NoCallerSavedRegsMask = 0x100 };
-    enum {
-      RegParmMask =  0xe00,
-      RegParmOffset = 9
-    };
+    enum { RegParmMask = 0xe00, RegParmOffset = 9 };
     enum { NoCfCheckMask = 0x1000 };
     enum { CmseNSCallMask = 0x2000 };
     uint16_t Bits = CC_C;

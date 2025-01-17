@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -41,8 +40,8 @@ private:
 public:
   RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
                bool EABI)
-      : DefaultABIInfo(CGT), XLen(XLen), FLen(FLen),
-        NumArgGPRs(EABI ? 6 : 8), NumArgFPRs(FLen != 0 ? 8 : 0), EABI(EABI) {}
+      : DefaultABIInfo(CGT), XLen(XLen), FLen(FLen), NumArgGPRs(EABI ? 6 : 8),
+        NumArgFPRs(FLen != 0 ? 8 : 0), EABI(EABI) {}
 
   // DefaultABIInfo's classifyReturnType and classifyArgumentType are
   // non-virtual, but computeInfo is virtual, so we overload it.
@@ -556,8 +555,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
 
 // Fixed-length RVV vectors are represented as scalable vectors in function
 // args/return and must be coerced from fixed vectors.
-ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty,
-                                         unsigned ABIVLen) const {
+ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();

@@ -2296,9 +2296,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     switch (ABIVlen) {
     default:
       return tokError("unknown RISC-V ABI VLEN");
-#define CC_VLS_CASE(ABIVlen)                                                  \
-  case ABIVlen:                                                               \
-    CC = CallingConv::RISCV_VLSCall_##ABIVlen;                                \
+#define CC_VLS_CASE(ABIVlen)                                                   \
+  case ABIVlen:                                                                \
+    CC = CallingConv::RISCV_VLSCall_##ABIVlen;                                 \
     break;
       CC_VLS_CASE(32)
       CC_VLS_CASE(64)
