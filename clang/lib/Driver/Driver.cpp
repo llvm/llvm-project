@@ -4325,14 +4325,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  bool UseNewOffloadingDriver =
-      C.isOffloadingHostKind(Action::OFK_OpenMP) ||
-      C.isOffloadingHostKind(Action::OFK_SYCL) ||
-      Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false) ||
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver,
-                   C.isOffloadingHostKind(Action::OFK_Cuda));
+  bool UseNewOffloadingDriver = Args.hasFlag(
+      options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
+      C.getActiveOffloadKinds() != Action::OFK_None);
 
   bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
@@ -4939,8 +4934,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   bool ShouldBundleHIP =
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, false) ||
-      (HIPNoRDC && offloadDeviceOnly() &&
-       llvm::none_of(OffloadActions, [](Action *A) {
+      (!Args.getLastArg(options::OPT_no_gpu_bundle_output) && HIPNoRDC &&
+       offloadDeviceOnly() && llvm::none_of(OffloadActions, [](Action *A) {
          return A->getType() != types::TY_Image;
        }));
 
@@ -5113,8 +5108,13 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+
+    bool IsAMDGCNSPIRV = Input->getOffloadingToolChain() &&
+                         Input->getOffloadingToolChain()->getTriple().getOS() ==
+                             llvm::Triple::OSType::AMDHSA &&
+                         Input->getOffloadingToolChain()->getTriple().isSPIRV();
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
+        TargetDeviceOffloadKind == Action::OFK_SYCL || IsAMDGCNSPIRV ||
         (((Input->getOffloadingToolChain() &&
            Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
@@ -5134,7 +5134,8 @@ Action *Driver::ConstructPhaseAction(
                    (TargetDeviceOffloadKind == Action::OFK_HIP &&
                     !Args.hasFlag(options::OPT_offload_new_driver,
                                   options::OPT_no_offload_new_driver,
-                                  C.isOffloadingHostKind(Action::OFK_Cuda))))
+                                  C.getActiveOffloadKinds() !=
+                                      Action::OFK_None)))
               ? types::TY_LLVM_IR
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
