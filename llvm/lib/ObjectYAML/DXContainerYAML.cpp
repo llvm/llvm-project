@@ -33,14 +33,14 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
     const dxbc::RootSignatureDesc &Data)
     : Version(Data.Version) {
-#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                            \
+#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
   Val = (Data.Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
 uint32_t DXContainerYAML::RootSignatureDesc::getEncodedFlags() {
   uint64_t Flag = 0;
-#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                            \
+#define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
   if (Val)                                                                     \
     Flag |= (uint32_t)dxbc::RootElementFlag::Val;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
