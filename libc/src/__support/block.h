@@ -358,6 +358,10 @@ private:
   ///   previous block is free.
   /// * If the `last` flag is set, the block is the sentinel last block. It is
   ///   summarily considered used and has no next block.
+
+public:
+  /// Only for testing.
+  static constexpr size_t PREV_FIELD_SIZE = sizeof(prev_);
 };
 
 static_assert(alignof(max_align_t) >= 4,
