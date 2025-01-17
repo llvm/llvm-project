@@ -110,6 +110,8 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
         auto Hotness = MachineFunctionDataHotness::Hot;
 
         // Hotness is based on source basic block hotness.
+        // TODO: PSI APIs are about instruction hotness. Introduce API for data
+        // access hotness.
         if (PSI->isColdBlock(&MBB, MBFI))
           Hotness = MachineFunctionDataHotness::Cold;
 
