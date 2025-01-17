@@ -4247,6 +4247,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
