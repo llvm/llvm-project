@@ -10035,8 +10035,8 @@ static bool canConvertIntTyToFloatTy(Sema &S, ExprResult *Int,
     // Reject types that cannot be fully encoded into the mantissa of
     // the float.
     Bits = S.Context.getTypeSize(IntTy);
-    unsigned FloatPrec = llvm::APFloat::semanticsPrecision(
-        S.Context.getFloatTypeSemantics(FloatTy));
+    unsigned FloatPrec = 
+        S.Context.getFloatTypeSemantics(FloatTy).precision;
     if (Bits > FloatPrec)
       return true;
   }
@@ -15250,8 +15250,8 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
           Ctx.getFloatTypeSemantics(ElementType);
       const llvm::fltSemantics &HigherElementTypeSemantics =
           Ctx.getFloatTypeSemantics(HigherElementType);
-      if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if (ElementTypeSemantics.maxExponent * 2 + 1 >
+          HigherElementTypeSemantics.maxExponent) {
         // Retain the location of the first use of higher precision type.
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;

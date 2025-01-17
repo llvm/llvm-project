@@ -377,7 +377,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombinerImpl &IC,
     Type *InputTy = I->getOperand(0)->getType()->getScalarType();
     const fltSemantics &Semantics = InputTy->getFltSemantics();
     uint32_t MinBitWidth =
-      APFloatBase::semanticsIntSizeInBits(Semantics,
+      Semantics.intSizeInBits(
           I->getOpcode() == Instruction::FPToSI);
     return Ty->getScalarSizeInBits() >= MinBitWidth;
   }

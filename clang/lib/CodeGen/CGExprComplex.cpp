@@ -302,8 +302,8 @@ public:
     // In terms of exponent it gives this formula:
     // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
     // doubles the exponent of SmallerType.LargestFiniteVal)
-    if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
-        llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+    if (ElementTypeSemantics.maxExponent * 2 + 1 <=
+        HigherElementTypeSemantics.maxExponent) {
       FPHasBeenPromoted = true;
       return Ctx.getComplexType(HigherElementType);
     } else {

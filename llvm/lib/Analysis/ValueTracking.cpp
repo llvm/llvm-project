@@ -5591,7 +5591,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const fltSemantics &Flt =
           II->getType()->getScalarType()->getFltSemantics();
-      unsigned Precision = APFloat::semanticsPrecision(Flt);
+      unsigned Precision = Flt.precision;
       const Value *ExpArg = II->getArgOperand(1);
       ConstantRange ExpRange = computeConstantRange(
           ExpArg, true, Q.IIQ.UseInstrInfo, Q.AC, Q.CxtI, Q.DT, Depth + 1);

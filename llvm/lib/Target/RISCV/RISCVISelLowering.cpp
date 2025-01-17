@@ -3105,7 +3105,7 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // values larger than it don't have any fractional bits so don't need to
   // be converted.
   const fltSemantics &FltSem = ContainerVT.getFltSemantics();
-  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  unsigned Precision = FltSem.precision;
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
                           /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
@@ -3213,7 +3213,7 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // values larger than it don't have any fractional bits so don't need to
   // be converted.
   const fltSemantics &FltSem = ContainerVT.getFltSemantics();
-  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  unsigned Precision = FltSem.precision;
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
                           /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
@@ -3293,7 +3293,7 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   // values larger than it don't have any fractional bits so don't need to be
   // converted.
   const fltSemantics &FltSem = VT.getFltSemantics();
-  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  unsigned Precision = FltSem.precision;
   APFloat MaxVal = APFloat(FltSem);
   MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
                           /*IsSigned*/ false, APFloat::rmNearestTiesToEven);

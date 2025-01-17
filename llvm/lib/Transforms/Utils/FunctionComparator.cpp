@@ -94,17 +94,13 @@ int FunctionComparator::cmpAPFloats(const APFloat &L, const APFloat &R) const {
   // Floats are ordered first by semantics (i.e. float, double, half, etc.),
   // then by value interpreted as a bitstring (aka APInt).
   const fltSemantics &SL = L.getSemantics(), &SR = R.getSemantics();
-  if (int Res = cmpNumbers(APFloat::semanticsPrecision(SL),
-                           APFloat::semanticsPrecision(SR)))
+  if (int Res = cmpNumbers(SL.precision, SR.precision))
     return Res;
-  if (int Res = cmpNumbers(APFloat::semanticsMaxExponent(SL),
-                           APFloat::semanticsMaxExponent(SR)))
+  if (int Res = cmpNumbers(SL.maxExponent, SR.maxExponent))
     return Res;
-  if (int Res = cmpNumbers(APFloat::semanticsMinExponent(SL),
-                           APFloat::semanticsMinExponent(SR)))
+  if (int Res = cmpNumbers(SL.minExponent, SR.minExponent))
     return Res;
-  if (int Res = cmpNumbers(APFloat::semanticsSizeInBits(SL),
-                           APFloat::semanticsSizeInBits(SR)))
+  if (int Res = cmpNumbers(SL.sizeInBits, SR.sizeInBits))
     return Res;
   return cmpAPInts(L.bitcastToAPInt(), R.bitcastToAPInt());
 }

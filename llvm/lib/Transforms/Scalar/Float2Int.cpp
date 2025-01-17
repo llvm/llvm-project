@@ -362,10 +362,10 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
     // the floating point result will differ from an integer approximation.
 
     // Do we need more bits than are in the mantissa of the type we converted
-    // to? semanticsPrecision returns the number of mantissa bits plus one
+    // to? semantics.precision returns the number of mantissa bits plus one
     // for the sign bit.
     unsigned MaxRepresentableBits
-      = APFloat::semanticsPrecision(ConvertedToTy->getFltSemantics()) - 1;
+      = ConvertedToTy->getFltSemantics().precision - 1;
     if (MinBW > MaxRepresentableBits) {
       LLVM_DEBUG(dbgs() << "F2I: Value not guaranteed to be representable!\n");
       continue;

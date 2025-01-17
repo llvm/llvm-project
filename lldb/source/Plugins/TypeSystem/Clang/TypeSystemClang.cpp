@@ -4745,8 +4745,7 @@ TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
   else if (bit_size == ast.getTypeSize(ast.DoubleTy))
     return ast.getFloatTypeSemantics(ast.DoubleTy);
   else if (bit_size == ast.getTypeSize(ast.LongDoubleTy) ||
-           bit_size == llvm::APFloat::semanticsSizeInBits(
-                           ast.getFloatTypeSemantics(ast.LongDoubleTy)))
+           bit_size == ast.getFloatTypeSemantics(ast.LongDoubleTy).sizeInBits)
     return ast.getFloatTypeSemantics(ast.LongDoubleTy);
   else if (bit_size == ast.getTypeSize(ast.HalfTy))
     return ast.getFloatTypeSemantics(ast.HalfTy);

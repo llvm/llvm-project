@@ -25,11 +25,11 @@ using namespace mlir::detail;
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  return APFloat::semanticsSizeInBits(getFloatSemantics());
+  return getFloatSemantics().sizeInBits;
 }
 
 unsigned FloatType::getFPMantissaWidth() {
-  return APFloat::semanticsPrecision(getFloatSemantics());
+  return getFloatSemantics().precision;
 }
 
 //===----------------------------------------------------------------------===//

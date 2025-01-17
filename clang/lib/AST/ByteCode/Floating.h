@@ -83,7 +83,7 @@ public:
     return NameStr;
   }
 
-  unsigned bitWidth() const { return F.semanticsSizeInBits(F.getSemantics()); }
+  unsigned bitWidth() const { return F.getSemantics().sizeInBits; }
 
   bool isSigned() const { return true; }
   bool isNegative() const { return F.isNegative(); }
@@ -128,7 +128,7 @@ public:
 
   static Floating bitcastFromMemory(const std::byte *Buff,
                                     const llvm::fltSemantics &Sem) {
-    size_t Size = APFloat::semanticsSizeInBits(Sem);
+    size_t Size = Sem.sizeInBits;
     llvm::APInt API(Size, true);
     llvm::LoadIntFromMemory(API, (const uint8_t *)Buff, Size / 8);
 
@@ -143,7 +143,7 @@ public:
   // === Serialization support ===
   size_t bytesToSerialize() const {
     return sizeof(llvm::fltSemantics *) +
-           (APFloat::semanticsSizeInBits(F.getSemantics()) / 8);
+           (F.getSemantics().sizeInBits / 8);
   }
 
   void serialize(std::byte *Buff) const {

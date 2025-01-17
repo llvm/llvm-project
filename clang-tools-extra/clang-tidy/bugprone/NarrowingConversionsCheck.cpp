@@ -244,8 +244,8 @@ struct IntegerRange {
 static IntegerRange createFromType(const ASTContext &Context,
                                    const BuiltinType &T) {
   if (T.isFloatingPoint()) {
-    unsigned PrecisionBits = llvm::APFloatBase::semanticsPrecision(
-        Context.getFloatTypeSemantics(T.desugar()));
+    unsigned PrecisionBits = 
+        Context.getFloatTypeSemantics(T.desugar()).precision;
     // Contrary to two's complement integer, floating point values are
     // symmetric and have the same number of positive and negative values.
     // The range of valid integers for a floating point value is:

@@ -390,7 +390,7 @@ Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
 
   APInt intValue;
   tok.getSpelling().getAsInteger(isHex ? 0 : 10, intValue);
-  auto typeSizeInBits = APFloat::semanticsSizeInBits(semantics);
+  auto typeSizeInBits = semantics.sizeInBits;
   if (intValue.getActiveBits() > typeSizeInBits) {
     return emitError(tok.getLoc(),
                      "hexadecimal float constant out of range for type");

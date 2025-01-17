@@ -495,7 +495,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       // Check whether neither int min nor int max can be represented in the
       // input floating-point type due to too short exponent range.
       if (static_cast<int>(dstTy.getIntOrFloatBitWidth()) - 1 >
-          APFloat::semanticsMaxExponent(fltSemantics)) {
+          fltSemantics.maxExponent) {
         // Use cmp + select to replace infinites by int min / int max. Other
         // integral values can be represented in the integer space.
         auto conv = rewriter.create<arith::FPToSIOp>(loc, dstTy, rounded);
