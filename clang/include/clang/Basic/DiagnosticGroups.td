@@ -936,7 +936,8 @@ def SignedEnumBitfield : DiagGroup<"signed-enum-bitfield">;
 
 def ReservedModuleIdentifier : DiagGroup<"reserved-module-identifier">;
 def ReservedIdentifier : DiagGroup<"reserved-identifier",
-    [ReservedIdAsMacro, ReservedModuleIdentifier, UserDefinedLiterals]>;
+    [ReservedIdAsMacro, ReservedModuleIdentifier,
+     UserDefinedLiterals, ReservedAttributeIdentifier]>;
 
 // Unreachable code warning groups.
 //
