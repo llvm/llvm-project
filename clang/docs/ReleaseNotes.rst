@@ -316,6 +316,8 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented module level lookup for C++20 modules. (#GH90154)
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -787,6 +789,7 @@ Improvements to Clang's diagnostics
       scope.Unlock();
       require(scope); // Warning!  Requires mu1.
     }
+- Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
 Improvements to Clang's time-trace
 ----------------------------------

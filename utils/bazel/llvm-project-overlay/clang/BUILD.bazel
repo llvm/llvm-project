@@ -1460,7 +1460,6 @@ cc_library(
     hdrs = glob(["include/clang/Tooling/DependencyScanning/**/*.h"]),
     deps = [
         ":basic",
-        ":codegen",
         ":driver",
         ":frontend",
         ":lex",
@@ -1952,14 +1951,12 @@ cc_library(
             "lib/Interpreter/*.cpp",
             "lib/Interpreter/*.h",
         ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
-    ),
-    hdrs = glob(
-        [
-            "include/clang/Interpreter/*.h",
+        exclude = [
+            "lib/Interpreter/Wasm.cpp",
+            "lib/Interpreter/Wasm.h",
         ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
     ),
+    hdrs = glob(["include/clang/Interpreter/*.h"]),
     includes = ["include"],
     deps = [
         ":analysis",
@@ -2026,7 +2023,6 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
         "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:Coroutines",
         "//llvm:Coverage",

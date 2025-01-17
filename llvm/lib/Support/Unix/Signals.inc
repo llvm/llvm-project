@@ -50,9 +50,7 @@
 #ifdef HAVE_BACKTRACE
 #include BACKTRACE_HEADER // For backtrace().
 #endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #include <sys/stat.h>
 #if HAVE_DLFCN_H
 #include <dlfcn.h>
