@@ -200,6 +200,19 @@ func.func @max_pool_i8(%arg0: tensor<1x6x34x62xi8>) -> () {
   return
 }
 
+// CHECK-LABEL: @max_pool_ui8
+func.func @max_pool_ui8(%arg0: tensor<1x6x34x62xui8>) -> tensor<1x4x32x62xui8> {
+  // CHECK: builtin.unrealized_conversion_cast {{.*}} : tensor<1x6x34x62xui8> to tensor<1x6x34x62xi8>
+  // CHECK: arith.constant 0
+  // CHECK: linalg.pooling_nhwc_max_unsigned
+  // CHECK-SAME: ins({{.*}} : tensor<1x6x34x62xi8>, tensor<3x3xi8>)
+  // CHECK-SAME: outs({{.*}} : tensor<1x4x32x62xi8>)
+  // CHECK-SAME: -> tensor<1x4x32x62xi8>
+  // CHECK: builtin.unrealized_conversion_cast {{.*}} : tensor<1x4x32x62xi8> to tensor<1x4x32x62xui8>
+  %0 = tosa.max_pool2d %arg0 {pad = array<i64: 0, 0, 0, 0>, kernel = array<i64: 3, 3>, stride = array<i64: 1, 1>} : (tensor<1x6x34x62xui8>) -> tensor<1x4x32x62xui8>
+  return %0 : tensor<1x4x32x62xui8>
+}
+
 // CHECK-LABEL: @max_pool_i16
 func.func @max_pool_i16(%arg0: tensor<1x6x34x62xi16>) -> () {
   // CHECK: arith.constant -32768
