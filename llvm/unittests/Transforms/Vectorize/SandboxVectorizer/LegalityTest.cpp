@@ -18,6 +18,7 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -110,7 +111,8 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
 
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
   EXPECT_TRUE(isa<sandboxir::Widen>(Result));
@@ -228,7 +230,8 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   {
     // Can vectorize St0,St1.
     const auto &Result = Legality.canVectorize({St0, St1});
@@ -263,7 +266,8 @@ define void @foo() {
   };
 
   sandboxir::Context Ctx(C);
-  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx);
+  llvm::sandboxir::InstrMaps IMaps;
+  sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
   EXPECT_TRUE(Matches(Legality.createLegalityResult<sandboxir::Pack>(
@@ -283,3 +287,68 @@ define void @foo() {
                       "Pack Reason: DiffWrapFlags"));
 }
 #endif // NDEBUG
+
+TEST_F(LegalityTest, CollectDescr) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %gep0 = getelementptr float, ptr %ptr, i32 0
+  %gep1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  %vld = load <4 x float>, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  getAnalyses(*LLVMF);
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  [[maybe_unused]] auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *VLd = cast<sandboxir::LoadInst>(&*It++);
+
+  sandboxir::CollectDescr::DescrVecT Descrs;
+  using EEDescr = sandboxir::CollectDescr::ExtractElementDescr;
+
+  {
+    // Check single input, no shuffle.
+    Descrs.push_back(EEDescr(VLd, 0));
+    Descrs.push_back(EEDescr(VLd, 1));
+    sandboxir::CollectDescr CD(std::move(Descrs));
+    EXPECT_TRUE(CD.getSingleInput());
+    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->second, false);
+    EXPECT_TRUE(CD.hasVectorInputs());
+  }
+  {
+    // Check single input, shuffle.
+    Descrs.push_back(EEDescr(VLd, 1));
+    Descrs.push_back(EEDescr(VLd, 0));
+    sandboxir::CollectDescr CD(std::move(Descrs));
+    EXPECT_TRUE(CD.getSingleInput());
+    EXPECT_EQ(CD.getSingleInput()->first, VLd);
+    EXPECT_EQ(CD.getSingleInput()->second, true);
+    EXPECT_TRUE(CD.hasVectorInputs());
+  }
+  {
+    // Check multiple inputs.
+    Descrs.push_back(EEDescr(Ld0));
+    Descrs.push_back(EEDescr(VLd, 0));
+    Descrs.push_back(EEDescr(VLd, 1));
+    sandboxir::CollectDescr CD(std::move(Descrs));
+    EXPECT_FALSE(CD.getSingleInput());
+    EXPECT_TRUE(CD.hasVectorInputs());
+  }
+  {
+    // Check multiple inputs only scalars.
+    Descrs.push_back(EEDescr(Ld0));
+    Descrs.push_back(EEDescr(Ld1));
+    sandboxir::CollectDescr CD(std::move(Descrs));
+    EXPECT_FALSE(CD.getSingleInput());
+    EXPECT_FALSE(CD.hasVectorInputs());
+  }
+}

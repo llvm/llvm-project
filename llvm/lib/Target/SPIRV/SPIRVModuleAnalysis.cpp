@@ -1352,9 +1352,7 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::Reduce:
     case SPIRV::GroupOperation::InclusiveScan:
     case SPIRV::GroupOperation::ExclusiveScan:
-      Reqs.addCapability(SPIRV::Capability::Kernel);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformArithmetic);
-      Reqs.addCapability(SPIRV::Capability::GroupNonUniformBallot);
       break;
     case SPIRV::GroupOperation::ClusteredReduce:
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformClustered);
