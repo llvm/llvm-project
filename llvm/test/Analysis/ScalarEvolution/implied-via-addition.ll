@@ -3,7 +3,7 @@
 ; RUN:   -scalar-evolution-classify-expressions=0 2>&1 | FileCheck %s
 
 define void @implied1(i32 %n) {
-; Prove that (n > 1) ===> (n - 1 > 0).
+; Prove that (n s> 1) ===> (n - 1 s> 0).
 ; CHECK-LABEL: 'implied1'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-2 + %n)
@@ -28,7 +28,7 @@ exit:
 }
 
 define void @implied1_neg(i32 %n) {
-; Prove that (n > 0) =\=> (n - 1 > 0).
+; Prove that (n s> 0) =\=> (n - 1 s> 0).
 ; CHECK-LABEL: 'implied1_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied1_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax (-1 + %n)<nsw>))<nsw>
@@ -53,7 +53,7 @@ exit:
 }
 
 define void @implied2(i32 %n) {
-; Prove that (n >= -1) ===> (n + 1 >= 0).
+; Prove that (n u>= -1) ===> (n + 1 u>= 0).
 ; CHECK-LABEL: 'implied2'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2
 ; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
@@ -86,7 +86,7 @@ exit:
 }
 
 define void @implied2_neg(i32 %n) {
-; Prove that (n >= -1) =\=> (n - 1 >= 0).
+; Prove that (n u>= -1) =\=> (n - 1 s>= 0).
 ; CHECK-LABEL: 'implied2_neg'
 ; CHECK-NEXT:  Determining loop execution counts for: @implied2_neg
 ; CHECK-NEXT:  Loop %header: backedge-taken count is (-1 + (1 smax %n))<nsw>
