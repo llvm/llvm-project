@@ -963,7 +963,6 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 //  - Checks the arity of the structured bindings
 //  - Creates the resolved pack expr if there is
 //    one
-
 static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
                                QualType DecompType,
                                ArrayRef<BindingDecl *> Bindings,
@@ -1621,6 +1620,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   // each binding.
   if (DecompType->isDependentType()) {
     for (auto *B : DD->bindings()) {
+      // Do not overwrite any pack type.
       if (B->getType().isNull())
         B->setType(Context.DependentTy);
     }

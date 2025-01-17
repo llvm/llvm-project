@@ -1180,8 +1180,11 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   ResolvedUnexpandedPackExpr *OldResolvedPack = nullptr;
   for (auto *OldBD : D->bindings()) {
     Expr *BindingExpr = OldBD->getBinding();
-    if (auto *RP = dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr))
+    if (auto *RP =
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BindingExpr)) {
+      assert(!OldResolvedPack && "no more than one pack is allowed");
       OldResolvedPack = RP;
+    }
     NewBindings.push_back(cast<BindingDecl>(VisitBindingDecl(OldBD)));
   }
   ArrayRef<BindingDecl*> NewBindingArray = NewBindings;
@@ -1197,13 +1200,13 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
     // Mark the holding vars (if any) in the pack as instantiated since
     // they are created implicitly.
     auto Bindings = NewDD->bindings();
-    auto BPack = std::find_if(
-        Bindings.begin(), Bindings.end(),
-        [](BindingDecl *D) -> bool { return D->isParameterPack(); });
+    auto BPack = llvm::find_if(
+        Bindings, [](BindingDecl *D) -> bool { return D->isParameterPack(); });
     auto *NewResolvedPack =
         cast<ResolvedUnexpandedPackExpr>((*BPack)->getBinding());
     auto OldExprs = OldResolvedPack->getExprs();
     auto NewExprs = NewResolvedPack->getExprs();
+    assert(OldExprs.size() == NewExprs.size());
     for (unsigned I = 0; I < OldResolvedPack->getNumExprs(); I++) {
       DeclRefExpr *OldDRE = cast<DeclRefExpr>(OldExprs[I]);
       BindingDecl *OldNestedBD = cast<BindingDecl>(OldDRE->getDecl());

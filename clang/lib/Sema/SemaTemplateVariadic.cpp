@@ -52,7 +52,7 @@ class CollectUnexpandedParameterPacksVisitor
           return;
       } else if (auto *BD = dyn_cast<BindingDecl>(ND)) {
         Expr *E = BD->getBinding();
-        if (auto *RP = dyn_cast_if_present<ResolvedUnexpandedPackExpr>(E)) {
+        if (auto *RP = cast_if_present<ResolvedUnexpandedPackExpr>(E)) {
           addUnexpanded(RP);
           return;
         }
@@ -818,8 +818,6 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
-      typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
           CurrentInstantiationScope->findInstantiationOf(
               cast<NamedDecl *>(ParmPack.first));
