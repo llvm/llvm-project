@@ -6,6 +6,8 @@
 #
 # ==-------------------------------------------------------------------------==#
 
+from pathlib import PurePath
+
 
 class HeaderFile:
     def __init__(self, name):
@@ -32,8 +34,20 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
+    def includes(self):
+        return sorted(
+            {
+                PurePath("llvm-libc-macros") / macro.header
+                for macro in self.macros
+                if macro.header is not None
+            }
+        )
+
     def public_api(self):
-        content = [""]
+        header_dir = PurePath(self.name).parent
+        content = [
+            f'#include "{file.relative_to(header_dir)}"' for file in self.includes()
+        ] + [""]
 
         for macro in self.macros:
             content.append(f"{macro}\n")
@@ -76,11 +90,9 @@ class HeaderFile:
             content.append(f"#endif // {current_guard}")
             content.append("")
 
-        for object in self.objects:
-            content.append(str(object))
+        content.extend(str(object) for object in self.objects)
         if self.objects:
-            content.append("\n__END_C_DECLS")
-        else:
-            content.append("__END_C_DECLS")
+            content.append("")
+        content.append("__END_C_DECLS")
 
         return "\n".join(content)

@@ -5,6 +5,11 @@ macros:
     macro_value: 1
   - macro_name: MACRO_B
     macro_value: 2
+  - macro_name: MACRO_C
+  - macro_name: MACRO_D
+    macro_header: test_small-macros.h
+  - macro_name: MACRO_E
+    macro_header: test_more-macros.h
 types:
   - type_name: type_a
   - type_name: type_b
