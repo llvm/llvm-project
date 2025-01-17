@@ -1031,7 +1031,13 @@ def SPIRV_GLFMixOp :
 
 // -----
 
-def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [Pure]> {
+def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
+    Pure,
+    AllElementTypesMatch<["p0", "p1"]>,
+    TypesMatchWith<"result type must match operand element type",
+                  "p0", "result",
+                  "::mlir::getElementTypeOrSelf($_self)">
+  ]> {
   let summary = "Return distance between two points";
 
   let description = [{
@@ -1060,6 +1066,8 @@ def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [Pure]> {
   let assemblyFormat = [{
     operands attr-dict `:` type($p0) `,` type($p1) `->` type($result)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
