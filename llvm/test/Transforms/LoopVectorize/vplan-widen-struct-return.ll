@@ -1,11 +1,11 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-width=2 -force-vector-interleave=1 -debug-only=loop-vectorize -disable-output -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -debug-only=loop-vectorize -disable-output -S 2>&1 | FileCheck %s
 
 define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: LV: Checking a loop in 'struct_return_f32_widen'
 ; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -16,22 +16,22 @@ define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<%3>
-; CHECK-NEXT:      vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<%4>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[IN_VEC_PTR]]>
 ; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
 ; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<%3>
-; CHECK-NEXT:      vp<%5> = vector-pointer ir<%arrayidx2>
-; CHECK-NEXT:      WIDEN store vp<%5>, ir<%extract_a>
-; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<%3>
-; CHECK-NEXT:      vp<%6> = vector-pointer ir<%arrayidx4>
-; CHECK-NEXT:      WIDEN store vp<%6>, ir<%extract_b>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:      WIDEN store vp<[[OUT_A_VEC_PTR]]>, ir<%extract_a>
+; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx4>
+; CHECK-NEXT:      WIDEN store vp<[[OUT_B_VEC_PTR]]>, ir<%extract_b>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 entry:
@@ -59,8 +59,8 @@ exit:
 define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: LV: Checking a loop in 'struct_return_f32_replicate'
 ; CHECK:       VPlan 'Initial VPlan for VF={2},UF>=1' {
-; CHECK-NEXT:  Live-in vp<%0> = VF * UF
-; CHECK-NEXT:  Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT:  Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -71,22 +71,22 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<%3>
-; CHECK-NEXT:      vp<%4> = vector-pointer ir<%arrayidx>
-; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<%4>
+; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:      WIDEN ir<%in_val> = load vp<[[IN_VEC_PTR]]>
 ; CHECK-NEXT:      REPLICATE ir<%call> = call @foo(ir<%in_val>)
 ; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
 ; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<%3>
-; CHECK-NEXT:      vp<%5> = vector-pointer ir<%arrayidx2>
-; CHECK-NEXT:      WIDEN store vp<%5>, ir<%extract_a>
-; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<%3>
-; CHECK-NEXT:      vp<%6> = vector-pointer ir<%arrayidx4>
-; CHECK-NEXT:      WIDEN store vp<%6>, ir<%extract_b>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%out_a>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[OUT_A_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx2>
+; CHECK-NEXT:      WIDEN store vp<[[OUT_A_VEC_PTR]]>, ir<%extract_a>
+; CHECK-NEXT:      CLONE ir<%arrayidx4> = getelementptr inbounds ir<%out_b>, vp<[[STEPS]]>
+; CHECK-NEXT:      vp<[[OUT_B_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx4>
+; CHECK-NEXT:      WIDEN store vp<[[OUT_B_VEC_PTR]]>, ir<%extract_b>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 entry:

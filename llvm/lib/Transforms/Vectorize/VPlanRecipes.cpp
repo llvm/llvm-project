@@ -1545,8 +1545,7 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
                                           Ctx.CostKind);
   }
   case Instruction::ExtractValue:
-    return Ctx.TTI.getInstructionCost(cast<Instruction>(getUnderlyingValue()),
-                                      TTI::TCK_RecipThroughput);
+    return 0;
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());

@@ -8625,9 +8625,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(Operands);
     Type *I32Ty = IntegerType::getInt32Ty(I->getContext());
-    for (unsigned Idx : cast<ExtractValueInst>(I)->getIndices())
-      NewOps.push_back(
-          Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Idx, false)));
+    auto *EVI = cast<ExtractValueInst>(I);
+    assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
+    unsigned Idx = EVI->getIndices()[0];
+    NewOps.push_back(Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Idx, false)));
     return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
   }
   };
