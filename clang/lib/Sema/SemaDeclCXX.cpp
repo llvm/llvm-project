@@ -10757,6 +10757,22 @@ static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
   }
 }
 
+static void diagnoseInvalidDeclaratorChunks(Sema &S, Declarator &D,
+                                            unsigned Kind) {
+  if (D.isInvalidType() || D.getNumTypeObjects() <= 1)
+    return;
+
+  DeclaratorChunk &Chunk = D.getTypeObject(D.getNumTypeObjects() - 1);
+  if (Chunk.Kind == DeclaratorChunk::Paren ||
+      Chunk.Kind == DeclaratorChunk::Function)
+    return;
+
+  SourceLocation PointerLoc = Chunk.getSourceRange().getBegin();
+  S.Diag(PointerLoc, diag::err_invalid_ctor_dtor_decl)
+      << Kind << Chunk.getSourceRange();
+  D.setInvalidType();
+}
+
 QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
                                           StorageClass &SC) {
   bool isVirtual = D.getDeclSpec().isVirtualSpecified();
@@ -10792,6 +10808,7 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_constructor);
+  diagnoseInvalidDeclaratorChunks(*this, D, /*constructor*/ 0);
 
   // C++0x [class.ctor]p4:
   //   A constructor shall not be declared with a ref-qualifier.
@@ -10958,6 +10975,7 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   }
 
   checkMethodTypeQualifiers(*this, D, diag::err_invalid_qualified_destructor);
+  diagnoseInvalidDeclaratorChunks(*this, D, /*destructor*/ 1);
 
   // C++0x [class.dtor]p2:
   //   A destructor shall not be declared with a ref-qualifier.
@@ -13217,18 +13235,18 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         if (getLangOpts().CPlusPlus11) {
           // Convert 'using X::Y;' to 'using Y = X::Y;'.
           Diag(SS.getBeginLoc(), diag::note_using_decl_class_member_workaround)
-            << 0 // alias declaration
-            << FixItHint::CreateInsertion(SS.getBeginLoc(),
-                                          NameInfo.getName().getAsString() +
-                                              " = ");
+              << diag::MemClassWorkaround::AliasDecl
+              << FixItHint::CreateInsertion(SS.getBeginLoc(),
+                                            NameInfo.getName().getAsString() +
+                                                " = ");
         } else {
           // Convert 'using X::Y;' to 'typedef X::Y Y;'.
           SourceLocation InsertLoc = getLocForEndOfToken(NameInfo.getEndLoc());
           Diag(InsertLoc, diag::note_using_decl_class_member_workaround)
-            << 1 // typedef declaration
-            << FixItHint::CreateReplacement(UsingLoc, "typedef")
-            << FixItHint::CreateInsertion(
-                   InsertLoc, " " + NameInfo.getName().getAsString());
+              << diag::MemClassWorkaround::TypedefDecl
+              << FixItHint::CreateReplacement(UsingLoc, "typedef")
+              << FixItHint::CreateInsertion(
+                     InsertLoc, " " + NameInfo.getName().getAsString());
         }
       } else if (R->getAsSingle<VarDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
@@ -13241,8 +13259,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << 2 // reference declaration
-          << FixIt;
+            << diag::MemClassWorkaround::ReferenceDecl << FixIt;
       } else if (R->getAsSingle<EnumConstantDecl>()) {
         // Don't provide a fixit outside C++11 mode; we don't want to suggest
         // repeating the type of the enumeration here, and we can't do so if
@@ -13256,8 +13273,10 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
         }
 
         Diag(UsingLoc, diag::note_using_decl_class_member_workaround)
-          << (getLangOpts().CPlusPlus11 ? 4 : 3) // const[expr] variable
-          << FixIt;
+            << (getLangOpts().CPlusPlus11
+                    ? diag::MemClassWorkaround::ConstexprVar
+                    : diag::MemClassWorkaround::ConstVar)
+            << FixIt;
       }
     }
 

@@ -3,19 +3,21 @@ add_flang_library(FIRTestOpenACCInterfaces
 
   DEPENDS
   FIRDialect
-  FIRBuilder
-  FIROpenACCSupport
-  FIRSupport
-  FIRTransforms
-  MLIROpenACCDialect
-
-  LINK_LIBS
-  FIRDialect
-  FIRBuilder
   FIROpenACCSupport
   FIRSupport
   MLIRIR
   MLIROpenACCDialect
+  MLIRPass
   MLIRSupport
-  MLIRFuncDialect
+
+  LINK_LIBS
+  FIRDialect
+  FIROpenACCSupport
+  FIRSupport
+
+  MLIR_LIBS
+  MLIRIR
+  MLIROpenACCDialect
+  MLIRPass
+  MLIRSupport
 )

@@ -2066,7 +2066,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = CharUnits::One();
     else {
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
-        return false;
+        return this->emitInvalid(E);
 
       if (Kind == UETT_SizeOf)
         Size = ASTCtx.getTypeSizeInChars(ArgType);
@@ -2139,6 +2139,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
 
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
   }
 
   return false;
@@ -4237,6 +4247,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
@@ -4805,12 +4816,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>

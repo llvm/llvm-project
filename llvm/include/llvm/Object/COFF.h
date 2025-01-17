@@ -392,6 +392,11 @@ public:
            getValue() == 0;
   }
 
+  bool isEmptySectionDeclaration() const {
+    return isSection() && getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED &&
+           getValue() == 0;
+  }
+
   bool isWeakExternal() const {
     return getStorageClass() == COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
   }
