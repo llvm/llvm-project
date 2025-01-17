@@ -1951,7 +1951,10 @@ cc_library(
             "lib/Interpreter/*.cpp",
             "lib/Interpreter/*.h",
         ],
-        exclude = ["lib/Interpreter/Wasm.cpp"],
+        exclude = [
+            "lib/Interpreter/Wasm.cpp",
+            "lib/Interpreter/Wasm.h",
+        ],
     ),
     hdrs = glob(["include/clang/Interpreter/*.h"]),
     includes = ["include"],
