@@ -303,6 +303,7 @@ void WindowScheduler::generateTripleMBB() {
       if (Register AntiReg = getAntiRegister(MI))
         DefPairs[MI->getOperand(0).getReg()] = AntiReg;
     auto *NewMI = MF->CloneMachineInstr(MI);
+    Context->LIS->RemoveMachineInstrFromMaps(*NewMI);
     MBB->push_back(NewMI);
     TriMIs.push_back(NewMI);
     TriToOri[NewMI] = MI;
@@ -316,6 +317,7 @@ void WindowScheduler::generateTripleMBB() {
           (MI->isTerminator() && Cnt < DuplicateNum - 1))
         continue;
       auto *NewMI = MF->CloneMachineInstr(MI);
+      Context->LIS->RemoveMachineInstrFromMaps(*NewMI);
       DenseMap<Register, Register> NewDefs;
       // New defines are updated.
       for (auto MO : NewMI->all_defs())
@@ -653,8 +655,6 @@ void WindowScheduler::updateLiveIntervals() {
       if (!is_contained(UsedRegs, Reg))
         UsedRegs.push_back(Reg);
     }
-    // Remove the residual slot index of newly cloned MI.
-    Context->LIS->RemoveMachineInstrFromMaps(MI);
   }
   Context->LIS->repairIntervalsInRange(MBB, MBB->begin(), MBB->end(), UsedRegs);
 }
