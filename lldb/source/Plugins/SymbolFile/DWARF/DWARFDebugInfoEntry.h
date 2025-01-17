@@ -53,19 +53,26 @@ public:
 
   using Recurse = DWARFBaseDIE::Recurse;
 
-  // Get all attribute values for a given DIE, including following any
-  // specification or abstract origin attributes and including those in the
-  // results.
-  //
-  // When following specifications/abstract origins, the attributes
-  // on the referring DIE are guaranteed to be visited before the attributes of
-  // the referenced DIE.
-  //
-  // \param[in]
-  // \param[in]
-  //
-  // \returns output may have duplicate entries
-  DWARFAttributes GetAttributes(DWARFUnit *cu,
+  /// Get all attribute values for a given DIE, including following any
+  /// specification or abstract origin attributes and including those in the
+  /// results.
+  ///
+  /// When following specifications/abstract origins, the attributes
+  /// on the referring DIE are guaranteed to be visited before the attributes of
+  /// the referenced DIE.
+  ///
+  /// \param[in] cu DWARFUnit that this entry belongs to.
+  ///
+  /// \param[in] recurse If set to \c Recurse::yes, will include attributes
+  /// on DIEs referenced via \c DW_AT_specification and \c DW_AT_abstract_origin
+  /// (including across multiple levels of indirection).
+  ///
+  /// \returns DWARFAttributes that include all attributes found on this DIE
+  /// (and possibly referenced DIEs). Attributes may appear multiple times
+  /// (e.g., if a declaration and definition both specify the same attribute).
+  /// On failure, the returned DWARFAttributes will be empty.
+  ///
+  DWARFAttributes GetAttributes(const DWARFUnit *cu,
                                 Recurse recurse = Recurse::yes) const;
 
   dw_offset_t GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
@@ -187,12 +194,6 @@ protected:
   /// A copy of the DW_TAG value so we don't have to go through the compile
   /// unit abbrev table
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
-
-private:
-  // Helper for the public \ref DWARFDebugInfoEntry::GetAttributes API.
-  bool GetAttributes(DWARFUnit const *cu, llvm::SmallVector<DWARFDIE> &worklist,
-                     llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
-                     DWARFAttributes &attributes) const;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

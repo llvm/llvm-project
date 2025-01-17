@@ -281,10 +281,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   return !ranges.empty();
 }
 
-bool DWARFDebugInfoEntry::GetAttributes(
-    DWARFUnit const *cu, llvm::SmallVector<DWARFDIE> &worklist,
-    llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
-    DWARFAttributes &attributes) const {
+/// Helper for the public \ref DWARFDebugInfoEntry::GetAttributes API.
+static bool GetAttributes(DWARFUnit const *cu,
+                          llvm::SmallVector<DWARFDIE> &worklist,
+                          llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
+                          DWARFAttributes &attributes) {
   assert(!worklist.empty());
   assert(cu);
 
@@ -348,7 +349,7 @@ bool DWARFDebugInfoEntry::GetAttributes(
   return true;
 }
 
-DWARFAttributes DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
+DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
                                                    Recurse recurse) const {
   // FIXME: use ElaboratingDIEIterator to follow specifications/abstract origins
   // instead of maintaining our own worklist/seen list.
@@ -365,7 +366,7 @@ DWARFAttributes DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
   seen.insert(this);
 
   while (!worklist.empty()) {
-    if (!GetAttributes(cu, worklist, seen, attributes)) {
+    if (!::GetAttributes(cu, worklist, seen, attributes)) {
       attributes.Clear();
       break;
     }

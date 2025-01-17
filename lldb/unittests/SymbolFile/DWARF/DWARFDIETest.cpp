@@ -584,8 +584,6 @@ DWARF:
 
   auto attrs = func.GetAttributes(DWARFDebugInfoEntry::Recurse::yes);
   EXPECT_EQ(attrs.Size(), 3U);
-
-  // TODO: check that we do form a cycle with the DIEs
 }
 
 TEST_P(GetAttributesTestFixture,
