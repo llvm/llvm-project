@@ -14171,7 +14171,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       }
       assert(((E->getOpcode() == Instruction::GetElementPtr &&
                !isa<GetElementPtrInst>(I)) ||
-               E->State == TreeEntry::SplitVectorize ||
+              E->State == TreeEntry::SplitVectorize ||
               (isVectorLikeInstWithConstOps(LastInst) &&
                isVectorLikeInstWithConstOps(I)) ||
               (GatheredLoadsEntriesFirst.has_value() &&
