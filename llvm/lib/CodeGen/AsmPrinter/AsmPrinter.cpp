@@ -2896,10 +2896,11 @@ void AsmPrinter::emitJumpTableInfo() {
   int NextHotJumpTableIndex = 0, NextColdJumpTableIndex = JT.size() - 1;
   JumpTableIndices.resize(JT.size());
   for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
-    if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold)
+    if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
       JumpTableIndices[NextColdJumpTableIndex--] = JTI;
-    else
+    } else {
       JumpTableIndices[NextHotJumpTableIndex++] = JTI;
+    }
   }
 
   if (NextHotJumpTableIndex != 0) {
@@ -2945,7 +2946,7 @@ void AsmPrinter::emitJumpTables(ArrayRef<unsigned> JumpTableIndices,
 
   const auto &JT = MJTI.getJumpTables();
   for (unsigned Index = 0, e = JumpTableIndices.size(); Index != e; ++Index) {
-    const std::vector<MachineBasicBlock *> &JTBBs =
+    ArrayRef<MachineBasicBlock *> JTBBs =
         JT[JumpTableIndices[Index]].MBBs;
 
     // If this jump table was deleted, ignore it.
