@@ -1454,7 +1454,8 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 }
 
 bool MasmParser::checkForValidSection() {
-  if (!ParsingMSInlineAsm && !getStreamer().getCurrentFragment()) {
+  if (!ParsingMSInlineAsm && !(getStreamer().getCurrentFragment() &&
+                               getStreamer().getCurrentSectionOnly())) {
     Out.initSections(false, getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
