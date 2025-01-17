@@ -12,7 +12,10 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
-    libc.src.stdio.fopen
+    .time_utils
+    .time_constants
+    libc.include.time
+    libc.hdr.types.struct_tm
     libc.src.time.asctime
 )
 
@@ -28,9 +31,7 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
-    libc.src.time.timezone
-    libc.src.time.asctime_r
-    libc.src.stdio.fopen
+    .time_utils
     libc.src.time.asctime_r
 )
 
@@ -46,6 +47,7 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
+    .time_utils
     libc.src.time.ctime
 )
 
@@ -76,7 +78,7 @@ add_libc_unittest(
   CXX_STANDARD
     20
   DEPENDS
-    libc.src.time.localtime
+    libc.src.stdio.fopen
 )
 
 add_libc_unittest(
@@ -165,10 +167,12 @@ add_libc_unittest(
   HDRS
     TmMatcher.h
   DEPENDS
-    libc.src.time.gmtime
     libc.src.__support.CPP.limits
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+    libc.src.time.localtime
+    libc.src.time.gmtime
+    libc.src.stdio.fopen
 )
 
 add_libc_unittest(
