@@ -58,6 +58,8 @@ code bases.
   containing strict-aliasing violations. The new default behavior can be
   disabled using ``-fno-pointer-tbaa``.
 
+- The Objective-C ARC migrator (ARCMigrate) has been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 

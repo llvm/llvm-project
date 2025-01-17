@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Options.h"
@@ -168,35 +167,6 @@ CreateFrontendAction(CompilerInstance &CI) {
   if (FEOpts.FixAndRecompile) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }
-
-#if CLANG_ENABLE_ARCMT
-  if (CI.getFrontendOpts().ProgramAction != frontend::MigrateSource &&
-      CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
-    // Potentially wrap the base FE action in an ARC Migrate Tool action.
-    switch (FEOpts.ARCMTAction) {
-    case FrontendOptions::ARCMT_None:
-      break;
-    case FrontendOptions::ARCMT_Check:
-      Act = std::make_unique<arcmt::CheckAction>(std::move(Act));
-      break;
-    case FrontendOptions::ARCMT_Modify:
-      Act = std::make_unique<arcmt::ModifyAction>(std::move(Act));
-      break;
-    case FrontendOptions::ARCMT_Migrate:
-      Act = std::make_unique<arcmt::MigrateAction>(std::move(Act),
-                                     FEOpts.MTMigrateDir,
-                                     FEOpts.ARCMTMigrateReportOut,
-                                     FEOpts.ARCMTMigrateEmitARCErrors);
-      break;
-    }
-
-    if (FEOpts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
-      Act = std::make_unique<arcmt::ObjCMigrateAction>(std::move(Act),
-                                                        FEOpts.MTMigrateDir,
-                                                        FEOpts.ObjCMTAction);
-    }
-  }
-#endif
 
   // Wrap the base FE action in an extract api action to generate
   // symbol graph as a biproduct of compilation (enabled with
