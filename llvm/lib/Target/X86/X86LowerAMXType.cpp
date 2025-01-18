@@ -273,8 +273,8 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     break;
   }
   case Intrinsic::x86_tcvtrowd2ps_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16h_internal:
-  case Intrinsic::x86_tcvtrowps2pbf16l_internal:
+  case Intrinsic::x86_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_tcvtrowps2bf16l_internal:
   case Intrinsic::x86_tcvtrowps2phh_internal:
   case Intrinsic::x86_tcvtrowps2phl_internal:
   case Intrinsic::x86_tilemovrow_internal: {

@@ -1599,11 +1599,8 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
     TypeStr = getStringValue(IO, "Type");
-    if (TypeStr.starts_with("SHT_") || isInteger(TypeStr)) {
+    if (TypeStr.starts_with("SHT_") || isInteger(TypeStr))
       IO.mapRequired("Type", Type);
-      if (IO.error())
-        Type = ELF::SHT_NULL;
-    }
   }
 
   if (TypeStr == "Fill") {
