@@ -111,7 +111,7 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
@@ -230,7 +230,7 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   {
     // Can vectorize St0,St1.
@@ -266,7 +266,7 @@ define void @foo() {
   };
 
   sandboxir::Context Ctx(C);
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
