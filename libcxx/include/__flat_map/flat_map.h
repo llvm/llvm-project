@@ -131,7 +131,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __allocator_ctor_constraint =
       _And<uses_allocator<key_container_type, _Allocator>, uses_allocator<mapped_container_type, _Allocator>>::value;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare, _Compare>;
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare>;
 
 public:
   // [flat.map.cons], construct/copy/destroy
@@ -1187,22 +1187,20 @@ template <ranges::input_range _Range,
           class _Compare   = less<__range_key_type<_Range>>,
           class _Allocator = allocator<byte>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
-flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
-    -> flat_map<
-        __range_key_type<_Range>,
-        __range_mapped_type<_Range>,
-        _Compare,
-        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_map<
+    __range_key_type<_Range>,
+    __range_mapped_type<_Range>,
+    _Compare,
+    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
-flat_map(from_range_t, _Range&&, _Allocator)
-    -> flat_map<
-        __range_key_type<_Range>,
-        __range_mapped_type<_Range>,
-        less<__range_key_type<_Range>>,
-        vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-        vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+flat_map(from_range_t, _Range&&, _Allocator) -> flat_map<
+    __range_key_type<_Range>,
+    __range_mapped_type<_Range>,
+    less<__range_key_type<_Range>>,
+    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
+    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
   requires(!__is_allocator<_Compare>::value)
