@@ -4009,8 +4009,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
   /// CAUTION: this assumes that the intrinsic will handle arbitrary
-  ///          bit-patterns (for example, if the intrinsic only accepts floats
-  ///          for var1, we require that it doesn't care if inputs are NaNs).
+  ///          bit-patterns (for example, if the intrinsic accepts floats for
+  ///          var1, we require that it doesn't care if inputs are NaNs).
   ///
   /// For example, this can be applied to the Arm NEON vector table intrinsics
   /// (tbl{1,2,3,4}).
