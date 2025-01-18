@@ -454,3 +454,19 @@ Sections:
 # LINK-NEXT:   [ 2] .ref.first PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      1
 # LINK-NEXT:   [ 3] .ref.last  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      4
 # LINK-NEXT:   [ 4] .shstrtab
+
+# Must not crash under Msan.
+# RUN: not yaml2obj %s --docnum=15 -o %t15 2>&1 | FileCheck %s --check-prefix=FOO_SECTION
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: FOO_SECTION
+    Size: 0x10
+    Content: [[<none>]]
+
+# FOO_SECTION: invalid hex32 number

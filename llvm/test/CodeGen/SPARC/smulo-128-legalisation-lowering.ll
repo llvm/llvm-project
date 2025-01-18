@@ -114,7 +114,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    addxcc %o0, %o3, %l6
 ; SPARC-NEXT:    addcc %l2, %o1, %l2
 ; SPARC-NEXT:    sra %i4, 31, %i4
-; SPARC-NEXT:    umul %g4, %i4, %g4
+; SPARC-NEXT:    umul %i4, %g4, %g4
 ; SPARC-NEXT:    rd %y, %o0
 ; SPARC-NEXT:    addxcc %l6, %l7, %l6
 ; SPARC-NEXT:    umul %i4, %g2, %g2

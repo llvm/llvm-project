@@ -1019,7 +1019,7 @@ void WasmObjectWriter::writeElemSection(
   encodeSLEB128(InitialTableOffset, W->OS);
   W->OS << char(wasm::WASM_OPCODE_END);
 
-  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+  if (Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) {
     // We only write active function table initializers, for which the elem kind
     // is specified to be written as 0x00 and interpreted to mean "funcref".
     const uint8_t ElemKind = 0;

@@ -1,3 +1,5 @@
+../generic/common/clc_degrees.cl
+../generic/common/clc_radians.cl
 ../generic/common/clc_smoothstep.cl
 ../generic/geometric/clc_dot.cl
 ../generic/math/clc_ceil.cl
