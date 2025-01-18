@@ -495,13 +495,14 @@ public:
     return ProcModels[I->second];
   }
 
-  CodeGenProcModel &getProcModel(const Record *ModelDef) {
+  const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
     ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
     return ProcModels[I->second];
   }
-  const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
-    return const_cast<CodeGenSchedModels *>(this)->getProcModel(ModelDef);
+  CodeGenProcModel &getProcModel(const Record *ModelDef) {
+    return const_cast<CodeGenProcModel &>(
+        static_cast<const CodeGenSchedModels &>(*this).getProcModel(ModelDef));
   }
 
   // Iterate over the unique processor models.
@@ -529,14 +530,14 @@ public:
   const CodeGenSchedRW &getSchedRW(unsigned Idx, bool IsRead) const {
     return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
-  CodeGenSchedRW &getSchedRW(const Record *Def) {
+  const CodeGenSchedRW &getSchedRW(const Record *Def) const {
     bool IsRead = Def->isSubClassOf("SchedRead");
     unsigned Idx = getSchedRWIdx(Def, IsRead);
-    return const_cast<CodeGenSchedRW &>(IsRead ? getSchedRead(Idx)
-                                               : getSchedWrite(Idx));
+    return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
-  const CodeGenSchedRW &getSchedRW(const Record *Def) const {
-    return const_cast<CodeGenSchedModels &>(*this).getSchedRW(Def);
+  CodeGenSchedRW &getSchedRW(const Record *Def) {
+    return const_cast<CodeGenSchedRW &>(
+        static_cast<const CodeGenSchedModels &>(*this).getSchedRW(Def));
   }
 
   unsigned getSchedRWIdx(const Record *Def, bool IsRead) const;
