@@ -73,6 +73,7 @@ class TestStepUntilAPI(TestBase):
         self._do_until(None, None, self.less_than_two, self.less_than_two)
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     def test_hitting_discontinuous(self):
         """Test SBThread.StepOverUntil - targeting a line and hitting it -- with
         discontinuous functions"""
@@ -91,6 +92,7 @@ class TestStepUntilAPI(TestBase):
         )
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     def test_missing_discontinuous(self):
         """Test SBThread.StepOverUntil - targeting a line and missing it by
         stepping out to call site -- with discontinuous functions"""
@@ -117,6 +119,7 @@ class TestStepUntilAPI(TestBase):
         )
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
+    @skipIf(archs=no_match(["x86_64", "aarch64"]))
     def test_bad_line_discontinuous(self):
         """Test that we get an error if attempting to step outside the current
         function -- and the function is discontinuous"""
