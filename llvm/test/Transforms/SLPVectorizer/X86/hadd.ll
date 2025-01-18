@@ -23,7 +23,7 @@ define <2 x double> @test_v2f64(<2 x double> %a, <2 x double> %b) {
   %b1 = extractelement <2 x double> %b, i32 1
   %r0 = fadd double %a0, %a1
   %r1 = fadd double %b0, %b1
-  %r00 = insertelement <2 x double> undef, double %r0, i32 0
+  %r00 = insertelement <2 x double> zeroinitializer, double %r0, i32 0
   %r01 = insertelement <2 x double>  %r00, double %r1, i32 1
   ret <2 x double> %r01
 }
@@ -47,7 +47,7 @@ define <4 x float> @test_v4f32(<4 x float> %a, <4 x float> %b) {
   %r1 = fadd float %a2, %a3
   %r2 = fadd float %b0, %b1
   %r3 = fadd float %b2, %b3
-  %r00 = insertelement <4 x float> undef, float %r0, i32 0
+  %r00 = insertelement <4 x float> zeroinitializer, float %r0, i32 0
   %r01 = insertelement <4 x float>  %r00, float %r1, i32 1
   %r02 = insertelement <4 x float>  %r01, float %r2, i32 2
   %r03 = insertelement <4 x float>  %r02, float %r3, i32 3
@@ -67,7 +67,7 @@ define <2 x i64> @test_v2i64(<2 x i64> %a, <2 x i64> %b) {
   %b1 = extractelement <2 x i64> %b, i32 1
   %r0 = add i64 %a0, %a1
   %r1 = add i64 %b0, %b1
-  %r00 = insertelement <2 x i64> undef, i64 %r0, i32 0
+  %r00 = insertelement <2 x i64> zeroinitializer, i64 %r0, i32 0
   %r01 = insertelement <2 x i64>  %r00, i64 %r1, i32 1
   ret <2 x i64> %r01
 }
@@ -91,7 +91,7 @@ define <4 x i32> @test_v4i32(<4 x i32> %a, <4 x i32> %b) {
   %r1 = add i32 %a2, %a3
   %r2 = add i32 %b0, %b1
   %r3 = add i32 %b2, %b3
-  %r00 = insertelement <4 x i32> undef, i32 %r0, i32 0
+  %r00 = insertelement <4 x i32> zeroinitializer, i32 %r0, i32 0
   %r01 = insertelement <4 x i32>  %r00, i32 %r1, i32 1
   %r02 = insertelement <4 x i32>  %r01, i32 %r2, i32 2
   %r03 = insertelement <4 x i32>  %r02, i32 %r3, i32 3
@@ -129,7 +129,7 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) {
   %r5 = add i16 %b2, %b3
   %r6 = add i16 %b4, %b5
   %r7 = add i16 %b6, %b7
-  %r00 = insertelement <8 x i16> undef, i16 %r0, i32 0
+  %r00 = insertelement <8 x i16> zeroinitializer, i16 %r0, i32 0
   %r01 = insertelement <8 x i16>  %r00, i16 %r1, i32 1
   %r02 = insertelement <8 x i16>  %r01, i16 %r2, i32 2
   %r03 = insertelement <8 x i16>  %r02, i16 %r3, i32 3
@@ -204,7 +204,7 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
   %r1 = fadd double %b0, %b1
   %r2 = fadd double %a2, %a3
   %r3 = fadd double %b2, %b3
-  %r00 = insertelement <4 x double> undef, double %r0, i32 0
+  %r00 = insertelement <4 x double> zeroinitializer, double %r0, i32 0
   %r01 = insertelement <4 x double>  %r00, double %r1, i32 1
   %r02 = insertelement <4 x double>  %r01, double %r2, i32 2
   %r03 = insertelement <4 x double>  %r02, double %r3, i32 3
@@ -213,16 +213,41 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 
 ; PR50392
 define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b) {
-; CHECK-LABEL: @test_v4f64_partial_swizzle(
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> <double undef, double poison>, <4 x i32> <i32 0, i32 2, i32 1, i32 poison>
-; CHECK-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[TMP4]], double [[R3]], i64 3
-; CHECK-NEXT:    ret <4 x double> [[R03]]
+; SSE-LABEL: @test_v4f64_partial_swizzle(
+; SSE-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
+; SSE-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
+; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; SSE-NEXT:    [[R0212:%.*]] = insertelement <4 x double> [[TMP4]], double 0.000000e+00, i64 1
+; SSE-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R0212]], double [[R3]], i64 3
+; SSE-NEXT:    ret <4 x double> [[R03]]
+;
+; SLM-LABEL: @test_v4f64_partial_swizzle(
+; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i64 0
+; SLM-NEXT:    [[A1:%.*]] = extractelement <4 x double> [[A]], i64 1
+; SLM-NEXT:    [[R0:%.*]] = fadd double [[A0]], [[A1]]
+; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
+; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[B]], <4 x double> poison, <2 x i32> <i32 0, i32 3>
+; SLM-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; SLM-NEXT:    [[R00:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, double [[R0]], i64 0
+; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SLM-NEXT:    [[R031:%.*]] = shufflevector <4 x double> [[R00]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; SLM-NEXT:    ret <4 x double> [[R031]]
+;
+; AVX-LABEL: @test_v4f64_partial_swizzle(
+; AVX-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
+; AVX-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
+; AVX-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
+; AVX-NEXT:    [[R0212:%.*]] = insertelement <4 x double> [[TMP4]], double 0.000000e+00, i64 1
+; AVX-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R0212]], double [[R3]], i64 3
+; AVX-NEXT:    ret <4 x double> [[R03]]
 ;
   %a0 = extractelement <4 x double> %a, i64 0
   %a1 = extractelement <4 x double> %a, i64 1
@@ -233,7 +258,7 @@ define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b
   %r0 = fadd double %a0, %a1
   %r2 = fadd double %b0, %b1
   %r3 = fadd double %b2, %b3
-  %r00 = insertelement <4 x double> undef, double %r0, i32 0
+  %r00 = insertelement <4 x double> zeroinitializer, double %r0, i32 0
   %r02 = insertelement <4 x double>  %r00, double %r2, i32 2
   %r03 = insertelement <4 x double>  %r02, double %r3, i32 3
   ret <4 x double> %r03
@@ -290,7 +315,7 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b) {
   %r5 = fadd float %a6, %a7
   %r6 = fadd float %b4, %b5
   %r7 = fadd float %b6, %b7
-  %r00 = insertelement <8 x float> undef, float %r0, i32 0
+  %r00 = insertelement <8 x float> zeroinitializer, float %r0, i32 0
   %r01 = insertelement <8 x float>  %r00, float %r1, i32 1
   %r02 = insertelement <8 x float>  %r01, float %r2, i32 2
   %r03 = insertelement <8 x float>  %r02, float %r3, i32 3
@@ -340,7 +365,7 @@ define <4 x i64> @test_v4i64(<4 x i64> %a, <4 x i64> %b) {
   %r1 = add i64 %b0, %b1
   %r2 = add i64 %a2, %a3
   %r3 = add i64 %b2, %b3
-  %r00 = insertelement <4 x i64> undef, i64 %r0, i32 0
+  %r00 = insertelement <4 x i64> zeroinitializer, i64 %r0, i32 0
   %r01 = insertelement <4 x i64>  %r00, i64 %r1, i32 1
   %r02 = insertelement <4 x i64>  %r01, i64 %r2, i32 2
   %r03 = insertelement <4 x i64>  %r02, i64 %r3, i32 3
@@ -398,7 +423,7 @@ define <8 x i32> @test_v8i32(<8 x i32> %a, <8 x i32> %b) {
   %r5 = add i32 %a6, %a7
   %r6 = add i32 %b4, %b5
   %r7 = add i32 %b6, %b7
-  %r00 = insertelement <8 x i32> undef, i32 %r0, i32 0
+  %r00 = insertelement <8 x i32> zeroinitializer, i32 %r0, i32 0
   %r01 = insertelement <8 x i32>  %r00, i32 %r1, i32 1
   %r02 = insertelement <8 x i32>  %r01, i32 %r2, i32 2
   %r03 = insertelement <8 x i32>  %r02, i32 %r3, i32 3
@@ -484,7 +509,7 @@ define <16 x i16> @test_v16i16(<16 x i16> %a, <16 x i16> %b) {
   %r13 = add i16 %b10, %b11
   %r14 = add i16 %b12, %b13
   %r15 = add i16 %b14, %b15
-  %rv0  = insertelement <16 x i16> undef, i16 %r0 , i32 0
+  %rv0  = insertelement <16 x i16> zeroinitializer, i16 %r0 , i32 0
   %rv1  = insertelement <16 x i16> %rv0 , i16 %r1 , i32 1
   %rv2  = insertelement <16 x i16> %rv1 , i16 %r2 , i32 2
   %rv3  = insertelement <16 x i16> %rv2 , i16 %r3 , i32 3
