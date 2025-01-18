@@ -670,8 +670,8 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   return NewData;
 }
 
-static Error removeNote(Object &Obj, endianness Endianness,
-                        ArrayRef<RemoveNoteInfo> NotesToRemove) {
+static Error removeNotes(Object &Obj, endianness Endianness,
+                         ArrayRef<RemoveNoteInfo> NotesToRemove) {
   for (auto &Sec : Obj.sections()) {
     // TODO: Support note sections in segments
     if (Sec.Type != SHT_NOTE || Sec.ParentSegment || !Sec.hasContents())
@@ -885,7 +885,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                      : endianness::big;
 
   if (!ELFConfig.NotesToRemove.empty()) {
-    if (Error Err = removeNote(Obj, E, ELFConfig.NotesToRemove))
+    if (Error Err = removeNotes(Obj, E, ELFConfig.NotesToRemove))
       return Err;
   }
 
