@@ -216,7 +216,14 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 #include "clang/Basic/BuiltinsHexagon.inc"
 #undef GET_BUILTIN_INFOS
 };
-static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsHexagon.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumBuiltins);
 
 bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
   std::string VS = "hvxv" + HVXVersion;
@@ -277,5 +284,6 @@ void HexagonTargetInfo::fillValidCPUList(
 
 llvm::SmallVector<Builtin::InfosShard>
 HexagonTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_HEXAGON_"}};
 }
