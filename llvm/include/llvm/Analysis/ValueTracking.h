@@ -1245,7 +1245,11 @@ bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO, Value *&Start,
                            Value *&Step);
 
 /// Analogous to the above, but starting from the binary operator
-bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P, Value *&Start,
+bool matchSimpleRecurrence(const Instruction *I, PHINode *&P, Value *&Start,
+                           Value *&Step);
+
+/// Analogous to the above, but also supporting non-binary operators.
+bool matchSimpleRecurrence(const PHINode *P, Instruction *&BO, Value *&Start,
                            Value *&Step);
 
 /// Return true if RHS is known to be implied true by LHS.  Return false if
