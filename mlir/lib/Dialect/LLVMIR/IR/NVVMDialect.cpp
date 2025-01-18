@@ -138,6 +138,26 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
                                          getLoc());
 }
 
+LogicalResult CvtFloatToTF32Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (getRnd()) {
+  case RndMode::RNA:
+    if (getRelu())
+      return emitError("Relu not supported with rna rounding mode.");
+    break;
+  case RndMode::RN:
+  case RndMode::RZ:
+    if (getSat() != NVVM::SaturationMode::NONE)
+      return emitError(
+          "Saturation mode not supported with rn/rz rounding modes.");
+    break;
+  default:
+    return emitError(
+        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+  }
+  return success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
@@ -1161,6 +1181,26 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
     return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
   }
   llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
+}
+
+llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                                     NVVM::SaturationMode sat,
+                                                     bool hasRelu) {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (rnd) {
+  case RndMode::RN:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rn_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rn;
+  case RndMode::RZ:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rz_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rz;
+  case RndMode::RNA:
+    return (sat == NVVM::SaturationMode::SATFINITE)
+               ? llvm::Intrinsic::nvvm_f2tf32_rna_satfinite
+               : llvm::Intrinsic::nvvm_f2tf32_rna;
+  default:
+    llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
 }
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
