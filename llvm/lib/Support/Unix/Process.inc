@@ -18,16 +18,12 @@
 #include <mutex>
 #include <optional>
 #include <fcntl.h>
-#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
 #include <sys/stat.h>
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
