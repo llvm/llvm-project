@@ -33,16 +33,15 @@ using namespace llvm::object;
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
-Error executeObjcopyOnBinary(
-    const MultiFormatConfig &Config, object::Binary &In, raw_ostream &Out,
-    function_ref<void(const Twine &)> WarningCallback) {
+Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
+                             object::Binary &In, raw_ostream &Out) {
   if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In)) {
     Expected<const ELFConfig &> ELFConfig = Config.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
 
     return elf::executeObjcopyOnBinary(Config.getCommonConfig(), *ELFConfig,
-                                       *ELFBinary, Out, WarningCallback);
+                                       *ELFBinary, Out);
   }
   if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In)) {
     Expected<const COFFConfig &> COFFConfig = Config.getCOFFConfig();
@@ -58,12 +57,12 @@ Error executeObjcopyOnBinary(
       return MachOConfig.takeError();
 
     return macho::executeObjcopyOnBinary(Config.getCommonConfig(), *MachOConfig,
-                                         *MachOBinary, Out, WarningCallback);
+                                         *MachOBinary, Out);
   }
   if (auto *MachOUniversalBinary =
           dyn_cast<object::MachOUniversalBinary>(&In)) {
     return macho::executeObjcopyOnMachOUniversalBinary(
-        Config, *MachOUniversalBinary, Out, WarningCallback);
+        Config, *MachOUniversalBinary, Out);
   }
   if (auto *WasmBinary = dyn_cast<object::WasmObjectFile>(&In)) {
     Expected<const WasmConfig &> WasmConfig = Config.getWasmConfig();

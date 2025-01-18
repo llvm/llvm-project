@@ -671,24 +671,11 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
 }
 
 static Error removeNote(Object &Obj, endianness Endianness,
-                        ArrayRef<RemoveNoteInfo> NotesToRemove,
-                        function_ref<void(const Twine &)> WarningCallback) {
-  // TODO: Support note segments.
-  for (Segment &Seg : Obj.segments()) {
-    if (Seg.Type == PT_NOTE) {
-      WarningCallback("note segments are not supported");
-      break;
-    }
-  }
+                        ArrayRef<RemoveNoteInfo> NotesToRemove) {
   for (auto &Sec : Obj.sections()) {
-    if (Sec.Type != SHT_NOTE || !Sec.hasContents())
+    // TODO: Support note sections in segments
+    if (Sec.Type != SHT_NOTE || Sec.ParentSegment || !Sec.hasContents())
       continue;
-    // TODO: Support note sections in segments.
-    if (Sec.ParentSegment) {
-      WarningCallback("cannot remove note(s) from " + Sec.Name +
-                      ": sections in segments are not supported");
-      continue;
-    }
     ArrayRef<uint8_t> OldData = Sec.getContents();
     size_t Align = std::max<size_t>(4, Sec.Align);
     // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
@@ -772,8 +759,7 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
-                        ElfType OutputElfType, Object &Obj,
-                        function_ref<void(const Twine &)> WarningCallback) {
+                        ElfType OutputElfType, Object &Obj) {
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch->EMachine;
     Obj.OSABI = Config.OutputArch->OSABI;
@@ -899,8 +885,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                      : endianness::big;
 
   if (!ELFConfig.NotesToRemove.empty()) {
-    if (Error Err =
-            removeNote(Obj, E, ELFConfig.NotesToRemove, WarningCallback))
+    if (Error Err = removeNote(Obj, E, ELFConfig.NotesToRemove))
       return Err;
   }
 
@@ -1035,9 +1020,9 @@ static Error writeOutput(const CommonConfig &Config, Object &Obj,
   return Writer->write();
 }
 
-Error objcopy::elf::executeObjcopyOnIHex(
-    const CommonConfig &Config, const ELFConfig &ELFConfig, MemoryBuffer &In,
-    raw_ostream &Out, function_ref<void(const Twine &)> WarningCallback) {
+Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
+                                         const ELFConfig &ELFConfig,
+                                         MemoryBuffer &In, raw_ostream &Out) {
   IHexReader Reader(&In);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
   if (!Obj)
@@ -1045,15 +1030,15 @@ Error objcopy::elf::executeObjcopyOnIHex(
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E =
-          handleArgs(Config, ELFConfig, OutputElfType, **Obj, WarningCallback))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error objcopy::elf::executeObjcopyOnRawBinary(
-    const CommonConfig &Config, const ELFConfig &ELFConfig, MemoryBuffer &In,
-    raw_ostream &Out, function_ref<void(const Twine &)> WarningCallback) {
+Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
+                                              const ELFConfig &ELFConfig,
+                                              MemoryBuffer &In,
+                                              raw_ostream &Out) {
   BinaryReader Reader(&In, ELFConfig.NewSymbolVisibility);
   Expected<std::unique_ptr<Object>> Obj = Reader.create(true);
   if (!Obj)
@@ -1063,16 +1048,15 @@ Error objcopy::elf::executeObjcopyOnRawBinary(
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
-  if (Error E =
-          handleArgs(Config, ELFConfig, OutputElfType, **Obj, WarningCallback))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
 
-Error objcopy::elf::executeObjcopyOnBinary(
-    const CommonConfig &Config, const ELFConfig &ELFConfig,
-    object::ELFObjectFileBase &In, raw_ostream &Out,
-    function_ref<void(const Twine &)> WarningCallback) {
+Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
+                                           const ELFConfig &ELFConfig,
+                                           object::ELFObjectFileBase &In,
+                                           raw_ostream &Out) {
   ELFReader Reader(&In, Config.ExtractPartition);
   Expected<std::unique_ptr<Object>> Obj =
       Reader.create(!Config.SymbolsToAdd.empty());
@@ -1083,8 +1067,7 @@ Error objcopy::elf::executeObjcopyOnBinary(
                                     ? getOutputElfType(*Config.OutputArch)
                                     : getOutputElfType(In);
 
-  if (Error E =
-          handleArgs(Config, ELFConfig, OutputElfType, **Obj, WarningCallback))
+  if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))

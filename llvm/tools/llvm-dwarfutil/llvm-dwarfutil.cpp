@@ -65,10 +65,6 @@ namespace dwarfutil {
 
 std::string ToolName;
 
-static void reportWarningMsg(const Twine &Msg) {
-  WithColor::warning(errs(), ToolName) << Msg << '\n';
-}
-
 static mc::RegisterMCTargetOptionsFlags MOF;
 
 static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
@@ -265,8 +261,8 @@ static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
-            if (Error Err = objcopy::executeObjcopyOnBinary(
-                    Config, InputFile, CRCBuffer, reportWarningMsg))
+            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
+                                                            CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -289,8 +285,8 @@ static Error saveNonDebugInfo(const Options &Opts, ObjectFile &InputFile,
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            if (Error Err = objcopy::executeObjcopyOnBinary(
-                    Config, InputFile, OutFile, reportWarningMsg))
+            if (Error Err =
+                    objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile))
               return Err;
 
             return Error::success();
@@ -377,8 +373,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
 
-            if (Error Err = objcopy::executeObjcopyOnBinary(
-                    Config, InputFile, CRCBuffer, reportWarningMsg))
+            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
+                                                            CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -403,8 +399,7 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile,
-                                                   reportWarningMsg);
+            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
           }))
     return Err;
 
@@ -440,8 +435,7 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile,
-                                                   reportWarningMsg);
+            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
           }))
     return Err;
 

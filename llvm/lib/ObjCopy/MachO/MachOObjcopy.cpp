@@ -445,10 +445,10 @@ static Error handleArgs(const CommonConfig &Config,
   return Error::success();
 }
 
-Error objcopy::macho::executeObjcopyOnBinary(
-    const CommonConfig &Config, const MachOConfig &MachOConfig,
-    object::MachOObjectFile &In, raw_ostream &Out,
-    function_ref<void(const Twine &)> WarningCallback) {
+Error objcopy::macho::executeObjcopyOnBinary(const CommonConfig &Config,
+                                             const MachOConfig &MachOConfig,
+                                             object::MachOObjectFile &In,
+                                             raw_ostream &Out) {
   MachOReader Reader(In);
   Expected<std::unique_ptr<Object>> O = Reader.create();
   if (!O)
@@ -484,14 +484,14 @@ Error objcopy::macho::executeObjcopyOnBinary(
 
 Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
     const MultiFormatConfig &Config, const MachOUniversalBinary &In,
-    raw_ostream &Out, function_ref<void(const Twine &)> WarningCallback) {
+    raw_ostream &Out) {
   SmallVector<OwningBinary<Binary>, 2> Binaries;
   SmallVector<Slice, 2> Slices;
   for (const auto &O : In.objects()) {
     Expected<std::unique_ptr<Archive>> ArOrErr = O.getAsArchive();
     if (ArOrErr) {
       Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
-          createNewArchiveMembers(Config, **ArOrErr, WarningCallback);
+          createNewArchiveMembers(Config, **ArOrErr);
       if (!NewArchiveMembersOrErr)
         return NewArchiveMembersOrErr.takeError();
       auto Kind = (*ArOrErr)->kind();
@@ -542,9 +542,8 @@ Error objcopy::macho::executeObjcopyOnMachOUniversalBinary(
     if (!MachO)
       return MachO.takeError();
 
-    if (Error E =
-            executeObjcopyOnBinary(Config.getCommonConfig(), *MachO, **ObjOrErr,
-                                   MemStream, WarningCallback))
+    if (Error E = executeObjcopyOnBinary(Config.getCommonConfig(), *MachO,
+                                         **ObjOrErr, MemStream))
       return E;
 
     auto MB = std::make_unique<SmallVectorMemoryBuffer>(

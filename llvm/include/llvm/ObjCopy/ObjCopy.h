@@ -9,12 +9,10 @@
 #ifndef LLVM_OBJCOPY_OBJCOPY_H
 #define LLVM_OBJCOPY_OBJCOPY_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 class raw_ostream;
-class Twine;
 
 namespace object {
 class Archive;
@@ -27,20 +25,16 @@ class MultiFormatConfig;
 /// Applies the transformations described by \p Config to
 /// each member in archive \p Ar.
 /// Writes a result in a file specified by \p Config.OutputFilename.
-/// Warnings can be printed via \p WarningCallback.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnArchive(
-    const MultiFormatConfig &Config, const object::Archive &Ar,
-    function_ref<void(const Twine &)> WarningCallback);
+Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
+                              const object::Archive &Ar);
 
 /// Applies the transformations described by \p Config to \p In and writes
 /// the result into \p Out. This function does the dispatch based on the
 /// format of the input binary (COFF, ELF, MachO or wasm).
-/// Warnings can be printed via \p WarningCallback.
 /// \returns any Error encountered whilst performing the operation.
 Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
-                             object::Binary &In, raw_ostream &Out,
-                             function_ref<void(const Twine &)> WarningCallback);
+                             object::Binary &In, raw_ostream &Out);
 
 } // end namespace objcopy
 } // end namespace llvm

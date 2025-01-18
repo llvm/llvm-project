@@ -20,8 +20,7 @@ namespace objcopy {
 using namespace llvm::object;
 
 Expected<std::vector<NewArchiveMember>>
-createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar,
-                        function_ref<void(const Twine &)> WarningCallback) {
+createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -37,8 +36,7 @@ createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar,
     SmallVector<char, 0> Buffer;
     raw_svector_ostream MemStream(Buffer);
 
-    if (Error E = executeObjcopyOnBinary(Config, *ChildOrErr->get(), MemStream,
-                                         WarningCallback))
+    if (Error E = executeObjcopyOnBinary(Config, *ChildOrErr->get(), MemStream))
       return std::move(E);
 
     Expected<NewArchiveMember> Member = NewArchiveMember::getOldMember(
@@ -96,11 +94,10 @@ static Error deepWriteArchive(StringRef ArcName,
   return Error::success();
 }
 
-Error executeObjcopyOnArchive(
-    const MultiFormatConfig &Config, const object::Archive &Ar,
-    function_ref<void(const Twine &)> WarningCallback) {
+Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
+                              const object::Archive &Ar) {
   Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
-      createNewArchiveMembers(Config, Ar, WarningCallback);
+      createNewArchiveMembers(Config, Ar);
   if (!NewArchiveMembersOrErr)
     return NewArchiveMembersOrErr.takeError();
   const CommonConfig &CommonConfig = Config.getCommonConfig();
