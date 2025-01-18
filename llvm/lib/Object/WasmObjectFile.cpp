@@ -1708,7 +1708,6 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
       auto ElemType = parseValType(Ctx, readVaruint32(Ctx));
       Segment.ElemKind = ElemType;
     } else {
-      // Here the type is nullable (ref null func) but we don't distinguish.
       Segment.ElemKind = wasm::ValType::FUNCREF;
     }
 
