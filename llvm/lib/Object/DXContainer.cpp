@@ -95,8 +95,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  dxbc::RootSignatureDesc Desc;
-  if (Error Err = readStruct(Part, Part.begin(), Desc))
+  DirectX::RootSignature Desc(Part);
+  if (Error Err = Desc.parse())
     return Err;
   RootSignature = Desc;
   return Error::success();
@@ -240,6 +240,20 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Data =
       StringRef(Current + sizeof(dxbc::PartHeader), IteratorState.Part.Size);
   IteratorState.Offset = Offset;
+}
+
+Error DirectX::RootSignature::parse() {
+  const char *Current = Data.begin();
+  dxbc::RootSignatureDesc Desc;
+  if (Error Err = readStruct(Data, Current, Desc))
+    return Err;
+
+  if (sys::IsBigEndianHost)
+    Desc.swapBytes();
+
+  Version = Desc.Version;
+  Flags = Desc.Flags;
+  return Error::success();
 }
 
 Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {

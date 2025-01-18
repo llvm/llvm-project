@@ -22,6 +22,8 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstdint>
+#include <sys/types.h>
 #include <variant>
 
 namespace llvm {
@@ -116,6 +118,23 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
+
+class RootSignature {
+private:
+  StringRef Data;
+  uint32_t Version;
+  uint32_t Flags;
+
+public:
+  RootSignature(StringRef Data) : Data(Data) {}
+
+  Error parse();
+
+  uint32_t getVersion() const { return Version; }
+
+  uint32_t getFlags() const { return Flags; }
+};
+
 class PSVRuntimeInfo {
 
   using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
@@ -287,7 +306,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
-  std::optional<dxbc::RootSignatureDesc> RootSignature;
+  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -384,7 +403,7 @@ public:
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 
-  std::optional<dxbc::RootSignatureDesc> getRootSignature() const {
+  std::optional<DirectX::RootSignature> getRootSignature() const {
     return RootSignature;
   }
 

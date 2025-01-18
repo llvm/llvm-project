@@ -13,6 +13,7 @@
 
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
@@ -264,13 +265,12 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
     case dxbc::PartType::RTS0:
       if (!P.RootSignature.has_value())
         continue;
-      uint32_t Flags = P.RootSignature->getEncodedFlags();
-      if (sys::IsBigEndianHost)
-        sys::swapByteOrder(Flags);
-      dxbc::RootSignatureDesc RS = {P.RootSignature->Version, Flags};
-      if (sys::IsBigEndianHost)
-        RS.swapBytes();
-      OS.write(reinterpret_cast<char *>(&RS), sizeof(dxbc::RootSignatureDesc));
+
+      mcdxbc::RootSignatureHeader Header;
+      Header.Version = P.RootSignature->Version;
+      Header.Flags = P.RootSignature->getEncodedFlags();
+
+      Header.write(OS);
       break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;

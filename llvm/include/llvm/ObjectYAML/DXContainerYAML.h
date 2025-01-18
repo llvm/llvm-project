@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
@@ -75,7 +76,7 @@ struct ShaderHash {
 #define ROOT_ELEMENT_FLAG(Num, Val, Str) bool Val = false;
 struct RootSignatureDesc {
   RootSignatureDesc() = default;
-  RootSignatureDesc(const dxbc::RootSignatureDesc &Data);
+  RootSignatureDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t getEncodedFlags();
   uint32_t Version;
