@@ -347,8 +347,8 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
 /// defined symbol imported" diagnostic for symbols in localImports.
 /// objFiles and bitcodeFiles (if not nullptr) are used to report where
 /// undefined symbols are referenced.
-static void reportProblemSymbols(
-    COFFLinkerContext &ctx, const SmallPtrSetImpl<Symbol *> &undefs,
+void SymbolTable::reportProblemSymbols(
+    const SmallPtrSetImpl<Symbol *> &undefs,
     const DenseMap<Symbol *, Symbol *> *localImports, bool needBitcodeFiles) {
   // Return early if there is nothing to report (which should be
   // the common case).
@@ -392,7 +392,7 @@ static void reportProblemSymbols(
     processFile(file, file->getSymbols());
 
   if (needBitcodeFiles)
-    for (BitcodeFile *file : ctx.bitcodeFileInstances)
+    for (BitcodeFile *file : bitcodeFileInstances)
       processFile(file, file->getSymbols());
 
   for (const UndefinedDiag &undefDiag : undefDiags)
@@ -423,8 +423,7 @@ void SymbolTable::reportUnresolvable() {
     undefs.insert(sym);
   }
 
-  reportProblemSymbols(ctx, undefs,
-                       /* localImports */ nullptr, true);
+  reportProblemSymbols(undefs, /*localImports=*/nullptr, true);
 }
 
 bool SymbolTable::resolveRemainingUndefines() {
@@ -506,8 +505,8 @@ bool SymbolTable::resolveRemainingUndefines() {
   }
 
   reportProblemSymbols(
-      ctx, undefs,
-      ctx.config.warnLocallyDefinedImported ? &localImports : nullptr, false);
+      undefs, ctx.config.warnLocallyDefinedImported ? &localImports : nullptr,
+      false);
   return foundLazy;
 }
 
@@ -1124,13 +1123,13 @@ Symbol *SymbolTable::addUndefined(StringRef name) {
 }
 
 void SymbolTable::compileBitcodeFiles() {
-  if (ctx.bitcodeFileInstances.empty())
+  if (bitcodeFileInstances.empty())
     return;
 
   llvm::TimeTraceScope timeScope("Compile bitcode");
   ScopedTimer t(ctx.ltoTimer);
   lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *f : ctx.bitcodeFileInstances)
+  for (BitcodeFile *f : bitcodeFileInstances)
     lto->add(*f);
   for (InputFile *newObj : lto->compile()) {
     ObjFile *obj = cast<ObjFile>(newObj);

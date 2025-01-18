@@ -28,7 +28,7 @@ class BottomUpVec final : public FunctionPass {
   std::unique_ptr<LegalityAnalysis> Legality;
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
-  InstrMaps IMaps;
+  std::unique_ptr<InstrMaps> IMaps;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
@@ -36,6 +36,8 @@ class BottomUpVec final : public FunctionPass {
   /// Erases all dead instructions from the dead instruction candidates
   /// collected during vectorization.
   void tryEraseDeadInstrs();
+  /// Creates a shuffle instruction that shuffles \p VecOp according to \p Mask.
+  Value *createShuffle(Value *VecOp, const ShuffleMask &Mask);
   /// Packs all elements of \p ToPack into a vector and returns that vector.
   Value *createPack(ArrayRef<Value *> ToPack);
   void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
