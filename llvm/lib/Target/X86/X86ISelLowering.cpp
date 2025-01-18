@@ -26438,7 +26438,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       switch (CC) {
       case ISD::SETEQ: {
         SetCC = getSETCC(X86::COND_E, Comi, dl, DAG);
-        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 1
+        if (HasAVX10_2_COMX && HasAVX10_2_COMX_Ty) // ZF == 1
           break;
         // (ZF = 1 and PF = 0)
         SDValue SetNP = getSETCC(X86::COND_NP, Comi, dl, DAG);
@@ -26447,7 +26447,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       case ISD::SETNE: {
         SetCC = getSETCC(X86::COND_NE, Comi, dl, DAG);
-        if (HasAVX10_2_COMX & HasAVX10_2_COMX_Ty) // ZF == 0
+        if (HasAVX10_2_COMX && HasAVX10_2_COMX_Ty) // ZF == 0
           break;
         // (ZF = 0 or PF = 1)
         SDValue SetP = getSETCC(X86::COND_P, Comi, dl, DAG);
@@ -37800,14 +37800,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTILESTORED:
       Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
       break;
-#undef GET_EGPR_IF_ENABLED
     case X86::PTILELOADDRS:
-      Opc = X86::TILELOADDRS;
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRS);
       break;
     case X86::PTILELOADDRST1:
-      Opc = X86::TILELOADDRST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDRST1);
       break;
     }
+#undef GET_EGPR_IF_ENABLED
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, MIMD, TII->get(Opc));
     unsigned CurOp = 0;
@@ -37838,34 +37838,36 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PT2RPNTLVWZ1RST1: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
+#define GET_EGPR_IF_ENABLED(OPC) (Subtarget.hasEGPR() ? OPC##_EVEX : OPC)
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PT2RPNTLVWZ0:
-      Opc = X86::T2RPNTLVWZ0;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0);
       break;
     case X86::PT2RPNTLVWZ0T1:
-      Opc = X86::T2RPNTLVWZ0T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0T1);
       break;
     case X86::PT2RPNTLVWZ1:
-      Opc = X86::T2RPNTLVWZ1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1);
       break;
     case X86::PT2RPNTLVWZ1T1:
-      Opc = X86::T2RPNTLVWZ1T1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1T1);
       break;
     case X86::PT2RPNTLVWZ0RS:
-      Opc = X86::T2RPNTLVWZ0RS;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RS);
       break;
     case X86::PT2RPNTLVWZ0RST1:
-      Opc = X86::T2RPNTLVWZ0RST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ0RST1);
       break;
     case X86::PT2RPNTLVWZ1RS:
-      Opc = X86::T2RPNTLVWZ1RS;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RS);
       break;
     case X86::PT2RPNTLVWZ1RST1:
-      Opc = X86::T2RPNTLVWZ1RST1;
+      Opc = GET_EGPR_IF_ENABLED(X86::T2RPNTLVWZ1RST1);
       break;
     }
+#undef GET_EGPR_IF_ENABLED
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
     MIB.addReg(TMMImmToTMMPair(MI.getOperand(0).getImm()), RegState::Define);
 
@@ -37890,8 +37892,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTCVTROWPS2PBF16Hrri:
-  case X86::PTCVTROWPS2PBF16Lrri:
+  case X86::PTCVTROWPS2BF16Hrri:
+  case X86::PTCVTROWPS2BF16Lrri:
   case X86::PTCVTROWPS2PHHrri:
   case X86::PTCVTROWPS2PHLrri:
   case X86::PTCVTROWD2PSrri:
@@ -37904,14 +37906,14 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTCVTROWD2PSrri:
       Opc = X86::TCVTROWD2PSrri;
       break;
-    case X86::PTCVTROWPS2PBF16Hrri:
-      Opc = X86::TCVTROWPS2PBF16Hrri;
+    case X86::PTCVTROWPS2BF16Hrri:
+      Opc = X86::TCVTROWPS2BF16Hrri;
       break;
     case X86::PTCVTROWPS2PHHrri:
       Opc = X86::TCVTROWPS2PHHrri;
       break;
-    case X86::PTCVTROWPS2PBF16Lrri:
-      Opc = X86::TCVTROWPS2PBF16Lrri;
+    case X86::PTCVTROWPS2BF16Lrri:
+      Opc = X86::TCVTROWPS2BF16Lrri;
       break;
     case X86::PTCVTROWPS2PHLrri:
       Opc = X86::TCVTROWPS2PHLrri;
@@ -37928,8 +37930,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent(); // The pseudo is gone now.
     return BB;
   }
-  case X86::PTCVTROWPS2PBF16Hrre:
-  case X86::PTCVTROWPS2PBF16Lrre:
+  case X86::PTCVTROWPS2BF16Hrre:
+  case X86::PTCVTROWPS2BF16Lrre:
   case X86::PTCVTROWPS2PHHrre:
   case X86::PTCVTROWPS2PHLrre:
   case X86::PTCVTROWD2PSrre:
@@ -37942,11 +37944,11 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTCVTROWD2PSrre:
       Opc = X86::TCVTROWD2PSrre;
       break;
-    case X86::PTCVTROWPS2PBF16Hrre:
-      Opc = X86::TCVTROWPS2PBF16Hrre;
+    case X86::PTCVTROWPS2BF16Hrre:
+      Opc = X86::TCVTROWPS2BF16Hrre;
       break;
-    case X86::PTCVTROWPS2PBF16Lrre:
-      Opc = X86::TCVTROWPS2PBF16Lrre;
+    case X86::PTCVTROWPS2BF16Lrre:
+      Opc = X86::TCVTROWPS2BF16Lrre;
       break;
     case X86::PTCVTROWPS2PHHrre:
       Opc = X86::TCVTROWPS2PHHrre;
@@ -58570,8 +58572,9 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
+static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
+                                       const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   SDLoc DL(N);
@@ -58637,6 +58640,16 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG,
     // Combine (v2i64 (scalar_to_vector (i64 (bitcast (mmx))))) to MOVQ2DQ.
     if (SrcOp.getValueType() == MVT::x86mmx)
       return DAG.getNode(X86ISD::MOVQ2DQ, DL, VT, SrcOp);
+  }
+
+  if (VT == MVT::v4i32) {
+    SDValue HalfSrc;
+    // Combine (v4i32 (scalar_to_vector (i32 (anyext (bitcast (f16))))))
+    // to remove XMM->GPR->XMM moves.
+    if (sd_match(Src, m_AnyExt(m_BitCast(
+                          m_AllOf(m_SpecificVT(MVT::f16), m_Value(HalfSrc))))))
+      return DAG.getBitcast(
+          VT, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, HalfSrc));
   }
 
   // See if we're broadcasting the scalar value, in which case just reuse that.
@@ -59264,7 +59277,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   // clang-format off
   default: break;
   case ISD::SCALAR_TO_VECTOR:
-    return combineScalarToVector(N, DAG, Subtarget);
+    return combineSCALAR_TO_VECTOR(N, DAG, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
   case X86ISD::PEXTRW:
   case X86ISD::PEXTRB:

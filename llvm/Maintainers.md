@@ -169,10 +169,26 @@ rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
-#### AArch64 backend
+#### ARM and AArch64 backends
 
-Tim Northover \
-t.p.northover@gmail.com (email), [TNorthover](https://github.com/TNorthover) (GitHub)
+David Green \
+david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
+Amara Emerson (esp. AArch64 GlobalISel) \
+amara@apple.com (email), [aemerson](https://github.com/aemerson) (GitHub) \
+Eli Friedman (esp. ARM64EC) \
+efriedma@quicinc.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
+Sjoerd Meijer \
+smeijer@nvidia.com (email), [sjoerdmeijer](https://github.com/sjoerdmeijer) (GitHub) \
+Nashe Mncube \
+nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
+Sander de Smalen (esp. scalable vectorization/SVE/SME) \
+sander.desmalen@arm.com (email), [sdesmalen-arm](https://github.com/sdesmalen-arm) (GitHub) \
+Peter Smith (Anything ABI) \
+peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
+Oliver Stannard (esp. assembly/dissassembly) \
+oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
+Ties Stuij (Arm GlobalISel and early arch support) \
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 #### AMDGPU backend
 
@@ -183,19 +199,6 @@ Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.co
 
 Mark Schimmel \
 marksl@synopsys.com (email), [markschimmel](https://github.com/markschimmel) (GitHub)
-
-#### ARM backend
-
-David Green \
-david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub) \
-Oliver Stannard (Especially assembly/dissassembly) \
-oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
-Nashe Mncube \
-nashe.mncube@arm.com (email), [nasherm](https://github.com/nasherm) (GitHub) \
-Peter Smith (Anything ABI) \
-peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
-Ties Stuij (GlobalISel and early arch support) \
-ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
 
 #### AVR backend
 
@@ -480,6 +483,7 @@ James Grosbach (grosbach@apple.com) -- MC layer \
 Anton Korobeynikov (anton@korobeynikov.info, [asl](https://github.com/asl)) -- ARM EABI, Windows codegen \
 Benjamin Kramer (benny.kra@gmail.com, [d0k](https://github.com/d0k)) -- DWARF Parser \
 David Majnemer (david.majnemer@gmail.com, [majnemer](https://github.com/majnemer)) -- InstCombine, ConstantFold \
+Tim Northover (t.p.northover@gmail.com, [TNorthover](https://github.com/TNorthover)) -- AArch64 backend \
 Chad Rosier (mcrosier@codeaurora.org) -- FastISel \
 Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Release management \
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \

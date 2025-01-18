@@ -316,6 +316,8 @@ C++23 Feature Support
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Implemented module level lookup for C++20 modules. (#GH90154)
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -787,6 +789,7 @@ Improvements to Clang's diagnostics
       scope.Unlock();
       require(scope); // Warning!  Requires mu1.
     }
+- Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -952,6 +955,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when __PRETTY_FUNCTION__ or __FUNCSIG__ (clang-cl) appears in the trailing return type of the lambda (#GH121274)
 - Fixed a crash caused by the incorrect construction of template arguments for CTAD alias guides when type
   constraints are applied. (#GH122134)
+- Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

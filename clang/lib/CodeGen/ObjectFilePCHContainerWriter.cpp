@@ -81,6 +81,9 @@ class PCHContainerGenerator : public ASTConsumer {
         if (!TD->isCompleteDefinition())
           return true;
 
+      if (D->hasAttr<NoDebugAttr>())
+        return true;
+
       QualType QualTy = Ctx.getTypeDeclType(D);
       if (!QualTy.isNull() && CanRepresent(QualTy.getTypePtr()))
         DI.getOrCreateStandaloneType(QualTy, D->getLocation());

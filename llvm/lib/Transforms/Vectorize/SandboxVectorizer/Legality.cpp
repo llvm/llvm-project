@@ -12,6 +12,7 @@
 #include "llvm/SandboxIR/Utils.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm::sandboxir {
@@ -19,6 +20,11 @@ namespace llvm::sandboxir {
 #define DEBUG_TYPE "SBVec:Legality"
 
 #ifndef NDEBUG
+void ShuffleMask::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+
 void LegalityResult::dump() const {
   print(dbgs());
   dbgs() << "\n";
@@ -184,6 +190,22 @@ static void dumpBndl(ArrayRef<Value *> Bndl) {
 }
 #endif // NDEBUG
 
+CollectDescr
+LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
+  SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
+  Vec.reserve(Bndl.size());
+  for (auto [Lane, V] : enumerate(Bndl)) {
+    if (auto *VecOp = IMaps.getVectorForOrig(V)) {
+      // If there is a vector containing `V`, then get the lane it came from.
+      std::optional<int> ExtractIdxOpt = IMaps.getOrigLane(VecOp, V);
+      Vec.emplace_back(VecOp, ExtractIdxOpt ? *ExtractIdxOpt : -1);
+    } else {
+      Vec.emplace_back(V);
+    }
+  }
+  return CollectDescr(std::move(Vec));
+}
+
 const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
@@ -193,10 +215,19 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
   }
 
+  auto CollectDescrs = getHowToCollectValues(Bndl);
+  if (CollectDescrs.hasVectorInputs()) {
+    if (auto ValueShuffleOpt = CollectDescrs.getSingleInput()) {
+      auto [Vec, Mask] = *ValueShuffleOpt;
+      if (Mask.isIdentity())
+        return createLegalityResult<DiamondReuse>(Vec);
+      return createLegalityResult<DiamondReuseWithShuffle>(Vec, Mask);
+    }
+    llvm_unreachable("TODO: Unimplemented");
+  }
+
   if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))
     return createLegalityResult<Pack>(*ReasonOpt);
-
-  // TODO: Check for existing vectors containing values in Bndl.
 
   if (!SkipScheduling) {
     // TODO: Try to remove the IBndl vector.
@@ -209,5 +240,10 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
   }
 
   return createLegalityResult<Widen>();
+}
+
+void LegalityAnalysis::clear() {
+  Sched.clear();
+  IMaps.clear();
 }
 } // namespace llvm::sandboxir

@@ -102,9 +102,6 @@
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
 
-/* Define to 1 if you have the `getrlimit' function. */
-#define HAVE_GETRLIMIT 1
-
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
 
@@ -168,14 +165,8 @@
 /* Define to 1 if you have the `setenv' function. */
 /* HAVE_SETENV defined in Bazel */
 
-/* Define to 1 if you have the `setrlimit' function. */
-#define HAVE_SETRLIMIT 1
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #define HAVE_SIGALTSTACK 1
-
-/* Define to 1 if you have the <signal.h> header file. */
-#define HAVE_SIGNAL_H 1
 
 /* Define to 1 if you have the `strerror_r' function. */
 /* HAVE_STRERROR_R defined in Bazel */
@@ -183,26 +174,14 @@
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#define HAVE_SYS_IOCTL_H 1
-
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #define HAVE_SYS_MMAN_H 1
-
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#define HAVE_SYS_RESOURCE_H 1
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#define HAVE_SYS_TIME_H 1
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 /* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
 
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */
-
-/* Define to 1 if you have the <termios.h> header file. */
-#define HAVE_TERMIOS_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
 /* HAVE_UNISTD_H defined in Bazel */
