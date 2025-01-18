@@ -592,7 +592,6 @@ private:
   void collectSchedRW();
 
   std::string genRWName(ArrayRef<unsigned> Seq, bool IsRead);
-  unsigned findRWForSequence(ArrayRef<unsigned> Seq, bool IsRead);
 
   void collectSchedClasses();
 
@@ -631,8 +630,8 @@ private:
   void inferFromItinClass(const Record *ItinClassDef, unsigned FromClassIdx);
   void inferFromInstRWs(unsigned SCIdx);
 
-  bool hasSuperGroup(ConstRecVec &SubUnits, CodeGenProcModel &PM);
-  void verifyProcResourceGroups(CodeGenProcModel &PM);
+  bool hasSuperGroup(const ConstRecVec &SubUnits, const CodeGenProcModel &PM);
+  void verifyProcResourceGroups(const CodeGenProcModel &PM);
 
   void collectProcResources();
 

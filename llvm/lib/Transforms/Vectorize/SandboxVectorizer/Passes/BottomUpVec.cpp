@@ -161,7 +161,7 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
   auto *VecI = CreateVectorInstr(Bndl, Operands);
   if (VecI != nullptr) {
     Change = true;
-    IMaps.registerVector(Bndl, VecI);
+    IMaps->registerVector(Bndl, VecI);
   }
   return VecI;
 }
@@ -177,6 +177,12 @@ void BottomUpVec::tryEraseDeadInstrs() {
       I->eraseFromParent();
   }
   DeadInstrCandidates.clear();
+}
+
+Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp});
+  return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
+                                   VecOp->getContext(), "VShuf");
 }
 
 Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
@@ -295,6 +301,13 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     NewVec = cast<DiamondReuse>(LegalityRes).getVector();
     break;
   }
+  case LegalityResultID::DiamondReuseWithShuffle: {
+    auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector();
+    const ShuffleMask &Mask =
+        cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
+    NewVec = createShuffle(VecOp, Mask);
+    break;
+  }
   case LegalityResultID::Pack: {
     // If we can't vectorize the seeds then just return.
     if (Depth == 0)
@@ -315,10 +328,10 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
 }
 
 bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
-  IMaps.clear();
+  IMaps = std::make_unique<InstrMaps>(F.getContext());
   Legality = std::make_unique<LegalityAnalysis>(
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
-      F.getContext(), IMaps);
+      F.getContext(), *IMaps);
   Change = false;
   const auto &DL = F.getParent()->getDataLayout();
   unsigned VecRegBits =

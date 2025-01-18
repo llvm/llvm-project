@@ -2596,15 +2596,13 @@ define void @store_cvt_f32_to_i16(float %a0, ptr %a1) nounwind {
 ; F16C-LABEL: store_cvt_f32_to_i16:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_f32_to_i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    movw %ax, (%rdi)
+; AVX512-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   %1 = fptrunc float %a0 to half
   %2 = bitcast half %1 to i16

@@ -5732,23 +5732,12 @@ TEST_F(FormatTest, HashInMacroDefinition) {
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
 
-#if 0
-  // FIXME: The correct format is:
   verifyFormat("{\n"
                "  {\n"
                "#define GEN_ID(_x) char *_x{#_x}\n"
                "    GEN_ID(one);\n"
                "  }\n"
                "}");
-#endif
-  verifyFormat("{\n"
-               "  {\n"
-               "#define GEN_ID(_x) \\\n"
-               "  char *_x { #_x }\n"
-               "    GEN_ID(one);\n"
-               "  }\n"
-               "}",
-               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -27987,6 +27976,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >> longOperand_1 >> longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
@@ -28065,6 +28059,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28088,6 +28089,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[1] << 8 |\n"
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28164,6 +28172,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28187,6 +28202,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[1] << 8\n"
                "                  | byte_buffer[2] << 16\n"
                "                  | byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
                Style);
 }
 

@@ -2478,13 +2478,12 @@ protected:
 public:
   using Predicate = llvm::CmpInst::Predicate;
 
-  static CmpInst *create(Predicate Pred, Value *S1, Value *S2,
-                         InsertPosition Pos, Context &Ctx,
-                         const Twine &Name = "");
-  static CmpInst *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
-                                        const Instruction *FlagsSource,
-                                        InsertPosition Pos, Context &Ctx,
-                                        const Twine &Name = "");
+  static Value *create(Predicate Pred, Value *S1, Value *S2, InsertPosition Pos,
+                       Context &Ctx, const Twine &Name = "");
+  static Value *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
+                                      const Instruction *FlagsSource,
+                                      InsertPosition Pos, Context &Ctx,
+                                      const Twine &Name = "");
   void setPredicate(Predicate P);
   void swapOperands();
 
