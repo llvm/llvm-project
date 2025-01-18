@@ -17,7 +17,7 @@ define <16 x double> @test(ptr %x, double %v, double %a) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x double> @llvm.vector.insert.v16f64.v6f64(<16 x double> poison, <6 x double> [[TMP1]], i64 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x double> [[TMP10]], <16 x double> [[TMP11]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x double> [[TMP10]], <16 x double> [[TMP11]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 16, i32 17, i32 18, i32 19, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <16 x double> @llvm.vector.insert.v16f64.v2f64(<16 x double> [[TMP12]], <2 x double> [[TMP6]], i64 6)
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x double> @llvm.vector.insert.v16f64.v2f64(<16 x double> [[TMP13]], <2 x double> [[TMP7]], i64 8)
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <16 x double> @llvm.vector.insert.v16f64.v2f64(<16 x double> [[TMP14]], <2 x double> [[TMP9]], i64 10)
