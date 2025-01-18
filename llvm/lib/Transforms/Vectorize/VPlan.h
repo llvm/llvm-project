@@ -1422,6 +1422,12 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
