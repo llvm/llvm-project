@@ -176,14 +176,14 @@ void DataAggregator::start() {
                       MainEventsPPI,
                       "script -F pid,event,ip",
                       /*Wait = */false);
+  } else if (!opts::ITraceAggregation.empty()) {
+    std::string ItracePerfScriptArgs = llvm::formatv(
+        "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
+    launchPerfProcess("branch events with itrace", MainEventsPPI,
+                      ItracePerfScriptArgs.c_str(),
+                      /*Wait = */ false);
   } else {
-    std::string Name = "branch events";
-    std::string PerfScriptArgs = "script -F pid,brstack";
-    if (!opts::ITraceAggregation.empty()) {
-      Name += " with itrace";
-      PerfScriptArgs += " --itrace=" + opts::ITraceAggregation;
-    }
-    launchPerfProcess(Name, MainEventsPPI, PerfScriptArgs.c_str(),
+    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack",
                       /*Wait = */ false);
   }
 
