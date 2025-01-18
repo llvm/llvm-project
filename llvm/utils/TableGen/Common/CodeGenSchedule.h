@@ -592,7 +592,6 @@ private:
   void collectSchedRW();
 
   std::string genRWName(ArrayRef<unsigned> Seq, bool IsRead);
-  unsigned findRWForSequence(ArrayRef<unsigned> Seq, bool IsRead);
 
   void collectSchedClasses();
 
