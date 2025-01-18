@@ -317,13 +317,13 @@ module attributes {gpu.container_module} {
     }
   }
 }
-// CHECK-SAME:        (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
-// CHECK:             %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
-// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:             affine.for %[[VAL_4:.*]] = %[[VAL_3]] to %[[VAL_2]] step 32 {
-// CHECK:             }
-// CHECK:             gpu.return
+// CHECK-SAME: (%[[VAL_0:.*]]: memref<?x?xf32>) kernel {
+// CHECK: %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK: %[[VAL_2:.*]] = memref.dim %[[VAL_0]], %[[VAL_1]] : memref<?x?xf32>
+// CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK: affine.for %{{.*}} = %[[VAL_3]] to %[[VAL_2]] step 32 {
+// CHECK: }
+// CHECK: gpu.return
 
 // -----
 
@@ -344,15 +344,15 @@ module {
   }
 }
 
-// CHECK-NEXT:  %[[VAL_0:.*]] = arith.constant 1 : index
-// CHECK-NEXT:   gpu.launch blocks(%[[VAL_1:.*]], %[[VAL_2:.*]], %[[VAL_3:.*]]) in (%[[VAL_4:.*]] = %[[VAL_0]], %[[VAL_5:.*]] = %[[VAL_0]], %[[VAL_6:.*]] = %[[VAL_0]]) threads(%[[VAL_7:.*]], %[[VAL_8:.*]], %[[VAL_9:.*]]) in (%[[VAL_10:.*]] = %[[VAL_0]], %[[VAL_11:.*]] = %[[VAL_0]], %[[VAL_12:.*]] = %[[VAL_0]]) {
-// CHECK-NEXT:     %[[VAL_13:.*]] = gpu.thread_id  x
-// CHECK-NEXT:     %[[VAL_14:.*]] = arith.constant 128 : index
-// CHECK-NEXT:     affine.for %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_14]] step 8 {
-// CHECK-NEXT:     }
-// CHECK-NEXT:     gpu.terminator
+// CHECK-NEXT: %[[VAL_0:.*]] = arith.constant 1 : index
+// CHECK-NEXT: gpu.launch blocks(%[[VAL_1:.*]], %[[VAL_2:.*]], %[[VAL_3:.*]]) in (%[[VAL_4:.*]] = %[[VAL_0]], %[[VAL_5:.*]] = %[[VAL_0]], %[[VAL_6:.*]] = %[[VAL_0]]) threads(%[[VAL_7:.*]], %[[VAL_8:.*]], %[[VAL_9:.*]]) in (%[[VAL_10:.*]] = %[[VAL_0]], %[[VAL_11:.*]] = %[[VAL_0]], %[[VAL_12:.*]] = %[[VAL_0]]) {
+// CHECK-NEXT:   %[[VAL_13:.*]] = gpu.thread_id  x
+// CHECK-NEXT:   %[[VAL_14:.*]] = arith.constant 128 : index
+// CHECK-NEXT:   affine.for %{{.*}} = %[[VAL_13]] to %[[VAL_14]] step 8 {
 // CHECK-NEXT:   }
-// CHECK-NEXT:   return
+// CHECK-NEXT:   gpu.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
 
 // -----
 
