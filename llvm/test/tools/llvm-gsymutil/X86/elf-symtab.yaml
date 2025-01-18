@@ -1,0 +1,654 @@
+## Test loading ELF files with only symbol table and only DWARF.
+## First we make the ELF files from yaml, then we convert the ELF files to GSYM
+## and perform lookups on the newly created GSYM
+## Notice the second lookup will have more info as we included DWARF
+
+# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %p/elf-dwarf-only.yaml -o elf-dwarf-only.yaml.tmp
+# RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
+# RUN: llvm-gsymutil --convert elf-dwarf-only.yaml.tmp --symtab-file %t 2>&1 | FileCheck %s --check-prefix=CONVERT1
+# RUN: llvm-gsymutil --address 0x00000000004011e0 %t.gsym | FileCheck %s --check-prefix=LOOKUP
+# RUN: llvm-gsymutil --address 0x00000000004011e0 elf-dwarf-only.yaml.tmp.gsym | FileCheck %s --check-prefix=LOOKUP1
+
+# CONVERT: Input file: {{.*\.yaml\.tmp}}
+# CONVERT: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}
+# CONVERT: Loaded 0 functions from DWARF.
+# CONVERT: Loaded 12 functions from symbol table.
+# CONVERT: Pruned 0 functions, ended with 12 total
+
+# CONVERT1: Input file: {{.*\.yaml\.tmp}}
+# CONVERT1: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}
+# CONVERT1: Loaded 2 functions from DWARF.
+# CONVERT1: Using symbol table file: {{.*\.yaml\.tmp}}
+# CONVERT1: Loaded 12 functions from symbol table.
+# CONVERT1: Pruned 2 functions, ended with 12 total
+
+# LOOKUP: Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
+# LOOKUP: 0x00000000004011e0: main
+
+# LOOKUP1: Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
+# LOOKUP1: 0x00000000004011e0: main @ /tmp/test_gsymutil/main.cpp
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x4010B0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x400318
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rela.plt
+    VAddr:           0x400000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .init
+    LastSec:         .fini
+    VAddr:           0x401000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .eh_frame
+    VAddr:           0x402000
+    Align:           0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .bss
+    VAddr:           0x403DA8
+    Align:           0x1000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x403DC0
+    Align:           0x8
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .note.gnu.property
+    VAddr:           0x400338
+    Align:           0x8
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .note.ABI-tag
+    VAddr:           0x400358
+    Align:           0x4
+  - Type:            PT_GNU_PROPERTY
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .note.gnu.property
+    VAddr:           0x400338
+    Align:           0x8
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x402034
+    Align:           0x4
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .got
+    VAddr:           0x403DA8
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400318
+    AddressAlign:    0x1
+    Content:         2F6C696236342F6C642D6C696E75782D7838362D36342E736F2E3200
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400338
+    AddressAlign:    0x8
+    Notes:
+      - Name:            GNU
+        Desc:            028000C0040000000300000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400358
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            6E3474EA595AB65F323A92D034BA2EA01E807B91
+        Type:            NT_PRPSINFO
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x40037C
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            '00000000030000000200000000000000'
+        Type:            NT_VERSION
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4003A0
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0xA
+      Shift2:          0x6
+    BloomFilter:     [ 0x10000100100000 ]
+    HashBuckets:     [ 0xA, 0x0 ]
+    HashValues:      [ 0x9F4FD20, 0x430C9815 ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4003C8
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4004E8
+    AddressAlign:    0x1
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400660
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 3, 4, 2, 2, 2, 1, 1, 1, 2, 2, 2 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400678
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           4
+          - Name:            GLIBC_2.34
+            Hash:            110530996
+            Flags:           0
+            Other:           3
+      - Version:         1
+        File:            'libstdc++.so.6'
+        Entries:
+          - Name:            GLIBCXX_3.4
+            Hash:            143796596
+            Flags:           0
+            Other:           2
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4006C8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x403FC0
+        Symbol:          __libc_start_main
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x403FC8
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x403FD0
+        Symbol:          __gmon_start__
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x403FD8
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x403FE0
+        Symbol:          _ZNSt8ios_base4InitD1Ev
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x404040
+        Symbol:          _ZSt4cout
+        Type:            R_X86_64_COPY
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x400758
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x404000
+        Symbol:          _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404008
+        Symbol:          __cxa_atexit
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404010
+        Symbol:          _ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404018
+        Symbol:          _ZNSolsEPFRSoS_E
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404020
+        Symbol:          _ZNSt8ios_base4InitC1Ev
+        Type:            R_X86_64_JUMP_SLOT
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401000
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         F30F1EFA4883EC08488B05C12F00004885C07402FFD04883C408C3
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401020
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         FF35CA2F0000FF25CC2F00000F1F4000FF25CA2F00006800000000E9E0FFFFFFFF25C22F00006801000000E9D0FFFFFFFF25BA2F00006802000000E9C0FFFFFFFF25B22F00006803000000E9B0FFFFFFFF25AA2F00006804000000E9A0FFFFFF
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401080
+    AddressAlign:    0x10
+    Content:         F30F1EFA53488D1DC53000004889DFE8DCFFFFFF488B3D452F00004889DE5B488D15620F0000E995FFFFFF0F1F440000F30F1EFA31ED4989D15E4889E24883E4F050544531C031C948C7C7E0114000FF15EB2E0000F4662E0F1F840000000000F30F1EFAC3662E0F1F84000000000090488D3D392F0000488D05322F00004839F87415488B05BE2E00004885C07409FFE00F1F8000000000C30F1F8000000000488D3D092F0000488D35022F00004829FE4889F048C1EE3F48C1F8034801C648D1FE7414488B058D2E00004885C07408FFE0660F1F440000C30F1F8000000000F30F1EFA803DE52F0000007513554889E5E87AFFFFFFC605D32F0000015DC390C366662E0F1F8400000000000F1F4000F30F1EFAEB8A662E0F1F840000000000554889E548BF404040000000000048BE1020400000000000E893FEFFFF4889C748BE3010400000000000E891FEFFFF5DC36666666666662E0F1F840000000000554889E54883EC10C745FC0000000048BF404040000000000048BE1C20400000000000E848FEFFFF4889C748BE3010400000000000E846FEFFFFE881FFFFFF48BF404040000000000048BE2820400000000000E818FEFFFF4889C748BE3010400000000000E816FEFFFF31C04883C4105DC3662E0F1F8400000000000F1F4000F30F1EFAC3
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401268
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC084883C408C3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402000
+    AddressAlign:    0x8
+    Offset:          0x2000
+    Content:         010002000000000000000000000000005468697320697320666F6F0068656C6C6F20776F726C6400616674657220666F6F00
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402034
+    AddressAlign:    0x4
+    Content:         011B033B4000000007000000ECEFFFFF840000004CF0FFFF000100007CF0FFFF5C000000ACF0FFFF700000006CF1FFFFAC000000ACF1FFFFCC0000002CF2FFFFEC000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402078
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000100000001C00000018F0FFFF2600000000440710100000003000000034F0FFFF0500000000000000240000004400000060EFFFFF60000000000E10460E184A0F0B770880003F1A3B2A332422000000001C0000006C000000B8F0FFFF3100000000410E108602430D066C0C07080000001C0000008C000000D8F0FFFF7200000000410E108602430D06026D0C0708000010000000AC00000038F1FFFF050000000000000018000000C000000044EFFFFF2B00000000450E1083025A0E0800000000000000
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DA8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Offset:          0x2DA8
+    Content:         '80104000000000009011400000000000'
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DB8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '6011400000000000'
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403DC0
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x123
+      - Tag:             DT_NEEDED
+        Value:           0x132
+      - Tag:             DT_NEEDED
+        Value:           0x13C
+      - Tag:             DT_NEEDED
+        Value:           0x14A
+      - Tag:             DT_INIT
+        Value:           0x401000
+      - Tag:             DT_FINI
+        Value:           0x401268
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x403DA8
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x10
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x403DB8
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x4003A0
+      - Tag:             DT_STRTAB
+        Value:           0x4004E8
+      - Tag:             DT_SYMTAB
+        Value:           0x4003C8
+      - Tag:             DT_STRSZ
+        Value:           0x177
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x403FE8
+      - Tag:             DT_PLTRELSZ
+        Value:           0x78
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x400758
+      - Tag:             DT_RELA
+        Value:           0x4006C8
+      - Tag:             DT_RELASZ
+        Value:           0x90
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_VERNEED
+        Value:           0x400678
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x2
+      - Tag:             DT_VERSYM
+        Value:           0x400660
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403FC0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '00000000000000000000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403FE8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         C03D4000000000000000000000000000000000000000000036104000000000004610400000000000561040000000000066104000000000007610400000000000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404028
+    AddressAlign:    0x1
+    Content:         '00000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404040
+    AddressAlign:    0x40
+    Offset:          0x302C
+    Size:            0x118
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A2028474E55292031312E342E312032303233303630352028526564204861742031312E342E312D3229004743433A2028474E55292031332E322E312032303233313131302028526564204861742031332E322E312D352900636C616E672076657273696F6E2031372E302E31202843656E744F532031372E302E312D322E656C392900
+  - Name:            .gnu.build.attributes
+    Type:            SHT_NOTE
+    Address:         0x406158
+    AddressAlign:    0x4
+    Notes:
+      - Name:            "GA$\x013a1"
+        Desc:            B010400000000000D610400000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            E510400000000000E510400000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '00104000000000001610400000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '68124000000000007012400000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            F0104000000000009611400000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '65124000000000006512400000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '65124000000000006512400000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            16104000000000001B10400000000000
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+      - Name:            "GA$\x013a1"
+        Desc:            '70124000000000007512400000000000'
+        Type:            NT_GNU_BUILD_ATTRIBUTE_OPEN
+Symbols:
+  - Name:            __abi_tag
+    Type:            STT_OBJECT
+    Section:         .note.ABI-tag
+    Value:           0x40037C
+    Size:            0x20
+  - Name:            _GLOBAL__sub_I.00090_ios_init.cc
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401080
+    Size:            0x2B
+  - Name:            _ZStL8__ioinit
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x404151
+    Size:            0x1
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x4010F0
+  - Name:            register_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401120
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401160
+  - Name:            completed.0
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x404150
+    Size:            0x1
+  - Name:            __do_global_dtors_aux_fini_array_entry
+    Type:            STT_OBJECT
+    Section:         .fini_array
+    Value:           0x403DB8
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x401190
+  - Name:            __frame_dummy_init_array_entry
+    Type:            STT_OBJECT
+    Section:         .init_array
+    Value:           0x403DB0
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x402150
+  - Name:            __GNU_EH_FRAME_HDR
+    Section:         .eh_frame_hdr
+    Value:           0x402034
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Section:         .dynamic
+    Value:           0x403DC0
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got.plt
+    Value:           0x403FE8
+  - Name:            _edata
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x40402C
+  - Name:            data_start
+    Section:         .data
+    Binding:         STB_WEAK
+    Value:           0x404028
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x402000
+    Size:            0x4
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4011E0
+    Size:            0x72
+  - Name:            '_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_@GLIBCXX_3.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x401030
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x402008
+    Other:           [ STV_HIDDEN ]
+  - Name:            _fini
+    Type:            STT_FUNC
+    Section:         .fini
+    Binding:         STB_GLOBAL
+    Value:           0x401268
+    Other:           [ STV_HIDDEN ]
+  - Name:            '__libc_start_main@GLIBC_2.34'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _dl_relocate_static_pie
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4010E0
+    Size:            0x5
+    Other:           [ STV_HIDDEN ]
+  - Name:            '__cxa_atexit@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4010B0
+    Size:            0x26
+  - Name:            '_ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc@GLIBCXX_3.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            '_ZNSolsEPFRSoS_E@GLIBCXX_3.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _init
+    Type:            STT_FUNC
+    Section:         .init
+    Binding:         STB_GLOBAL
+    Value:           0x401000
+    Other:           [ STV_HIDDEN ]
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x404030
+    Other:           [ STV_HIDDEN ]
+  - Name:            '_ZSt4cout@GLIBCXX_3.4'
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404040
+    Size:            0x110
+  - Name:            __data_start
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x404028
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404158
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x40402C
+  - Name:            _Z3foov
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4011A0
+    Size:            0x31
+  - Name:            '_ZNSt8ios_base4InitC1Ev@GLIBCXX_3.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ZSt21ios_base_library_initv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401260
+    Size:            0x5
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            '_ZNSt8ios_base4InitD1Ev@GLIBCXX_3.4'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+DynamicSymbols:
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __cxa_atexit
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ZNSolsEPFRSoS_E
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ZNSt8ios_base4InitC1Ev
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            _ZNSt8ios_base4InitD1Ev
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+    Value:           0x401030
+  - Name:            _ZSt4cout
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x404040
+    Size:            0x110
+...

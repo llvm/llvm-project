@@ -46,3 +46,6 @@ def addresses_from_stdin :
 defm json_summary_file :
   Eq<"json-summary-file",
      "Output a categorized summary of errors into the JSON file specified.">;
+defm symtab_file :
+  Eq<"symtab-file",
+     "Specify a separate file for symbol table to GSYM conversion.\nIn case the symbol table and debug info are not in the same binary. Does not support universal binary.">;
