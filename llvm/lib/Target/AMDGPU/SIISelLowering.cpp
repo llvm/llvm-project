@@ -13905,7 +13905,7 @@ static SDValue tryFoldMADwithSRL(SelectionDAG &DAG, const SDLoc &SL,
     return SDValue();
 
   ConstantSDNode *Const = dyn_cast<ConstantSDNode>(MulRHS.getNode());
-  if (!Const || Hi_32(Const->getZExtValue()) != -1)
+  if (!Const || Hi_32(Const->getZExtValue()) != uint32_t(-1))
     return SDValue();
 
   SDValue ConstMul =
