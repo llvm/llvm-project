@@ -2812,7 +2812,16 @@ bool X86::mayFoldLoadIntoBroadcastFromMem(SDValue Op, MVT EltVT,
 }
 
 bool X86::mayFoldIntoStore(SDValue Op) {
-  return Op.hasOneUse() && ISD::isNormalStore(*Op.getNode()->user_begin());
+  if (!Op.hasOneUse())
+    return false;
+  // Peek through (oneuse) bitcast users
+  SDNode *User = *Op->user_begin();
+  while (User->getOpcode() == ISD::BITCAST) {
+    if (!User->hasOneUse())
+      return false;
+    User = *User->user_begin();
+  }
+  return ISD::isNormalStore(User);
 }
 
 bool X86::mayFoldIntoZeroExtend(SDValue Op) {
