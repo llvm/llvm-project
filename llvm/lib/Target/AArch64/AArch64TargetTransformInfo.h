@@ -89,6 +89,10 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
 
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
