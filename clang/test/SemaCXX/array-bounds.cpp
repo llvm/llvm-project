@@ -170,16 +170,18 @@ void test_nested_switch() {
   }
 }
 
-// Test that a warning is not emitted if the code is unreachable.
+// Test that if all the values of an enum covered, that the 'default' branch
+// is reachable.
 enum Values { A, B, C, D };
 void test_all_enums_covered(enum Values v) {
-  int x[2];
-  if(v == A) {
-    return;
-  } else {
-    return;
+  int x[2]; // expected-note {{array 'x' declared here}}
+  switch (v) {
+  case A: return;
+  case B: return;
+  case C: return;
+  case D: return;
   }
-  x[2] = 0; // no-warning
+  x[2] = 0; // expected-warning {{array index 2 is past the end of the array (that has type 'int[2]')}}
 }
 
 namespace tailpad {
