@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
 
@@ -136,13 +137,26 @@ void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
 
 void RawStringLiteralCheck::replaceWithRawStringLiteral(
     const MatchFinder::MatchResult &Result, const StringLiteral *Literal,
-    StringRef Replacement) {
-  CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(Literal->getSourceRange()),
-      *Result.SourceManager, getLangOpts());
-  diag(Literal->getBeginLoc(),
-       "escaped string literal can be written as a raw string literal")
-      << FixItHint::CreateReplacement(CharRange, Replacement);
+    std::string Replacement) {
+  DiagnosticBuilder Builder =
+      diag(Literal->getBeginLoc(),
+           "escaped string literal can be written as a raw string literal");
+  const SourceManager &SM = *Result.SourceManager;
+  const CharSourceRange TokenRange =
+      CharSourceRange::getTokenRange(Literal->getSourceRange());
+  Token T;
+  if (Lexer::getRawToken(Literal->getBeginLoc(), T, SM, getLangOpts()))
+    return;
+  const CharSourceRange CharRange =
+      Lexer::makeFileCharRange(TokenRange, SM, getLangOpts());
+  if (T.hasUDSuffix()) {
+    const StringRef Text = Lexer::getSourceText(CharRange, SM, getLangOpts());
+    const size_t UDSuffixPos = Text.find_last_of('"');
+    if (UDSuffixPos == StringRef::npos)
+      return;
+    Replacement += Text.slice(UDSuffixPos + 1, Text.size());
+  }
+  Builder << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
 } // namespace clang::tidy::modernize
