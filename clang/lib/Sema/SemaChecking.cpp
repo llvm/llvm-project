@@ -8476,24 +8476,25 @@ static bool IsInfinityFunction(const FunctionDecl *FDecl) {
 
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
+  if (!FDecl->getIdentifier()) {
+    return;
+  }
+
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
-  bool HasIdentifier = FDecl->getIdentifier() != nullptr;
-  bool IsNaNOrIsUnordered =
-      IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered");
-  bool IsSpecialNaN =
-      HasIdentifier && IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN);
-  if ((IsNaNOrIsUnordered || IsSpecialNaN) && FPO.getNoHonorNaNs()) {
+  if (FPO.getNoHonorNaNs() &&
+      (IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered") ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN))) {
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << Call->getSourceRange();
-  } else {
-    bool IsInfOrIsFinite =
-        IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
-    bool IsInfinityOrIsSpecialInf =
-        HasIdentifier && (IsInfinityFunction(FDecl) ||
-                          IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf));
-    if ((IsInfOrIsFinite || IsInfinityOrIsSpecialInf) && FPO.getNoHonorInfs())
-      Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-          << 0 << 0 << Call->getSourceRange();
+    return;
+  }
+
+  if (FPO.getNoHonorInfs() &&
+      (IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite") ||
+       IsInfinityFunction(FDecl) ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf))) {
+    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << Call->getSourceRange();
   }
 }
 
