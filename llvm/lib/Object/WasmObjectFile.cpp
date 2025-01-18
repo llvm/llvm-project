@@ -1450,12 +1450,10 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
         unsigned FuncIndex = Info.ElementIndex - NumImportedFunctions;
         wasm::WasmFunction &Function = Functions[FuncIndex];
         Signature = &Signatures[Function.SigIndex];
-        break;
-      } else {
-        // Function is imported. LLVM object files don't use this pattern and
-        // we still treat this as an undefined symbol, but we want to parse
-        // it.
       }
+      // Else the function is imported. LLVM object files don't use this
+      // pattern and we still treat this as an undefined symbol, but we want to
+      // parse it without crashing.
       break;
     }
     case wasm::WASM_EXTERNAL_GLOBAL: {
