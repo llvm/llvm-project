@@ -1767,9 +1767,9 @@ multiclass vmovrs_p<bits<8> opc, string OpStr, X86VectorVTInfo _> {
 }
 
 multiclass vmovrs_p_vl<bits<8> opc, string OpStr, AVX512VLVectorVTInfo _Vec> {
-  let Predicates = [HasMOVRS, HasAVX10_2_512] in
+  let Predicates = [HasMOVRS, HasAVX10_2_512, In64BitMode] in
     defm Z : vmovrs_p<opc, OpStr, _Vec.info512>, EVEX_V512;
-  let Predicates = [HasMOVRS, HasAVX10_2] in {
+  let Predicates = [HasMOVRS, HasAVX10_2, In64BitMode] in {
     defm Z128 : vmovrs_p<opc, OpStr, _Vec.info128>, EVEX_V128;
     defm Z256 : vmovrs_p<opc, OpStr, _Vec.info256>, EVEX_V256;
   }
