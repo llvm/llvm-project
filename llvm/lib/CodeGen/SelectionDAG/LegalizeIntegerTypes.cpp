@@ -5084,13 +5084,9 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC) ||
       TLI.getLibcallName(LC) == DAG.getMachineFunction().getName()) {
     // FIXME: This is not an optimal expansion, but better than crashing.
-    EVT WideVT =
-        EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
-    SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(0));
-    SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(1));
-    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS);
     SDValue MulLo, MulHi;
-    SplitInteger(Mul, MulLo, MulHi);
+    TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, N->getOperand(0),
+                           N->getOperand(1), MulLo, MulHi);
     SDValue SRA =
         DAG.getNode(ISD::SRA, dl, VT, MulLo,
                     DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
