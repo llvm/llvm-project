@@ -32,7 +32,7 @@ static bool parseRootFlags(ModuleRootSignature *MRS, MDNode *RootFlagNode) {
 
   // Root Element validation, as specified:
   // https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#validations-during-dxil-generation
-  assert((Value & ~0x80000fff) != 0 && "Invalid flag for RootFlag Element");
+  assert((Value & ~0x80000fff) == 0 && "Invalid flag for RootFlag Element");
 
   MRS->Flags = Value;
   return false;
@@ -97,17 +97,6 @@ bool ModuleRootSignature::parse(int32_t Version, NamedMDNode *Root) {
     }
   }
   return HasError;
-}
-
-void ModuleRootSignature::write(raw_ostream &OS) {
-  dxbc::RootSignatureDesc Out{this->Version, this->Flags};
-
-  if (sys::IsBigEndianHost) {
-    Out.swapBytes();
-  }
-
-  OS.write(reinterpret_cast<const char *>(&Out),
-           sizeof(dxbc::RootSignatureDesc));
 }
 
 AnalysisKey RootSignatureAnalysis::Key;
