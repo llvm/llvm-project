@@ -40,10 +40,10 @@ function(add_ocaml_library name)
   set(ocaml_outputs "${bin}/${name}.cma")
   if( ARG_C )
     list(APPEND ocaml_outputs
-         "${bin}/lib${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+         "${bin}/lib${name}.a")
     if ( BUILD_SHARED_LIBS )
       list(APPEND ocaml_outputs
-           "${bin}/dll${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+           "${bin}/dll${name}.so")
     endif()
   endif()
   if( HAVE_OCAMLOPT )
@@ -52,7 +52,12 @@ function(add_ocaml_library name)
          "${bin}/${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  set(ocaml_flags "-lstdc++" "-ldopt" "-L${LLVM_LIBRARY_DIR}"
+  if ( LLVM_OCAML_OUT_OF_TREE )
+    set(ocaml_llvm_libdir "-L${LLVM_OCAML_EXTERNAL_LLVM_LIBDIR}")
+  else()
+    set(ocaml_llvm_libdir "-L${LLVM_LIBRARY_DIR}")
+  endif()
+  set(ocaml_flags "-lstdc++" "${ocaml_llvm_libdir}"
                   "-ccopt" "-L\\$CAMLORIGIN/../.."
                   "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
@@ -67,7 +72,7 @@ function(add_ocaml_library name)
   endif()
 
   if(LLVM_LINK_LLVM_DYLIB)
-    list(APPEND ocaml_flags "-lLLVM")
+    list(APPEND ocaml_flags "-lLLVM-${LLVM_VERSION_MAJOR}")
   else()
     explicit_map_components_to_libraries(llvm_libs ${ARG_LLVM})
     foreach( llvm_lib ${llvm_libs} )
