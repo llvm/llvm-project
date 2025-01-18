@@ -191,7 +191,7 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    sltu $s5, $s5, $s1
 ; LA32-NEXT:    sltu $s1, $s1, $s0
 ; LA32-NEXT:    sltu $s0, $s0, $t6
-; LA32-NEXT:    mul.w $t2, $a3, $t5
+; LA32-NEXT:    mul.w $t2, $t5, $a3
 ; LA32-NEXT:    st.w $a3, $sp, 24 # 4-byte Folded Spill
 ; LA32-NEXT:    sltu $t4, $fp, $t4
 ; LA32-NEXT:    mulh.wu $fp, $a5, $t3
@@ -232,10 +232,10 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; LA32-NEXT:    add.w $a7, $s4, $t2
 ; LA32-NEXT:    st.w $a7, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    add.w $s3, $t7, $a7
-; LA32-NEXT:    mulh.wu $a7, $a3, $t5
-; LA32-NEXT:    add.w $t4, $a7, $a0
-; LA32-NEXT:    mul.w $s2, $s6, $t5
-; LA32-NEXT:    add.w $s1, $t4, $s2
+; LA32-NEXT:    mulh.wu $a7, $t5, $a3
+; LA32-NEXT:    add.w $t4, $a0, $a7
+; LA32-NEXT:    mul.w $s2, $t5, $s6
+; LA32-NEXT:    add.w $s1, $s2, $t4
 ; LA32-NEXT:    add.w $fp, $s1, $s3
 ; LA32-NEXT:    add.w $a0, $fp, $t6
 ; LA32-NEXT:    add.w $fp, $s8, $a0
