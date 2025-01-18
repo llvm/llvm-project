@@ -24,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
+#include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -159,7 +160,11 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
-  MRS->write(OS);
+
+  RootSignatureHeader RSH;
+  RSH.Flags = MRS->Flags;
+  RSH.Version = MRS->Version;
+  RSH.write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
