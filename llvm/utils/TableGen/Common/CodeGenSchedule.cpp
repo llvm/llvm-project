@@ -1702,24 +1702,23 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
              dbgs() << ") ");
   // Create a seed transition with an empty PredTerm and the expanded sequences
   // of SchedWrites for the current SchedClass.
-  std::vector<PredTransition> LastTransitions;
-  LastTransitions.emplace_back();
+  std::vector<PredTransition> LastTransitions(1);
 
   for (unsigned WriteIdx : OperWrites) {
     IdxVec WriteSeq;
     expandRWSequence(WriteIdx, WriteSeq, /*IsRead=*/false);
-    LastTransitions[0].WriteSequences.emplace_back();
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].WriteSequences.back();
-    Seq.append(WriteSeq.begin(), WriteSeq.end());
+    SmallVectorImpl<unsigned> &Seq =
+        LastTransitions[0].WriteSequences.emplace_back(WriteSeq.begin(),
+                                                       WriteSeq.end());
     LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
   LLVM_DEBUG(dbgs() << " Reads: ");
   for (unsigned ReadIdx : OperReads) {
     IdxVec ReadSeq;
     expandRWSequence(ReadIdx, ReadSeq, /*IsRead=*/true);
-    LastTransitions[0].ReadSequences.emplace_back();
-    SmallVectorImpl<unsigned> &Seq = LastTransitions[0].ReadSequences.back();
-    Seq.append(ReadSeq.begin(), ReadSeq.end());
+    SmallVectorImpl<unsigned> &Seq =
+        LastTransitions[0].ReadSequences.emplace_back(ReadSeq.begin(),
+                                                      ReadSeq.end());
     LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
   }
   LLVM_DEBUG(dbgs() << '\n');
