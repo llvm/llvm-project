@@ -469,10 +469,7 @@ def Vector_ShuffleOp
     ```
   }];
 
-  let extraClassDeclaration = [{
-    // Integer to represent a poison value in a vector shuffle mask.
-    static constexpr int64_t kMaskPoisonValue = -1;
-
+  let extraClassDeclaration = extraPoisonClassDeclaration # [{
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
@@ -706,8 +703,6 @@ def Vector_ExtractOp :
     %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
     %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
-
-    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -724,7 +719,7 @@ def Vector_ExtractOp :
     OpBuilder<(ins "Value":$source, "ArrayRef<OpFoldResult>":$position)>,
   ];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraPoisonClassDeclaration # [{
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
@@ -898,8 +893,6 @@ def Vector_InsertOp :
     %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
     %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     ```
-
-    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -917,7 +910,7 @@ def Vector_InsertOp :
     OpBuilder<(ins "Value":$source, "Value":$dest, "ArrayRef<OpFoldResult>":$position)>,
   ];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraPoisonClassDeclaration # [{
     Type getSourceType() { return getSource().getType(); }
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
@@ -990,15 +983,13 @@ def Vector_ScalableInsertOp :
     ```mlir
     %2 = vector.scalable.insert %0, %1[5] : vector<4xf32> into vector<[16]xf32>
     ```
-
-    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
     $source `,` $dest `[` $pos `]` attr-dict `:` type($source) `into` type($dest)
   }];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraPoisonClassDeclaration # [{
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -1043,15 +1034,13 @@ def Vector_ScalableExtractOp :
     ```mlir
     %1 = vector.scalable.extract %0[5] : vector<4xf32> from vector<[16]xf32>
     ```
-
-    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
     $source `[` $pos `]` attr-dict `:` type($res) `from` type($source)
   }];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = extraPoisonClassDeclaration # [{
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -1089,8 +1078,6 @@ def Vector_InsertStridedSliceOp :
         {offsets = [0, 0, 2], strides = [1, 1]}:
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
-
-    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
