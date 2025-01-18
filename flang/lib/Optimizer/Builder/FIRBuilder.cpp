@@ -1401,6 +1401,10 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
 /// Can the assignment of this record type be implement with a simple memory
 /// copy (it requires no deep copy or user defined assignment of components )?
 static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
+  // c_devptr type is a special case. It has a nested c_ptr field but we know it
+  // can be copied directly.
+  if (fir::isa_builtin_c_devptr_type(recordType))
+    return true;
   if (fir::hasDynamicSize(recordType))
     return false;
   for (auto [_, fieldType] : recordType.getTypeList()) {

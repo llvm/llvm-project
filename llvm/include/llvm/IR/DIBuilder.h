@@ -662,9 +662,9 @@ namespace llvm {
     /// Create a uniqued clone of \p Ty with FlagArtificial set.
     static DIType *createArtificialType(DIType *Ty);
 
-    /// Create a uniqued clone of \p Ty with FlagObjectPointer set.
-    /// If \p Implicit is true, also set FlagArtificial.
-    static DIType *createObjectPointerType(DIType *Ty, bool Implicit);
+    /// Create a uniqued clone of \p Ty with FlagObjectPointer and
+    /// FlagArtificial set.
+    static DIType *createObjectPointerType(DIType *Ty);
 
     /// Create a permanent forward-declared type.
     DICompositeType *createForwardDecl(unsigned Tag, StringRef Name,

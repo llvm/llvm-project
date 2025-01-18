@@ -25,10 +25,62 @@ class LegalityAnalysis;
 class Value;
 class InstrMaps;
 
+class ShuffleMask {
+public:
+  using IndicesVecT = SmallVector<int, 8>;
+
+private:
+  IndicesVecT Indices;
+
+public:
+  ShuffleMask(SmallVectorImpl<int> &&Indices) : Indices(std::move(Indices)) {}
+  ShuffleMask(std::initializer_list<int> Indices) : Indices(Indices) {}
+  explicit ShuffleMask(ArrayRef<int> Indices) : Indices(Indices) {}
+  operator ArrayRef<int>() const { return Indices; }
+  /// Creates and returns an identity shuffle mask of size \p Sz.
+  /// For example if Sz == 4 the returned mask is {0, 1, 2, 3}.
+  static ShuffleMask getIdentity(unsigned Sz) {
+    IndicesVecT Indices;
+    Indices.reserve(Sz);
+    for (auto Idx : seq<int>(0, (int)Sz))
+      Indices.push_back(Idx);
+    return ShuffleMask(std::move(Indices));
+  }
+  /// \Returns true if the mask is a perfect identity mask with consecutive
+  /// indices, i.e., performs no lane shuffling, like 0,1,2,3...
+  bool isIdentity() const {
+    for (auto [Idx, Elm] : enumerate(Indices)) {
+      if ((int)Idx != Elm)
+        return false;
+    }
+    return true;
+  }
+  bool operator==(const ShuffleMask &Other) const {
+    return Indices == Other.Indices;
+  }
+  bool operator!=(const ShuffleMask &Other) const { return !(*this == Other); }
+  size_t size() const { return Indices.size(); }
+  int operator[](int Idx) const { return Indices[Idx]; }
+  using const_iterator = IndicesVecT::const_iterator;
+  const_iterator begin() const { return Indices.begin(); }
+  const_iterator end() const { return Indices.end(); }
+#ifndef NDEBUG
+  friend raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &Mask) {
+    Mask.print(OS);
+    return OS;
+  }
+  void print(raw_ostream &OS) const {
+    interleave(Indices, OS, [&OS](auto Elm) { OS << Elm; }, ",");
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
 enum class LegalityResultID {
-  Pack,         ///> Collect scalar values.
-  Widen,        ///> Vectorize by combining scalars to a vector.
-  DiamondReuse, ///> Don't generate new code, reuse existing vector.
+  Pack,                    ///> Collect scalar values.
+  Widen,                   ///> Vectorize by combining scalars to a vector.
+  DiamondReuse,            ///> Don't generate new code, reuse existing vector.
+  DiamondReuseWithShuffle, ///> Reuse the existing vector but add a shuffle.
 };
 
 /// The reason for vectorizing or not vectorizing.
@@ -54,6 +106,8 @@ struct ToStr {
       return "Widen";
     case LegalityResultID::DiamondReuse:
       return "DiamondReuse";
+    case LegalityResultID::DiamondReuseWithShuffle:
+      return "DiamondReuseWithShuffle";
     }
     llvm_unreachable("Unknown LegalityResultID enum");
   }
@@ -154,6 +208,22 @@ public:
   Value *getVector() const { return Vec; }
 };
 
+class DiamondReuseWithShuffle final : public LegalityResult {
+  friend class LegalityAnalysis;
+  Value *Vec;
+  ShuffleMask Mask;
+  DiamondReuseWithShuffle(Value *Vec, const ShuffleMask &Mask)
+      : LegalityResult(LegalityResultID::DiamondReuseWithShuffle), Vec(Vec),
+        Mask(Mask) {}
+
+public:
+  static bool classof(const LegalityResult *From) {
+    return From->getSubclassID() == LegalityResultID::DiamondReuseWithShuffle;
+  }
+  Value *getVector() const { return Vec; }
+  const ShuffleMask &getMask() const { return Mask; }
+};
+
 class Pack final : public LegalityResultWithReason {
   Pack(ResultReason Reason)
       : LegalityResultWithReason(LegalityResultID::Pack, Reason) {}
@@ -192,23 +262,22 @@ public:
   CollectDescr(SmallVectorImpl<ExtractElementDescr> &&Descrs)
       : Descrs(std::move(Descrs)) {}
   /// If all elements come from a single vector input, then return that vector
-  /// and whether we need a shuffle to get them in order.
-  std::optional<std::pair<Value *, bool>> getSingleInput() const {
+  /// and also the shuffle mask required to get them in order.
+  std::optional<std::pair<Value *, ShuffleMask>> getSingleInput() const {
     const auto &Descr0 = *Descrs.begin();
     Value *V0 = Descr0.getValue();
     if (!Descr0.needsExtract())
       return std::nullopt;
-    bool NeedsShuffle = Descr0.getExtractIdx() != 0;
-    int Lane = 1;
+    ShuffleMask::IndicesVecT MaskIndices;
+    MaskIndices.push_back(Descr0.getExtractIdx());
     for (const auto &Descr : drop_begin(Descrs)) {
       if (!Descr.needsExtract())
         return std::nullopt;
       if (Descr.getValue() != V0)
         return std::nullopt;
-      if (Descr.getExtractIdx() != Lane++)
-        NeedsShuffle = true;
+      MaskIndices.push_back(Descr.getExtractIdx());
     }
-    return std::make_pair(V0, NeedsShuffle);
+    return std::make_pair(V0, ShuffleMask(std::move(MaskIndices)));
   }
   bool hasVectorInputs() const {
     return any_of(Descrs, [](const auto &D) { return D.needsExtract(); });
