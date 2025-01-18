@@ -7,7 +7,7 @@
 ;     the -print-loop-func-scope flag.
 
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=licm -print-after=licm\
+; RUN: 	   -passes=licm -print-after=licm \
 ; RUN:	   | FileCheck %s -check-prefix=VANILLA
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes=licm -print-after=licm -print-loop-func-scope \
@@ -50,7 +50,7 @@
 ; MODULEWITHLOOP: define void @bar
 ; MODULEWITHLOOP: declare void @baz(i32)
 
-define void @foo (i32 %n) {
+define void @foo(i32 %n) {
 entry:
   br label %loop_cond
 
