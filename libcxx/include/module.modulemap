@@ -1243,10 +1243,12 @@ module std [system] {
     module flat_map                       {
       header "__flat_map/flat_map.h"
       export std.vector.vector
+      export std.vector.fwd
     }
     module flat_multimap                  {
       header "__flat_map/flat_multimap.h"
       export std.vector.vector
+      export std.vector.fwd
     }
     module key_value_iterator             { header "__flat_map/key_value_iterator.h" }
     module sorted_equivalent              { header "__flat_map/sorted_equivalent.h" }
