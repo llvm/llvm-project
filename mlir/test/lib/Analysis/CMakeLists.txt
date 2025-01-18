@@ -21,12 +21,18 @@ add_mlir_library(MLIRTestAnalysis
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+
+# Since this library is excluded from libMLIR, link it to the dylib
+# to ensure that it can be used in flang without implicitly pulling in
+# static libraries.
+mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
-  MLIRTestDialect
   )
 
 target_include_directories(MLIRTestAnalysis
