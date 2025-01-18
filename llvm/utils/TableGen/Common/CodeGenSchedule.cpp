@@ -1740,8 +1740,8 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
 
 // Check if any processor resource group contains all resource records in
 // SubUnits.
-bool CodeGenSchedModels::hasSuperGroup(ConstRecVec &SubUnits,
-                                       CodeGenProcModel &PM) {
+bool CodeGenSchedModels::hasSuperGroup(const ConstRecVec &SubUnits,
+                                       const CodeGenProcModel &PM) {
   for (const Record *ProcResourceDef : PM.ProcResourceDefs) {
     if (!ProcResourceDef->isSubClassOf("ProcResGroup"))
       continue;
@@ -1759,7 +1759,7 @@ bool CodeGenSchedModels::hasSuperGroup(ConstRecVec &SubUnits,
 }
 
 // Verify that overlapping groups have a common supergroup.
-void CodeGenSchedModels::verifyProcResourceGroups(CodeGenProcModel &PM) {
+void CodeGenSchedModels::verifyProcResourceGroups(const CodeGenProcModel &PM) {
   for (unsigned i = 0, e = PM.ProcResourceDefs.size(); i < e; ++i) {
     if (!PM.ProcResourceDefs[i]->isSubClassOf("ProcResGroup"))
       continue;
