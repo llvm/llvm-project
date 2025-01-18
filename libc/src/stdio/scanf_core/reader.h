@@ -30,6 +30,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
+#ifdef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#endif
+
 
 namespace internal {
 

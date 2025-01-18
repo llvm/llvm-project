@@ -56,10 +56,10 @@ add_object_library(
 
 if(LIBC_TARGET_OS_IS_GPU)
 # TODO: fix this
-add_object_library(
+add_header_library(
   reader
-  SRCS
-    reader.cpp
+  # SRCS
+  #   reader.cpp
   HDRS
     reader.h
   DEPENDS
@@ -68,15 +68,17 @@ add_object_library(
     libc.src.stdio.ungetc
 )
 elseif(NOT (TARGET libc.src.__support.File.file)  )
-add_object_library(
+add_header_library(
   reader
-  SRCS
-    reader.cpp
+  # SRCS
+  #   reader.cpp
   HDRS
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
     libc.hdr.types.FILE
+    libc.src.__support.File.file
+  COMPILE_OPTIONS
     ${use_system_file}
 )
 elseif((LLVM_LIBC_FULL_BUILD))
@@ -90,7 +92,7 @@ add_object_library(
     libc.src.__support.macros.attributes
     libc.src.__support.File.file
     libc.hdr.types.FILE
-    ${use_system_file}
+    # ${use_system_file}
 )
 
 endif()
