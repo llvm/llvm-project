@@ -47,6 +47,7 @@ void ConvertMathToEmitC::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateConvertMathToEmitCPatterns(patterns, languageTarget);
 
-  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }

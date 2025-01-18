@@ -33,8 +33,10 @@ public:
 template <typename OpType>
 LogicalResult LowerToEmitCCallOpaque<OpType>::matchAndRewrite(
     OpType op, PatternRewriter &rewriter) const {
-  if (!llvm::all_of(op->getOperandTypes(), llvm::IsaPred<Float32Type, Float64Type>)||
-      !llvm::all_of(op->getResultTypes(),llvm::IsaPred<Float32Type, Float64Type>))
+  if (!llvm::all_of(op->getOperandTypes(),
+                    llvm::IsaPred<Float32Type, Float64Type>) ||
+      !llvm::all_of(op->getResultTypes(),
+                    llvm::IsaPred<Float32Type, Float64Type>))
     return rewriter.notifyMatchFailure(
         op.getLoc(),
         "expected all operands and results to be of type f32 or f64");
