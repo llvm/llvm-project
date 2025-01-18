@@ -93,6 +93,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBModule.cpp
   SBModuleSpec.cpp
   SBPlatform.cpp
+  SBProgress.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
