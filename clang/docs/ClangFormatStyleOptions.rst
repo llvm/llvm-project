@@ -380,6 +380,29 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
 
@@ -537,6 +560,29 @@ the configuration (without a prefix: ``Auto``).
       int d = 3;
       /* A comment. */
       double e = 4;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
@@ -696,6 +742,29 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
 
@@ -854,6 +923,29 @@ the configuration (without a prefix: ``Auto``).
       int d = 3;
       /* A comment. */
       double e = 4;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
@@ -1133,6 +1225,29 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
 
@@ -1289,6 +1404,29 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
+
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
 
@@ -1444,6 +1582,29 @@ the configuration (without a prefix: ``Auto``).
       int d = 3;
       /* A comment. */
       double e = 4;
+
+  * ``bool AlignBlockComments`` Only for ``AlignConsecutiveDeclarations``.  Whether block comments
+    are aligned in declarations.
+
+    .. code-block:: c++
+
+      true:
+      bool someLongFunction(int                /*a*/,
+                            bool               b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4    /*a*/,
+                                        true /*b*/,
+                                        str  /*c*/);
+
+      false:
+      bool someLongFunction(int /*a*/,
+                            bool b,
+                            const std::string& c);
+
+      const bool ret = someLongFunction(4 /*a*/,
+                                        true /*b*/,
+                                        str /*c*/);
 
   * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
     like ``+=`` are aligned along with ``=``.
