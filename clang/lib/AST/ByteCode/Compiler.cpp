@@ -6194,60 +6194,67 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return revisit(VD);
   }
 
-  if (D != InitializingDecl) {
-    // Try to lazily visit (or emit dummy pointers for) declarations
-    // we haven't seen yet.
-    if (Ctx.getLangOpts().CPlusPlus) {
-      if (const auto *VD = dyn_cast<VarDecl>(D)) {
-        const auto typeShouldBeVisited = [&](QualType T) -> bool {
-          if (T.isConstant(Ctx.getASTContext()))
-            return true;
-          return T->isReferenceType();
-        };
+  // Avoid infinite recursion.
+  if (D == InitializingDecl)
+    return this->emitDummyPtr(D, E);
 
-        // DecompositionDecls are just proxies for us.
-        if (isa<DecompositionDecl>(VD))
-          return revisit(VD);
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  // For C.
+  if (!Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->getAnyInitializer() &&
+        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
+      return revisit(VD);
+    return this->emitDummyPtr(D, E);
+  }
 
-        if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
-            typeShouldBeVisited(VD->getType())) {
-          if (const Expr *Init = VD->getAnyInitializer();
-              Init && !Init->isValueDependent()) {
-            // Whether or not the evaluation is successul doesn't really matter
-            // here -- we will create a global variable in any case, and that
-            // will have the state of initializer evaluation attached.
-            APValue V;
-            SmallVector<PartialDiagnosticAt> Notes;
-            (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
-                                              true);
-            return this->visitDeclRef(D, E);
-          }
-          return revisit(VD);
-        }
+  // ... and C++.
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return this->emitDummyPtr(D, E);
 
-        // FIXME: The evaluateValue() check here is a little ridiculous, since
-        // it will ultimately call into Context::evaluateAsInitializer(). In
-        // other words, we're evaluating the initializer, just to know if we can
-        // evaluate the initializer.
-        if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-            VD->getInit() && !VD->getInit()->isValueDependent()) {
+  const auto typeShouldBeVisited = [&](QualType T) -> bool {
+    if (T.isConstant(Ctx.getASTContext()))
+      return true;
+    return T->isReferenceType();
+  };
 
-          if (VD->evaluateValue())
-            return revisit(VD);
+  // DecompositionDecls are just proxies for us.
+  if (isa<DecompositionDecl>(VD))
+    return revisit(VD);
 
-          if (!D->getType()->isReferenceType())
-            return this->emitDummyPtr(D, E);
-
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                          /*InitializerFailed=*/true, E);
-        }
-      }
-    } else {
-      if (const auto *VD = dyn_cast<VarDecl>(D);
-          VD && VD->getAnyInitializer() &&
-          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
-        return revisit(VD);
+  if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
+      typeShouldBeVisited(VD->getType())) {
+    if (const Expr *Init = VD->getAnyInitializer();
+        Init && !Init->isValueDependent()) {
+      // Whether or not the evaluation is successul doesn't really matter
+      // here -- we will create a global variable in any case, and that
+      // will have the state of initializer evaluation attached.
+      APValue V;
+      SmallVector<PartialDiagnosticAt> Notes;
+      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
+                                        true);
+      return this->visitDeclRef(D, E);
     }
+    return revisit(VD);
+  }
+
+  // FIXME: The evaluateValue() check here is a little ridiculous, since
+  // it will ultimately call into Context::evaluateAsInitializer(). In
+  // other words, we're evaluating the initializer, just to know if we can
+  // evaluate the initializer.
+  if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
+      VD->getInit() && !VD->getInit()->isValueDependent()) {
+
+    if (VD->evaluateValue())
+      return revisit(VD);
+
+    if (!D->getType()->isReferenceType())
+      return this->emitDummyPtr(D, E);
+
+    return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                    /*InitializerFailed=*/true, E);
   }
 
   return this->emitDummyPtr(D, E);
