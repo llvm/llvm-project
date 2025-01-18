@@ -99,8 +99,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  dxbc::RootSignatureDesc Desc;
-  if (Error Err = readStruct(Part, Part.begin(), Desc))
+  DirectX::RootSignature Desc(Part);
+  if (Error Err = Desc.parse())
     return Err;
   RootSignature = Desc;
   return Error::success();
@@ -246,48 +246,17 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse(StringRef Data) {
+Error DirectX::RootSignature::parse() {
   const char *Current = Data.begin();
+  dxbc::RootSignatureDesc Desc;
+  if (Error Err = readStruct(Data, Current, Desc))
+    return Err;
 
-  // Root Signature headers expects 6 integers to be present.
-  if (Data.size() < 6 * sizeof(uint32_t))
-    return parseFailed(
-        "Invalid root signature, insufficient space for header.");
+  if (sys::IsBigEndianHost)
+    Desc.swapBytes();
 
-  uint32_t VValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureValidations::isValidVersion(VValue))
-    return validationFailed("unsupported root signature version read: " +
-                            llvm::Twine(VValue));
-  Version = VValue;
-
-  NumParameters =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  RootParametersOffset =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  NumStaticSamplers =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  StaticSamplersOffset =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  uint32_t FValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
-  Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureValidations::isValidRootFlag(FValue))
-    return validationFailed("unsupported root signature flag value read: " +
-                            llvm::Twine(FValue));
-  Flags = FValue;
-
+  Version = Desc.Version;
+  Flags = Desc.Flags;
   return Error::success();
 }
 

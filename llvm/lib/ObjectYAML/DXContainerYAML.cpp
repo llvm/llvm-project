@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstdint>
 
@@ -31,10 +32,11 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 }
 
 DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
-    const dxbc::RootSignatureDesc &Data)
-    : Version(Data.Version) {
+    const object::DirectX::RootSignature &Data)
+    : Version(Data.getVersion()) {
+  uint32_t Flags = Data.getFlags();
 #define ROOT_ELEMENT_FLAG(Num, Val, Str)                                       \
-  Val = (Data.Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+  Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
