@@ -809,18 +809,6 @@ void CodeGenSchedModels::expandRWSeqForProc(
   }
 }
 
-// Find the existing SchedWrite that models this sequence of writes.
-unsigned CodeGenSchedModels::findRWForSequence(ArrayRef<unsigned> Seq,
-                                               bool IsRead) {
-  std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
-
-  auto I = find_if(RWVec, [Seq](CodeGenSchedRW &RW) {
-    return ArrayRef(RW.Sequence) == Seq;
-  });
-  // Index zero reserved for invalid RW.
-  return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
-}
-
 /// Add this ReadWrite if it doesn't already exist.
 unsigned CodeGenSchedModels::findOrInsertRW(ArrayRef<unsigned> Seq,
                                             bool IsRead) {
@@ -828,11 +816,14 @@ unsigned CodeGenSchedModels::findOrInsertRW(ArrayRef<unsigned> Seq,
   if (Seq.size() == 1)
     return Seq.back();
 
-  unsigned Idx = findRWForSequence(Seq, IsRead);
-  if (Idx)
-    return Idx;
-
   std::vector<CodeGenSchedRW> &RWVec = IsRead ? SchedReads : SchedWrites;
+
+  auto I = find_if(RWVec, [Seq](CodeGenSchedRW &RW) {
+    return ArrayRef(RW.Sequence) == Seq;
+  });
+  if (I != RWVec.end())
+    return std::distance(RWVec.begin(), I);
+
   unsigned RWIdx = RWVec.size();
   CodeGenSchedRW SchedRW(RWIdx, IsRead, Seq, genRWName(Seq, IsRead));
   RWVec.push_back(SchedRW);
