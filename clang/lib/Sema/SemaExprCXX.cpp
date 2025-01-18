@@ -1956,6 +1956,8 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
         Info.CUDAPref == SemaCUDA::CFP_Never)
       continue;
 
+    if (!isTypeAwareAllocation(IDP.PassTypeIdentity) && isTypeAwareAllocation(Info.IDP.PassTypeIdentity))
+      continue;
     if (!Best) {
       Best = Info;
       if (BestFns)

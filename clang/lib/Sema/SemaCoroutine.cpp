@@ -1165,6 +1165,7 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
       return false;
   }
 
+  assert(!OperatorDelete->isTypeAwareOperatorNewOrDelete());
   S.MarkFunctionReferenced(Loc, OperatorDelete);
   return true;
 }
@@ -1576,6 +1577,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
     return false;
   }
+  assert(!OperatorNew->isTypeAwareOperatorNewOrDelete());
 
   DiagnoseTypeAwareAllocatorsIfNecessary(
       S, Loc, diag::warn_coroutine_type_aware_allocator_ignored, NewName,
@@ -1600,6 +1602,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     //   If no usual deallocation function is found, the program is ill-formed.
     return false;
   }
+
+  assert(!OperatorDelete->isTypeAwareOperatorNewOrDelete());
 
   Expr *FramePtr =
       S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});

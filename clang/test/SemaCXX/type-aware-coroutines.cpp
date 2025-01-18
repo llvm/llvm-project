@@ -124,8 +124,10 @@ resumable3 f5(float) {
 }
 
 resumable4 f6(float) {
-  // expected-warning@-1 {{type aware 'operator delete' will not be used for coroutine allocation}}
+  // expected-error@-1 {{no suitable member 'operator delete' in 'promise_type'}}
+  // expected-warning@-2 {{type aware 'operator delete' will not be used for coroutine allocation}}
   // expected-note@#resumable4_tad {{type aware 'operator delete' declared here}}
+  // expected-note@#resumable4_tad {{member 'operator delete' declared here}}
   co_return;
 }
 
