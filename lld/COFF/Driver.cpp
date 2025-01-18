@@ -218,7 +218,7 @@ void LinkerDriver::addFile(InputFile *file) {
                  << " linked in after "
                     "doing LTO compilation.";
       }
-      ctx.bitcodeFileInstances.push_back(f);
+      f->symtab.bitcodeFileInstances.push_back(f);
     } else if (auto *f = dyn_cast<ImportFile>(file)) {
       ctx.importFileInstances.push_back(f);
     }
@@ -285,7 +285,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
-    addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
+    addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
@@ -374,8 +374,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   if (magic == file_magic::coff_object) {
     obj = ObjFile::create(ctx, mb);
   } else if (magic == file_magic::bitcode) {
-    obj =
-        make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
+    obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
+                              /*lazy=*/false);
   } else if (magic == file_magic::coff_cl_gl_object) {
     Err(ctx) << mb.getBufferIdentifier()
              << ": is not a native COFF file. Recompile without /GL?";
@@ -2571,19 +2571,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         }
       }
 
-      // If any inputs are bitcode files, the LTO code generator may create
-      // references to library functions that are not explicit in the bitcode
-      // file's symbol table. If any of those library functions are defined in a
-      // bitcode file in an archive member, we need to arrange to use LTO to
-      // compile those archive members by adding them to the link beforehand.
-      if (!ctx.bitcodeFileInstances.empty()) {
-        llvm::Triple TT(
-            ctx.bitcodeFileInstances.front()->obj->getTargetTriple());
-        for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
-          ctx.symtab.addLibcall(s);
-      }
-
       ctx.forEachSymtab([&](SymbolTable &symtab) {
+        // If any inputs are bitcode files, the LTO code generator may create
+        // references to library functions that are not explicit in the bitcode
+        // file's symbol table. If any of those library functions are defined in
+        // a bitcode file in an archive member, we need to arrange to use LTO to
+        // compile those archive members by adding them to the link beforehand.
+        if (!symtab.bitcodeFileInstances.empty()) {
+          llvm::Triple TT(
+              symtab.bitcodeFileInstances.front()->obj->getTargetTriple());
+          for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
+            symtab.addLibcall(s);
+        }
+
         // Windows specific -- if __load_config_used can be resolved, resolve
         // it.
         if (symtab.findUnderscore("_load_config_used"))
@@ -2639,8 +2639,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // If we are going to do codegen for link-time optimization, check for
   // unresolvable symbols first, so we don't spend time generating code that
   // will fail to link anyway.
-  if (!ctx.bitcodeFileInstances.empty() && !config->forceUnresolved)
-    ctx.symtab.reportUnresolvable();
+  if (!config->forceUnresolved)
+    ctx.forEachSymtab([](SymbolTable &symtab) {
+      if (!symtab.bitcodeFileInstances.empty())
+        symtab.reportUnresolvable();
+    });
   if (errorCount())
     return;
 
@@ -2655,7 +2658,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
   ltoCompilationDone = true;
-  ctx.symtab.compileBitcodeFiles();
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
   if (Defined *d =
           dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
