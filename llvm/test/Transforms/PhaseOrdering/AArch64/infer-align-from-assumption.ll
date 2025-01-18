@@ -126,7 +126,6 @@ define void @align_from_call_and_assumption() {
 ; CHECK-LABEL: define void @align_from_call_and_assumption() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[BASE:%.*]] = tail call align 128 ptr @get_aligned()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE]], i64 128) ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BASE]], %[[ENTRY]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
@@ -152,3 +151,4 @@ loop:
 exit:
   ret void
 }
+
