@@ -372,6 +372,94 @@ define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
   ret i32 %t9
 }
 
+; PR123456 - all_of(x == 0)
+define i1 @ptestc_v4i32_eq0(<4 x i32> %a0) {
+; SSE-LABEL: ptestc_v4i32_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setb %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
+  %icmp = icmp eq <4 x i32> %a0, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp ne i32 %test, 0
+  ret i1 %res
+}
+
+; PR123456 - all_of((a & b) == 0)
+define i1 @ptestc_v4i32_and_eq0(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE-LABEL: ptestc_v4i32_and_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setb %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_and_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
+  %and = and <4 x i32> %a1, %a0
+  %icmp = icmp eq <4 x i32> %and, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp ne i32 %test, 0
+  ret i1 %res
+}
+
+; PR123456 - !all_of((a & ~b) == 0)
+define i1 @ptestc_v4i32_andnot_eq0(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE-LABEL: ptestc_v4i32_andnot_eq0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    setae %al
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ptestc_v4i32_andnot_eq0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    setae %al
+; AVX-NEXT:    retq
+  %not = xor <4 x i32> %a1, splat (i32 -1)
+  %and = and <4 x i32> %a0, %not
+  %icmp = icmp eq <4 x i32> %and, zeroinitializer
+  %sext = sext <4 x i1> %icmp to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %test = tail call noundef i32 @llvm.x86.sse41.ptestc(<2 x i64> %bc, <2 x i64> splat (i64 -1))
+  %res = icmp eq i32 %test, 0
+  ret i1 %res
+}
+
 ; FIXME: Foldable to ptest(xor(%0,%1),xor(%0,%1))
 define i1 @PR38788(<4 x i32> %0, <4 x i32> %1) {
 ; SSE-LABEL: PR38788:
