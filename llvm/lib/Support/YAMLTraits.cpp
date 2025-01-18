@@ -750,8 +750,6 @@ void Output::scalarTag(std::string &Tag) {
 void Output::setError(const Twine &message) {
 }
 
-std::error_code Output::error() { return {}; }
-
 bool Output::canElideEmptySequence() {
   // Normally, with an optional key/value where the value is an empty sequence,
   // the whole key/value can be not written.  But, that produces wrong yaml

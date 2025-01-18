@@ -819,7 +819,6 @@ public:
   virtual NodeKind getNodeKind() = 0;
 
   virtual void setError(const Twine &) = 0;
-  virtual std::error_code error() = 0;
   virtual void setAllowUnknownKeys(bool Allow);
 
   template <typename T>
@@ -1449,7 +1448,7 @@ public:
   ~Input() override;
 
   // Check if there was an syntax or semantic error during parsing.
-  std::error_code error() override;
+  std::error_code error();
 
 private:
   bool outputting() const override;
@@ -1632,7 +1631,6 @@ public:
   void scalarTag(std::string &) override;
   NodeKind getNodeKind() override;
   void setError(const Twine &message) override;
-  std::error_code error() override;
   bool canElideEmptySequence() override;
 
   // These are only used by operator<<. They could be private
