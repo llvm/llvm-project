@@ -2264,8 +2264,15 @@ struct ImplicitAllocationParameters {
   ImplicitAllocationParameters(QualType Type,
                                TypeAwareAllocationMode PassTypeIdentity,
                                AlignedAllocationMode PassAlignment)
-      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
-        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment) {}
+  : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+    PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment) {
+    if (Type.isNull())
+      assert(!isTypeAwareAllocation(PassTypeIdentity));
+    assert(!Type.isNull());
+  }
+  explicit ImplicitAllocationParameters(AlignedAllocationMode PassAlignment)
+  : PassTypeIdentity(TypeAwareAllocationMode::No),
+    PassAlignment(PassAlignment) {}
   QualType Type;
   TypeAwareAllocationMode PassTypeIdentity;
   AlignedAllocationMode PassAlignment;
@@ -2277,6 +2284,11 @@ struct ImplicitAllocationParameters {
       ++Count;
     return Count;
   }
+  bool isValid() const {
+    if (!isTypeAwareAllocation(PassTypeIdentity))
+      return true;
+    return !Type.isNull();
+  }
 };
 
 struct ImplicitDeallocationParameters {
@@ -2284,9 +2296,19 @@ struct ImplicitDeallocationParameters {
                                  TypeAwareAllocationMode PassTypeIdentity,
                                  AlignedAllocationMode PassAlignment,
                                  SizedDeallocationMode PassSize)
-      : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
-        PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment),
-        PassSize(PassSize) {}
+  : Type(Type.isNull() ? Type : Type.getUnqualifiedType()),
+    PassTypeIdentity(PassTypeIdentity), PassAlignment(PassAlignment),
+    PassSize(PassSize) {
+    if (Type.isNull())
+      assert(!isTypeAwareAllocation(PassTypeIdentity));
+    assert(!Type.isNull());
+  }
+
+  ImplicitDeallocationParameters(AlignedAllocationMode PassAlignment,
+                                 SizedDeallocationMode PassSize)
+  : PassTypeIdentity(TypeAwareAllocationMode::No),
+    PassAlignment(PassAlignment), PassSize(PassSize) {
+  }
   QualType Type;
   TypeAwareAllocationMode PassTypeIdentity;
   AlignedAllocationMode PassAlignment;
@@ -2300,6 +2322,11 @@ struct ImplicitDeallocationParameters {
     if (isSizedDeallocation(PassSize))
       ++Count;
     return Count;
+  }
+  bool isValid() const {
+    if (!isTypeAwareAllocation(PassTypeIdentity))
+      return true;
+    return !Type.isNull();
   }
 };
 

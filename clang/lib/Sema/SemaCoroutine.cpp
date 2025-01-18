@@ -1139,7 +1139,6 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
   ImplicitDeallocationParameters IDP = {
-      S.Context.VoidTy, TypeAwareAllocationMode::No,
       alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
                                  PromiseType, IDP, /*Diagnose*/ true))
@@ -1450,9 +1449,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   // Helper function to indicate whether the last lookup found the aligned
   // allocation function.
-  ImplicitAllocationParameters IAP = {
-      S.Context.VoidTy, TypeAwareAllocationMode::No,
-      alignedAllocationModeFromBool(S.getLangOpts().CoroAlignedAllocation)};
+  ImplicitAllocationParameters IAP(
+      alignedAllocationModeFromBool(S.getLangOpts().CoroAlignedAllocation));
   auto LookupAllocationFunction =
       [&](Sema::AllocationFunctionScope NewScope = Sema::AFS_Both,
           bool WithoutPlacementArgs = false, bool ForceNonAligned = false) {

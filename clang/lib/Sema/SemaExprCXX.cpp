@@ -1777,8 +1777,7 @@ namespace {
   struct UsualDeallocFnInfo {
     UsualDeallocFnInfo()
         : Found(), FD(nullptr),
-          IDP(QualType(), TypeAwareAllocationMode::No,
-              AlignedAllocationMode::No, SizedDeallocationMode::No) {}
+          IDP(AlignedAllocationMode::No, SizedDeallocationMode::No) {}
     UsualDeallocFnInfo(Sema &S, DeclAccessPair Found, QualType AllocType)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
           Destroying(false),
@@ -1798,7 +1797,7 @@ namespace {
         FD = InstantiatedDecl;
       }
       unsigned NumBaseParams = 1;
-      if (S.getLangOpts().TypeAwareAllocators &&
+      if (S.getLangOpts().TypeAwareAllocators && !AllocType.isNull() &&
           FD->isTypeAwareOperatorNewOrDelete()) {
         QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
         QualType ExpectedTypeIdentityTag =
@@ -1844,6 +1843,11 @@ namespace {
 
     int Compare(Sema &S, const UsualDeallocFnInfo &Other,
                 ImplicitDeallocationParameters TargetIDP) const {
+      assert(TargetIDP.isValid());
+      assert(Other.IDP.isValid());
+      assert(!TargetIDP.Type.isNull() ||
+             !isTypeAwareAllocation(Other.IDP.PassTypeIdentity));
+
       // C++ P0722:
       //   A destroying operator delete is preferred over a non-destroying
       //   operator delete.
@@ -1956,7 +1960,8 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
         Info.CUDAPref == SemaCUDA::CFP_Never)
       continue;
 
-    if (!isTypeAwareAllocation(IDP.PassTypeIdentity) && isTypeAwareAllocation(Info.IDP.PassTypeIdentity))
+    if (!isTypeAwareAllocation(IDP.PassTypeIdentity) &&
+        isTypeAwareAllocation(Info.IDP.PassTypeIdentity))
       continue;
     if (!Best) {
       Best = Info;
