@@ -36,7 +36,6 @@ struct ModuleRootSignature {
   ModuleRootSignature() = default;
 
   bool parse(int32_t Version, NamedMDNode *Root);
-  void write(raw_ostream &OS);
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
