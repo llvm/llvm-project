@@ -13,9 +13,9 @@ define <1 x i32> @select_addsub_v1i32(<1 x i1> %cc, <1 x i32> %a, <1 x i32> %b) 
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <1 x i32> %a, %b
-  %sub = add nsw <1 x i32> %a, %b
-  %res = select <1 x i1> %cc,  <1 x i32> %add, <1 x i32> %sub
+  %sub = sub <1 x i32> %a, %b
+  %add = add <1 x i32> %a, %b
+  %res = select <1 x i1> %cc,  <1 x i32> %sub, <1 x i32> %add
   ret <1 x i32> %res
 }
 
@@ -27,9 +27,9 @@ define <2 x i32> @select_addsub_v2i32(<2 x i1> %cc, <2 x i32> %a, <2 x i32> %b) 
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <2 x i32> %a, %b
-  %sub = add nsw <2 x i32> %a, %b
-  %res = select <2 x i1> %cc,  <2 x i32> %add, <2 x i32> %sub
+  %sub = sub <2 x i32> %a, %b
+  %add = add <2 x i32> %a, %b
+  %res = select <2 x i1> %cc,  <2 x i32> %sub, <2 x i32> %add
   ret <2 x i32> %res
 }
 
@@ -41,9 +41,9 @@ define <4 x i32> @select_addsub_v4i32(<4 x i1> %cc, <4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %a, %b
-  %res = select <4 x i1> %cc,  <4 x i32> %add, <4 x i32> %sub
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %a, %b
+  %res = select <4 x i1> %cc,  <4 x i32> %sub, <4 x i32> %add
   ret <4 x i32> %res
 }
 
@@ -55,9 +55,9 @@ define <4 x i32> @select_addsub_v4i32_select_swapped(<4 x i1> %cc, <4 x i32> %a,
 ; CHECK-NEXT:    vadd.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %a, %b
-  %res = select <4 x i1> %cc,  <4 x i32> %sub, <4 x i32> %add
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %a, %b
+  %res = select <4 x i1> %cc,  <4 x i32> %add, <4 x i32> %sub
   ret <4 x i32> %res
 }
 
@@ -69,9 +69,9 @@ define <4 x i32> @select_addsub_v4i32_add_swapped(<4 x i1> %cc, <4 x i32> %a, <4
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %b, %a
-  %res = select <4 x i1> %cc,  <4 x i32> %add, <4 x i32> %sub
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %b, %a
+  %res = select <4 x i1> %cc,  <4 x i32> %sub, <4 x i32> %add
   ret <4 x i32> %res
 }
 
@@ -83,9 +83,9 @@ define <4 x i32> @select_addsub_v4i32_both_swapped(<4 x i1> %cc, <4 x i32> %a, <
 ; CHECK-NEXT:    vadd.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %b, %a
-  %res = select <4 x i1> %cc,  <4 x i32> %sub, <4 x i32> %add
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %b, %a
+  %res = select <4 x i1> %cc,  <4 x i32> %add, <4 x i32> %sub
   ret <4 x i32> %res
 }
 
@@ -97,9 +97,9 @@ define <4 x i32> @select_addsub_v4i32_sub_swapped(<4 x i1> %cc, <4 x i32> %a, <4
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %b, %a
-  %res = select <4 x i1> %cc,  <4 x i32> %add, <4 x i32> %sub
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %b, %a
+  %res = select <4 x i1> %cc,  <4 x i32> %sub, <4 x i32> %add
   ret <4 x i32> %res
 }
 
@@ -111,9 +111,9 @@ define <8 x i32> @select_addsub_v8i32(<8 x i1> %cc, <8 x i32> %a, <8 x i32> %b) 
 ; CHECK-NEXT:    vsub.vv v12, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i32> %a, %b
-  %sub = add nsw <8 x i32> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i32> %add, <8 x i32> %sub
+  %sub = sub <8 x i32> %a, %b
+  %add = add <8 x i32> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i32> %sub, <8 x i32> %add
   ret <8 x i32> %res
 }
 
@@ -125,9 +125,9 @@ define <16 x i32> @select_addsub_v16i32(<16 x i1> %cc, <16 x i32> %a, <16 x i32>
 ; CHECK-NEXT:    vsub.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
-  %add = sub nsw <16 x i32> %a, %b
-  %sub = add nsw <16 x i32> %a, %b
-  %res = select <16 x i1> %cc,  <16 x i32> %add, <16 x i32> %sub
+  %sub = sub <16 x i32> %a, %b
+  %add = add <16 x i32> %a, %b
+  %res = select <16 x i1> %cc,  <16 x i32> %sub, <16 x i32> %add
   ret <16 x i32> %res
 }
 
@@ -140,9 +140,9 @@ define <32 x i32> @select_addsub_v32i32(<32 x i1> %cc, <32 x i32> %a, <32 x i32>
 ; CHECK-NEXT:    vsub.vv v24, v8, v16, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
-  %add = sub nsw <32 x i32> %a, %b
-  %sub = add nsw <32 x i32> %a, %b
-  %res = select <32 x i1> %cc,  <32 x i32> %add, <32 x i32> %sub
+  %sub = sub <32 x i32> %a, %b
+  %add = add <32 x i32> %a, %b
+  %res = select <32 x i1> %cc,  <32 x i32> %sub, <32 x i32> %add
   ret <32 x i32> %res
 }
 
@@ -214,9 +214,9 @@ define <64 x i32> @select_addsub_v64i32(<64 x i1> %cc, <64 x i32> %a, <64 x i32>
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-  %add = sub nsw <64 x i32> %a, %b
-  %sub = add nsw <64 x i32> %a, %b
-  %res = select <64 x i1> %cc,  <64 x i32> %add, <64 x i32> %sub
+  %sub = sub <64 x i32> %a, %b
+  %add = add <64 x i32> %a, %b
+  %res = select <64 x i1> %cc,  <64 x i32> %sub, <64 x i32> %add
   ret <64 x i32> %res
 }
 
@@ -228,9 +228,9 @@ define <8 x i64> @select_addsub_v8i64(<8 x i1> %cc, <8 x i64> %a, <8 x i64> %b) 
 ; CHECK-NEXT:    vsub.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i64> %a, %b
-  %sub = add nsw <8 x i64> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i64> %add, <8 x i64> %sub
+  %sub = sub <8 x i64> %a, %b
+  %add = add <8 x i64> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i64> %sub, <8 x i64> %add
   ret <8 x i64> %res
 }
 
@@ -242,9 +242,9 @@ define <8 x i16> @select_addsub_v8i16(<8 x i1> %cc, <8 x i16> %a, <8 x i16> %b) 
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i16> %a, %b
-  %sub = add nsw <8 x i16> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i16> %add, <8 x i16> %sub
+  %sub = sub <8 x i16> %a, %b
+  %add = add <8 x i16> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i16> %sub, <8 x i16> %add
   ret <8 x i16> %res
 }
 
@@ -256,9 +256,9 @@ define <8 x i8> @select_addsub_v8i8(<8 x i1> %cc, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i8> %a, %b
-  %sub = add nsw <8 x i8> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i8> %add, <8 x i8> %sub
+  %sub = sub <8 x i8> %a, %b
+  %add = add <8 x i8> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i8> %sub, <8 x i8> %add
   ret <8 x i8> %res
 }
 
@@ -268,9 +268,9 @@ define <8 x i1> @select_addsub_v8i1(<8 x i1> %cc, <8 x i1> %a, <8 x i1> %b) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i1> %a, %b
-  %sub = add nsw <8 x i1> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i1> %add, <8 x i1> %sub
+  %sub = sub <8 x i1> %a, %b
+  %add = add <8 x i1> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i1> %sub, <8 x i1> %add
   ret <8 x i1> %res
 }
 
@@ -282,9 +282,9 @@ define <8 x i2> @select_addsub_v8i2(<8 x i1> %cc, <8 x i2> %a, <8 x i2> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <8 x i2> %a, %b
-  %sub = add nsw <8 x i2> %a, %b
-  %res = select <8 x i1> %cc,  <8 x i2> %add, <8 x i2> %sub
+  %sub = sub <8 x i2> %a, %b
+  %add = add <8 x i2> %a, %b
+  %res = select <8 x i1> %cc,  <8 x i2> %sub, <8 x i2> %add
   ret <8 x i2> %res
 }
 
@@ -297,9 +297,9 @@ define <4 x i32> @select_addsub_v4i32_constmask(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %a, %b
-  %res = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>,  <4 x i32> %add, <4 x i32> %sub
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %a, %b
+  %res = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>,  <4 x i32> %sub, <4 x i32> %add
   ret <4 x i32> %res
 }
 
@@ -312,9 +312,9 @@ define <4 x i32> @select_addsub_v4i32_constmask2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %b, %a
-  %res = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>,  <4 x i32> %add, <4 x i32> %sub
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %b, %a
+  %res = select <4 x i1> <i1 true, i1 false, i1 true, i1 false>,  <4 x i32> %sub, <4 x i32> %add
   ret <4 x i32> %res
 }
 
@@ -328,9 +328,9 @@ define <4 x i32> @select_addsub_v4i32_as_shuffle(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %a, %b
-  %sub = add nsw <4 x i32> %a, %b
-  %res = shufflevector <4 x i32> %add, <4 x i32> %sub, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %sub = sub <4 x i32> %a, %b
+  %add = add <4 x i32> %a, %b
+  %res = shufflevector <4 x i32> %sub, <4 x i32> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x i32> %res
 }
 
@@ -344,8 +344,8 @@ define <4 x i32> @select_addsub_v4i32_as_shuffle2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vsub.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %add = sub nsw <4 x i32> %b, %a
-  %sub = add nsw <4 x i32> %a, %b
-  %res = shufflevector <4 x i32> %add, <4 x i32> %sub, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  %sub = sub <4 x i32> %b, %a
+  %add = add <4 x i32> %a, %b
+  %res = shufflevector <4 x i32> %sub, <4 x i32> %add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x i32> %res
 }
