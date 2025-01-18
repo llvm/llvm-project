@@ -1018,7 +1018,7 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Record);
       HI.Offset = Layout.getFieldOffset(FD->getFieldIndex());
       if (FD->isBitField())
-        HI.Size = FD->getBitWidthValue(Ctx);
+        HI.Size = FD->getBitWidthValue();
       else if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
         HI.Size = FD->isZeroSize(Ctx) ? 0 : Size->getQuantity() * 8;
       if (HI.Size) {

@@ -32,11 +32,11 @@ class Loop;
 class LoopInfo;
 class VPRegionBlock;
 class VPlan;
-class VPlanTestBase;
+class VPlanTestIRBase;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
 class VPlanHCFGBuilder {
-  friend VPlanTestBase;
+  friend VPlanTestIRBase;
 
 private:
   // The outermost loop of the input loop nest considered for vectorization.

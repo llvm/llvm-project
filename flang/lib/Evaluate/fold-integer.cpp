@@ -71,6 +71,28 @@ static bool CheckDimArg(const std::optional<ActualArgument> &dimArg,
   return true;
 }
 
+static bool CheckCoDimArg(const std::optional<ActualArgument> &dimArg,
+    const Symbol &symbol, parser::ContextualMessages &messages,
+    std::optional<int> &dimVal) {
+  dimVal.reset();
+  if (int corank{symbol.Corank()}; corank > 0) {
+    if (auto dim64{ToInt64(dimArg)}) {
+      if (*dim64 < 1) {
+        messages.Say("DIM=%jd dimension must be positive"_err_en_US, *dim64);
+        return false;
+      } else if (*dim64 > corank) {
+        messages.Say(
+            "DIM=%jd dimension is out of range for corank-%d coarray"_err_en_US,
+            *dim64, corank);
+        return false;
+      } else {
+        dimVal = static_cast<int>(*dim64 - 1); // 1-based to 0-based
+      }
+    }
+  }
+  return true;
+}
+
 // Class to retrieve the constant bound of an expression which is an
 // array that devolves to a type of Constant<T>
 class GetConstantArrayBoundHelper {
@@ -259,6 +281,37 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
           }
         }
       }
+    }
+  }
+  return Expr<T>{std::move(funcRef)};
+}
+
+// LCOBOUND() & UCOBOUND()
+template <int KIND>
+Expr<Type<TypeCategory::Integer, KIND>> COBOUND(FoldingContext &context,
+    FunctionRef<Type<TypeCategory::Integer, KIND>> &&funcRef, bool isUCOBOUND) {
+  using T = Type<TypeCategory::Integer, KIND>;
+  ActualArguments &args{funcRef.arguments()};
+  if (const Symbol * coarray{UnwrapWholeSymbolOrComponentDataRef(args[0])}) {
+    std::optional<int> dim;
+    if (funcRef.Rank() == 0) {
+      // Optional DIM= argument is present: result is scalar.
+      if (!CheckCoDimArg(args[1], *coarray, context.messages(), dim)) {
+        return MakeInvalidIntrinsic<T>(std::move(funcRef));
+      } else if (!dim) {
+        // DIM= is present but not constant, or error
+        return Expr<T>{std::move(funcRef)};
+      }
+    }
+    if (dim) {
+      if (auto cb{isUCOBOUND ? GetUCOBOUND(*coarray, *dim)
+                             : GetLCOBOUND(*coarray, *dim)}) {
+        return Fold(context, ConvertToType<T>(std::move(*cb)));
+      }
+    } else if (auto cbs{
+                   AsExtentArrayExpr(isUCOBOUND ? GetUCOBOUNDs(*coarray)
+                                                : GetLCOBOUNDs(*coarray))}) {
+      return Fold(context, ConvertToType<T>(Expr<ExtentType>{std::move(*cbs)}));
     }
   }
   return Expr<T>{std::move(funcRef)};
@@ -1105,6 +1158,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "lbound") {
     return LBOUND(context, std::move(funcRef));
+  } else if (name == "lcobound") {
+    return COBOUND(context, std::move(funcRef), /*isUCOBOUND=*/false);
   } else if (name == "leadz" || name == "trailz" || name == "poppar" ||
       name == "popcnt") {
     if (auto *sn{UnwrapExpr<Expr<SomeKind<T::category>>>(args[0])}) {
@@ -1396,6 +1451,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
+  } else if (name == "ucobound") {
+    return COBOUND(context, std::move(funcRef), /*isUCOBOUND=*/true);
   } else if (name == "__builtin_numeric_storage_size") {
     if (!context.moduleFileName()) {
       // Don't fold this reference until it appears in the module file

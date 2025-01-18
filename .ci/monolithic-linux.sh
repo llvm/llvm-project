@@ -29,6 +29,8 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
 fi
 
 function at-exit {
+  retcode=$?
+
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
 
@@ -37,7 +39,7 @@ function at-exit {
   if command -v buildkite-agent 2>&1 >/dev/null
   then
     python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
-      "linux-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
+      "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
   fi
 }
 trap at-exit EXIT
