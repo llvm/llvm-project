@@ -1153,6 +1153,16 @@ TEST(TestRtsanInterceptors, ShutdownOnASocketDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_GETSOCKNAME
+TEST(TestRtsanInterceptors, GetsocknameOnASocketDiesWhenRealtime) {
+  sockaddr addr{};
+  socklen_t len{};
+  auto Func = [&]() { getsockname(0, &addr, &len); };
+  ExpectRealtimeDeath(Func, "getsockname");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     I/O Multiplexing
 */
