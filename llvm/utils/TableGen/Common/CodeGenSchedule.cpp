@@ -1701,7 +1701,7 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   for (unsigned WriteIdx : OperWrites) {
     IdxVec WriteSeq;
     expandRWSequence(WriteIdx, WriteSeq, /*IsRead=*/false);
-    SmallVectorImpl<unsigned> &Seq =
+    [[maybe_unused]] SmallVectorImpl<unsigned> &Seq =
         LastTransitions[0].WriteSequences.emplace_back(WriteSeq.begin(),
                                                        WriteSeq.end());
     LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
@@ -1710,7 +1710,7 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
   for (unsigned ReadIdx : OperReads) {
     IdxVec ReadSeq;
     expandRWSequence(ReadIdx, ReadSeq, /*IsRead=*/true);
-    SmallVectorImpl<unsigned> &Seq =
+    [[maybe_unused]] SmallVectorImpl<unsigned> &Seq =
         LastTransitions[0].ReadSequences.emplace_back(ReadSeq.begin(),
                                                       ReadSeq.end());
     LLVM_DEBUG(dbgs() << "("; dumpIdxVec(Seq); dbgs() << ") ");
