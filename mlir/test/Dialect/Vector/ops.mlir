@@ -190,6 +190,13 @@ func.func @shuffle2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf32
   return %1 : vector<3x4xf32>
 }
 
+// CHECK-LABEL: @shuffle_poison_mask
+func.func @shuffle_poison_mask(%a: vector<4xf32>, %b: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[1, -1, 6, -1] : vector<4xf32>, vector<4xf32>
+  %1 = vector.shuffle %a, %a[1, -1, 6, -1] : vector<4xf32>, vector<4xf32>
+  return %1 : vector<4xf32>
+}
+
 // CHECK-LABEL: @extract_element_0d
 func.func @extract_element_0d(%a: vector<f32>) -> f32 {
   // CHECK-NEXT: vector.extractelement %{{.*}}[] : vector<f32>
