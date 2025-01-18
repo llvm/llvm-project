@@ -17150,7 +17150,7 @@ static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
       MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     }
     assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    EVT MaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
     SDValue CC = DAG.getBuildVector(MaskVT, DL, MaskVals);
 
     // Arrange the select such that we can match a masked
