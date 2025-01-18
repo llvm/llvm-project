@@ -387,7 +387,11 @@ C Language Changes
 ------------------
 
 - Extend clang's ``<limits.h>`` to define ``LONG_LONG_*`` macros for Android's bionic.
+<<<<<<< HEAD
 - Macro ``__STDC_NO_THREADS__`` is no longer necessary for MSVC 2022 1939 and later.
+=======
+- Added support for the ``__nullptr`` keyword. 
+>>>>>>> cfda1e8d3bf6 (Update ReleaseNotes.rst)
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
